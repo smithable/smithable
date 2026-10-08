@@ -2,7 +2,14 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, expect, test } from "vitest";
-import { buildReport, recordFailure, reportChoice, sendReport, setReportChoice } from "./report.js";
+import {
+  buildReport,
+  recordFailure,
+  reportChoice,
+  sendReport,
+  setReportChoice,
+  traceIdOf,
+} from "./report.js";
 
 let dir: string;
 beforeEach(() => {
@@ -88,4 +95,23 @@ test("hosted, the service's own words: its thanks, or why it refused", async () 
   } finally {
     server.close();
   }
+});
+
+test("a report carries the trace id of the request that failed, from its traceparent", () => {
+  expect(traceIdOf("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")).toBe(
+    "4bf92f3577b34da6a3ce929d0e0e4736",
+  );
+  expect(traceIdOf(undefined)).toBeUndefined();
+  expect(traceIdOf("not a traceparent")).toBeUndefined();
+  const dir = mkdtempSync(join(tmpdir(), "report-trace-"));
+  recordFailure(
+    dir,
+    "addField",
+    { model: "Customer" },
+    "It failed.",
+    "4bf92f3577b34da6a3ce929d0e0e4736",
+  );
+  expect(buildReport(dir)?.trace).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+  recordFailure(dir, "addField", { model: "Customer" }, "It failed again.");
+  expect(buildReport(dir)?.trace).toBeUndefined();
 });
