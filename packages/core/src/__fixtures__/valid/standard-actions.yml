@@ -29,7 +29,6 @@ actions:
       resolvedAt: NOW()
       followUp: DATEADD(TODAY(), 14, "day")
       pinned: false
-    allow: [admin]
     intent: The incident is over.
     add:
       IncidentUpdate: { at: NOW(), status: resolved, message: This incident is resolved. }

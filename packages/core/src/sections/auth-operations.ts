@@ -78,7 +78,7 @@ const setProviders: Operation<{ providers: string[] }> = {
 const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
   name: "setDefaultAccess",
   summary:
-    "Choose the default access to records: shared (a team sees and changes everything; smithable.yml lists the exceptions) or private (each person sees only their own records).",
+    "Choose the record rule: shared (everyone who signs in sees every record) or private (each person sees only their own); everyone changes and deletes their own, and the roles' grants say the rest.",
   schema: {
     type: "object",
     required: ["access"],
@@ -149,7 +149,7 @@ const ROLE_NAME = /^[a-z][A-Za-z0-9]*$/;
 const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string }> = {
   name: "setRoles",
   summary:
-    'Set the app\'s roles with a description each ("admin" always exists), and which one new users get.',
+    'Set the app\'s roles with a description each ("admin" always exists and does everything), and which one new users get. A role keeps what it was granted; a new one starts with the record rule only, so grant it its pages.',
   schema: {
     type: "object",
     required: ["roles"],
@@ -177,11 +177,25 @@ const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string 
         throw new OperationError(
           `"${name}" is not a role name: lowercase letters and digits, not "owner".`,
         );
+    const before = auth.has(["roles"]) ? (auth.get(["roles"]) as Record<string, YamlValue>) : {};
     const value: YamlValue = Object.fromEntries(
-      names.map((name): [string, YamlValue] => [
-        name,
-        roles[name] ? { description: roles[name] as string } : {},
-      ]),
+      ["admin", ...names]
+        .filter((r, i, all) => all.indexOf(r) === i)
+        .map((name): [string, YamlValue] => {
+          const was = before[name];
+          const grants =
+            was && typeof was === "object" && !Array.isArray(was)
+              ? Object.fromEntries(Object.entries(was).filter(([k]) => k !== "description"))
+              : {};
+          const description: Record<string, YamlValue> = roles[name]
+            ? { description: roles[name] as string }
+            : was && typeof was === "object" && !Array.isArray(was) && "description" in was
+              ? { description: (was as { description: YamlValue }).description }
+              : {};
+          if (name === "admin")
+            return [name, Object.keys(description).length ? description : "all"];
+          return [name, was === "all" ? "all" : { ...description, ...grants }];
+        }),
     );
     if (auth.has(["roles"])) auth.set(["roles"], value);
     else auth.add([], "roles", value);

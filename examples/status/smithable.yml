@@ -24,7 +24,6 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
-    access: { write: [admin, staff] }   # any of the team moves any incident on
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -46,7 +45,6 @@ actions:
     set: { status: identified }
     add:
       IncidentUpdate: { at: NOW(), status: identified, message: The cause is found and a fix is being worked on. }
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -54,7 +52,6 @@ actions:
     set: { status: monitoring }
     add:
       IncidentUpdate: { at: NOW(), status: monitoring, message: A fix is out. We are watching before we close this. }
-    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -62,7 +59,6 @@ actions:
     set: { status: resolved, resolvedAt: NOW() }
     add:
       IncidentUpdate: { at: NOW(), status: resolved, message: This incident is resolved. }
-    allow: [admin, staff]
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.
 
 pages:
@@ -82,7 +78,7 @@ pages:
     crud: Incident
     actions: [identified, monitoring, resolve]
   updates: { crud: IncidentUpdate }
-  components: { crud: Component, access: [admin] }
+  components: { crud: Component }
   maintenance: { crud: Maintenance }
   overview:
     dashboard:

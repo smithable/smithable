@@ -1,4 +1,4 @@
-import { applyOperation, validateAuth, validateSpec } from "@smithable/core";
+import { type AuthIR, applyOperation, validateAuth, validateSpec } from "@smithable/core";
 import { describe, expect, test } from "vitest";
 import { matchRequest, type PhraseOperation, refusalOf } from "./phrases.js";
 
@@ -36,11 +36,23 @@ const ir = () => {
   return result.ir;
 };
 
-const ops = (request: string) => matchRequest(ir(), request, ROLES)?.operations;
+// Sales may do everything a role can be granted, so an "only …" request takes something away.
+const AUTH = `smithableAuth: 0.1
+signIn: { providers: [google] }
+defaultAccess: shared
+roles:
+  admin: all
+  sales: { pages: all, create: all, write: all, delete: all }
+defaultRole: sales
+`;
+const authOf = (text: string) =>
+  validateAuth({ path: "smithable.auth.yml", text }, ir()).auth as AuthIR;
+const ops = (request: string, auth = authOf(AUTH)) =>
+  matchRequest(ir(), request, ROLES, auth)?.operations;
 
 /** Every proposal must also apply: the grammar is only useful when its operations are valid. */
 function applies(operations: PhraseOperation[]) {
-  let files = { spec: SPEC };
+  let files: { spec: string; auth?: string } = { spec: SPEC, auth: AUTH };
   for (const { op, args } of operations) {
     const result = applyOperation(files, op, args);
     if (!result.ok) throw new Error(`${op}: ${result.message}`);
@@ -152,33 +164,30 @@ describe("the seven benchmark tasks", () => {
     expect(matchRequest(ir(), "Only invited people may sign in", ROLES)).toBeUndefined();
   });
   test("Only admins may delete customers", () => {
+    // Sales keep deleting products (and, as everyone, their own customers).
     const o = ops("Only admins may delete customers.");
     expect(o).toEqual([
-      { op: "setAccess", args: { target: "model:Customer.delete", roles: ["admin"] } },
+      { op: "grant", args: { role: "sales", what: "delete", names: ["Product"] } },
     ]);
     applies(o as PhraseOperation[]);
+    // Without the auth file, who may what is not guessed.
+    expect(matchRequest(ir(), "Only admins may delete customers.", ROLES)).toBeUndefined();
   });
   test("a grant keeps whoever may already: sales should be able to delete customers (the stranger walk)", () => {
-    const auth = validateAuth(
-      {
-        path: "smithable.auth.yml",
-        text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n",
-      },
-      ir(),
-    ).auth;
-    // With shared access each person deletes their own: the grant adds sales beside the owner.
+    const auth = authOf(
+      "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all, delete: [Product] } }\ndefaultRole: sales\n",
+    );
+    // Sales keep deleting products; customers come beside them, which is every kind there is.
     expect(
       matchRequest(ir(), "Sales should be able to delete customers.", ROLES, auth)?.operations,
-    ).toEqual([
-      { op: "setAccess", args: { target: "model:Customer.delete", roles: ["owner", "sales"] } },
-    ]);
+    ).toEqual([{ op: "grant", args: { role: "sales", what: "delete", names: ["all"] } }]);
     expect(matchRequest(ir(), "Let sales delete customers.", ROLES, auth)?.operations).toEqual([
-      { op: "setAccess", args: { target: "model:Customer.delete", roles: ["owner", "sales"] } },
+      { op: "grant", args: { role: "sales", what: "delete", names: ["all"] } },
     ]);
     // Already allowed: said so, nothing proposed.
     expect(
       refusalOf(ir(), "Sales should be able to see customers.", ROLES, auth)?.refusal,
-    ).toContain("already");
+    ).toContain("shared access");
     // Not a role: another rule's sentence, not a refusal.
     expect(ops("Let people filter customers by segment on the customers page")?.[0]?.op).toBe(
       "setFilters",
@@ -309,18 +318,28 @@ describe("other wordings", () => {
   });
 
   test("access wordings", () => {
-    expect(ops("Only admins and sales may change products")).toEqual([
-      { op: "setAccess", args: { target: "model:Product.write", roles: ["admin", "sales"] } },
+    const plain = authOf(
+      "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all, create: all } }\ndefaultRole: sales\n",
+    );
+    expect(ops("Only admins and sales may change products", plain)).toEqual([
+      { op: "grant", args: { role: "sales", what: "write", names: ["Product"] } },
     ]);
     expect(ops("Deleting products is only for admins")).toEqual([
-      { op: "setAccess", args: { target: "model:Product.delete", roles: ["admin"] } },
+      { op: "grant", args: { role: "sales", what: "delete", names: ["Customer"] } },
     ]);
     expect(ops("Only the owner may edit customers")).toEqual([
-      { op: "setAccess", args: { target: "model:Customer.write", roles: ["owner"] } },
+      { op: "grant", args: { role: "sales", what: "write", names: ["Product"] } },
     ]);
     expect(ops("Only admins may open the dashboard")).toEqual([
-      { op: "setAccess", args: { target: "page:dashboard", roles: ["admin"] } },
+      { op: "grant", args: { role: "sales", what: "pages", names: ["customers", "products"] } },
     ]);
+    // As asked already, or not a grant's to say: said so, nothing proposed.
+    expect(refusalOf(ir(), "Only admins may read customers", ROLES, plain)?.refusal).toContain(
+      "shared access",
+    );
+    expect(refusalOf(ir(), "Deleting products is only for admins", ROLES, plain)?.refusal).toBe(
+      "Only admins and each one for their own can delete products already.",
+    );
   });
 
   test("menu wordings", () => {

@@ -77,7 +77,11 @@ export function touched(
     return [`field:${model}.${args.field}`];
   if (model && op === "renameField" && typeof args.to === "string")
     return [`field:${model}.${args.to}`];
-  if (model && /^(addModel|setAccess|setCapacity|setModelLabel|setOwner)/.test(op))
-    return [`model:${model}`];
+  if (model && /^(addModel|setCapacity|setModelLabel|setOwner)/.test(op)) return [`model:${model}`];
+  // A grant names the kinds of record (or pages) it is about.
+  if (op === "grant" && Array.isArray(args.names) && typeof args.what === "string")
+    return (args.names as string[])
+      .filter((n) => n !== "all" && n !== "none")
+      .map((n) => (args.what === "pages" ? `page:${n}` : `model:${n}`));
   return [];
 }

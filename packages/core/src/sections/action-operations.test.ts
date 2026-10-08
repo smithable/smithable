@@ -35,8 +35,6 @@ describe("addAction", () => {
       "mergeCustomers",
       "keep=Customer!",
       "duplicate=Customer!",
-      "--allow",
-      "admin",
       "--intent",
       "Merge a duplicate customer record into the one we keep.",
     ]);
@@ -47,18 +45,31 @@ describe("addAction", () => {
     expect(made).toEqual(original);
   });
 
-  test("a name that exists or is not camelCase is refused; a role that does not exist is an error", () => {
+  test("a name that exists or is not camelCase is refused", () => {
     expect(applyOperation({ spec, auth }, "addAction", { action: "mergeCustomers" })).toMatchObject(
       { ok: false },
     );
     expect(applyOperation({ spec, auth }, "addAction", { action: "Merge" })).toMatchObject({
       ok: false,
     });
-    expect(
-      applyOperation({ spec, auth }, "addAction", { action: "archive", allow: ["boss"] }),
-    ).toMatchObject({
-      ok: false,
+  });
+
+  test("who may run a custom action is granted in the auth file", () => {
+    const granted = applyOperation({ spec, auth }, "grant", {
+      role: "sales",
+      what: "actions",
+      names: ["mergeCustomers"],
     });
+    if (!granted.ok) throw new Error(granted.message);
+    expect(granted.files.auth).toContain("actions: [mergeCustomers]");
+    expect(granted.description).toBe("sales may run merge customers");
+    for (const args of [
+      { role: "boss", what: "actions", names: ["mergeCustomers"] },
+      { role: "sales", what: "actions", names: ["complete"] },
+      { role: "admin", what: "write", names: ["Customer"] },
+      { role: "sales", what: "edit", names: ["Customer"] },
+    ])
+      expect(applyOperation({ spec, auth }, "grant", args)).toMatchObject({ ok: false });
   });
 });
 

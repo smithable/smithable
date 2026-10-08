@@ -210,7 +210,7 @@ const CHANGES = [
   ["addModel", "Add a kind of record"],
   ["addPage", "Add a page"],
   ["setSearch", "Search on a page"],
-  ["setAccess", "Who can do what"],
+  ["grant", "Who can do what"],
   ["setNavigation", "Menu order"],
   ["addTile", "A dashboard tile"],
   ["removePage", "Remove a page"],
@@ -275,7 +275,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "importRecords" && <ImportRecords spec={spec} run={runAndReset} />}
         {change === "addPage" && <AddPage spec={spec} run={runAndReset} initial={initial} />}
         {change === "setSearch" && <SetSearch spec={spec} run={runAndReset} />}
-        {change === "setAccess" && <SetAccess spec={spec} run={runAndReset} />}
+        {change === "grant" && <Grant spec={spec} run={runAndReset} />}
         {change === "setNavigation" && <SetNavigation spec={spec} run={runAndReset} />}
         {change === "addTile" && <AddTile spec={spec} run={runAndReset} />}
         {change === "removePage" && (
@@ -726,7 +726,6 @@ function ValueOf({
 
 function AddStandardAction({ spec, run }: FormProps) {
   const models = spec.ir?.models ?? [];
-  const roles = spec.auth?.roles.map((r) => r.name) ?? [];
   const [label, setLabel] = useState("");
   const [modelName, setModelName] = useState(models[0]?.name ?? "");
   const model = models.find((m) => m.name === modelName);
@@ -740,7 +739,6 @@ function AddStandardAction({ spec, run }: FormProps) {
   const [whenName, setWhenName] = useState("");
   const whenField = conditions.find((f) => f.name === whenName);
   const [whenValue, setWhenValue] = useState("");
-  const [allow, setAllow] = useState<string[]>([]);
   const action = identifier(label);
   const value =
     setField?.type.kind === "choice" ? setValue || (setField.type.values[0] ?? "") : setValue;
@@ -755,7 +753,6 @@ function AddStandardAction({ spec, run }: FormProps) {
           on: modelName,
           set: { [setField?.name ?? ""]: value },
           ...(whenField ? { when: { [whenField.name]: when } } : {}),
-          ...(allow.length ? { allow } : {}),
           intent: label,
         })
       }
@@ -812,25 +809,6 @@ function AddStandardAction({ spec, run }: FormProps) {
           <ValueOf field={whenField} value={when} onChange={setWhenValue} label="Is" />
         </Label>
       )}
-      {roles.length > 0 && (
-        <fieldset className="space-y-1">
-          <legend className="text-xs font-medium text-neutral-600">
-            Who may press it (none: whoever may change the record)
-          </legend>
-          {roles.map((role) => (
-            <label key={role} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allow.includes(role)}
-                onChange={(e) =>
-                  setAllow(e.target.checked ? [...allow, role] : allow.filter((r) => r !== role))
-                }
-              />
-              {role}
-            </label>
-          ))}
-        </fieldset>
-      )}
       <SpecNote
         label="Will read:"
         text={
@@ -844,12 +822,10 @@ function AddStandardAction({ spec, run }: FormProps) {
   );
 }
 
-function AddCustomAction({ spec, run, initial }: FormProps) {
-  const roles = spec.auth?.roles.map((r) => r.name) ?? [];
+function AddCustomAction({ run, initial }: FormProps) {
   const [action, setAction] = useState(str(initial?.action) ?? "");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [allow, setAllow] = useState<string[]>([]);
   const [intent, setIntent] = useState(str(initial?.intent) ?? "");
   const box =
     "block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 font-mono text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
@@ -860,7 +836,6 @@ function AddCustomAction({ spec, run, initial }: FormProps) {
           action: identifier(action),
           input: fieldLines(input),
           output: fieldLines(output),
-          allow,
           intent,
         })
       }
@@ -900,25 +875,6 @@ function AddCustomAction({ spec, run, initial }: FormProps) {
           className={box}
         />
       </Label>
-      {roles.length > 0 && (
-        <fieldset className="space-y-1">
-          <legend className="text-xs font-medium text-neutral-600">
-            Who may run it (none: the default access)
-          </legend>
-          {roles.map((role) => (
-            <label key={role} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allow.includes(role)}
-                onChange={(e) =>
-                  setAllow(e.target.checked ? [...allow, role] : allow.filter((r) => r !== role))
-                }
-              />
-              {role}
-            </label>
-          ))}
-        </fieldset>
-      )}
       <p className="text-xs text-neutral-500">
         What it does is code: it starts as a stub in src/custom/actions/, for a developer or an
         agent to write.
@@ -1106,14 +1062,14 @@ function SetSearch({ spec, run }: FormProps) {
   );
 }
 
-function SetAccess({ spec, run }: FormProps) {
+function Grant({ spec, run }: FormProps) {
   return (
     <FromSchema
-      op="setAccess"
+      op="grant"
       spec={spec}
       run={run}
-      submit="Set access"
-      hints={{ roles: "None: back to the default." }}
+      submit="Grant"
+      hints={{ names: "all for every one; none for nothing." }}
     />
   );
 }

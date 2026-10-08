@@ -257,58 +257,64 @@ describe("setOwner", () => {
   });
 });
 
-describe("setAccess", () => {
-  test("changes, adds and removes access exceptions, one line at a time", () => {
+describe("grant", () => {
+  const authText = files.auth as string;
+  test("sets what a role may do in the auth file, one grant at a time", () => {
     expect(
-      changed(files.spec, ok("setAccess", ["model:Customer.delete", "admin", "sales"]).files.spec),
+      changed(authText, ok("grant", ["sales", "delete", "Customer", "Order"]).files.auth as string),
     ).toEqual({
-      added: ["      delete: [admin, sales]"],
-      removed: ["      delete: [admin]"],
-    });
-    expect(
-      changed(files.spec, ok("setAccess", ["model:Customer.read", "admin"]).files.spec),
-    ).toEqual({
-      added: ["      read: [admin]"],
+      added: ["    delete: [Customer, Order]"],
       removed: [],
     });
-    expect(changed(files.spec, ok("setAccess", ["page:orders", "admin"]).files.spec)).toEqual({
-      added: ["    access: [admin]"],
-      removed: [],
-    });
-    expect(changed(files.spec, ok("setAccess", ["action:mergeCustomers"]).files.spec)).toEqual({
+    expect(ok("grant", ["sales", "write", "Customer"]).files.auth).toContain(
+      "    write: [Customer]",
+    );
+    expect(changed(authText, ok("grant", ["sales", "create"]).files.auth as string)).toEqual({
       added: [],
-      removed: ["    allow: [admin]"],
+      removed: ["    create: all"],
     });
+    expect(
+      changed(authText, ok("grant", ["sales", "actions", "all"]).files.auth as string),
+    ).toEqual({
+      added: ["    actions: all"],
+      removed: [],
+    });
+    expect(ok("grant", ["sales", "actions", "mergeCustomers"]).description).toBe(
+      "sales may run merge customers",
+    );
   });
 
-  test("returning every operation to the default removes the model's access", () => {
-    const once = ok("setAccess", ["model:Order.write"]).files;
-    const twice = applyOperation({ ...files, spec: once.spec }, "setAccess", {
-      target: "model:Order.delete",
+  test("a role as a whole: all, none, and a grant that takes it out of all", () => {
+    const all = ok("grant", ["sales", "all"]).files.auth;
+    expect(all).toContain("  sales: all\n");
+    const less = applyOperation({ ...files, auth: all }, "grant", {
+      role: "sales",
+      what: "delete",
+      names: ["Order"],
     });
-    if (!twice.ok) throw new Error(twice.message);
-    expect(changed(files.spec, twice.files.spec).removed.sort()).toEqual([
-      "      delete: [admin]",
-      "      write: [sales]",
-      "    access:",
-    ]);
+    if (!less.ok) throw new Error(less.message);
+    expect(less.files.auth).toContain(
+      "  sales:\n    pages: all\n    read: all\n    create: all\n    write: all\n    actions: all\n    delete: [Order]\n",
+    );
+    expect(ok("grant", ["sales", "none"]).files.auth).toContain(
+      "  sales:\n    description: Works with customers and orders.\n",
+    );
   });
 
-  test("unknown targets and roles are refused", () => {
-    expect(apply("setAccess", ["model:Customer.remove", "admin"])).toMatchObject({
+  test("unknown roles, grants and names are refused; administrators are not granted", () => {
+    expect(apply("grant", ["sale", "write", "Customer"])).toMatchObject({
       ok: false,
-      message: expect.stringContaining("model:Customer.delete"),
+      message: 'There is no role named "sale": setRoles adds one.',
     });
-    expect(apply("setAccess", ["page:custmers", "admin"])).toMatchObject({
+    expect(apply("grant", ["sales", "edit", "Customer"])).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('"pages", "read", "create", "write", "delete", "actions"'),
+    });
+    expect(apply("grant", ["sales", "pages", "custmers"])).toMatchObject({
       ok: false,
       message: 'There is no page named "custmers". Did you mean "customers"?',
     });
-    const unknownRole = apply("setAccess", ["model:Customer.delete", "sale"]);
-    expect(unknownRole.ok).toBe(false);
-    if (!unknownRole.ok)
-      expect(unknownRole.diagnostics.map((d) => [d.code, d.hint])).toEqual([
-        ["unknown-role", 'Did you mean "sales"?'],
-      ]);
+    expect(apply("grant", ["admin", "write", "Customer"])).toMatchObject({ ok: false });
   });
 });
 
@@ -471,12 +477,15 @@ test("editSpec takes a companion file too, checked as a whole and against the sp
   });
   expect(added.ok && added.files.auth).toContain("support:");
   expect(added.ok && added.files.spec).toBe(files.spec);
-  // A role the spec names cannot go: the spec is checked with the roles as edited.
+  // A grant that names nothing in the spec: the file is checked against the spec as edited.
   const gone = applyOperation(files, "editSpec", {
     file: "smithable.auth.yml",
-    text: files.auth.replace(/^ {2}sales:.*\n/m, ""),
+    text: files.auth.replace("write: all", "write: [Custmer]"),
   });
-  expect(gone).toMatchObject({ ok: false, message: "editSpec would make smithable.yml invalid." });
+  expect(gone).toMatchObject({
+    ok: false,
+    message: "editSpec would make smithable.auth.yml invalid.",
+  });
   // The file's own checks, and its YAML.
   expect(
     applyOperation(files, "editSpec", {

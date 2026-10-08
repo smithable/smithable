@@ -280,7 +280,7 @@ ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { w
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.allow ? ", among the roles it allows" : ""}${action.add ? ", and may create what it adds" : ""}. */
+/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.add ? ", and may create what it adds" : ""}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Whether the "${action.name}" action fits the ${n.label.toLowerCase()}: it is offered and allowed only then. */

@@ -140,6 +140,8 @@ export interface KeyRules {
   later?: readonly string[];
   /** Keys holding visible text, which belongs in smithable.content.yml. */
   content?: readonly string[];
+  /** Keys that moved to another file: key → where it is said now. */
+  moved?: Readonly<Record<string, string>>;
 }
 
 /** Reports keys that are not allowed, with a tailored message. Returns the allowed entries. */
@@ -152,6 +154,12 @@ export function checkKeys(ctx: ParseContext, entries: Entry[], where: string, ru
         keyNode,
         "not-yet-supported",
         `"${key}" in ${where} is not available in spec version 0.1 yet.`,
+      );
+    } else if (rules.moved && key in rules.moved) {
+      ctx.error(
+        keyNode,
+        "moved-key",
+        `"${key}" in ${where} is not in smithable.yml any more: ${rules.moved[key]}`,
       );
     } else if (rules.content?.includes(key)) {
       ctx.error(

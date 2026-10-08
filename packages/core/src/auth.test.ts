@@ -24,7 +24,6 @@ app: { name: X }
 models:
   Customer:
     fields: { name: string!, email: email, manager: User }
-    access: { delete: [admin] }
   Note:
     fields: { text: string }
 pages:
@@ -50,7 +49,7 @@ describe("the examples", () => {
     expect(auth.auth).toMatchSnapshot();
   });
 
-  test("CRM: sales edit customers and orders, only admins delete or merge", () => {
+  test("CRM: sales edit anyone's customers and orders, delete their own, and only admins merge", () => {
     const { ir, auth } = load(
       examples["../../../examples/crm/smithable.yml"] as string,
       examples["../../../examples/crm/smithable.auth.yml"] as string,
@@ -60,12 +59,13 @@ describe("the examples", () => {
     expect(customer).toEqual({
       read: { public: false, roles: ["admin", "sales"], owner: false },
       create: { public: false, roles: ["admin", "sales"], owner: false },
-      write: { public: false, roles: ["admin", "sales"], owner: false },
-      delete: { public: false, roles: ["admin"], owner: false },
+      write: { public: false, roles: ["admin", "sales"], owner: true },
+      delete: { public: false, roles: ["admin"], owner: true },
     });
+    // A custom action is run by the roles whose "actions" grant names it: here nobody but admins.
     const merge = (ir as SpecIR).actions[0] as SpecIR["actions"][0];
     expect(actionAccess(merge, a).roles).toEqual(["admin"]);
-    // A standard action follows the model's write access; "allow" narrows it, never widens it.
+    // A standard action follows the model's write access.
     const models = (ir as SpecIR).models;
     const archive: StandardActionIR = {
       name: "archive",
@@ -75,7 +75,6 @@ describe("the examples", () => {
       set: [],
     };
     expect(actionAccess(archive, a, models)).toEqual(customer.write);
-    expect(actionAccess({ ...archive, allow: ["support"] }, a, models).roles).toEqual(["admin"]);
     const order = { ...archive, on: "Order" };
     expect(actionAccess(order, a, models)).toEqual(
       modelAccess(models.find((m) => m.name === "Order") as SpecIR["models"][0], a).write,
@@ -113,7 +112,10 @@ describe("smithable.auth.yml", () => {
     expect(auth.auth).toEqual({
       signIn: { providers: ["google"], selfSignUp: true },
       defaultAccess: "private",
-      roles: [{ name: "admin" }, { name: "member" }],
+      roles: [
+        { name: "admin", grants: "all" },
+        { name: "member", grants: {} },
+      ],
       defaultRole: "member",
       admins: [],
       public: { pages: [], read: [], create: [], readWhere: {} },
@@ -137,6 +139,8 @@ public: { pages: [customer], read: [Customers], write: [Note] }
       "error unknown-provider",
       "error invalid-domain",
       "error missing-key",
+      "warning role-opens-nothing",
+      "warning role-opens-nothing",
       "error invalid-name",
       "error invalid-email",
       "error unknown-page",
@@ -150,13 +154,17 @@ public: { pages: [customer], read: [Customers], write: [Note] }
       codes(
         "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic: { read: [Customer, Note] }\n",
       ),
-    ).toEqual(["warning open-shared-access", "warning public-personal-data"]);
+    ).toEqual([
+      "warning role-opens-nothing",
+      "warning open-shared-access",
+      "warning public-personal-data",
+    ]);
   });
 
   test("closed sign-up needs a users page, and a users page needs sign-in", () => {
     const team = `${SPEC}  team: { users: manage }\n`;
     const closed =
-      "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: false }\ndefaultAccess: shared\nadmins: [owner@studio.ax]\n";
+      "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: false }\ndefaultAccess: shared\nroles: { admin: all, member: { pages: all } }\nadmins: [owner@studio.ax]\n";
     expect(codes(closed)).toEqual(["error no-users-page"]);
     const { auth, ir } = load(team, closed);
     expect(auth.diagnostics).toEqual([]);
@@ -184,7 +192,7 @@ public: { pages: [customer], read: [Customers], write: [Note] }
       codes(
         "smithableAuth: 0.1\nsignIn: { providers: [google], selfSignUp: maybe }\ndefaultAccess: private\n",
       ),
-    ).toEqual(["error expected-boolean"]);
+    ).toEqual(["warning role-opens-nothing", "error expected-boolean"]);
   });
 
   test("without sign-in, users cannot be referred to and only public pages open", () => {
@@ -195,14 +203,78 @@ public: { pages: [customer], read: [Customers], write: [Note] }
     ]);
   });
 
-  test("roles used in smithable.yml must exist", () => {
-    const spec = SPEC.replace("delete: [admin]", "delete: [amdin]");
+  test("a role's grants name pages, models and custom actions that exist", () => {
+    const { auth } = load(
+      `${SPEC}actions:\n  archive: { on: Customer, set: { name: x } }\n`,
+      `smithableAuth: 0.1
+signIn: { providers: [google] }
+defaultAccess: shared
+roles:
+  admin: all
+  sales: { pages: [custmers], write: [Customr], actions: [archive, merge], read: [Note] }
+  viewer: { description: Looks. }
+defaultRole: sales
+`,
+    );
+    expect(auth.diagnostics.map((d) => [d.severity, d.code, d.hint])).toEqual([
+      [
+        "warning",
+        "open-shared-access",
+        'Restrict sign-in with "allowedDomains" or "selfSignUp: false" under "signIn", or use "defaultAccess: private".',
+      ],
+      ["error", "unknown-page", 'Did you mean "customers"?'],
+      ["error", "unknown-model", 'Did you mean "Customer"?'],
+      ["error", "standard-action-grant", 'Grant sales "write" on its model instead.'],
+      ["error", "unknown-custom-action", undefined],
+      [
+        "warning",
+        "read-with-shared",
+        'Remove it, or use "defaultAccess: private" and grant reading to the roles that read everyone\'s records.',
+      ],
+      [
+        "warning",
+        "role-opens-nothing",
+        'Add "pages: all" (or a list of pages) under roles.viewer in smithable.auth.yml.',
+      ],
+    ]);
+  });
+
+  test("who may do what is not said in smithable.yml any more", () => {
+    const spec = `${SPEC.replace("fields: { text: string }", "fields: { text: string }\n    access: { write: [admin] }")}  team: { users: manage, access: [admin] }
+actions:
+  merge: { custom: true, input: {}, allow: [admin] }
+`;
     const { diagnostics } = load(
       spec,
       "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\n",
     );
-    expect(diagnostics.map((d) => [d.code, d.hint])).toEqual([
-      ["unknown-role", 'Did you mean "admin"?'],
+    expect(diagnostics.map((d) => d.code)).toEqual(["moved-key", "moved-key", "moved-key"]);
+    expect(diagnostics[0]?.message).toContain("roles.<role>.write: [Note]");
+  });
+
+  test("a role is all, or a block; administrators are always all", () => {
+    const parsed = (roles: string) =>
+      validateAuth({
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles:\n${roles}`,
+      });
+    expect(parsed("  admin: all\n  staff: all\n").auth?.roles).toEqual([
+      { name: "admin", grants: "all" },
+      { name: "staff", grants: "all" },
+    ]);
+    expect(
+      parsed("  admin: { description: Runs it. }\n  staff: { pages: all, create: [Note] }\n").auth
+        ?.roles,
+    ).toEqual([
+      { name: "admin", grants: "all", description: "Runs it." },
+      { name: "staff", grants: { pages: "all", create: ["Note"] } },
+    ]);
+    expect(parsed("  admin: { pages: all }\n").diagnostics.map((d) => d.code)).toEqual([
+      "invalid-key",
+    ]);
+    expect(parsed("  staff: some\n").diagnostics.map((d) => d.code)).toEqual(["invalid-value"]);
+    expect(parsed("  staff: { write: Note }\n").diagnostics.map((d) => d.code)).toEqual([
+      "expected-list",
     ]);
   });
 });
@@ -239,7 +311,6 @@ app: { name: X }
 models:
   Message:
     fields: { name: string!, email: email, message: text! }
-    access: { read: [admin] }
 outgoing:
   thanks: { when: Message created, to: mail, recipient: email }
   told: { when: Message created, to: mail, recipient: staff }
@@ -311,40 +382,7 @@ pages:
   expect(codes("items")).not.toContain("mine-public");
 });
 
-test("a role a standard action allows but that may not edit the record is warned about", () => {
-  const ir = validateSpec({
-    path: "smithable.yml",
-    text: `smithable: 0.1
-app: { name: Status }
-models:
-  Incident:
-    fields: { title: string!, status: open | resolved }
-    access: { write: [staff] }
-actions:
-  resolve:
-    on: Incident
-    set: { status: resolved }
-    allow: [staff, viewer]
-`,
-  }).ir;
-  const { diagnostics } = validateAuth(
-    {
-      path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, staff: {}, viewer: {} }\n",
-    },
-    ir,
-  );
-  expect(diagnostics.filter((d) => d.code === "action-role-cannot-write")).toMatchObject([
-    {
-      line: 4,
-      message: expect.stringContaining(
-        'The action "resolve" allows viewer, but viewer may not edit Incident records',
-      ),
-    },
-  ]);
-});
-
-test("a standard action's allow narrows who may run it, and the record's owner still counts", () => {
+test("a standard action is run by whoever may change the record: a role granted write, or the owner", () => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -357,24 +395,30 @@ actions:
     on: Booking
     when: { status: booked }
     set: { status: canceled }
-    allow: [member]
 `,
   }).ir as SpecIR;
-  const { auth, diagnostics } = validateAuth(
-    {
-      path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: {}, member: {}, guest: {} }\ndefaultRole: member\n",
-    },
-    ir,
-  );
-  // Members write their own bookings: allowed, a member cancels their own; a guest does not.
-  expect(actionAccess(ir.actions[0] as SpecIR["actions"][0], auth as AuthIR, ir.models)).toEqual({
+  const access = (roles: string) =>
+    actionAccess(
+      ir.actions[0] as SpecIR["actions"][0],
+      validateAuth(
+        {
+          path: "smithable.auth.yml",
+          text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles:\n${roles}defaultRole: member\n`,
+        },
+        ir,
+      ).auth as AuthIR,
+      ir.models,
+    );
+  // Members cancel their own bookings; staff anyone's; a guest none.
+  expect(access("  admin: all\n  member: { create: [Booking] }\n  guest: {}\n")).toEqual({
     public: false,
     roles: ["admin"],
     owner: true,
-    among: ["admin", "member"],
   });
-  expect(diagnostics.filter((d) => d.code === "action-role-cannot-write")).toEqual([]);
+  expect(access("  admin: all\n  staff: { write: [Booking] }\n  member: {}\n").roles).toEqual([
+    "admin",
+    "staff",
+  ]);
 });
 
 test("an administrator outside allowedDomains is warned about: nobody else from their domain may sign in", () => {
@@ -406,7 +450,7 @@ test("allowedDomains on a domain nobody has is warned about, instead of the admi
   ]);
 });
 
-test("an action that adds a related record needs the right to create one, and a listed role without it is warned about", () => {
+test("an action that adds a related record needs the right to create one", () => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -414,37 +458,29 @@ app: { name: Status }
 models:
   Incident:
     fields: { title: string!, status: open | resolved, updates: "Update[]" }
-    access: { write: [admin, staff, viewer] }
   Update:
     fields: { incident: Incident!, message: text! }
-    access: { create: [admin, staff] }
 actions:
   resolve:
     on: Incident
     set: { status: resolved }
     add:
       Update: { message: Resolved. }
-    allow: [staff, viewer]
 `,
   }).ir as SpecIR;
-  const { auth, diagnostics } = validateAuth(
+  const { auth } = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, staff: {}, viewer: {} }\ndefaultRole: staff\n",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, staff: { write: [Incident], create: [Update] }, viewer: { write: [Incident] } }\ndefaultRole: staff\n",
     },
     ir,
   );
-  expect(
-    actionAccess(ir.actions[0] as SpecIR["actions"][0], auth as AuthIR, ir.models),
-  ).toMatchObject({
+  // A viewer may change incidents but not add updates, so the action is staff's (and the owner's).
+  expect(actionAccess(ir.actions[0] as SpecIR["actions"][0], auth as AuthIR, ir.models)).toEqual({
+    public: false,
     roles: ["admin", "staff"],
-    among: ["admin", "staff"],
+    owner: true,
   });
-  expect(
-    diagnostics.filter((d) => d.code === "action-role-cannot-create").map((d) => d.message),
-  ).toEqual([
-    'The action "resolve" allows viewer and adds a Update, but viewer may not create Update records, so viewer still cannot run it.',
-  ]);
 });
 
 test("a public page that shows records visitors may not read is warned about", () => {
