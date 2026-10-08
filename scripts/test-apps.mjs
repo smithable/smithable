@@ -3922,6 +3922,44 @@ async function browserFlow(dir, base) {
       "Invitation to new.person@example.com written to the preview's outbox, not sent",
     );
 
+    // Removing a member whom records name gives them to another (backlog A56): a customer's
+    // account manager goes to the member chosen in the remove dialog, with the removal.
+    await signInAs(page, base, "sales");
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers`);
+    await page.getByRole("cell", { name: "Arctic Outdoor Co", exact: true }).click();
+    await chooseRecord(page, "Account manager", "Dev sales");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.waitForURL(`${base}/customers`);
+    await open(page, `${base}/team`);
+    await page
+      .locator("tr", { hasText: "Dev sales" })
+      .getByRole("button", { name: "Remove" })
+      .filter({ visible: true })
+      .click();
+    const removeDialog = page.getByRole("dialog");
+    await removeDialog.getByText("1 customer has Dev sales as account manager.").waitFor();
+    await removeDialog
+      .getByRole("combobox", { name: "Give them to" })
+      .selectOption({ label: "Dev admin" });
+    await removeDialog.getByRole("button", { name: "Remove user" }).click();
+    await page
+      .locator("tr", { hasText: "Dev sales" })
+      .waitFor({ state: "detached", timeout: 10000 });
+    const managed = query(
+      dir,
+      "select u.name from customers c join user u on u.id = c.account_manager_id where c.name = 'Arctic Outdoor Co'",
+    );
+    const moved = query(
+      dir,
+      "select count(*) as n from audit_log where action = 'records reassigned'",
+    );
+    if (managed[0]?.name !== "Dev admin" || moved[0]?.n !== 1)
+      throw new Error(`reassigned: ${JSON.stringify(managed)} ${JSON.stringify(moved)}`);
+    console.log(
+      "  ✓ browser: removing a member says which records name them and gives them to the member chosen, in one change with its Activity line",
+    );
+
     await open(page, `${base}/orders/new`);
     await page.getByRole("textbox", { name: "Number *" }).fill("ORD-2001");
     await chooseRecord(page, "Customer *", "Skerry Software");

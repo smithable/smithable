@@ -4990,6 +4990,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -5140,14 +5141,41 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Project", field: null, noun: ["project", "projects"], required: false, count: db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).all().length },
+    { model: "Task", field: "assignee", noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.assigneeId, userId)).all().length },
+    { model: "Task", field: null, noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.ownerId, userId)).all().length },
+    { model: "Note", field: null, noun: ["note", "notes"], required: false, count: db.select({ id: schema.notes.id }).from(schema.notes).where(eq(schema.notes.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -5166,12 +5194,29 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
         .returning()
         .all())
         audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });
+
+      {
+        const moved = tx.update(schema.projects).set({ ownerId: heir?.id ?? null }).where(eq(schema.projects.ownerId, userId)).returning({ id: schema.projects.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Project", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.tasks).set({ assigneeId: heir?.id ?? null }).where(eq(schema.tasks.assigneeId, userId)).returning({ id: schema.tasks.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Task", details: { column: "assigneeId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.tasks).set({ ownerId: heir?.id ?? null }).where(eq(schema.tasks.ownerId, userId)).returning({ id: schema.tasks.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Task", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.notes).set({ ownerId: heir?.id ?? null }).where(eq(schema.notes.ownerId, userId)).returning({ id: schema.notes.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Note", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -7397,6 +7442,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";
@@ -7458,10 +7504,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -7504,7 +7554,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -7967,7 +8018,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.server.ts": "ba2e6162 generated",
   "src/generated/task.ts": "6326dfd1 generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
-  "src/generated/users.server.ts": "d819e564 generated",
+  "src/generated/users.server.ts": "1354a6fb generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
@@ -7986,7 +8037,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "17900588 kit",
-  "src/kit/Users.tsx": "30da499e kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "de99ef82 kit",
@@ -8011,7 +8062,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -8053,7 +8104,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "efde7e0b generated",
   "src/routes/team/activity.tsx": "1a9c5e5b generated",
-  "src/routes/team/index.tsx": "15ce08b3 generated",
+  "src/routes/team/index.tsx": "5dc59d41 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
@@ -15917,7 +15968,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -17889,6 +17940,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -18039,14 +18091,39 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Customer", field: "account manager", noun: ["customer", "customers"], required: false, count: db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.accountManagerId, userId)).all().length },
+    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -18057,12 +18134,21 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
     throw new Error("The last administrator cannot be removed.");
   try {
     db.transaction((tx) => {
+
+      {
+        const moved = tx.update(schema.customers).set({ accountManagerId: heir?.id ?? null }).where(eq(schema.customers.accountManagerId, userId)).returning({ id: schema.customers.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Customer", details: { column: "accountManagerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.orders).set({ ownerId: heir?.id ?? null }).where(eq(schema.orders.ownerId, userId)).returning({ id: schema.orders.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Order", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -19620,6 +19706,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { guardPage } from "#/kit/access";
@@ -19660,10 +19747,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -19706,7 +19797,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -20182,7 +20274,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.server.ts": "869281e1 generated",
   "src/generated/order.ts": "92cb572d generated",
   "src/generated/pages.ts": "1660cc3e generated",
-  "src/generated/users.server.ts": "32ba704b generated",
+  "src/generated/users.server.ts": "432e3193 generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -20200,7 +20292,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Trash.tsx": "a4260a36 kit",
-  "src/kit/Users.tsx": "30da499e kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -20217,7 +20309,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -20240,7 +20332,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "2d049a58 generated",
   "src/routes/team/activity.tsx": "95063ee2 generated",
-  "src/routes/team/index.tsx": "8bb93f44 generated",
+  "src/routes/team/index.tsx": "c14e68a6 generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
@@ -25263,7 +25355,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -28210,7 +28302,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
@@ -30335,7 +30427,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -35656,6 +35748,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -35806,14 +35899,41 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Component", field: null, noun: ["component", "components"], required: false, count: db.select({ id: schema.components.id }).from(schema.components).where(eq(schema.components.ownerId, userId)).all().length },
+    { model: "Incident", field: null, noun: ["incident", "incidents"], required: false, count: db.select({ id: schema.incidents.id }).from(schema.incidents).where(eq(schema.incidents.ownerId, userId)).all().length },
+    { model: "IncidentUpdate", field: null, noun: ["incident update", "incident updates"], required: false, count: db.select({ id: schema.incidentUpdates.id }).from(schema.incidentUpdates).where(eq(schema.incidentUpdates.ownerId, userId)).all().length },
+    { model: "Maintenance", field: null, noun: ["maintenance", "maintenances"], required: false, count: db.select({ id: schema.maintenances.id }).from(schema.maintenances).where(eq(schema.maintenances.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -35832,12 +35952,29 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
         .returning()
         .all())
         audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });
+
+      {
+        const moved = tx.update(schema.components).set({ ownerId: heir?.id ?? null }).where(eq(schema.components.ownerId, userId)).returning({ id: schema.components.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Component", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.incidents).set({ ownerId: heir?.id ?? null }).where(eq(schema.incidents.ownerId, userId)).returning({ id: schema.incidents.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Incident", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.incidentUpdates).set({ ownerId: heir?.id ?? null }).where(eq(schema.incidentUpdates.ownerId, userId)).returning({ id: schema.incidentUpdates.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "IncidentUpdate", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.maintenances).set({ ownerId: heir?.id ?? null }).where(eq(schema.maintenances.ownerId, userId)).returning({ id: schema.maintenances.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Maintenance", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -38270,6 +38407,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";
@@ -38326,10 +38464,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -38372,7 +38514,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -39122,7 +39265,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/mcp.server.ts": "a3ccdc68 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "2b5c39fa generated",
+  "src/generated/users.server.ts": "d37db4cf generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
@@ -39144,7 +39287,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "373ac173 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
-  "src/kit/Users.tsx": "30da499e kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
@@ -39167,7 +39310,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "5571461e kit",
+  "src/kit/words.ts": "2143c319 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",
@@ -39203,7 +39346,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sign-in.tsx": "86edddef generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "fb17a3c3 generated",
-  "src/routes/team/index.tsx": "df9523be generated",
+  "src/routes/team/index.tsx": "f6b29206 generated",
   "src/routes/updates/$id.tsx": "be12a96a generated",
   "src/routes/updates/index.tsx": "27093f7a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
