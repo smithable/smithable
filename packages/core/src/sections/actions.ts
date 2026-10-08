@@ -7,7 +7,6 @@ import {
   type ParseContext,
   readBoolean,
   readNameList,
-  readRoleList,
   readString,
 } from "../context.js";
 import {
@@ -269,17 +268,17 @@ function readAction(
       "add",
       "copy",
       "with",
-      "allow",
       ...TEXT_KEYS,
     ],
     later: ["confirm", "examples"],
     content: ["label", "title"],
+    moved: {
+      allow: `who may run ${name} is said by the roles in smithable.auth.yml: a custom action under roles.<role>.actions, a standard one by "write" on its model.`,
+    },
   });
   const byKey = new Map(known.map((e) => [e.key, e]));
-  const allow = byKey.get("allow");
   const common = {
     name,
-    ...(allow ? { allow: readRoleList(ctx, allow.value, `"allow" of ${where}`, false) } : {}),
     ...readSemanticText(ctx, known),
   };
   const custom = byKey.get("custom");
@@ -328,7 +327,7 @@ function readStandardAction(
   keyNode: ParsedNode,
   byKey: Map<string, Entry>,
   models: ModelIR[],
-  common: Pick<StandardActionIR, "name" | "allow" | keyof SemanticText>,
+  common: Pick<StandardActionIR, "name" | keyof SemanticText>,
 ): StandardActionIR | undefined {
   for (const key of ["input", "output"]) {
     const entry = byKey.get(key);

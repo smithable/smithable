@@ -86,7 +86,7 @@ describe("buildIndex", () => {
   test("a concept has its meaning, rules with status, files, routes and tests", () => {
     const action = inspect(index, "action:mergeCustomers");
     expect(action?.summary).toBe(
-      "Custom action mergeCustomers(keep: Customer!, duplicate: Customer!); allowed for admin",
+      "Custom action mergeCustomers(keep: Customer!, duplicate: Customer!)",
     );
     expect(action?.intent).toBe("Merge a duplicate customer record into the one we keep.");
     expect(action?.rules[0]).toEqual({

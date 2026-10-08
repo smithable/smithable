@@ -20,7 +20,6 @@ models:
     fields: { name: string!, phone: phone }
   Message:
     fields: { name: string!, email: email! }
-    access: { read: [admin] }
 pages:
   home: { route: /, landing: { hero: {}, footer: {} } }
   privacy: { route: /privacy, legal: privacy }
@@ -29,7 +28,7 @@ pages:
   const auth = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\npublic: { pages: [home, privacy], read: [Instructor] }\n",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy], read: [Instructor] }\n",
     },
     ir,
   ).auth as AuthIR;

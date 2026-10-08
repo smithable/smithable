@@ -29,7 +29,7 @@ if (prompt.includes('does not know the section "newsletter"')) {
           fields: { email: "email! unique", ...(lists.length > 1 ? { list: lists.join(" | ") } : {}) },
         },
       },
-      pages: { subscribers: { crud: "Subscriber", access: ["admin"] } },
+      pages: { subscribers: { crud: "Subscriber" } },
     };
   },
   generate(value) {

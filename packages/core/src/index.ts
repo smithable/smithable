@@ -22,11 +22,21 @@ export type {
   ApiOffers,
   AssistantIR,
   AuthIR,
+  GrantKey,
+  GrantNames,
   Provider,
+  RoleGrants,
   RoleIR,
   SignInIR,
 } from "./auth.js";
-export { AUTH_VERSION, apiOffers, PROVIDERS, reservedDomain, validateAuth } from "./auth.js";
+export {
+  AUTH_VERSION,
+  apiOffers,
+  GRANT_KEYS,
+  PROVIDERS,
+  reservedDomain,
+  validateAuth,
+} from "./auth.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export { defaultColumns } from "./columns.js";
 export { AUTH_SCHEMA, COMPANION_SCHEMAS, CONTENT_SCHEMA, UX_SCHEMA } from "./companion-schemas.js";

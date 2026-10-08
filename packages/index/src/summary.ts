@@ -5,6 +5,7 @@ import {
   capitalize,
   emptyContent,
   type FieldIR,
+  type GrantNames,
   humanize,
   type LandingSection,
   type ModelIR,
@@ -12,8 +13,10 @@ import {
   type PageIR,
   type PatternKind,
   type PatternOf,
+  pageAccess,
   pageModel,
   plural,
+  type RoleIR,
   type SpecIR,
   type SpecPlugin,
   type StandardActionIR,
@@ -48,8 +51,6 @@ export const KINDS: Record<string, string> = {
   phone: "a phone number",
   url: "a web address",
 };
-
-const VERBS = { read: "see", create: "add", write: "change", delete: "delete" };
 
 /** The fields every record has, as a list's search, filters and sort say them. */
 const AUTOMATIC: Record<string, string> = {
@@ -92,8 +93,10 @@ export function summarize(
       const filtered = labels(p.filters);
       const sorted = labels(p.sortable);
       // A page only some roles open may list records visitors still see elsewhere: say where.
+      const opens = auth ? pageAccess(p, auth).roles : [];
+      const narrowed = auth !== undefined && opens.length < auth.roles.length;
       const shown =
-        model && p.access && auth?.public.read.includes(model.name)
+        model && narrowed && auth?.public.read.includes(model.name)
           ? ir.pages.filter(
               (o) =>
                 o.pattern.kind === "landing" &&
@@ -117,7 +120,7 @@ export function summarize(
             : "",
         p.contact ? contactWords(p.contact, model, fieldLabel) : "",
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
-        p.access ? `only for ${who(p.access)}` : "",
+        narrowed ? `only for ${who(opens)}` : "",
         shown.length && model
           ? `visitors see ${pluralLabel(model).toLowerCase()} on the ${list(shown.map((o) => content.pages[o.id]?.title ?? humanize(o.id)))} page`
           : "",
@@ -162,10 +165,6 @@ export function summarize(
     }
     const owner = model.fields.find((f) => f.name === model.ownedBy);
     if (owner) sentences.push(`The ${fieldLabel(model, owner)} owns the ${one}.`);
-    for (const [op, roles] of Object.entries(model.access ?? {})) {
-      const verb = VERBS[op as keyof typeof VERBS];
-      sentences.push(`${whoCan(roles, verb, pluralLabel(model).toLowerCase())}.`);
-    }
     if (model.capacity) {
       const per = model.fields.find((f) => f.name === model.capacity?.per);
       const target = per?.type.kind === "relation" ? per.type.model : model.capacity.per;
@@ -293,7 +292,6 @@ export function summarize(
         ...(action.custom
           ? [action.intent ?? action.description ?? "Custom code."]
           : standard(action)),
-        ...(action.allow ? [`Only ${who(action.allow)} can use it.`] : []),
         ...(action.rules ?? []).map((r) => `Rule: ${r.text}`),
       ],
     });
@@ -461,13 +459,13 @@ function access(auth: AuthIR): string[] {
     );
     sentences.push(
       auth.defaultAccess === "shared"
-        ? "Unless a kind of record says otherwise, everyone who signs in sees all records, and changes and deletes the ones they own."
-        : "Unless a kind of record says otherwise, everyone sees and changes only their own records.",
+        ? "Everyone who signs in sees all records, and changes and deletes the ones they own."
+        : "Everyone sees, changes and deletes only their own records.",
     );
     sentences.push("Roles:");
     for (const r of auth.roles)
       sentences.push(
-        `- ${r.description ? `${r.name} (${r.description.replace(/\.$/, "")})` : r.name}`,
+        `- ${r.description ? `${r.name} (${r.description.replace(/\.$/, "")})` : r.name}: ${grantWords(r)}`,
       );
     sentences.push(`New users get the ${auth.defaultRole} role.`);
   }
@@ -482,6 +480,33 @@ function access(auth: AuthIR): string[] {
   ];
   if (open.length) sentences.push(`Open to anyone without signing in: ${list(open)}.`);
   return sentences;
+}
+
+/** What a role may do beyond the record rule, as a clause: "opens every page; adds bookings". */
+function grantWords(role: RoleIR): string {
+  if (role.name === "admin" || role.grants === "all") return "everything";
+  const names = (g: GrantNames | undefined, one: (n: string) => string, every: string) =>
+    g === "all" ? every : g?.length ? list(g.map(one)) : undefined;
+  const kinds = (n: string) => humanize(plural(n)).toLowerCase();
+  const parts = [
+    ((p) => (p ? `opens ${p}` : undefined))(
+      names(role.grants.pages, (p) => `the ${humanize(p).toLowerCase()} page`, "every page"),
+    ),
+    ((m) => (m ? `sees everyone's ${m}` : undefined))(names(role.grants.read, kinds, "records")),
+    ((m) => (m ? `adds ${m}` : undefined))(
+      names(role.grants.create, kinds, "every kind of record"),
+    ),
+    ((m) => (m ? `changes everyone's ${m}` : undefined))(
+      names(role.grants.write, kinds, "records"),
+    ),
+    ((m) => (m ? `deletes everyone's ${m}` : undefined))(
+      names(role.grants.delete, kinds, "records"),
+    ),
+    ((a) => (a ? `runs ${a}` : undefined))(
+      names(role.grants.actions, (a) => `“${humanize(a)}”`, "every custom action"),
+    ),
+  ].filter((p): p is string => p !== undefined);
+  return parts.length ? parts.join("; ") : "only their own records";
 }
 
 /** Common abbreviations stay in capitals when a label is lowercased: "a VAT number". */

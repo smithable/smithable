@@ -7,8 +7,8 @@ signIn:
 defaultAccess: private             # each freelancer sees only their own data
 
 roles:
-  admin: { description: Invoicely staff. }
-  member: { description: A freelancer using Invoicely. }
+  admin: all
+  member: { description: A freelancer using Invoicely., pages: all, create: all }
 
 admins: [owner@invoicely.example]
 
