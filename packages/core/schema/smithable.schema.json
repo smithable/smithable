@@ -218,41 +218,6 @@
             "type": "string",
             "description": "A User field whose user owns the record, instead of its creator."
           },
-          "access": {
-            "type": "object",
-            "description": "Exceptions to the default access in smithable.auth.yml, e.g. { delete: [admin] }. \"owner\" is the record's owner.",
-            "additionalProperties": false,
-            "properties": {
-              "read": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "The roles that may see these records."
-              },
-              "create": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "The roles that may add these records."
-              },
-              "write": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "The roles that may change these records."
-              },
-              "delete": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "The roles that may delete these records."
-              }
-            }
-          },
           "trash": {
             "type": "boolean",
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
@@ -1028,13 +993,6 @@
               "type": "string"
             },
             "description": "Actions offered on the page, as buttons."
-          },
-          "access": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Only these roles may open the page (admins always can)."
           },
           "search": {
             "type": "array",

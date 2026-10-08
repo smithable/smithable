@@ -320,7 +320,7 @@ const CONFIG = {
 } as const;
 
 function parse(argv: string[]) {
-  // An operation's own arguments may be given by name (--output, --allow): `op` takes them as
+  // An operation's own arguments may be given by name (--output, --intent): `op` takes them as
   // words, so its options are not refused here (operationWords picks them out).
   const loose = parseArgs({ ...CONFIG, args: argv, strict: false });
   return (

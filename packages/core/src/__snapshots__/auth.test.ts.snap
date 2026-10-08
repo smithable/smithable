@@ -32,10 +32,19 @@ exports[`the examples > booking is valid with its auth file 1`] = `
   "roles": [
     {
       "description": "Studio staff. Manage the schedule, classes and teachers.",
+      "grants": "all",
       "name": "admin",
     },
     {
       "description": "A student who books classes.",
+      "grants": {
+        "create": [
+          "Booking",
+        ],
+        "pages": [
+          "my-bookings",
+        ],
+      },
       "name": "member",
     },
   ],
@@ -63,11 +72,16 @@ exports[`the examples > crm is valid with its auth file 1`] = `
   },
   "roles": [
     {
-      "description": "Sales management. Full access.",
+      "grants": "all",
       "name": "admin",
     },
     {
       "description": "Works with customers and orders.",
+      "grants": {
+        "create": "all",
+        "pages": "all",
+        "write": "all",
+      },
       "name": "sales",
     },
   ],
@@ -100,11 +114,15 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
   },
   "roles": [
     {
-      "description": "Invoicely staff.",
+      "grants": "all",
       "name": "admin",
     },
     {
       "description": "A freelancer using Invoicely.",
+      "grants": {
+        "create": "all",
+        "pages": "all",
+      },
       "name": "member",
     },
   ],

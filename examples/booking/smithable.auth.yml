@@ -6,11 +6,13 @@ signIn:
 
 defaultAccess: private             # members only see their own records
 
-roles:
+roles:                             # what each role may do, beyond their own records
   admin:
     description: Studio staff. Manage the schedule, classes and teachers.
   member:
     description: A student who books classes.
+    pages: [my-bookings]             # the public pages are open to everyone
+    create: [Booking]                # members book; the classes and sessions are the staff's
 
 admins: [owner@stillwater.example]
 

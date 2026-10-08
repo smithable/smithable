@@ -24,9 +24,6 @@ models:
       accountManager: User
       orders: Order[]                # every order that refers to this customer
     ownedBy: accountManager          # the account manager owns the customer
-    access:                          # exceptions to "shared" (see smithable.auth.yml)
-      write: [sales]                 # any salesperson may edit any customer
-      delete: [admin]
 
   Order:
     trash: true
@@ -48,15 +45,11 @@ models:
           - input: { total: 150, shippingMethod: express }
             expected: 15
       placedAt: datetime = NOW()
-    access:
-      write: [sales]
-      delete: [admin]
 
 actions:
   mergeCustomers:
     custom: true
     input: { keep: Customer!, duplicate: Customer! }
-    allow: [admin]
     intent: Merge a duplicate customer record into the one we keep.
     rules:
       - All orders of the duplicate move to the kept customer.

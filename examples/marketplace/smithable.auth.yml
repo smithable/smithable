@@ -7,8 +7,8 @@ signIn:
 defaultAccess: private             # people change only their own items
 
 roles:
-  admin: { description: Keeps the marketplace tidy. }
-  member: { description: Sells and saves items. }
+  admin: all
+  member: { description: Sells and saves items., pages: all, create: all }
 
 defaultRole: member
 admins: [owner@torget.example]

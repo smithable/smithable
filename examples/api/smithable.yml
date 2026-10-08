@@ -13,10 +13,6 @@ models:
       description: text
       tasks: Task[]
       notes: Note[]
-    access:
-      create: [admin, member]
-      write: [admin, member]
-      delete: [admin, member]
   Task:
     fields:
       title: string!
@@ -25,25 +21,18 @@ models:
       dueDate: date
       assignee: User
       details: text
-    access:
-      delete: [admin, member]
-      write: [admin, member, assistant]
   Note:
     fields:
       title: string!
       project: Project!
       body: text
       attachment: file                 # a document the note is about, sent through the API too
-    access:
-      delete: [admin, member]
-      write: [admin, member, assistant]
 pages:
   team:
     users: manage
   admin:
     route: /admin
     data: all
-    access: [admin, member]
 actions:
   complete:
     on: Task

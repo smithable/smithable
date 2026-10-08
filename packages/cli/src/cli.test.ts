@@ -94,7 +94,7 @@ test("__complete offers commands, options and operations", async () => {
   const ops = captureIo();
   await run(["__complete", "--", "op", "--", "add"], ops);
   expect(ops.stdout).toContain("addField\n");
-  expect(ops.stdout).not.toContain("setAccess");
+  expect(ops.stdout).not.toContain("grant");
 });
 
 test("a new project's administrator is the one given, never the starter's sample", () => {

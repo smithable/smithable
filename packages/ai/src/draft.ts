@@ -98,8 +98,8 @@ signIn:
   providers: [email]
 defaultAccess: shared
 roles:
-  admin: { description: Runs the app. }
-  agent: { description: Handles tickets. }
+  admin: all
+  agent: { description: Handles tickets., pages: all, create: all, write: [Ticket] }
 defaultRole: agent
 public:
   pages: [home]

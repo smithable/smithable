@@ -61,11 +61,17 @@
     },
     "roles": {
       "type": "object",
-      "description": "The roles, by name (camelCase), each with an optional description. admin always exists, and so does a role for everyone else: member, when none is named.",
+      "description": "The roles, by name (camelCase): all (the whole app; always admin's), or a block with a description and what the role may do beyond the record rule. admin always exists, and so does a role for everyone else: member, when none is named.",
       "additionalProperties": {
         "oneOf": [
           {
             "type": "null"
+          },
+          {
+            "enum": [
+              "all"
+            ],
+            "description": "The whole app."
           },
           {
             "type": "object",
@@ -74,6 +80,102 @@
               "description": {
                 "type": "string",
                 "description": "What the role is for, in a sentence."
+              },
+              "pages": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Pages the role may open; all is every page but the administrators'."
+              },
+              "read": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Models whose every record the role reads (with private access)."
+              },
+              "create": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Models the role may add records of."
+              },
+              "write": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Models whose every record the role may change."
+              },
+              "delete": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Models whose every record the role may delete."
+              },
+              "actions": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Custom actions the role may run (a standard action follows write)."
               }
             }
           }

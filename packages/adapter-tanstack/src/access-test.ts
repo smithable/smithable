@@ -140,6 +140,8 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const title = role === null ? "a visitor who has not signed in" : role;
       const own = role !== null;
+      // Changing a stranger's record keeps it the stranger's: with the owner in a field
+      // (ownedBy), setting it to the viewer would make "delete others" a delete of their own.
       return `  test(${JSON.stringify(title)}, async () => {
     const viewer = ${viewer};
     const others = insert${model.name}(${signedIn ? "stranger.id" : "null"}${fits});
@@ -147,7 +149,7 @@ ${own ? `    const own = insert${model.name}(viewer.id${fits});\n` : ""}    expe
       readOthers: await reads(${data}, viewer, others.id),
       readOwn: ${own ? `await reads(${data}, viewer, own.id)` : "false"},
       create: await can(() => ${data}.create(viewer, ${values}(${own ? "viewer.id" : "null"}))),
-      changeOthers: await can(() => ${data}.update(viewer, others.id, ${values}(${own ? "viewer.id" : "null"}))),
+      changeOthers: await can(() => ${data}.update(viewer, others.id, ${values}(${signedIn ? "stranger.id" : "null"}))),
       changeOwn: ${own ? `await can(() => ${data}.update(viewer, own.id, ${values}(viewer.id)))` : "false"},
       deleteOthers: await can(() => ${data}.remove(viewer, others.id)),
       deleteOwn: ${own ? `await can(() => ${data}.remove(viewer, own.id))` : "false"},
@@ -290,9 +292,7 @@ ${tests.join("\n\n")}
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const can = expected(access, role);
       const listed = role !== null && allowed.roles.includes(role);
-      // As an owner, only with a role "allow" names (when it names any).
-      const asOwner =
-        role !== null && allowed.owner && (!allowed.among || allowed.among.includes(role));
+      const asOwner = role !== null && allowed.owner;
       const othersOk = can.readOthers && listed;
       const ownOk = can.readOwn && (listed || asOwner);
       return `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {

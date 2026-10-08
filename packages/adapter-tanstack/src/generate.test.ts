@@ -298,7 +298,7 @@ pages:
   expect(files.some((f) => f.path === "src/kit/ActionButton.tsx")).toBe(true);
 });
 
-test("a standard action with allow on records their owners write: owners with a listed role run it on their own", () => {
+test("a standard action on records their owners write: each one runs it on their own, a role granted write on anyone's", () => {
   const spec = `smithable: 0.1
 app: { name: Studio }
 models:
@@ -309,12 +309,11 @@ actions:
     on: Booking
     when: { status: booked }
     set: { status: canceled }
-    allow: [member]
 pages:
   bookings: { crud: Booking, actions: [cancel] }
 `;
   const auth = authOf(
-    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: {}, member: {}, guest: {} }\ndefaultRole: member\n",
+    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, staff: { pages: all, read: [Booking], write: [Booking] }, member: { pages: all, create: [Booking] } }\ndefaultRole: member\n",
   );
   const files = generateApp(ir("smithable.yml", spec), { ...options, auth });
   const access = files.find((f) => f.path === "src/generated/access.test.ts")?.content ?? "";
@@ -324,11 +323,8 @@ pages:
       action,
     )?.[1] ?? "";
   expect(block("member")).toContain("toEqual({ others: false, own: true })");
-  expect(block("guest")).toContain("toEqual({ others: false, own: false })");
+  expect(block("staff")).toContain("toEqual({ others: true, own: true })");
   expect(block("admin")).toContain("toEqual({ others: true, own: true })");
-  expect(files.find((f) => f.path === "src/generated/actions/cancel.ts")?.content).toContain(
-    'among: ["admin", "member"]',
-  );
 });
 
 test("tables that refer to each other say their reference's type; an app without pages still type-checks", () => {

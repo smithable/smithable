@@ -29,7 +29,6 @@ models:
       total: money!
       placedOn: date
       rush: bool
-    access: { write: [sales], delete: [admin] }
 actions:
   ship:
     on: Order
@@ -45,7 +44,7 @@ const authOf = (rest: string) => {
   const read = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {}, viewer: {} }\ndefaultRole: viewer\n${rest}`,
+      text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all, create: all, write: [Order] }, viewer: { pages: all } }\ndefaultRole: viewer\n${rest}`,
     },
     ir,
   );
@@ -93,15 +92,15 @@ test("a few tools whatever the app, and a line per kind of record the caller may
 
 test("the tools follow the role: no changing where it may not, deleting only where the spec and the role both say so", () => {
   const plain = authOf("api: { models: all, actions: all, assistants: true }\n");
-  // A viewer may read everything (shared) and add, but an order is changed by sales only.
+  // A viewer may read everything (shared), add, and change their own records; sales anyone's orders.
   const viewer = assistantOffer(ir, plain, { role: "viewer" });
-  expect(kindsOf(viewer, "change")).toEqual(["Customer"]);
+  expect(kindsOf(viewer, "change")).toEqual(["Customer", "Order"]);
   expect(names(viewer.tools)).not.toContain("delete");
   // Deleting is offered only with the line in the spec, and then only for what the role may delete.
   const deleting = authOf("api: { models: all, assistants: { delete: true } }\n");
   const del = (role: string) => kindsOf(assistantOffer(ir, deleting, { role }), "delete");
   expect(del("admin")).toEqual(["Customer", "Order"]);
-  expect(del("sales")).toEqual(["Customer"]);
+  expect(del("sales")).toEqual(["Customer", "Order"]);
   // Only what the api block offers is reachable from outside.
   const one = assistantOffer(ir, authOf("api: { models: [Customer] }\n"), { role: "sales" });
   expect(one.kinds.map((k) => k.model)).toEqual(["Customer"]);
@@ -184,7 +183,7 @@ test("the assistant block: who gets Ask, whether it may change things, and what 
     validateAuth(
       {
         path: "smithable.auth.yml",
-        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, sales: {} }\ndefaultRole: sales\n${rest}`,
+        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all } }\ndefaultRole: sales\n${rest}`,
       },
       ir,
     )

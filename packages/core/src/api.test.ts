@@ -33,7 +33,8 @@ pages:
   subscribers: { crud: Subscriber }
 `;
 const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
-const head = "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\n";
+const head =
+  "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\n";
 const read = (api: string, top = head) =>
   validateAuth({ path: "smithable.auth.yml", text: `${top}${api}` }, ir);
 const codes = (api: string, top = head) =>

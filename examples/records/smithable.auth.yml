@@ -7,8 +7,8 @@ signIn:
 defaultAccess: private             # the collection itself is public (below); private covers the rest
 
 roles:
-  admin: { description: Keeps the collection. }
-  member: { description: Looks at it. }
+  admin: all
+  member: { description: Looks at it. }   # the collection is public; only administrators add to it
 
 # ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
 # signing in. Never add models that contain personal or business data.
