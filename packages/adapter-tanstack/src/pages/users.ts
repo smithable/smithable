@@ -49,6 +49,7 @@ import {
 ${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";${keys ? '\nimport { Keys } from "#/kit/Keys";' : ""}
 import { inviteAllowed } from "#/kit/limit";
+import { mailConfigured } from "#/kit/mail";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -86,6 +87,7 @@ const inviteUser = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await invite(viewer, data.email, data.role, origin());
+    return { kept: !mailConfigured() };
   });
 
 const changeRole = createServerFn({ method: "POST" })
@@ -106,6 +108,7 @@ const resend = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await resendInvitation(viewer, data.invitationId, origin());
+    return { kept: !mailConfigured() };
   });
 
 const withdraw = createServerFn({ method: "POST" })
@@ -123,9 +126,10 @@ function ${component}() {
   const { users, invitations${keys ? ", keys" : ""} } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
-  const then = async (change: Promise<unknown>) => {
-    await change;
+  const then = async <T,>(change: Promise<T>) => {
+    const done = await change;
     await router.invalidate();
+    return done;
   };
   return (
     <>

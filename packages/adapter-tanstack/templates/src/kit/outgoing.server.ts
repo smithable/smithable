@@ -12,7 +12,7 @@ import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
 import { log } from "./log.server";
-import { sendMail } from "./mail";
+import { mailConfigured, sendMail } from "./mail";
 import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
 import { outsideTrace } from "./trace.server";
 import { w } from "./words";
@@ -179,7 +179,12 @@ export async function sendDue(now = Date.now()): Promise<number> {
             .where(eq(outgoingMail.id, mail.id))
             .run();
           audit(tx, null, {
-            action: "mailed",
+            // The preview, like an app without mail settings, keeps its mail in the outbox.
+            action: mailConfigured()
+              ? "mailed"
+              : import.meta.env.DEV
+                ? "kept in the preview"
+                : "kept in the outbox",
             ...about,
             details: { outgoing: mail.entry, email: mail.to },
           });
@@ -241,8 +246,24 @@ async function sendCalls(now: number): Promise<number> {
     const settings = targetSettings(call.target);
     const url = process.env[settings.url];
     const secret = process.env[settings.secret];
-    if (!url || !secret) continue;
     const about = { model: call.model, record: call.recordId };
+    if (!url || !secret) {
+      // The preview has no addresses for its connections (and no internet): the call is
+      // skipped, once, and Activity says so. A published app waits for the settings instead.
+      if (import.meta.env.DEV)
+        db.transaction((tx) => {
+          tx.update(outgoingCall)
+            .set({ failedAt: new Date(), error: "skipped in the preview" })
+            .where(eq(outgoingCall.id, call.id))
+            .run();
+          audit(tx, null, {
+            action: "skipped in the preview",
+            ...about,
+            details: { outgoing: call.entry, target: call.target },
+          });
+        });
+      continue;
+    }
     let status: number | undefined;
     try {
       const refused = await refusedAddress(url);

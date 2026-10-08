@@ -48,6 +48,8 @@ export const w = {
   close: "Stäng",
   closeMenu: "Stäng menyn",
   code: "Kod",
+  codeKept:
+    "Förhandsvisningen skickar ingen e-post: koden finns i Studios Utkorg. Eller logga in med en roll nedan (bara under utveckling).",
   codeOnItsWay: "får logga in är en kod på väg. Den gäller i tio minuter.",
   confirm: "Bekräfta",
   consentText:
@@ -116,6 +118,8 @@ export const w = {
   makeAKey: "Skapa en nyckel",
   menu: "Meny",
   message: "Meddelande",
+  messageKept:
+    "Ditt meddelande ligger i förhandsvisningens utkorg, inte skickat: förhandsvisningen skickar ingen e-post.",
   messageNotSent: "Meddelandet kunde inte skickas.",
   messageSent: "Ditt meddelande är skickat.",
   modelNotReached: "Modellen gick inte att nå.",
@@ -270,6 +274,8 @@ export const w = {
     `${total} hittades${first.length ? `: ${first.join(", ")}` : ""}.`,
   fromValue: (from: string) => `från ${from}`,
   inAll: (total: number) => `${total} totalt`,
+  invitationKept: (address: string) =>
+    `Inbjudan till ${address} ligger i förhandsvisningens utkorg, inte skickad: förhandsvisningen skickar ingen e-post. Studios Utkorg visar den.`,
   invitationSentAgain: (address: string) => `Inbjudan är skickad igen till ${address}.`,
   invitationSentTo: (address: string) => `Inbjudan är skickad till ${address}.`,
   invitedAs: (app: string, role: string) => `Du är inbjuden till ${app} som ${role}. Logga in med`,
