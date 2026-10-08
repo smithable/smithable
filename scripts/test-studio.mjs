@@ -1165,6 +1165,18 @@ try {
     await accept();
     if (!(await editor.evaluate((e) => e.value)).endsWith("queries: "))
       throw new Error("the key offered was not put in the text with its colon");
+    // On an empty indented line, where a key goes, the keys are offered as soon as the cursor
+    // lands there, with no keystroke (a phone has no Ctrl-Space); "What goes here?" asks too.
+    const crud = "    crud: Customer\n";
+    await write(good.replace(crud, `${crud}    \n`));
+    await editor.focus();
+    await cursor(good.indexOf(crud) + crud.length + 4);
+    await offered.getByText("route", { exact: true }).waitFor();
+    await page.keyboard.press("Escape");
+    await offered.waitFor({ state: "hidden" });
+    await page.getByRole("button", { name: "What goes here?" }).click();
+    await offered.getByText("route", { exact: true }).waitFor();
+    await page.keyboard.press("Escape");
     await write(good);
     // A key says what it is for when the pointer rests on it.
     await cursor(good.indexOf("    crud: Customer"));
