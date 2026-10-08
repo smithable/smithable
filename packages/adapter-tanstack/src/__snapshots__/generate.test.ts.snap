@@ -5024,6 +5024,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -5174,14 +5175,41 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Project", field: null, noun: ["project", "projects"], required: false, count: db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).all().length },
+    { model: "Task", field: "assignee", noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.assigneeId, userId)).all().length },
+    { model: "Task", field: null, noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.ownerId, userId)).all().length },
+    { model: "Note", field: null, noun: ["note", "notes"], required: false, count: db.select({ id: schema.notes.id }).from(schema.notes).where(eq(schema.notes.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -5200,12 +5228,29 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
         .returning()
         .all())
         audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });
+
+      {
+        const moved = tx.update(schema.projects).set({ ownerId: heir?.id ?? null }).where(eq(schema.projects.ownerId, userId)).returning({ id: schema.projects.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Project", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.tasks).set({ assigneeId: heir?.id ?? null }).where(eq(schema.tasks.assigneeId, userId)).returning({ id: schema.tasks.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Task", details: { column: "assigneeId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.tasks).set({ ownerId: heir?.id ?? null }).where(eq(schema.tasks.ownerId, userId)).returning({ id: schema.tasks.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Task", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.notes).set({ ownerId: heir?.id ?? null }).where(eq(schema.notes.ownerId, userId)).returning({ id: schema.notes.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Note", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -5395,6 +5440,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 /** The invitation for an address, if there is one (it may have expired). */
 function invitationOf(email: string) {
@@ -7141,7 +7188,7 @@ import { oneOf, optional, type Search, shaped, text } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member","assistant"] as const;
@@ -7164,7 +7211,7 @@ const signInOptions = createServerFn()
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
       demo: demoSignIn,
-      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(),
+      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(), kept: mailKept(),
     };
   });
 
@@ -7205,7 +7252,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, invitation, codes } = Route.useLoaderData();
+  const { providers, missing, demo, invitation, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -7222,6 +7269,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -7431,6 +7479,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";
@@ -7438,6 +7487,7 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { Keys } from "#/kit/Keys";
 import { inviteAllowed } from "#/kit/limit";
+import { mailConfigured } from "#/kit/mail";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -7481,6 +7531,7 @@ const inviteUser = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await invite(viewer, data.email, data.role, origin());
+    return { kept: !mailConfigured() };
   });
 
 const changeRole = createServerFn({ method: "POST" })
@@ -7490,10 +7541,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -7501,6 +7556,7 @@ const resend = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await resendInvitation(viewer, data.invitationId, origin());
+    return { kept: !mailConfigured() };
   });
 
 const withdraw = createServerFn({ method: "POST" })
@@ -7520,9 +7576,10 @@ function TeamPage() {
   const { users, invitations, keys } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
-  const then = async (change: Promise<unknown>) => {
-    await change;
+  const then = async <T,>(change: Promise<T>) => {
+    const done = await change;
     await router.invalidate();
+    return done;
   };
   return (
     <>
@@ -7534,7 +7591,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -7787,7 +7845,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -7997,7 +8056,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.server.ts": "83876b81 generated",
   "src/generated/task.ts": "ec1c8a2d generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
-  "src/generated/users.server.ts": "d819e564 generated",
+  "src/generated/users.server.ts": "1354a6fb generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
@@ -8015,9 +8074,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/Users.tsx": "51a5b098 kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "df5d2f8c kit",
@@ -8042,10 +8101,10 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "f3ba8a00 generated",
+  "src/lib/auth.ts": "664a681e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -8082,13 +8141,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "505b868e generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "53dad7c7 generated",
+  "src/routes/sign-in.tsx": "efde7e0b generated",
   "src/routes/team/activity.tsx": "1a9c5e5b generated",
-  "src/routes/team/index.tsx": "156920a5 generated",
+  "src/routes/team/index.tsx": "5dc59d41 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "356c02cd generated",
+  "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -11754,6 +11813,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 
 /**
@@ -15359,14 +15420,14 @@ import { oneOf, optional, type Search, shaped } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople() };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
 /** Development, or a demo: signs in as a user with the role, without a provider. */
@@ -15404,7 +15465,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, codes } = Route.useLoaderData();
+  const { providers, missing, demo, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -15419,6 +15480,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -15749,7 +15811,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -16011,7 +16074,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Reserve.tsx": "9f0c730c kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -16025,17 +16088,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
-  "src/kit/outgoing.server.ts": "f80054c6 kit",
+  "src/kit/outgoing.server.ts": "42be7ec6 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "3a82cc45 generated",
+  "src/lib/auth.ts": "7d773757 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16089,12 +16152,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/$id.tsx": "96fa8ecb generated",
   "src/routes/sessions/index.tsx": "ce4e4028 generated",
   "src/routes/sessions/new.tsx": "954f9cb1 generated",
-  "src/routes/sign-in.tsx": "cec1d0a9 generated",
+  "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "cb6f9edb generated",
+  "tests/smoke.spec.ts": "785d6529 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -18106,6 +18169,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -18256,14 +18320,39 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Customer", field: "account manager", noun: ["customer", "customers"], required: false, count: db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.accountManagerId, userId)).all().length },
+    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -18274,12 +18363,21 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
     throw new Error("The last administrator cannot be removed.");
   try {
     db.transaction((tx) => {
+
+      {
+        const moved = tx.update(schema.customers).set({ accountManagerId: heir?.id ?? null }).where(eq(schema.customers.accountManagerId, userId)).returning({ id: schema.customers.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Customer", details: { column: "accountManagerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.orders).set({ ownerId: heir?.id ?? null }).where(eq(schema.orders.ownerId, userId)).returning({ id: schema.orders.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Order", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -18470,6 +18568,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 /** The invitation for an address, if there is one (it may have expired). */
 function invitationOf(email: string) {
@@ -19558,7 +19658,7 @@ import { oneOf, optional, type Search, shaped, text } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","sales"] as const;
@@ -19581,7 +19681,7 @@ const signInOptions = createServerFn()
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
       demo: demoSignIn,
-      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(),
+      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(), kept: mailKept(),
     };
   });
 
@@ -19622,7 +19722,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, invitation, codes } = Route.useLoaderData();
+  const { providers, missing, demo, invitation, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -19639,6 +19739,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -19834,11 +19935,13 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { inviteAllowed } from "#/kit/limit";
+import { mailConfigured } from "#/kit/mail";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -19863,6 +19966,7 @@ const inviteUser = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await invite(viewer, data.email, data.role, origin());
+    return { kept: !mailConfigured() };
   });
 
 const changeRole = createServerFn({ method: "POST" })
@@ -19872,10 +19976,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -19883,6 +19991,7 @@ const resend = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await resendInvitation(viewer, data.invitationId, origin());
+    return { kept: !mailConfigured() };
   });
 
 const withdraw = createServerFn({ method: "POST" })
@@ -19902,9 +20011,10 @@ function TeamPage() {
   const { users, invitations } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
-  const then = async (change: Promise<unknown>) => {
-    await change;
+  const then = async <T,>(change: Promise<T>) => {
+    const done = await change;
     await router.invalidate();
+    return done;
   };
   return (
     <>
@@ -19916,7 +20026,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -20223,7 +20334,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -20394,7 +20506,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.ts": "0bc7ab14 generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
-  "src/generated/users.server.ts": "32ba704b generated",
+  "src/generated/users.server.ts": "432e3193 generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
@@ -20410,10 +20522,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Trash.tsx": "26ea3332 kit",
-  "src/kit/Users.tsx": "51a5b098 kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -20430,10 +20542,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "7ccb0e1a generated",
+  "src/lib/auth.ts": "5a97aa30 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -20451,14 +20563,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "dacc7aac generated",
+  "src/routes/sign-in.tsx": "2d049a58 generated",
   "src/routes/team/activity.tsx": "95063ee2 generated",
-  "src/routes/team/index.tsx": "84f68638 generated",
+  "src/routes/team/index.tsx": "c14e68a6 generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "47211f98 generated",
+  "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -23454,6 +23566,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 
 /**
@@ -24805,14 +24919,14 @@ import { oneOf, optional, type Search, shaped } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople() };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
 /** Development, or a demo: signs in as a user with the role, without a provider. */
@@ -24850,7 +24964,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, codes } = Route.useLoaderData();
+  const { providers, missing, demo, codes, kept } = Route.useLoaderData();
   const { redirect = "/welcome" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -24865,6 +24979,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -25288,7 +25403,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -25508,7 +25624,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -25524,17 +25640,17 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/mail.ts": "4673e657 kit",
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
-  "src/kit/outgoing.server.ts": "f80054c6 kit",
+  "src/kit/outgoing.server.ts": "42be7ec6 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "29808e97 generated",
+  "src/lib/auth.ts": "ce952519 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -25557,13 +25673,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "d2808f14 generated",
-  "src/routes/sign-in.tsx": "43dbd545 generated",
+  "src/routes/sign-in.tsx": "d164c0c1 generated",
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "59eccf55 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "96656d16 generated",
+  "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -26653,6 +26769,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 
 /**
@@ -26820,7 +26938,7 @@ import { user } from "#/db/schema";
 import { itemData } from "#/generated/item.server";
 import { ContactOwner } from "#/kit/ContactOwner";
 import { writeAllowed } from "#/kit/limit";
-import { sendMail } from "#/kit/mail";
+import { mailConfigured, sendMail } from "#/kit/mail";
 import { currentViewer } from "#/lib/viewer.server";
 
 
@@ -26844,7 +26962,7 @@ const contactItem = createServerFn({ method: "POST" })
       subject: \`About “\${name}”\`,
       text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
     });
-    return { sent: true };
+    return { sent: true, kept: !mailConfigured() };
   });
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
@@ -27852,14 +27970,14 @@ import { oneOf, optional, type Search, shaped } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople() };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
 /** Development, or a demo: signs in as a user with the role, without a provider. */
@@ -27897,7 +28015,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, codes } = Route.useLoaderData();
+  const { providers, missing, demo, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -27912,6 +28030,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -28280,7 +28399,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -28446,7 +28566,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppShell.tsx": "09b317fc kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/ContactOwner.tsx": "0158824f kit",
+  "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
@@ -28458,7 +28578,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/PictureInput.tsx": "3f183c83 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -28478,14 +28598,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "b5f252f5 kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c5155025 generated",
+  "src/lib/auth.ts": "8e64f877 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "5f960144 generated",
+  "src/routes/$id.tsx": "f282f420 generated",
   "src/routes/__root.tsx": "322cb3ff generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "7dee5900 kit",
@@ -28501,13 +28621,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/$id.tsx": "dcce714d generated",
   "src/routes/saved/index.tsx": "ba1832d5 generated",
   "src/routes/saved/new.tsx": "062ab243 generated",
-  "src/routes/sign-in.tsx": "cec1d0a9 generated",
+  "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "293fa7c3 generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "83765356 generated",
+  "tests/smoke.spec.ts": "a1478d06 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -29505,6 +29625,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 
 /**
@@ -30096,14 +30218,14 @@ import { oneOf, optional, type Search, shaped } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
-  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople() };
+  return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
 /** Development, or a demo: signs in as a user with the role, without a provider. */
@@ -30141,7 +30263,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, codes } = Route.useLoaderData();
+  const { providers, missing, demo, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -30156,6 +30278,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -30426,7 +30549,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -30585,7 +30709,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -30603,10 +30727,10 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "63d519fe generated",
+  "src/lib/auth.ts": "abf81fbe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -30618,12 +30742,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "058d2480 generated",
   "src/routes/items/new.tsx": "b2461bfe generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
-  "src/routes/sign-in.tsx": "cec1d0a9 generated",
+  "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "cd3af4c8 generated",
+  "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -35958,6 +36082,7 @@ import { getRequestUrl } from "@tanstack/react-start/server";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
@@ -36108,14 +36233,41 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   });
 }
 
+/** What names a person: how many records of each kind, live or in the trash, by the column. */
+export interface UserUse {
+  model: string;
+  /** The reference's label ("assignee"); null for the records that are the person's own. */
+  field: string | null;
+  noun: [string, string];
+  /** A required reference: removing the person needs someone to give these to. */
+  required: boolean;
+  count: number;
+}
+
+/** The records that name a person, for the remove dialog. */
+export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
+  manager(viewer);
+  const uses: UserUse[] = [
+    { model: "Component", field: null, noun: ["component", "components"], required: false, count: db.select({ id: schema.components.id }).from(schema.components).where(eq(schema.components.ownerId, userId)).all().length },
+    { model: "Incident", field: null, noun: ["incident", "incidents"], required: false, count: db.select({ id: schema.incidents.id }).from(schema.incidents).where(eq(schema.incidents.ownerId, userId)).all().length },
+    { model: "IncidentUpdate", field: null, noun: ["incident update", "incident updates"], required: false, count: db.select({ id: schema.incidentUpdates.id }).from(schema.incidentUpdates).where(eq(schema.incidentUpdates.ownerId, userId)).all().length },
+    { model: "Maintenance", field: null, noun: ["maintenance", "maintenances"], required: false, count: db.select({ id: schema.maintenances.id }).from(schema.maintenances).where(eq(schema.maintenances.ownerId, userId)).all().length },
+  ];
+  return uses.filter((use) => use.count > 0);
+}
+
 /**
- * Removes a user: they can no longer sign in, their sessions end, and what they created stays
- * without an owner. Never yourself or the last administrator; a required reference to them
- * (a record they are the account manager of, say) refuses the removal until it is reassigned.
+ * Removes a user: they can no longer sign in and their sessions end. What names them (a
+ * reference, the records that are theirs, in the trash too) goes to the heir, another member,
+ * in the same transaction; without one, what may be empty is cleared and a required reference
+ * (a record they are the account manager of, say) refuses the removal. Never yourself or the
+ * last administrator.
  */
-export async function removeUser(viewer: Viewer | null, userId: string): Promise<void> {
+export async function removeUser(viewer: Viewer | null, userId: string, heirId?: string): Promise<void> {
   const by = manager(viewer);
   if (userId === by.id) throw new Error("You cannot remove yourself.");
+  const heir = heirId ? db.select({ id: user.id }).from(user).where(eq(user.id, heirId)).get() : undefined;
+  if (heirId && (!heir || heirId === userId)) throw new Error("Choose someone on the team to give them to.");
   const target = db
     .select({ role: user.role, name: user.name, email: user.email })
     .from(user)
@@ -36134,12 +36286,29 @@ export async function removeUser(viewer: Viewer | null, userId: string): Promise
         .returning()
         .all())
         audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker was removed" } });
+
+      {
+        const moved = tx.update(schema.components).set({ ownerId: heir?.id ?? null }).where(eq(schema.components.ownerId, userId)).returning({ id: schema.components.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Component", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.incidents).set({ ownerId: heir?.id ?? null }).where(eq(schema.incidents.ownerId, userId)).returning({ id: schema.incidents.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Incident", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.incidentUpdates).set({ ownerId: heir?.id ?? null }).where(eq(schema.incidentUpdates.ownerId, userId)).returning({ id: schema.incidentUpdates.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "IncidentUpdate", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.maintenances).set({ ownerId: heir?.id ?? null }).where(eq(schema.maintenances.ownerId, userId)).returning({ id: schema.maintenances.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Maintenance", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed"))
-      throw new Error(\`\${target.name} is still named in records. Reassign them first.\`);
+      throw new Error(\`\${target.name} is still named in records: choose someone to give them to.\`);
     throw error;
   }
 }
@@ -36312,6 +36481,8 @@ export const configuredProviders = () => PROVIDERS.filter((p) => p === "email" |
 
 /** Whether sign-in codes can leave the machine: mail settings, or development's outbox. */
 export const codesReachPeople = () => import.meta.env.DEV || mailConfigured();
+/** A mail stays in the outbox (the preview, or an app without mail settings): pages say so. */
+export const mailKept = () => !mailConfigured();
 
 /** The invitation for an address, if there is one (it may have expired). */
 function invitationOf(email: string) {
@@ -38227,7 +38398,7 @@ import { oneOf, optional, type Search, shaped, text } from "#/kit/params";
 import { app } from "#/generated/app";
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
-import { auth, codesReachPeople, configuredProviders, demoSignIn, PROVIDERS } from "#/lib/auth";
+import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ["admin","staff"] as const;
@@ -38250,7 +38421,7 @@ const signInOptions = createServerFn()
       providers,
       missing: PROVIDERS.filter((p) => !providers.includes(p)),
       demo: demoSignIn,
-      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(),
+      invitation: open ? { email: open.email, role: ROLE_LABELS[open.role] ?? open.role } : null, codes: codesReachPeople(), kept: mailKept(),
     };
   });
 
@@ -38291,7 +38462,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo, invitation, codes } = Route.useLoaderData();
+  const { providers, missing, demo, invitation, codes, kept } = Route.useLoaderData();
   const { redirect = "/" } = Route.useSearch();
   const router = useRouter();
   return (
@@ -38308,6 +38479,7 @@ function SignInPage() {
         if (error) throw new Error(error.message);
       }}
       codes={codes}
+      kept={kept}
       onSendCode={async (address) => {
         const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
         if (error) throw new Error(error.message);
@@ -38571,6 +38743,7 @@ import {
   type Role,
   ROLES,
   setRole,
+  usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
 import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";
@@ -38578,6 +38751,7 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { Keys } from "#/kit/Keys";
 import { inviteAllowed } from "#/kit/limit";
+import { mailConfigured } from "#/kit/mail";
 import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -38616,6 +38790,7 @@ const inviteUser = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await invite(viewer, data.email, data.role, origin());
+    return { kept: !mailConfigured() };
   });
 
 const changeRole = createServerFn({ method: "POST" })
@@ -38625,10 +38800,14 @@ const changeRole = createServerFn({ method: "POST" })
   });
 
 const remove = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().max(100) }))
+  .validator(z.object({ userId: z.string().max(100), heirId: z.string().max(100).optional() }))
   .handler(async ({ data }) => {
-    await removeUser(await currentViewer(), data.userId);
+    await removeUser(await currentViewer(), data.userId, data.heirId);
   });
+
+const uses = createServerFn()
+  .validator(z.object({ userId: z.string().max(100) }))
+  .handler(async ({ data }) => usesOf(await currentViewer(), data.userId));
 
 const resend = createServerFn({ method: "POST" })
   .validator(z.object({ invitationId: z.string().max(100) }))
@@ -38636,6 +38815,7 @@ const resend = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     inviteAllowed(viewer);
     await resendInvitation(viewer, data.invitationId, origin());
+    return { kept: !mailConfigured() };
   });
 
 const withdraw = createServerFn({ method: "POST" })
@@ -38655,9 +38835,10 @@ function TeamPage() {
   const { users, invitations, keys } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
-  const then = async (change: Promise<unknown>) => {
-    await change;
+  const then = async <T,>(change: Promise<T>) => {
+    const done = await change;
     await router.invalidate();
+    return done;
   };
   return (
     <>
@@ -38669,7 +38850,8 @@ function TeamPage() {
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
         onSetRole={(userId, role) => then(changeRole({ data: { userId, role: role as Role } }))}
-        onRemove={(userId) => then(remove({ data: { userId } }))}
+        onRemove={(userId, heirId) => then(remove({ data: { userId, heirId } }))}
+        usesOf={(userId) => uses({ data: { userId } })}
         onResend={(invitationId) => then(resend({ data: { invitationId } }))}
         onWithdraw={(invitationId) => then(withdraw({ data: { invitationId } }))}
       />
@@ -39199,7 +39381,8 @@ test("signing in with a code from the outbox", async ({ page }) => {
   await page.locator('body[data-hydrated="true"]').waitFor();
   await page.getByLabel("Email address").fill(address);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.getByText("a code is on its way")).toBeVisible();
+  // The page asks for the code (its words differ when the mail stays in the outbox).
+  await expect(page.getByLabel("Code")).toBeVisible();
   await expect.poll(() => codeFor(address), { timeout: 15_000 }).toBeTruthy();
   await page.getByLabel("Code").fill(codeFor(address) as string);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -39419,7 +39602,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/mcp.server.ts": "8a9bce72 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
-  "src/generated/users.server.ts": "2b5c39fa generated",
+  "src/generated/users.server.ts": "d37db4cf generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
@@ -39440,9 +39623,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
-  "src/kit/SignIn.tsx": "c877e4f6 kit",
+  "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/Users.tsx": "51a5b098 kit",
+  "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
@@ -39465,10 +39648,10 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "6e278863 kit",
+  "src/kit/words.ts": "574a0f10 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d35a3346 generated",
+  "src/lib/auth.ts": "70248e44 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -39498,17 +39681,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "d77fe1dc generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
-  "src/routes/sign-in.tsx": "2075b0c1 generated",
+  "src/routes/sign-in.tsx": "86edddef generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "fb17a3c3 generated",
-  "src/routes/team/index.tsx": "796850fe generated",
+  "src/routes/team/index.tsx": "f6b29206 generated",
   "src/routes/updates/$id.tsx": "0fffa578 generated",
   "src/routes/updates/index.tsx": "40f4b24a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "5379c2a6 kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "fd8fdf64 generated",
+  "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
