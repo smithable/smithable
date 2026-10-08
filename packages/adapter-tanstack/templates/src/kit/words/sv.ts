@@ -9,6 +9,8 @@ export const w = {
   accept: "Godkänn",
   addFiles: "Lägg till filer",
   addOne: (label: string) => `Lägg till ${label}`,
+  addYourName: "Lägg till ditt namn",
+  admin: "Admin",
   aFirstCall: "Ett första anrop:",
   actAs: "Agera som",
   actions: "Åtgärder",
@@ -101,6 +103,8 @@ export const w = {
   invitationExpired: "Inbjudan har gått ut",
   invitationLinkCopied: "Inbjudningslänken är kopierad.",
   invitations: "inbjudningar",
+  invitedNameLater:
+    "Den som bjuds in väljer namnet andra ser efter inloggningen: sitt namn längst ned i menyn.",
   keepIt: "Behåll den",
   keys: "Nycklar",
   keysLead:
@@ -254,6 +258,7 @@ export const w = {
   youAreBooked: "Du är bokad",
   yourEmail: "Din e-post",
   yourName: "Ditt namn",
+  yourNameHelp: "Namnet andra ser i appen.",
   alreadyHas: (_label: string, field: string) =>
     `Det finns redan en post med samma ${field.toLowerCase()}.`,
   alreadyTaken: (booked: string) =>

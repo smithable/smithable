@@ -9,6 +9,8 @@ export const w = {
   accept: "Accept",
   addFiles: "Add files",
   addOne: (label: string) => `Add ${label}`,
+  addYourName: "Add your name",
+  admin: "Admin",
   aFirstCall: "A first call:",
   actAs: "Act as",
   actions: "Actions",
@@ -100,6 +102,8 @@ export const w = {
   invitationExpired: "Invitation expired",
   invitationLinkCopied: "Invitation link copied.",
   invitations: "invitations",
+  invitedNameLater:
+    "An invited person chooses the name others see after signing in: their name at the bottom of the menu.",
   keepIt: "Keep it",
   keys: "Keys",
   keysLead:
@@ -258,6 +262,7 @@ export const w = {
   youAreBooked: "You're booked",
   yourEmail: "Your email",
   yourName: "Your name",
+  yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>
     `Another ${label.toLowerCase()} already has this ${field.toLowerCase()}.`,
