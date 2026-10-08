@@ -5104,7 +5104,9 @@ test("the session cookie's name and attributes", async () => {
   expect(https.state.attributes.secure).toBe(true);
   const http = await sessionCookie("http://localhost:3000");
   expect(http.name.startsWith("__Host-")).toBe(false);
-});
+  // The auth module imported cold twice, beside the other examples building: more than
+  // vitest's five seconds on a busy machine (a gate on 2026-10-09).
+}, 60_000);
 `,
           );
           try {
