@@ -9,13 +9,17 @@ models:
       manager: User
       helpers: User[]                     # expect: invalid-field
     ownedBy: name                         # expect: invalid-owner
-    access:
-      create: [owner]                     # expect: invalid-role
-      remove: [admin]                     # expect: unknown-key
+    access:                               # expect: moved-key
+      create: [owner]
+actions:
+  archive:
+    custom: true
+    input: { customer: Customer! }
+    allow: [admin]                        # expect: moved-key
 pages:
   customers:
     crud: Customer
-    access: [owner]                       # expect: invalid-role
+    access: [owner]                       # expect: moved-key
     search: [name, nam, helpers]          # expect: unknown-field, invalid-search
   sign-in:                                # expect: reserved-route
     crud: Customer

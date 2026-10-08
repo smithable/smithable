@@ -57,7 +57,6 @@ const addAction: Operation<{
   with?: string[];
   input?: Record<string, string>;
   output?: Record<string, string>;
-  allow?: string[];
   intent?: string;
 }> = {
   name: "addAction",
@@ -107,11 +106,6 @@ const addAction: Operation<{
         'A custom action: the values it needs, as field shorthand, e.g. { keep: "Customer!" }.',
       ),
       output: fields("A custom action: the values it returns, if any."),
-      allow: refTo(
-        { ref: "role", label: "Who may run it" },
-        { description: "Roles from smithable.auth.yml; none means the default access." },
-        true,
-      ),
       intent: { type: "string", description: "What it is for, in a sentence." },
     },
   },
@@ -130,7 +124,6 @@ const addAction: Operation<{
       with: lists = [],
       input = {},
       output = {},
-      allow = [],
       intent,
     },
     ir,
@@ -139,7 +132,6 @@ const addAction: Operation<{
     if (ir.actions.some((a) => a.name === action))
       throw new OperationError(`Action "${action}" already exists.`);
     const text = {
-      ...(allow.length ? { allow } : {}),
       ...(intent?.trim() ? { intent: intent.trim() } : {}),
     };
     if (!on) {
@@ -213,7 +205,7 @@ const named = {
 /**
  * Changes an action there is: its intent, the records it is offered for, or the values a
  * standard action sets. Each part named replaces what was there, and an empty one removes it.
- * Who may run it is setAccess's (`action:<name>`); anything else is removeAction and addAction.
+ * Who may run it is grant's (a role's `actions`); anything else is removeAction and addAction.
  */
 const setAction: Operation<{
   action: string;

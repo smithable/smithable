@@ -223,7 +223,6 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
   const [section, entry, part] = place.path;
   const depth = place.path.length;
   const fieldsOf = (model: string | undefined) => (model ? (models.get(model) ?? []) : []);
-  const roles = known.roles ?? [];
   if (keys) {
     // What an action sets or asks for is said by the fields of its model.
     if (section === "actions" && depth === 3 && ["when", "set", "copy"].includes(part ?? ""))
@@ -242,14 +241,12 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
     if (part === "fields" && (depth === 3 || (depth === 4 && key === "type")))
       return [...SCALAR_TYPES, ...kinds, USER_MODEL];
     if (depth === 2 && key === "ownedBy") return fieldsOf(entry);
-    if (depth === 3 && part === "access") return [...roles, "owner"];
   }
   if (section === "pages" && depth === 2) {
     if (["crud", "calendar", "articles", "data"].includes(key ?? "")) return kinds;
     if (["search", "filters", "sortable"].includes(key ?? ""))
       return fieldsOf(pages.get(entry ?? ""));
     if (key === "actions") return [...actions.keys()];
-    if (key === "access") return roles;
   }
   if (section === "pages" && depth === 3 && key === "model") return kinds;
   // A landing page's section, a dashboard's tile.
@@ -259,7 +256,6 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
   }
   if (section === "actions" && depth === 2) {
     if (key === "on") return kinds;
-    if (key === "allow") return roles;
     if (key === "with") return fieldsOf(actions.get(entry ?? ""));
   }
   return undefined;
@@ -275,7 +271,7 @@ function companionNames(
   known: Known,
   keys: boolean,
 ): string[] | undefined {
-  const { models, pages } = namesIn(known.spec ?? "");
+  const { models, pages, actions } = namesIn(known.spec ?? "");
   const kinds = [...models.keys()];
   const pageIds = [...pages.keys()];
   const [section, entry, part] = place.path;
@@ -295,6 +291,12 @@ function companionNames(
     if (section === "public" && depth === 1 && (key === "read" || key === "create")) return kinds;
     if (section === "api" && depth === 1 && (key === "models" || key === "except")) return kinds;
     if (section === "assistant" && depth === 1 && key === "for") return known.roles ?? [];
+    // A role's grants: pages, models and custom actions by name, or all.
+    if (section === "roles" && depth === 2) {
+      if (key === "pages") return ["all", ...pageIds];
+      if (["read", "create", "write", "delete"].includes(key ?? "")) return ["all", ...kinds];
+      if (key === "actions") return ["all", ...actions.keys()];
+    }
     if (depth === 0 && key === "defaultRole") return known.roles ?? [];
   }
   if (file === "smithable.ux.yml" && section === "pages" && depth === 3) {

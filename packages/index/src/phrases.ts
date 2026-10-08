@@ -11,9 +11,10 @@ import {
   identifier,
   kebab,
   type ModelIR,
-  modelAccess,
   type PageIR,
   pageModel,
+  patternInfo,
+  type RoleGrants,
   type SpecIR,
   sortableBy,
   USER_MODEL,
@@ -425,6 +426,40 @@ export function verbOf(word: string): "read" | "create" | "write" | "delete" | u
 }
 
 /** "admins", "admins and sales", "the owner" → role names, or undefined if one is unknown. */
+/**
+ * The grants that give `roles` the key on `name` and, with `only`, take it from every other
+ * role: one operation per role whose list changes. A role's "all" is spelled out as the names
+ * it keeps. Nothing when every list is as asked already.
+ */
+function grantsFor(
+  scope: Scope,
+  key: "pages" | "read" | "create" | "write" | "delete",
+  name: string,
+  roles: string[],
+  only: boolean,
+): PhraseOperation[] {
+  const auth = scope.auth as AuthIR;
+  const every =
+    key === "pages"
+      ? scope.ir.pages.filter((p) => !patternInfo(p).access).map((p) => p.id)
+      : scope.ir.models.map((m) => m.name);
+  const ops: PhraseOperation[] = [];
+  for (const role of auth.roles) {
+    if (role.name === "admin") continue;
+    const wanted = roles.includes(role.name);
+    if (!wanted && !only) continue;
+    const whole = role.grants === "all" || role.grants[key] === "all";
+    const now = whole ? every : [...((role.grants as RoleGrants)[key] ?? [])];
+    const has = now.includes(name);
+    if (has === wanted) continue;
+    const next = wanted ? [...now, name] : now.filter((n) => n !== name);
+    const names =
+      next.length === every.length && every.every((n) => next.includes(n)) ? ["all"] : next;
+    ops.push({ op: "grant", args: { role: role.name, what: key, names } });
+  }
+  return ops;
+}
+
 function rolesFor(phrase: string, scope: Scope): string[] | undefined {
   const names = dropArticles(phrase)
     .split(/,| and | or /)
@@ -673,8 +708,13 @@ const RULES: Rule[] = [
       const roles = rolesFor(m.groups.roles ?? "", scope);
       const page = pageFor(scope.ir, m.groups.page ?? "");
       if (!page) return undefined;
-      if (!roles || roles.includes("owner")) return null;
-      return [{ op: "setAccess", args: { target: `page:${page.id}`, roles } }];
+      if (!roles || roles.includes("owner") || !scope.auth) return null;
+      const ops = grantsFor(scope, "pages", page.id, roles, true);
+      return ops.length
+        ? ops
+        : {
+            refusal: `Only ${roles.map(plural).join(" and ")} can open ${words(page.id)} already.`,
+          };
     },
   },
   {
@@ -711,21 +751,26 @@ const RULES: Rule[] = [
       );
       const model = modelFor(scope.ir, target);
       if (!model || model.name === USER_MODEL) return null;
-      if (!m) {
-        // A grant keeps whoever may already: the model's rule, or the app's default when the
-        // auth file is at hand; without it the grant is read as the whole list.
-        const now = scope.auth ? modelAccess(model, scope.auth)[verb] : undefined;
-        const kept = now
-          ? [...now.roles.filter((r) => r !== "admin"), ...(now.owner ? ["owner"] : [])]
-          : [];
-        const all = [...new Set([...kept, ...roles])];
-        if (now && all.length === kept.length)
-          return {
-            refusal: `${sentence(roles.map((r) => (r === "owner" ? "the record's owner" : plural(r))).join(" and "))} can ${verb === "write" ? "change" : verb} ${plural(words(model.name))} already.`,
-          };
-        return [{ op: "setAccess", args: { target: `model:${model.name}.${verb}`, roles: all } }];
-      }
-      return [{ op: "setAccess", args: { target: `model:${model.name}.${verb}`, roles } }];
+      // Who may do what is granted per role in smithable.auth.yml: without it, nothing is guessed.
+      if (!scope.auth) return null;
+      const things = plural(words(model.name));
+      const doing = verb === "write" ? "change" : verb === "create" ? "add" : verb;
+      // Reading is the record rule's: under shared access everyone reads everything.
+      if (verb === "read" && scope.auth.defaultAccess === "shared")
+        return {
+          refusal: `Everyone who signs in sees every record (shared access), so who sees ${things} is not a role's grant: make access private first (setDefaultAccess private).`,
+        };
+      // Each one works with their own records whatever the grants say: "only the owner" takes the
+      // grant from every role, "only admins" too, and nobody loses their own.
+      const wanted = roles.filter((r) => r !== "owner");
+      const ops = grantsFor(scope, verb, model.name, wanted, m !== null && m !== undefined);
+      if (ops.length) return ops;
+      const who = roles.map((r) => (r === "owner" ? "the record's owner" : plural(r)));
+      return {
+        refusal: m
+          ? `Only ${who.join(" and ")}${who.includes("the record's owner") ? "" : " and each one for their own"} can ${doing} ${things} already.`
+          : `${sentence(who.join(" and "))} can ${doing} ${things} already.`,
+      };
     },
   },
   {

@@ -1,115 +1,121 @@
-import { ACCESS_OPERATIONS, USER_MODEL } from "../ir.js";
+import { GRANT_KEYS, type GrantKey } from "../auth.js";
+import type { YamlValue } from "../edit.js";
+import { USER_MODEL } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { didYouMean } from "../suggest.js";
 
-const VERBS: Record<string, string> = {
-  read: "see",
-  create: "create",
-  update: "change",
-  delete: "delete",
+const WHATS = ["all", "none", ...GRANT_KEYS] as const;
+const VERBS: Record<GrantKey, string> = {
+  pages: "open",
+  read: "read everyone's",
+  create: "add",
+  write: "change everyone's",
+  delete: "delete everyone's",
+  actions: "run",
 };
 
-/** "model:Order.delete" → "delete orders", "page:class-types" → "open the Class types page". */
-function accessText(target: string): string {
-  const [kind, name = ""] = target.split(":");
-  if (kind === "page") return `open the ${humanize(name)} page`;
-  if (kind === "action") return `use ${humanize(name)}`;
-  const [model = "", op = ""] = name.split(".");
-  return `${VERBS[op] ?? op} ${humanize(plural(model)).toLowerCase()}`;
-}
-
-const setAccess: Operation<{ target: string; roles?: string[] }> = {
-  name: "setAccess",
-  summary: "Set which roles may do something, or return it to the default access.",
+const grant: Operation<{ role: string; what: string; names?: string[] }> = {
+  name: "grant",
+  summary:
+    'Set what a role may do beyond the record rule, in smithable.auth.yml: the pages it opens, the models it adds to (create), reads, changes (write) or deletes for everyone, or the custom actions it runs. "all" names everything, "none" nothing; "grant <role> all" is the whole app and "grant <role> none" the record rule only.',
   schema: {
     type: "object",
-    required: ["target"],
+    required: ["role", "what"],
     additionalProperties: false,
     properties: {
-      target: refTo(
-        { ref: "accessTarget", label: "Who can" },
+      role: refTo({ ref: "role", label: "Role" }),
+      what: {
+        type: "string",
+        enum: [...WHATS],
+        description:
+          "pages, read, create, write, delete or actions; or all / none for the role as a whole.",
+      },
+      names: refTo(
+        { ref: "grantNames", what: "what", label: "Which" },
         {
           description:
-            'e.g. "model:Customer.delete", "page:class-types" or "action:mergeCustomers".',
-        },
-      ),
-      roles: refTo(
-        { ref: "role", target: "target", label: "Only" },
-        {
-          description:
-            'Roles from smithable.auth.yml; for models also "owner". None returns to the default.',
+            'The pages, models or custom actions; ["all"] for every one, none (or ["none"]) for nothing.',
         },
         true,
       ),
     },
   },
-  positional: ["target", "...roles"],
-  describe: ({ target, roles }) => {
-    const what = accessText(target);
-    if (!roles?.length) return `Let the default access decide who may ${what}`;
-    const who = roles.map((r) => (r === "owner" ? "the owner" : r));
-    return `Only ${who.length > 1 ? `${who.slice(0, -1).join(", ")} and ${who.at(-1)}` : who[0]} may ${what}`;
+  positional: ["role", "what", "...names"],
+  describe: ({ role, what, names = [] }) => {
+    if (what === "all") return `${role} may do everything`;
+    if (what === "none") return `${role} may only work with their own records`;
+    const verb = VERBS[what as GrantKey] ?? what;
+    if (names.length === 0 || names[0] === "none")
+      return what === "pages"
+        ? `${role} may open no page`
+        : what === "actions"
+          ? `${role} may run no custom action`
+          : what === "create"
+            ? `${role} may add no records`
+            : `${role} may ${what === "read" ? "read" : what === "write" ? "change" : "delete"} only their own records`;
+    if (names[0] === "all")
+      return `${role} may ${verb} every ${what === "pages" ? "page" : what === "actions" ? "custom action" : "kind of record"}`;
+    const named = names.map((n) =>
+      what === "pages"
+        ? `the ${humanize(n).toLowerCase()} page`
+        : what === "actions"
+          ? humanize(n).toLowerCase()
+          : humanize(plural(n)).toLowerCase(),
+    );
+    return `${role} may ${verb} ${named.join(", ")}`;
   },
   destructive: () => false,
-  apply({ spec }, { target, roles = [] }, ir) {
-    const [kind, name = ""] = target.split(":");
-    let path: string[];
-    if (kind === "model") {
-      const [model = "", op = ""] = name.split(".");
-      if (!ir.models.some((m) => m.name === model)) {
-        throw new OperationError(
-          `There is no model named "${model}". ${
-            didYouMean(
-              model,
-              ir.models.map((m) => m.name),
-            ) ?? ""
-          }`.trim(),
-        );
-      }
-      if (!(ACCESS_OPERATIONS as readonly string[]).includes(op)) {
-        throw new OperationError(
-          `Say which operation: ${ACCESS_OPERATIONS.map((o) => `model:${model}.${o}`).join(", ")}.`,
-        );
-      }
-      path = ["models", model, "access", op];
-    } else if (kind === "page") {
-      if (!ir.pages.some((p) => p.id === name)) {
-        throw new OperationError(
-          `There is no page named "${name}". ${
-            didYouMean(
-              name,
-              ir.pages.map((p) => p.id),
-            ) ?? ""
-          }`.trim(),
-        );
-      }
-      path = ["pages", name, "access"];
-    } else if (kind === "action") {
-      if (!ir.actions.some((a) => a.name === name)) {
-        throw new OperationError(
-          `There is no action named "${name}". ${
-            didYouMean(
-              name,
-              ir.actions.map((a) => a.name),
-            ) ?? ""
-          }`.trim(),
-        );
-      }
-      path = ["actions", name, "allow"];
-    } else {
-      throw new OperationError(
-        `"${target}" is not a model operation, page or action. Use e.g. "model:Customer.delete", "page:customers" or "action:mergeCustomers".`,
-      );
+  apply({ auth }, { role, what, names = [] }, ir) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (role === "admin") throw new OperationError("Administrators do everything already.");
+    if (!auth.has(["roles", role]))
+      throw new OperationError(`There is no role named "${role}": setRoles adds one.`);
+    if (!(WHATS as readonly string[]).includes(what))
+      throw new OperationError(`Say what to grant: ${WHATS.join(", ")}.`);
+    const path = ["roles", role];
+    const block = auth.get(path);
+    const kept: Record<string, YamlValue> =
+      block && typeof block === "object" && !Array.isArray(block) && "description" in block
+        ? { description: (block as { description: YamlValue }).description }
+        : {};
+    if (what === "all") {
+      auth.set(path, "all");
+      return [];
     }
-    if (roles.length === 0) {
-      // Back to the default: remove the exception, and a model's access if nothing is left.
-      if (spec.has(path)) spec.removeAndPrune(path, 2);
-    } else if (spec.has(path)) {
-      spec.set(path, roles);
-    } else {
-      spec.add(path.slice(0, -1), path[path.length - 1] as string, roles);
+    if (what === "none") {
+      auth.set(path, kept);
+      return [];
     }
+    const key = what as GrantKey;
+    const known =
+      key === "pages"
+        ? ir.pages.map((p) => p.id)
+        : key === "actions"
+          ? ir.actions.filter((a) => a.custom).map((a) => a.name)
+          : ir.models.map((m) => m.name);
+    const kind = key === "pages" ? "page" : key === "actions" ? "custom action" : "model";
+    for (const name of names)
+      if (name !== "all" && name !== "none" && !known.includes(name))
+        throw new OperationError(
+          `There is no ${kind} named "${name}". ${didYouMean(name, known) ?? ""}`.trim(),
+        );
+    const value: YamlValue | undefined =
+      names.length === 0 || names[0] === "none" ? undefined : names[0] === "all" ? "all" : names;
+    // A role that was "all" becomes a block of every grant but this one.
+    if (block === "all") {
+      auth.set(path, {
+        ...kept,
+        ...Object.fromEntries(GRANT_KEYS.filter((k) => k !== key).map((k) => [k, "all"])),
+        ...(value === undefined ? {} : { [key]: value }),
+      });
+      return [];
+    }
+    if (value === undefined) {
+      if (auth.has([...path, key])) auth.removeAndPrune([...path, key], 2);
+    } else if (auth.has([...path, key])) auth.set([...path, key], value);
+    else if (block && typeof block === "object") auth.add(path, key, value);
+    else auth.set(path, { ...kept, [key]: value });
     return [];
   },
 };
@@ -170,4 +176,4 @@ const setOwner: Operation<{ model: string; field?: string }> = {
   },
 };
 
-export const accessOperations: AnyOperation[] = [setAccess, setOwner];
+export const accessOperations: AnyOperation[] = [grant, setOwner];

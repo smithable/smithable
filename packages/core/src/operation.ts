@@ -77,9 +77,10 @@ export interface Note {
  * a choice value of a field, a landing section of a page. `label` is how Builder asks for it.
  */
 export type ArgRef = { label?: string } & (
-  | { ref: "model" | "page" | "menu" | "accessTarget" | "outgoing" }
-  /** Roles; with `target`, also "owner" where that argument's rule has an owner to check. */
-  | { ref: "role"; target?: string }
+  | { ref: "model" | "page" | "menu" | "outgoing" }
+  | { ref: "role" }
+  /** What a grant names: pages, models or custom actions, by the argument `what` names. */
+  | { ref: "grantNames"; what: string }
   | { ref: "field"; model: string }
   | { ref: "field"; page: string }
   | { ref: "choiceValue"; model: string; field: string }
@@ -91,9 +92,8 @@ const REF_HINTS: Record<ArgRef["ref"], string> = {
   model: "A kind of record, e.g. Customer.",
   page: "A page's name, e.g. customers.",
   menu: 'A menu, usually "main".',
-  accessTarget:
-    "What the rule is for, e.g. model:Order.create, page:orders or action:mergeCustomers.",
   role: "Roles from smithable.auth.yml, e.g. admin sales.",
+  grantNames: "Pages, kinds of record or custom actions, by what is granted; or all.",
   field: "A field of that kind of record, e.g. email.",
   choiceValue: "One of the choice field's values.",
   section: "A section of that landing page.",

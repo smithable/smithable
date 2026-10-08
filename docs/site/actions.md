@@ -140,6 +140,6 @@ A bare `--when` removes the condition, so the button is offered on every record;
 
 ## Who may press them
 
-An action follows its model's write access: whoever may edit the record may run it. `--allow admin` (or any roles) narrows that, and never widens it. On a list, ticking several rows offers each action that fits at least one of them, as **Postpone (3)**; it changes the ones it fits and skips the others.
+An action follows its model's write access: whoever may edit the record may run it, which is each one for their own records and the roles granted `write` on the model in `smithable.auth.yml`. A custom action is run by the roles whose `actions` grant names it (`smithable op grant staff actions resolve`). On a list, ticking several rows offers each action that fits at least one of them, as **Postpone (3)**; it changes the ones it fits and skips the others.
 
 When a button needs more than setting fields (sending a mail, calling another system, a calculation over many records), a [custom action](../spec/v0.1.md#actions) is code of your own in `src/custom/actions/`. The [spec reference](../spec/v0.1.md#standard-actions) has every rule of standard actions.

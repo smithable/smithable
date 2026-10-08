@@ -111,7 +111,7 @@ const TASKS = [
   {
     id: "admin-delete",
     prompt: "Only admins may delete customers.",
-    ops: [["setAccess", "model:Customer.delete", "admin"]],
+    ops: [["grant", "sales", "delete", "none"]],
     check: async ({ db, page, base, signIn }) => {
       // As sales: deleting must fail or be impossible. As admin: it must work.
       const attempt = async (role) => {

@@ -77,3 +77,7 @@ The reader of first descriptions and `smithable new` write the role blocks: a sh
 ## Not in this change
 
 Narrowing the record rule for one model (an order the owner may not change once placed) is a workflow rule, and nothing asked for it yet; when it comes it is a role-independent `readonly` on the model, not a role list. Teams and workspaces stay where ARCHITECTURE §3.1 puts them.
+
+## Built (2026-10-09, Fable)
+
+As designed, with two things settled while building: a public page is open to every role (the public section says so once; a role need not name it), and `pages: all` leaves out the pages a pattern keeps for administrators (the users page, a data page), which a role gets by naming them. The validator's new codes: `moved-key` (an `access` or `allow` in `smithable.yml`), `unknown-page` / `unknown-model` / `unknown-custom-action` and `standard-action-grant` in a role's grants, `read-with-shared` and `role-opens-nothing` as warnings. The Builder's "Who can" chips grant per role; the phrase rules ("only admins may delete customers", "let sales delete customers") propose grants, and without the auth file they propose nothing.

@@ -293,81 +293,65 @@ const ACCESS_WORDS: Record<AccessOperation, string> = {
 };
 
 /**
- * Who may do what with a model's records: a row per operation, the roles (and the record's
- * owner) as chips. A chip applies setAccess at once; Default returns a row to the auth file's
- * defaultAccess. Admins may always.
+ * Who may do what with a model's records: a row per operation, a chip per role. A chip grants
+ * the role the operation on this kind of record (or takes it back) in smithable.auth.yml; the
+ * record rule (everyone changes and deletes their own; shared: everyone reads all) and admins
+ * stay as they are.
  */
 function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
   const found = spec.ir?.models.find((m) => m.name === model);
   const auth = spec.auth;
   if (!found || !auth || auth.signIn === "none") return null;
   const allowed = modelAccess(found, auth);
-  const roles = [...auth.roles.map((r) => r.name).filter((r) => r !== "admin"), "owner"];
+  const roles = auth.roles.filter((r) => r.name !== "admin");
+  const kinds = spec.ir?.models.map((m) => m.name) ?? [];
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-semibold text-neutral-500">Who can</legend>
       <p className="text-xs text-neutral-500">
-        “Their own”: each person, for the records they own. Admins always may.
+        {auth.defaultAccess === "shared"
+          ? "Everyone sees all records and changes and deletes their own; a role ticked here may for everyone's. Admins always may."
+          : "Everyone sees, changes and deletes their own records; a role ticked here may for everyone's. Admins always may."}
       </p>
       {ACCESS_OPERATIONS.map((op) => {
-        const listed = found.access?.[op];
-        const now = [...allowed[op].roles, ...(allowed[op].owner ? ["owner"] : [])];
-        // No role left means admins only (an empty list would mean the default).
-        const set = (next: string[]) =>
-          run("setAccess", {
-            target: `model:${model}.${op}`,
-            roles: next.length ? next : ["admin"],
-          });
-        const reset = () => run("setAccess", { target: `model:${model}.${op}`, roles: [] });
+        const shared = op === "read" && auth.defaultAccess === "shared";
         return (
           <div key={op} className="flex flex-wrap items-center gap-1">
             <span className="w-14 text-xs text-neutral-600">{ACCESS_WORDS[op]}</span>
             {roles.map((role) => {
-              const on = now.includes(role);
+              const on = allowed[op].roles.includes(role.name);
+              const grants = role.grants === "all" ? undefined : role.grants[op];
+              // The names the role keeps when this one is ticked or unticked.
+              const names = grants === "all" || role.grants === "all" ? kinds : [...(grants ?? [])];
+              const next = on ? names.filter((n) => n !== model) : [...names, model];
               return (
                 <button
-                  key={role}
+                  key={role.name}
                   type="button"
                   aria-pressed={on}
-                  aria-label={`${ACCESS_WORDS[op]}: ${role === "owner" ? "their own" : role}`}
+                  disabled={shared}
+                  aria-label={`${ACCESS_WORDS[op]}: ${role.name}`}
                   onClick={() =>
-                    void set(
-                      on
-                        ? now.filter((r) => r !== role && r !== "admin")
-                        : [...now.filter((r) => r !== "admin"), role],
-                    )
+                    void run("grant", {
+                      role: role.name,
+                      what: op,
+                      names: next.length === kinds.length ? ["all"] : next,
+                    })
                   }
                   className={cx(
                     "h-6 rounded-full border px-2 text-xs",
                     on
                       ? "border-accent bg-accent-soft text-accent"
                       : "border-neutral-200 text-neutral-600",
+                    shared && "opacity-60",
                   )}
                 >
-                  {role === "owner" ? "their own" : role}
+                  {role.name}
                 </button>
               );
             })}
-            {listed && (
-              <button
-                type="button"
-                aria-label={`${ACCESS_WORDS[op]}: default`}
-                className="text-xs text-neutral-500 hover:text-accent"
-                onClick={() => void reset()}
-              >
-                Default
-              </button>
-            )}
-            {now.includes("owner") && now.some((r) => r !== "owner" && r !== "admin") && (
-              // A role that may for all records leaves "their own" nothing to add for it.
-              <p className="basis-full pl-14 text-xs text-neutral-500">
-                {now
-                  .filter((r) => r !== "owner" && r !== "admin")
-                  .map((r) => `${r} users`)
-                  .join(", ")}{" "}
-                may {ACCESS_WORDS[op].toLowerCase()} all of them; turn that off for each to{" "}
-                {ACCESS_WORDS[op].toLowerCase()} only their own.
-              </p>
+            {allowed[op].owner && (
+              <span className="text-xs text-neutral-500">and each one their own</span>
             )}
           </div>
         );

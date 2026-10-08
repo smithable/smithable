@@ -26,7 +26,7 @@ api:
   assistants: true
 ```
 
-`api` offers every model and the standard actions (here **complete** and **reopen** a task) to programs, and `assistants: true` offers the same as tools for AI assistants. What a caller may do is still its role's access, set in `smithable.yml`: the assistant may change tasks and notes, and may delete nothing.
+`api` offers every model and the standard actions (here **complete** and **reopen** a task) to programs, and `assistants: true` offers the same as tools for AI assistants. What a caller may do is still its role's access, granted in `smithable.auth.yml`: the assistant may add and change tasks and notes, and may delete nothing.
 
 ## 2. Make a key
 

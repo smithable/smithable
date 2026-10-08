@@ -44,8 +44,6 @@ export interface ModelIR extends SemanticText {
   fields: FieldIR[];
   /** A `User` field that owns the record instead of the automatic owner. */
   ownedBy?: string;
-  /** Exceptions to the default access in smithable.auth.yml: roles, or "owner". */
-  access?: ModelAccessIR;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
   capacity?: CapacityIR;
   /**
@@ -66,7 +64,6 @@ export interface CapacityIR {
 
 export const ACCESS_OPERATIONS = ["read", "create", "write", "delete"] as const;
 export type AccessOperation = (typeof ACCESS_OPERATIONS)[number];
-export type ModelAccessIR = Partial<Record<AccessOperation, string[]>>;
 
 /** The users who sign in; a field of this type refers to one of them. */
 export const USER_MODEL = "User";
@@ -194,8 +191,6 @@ export interface PageIR extends SemanticText {
       };
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
-  /** Only these roles may open the page (admins always can). */
-  access?: string[];
   /** Fields of the model a list can be searched by. */
   search?: string[];
   /** Fields of the model the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle. */
@@ -310,8 +305,6 @@ export type ActionIR = CustomActionIR | StandardActionIR;
 
 interface ActionBase extends SemanticText {
   name: string;
-  /** Only these roles may run the action (admins always can). */
-  allow?: string[];
 }
 
 export interface CustomActionIR extends ActionBase {

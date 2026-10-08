@@ -1,6 +1,7 @@
 import {
   type ContentIR,
   type FieldIR,
+  findOperation,
   humanize,
   type ModelIR,
   parseFieldShorthand,
@@ -78,16 +79,10 @@ export function describeChange(
       return `Added a ${humanize(str("section")).toLowerCase()} section to the ${humanize(str("page"))} page`;
     case "removeSection":
       return `Removed the ${humanize(str("section")).toLowerCase()} section from the ${humanize(str("page"))} page`;
-    case "setAccess": {
-      const [kind, name = ""] = str("target").split(":");
-      const [modelName = "", verb = ""] = name.split(".");
-      const target = ir.models.find((m) => m.name === modelName);
-      const roles = Array.isArray(args.roles) ? (args.roles as string[]) : [];
-      if (kind !== "model" || !target || !VERBS[verb]) return undefined;
-      const things = w.pluralLabel(target).toLowerCase();
-      return roles.length
-        ? whoCan(roles, VERBS[verb], things)
-        : `Everyone with access can ${VERBS[verb]} ${things} again`;
+    case "grant": {
+      // The operation's own words are plain ("sales may add orders"); the status shows them too.
+      const operation = findOperation("grant");
+      return operation ? operation.describe(args as never, ir) : undefined;
     }
     case "nameRecords": {
       const one = str("one").trim();
