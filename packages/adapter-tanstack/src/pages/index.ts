@@ -2,16 +2,17 @@
 // the files a page of that pattern gets, and the kit files only such pages need.
 import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
 import { calculatorRoute } from "../calculators.js";
-import type { GenContext } from "../shared.js";
+import { hasKeys } from "../keys.js";
+import { type GenContext, trashedLists } from "../shared.js";
 import { articlesRoutes } from "./articles.js";
 import { calendarRoute } from "./calendar.js";
 import { customRoute } from "./custom.js";
 import { dashboardRoute } from "./dashboard.js";
-import { dataRoutes } from "./data.js";
+import { activityRoute, dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
 import { legalRoute } from "./legal.js";
 import { listRoute } from "./list.js";
-import { detailRoute, newRoute, recordPageRoute, trashRoute } from "./record.js";
+import { allTrashRoute, detailRoute, newRoute, recordPageRoute, trashRoute } from "./record.js";
 import { usersRoute } from "./users.js";
 
 type PageOf<K extends PatternKind> = PageIR & { pattern: PatternOf<K> };
@@ -85,7 +86,13 @@ export const PAGE_GENERATORS: {
   },
   users: {
     kit: ["src/kit/Users.tsx"],
-    routes: (page, { ir, t, auth }) => ({ "index.tsx": usersRoute(page, ir, t, auth) }),
+    // Beside the team, the administrator's other pages: every trash and the activity
+    // (docs/design/admin.md).
+    routes: (page, { ir, t, auth }) => ({
+      "index.tsx": usersRoute(page, ir, t, auth),
+      ...(trashedLists(ir).length ? { "trash.tsx": allTrashRoute(page, ir, t) } : {}),
+      "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)),
+    }),
   },
 };
 

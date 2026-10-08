@@ -1,7 +1,10 @@
 // Smithable app kit: the application frame with navigation menus and the signed-in user.
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
+import { Input, Label } from "#/components/ui/input";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
@@ -23,6 +26,8 @@ interface ShellProps {
   viewer: Viewer | null;
   /** Without it the app has no sign-in. */
   onSignOut?: () => Promise<void>;
+  /** Sets the signed-in person's own name, the one others see (an invited person has none yet). */
+  onRename?: (name: string) => Promise<void>;
 }
 
 // Links and buttons on the sidebar's own colors, with 44 px targets.
@@ -117,6 +122,7 @@ function Navigation({
   menus,
   viewer,
   onSignOut,
+  onRename,
   onNavigate,
 }: ShellProps & { onNavigate?: () => void }) {
   return (
@@ -160,9 +166,13 @@ function Navigation({
         <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
           {viewer ? (
             <>
-              <p className="truncate font-semibold" title={viewer.email}>
-                {viewer.name}
-              </p>
+              {onRename ? (
+                <YourName name={viewer.name} email={viewer.email} onRename={onRename} />
+              ) : (
+                <p className="truncate font-semibold" title={viewer.email}>
+                  {viewer.name}
+                </p>
+              )}
               <p className="capitalize">{viewer.role}</p>
               <button type="button" onClick={onSignOut} className={`${sidebarItem} -mx-3 mt-2`}>
                 <LogOut aria-hidden className="size-5" />
@@ -176,6 +186,86 @@ function Navigation({
           )}
         </div>
       )}
+    </>
+  );
+}
+
+/** The signed-in person's name, which they set themselves: an invited person starts with none. */
+function YourName({
+  name,
+  email,
+  onRename,
+}: {
+  name: string;
+  email: string;
+  onRename: (name: string) => Promise<void>;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [value, setValue] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string>();
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (!value.trim()) return;
+    setBusy(true);
+    setFailure(undefined);
+    try {
+      await onRename(value.trim());
+      dialog.current?.close();
+    } catch {
+      setFailure(w.tryAgain);
+    }
+    setBusy(false);
+  }
+  return (
+    <>
+      <button
+        type="button"
+        title={email}
+        onClick={() => {
+          setValue(name);
+          dialog.current?.showModal();
+        }}
+        className="block max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
+      >
+        {name.trim() || w.addYourName}
+      </button>
+      <dialog
+        ref={dialog}
+        aria-label={w.yourName}
+        className="m-auto w-[calc(100%-2.5rem)] max-w-md bg-transparent p-0 text-foreground backdrop:bg-black/50"
+      >
+        <Card className="p-card">
+          <form onSubmit={save} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="your-name">{w.yourName}</Label>
+              <Input
+                id="your-name"
+                required
+                maxLength={100}
+                value={value}
+                autoComplete="name"
+                onChange={(e) => setValue(e.target.value)}
+                disabled={busy}
+              />
+              <p className="text-sm text-muted-foreground">{w.yourNameHelp}</p>
+            </div>
+            {failure && (
+              <p role="alert" className="text-sm text-destructive">
+                {failure}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={busy}>
+                {busy ? w.saving : w.saveChanges}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => dialog.current?.close()}>
+                {w.cancel}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </dialog>
     </>
   );
 }

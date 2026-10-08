@@ -223,6 +223,24 @@ export function references(
  * The references of a new record that a record page's related list fills in ("Add line" on an
  * invoice): to a model whose record page lists this one, and which has a page of its own.
  */
+/**
+ * The models with a trash, each with its list page (the first crud page of it): the Team page's
+ * Trash shows them all (docs/design/admin.md).
+ */
+export function trashedLists(ir: SpecIR): { model: ModelIR; page: PageIR }[] {
+  return ir.models.flatMap((model) => {
+    const page = ir.pages.find((p) => p.pattern.kind === "crud" && p.pattern.model === model.name);
+    return model.trash && page ? [{ model, page }] : [];
+  });
+}
+
+/** The users page the navigation shows: with it, the menu ends with an Admin group. */
+export function adminPage(ir: SpecIR): PageIR | undefined {
+  return ir.pages.find(
+    (p) => p.pattern.kind === "users" && ir.navigation.some((m) => m.pages.includes(p.id)),
+  );
+}
+
 export function parentRefs(model: ModelIR, ir: SpecIR) {
   return references(model).flatMap((field) => {
     const parent = modelNamed(ir, field.type.model);
