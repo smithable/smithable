@@ -96,7 +96,7 @@ What each line did:
 From inside the project:
 
 ```sh
-smithable op addField Customer phone phone        # a deterministic change: spec, migration, forms, tables
+smithable op addField Customer taxId string        # a deterministic change: spec, migration, forms, tables
 smithable ask "Customers should have a website"   # in your own words; confirmed before it applies
 smithable undo                                    # takes back the last change, database included
 smithable report                                  # after a failure: shows what a report would send
