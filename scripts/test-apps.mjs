@@ -3145,6 +3145,59 @@ async function sitemapCheck(dir, base) {
 }
 
 /**
+ * The app's mark (docs/design/app-logo.md §2), when its content file names one: drawn before
+ * the name in the landing page's header and, signed in, in the shell, and linked as the tab's
+ * icon.
+ */
+async function logoCheck(dir, base) {
+  const src = /^logo:\s*(?:\{\s*src:|\n\s+src:)\s*([^\s,}]+)/m.exec(
+    readFileSync(join(dir, "smithable.content.yml"), "utf8"),
+  )?.[1];
+  if (!src) return;
+  const role = /^roles:.*\n\s+(\w+):/m.exec(
+    readFileSync(join(dir, "smithable.auth.yml"), "utf8"),
+  )?.[1];
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  // Drawn, and its file loaded: an <img> whose file is missing has no natural width.
+  const drawn = async (where) => {
+    const logo = page.locator(`${where} img[data-part="logo"]`).first();
+    await logo.waitFor({ state: "visible" });
+    if ((await logo.getAttribute("src")) !== `/${src}`) throw new Error(`${where}: not /${src}`);
+    if (!(await logo.evaluate((img) => img.complete && img.naturalWidth > 0)))
+      throw new Error(`${where}: the file did not load`);
+  };
+  try {
+    await asyncStep(
+      `the app's logo (/${src}) is before its name in the landing header${role ? " and the shell" : ""}, and is the tab's icon`,
+      async () => {
+        await open(page, `${base}/`);
+        await drawn('[data-kit="landing"] [data-part="header"]');
+        const icon = await page.locator('link[rel="icon"]').getAttribute("href");
+        if (icon !== `/${src}`) throw new Error(`the icon is ${icon}`);
+        if (role) {
+          await signInAs(page, base, role);
+          // Signed in on the landing page, its header leads into the app.
+          if (!(await page.locator('[data-kit="app-shell"]').count())) {
+            await page
+              .locator('[data-kit="landing"] [data-part="header"]')
+              .getByRole("link", { name: /^Open / })
+              .first()
+              .click();
+            await page.locator('[data-kit="app-shell"]').waitFor();
+          }
+          await drawn('[data-kit="app-shell"] aside');
+        }
+      },
+    );
+  } catch {
+    // Reported by the step.
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * A privacy page (legal: privacy): written from the app, open to visitors, naming the operator
  * from the content file, with its parts; linked from the site's footer and never from the menu.
  */
@@ -5319,6 +5372,7 @@ test("the session cookie's name and attributes", async () => {
       await robotsCheck(base);
       await sitemapCheck(dir, base);
       await legalCheck(dir, base);
+      await logoCheck(dir, base);
       if (example === "crm") {
         await browserFlow(dir, base);
         await filtersFlow(base);

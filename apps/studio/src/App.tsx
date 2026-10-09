@@ -170,12 +170,17 @@ export function App() {
   };
 
   /** Applies an operation; a change that loses data first asks for confirmation. */
-  const run = async (name: string, args: Record<string, unknown>, confirm = false) => {
+  const run = async (
+    name: string,
+    args: Record<string, unknown>,
+    confirm = false,
+    file?: { path: string; data: string },
+  ) => {
     setBusy(true);
     setMessage(undefined);
     let result: Awaited<ReturnType<typeof api.operation>>;
     try {
-      result = await api.operation(name, args, confirm);
+      result = await api.operation(name, args, confirm, file);
     } catch (error) {
       setMessage({ ok: false, text: (error as Error).message });
       return false;

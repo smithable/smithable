@@ -66,6 +66,11 @@ export interface OpFlags {
   trace?: string;
   /** The caller offers a report of a failure itself (Studio, with its log). */
   reportLater?: boolean;
+  /**
+   * Files the change brings with it, by their path in the project (a logo Studio was given):
+   * written with the change and committed in it, so an undo takes them back too.
+   */
+  files?: { path: string; bytes: Uint8Array }[];
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -251,9 +256,9 @@ async function applyAndCheckpoint(
     if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
     if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
     if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
-    for (const file of result.added) {
+    for (const file of [...result.added, ...(flags.files ?? [])]) {
       mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-      writeFileSync(join(dir, file.path), file.text);
+      writeFileSync(join(dir, file.path), "text" in file ? file.text : file.bytes);
     }
     followInSamples(dir, result.effects);
     // The imported file is kept beside the checkpoint; the log names it instead of holding it.

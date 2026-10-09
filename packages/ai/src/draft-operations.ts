@@ -57,6 +57,8 @@ const NOT_FOR_DRAFTS = new Set([
   "removePage",
   "setRuleId",
   "setPackage",
+  // A draft has no files of its own: its mark comes from the image library afterwards.
+  "setLogo",
 ]);
 
 export function draftOperations(): AnyOperation[] {
