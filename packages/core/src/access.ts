@@ -49,6 +49,14 @@ function granted(auth: AuthIR, key: GrantKey, name: string): string[] {
 }
 
 /**
+ * The roles that approve or reject a model's waiting pictures and files (docs/design/file-review.md):
+ * admin, and those whose `review` grant names the model or is `all`.
+ */
+export function reviewRoles(model: string, auth: AuthIR): string[] {
+  return auth.signIn === "none" ? [] : granted(auth, "review", model);
+}
+
+/**
  * The effective access to a model (docs/design/access-in-auth.md): the record rule of
  * `defaultAccess` (shared: everyone reads every record; private: their own; everyone changes
  * and deletes their own), the roles whose grants name the model, and what the public section
@@ -84,10 +92,15 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
  */
 export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
   const reserved = patternInfo(page).access !== undefined;
+  // The review page opens too for the roles granted review on any of its models.
+  const reviewing = (r: AuthIR["roles"][number]) =>
+    page.pattern.kind === "review" &&
+    page.pattern.models.some((m) => reviewRoles(m, auth).includes(r.name));
   const roles = auth.roles
     .filter((r) => {
       if (r.name === "admin" || r.grants === "all") return true;
       const pages = r.grants.pages;
+      if (reviewing(r)) return true;
       return pages === "all" ? !reserved : (pages?.includes(page.id) ?? false);
     })
     .map((r) => r.name);

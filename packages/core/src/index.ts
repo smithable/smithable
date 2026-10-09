@@ -1,5 +1,5 @@
 export type { Allowed, ModelAllowed } from "./access.js";
-export { actionAccess, modelAccess, pageAccess, uniquePerOwner } from "./access.js";
+export { actionAccess, modelAccess, pageAccess, reviewRoles, uniquePerOwner } from "./access.js";
 export type { OperationResult, ProjectFiles } from "./apply.js";
 export {
   applyOperation,

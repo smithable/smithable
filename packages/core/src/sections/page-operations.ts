@@ -137,6 +137,45 @@ const addDataPage: Operation<{ page?: string; route?: string; models?: string[] 
   },
 };
 
+const addReviewPage: Operation<{ page?: string; route?: string; models?: string[] }> = {
+  name: "addReviewPage",
+  summary:
+    "Add the page where the pictures and files that wait for review (a model's review) are approved or rejected, for admins and the roles granted review; it goes in the main menu.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name; review when left out." },
+      route: { type: "string", description: "Defaults to / plus the page name." },
+      models: refTo(
+        { ref: "model", label: "Models" },
+        { description: "Leave out for every model with review." },
+        true,
+      ),
+    },
+  },
+  positional: ["page", "route", "...models"],
+  describe: ({ page = "review", models }) =>
+    `Add review page ${page} (${models?.length ? models.join(", ") : "every reviewed model"})`,
+  destructive: () => false,
+  apply({ spec, auth }, { page = "review", route, models }, ir) {
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    if (auth?.get(["signIn"]) === "none")
+      throw new OperationError(
+        "A review page is for reviewers: it needs sign-in, and this app has none.",
+      );
+    for (const m of models ?? [])
+      if (!ir.models.some((x) => x.name === m))
+        throw new OperationError(`There is no model named "${m}".`);
+    const review = models?.length ? models : "all";
+    spec.add(["pages"], page, route ? { route, review } : { review });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
 const addCalendarPage: Operation<{ page: string; model: string; starts?: string }> = {
   name: "addCalendarPage",
   summary:
@@ -895,6 +934,7 @@ export const calendarOperations: AnyOperation[] = [addCalendarPage];
 export const articlesOperations: AnyOperation[] = [addArticlesPage];
 /** Operations of the data pattern. */
 export const dataOperations: AnyOperation[] = [addDataPage];
+export const reviewOperations: AnyOperation[] = [addReviewPage];
 /** Operations of the users pattern. */
 export const usersOperations: AnyOperation[] = [addUsersPage];
 export const navigationOperations: AnyOperation[] = [setNavigation];

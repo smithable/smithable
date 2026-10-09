@@ -294,7 +294,7 @@ describe("grant", () => {
     });
     if (!less.ok) throw new Error(less.message);
     expect(less.files.auth).toContain(
-      "  sales:\n    pages: all\n    read: all\n    create: all\n    write: all\n    actions: all\n    delete: [Order]\n",
+      "  sales:\n    pages: all\n    read: all\n    create: all\n    write: all\n    actions: all\n    review: all\n    delete: [Order]\n",
     );
     expect(ok("grant", ["sales", "none"]).files.auth).toContain(
       "  sales:\n    description: Works with customers and orders.\n",
