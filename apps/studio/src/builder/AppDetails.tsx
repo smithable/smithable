@@ -21,9 +21,7 @@ export function AppDetails({
   const [name, setName] = useState(app?.name ?? "");
   const [description, setDescription] = useState(app?.description ?? "");
   if (!app)
-    return (
-      <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Code mode.</p>
-    );
+    return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
   const signIn = spec.auth?.signIn;
   // Only what was changed, so the change list says what it was.
   const edits = {
@@ -34,7 +32,7 @@ export function AppDetails({
   const preset = spec.ux?.theme.preset;
   return (
     <section aria-label="The app" className="space-y-5 p-3 text-sm">
-      <p className="text-neutral-600">
+      <p className="text-muted">
         Choose Select above the preview and click a part of the app, or click a sentence in What it
         does, to see that part's details here.
       </p>
@@ -45,7 +43,7 @@ export function AppDetails({
           if (changed) void run("setApp", edits);
         }}
       >
-        <h3 className="text-xs font-semibold text-neutral-500">The app</h3>
+        <h3 className="text-xs font-semibold text-quiet">The app</h3>
         <Label text="App name">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Label>
@@ -65,7 +63,7 @@ export function AppDetails({
           />
         </Label>
         <div className="space-y-1">
-          <p className="text-xs font-medium text-neutral-600">Theme</p>
+          <p className="text-xs font-medium text-muted">Theme</p>
           <p className="flex items-center justify-between gap-2">
             <span>{preset ? preset[0]?.toUpperCase() + preset.slice(1) : "The default theme"}</span>
             <Button variant="ghost" onClick={onLook}>

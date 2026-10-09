@@ -227,12 +227,12 @@ export function Preview({
       className="h-full"
       actions={
         <div className="flex items-center gap-2">
-          {reloading && <span className="text-xs text-neutral-500">Updating…</span>}
+          {reloading && <span className="text-xs text-quiet">Updating…</span>}
           {onSelecting && (
             <Button
               variant={selecting ? "primary" : "ghost"}
               aria-pressed={Boolean(selecting)}
-              className="h-7 border border-neutral-200"
+              className="h-7 border border-line"
               onClick={() => onSelecting(!selecting)}
             >
               Select
@@ -287,7 +287,7 @@ export function Preview({
                 id={listId}
                 role="listbox"
                 aria-label="Pages"
-                className="absolute top-8 left-0 z-30 w-72 rounded-md border border-neutral-200 bg-white py-1 shadow-lg"
+                className="absolute top-8 left-0 z-30 w-72 rounded-md border border-line bg-panel py-1 shadow-lg"
               >
                 {matches.map(([route, title], index) => (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: the keys are the address field's (a combobox)
@@ -302,11 +302,11 @@ export function Preview({
                     onClick={() => open(route)}
                     className={cx(
                       "flex cursor-pointer items-baseline gap-2 px-2 py-1 text-xs",
-                      index === active ? "bg-accent-soft" : "hover:bg-neutral-100",
+                      index === active ? "bg-accent-soft" : "hover:bg-subtle",
                     )}
                   >
                     <span className="font-mono">{route}</span>
-                    <span className="truncate text-neutral-500">{title}</span>
+                    <span className="truncate text-quiet">{title}</span>
                   </div>
                 ))}
               </div>
@@ -342,10 +342,7 @@ export function Preview({
           {/* Remounted after every change, so server code and data are fresh; until the new one
               is up, the last one stays, dimmed and inert. */}
           {server === "down" || (server !== "up" && !stale) ? (
-            <div
-              role="status"
-              className="grid h-full place-items-center p-6 text-sm text-neutral-500"
-            >
+            <div role="status" className="grid h-full place-items-center p-6 text-sm text-quiet">
               {server === "starting" ? (
                 <p>Starting…</p>
               ) : (
@@ -385,7 +382,7 @@ export function Preview({
               {stale && (
                 <p
                   role="status"
-                  className="appear-late absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900/80 px-3 py-1 text-xs text-white"
+                  className="appear-late absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-fg/80 px-3 py-1 text-xs text-panel"
                 >
                   Updating the preview…
                 </p>
@@ -413,16 +410,16 @@ export function Trace({
   return (
     <Panel title="Changes" className="h-full">
       {entries.length === 0 ? (
-        <p className="p-3 text-sm text-neutral-500">No changes yet.</p>
+        <p className="p-3 text-sm text-quiet">No changes yet.</p>
       ) : (
-        <ol aria-label="Change trace" className="divide-y divide-neutral-100">
+        <ol aria-label="Change trace" className="divide-y divide-line">
           {entries.map((e) => (
             <li
               key={`${e.at}-${e.description}`}
               className={cx("px-3 py-2", e.undone && "opacity-50")}
             >
               <p className={cx("text-sm", e.undone && "line-through")}>{text(e)}</p>
-              <p className="mt-0.5 text-xs text-neutral-500">
+              <p className="mt-0.5 text-xs text-quiet">
                 {/* The Builder (words given) says only when, and the model's use where there was
                     one; Studio says how every change was made. */}
                 {!words || e.tokens > 0 ? (
@@ -472,7 +469,7 @@ function Stuck({ retry }: { retry: () => void }) {
       {stuck && stuck.log.length > 0 && (
         <pre
           title="The preview's last lines"
-          className="max-h-48 overflow-auto rounded-md bg-neutral-100 p-2 text-left font-mono text-xs text-neutral-700"
+          className="max-h-48 overflow-auto rounded-md bg-subtle p-2 text-left font-mono text-xs text-fg-soft"
         >
           {stuck.log.join("\n")}
         </pre>

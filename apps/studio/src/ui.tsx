@@ -18,8 +18,8 @@ export function Button({
       className={cx(
         "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" && "bg-accent text-white hover:bg-accent/90",
-        variant === "ghost" && "text-neutral-700 hover:bg-neutral-100",
-        variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
+        variant === "ghost" && "text-fg-soft hover:bg-subtle",
+        variant === "danger" && "bg-red-600 text-white hover:bg-red-600/90",
         className,
       )}
     >
@@ -44,21 +44,21 @@ export function Label({
   const id = useId();
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-xs font-medium text-neutral-600">
+      <label htmlFor={id} className="block text-xs font-medium text-muted">
         {text}
       </label>
       {cloneElement(children, { id, ...(problem ? { "aria-invalid": true } : {}) })}
       {problem ? (
         <p className="text-xs text-red-700">{problem}</p>
       ) : (
-        hint && <p className="text-xs text-neutral-500">{hint}</p>
+        hint && <p className="text-xs text-quiet">{hint}</p>
       )}
     </div>
   );
 }
 
 const control =
-  "block h-8 w-full rounded-md border border-neutral-300 bg-white px-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
+  "block h-8 w-full rounded-md border border-line-strong bg-panel px-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(control, props.className)} />;
@@ -103,13 +103,11 @@ export function Panel({
     <section
       data-panel={panel}
       aria-busy={busy || undefined}
-      className={cx("flex min-h-0 min-w-0 flex-col border-neutral-200 bg-white", className)}
+      className={cx("flex min-h-0 min-w-0 flex-col border-line bg-panel", className)}
     >
       {title !== undefined && (
-        <header className="flex h-10 shrink-0 items-center justify-between border-b border-neutral-200 px-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            {title}
-          </h2>
+        <header className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-quiet">{title}</h2>
           {actions}
         </header>
       )}
@@ -151,7 +149,7 @@ export function Tabs<T extends string>({
           onClick={() => onChange(id)}
           className={cx(
             "h-7 rounded-md px-2.5 text-xs font-medium",
-            value === id ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100",
+            value === id ? "bg-fg text-panel" : "text-muted hover:bg-subtle",
           )}
         >
           {label}

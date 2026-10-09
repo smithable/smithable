@@ -124,11 +124,11 @@ export function Builder({
     <div className="flex h-full min-h-0 flex-col">
       <nav
         aria-label="Panels"
-        className="flex shrink-0 flex-wrap items-center gap-3 border-b border-neutral-200 bg-white px-3 py-1.5"
+        className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line bg-panel px-3 py-1.5"
       >
         {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys between the panels' buttons */}
         <div
-          className="flex rounded-md bg-neutral-100 p-0.5"
+          className="flex rounded-md bg-subtle p-0.5"
           onKeyDown={(e) => {
             const at = panels.findIndex(([id]) => id === shown);
             const to = { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key];
@@ -149,7 +149,7 @@ export function Builder({
                 onClick={() => show(id)}
                 className={cx(
                   "h-7 rounded px-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                  current ? "bg-white shadow-xs" : "text-neutral-600",
+                  current ? "bg-panel shadow-xs" : "text-muted",
                 )}
               >
                 {label}
@@ -158,7 +158,7 @@ export function Builder({
           })}
         </div>
         {wide && (
-          <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+          <label className="flex items-center gap-1.5 text-xs text-muted">
             <input
               type="checkbox"
               checked={twoUp}
@@ -226,7 +226,7 @@ export function Builder({
           data-panel="details"
           data-guide="details"
           className={cx(
-            "flex min-h-0 shrink-0 flex-col border-l border-neutral-200 *:min-h-0 *:flex-1",
+            "flex min-h-0 shrink-0 flex-col border-l border-line *:min-h-0 *:flex-1",
             paired ? "w-[22rem]" : "w-full snap-start",
           )}
         >
@@ -257,7 +257,7 @@ export function Builder({
         // Folded, the bar is the guide's change stop: it says where the box opens.
         <div
           data-guide="change"
-          className="flex shrink-0 items-center gap-3 border-t border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-600"
+          className="flex shrink-0 items-center gap-3 border-t border-line bg-panel px-3 py-1.5 text-xs text-muted"
         >
           <span className="min-w-0 flex-1 truncate">
             {project.trace[0] ? `Last change: ${lastWords}` : "No changes yet."}
@@ -267,7 +267,7 @@ export function Builder({
           </Button>
         </div>
       ) : (
-        <div className="flex max-h-[35vh] shrink-0 flex-col border-t border-neutral-200 bg-white">
+        <div className="flex max-h-[35vh] shrink-0 flex-col border-t border-line bg-panel">
           <div className="flex justify-end px-3 pt-1">
             <Button variant="ghost" className="h-6 text-xs" onClick={() => fold(true)}>
               Fold
@@ -287,7 +287,7 @@ export function Builder({
               }}
             />
           </div>
-          <div className="flex min-h-24 flex-1 flex-col border-t border-neutral-200 *:min-h-0 *:flex-1">
+          <div className="flex min-h-24 flex-1 flex-col border-t border-line *:min-h-0 *:flex-1">
             <Trace entries={project.trace} words={words} />
           </div>
         </div>

@@ -119,7 +119,7 @@ export function Ask({
             value={request}
             onChange={(e) => setRequest(e.target.value)}
             rows={2}
-            className="block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="block w-full rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </Label>
         <Button type="submit" disabled={busy || !request.trim()}>
@@ -136,7 +136,7 @@ export function Ask({
             <li
               // The same request may wait twice: the text and how many alike came before.
               key={`${text}#${waiting.slice(0, i).filter((t) => t === text).length}`}
-              className="flex items-center gap-2 text-sm text-neutral-600"
+              className="flex items-center gap-2 text-sm text-muted"
             >
               <span className="min-w-0 flex-1 truncate">Waiting: {text}</span>
               <Button
@@ -166,7 +166,7 @@ export function Ask({
           }}
         />
       )}
-      {output && <p className="text-sm text-neutral-600">{output}</p>}
+      {output && <p className="text-sm text-muted">{output}</p>}
     </div>
   );
 }
@@ -196,9 +196,9 @@ export function ProposalView({
     <section
       aria-label="Proposal"
       aria-live="polite"
-      className="space-y-3 rounded-md border border-neutral-200 p-3"
+      className="space-y-3 rounded-md border border-line p-3"
     >
-      {proposal.usage && <p className="text-xs text-neutral-500">{plainUsage(proposal.usage)}</p>}
+      {proposal.usage && <p className="text-xs text-quiet">{plainUsage(proposal.usage)}</p>}
       {proposal.kind === "change" && (
         <>
           <p className="text-sm font-medium">Proposed change</p>
@@ -237,7 +237,7 @@ export function ProposalView({
               <Button
                 key={option}
                 variant="ghost"
-                className="border border-neutral-200"
+                className="border border-line"
                 disabled={!onOption}
                 onClick={() => onOption?.(option)}
               >

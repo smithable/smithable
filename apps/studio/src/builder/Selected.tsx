@@ -37,11 +37,10 @@ export function Selected({
       <div className="space-y-3 p-3 text-sm">
         <div>
           <p className="font-medium">
-            {humanize(field.name)}{" "}
-            <span className="text-neutral-500">of {humanize(model.name)}</span>
+            {humanize(field.name)} <span className="text-quiet">of {humanize(model.name)}</span>
           </p>
           {/* As "Your app" lists it. */}
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-quiet">
             {wordsFor(spec.ir as SpecIR, spec.content).item(model, field)}
           </p>
         </div>
@@ -81,7 +80,7 @@ export function Selected({
         {selection.part === "column" && selection.page && selection.columns && (
           <Button
             variant="ghost"
-            className="w-full border border-neutral-200"
+            className="w-full border border-line"
             onClick={() =>
               run("setColumns", {
                 page: selection.page,
@@ -107,18 +106,13 @@ export function Selected({
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
-          <Button
-            type="submit"
-            variant="ghost"
-            className="border border-neutral-200"
-            disabled={!to}
-          >
+          <Button type="submit" variant="ghost" className="border border-line" disabled={!to}>
             Rename
           </Button>
         </form>
         <Button
           variant="ghost"
-          className="w-full border border-neutral-200 text-red-700"
+          className="w-full border border-line text-red-700"
           onClick={() =>
             run("removeField", { model: model.name, field: field.name }).then(
               (ok) => ok && onClose(),
@@ -127,9 +121,7 @@ export function Selected({
         >
           Remove field
         </Button>
-        <p className="text-xs text-neutral-500">
-          Drag a column's header in the preview to move it.
-        </p>
+        <p className="text-xs text-quiet">Drag a column's header in the preview to move it.</p>
       </div>
     </Panel>
   );
