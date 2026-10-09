@@ -2,6 +2,11 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Borrow it from a neighbor
+      subtitle: Drills, ladders, hedge trimmers and more, shared by the people on your street. Browse what's available, ask the owner, and give it back when you're done.
+      button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
+    latest:
+      title: Available now

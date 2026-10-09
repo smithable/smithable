@@ -2,12 +2,14 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Ideas worth the trip
-      subtitle: Browse the talks, meet the speakers and save your seat at the sessions you don't want to miss.
+      title: Join the conference
+      subtitle: Browse the programme, meet the speakers and register for the talks you want to attend.
+      button: See the programme
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
     speakerCards:
       title: Speakers
     callToAction:
-      title: Seats are limited — register for your talks today
+      title: Save your seat
+      button: Register for talks

@@ -4,9 +4,6 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Runs the app and invites the family.
-  member:
-    description: "A family member: adds and edits recipes and shopping lists."
-defaultRole: member
+  admin: all
+  member: { pages: all, create: all }
 admins: [johan@smithable.ai]

@@ -1,3 +1,5 @@
 smithableUx: 0.1
 theme:
   preset: woodland
+  brand:
+    font: Nunito Sans
