@@ -19,6 +19,7 @@ import {
   PICTURES_MAX,
   pascal,
   plural,
+  reviewRoles,
   type SpecIR,
   snake,
   storesFiles,
@@ -284,13 +285,13 @@ export const ${n.get} = createServerFn()
     // In the trash: its page shows it read-only, with when, by whom and Restore.
     if (!row) {
       const gone = await ${n.data}.trashed(viewer, id);
-      return gone && { row: gone.row, ${hasFavorites(model, ir, auth) ? "saved: false, " : ""}canWrite: false, canDelete: false,${adds.length ? ` canAdd: { ${adds.map((a) => `${a.list.name}: false`).join(", ")} },` : ""} trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+      return gone && { row: gone.row, ${hasFavorites(model, ir, auth) ? "saved: false, " : ""}${model.review ? "review: [], " : ""}canWrite: false, canDelete: false,${adds.length ? ` canAdd: { ${adds.map((a) => `${a.list.name}: false`).join(", ")} },` : ""} trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
     }`
         : ""
     }
     if (!row) return null;
     return {
-      row,${model.trash ? "\n      trashed: null," : ""}${
+      row,${model.trash ? "\n      trashed: null," : ""}${model.review ? `\n      // Its files waiting for review, or rejected with the reason: for its owner and the reviewers.\n      review: ${n.data}.reviewNotes(viewer, id),` : ""}${
         hasFavorites(model, ir, auth)
           ? `
       saved: ${n.data}.saved(viewer).includes(id),`
@@ -561,14 +562,18 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
   // A list's rows as the viewer gets them: formulas worked out, related records kept for the
   // totals left out. No local of its own: a model's table may have any name (items, for Item).
-  const asListed = (rows: string, lead: string, tail = "") =>
-    aggregatedLists(model).length
+  const asListed = (given: string, lead: string, tail = "") => {
+    const rows = (model.review ?? []).some((f) => !model.fields.find((x) => x.name === f)?.required)
+      ? `veiled(viewer, ${given})`
+      : given;
+    return aggregatedLists(model).length
       ? `// The related records are here for the totals only: some may not be the viewer's to read.
     ${lead}${rows}.map((row) => {
       const { ${aggregatedLists(model).join(", ")}, ...listed } = ${compute("row")};
       return listed;
     })${tail};`
       : `${lead}${formulas ? `${rows}.map(${withFormulasName(model)})` : rows}${tail};`;
+  };
   const titleColumn = titleField(model);
   // The references measureBy can name its groups by: those whose model has a title.
   const titled = references(model)
@@ -599,7 +604,12 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     ...Object.values(capacity?.where ?? {}),
     ...holds.flatMap((m) => Object.values(m.capacity?.where ?? {})),
   ].some(Array.isArray);
+  // A reviewed field that is required holds the whole record until its file is approved; the
+  // reviewers are admin and the roles granted review (docs/design/file-review.md).
+  const held = (model.review ?? []).filter((f) => model.fields.find((x) => x.name === f)?.required);
+  const veils = (model.review ?? []).filter((f) => !held.includes(f));
   const drizzle = [
+    ...(held.length ? ["notExists", "or"] : []),
     "and",
     "eq",
     "inArray",
@@ -682,8 +692,11 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     mails
       ? `\n        outgoing(tx, viewer, "${model.name}", ${what}, ${record}${before && `, ${before}`});`
       : "";
+  // A new file in a reviewed field starts waiting, in the change's own transaction.
+  const queue = (record: string, before: string, after: string) =>
+    model.review ? `\n        queueReviews(tx, viewer, ${record}, ${before}, ${after});` : "";
   const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();
-        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${tell('"created"', "made")}
+        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${queue("made.id", "undefined", "made")}${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
   // The trash (docs/design/trash.md): a delete moves the record there.
@@ -1091,7 +1104,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}import { afterChange, afterDelete } from "./hooks";
+${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1103,8 +1116,102 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 `
     : ""
 }${usedBy}${rootInTrash}
-/** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
-export const ${n.access}: ModelAccess = ${literal(access)};
+${
+  model.review
+    ? `/**
+ * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
+ * reviewer sent it; a file that is replaced or removed leaves the list, and with it a rejection
+ * and its reason.
+ */
+function queueReviews(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  viewer: Viewer | null,
+  recordId: number,
+  before: Record<string, unknown> | undefined,
+  after: Record<string, unknown>,
+) {
+  const files = (value: unknown) =>
+    (Array.isArray(value) ? value : value ? [value] : []).map((v) => (v as { file: string }).file);
+${signedIn ? "  let queued = false;" : ""}
+  for (const [field, key] of ${JSON.stringify(model.review.map((f) => [f, dataKey(model.fields.find((x) => x.name === f) as FieldIR)]))} as [string, string][]) {
+    const had = files(before?.[key]);
+    const has = files(after[key]);
+    const gone = had.filter((f) => !has.includes(f));
+    if (gone.length)
+      tx.delete(schema.fileReviews)
+        .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), inArray(schema.fileReviews.file, gone)))
+        .run();
+    if (viewer && REVIEWERS.includes(viewer.role)) continue;
+    for (const file of has.filter((f) => !had.includes(f))) {
+      // The same file sent again (files are named by their content) starts afresh: an earlier
+      // decision about it, a rejection above all, is replaced.
+      tx.delete(schema.fileReviews)
+        .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), eq(schema.fileReviews.file, file)))
+        .run();
+      tx.insert(schema.fileReviews)
+        .values({ model: ${JSON.stringify(model.name)}, recordId, field, file, uploadedBy: viewer?.id ?? null })
+        .run();
+${signedIn ? "      queued = true;\n" : ""}    }
+  }
+${
+  signedIn
+    ? `  // The reviewers are told once the change is saved (a rolled-back one leaves nothing waiting).
+  if (queued) setTimeout(() => void tellReviewers(${JSON.stringify(ir.app.name)}, ${JSON.stringify(model.name)}), 0);
+`
+    : ""
+}}
+
+`
+    : ""
+}${
+  veils.length
+    ? `/**
+ * The waiting or rejected files of the optional reviewed fields, left out for everyone but the
+ * record's owner and the reviewers (docs/design/file-review.md): the record shows, the file not.
+ */
+function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[] {
+  if (!rows.length || (viewer && REVIEWERS.includes(viewer.role))) return rows;
+  const waiting = db
+    .select({ recordId: schema.fileReviews.recordId, field: schema.fileReviews.field, file: schema.fileReviews.file })
+    .from(schema.fileReviews)
+    .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), inArray(schema.fileReviews.recordId, rows.map((r) => r.id)), inArray(schema.fileReviews.state, ["pending", "rejected"]), inArray(schema.fileReviews.field, ${JSON.stringify(veils)})))
+    .all();
+  if (!waiting.length) return rows;${
+    signedIn
+      ? `
+  const owners = new Map(
+    db.select({ id: ${n.table}.id, owner: ${n.table}.${owner} }).from(${n.table}).where(inArray(${n.table}.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, o.owner]),
+  );`
+      : ""
+  }
+  const keys: Record<string, string> = ${JSON.stringify(Object.fromEntries(veils.map((f) => [f, dataKey(model.fields.find((x) => x.name === f) as FieldIR)])))};
+  return rows.map((row) => {
+    const mine = waiting.filter((w) => w.recordId === row.id);
+    if (!mine.length${signedIn ? " || (viewer && owners.get(row.id) === viewer.id)" : ""}) return row;
+    const shown: Record<string, unknown> = { ...row };
+    for (const w of mine) {
+      const key = keys[w.field] as string;
+      const value = shown[key];
+      shown[key] = Array.isArray(value)
+        ? value.filter((v) => (v as { file: string }).file !== w.file)
+        : (value as { file?: string } | null)?.file === w.file
+          ? null
+          : value;
+    }
+    return shown as R;
+  });
+}
+
+`
+    : ""
+}/** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
+export const ${n.access}: ModelAccess = ${literal(access)};${
+    model.review
+      ? `
+/** The roles that approve or reject ${n.pluralLabel.toLowerCase()}' waiting files (docs/design/file-review.md). */
+export const REVIEWERS: string[] = ${JSON.stringify(reviewRoles(model.name, auth))};`
+      : ""
+  }
 ${
   ownedAuto
     ? `
@@ -1196,11 +1303,33 @@ const DAY = 24 * 60 * 60 * 1000;
 }export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {${
-    model.trash
+    model.trash || held.length
       ? `
-    // What is in the trash is gone to every reader (docs/design/trash.md).
-    return and(isNull(${n.table}.deletedAt), ${self}.scoped(viewer));
-  },
+${model.trash ? "    // What is in the trash is gone to every reader (docs/design/trash.md).\n" : ""}${held.length ? "    // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).\n" : ""}    return and(${model.trash ? `isNull(${n.table}.deletedAt), ` : ""}${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer));
+  },${
+    held.length
+      ? `
+
+  /** Records whose required file waits for review (or was rejected) are left out, except for their owner and the reviewers. */
+  unheld(viewer: Viewer | null) {
+    if (viewer && REVIEWERS.includes(viewer.role)) return undefined;
+    const waiting = notExists(
+      db
+        .select({ id: schema.fileReviews.id })
+        .from(schema.fileReviews)
+        .where(
+          and(
+            eq(schema.fileReviews.model, ${JSON.stringify(model.name)}),
+            eq(schema.fileReviews.recordId, ${n.table}.id),
+            inArray(schema.fileReviews.state, ["pending", "rejected"]),
+            inArray(schema.fileReviews.field, ${JSON.stringify(held)}),
+          ),
+        ),
+    );
+    return viewer ? or(waiting, eq(${n.table}.${owner}, viewer.id)) : waiting;
+  },`
+      : ""
+  }
 
   /** The records the viewer may read by the read rule, the trashed ones too. */
   scoped(viewer: Viewer | null) {`
@@ -1211,7 +1340,29 @@ const DAY = 24 * 60 * 60 * 1000;
 ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    return ${ownOrPublic};
   },
 
-  canRead(viewer: Viewer | null, id: number): boolean {
+${
+  model.review
+    ? `  /** The record's files waiting for review, or rejected with a reason: for its owner and the reviewers only. */
+  reviewNotes(viewer: Viewer | null, id: number): { field: string; state: string; reason: string | null }[] {
+    if (!viewer) return [];
+    if (!REVIEWERS.includes(viewer.role)) {${
+      signedIn
+        ? `
+      const own = db.select({ owner: ${n.table}.${owner} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
+      if (own?.owner !== viewer.id) return [];`
+        : "\n      return [];"
+    }
+    }
+    return db
+      .select({ field: schema.fileReviews.field, state: schema.fileReviews.state, reason: schema.fileReviews.reason })
+      .from(schema.fileReviews)
+      .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), eq(schema.fileReviews.recordId, id), inArray(schema.fileReviews.state, ["pending", "rejected"])))
+      .all();
+  },
+
+`
+    : ""
+}  canRead(viewer: Viewer | null, id: number): boolean {
     const found = db
       .select({ id: ${n.table}.id })
       .from(${n.table})
@@ -1494,8 +1645,8 @@ ${
     ? `    if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
     const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } });
-    return { ...${compute(`{ ...row, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
-    : `    return row ? ${compute("row")} : null;`
+    return { ...${compute(`{ ...${veils.length ? "veiled(viewer, [row])[0]" : "row"}, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
+    : `    return row ? ${compute(veils.length ? "veiled(viewer, [row])[0]" : "row")} : null;`
 }
   },
 
@@ -1557,7 +1708,7 @@ ${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: t
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
         const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${tell("what", "after", "before")}
+        audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
         return after;
       });
     } catch (error) {

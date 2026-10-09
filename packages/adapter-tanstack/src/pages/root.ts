@@ -148,6 +148,13 @@ export function rootRoute(
   const framedBySite = sites.length
     ? `landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`))`
     : "landingRoutes.includes(pathname)";
+  // The review pages (docs/design/file-review.md): the menu shows how many files wait on each.
+  const reviews = hasSignIn(auth)
+    ? ir.pages.flatMap((p) =>
+        p.pattern.kind === "review" ? [{ route: p.route, models: p.pattern.models }] : [],
+      )
+    : [];
+  const reviewCounts = `{ ${reviews.map((r) => `${JSON.stringify(r.route)}: waitingCount(viewer, ${JSON.stringify(r.models)})`).join(", ")} }`;
   // Each page's route, longest first: the page a path is on names it for custom styles.
   const pageRoutes = [...ir.pages]
     .sort((a, b) => b.route.length - a.route.length || (a.route < b.route ? -1 : 1))
@@ -159,7 +166,7 @@ ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}im
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { Consent } from "#/kit/Consent";
-${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";
+${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
@@ -186,10 +193,21 @@ ${
     viewer,
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
-    asks: asks(viewer),
+    asks: asks(viewer),${reviews.length ? `\n    counts: ${reviewCounts},` : ""}
   };
 });`
-    : `const getViewer = createServerFn().handler(async () => ({
+    : reviews.length
+      ? `const getViewer = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return {
+    viewer,
+    asOf: process.env.DATA_AS_OF,
+    demo: process.env.DEMO_SIGN_IN === "1",
+    // How many files wait for the viewer's review, beside the review page in the menu.
+    counts: ${reviewCounts},
+  };
+});`
+      : `const getViewer = createServerFn().handler(async () => ({
   viewer: await currentViewer(),
   asOf: process.env.DATA_AS_OF,
   demo: process.env.DEMO_SIGN_IN === "1",
@@ -242,7 +260,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo${asking ? ", asks" : ""} } = Route.useRouteContext();
+  const { viewer, asOf, demo${asking ? ", asks" : ""}${reviews.length ? ", counts" : ""} } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -295,11 +313,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}>
+          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}>
+            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
           {children}
         </AppShell>`
         }

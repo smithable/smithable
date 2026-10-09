@@ -36,7 +36,7 @@ models:
 
 ## 4. What it is not
 
-No preview, no editing, no versions, no virus scanning, no sharing a file by link outside the app. A file is as private as its record, which is the whole point.
+No preview, no editing, no versions, no virus scanning, no sharing a file by link outside the app. A file is as private as its record, which is the whole point. Two later additions ([file-review.md](file-review.md), 2026-10-09): a model may hold its pictures and files for review before others see them (`review`), and a `SCAN_URL`, when set, is asked about every file before it is stored; nothing is scanned without it.
 
 ## 5. Steps
 
