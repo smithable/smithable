@@ -609,7 +609,8 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const held = (model.review ?? []).filter((f) => model.fields.find((x) => x.name === f)?.required);
   const veils = (model.review ?? []).filter((f) => !held.includes(f));
   const drizzle = [
-    ...(held.length ? ["notExists", "or"] : []),
+    ...(held.length ? ["notExists"] : []),
+    ...(model.review ? ["or"] : []),
     "and",
     "eq",
     "inArray",
@@ -1143,10 +1144,11 @@ ${signedIn ? "  let queued = false;" : ""}
         .run();
     if (viewer && REVIEWERS.includes(viewer.role)) continue;
     for (const file of has.filter((f) => !had.includes(f))) {
-      // The same file sent again (files are named by their content) starts afresh: an earlier
-      // decision about it, a rejection above all, is replaced.
+      // A new file answers what was asked: the field's rejections go (their reasons were shown
+      // until now), and an earlier decision about the same file (files are named by their
+      // content) is replaced.
       tx.delete(schema.fileReviews)
-        .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), eq(schema.fileReviews.file, file)))
+        .where(and(eq(schema.fileReviews.model, ${JSON.stringify(model.name)}), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), or(eq(schema.fileReviews.file, file), eq(schema.fileReviews.state, "rejected"))))
         .run();
       tx.insert(schema.fileReviews)
         .values({ model: ${JSON.stringify(model.name)}, recordId, field, file, uploadedBy: viewer?.id ?? null })
