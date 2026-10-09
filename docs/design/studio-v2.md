@@ -1,6 +1,6 @@
 # Studio, second round: one preview, a remembered place, a Look tab, questions, editing by parts (design)
 
-Status: §1 (one preview), §3 (the Look tab) and §4 (questions) are built; §2 (the remembered place) and §5 (editing by parts) are not built and not scheduled. Proposed 2026-09-30 by Fable from Johan's testing of the yoga app on the beta. The routine items from the same testing (the mode names "No code" and "Code", the change notice with Undo, the trace below the change box, a no-change edit refused, one-click editing of a sentence, adding a custom action, details beside the concepts) are with Opus already. This document is the rest: the parts that change how Builder and Studio are put together.
+Status: §1 (one preview), §3 (the Look tab) and §4 (questions) are built; §2 (the remembered place) is built for each mode's tab and pick, and in Code mode for the file open, its cursor and unsaved edits (2026-10-09); §5 (editing by parts) is not built and not scheduled. Proposed 2026-09-30 by Fable from Johan's testing of the yoga app on the beta. The routine items from the same testing (the mode names "No code" and "Code", the change notice with Undo, the trace below the change box, a no-change edit refused, one-click editing of a sentence, adding a custom action, details beside the concepts) are with Opus already. This document is the rest: the parts that change how Builder and Studio are put together.
 
 ## 1. One preview, outside both modes
 
@@ -9,7 +9,7 @@ Today each mode renders the preview inside its own layout, so switching modes re
 Where Builder's panels snap (Your app, Preview, Changes), "Preview" snaps to the frame; on wide windows the frame is always visible and the panels take the rest.
 
 **As built (2026-09-30, Opus, #36, #38 and the Hide button):**
-- **The frame:** it's made once in `App.tsx` and never moves in the page. From lg it's a column taking 55% of the window, because at 45% the preview's app fell into its phone layout at 1440 px. Below lg it's placed over the mode's empty preview slot (Builder's Preview panel, Code's Preview tab) and follows it as the strip snaps.
+- **The frame:** it's made once in `App.tsx` and never moves in the page. From lg it's a column taking 55% of the window, because at 45% the preview's app fell into its phone layout at 1440 px. Below lg the mode switch has a third choice, **No code | Preview | Code**: Preview shows the frame alone, the window's width, with the mode hidden (not unmade) under it; the modes have no Preview panel or tab of their own (Johan, 2026-10-09). Before, it was placed over a slot in the mode's snapping strip.
 - **Builder:** "Your app + Details" side by side from 1680 px.
 - **Hide:** the column's Hide button, and "Show preview" in the header, remembered with the place.
 - **Code mode's details:** beside the tree from lg while the preview is hidden, otherwise from 1800 px.
