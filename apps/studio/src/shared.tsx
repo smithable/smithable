@@ -1,5 +1,5 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type TraceEntry } from "./api";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
@@ -13,6 +13,7 @@ export function Preview({
   onSelecting,
   onHide,
   highlight,
+  pages = [],
 }: {
   url: string;
   version: number;
@@ -25,6 +26,8 @@ export function Preview({
   onHide?: () => void;
   /** What the last change touched, flashed once in the preview (motion.md 9a); `key` names the change. */
   highlight?: { key: string; concepts: string[] };
+  /** The app's pages, each its address and its title: offered under the address as it is typed. */
+  pages?: [string, string][];
 }) {
   // The preview's records are samples, and a published app starts empty: said until dismissed.
   const [samples, setSamples] = useState(() => {
@@ -198,6 +201,23 @@ export function Preview({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  // The address's list of the app's pages: while the field has the focus, those whose address
+  // or title has what is typed (all of them for an empty field or "/"), eight at most. Our own
+  // list, not a datalist, which an iPhone does not show.
+  const listId = useId();
+  const [listing, setListing] = useState(false);
+  const [active, setActive] = useState(-1);
+  const wanted = typed.replace(/^\//, "").toLowerCase();
+  const matches = pages
+    .filter(([route, title]) => `${route} ${title}`.toLowerCase().includes(wanted))
+    .slice(0, 8);
+  const open = (path: string) => {
+    current.current = path.startsWith("/") ? path : `/${path}`;
+    setTyped(current.current);
+    setListing(false);
+    setActive(-1);
+    setOpened((n) => n + 1);
+  };
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
   return (
@@ -219,19 +239,78 @@ export function Preview({
             </Button>
           )}
           <form
-            className="flex items-center gap-1"
+            className="relative flex items-center gap-1"
             onSubmit={(e) => {
               e.preventDefault();
-              current.current = typed.startsWith("/") ? typed : `/${typed}`;
-              setOpened((n) => n + 1);
+              open(typed);
             }}
           >
             <Input
               aria-label="Preview address"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={listing && matches.length > 0}
+              aria-controls={listId}
+              aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+              autoComplete="off"
               value={typed}
-              onChange={(e) => setTyped(e.target.value)}
+              onChange={(e) => {
+                setTyped(e.target.value);
+                setListing(true);
+                setActive(-1);
+              }}
+              onFocus={() => setListing(true)}
+              onBlur={() => setListing(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  if (listing) e.stopPropagation();
+                  setListing(false);
+                  return;
+                }
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setListing(true);
+                  const step = e.key === "ArrowDown" ? 1 : -1;
+                  setActive((at) => (at + step + matches.length) % Math.max(matches.length, 1));
+                  return;
+                }
+                const chosen = matches[active];
+                if (e.key === "Enter" && listing && chosen) {
+                  e.preventDefault();
+                  open(chosen[0]);
+                }
+              }}
               className="h-7 w-56 font-mono text-xs"
             />
+            {listing && matches.length > 0 && (
+              <div
+                id={listId}
+                role="listbox"
+                aria-label="Pages"
+                className="absolute top-8 left-0 z-30 w-72 rounded-md border border-neutral-200 bg-white py-1 shadow-lg"
+              >
+                {matches.map(([route, title], index) => (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: the keys are the address field's (a combobox)
+                  <div
+                    key={route}
+                    id={`${listId}-${index}`}
+                    role="option"
+                    aria-selected={index === active}
+                    tabIndex={-1}
+                    // Picked before the field loses the focus (and the list with it).
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => open(route)}
+                    className={cx(
+                      "flex cursor-pointer items-baseline gap-2 px-2 py-1 text-xs",
+                      index === active ? "bg-accent-soft" : "hover:bg-neutral-100",
+                    )}
+                  >
+                    <span className="font-mono">{route}</span>
+                    <span className="truncate text-neutral-500">{title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <Button type="submit" variant="ghost" className="h-7">
               Go
             </Button>

@@ -1,19 +1,25 @@
 // The Studio guide (docs/design/studio-guide.md): a card beside each place, in order, with Next
 // and Skip; the rest of the screen dims and takes no clicks while it runs. A stop whose place is
-// not on the screen is left out.
+// not on the screen is left out, except the preview, which is brought on screen (onStop).
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { doneKey, STOPS, type Stop } from "./guide";
+import { doneKey, type Stop } from "./guide";
 import { Button } from "./ui";
 
 const CARD = { width: 320, height: 190, gap: 10 };
 
-/** The stops whose places are on the screen now, each with its element. */
-function present(): { stop: Stop; element: HTMLElement }[] {
-  return STOPS.flatMap((stop) => {
+/**
+ * The stops whose places are on the screen now, each with its element. A place marked
+ * data-guide-view (the preview, which a narrow window shows only when chosen) counts even unseen:
+ * its stop brings it on screen.
+ */
+function present(stops: Stop[]): { stop: Stop; element: HTMLElement }[] {
+  return stops.flatMap((stop) => {
     const element = document.querySelector<HTMLElement>(`[data-guide="${stop.anchor}"]`);
     if (!element) return [];
     const box = element.getBoundingClientRect();
-    return box.width > 0 && box.height > 0 ? [{ stop, element }] : [];
+    return (box.width > 0 && box.height > 0) || element.closest("[data-guide-view]")
+      ? [{ stop, element }]
+      : [];
   });
 }
 
@@ -35,16 +41,24 @@ function cardAt(box: DOMRect): { top: number; left: number } {
 
 export function Guide({
   app,
+  stops: tour,
   onEnd,
   onCode,
+  onStop,
 }: {
   app: string;
+  /** The tour of the mode it was started in (guide.ts). */
+  stops: Stop[];
   onEnd: () => void;
-  /** The first stop's Code: the tour ends and Studio switches to Code mode (remembered). */
+  /** A choice stop's Code: Studio switches to Code mode (remembered) and its tour follows. */
   onCode: () => void;
+  /** Each stop as it opens, so a place that is not shown (the preview) can be. */
+  onStop?: (anchor: string) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [stops] = useState(present);
+  // Found once the tour's mode is on the screen: after the render that may have just switched to
+  // it, not during it.
+  const [stops, setStops] = useState<{ stop: Stop; element: HTMLElement }[]>([]);
   const [at, setAt] = useState(0);
   const [box, setBox] = useState<DOMRect>();
   const current = stops[at];
@@ -65,16 +79,18 @@ export function Guide({
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the tour starts
   useEffect(() => {
     before.current = document.activeElement;
+    const found = present(tour);
+    if (found.length === 0) return end();
+    setStops(found);
     if (!dialog.current?.open) dialog.current?.showModal();
-    if (stops.length === 0) end();
   }, []);
 
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each stop once, as it opens (onStop is made anew each render)
   useLayoutEffect(() => {
     if (!current) return;
-    // A place laid over a panel (the preview on a phone) is brought in by scrolling to the panel.
-    const panel = document.querySelector(`[data-guide-place="${current.stop.anchor}"]`);
-    (panel ?? current.element).scrollIntoView({ block: "nearest", inline: "nearest" });
+    onStop?.(current.stop.anchor);
+    current.element.scrollIntoView({ block: "nearest", inline: "nearest" });
     const measure = () => setBox(current.element.getBoundingClientRect());
     measure();
     const later = setTimeout(measure, 350);
@@ -140,13 +156,7 @@ export function Guide({
           {current.stop.choice ? (
             // How the person wants to work: No code goes on with the tour, Code switches to it.
             <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  end();
-                  onCode();
-                }}
-              >
+              <Button variant="ghost" onClick={onCode}>
                 Code
               </Button>
               <Button
