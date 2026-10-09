@@ -44,9 +44,7 @@ export function Look({
 }) {
   const { ir, ux } = spec;
   if (!ir || !ux)
-    return (
-      <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Code mode.</p>
-    );
+    return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
   const theme = ux.theme;
   const choices = ir.models.flatMap((m) =>
     m.fields.flatMap((f) =>
@@ -70,7 +68,7 @@ export function Look({
                     "w-full overflow-hidden rounded-md border text-left",
                     current
                       ? "border-accent ring-4 ring-accent/40"
-                      : "border-neutral-200 hover:border-neutral-400",
+                      : "border-line hover:border-line-strong",
                   )}
                 >
                   <img
@@ -84,7 +82,7 @@ export function Look({
                     <span className="font-medium">{humanize(t.name)}</span>
                     {/* The one in use says so in words, not only by its outline. */}
                     {current && <span className="ml-1.5 font-medium text-accent">· In use</span>}
-                    <span className="block text-neutral-500">
+                    <span className="block text-quiet">
                       {t.source === "project" ? `themes/${t.name}.yml · ` : ""}
                       {t.font}
                     </span>
@@ -146,7 +144,7 @@ export function Look({
           onChange={(e) => void run("setLanguage", { language: e.target.value })}
           options={LANGUAGES.map((l) => [l, LANGUAGE_NAMES[l]])}
         />
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-quiet">
           What the app says by itself (buttons, messages, mails) follows it; your own texts stay as
           you wrote them. In another language than English, give each kind of record its name for
           several, or the app makes it by an English rule.
@@ -156,7 +154,7 @@ export function Look({
         {ir.pages.map((page) => {
           const model = ir.models.find((m) => m.name === pageModel(page));
           return (
-            <div key={page.id} className="space-y-2 border-b border-neutral-100 pb-3 last:border-0">
+            <div key={page.id} className="space-y-2 border-b border-line pb-3 last:border-0">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium">{humanize(page.id)}</span>
                 <Select
@@ -239,7 +237,7 @@ export function Look({
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="space-y-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-quiet">{title}</h3>
       {children}
     </section>
   );
@@ -270,7 +268,7 @@ function Segmented({
             "h-8 rounded-md border px-3 text-xs font-medium",
             v === value
               ? "border-accent bg-accent-soft text-accent"
-              : "border-neutral-200 text-neutral-700 hover:bg-neutral-50",
+              : "border-line text-fg-soft hover:bg-surface",
           )}
         >
           {text}
@@ -311,9 +309,9 @@ function ThemeColor({
         value={shown}
         onChange={(e) => setPicked(e.target.value)}
         onBlur={apply}
-        className="h-9 w-14 cursor-pointer rounded border border-neutral-200 p-1"
+        className="h-9 w-14 cursor-pointer rounded border border-line p-1"
       />
-      <span className="text-xs text-neutral-600">{label}</span>
+      <span className="text-xs text-muted">{label}</span>
       <span className="font-mono text-xs">{value ?? "the theme's own"}</span>
       {picked && picked !== value && (
         <button type="button" className="text-xs font-medium text-accent" onClick={apply}>
@@ -323,7 +321,7 @@ function ThemeColor({
       {value && (
         <button
           type="button"
-          className="text-xs text-neutral-600 hover:text-accent"
+          className="text-xs text-muted hover:text-accent"
           onClick={() => run("setTheme", { [which]: "none" })}
         >
           Use the theme's own
@@ -352,7 +350,7 @@ function Columns({
 }) {
   if (!columns)
     return (
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-quiet">
         Columns chosen automatically.{" "}
         <button
           type="button"
@@ -409,14 +407,14 @@ function Columns({
             aria-label={`Hide ${humanize(c)}`}
             disabled={columns.length === 1}
             onClick={() => set(columns.filter((x) => x !== c))}
-            className="px-1 text-xs text-neutral-500 disabled:opacity-30"
+            className="px-1 text-xs text-quiet disabled:opacity-30"
           >
             Hide
           </button>
         </li>
       ))}
       {hidden.map((c) => (
-        <li key={c} className="flex items-center gap-2 text-neutral-400">
+        <li key={c} className="flex items-center gap-2 text-faint">
           <span className="flex-1">{humanize(c)}</span>
           <button
             type="button"
@@ -472,9 +470,7 @@ function ListAndForm({
         />
       </div>
       <details>
-        <summary className="cursor-pointer text-xs font-medium text-neutral-600">
-          Form of {title}
-        </summary>
+        <summary className="cursor-pointer text-xs font-medium text-muted">Form of {title}</summary>
         <FormLook page={page} fields={fields} ux={ux} run={run} />
       </details>
     </div>
@@ -577,7 +573,7 @@ function FormLook({
           placeholder="newSection"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="h-7 flex-1 rounded border border-neutral-200 px-2 text-xs"
+          className="h-7 flex-1 rounded border border-line px-2 text-xs"
         />
         <button type="submit" className="text-xs font-medium text-accent">
           Add a section
@@ -585,7 +581,7 @@ function FormLook({
         {groups.length > 0 && (
           <button
             type="button"
-            className="text-xs text-neutral-600 hover:text-accent"
+            className="text-xs text-muted hover:text-accent"
             onClick={() => run("setFormSections", { page })}
           >
             One form
@@ -643,7 +639,7 @@ function LandingLook({
                   const value = e.target.value.trim() || "default";
                   if (value !== (current ?? "default")) void set(value);
                 }}
-                className="h-8 w-44 rounded border border-neutral-200 px-2 text-xs"
+                className="h-8 w-44 rounded border border-line px-2 text-xs"
               />
             </label>
           ) : (
@@ -677,7 +673,7 @@ function AddTheme({ run }: { run: Run }) {
   };
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-xs font-medium text-neutral-600">Add a theme</summary>
+      <summary className="cursor-pointer text-xs font-medium text-muted">Add a theme</summary>
       <form
         className="mt-2 space-y-2"
         onSubmit={async (e) => {
@@ -709,7 +705,7 @@ function AddTheme({ run }: { run: Run }) {
           placeholder={
             'smithableTheme: 0.1\nname: forest\nfont: Inter\nlight: { primary: "#2f6f4e", … }'
           }
-          className="w-full rounded border border-neutral-200 p-2 font-mono text-xs"
+          className="w-full rounded border border-line p-2 font-mono text-xs"
         />
         <div className="flex items-center gap-2">
           <input
@@ -717,7 +713,7 @@ function AddTheme({ run }: { run: Run }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="forest"
-            className="h-8 flex-1 rounded border border-neutral-200 px-2 text-xs"
+            className="h-8 flex-1 rounded border border-line px-2 text-xs"
           />
           <button
             type="submit"
@@ -727,7 +723,7 @@ function AddTheme({ run }: { run: Run }) {
             Add and use
           </button>
         </div>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-quiet">
           A theme is a file of colors and a font (see the spec, Themes); it is checked before it is
           added, and saved as themes/&lt;name&gt;.yml.
         </p>

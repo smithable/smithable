@@ -96,9 +96,9 @@ export function Studio({
       {!framed && (
         <nav
           aria-label="Panels"
-          className="flex shrink-0 border-b border-neutral-200 bg-white px-3 py-1.5"
+          className="flex shrink-0 border-b border-line bg-panel px-3 py-1.5"
         >
-          <div className="flex rounded-md bg-neutral-100 p-0.5">
+          <div className="flex rounded-md bg-subtle p-0.5">
             {PHONE_PANELS.map(([id, label]) => (
               <button
                 key={id}
@@ -107,7 +107,7 @@ export function Studio({
                 onClick={() => show(id)}
                 className={cx(
                   "h-7 rounded px-3 text-xs font-medium",
-                  shown === id ? "bg-white shadow-xs" : "text-neutral-600",
+                  shown === id ? "bg-panel shadow-xs" : "text-muted",
                 )}
               >
                 {label}
@@ -126,7 +126,7 @@ export function Studio({
         data-strip
         onScroll={onScroll}
         className={cx(
-          "flex min-h-0 flex-1 snap-x snap-mandatory divide-x divide-neutral-200 overflow-x-auto overscroll-x-contain",
+          "flex min-h-0 flex-1 snap-x snap-mandatory divide-x divide-line overflow-x-auto overscroll-x-contain",
           "lg:grid lg:snap-none lg:grid-cols-[260px_1fr] lg:overflow-visible",
           previewHidden
             ? "lg:grid-cols-[240px_320px_1fr]"
@@ -145,7 +145,7 @@ export function Studio({
           <div
             data-panel="details"
             className={cx(
-              "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-neutral-200 border-t border-neutral-200",
+              "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-line border-t border-line",
               PHONE_PANEL,
               "max-lg:border-t-0",
               previewHidden
@@ -172,7 +172,7 @@ export function Studio({
                   />
                 </>
               ) : (
-                <p className="p-3 text-sm text-neutral-500">Choose a concept.</p>
+                <p className="p-3 text-sm text-quiet">Choose a concept.</p>
               )}
             </Panel>
             <Trace entries={project.trace} />
@@ -210,7 +210,7 @@ export function Studio({
           {tab === "diff" && <Diff key={version} />}
           {tab === "logs" && (
             <section aria-label="Logs">
-              <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-neutral-700">
+              <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-fg-soft">
                 {logs.slice(-300).join("\n")}
               </pre>
             </section>
@@ -248,15 +248,13 @@ function ConceptTree({
         aria-current={selected === c.concept ? "true" : undefined}
         className={cx(
           "block w-full truncate rounded px-2 py-1 text-left text-sm",
-          nested && "pl-6 text-neutral-600",
-          selected === c.concept
-            ? "bg-accent-soft font-medium text-accent"
-            : "hover:bg-neutral-100",
+          nested && "pl-6 text-muted",
+          selected === c.concept ? "bg-accent-soft font-medium text-accent" : "hover:bg-subtle",
         )}
       >
         {label}
         {c.rules.length > 0 && (
-          <span className="ml-1 text-xs text-neutral-400">· {c.rules.length} rules</span>
+          <span className="ml-1 text-xs text-faint">· {c.rules.length} rules</span>
         )}
       </button>
     </li>
@@ -271,7 +269,7 @@ function ConceptTree({
       {groups.map(([title, list]) =>
         list.length ? (
           <div key={title}>
-            <p className="px-2 pb-1 text-xs font-medium text-neutral-500">{title}</p>
+            <p className="px-2 pb-1 text-xs font-medium text-quiet">{title}</p>
             <ul>
               {list.flatMap((c) => {
                 const name = c.concept.split(":")[1] ?? "";
@@ -286,7 +284,7 @@ function ConceptTree({
                     aria-label={`${expanded ? "Close" : "Open"} ${name}`}
                     aria-expanded={Boolean(expanded)}
                     onClick={() => toggle(name)}
-                    className="w-5 shrink-0 text-xs text-neutral-500"
+                    className="w-5 shrink-0 text-xs text-quiet"
                   >
                     {expanded ? "▾" : "▸"}
                   </button>
@@ -322,7 +320,7 @@ function ConceptDetails({
   return (
     <div className="space-y-3 p-3 text-sm">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-xs text-neutral-500">{info.concept}</p>
+        <p className="font-mono text-xs text-quiet">{info.concept}</p>
         <button type="button" onClick={onShow} className="text-xs text-accent hover:underline">
           Show in smithable.yml
         </button>
@@ -330,32 +328,26 @@ function ConceptDetails({
       <p>{info.summary}</p>
       {page &&
         (customized ? (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-quiet">
             This page has its own component in src/custom/pages/{page}.tsx.
           </p>
         ) : (
-          <Button
-            variant="ghost"
-            className="border border-neutral-200"
-            onClick={() => onCustomize(page)}
-          >
+          <Button variant="ghost" className="border border-line" onClick={() => onCustomize(page)}>
             Give this page its own component
           </Button>
         ))}
-      {info.description && <p className="text-neutral-600">{info.description}</p>}
-      {info.intent && <p className="text-neutral-600">Intent: {info.intent}</p>}
+      {info.description && <p className="text-muted">{info.description}</p>}
+      {info.intent && <p className="text-muted">Intent: {info.intent}</p>}
       {info.rules.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-neutral-500">Rules</h3>
+          <h3 className="text-xs font-semibold text-quiet">Rules</h3>
           <ul className="mt-1 space-y-1">
             {info.rules.map((r) => (
               <li key={r.text}>
                 <span
                   className={cx(
                     "mr-1 rounded px-1 text-xs",
-                    r.status === "tested"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-neutral-100 text-neutral-600",
+                    r.status === "tested" ? "bg-green-100 text-green-800" : "bg-subtle text-muted",
                   )}
                 >
                   {STATUS[r.status]}
@@ -368,11 +360,11 @@ function ConceptDetails({
       )}
       {info.files.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-neutral-500">Files</h3>
+          <h3 className="text-xs font-semibold text-quiet">Files</h3>
           <ul className="mt-1 space-y-0.5 font-mono text-xs">
             {info.files.map((f) => (
               <li key={`${f.path}-${f.role}`}>
-                {f.path} <span className="text-neutral-400">({f.role})</span>
+                {f.path} <span className="text-faint">({f.role})</span>
               </li>
             ))}
           </ul>
@@ -475,7 +467,8 @@ function SpecEditor({
   const [ask, setAsk] = useState(0);
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="flex items-center gap-2 border-b border-neutral-200 px-2 py-1.5 text-xs">
+      {/* In a narrow column the toolbar wraps onto a second line, never a word per line. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 text-xs">
         <Select
           aria-label="File"
           value={file}
@@ -494,16 +487,16 @@ function SpecEditor({
           href={FILE_DOCS[file]}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 text-xs text-neutral-600 hover:underline"
+          className="shrink-0 whitespace-nowrap text-xs text-muted hover:underline"
         >
           How this file is written
         </a>
         {project.files[EDITABLE_FILES[file]] === undefined && (
-          <span className="text-neutral-500">Not in the project yet: saving adds it.</span>
+          <span className="text-quiet">Not in the project yet: saving adds it.</span>
         )}
         <Button
           variant="ghost"
-          className="ml-auto h-6 text-xs"
+          className="ml-auto h-6 whitespace-nowrap text-xs"
           // Keeps the editor's focus (and a phone's keyboard) where it is.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setAsk((n) => n + 1)}
@@ -511,9 +504,7 @@ function SpecEditor({
           What goes here?
         </Button>
       </div>
-      <Suspense
-        fallback={<p className="flex-1 p-3 text-xs text-neutral-500">Opening the editor…</p>}
-      >
+      <Suspense fallback={<p className="flex-1 p-3 text-xs text-quiet">Opening the editor…</p>}>
         <SpecText
           key={file}
           label={file}
@@ -543,7 +534,7 @@ function SpecEditor({
       )}
       <div
         data-guide="problems"
-        className="flex items-center justify-between gap-3 border-t border-neutral-200 p-2"
+        className="flex items-center justify-between gap-3 border-t border-line p-2"
       >
         <ul aria-label="Problems" aria-live="polite" className="min-w-0 space-y-0.5 text-xs">
           {diagnostics.length === 0 ? (
@@ -672,9 +663,9 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
         />
       </Label>
       {op && (
-        <section aria-label="What it does" className="rounded-md bg-neutral-50 p-2 text-xs">
-          <p className="text-neutral-700">{op.summary}</p>
-          <p className="mt-1 text-neutral-500">
+        <section aria-label="What it does" className="rounded-md bg-surface p-2 text-xs">
+          <p className="text-fg-soft">{op.summary}</p>
+          <p className="mt-1 text-quiet">
             On the command line:{" "}
             <code className="font-mono">
               smithable op {name} {op.positional.map((p) => `<${p.replace("...", "")}…>`).join(" ")}
@@ -730,7 +721,7 @@ function Diff() {
     api.diff().then((d) => setPatch(d.patch));
   }, []);
   if (patch === undefined) return null;
-  if (!patch) return <p className="p-3 text-sm text-neutral-500">No changes yet.</p>;
+  if (!patch) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
   return (
     <section aria-label="Last change">
       <pre className="p-3 font-mono text-xs leading-5">
@@ -743,7 +734,7 @@ function Diff() {
               className={cx(
                 line.startsWith("+") && !line.startsWith("+++") && "bg-green-50 text-green-800",
                 line.startsWith("-") && !line.startsWith("---") && "bg-red-50 text-red-800",
-                line.startsWith("diff ") && "mt-3 font-semibold text-neutral-900",
+                line.startsWith("diff ") && "mt-3 font-semibold text-fg",
               )}
             >
               {line || " "}
