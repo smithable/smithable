@@ -11,14 +11,14 @@ models:
   Item:
     fields:
       title: string!
-      photos: pictures
+      photos: pictures!             # an item without a photo is not a listing
       description: text!
       price: money
       category: furniture | bikes | electronics | sports | kids | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
-    review: [photos]               # a seller's photos are seen once someone has approved them
+    review: [photos]               # required, so an item waits for its photos to be approved
 
 pages:
   home:
