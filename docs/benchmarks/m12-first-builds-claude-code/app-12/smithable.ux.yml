@@ -8,10 +8,5 @@ tones:
     investigating: danger
     identified: warning
     resolved: success
-pages:
-  incidents:
-    table:
-      sort: -detectedAt
-  updates:
-    table:
-      sort: -at
+theme:
+  preset: modern

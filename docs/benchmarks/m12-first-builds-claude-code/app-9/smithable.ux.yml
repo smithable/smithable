@@ -4,5 +4,8 @@ tones:
     high: warning
     urgent: danger
   Ticket.status:
-    inProgress: warning
+    waiting: warning
     resolved: success
+pages:
+  tickets:
+    icon: clipboard

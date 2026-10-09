@@ -3,12 +3,13 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin:
-    description: Keeps the tool library tidy.
+  admin: all
   member:
     description: Lends and borrows tools.
-defaultRole: member
+    pages: all
+    create: all
 public:
-  pages: [home, catalog]
+  pages: [home, tools, privacy]
   read: [Tool]
+defaultRole: member
 admins: [johan@smithable.ai]
