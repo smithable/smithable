@@ -78,10 +78,8 @@ export function AppSummary({
     const g = GROUPS[group];
     if (!g) return null;
     return (
-      <div className="mb-3 flex items-center justify-between gap-2 border-b border-neutral-200 pb-1">
-        <h2 className="text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-          {g.title}
-        </h2>
+      <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-1">
+        <h2 className="text-xs font-semibold tracking-wide text-quiet uppercase">{g.title}</h2>
         {g.add && (
           <button
             type="button"
@@ -185,7 +183,7 @@ function Part({
   });
   const properties = (concept: string) =>
     open === concept && (
-      <div className="my-2 rounded-md border border-neutral-200 bg-neutral-50">
+      <div className="my-2 rounded-md border border-line bg-surface">
         <Properties key={concept} concept={concept} spec={spec} run={run} />
       </div>
     );
@@ -212,7 +210,7 @@ function Part({
         {draft === undefined && section.concept !== "auth" && (
           <button
             type="button"
-            className="text-xs text-neutral-500 hover:text-accent"
+            className="text-xs text-quiet hover:text-accent"
             onClick={() => setDraft(wording ?? generated)}
           >
             In my words
@@ -227,9 +225,9 @@ function Part({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={Math.max(3, draft.split("\n").length + 1)}
-            className="block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="block w-full rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-quiet">
             Only the wording, for you: it changes nothing in the app. To change the app, click a
             part or describe the change below.
           </p>
@@ -252,7 +250,7 @@ function Part({
           <Lines text={wording} />
           <button
             type="button"
-            className="mt-1 text-xs text-neutral-500 hover:text-accent"
+            className="mt-1 text-xs text-quiet hover:text-accent"
             onClick={() => onWording(undefined)}
           >
             Back to the generated text
@@ -320,7 +318,7 @@ function Lines({
     else blocks.push([{ text: bullet, index }]);
   });
   return (
-    <div className="space-y-1 text-sm leading-relaxed text-neutral-700">
+    <div className="space-y-1 text-sm leading-relaxed text-fg-soft">
       {blocks.map((block, i) =>
         Array.isArray(block) ? (
           // biome-ignore lint/suspicious/noArrayIndexKey: the blocks have no identity of their own

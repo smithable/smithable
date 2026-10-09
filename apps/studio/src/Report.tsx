@@ -37,15 +37,15 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
       ref={dialog}
       aria-label="Report this"
       onClose={onClose}
-      className="m-auto w-[min(48rem,92vw)] rounded-lg p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto w-[min(48rem,92vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/40"
     >
       <div className="space-y-3 p-4">
         <h2 className="text-base font-semibold">Report this</h2>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-muted">
           This is everything the report sends: the change, the error, the last log lines and the
           spec files. No records, uploads or code of your own.
         </p>
-        <pre className="max-h-[50vh] overflow-auto rounded border border-neutral-200 bg-neutral-50 p-2 text-xs whitespace-pre-wrap">
+        <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-surface p-2 text-xs whitespace-pre-wrap">
           {text ?? "…"}
         </pre>
         {done ? (

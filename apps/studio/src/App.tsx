@@ -3,6 +3,7 @@ import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
 import wordmark from "./brand/wordmark.svg";
+import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
 import { Guide } from "./GuideTour";
@@ -320,11 +321,11 @@ export function App() {
   useEffect(() => {
     if (firstVisit && previewUp) setGuiding(true);
   }, [firstVisit, previewUp]);
-  if (!project) return <p className="p-6 text-sm text-neutral-500">Opening the project…</p>;
+  if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   return (
     <div className="flex h-full flex-col">
       {/* On a phone the items wrap onto a second line instead of running off the screen. */}
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-neutral-200 bg-white px-4 py-1.5 sm:flex-nowrap sm:py-0">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 sm:flex-nowrap sm:py-0">
         {project.home ? (
           // Hosted: back to the apps overview.
           <a href={project.home} className="shrink-0">
@@ -334,10 +335,10 @@ export function App() {
           <Wordmark />
         )}
         {/* While an app is being made, the project is a placeholder: its name says nothing. */}
-        <span className="min-w-0 truncate text-sm text-neutral-500">
+        <span className="min-w-0 truncate text-sm text-quiet">
           {project.making ? "" : project.name}
         </span>
-        <fieldset data-guide="mode" className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
+        <fieldset data-guide="mode" className="flex rounded-md bg-subtle p-0.5 sm:ml-4">
           <legend className="sr-only">Mode</legend>
           {(narrow
             ? (["builder", "preview", "studio"] as const)
@@ -349,7 +350,7 @@ export function App() {
                 key={m}
                 className={cx(
                   "flex h-7 cursor-pointer items-center rounded px-3 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                  checked ? "bg-white shadow-xs" : "text-neutral-600",
+                  checked ? "bg-panel shadow-xs" : "text-muted",
                 )}
               >
                 <input
@@ -369,7 +370,7 @@ export function App() {
           })}
         </fieldset>
         <div className="ml-auto flex items-center gap-3">
-          {busy && <span className="text-xs text-neutral-500">Working…</span>}
+          {busy && <span className="text-xs text-quiet">Working…</span>}
           {place.previewHidden && (
             <Button
               variant="ghost"
@@ -405,7 +406,7 @@ export function App() {
               type="button"
               // The tour of the mode shown.
               onClick={() => setGuiding(true)}
-              className="text-xs font-medium text-neutral-600 hover:underline"
+              className="text-xs font-medium text-muted hover:underline"
             >
               Guide
             </button>
@@ -414,7 +415,7 @@ export function App() {
             type="button"
             title="The mail the preview kept instead of sending: invitations, sign-in codes"
             onClick={() => setOutbox(true)}
-            className="text-xs font-medium text-neutral-600 hover:underline"
+            className="text-xs font-medium text-muted hover:underline"
           >
             Outbox
           </button>
@@ -422,7 +423,7 @@ export function App() {
             href="https://docs.smithable.ai/start.html"
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-medium text-neutral-600 hover:underline"
+            className="text-xs font-medium text-muted hover:underline"
           >
             Help
           </a>
@@ -546,14 +547,14 @@ export function App() {
           <div
             data-guide-view
             className={cx(
-              "flex min-h-0 flex-col bg-white",
+              "flex min-h-0 flex-col bg-panel",
               narrow
                 ? viewing
                   ? "min-w-0 flex-1"
                   : "hidden"
                 : place.previewHidden
                   ? "hidden"
-                  : "w-[55%] border-l border-neutral-200",
+                  : "w-[55%] border-l border-line",
             )}
           >
             <Preview
@@ -573,9 +574,14 @@ export function App() {
   );
 }
 
-/** The wordmark (docs/site/brand), 20 px tall. */
+/** The wordmark (docs/site/brand), 20 px tall; its light lettering on a dark page. */
 function Wordmark() {
-  return <img src={wordmark} alt="Smithable" className="h-5 w-auto shrink-0" />;
+  return (
+    <picture className="shrink-0">
+      <source srcSet={wordmarkDark} media="(prefers-color-scheme: dark)" />
+      <img src={wordmark} alt="Smithable" className="h-5 w-auto" />
+    </picture>
+  );
 }
 
 /** Whether this browser has seen the guide for this app. */

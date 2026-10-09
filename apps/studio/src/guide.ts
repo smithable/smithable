@@ -70,7 +70,7 @@ const STUDIO: Stop[] = [
   {
     anchor: "operation",
     title: "Every change as a form",
-    text: "Every change is an operation: pick one and fill in its form. The line under it is the same change for a terminal.",
+    text: "Pick an operation and fill in its form; the line under it is the same change for a terminal.",
   },
   {
     anchor: "last-change",

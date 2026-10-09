@@ -196,8 +196,8 @@ function changeText(spec: Spec, op: string, args: Record<string, unknown>) {
 /** A note under a form: the change it will make, or (in Studio) what it writes in the spec. */
 function SpecNote({ label, text }: { label: string; text: string }) {
   return text ? (
-    <p className="text-xs text-neutral-500">
-      {label} <code className="rounded bg-neutral-100 px-1">{text}</code>
+    <p className="text-xs text-quiet">
+      {label} <code className="rounded bg-subtle px-1">{text}</code>
     </p>
   ) : null;
 }
@@ -241,9 +241,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
   // A proposal's values, for its own form only, until it went through.
   const initial = change === prefill?.op && done === 0 ? prefill.args : undefined;
   if (!spec.ir)
-    return (
-      <p className="p-3 text-sm text-neutral-500">The spec has errors; fix them in Studio mode.</p>
-    );
+    return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Studio mode.</p>;
   return (
     <div className="space-y-4 p-3">
       <Label text="What do you want to change?">
@@ -254,7 +252,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
           options={CHANGES.map(([value, label]) => [value, label])}
         />
       </Label>
-      <div key={done} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+      <div key={done} className="rounded-lg border border-line bg-surface p-3">
         {change === "addField" && <AddField spec={spec} run={runAndReset} initial={initial} />}
         {change === "changeField" && (
           <ChangeField spec={spec} run={runAndReset} initial={initial} />
@@ -502,7 +500,7 @@ function ChangeField({ spec, run, initial }: FormProps) {
       {pickers}
       {field &&
         (field.formula || (field.type.kind === "relation" && field.type.many) ? (
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-muted">
             {field.formula ? "This field is calculated" : "This field lists related records"}:
             change it in Studio mode.
           </p>
@@ -828,7 +826,7 @@ function AddCustomAction({ run, initial }: FormProps) {
   const [output, setOutput] = useState("");
   const [intent, setIntent] = useState(str(initial?.intent) ?? "");
   const box =
-    "block w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 font-mono text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
+    "block w-full rounded-md border border-line-strong bg-panel px-2 py-1.5 font-mono text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
   return (
     <Form
       onSubmit={() =>
@@ -875,7 +873,7 @@ function AddCustomAction({ run, initial }: FormProps) {
           className={box}
         />
       </Label>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-quiet">
         What it does is code: it starts as a stub in src/custom/actions/, for a developer or an
         agent to write.
       </p>
@@ -929,7 +927,7 @@ function AddPage({ spec, run, initial }: FormProps) {
           onChange={setComponent}
         />
       ) : kind === "landing" ? (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-quiet">
           It starts with a heading and a footer, opens without sign-in, and gets more sections from
           “A section on a landing page”.
         </p>
@@ -1000,7 +998,7 @@ function ImportRecords({ spec, run }: FormProps) {
         <pre
           role="status"
           aria-label="Import preview"
-          className={`max-h-64 overflow-auto rounded border p-2 text-xs whitespace-pre-wrap ${preview.ok ? "border-neutral-200 bg-white" : "border-red-200 bg-red-50 text-red-800"}`}
+          className={`max-h-64 overflow-auto rounded border p-2 text-xs whitespace-pre-wrap ${preview.ok ? "border-line bg-panel" : "border-red-200 bg-red-50 text-red-800"}`}
         >
           {preview.output}
         </pre>
@@ -1041,7 +1039,7 @@ function SetSearch({ spec, run }: FormProps) {
         />
       </Label>
       <fieldset className="space-y-1">
-        <legend className="text-xs font-medium text-neutral-600">Search by</legend>
+        <legend className="text-xs font-medium text-muted">Search by</legend>
         {searchable.map((f) => (
           <label key={f.name} className="flex items-center gap-2 text-sm">
             <input
@@ -1089,7 +1087,7 @@ function SetNavigation({ spec, run }: FormProps) {
         {pages.map((p, i) => (
           <li
             key={p}
-            className="flex items-center justify-between rounded-md bg-white px-2 py-1 text-sm shadow-xs"
+            className="flex items-center justify-between rounded-md bg-panel px-2 py-1 text-sm shadow-xs"
           >
             {humanize(p)}
             <span className="flex gap-1">
@@ -1239,7 +1237,7 @@ function OwnComponent({
           onChange={(e) => onChange(e.target.value)}
         />
       </Label>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-quiet">
         It starts as a stub in src/custom/{folder}/{value || placeholder}.tsx, for a developer or an
         agent to write; Smithable never changes it.
       </p>
@@ -1260,7 +1258,7 @@ function AddSection({ spec, run }: FormProps) {
   const own = kind === "custom";
   const section = records || own ? identifier(label) : kind;
   if (!landings.length)
-    return <p className="text-sm text-neutral-600">The app has no landing page yet.</p>;
+    return <p className="text-sm text-muted">The app has no landing page yet.</p>;
   return (
     <Form
       onSubmit={() =>
@@ -1341,7 +1339,7 @@ function AddSection({ spec, run }: FormProps) {
         </Label>
       )}
       {kind === "gallery" && (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-quiet">
           Its pictures are listed in smithable.content.yml for now (Studio mode).
         </p>
       )}
@@ -1407,7 +1405,7 @@ function FromSchema({
           />
         ),
       )}
-      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+      {hint && <p className="text-xs text-quiet">{hint}</p>}
       <Submit
         label={submit}
         disabled={disabled || required.some((k) => effective[k] === undefined)}
