@@ -44,10 +44,9 @@
     "packages": {
       "type": "object",
       "additionalProperties": {
-        "type": [
-          "string",
-          "number"
-        ]
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$",
+        "x-expected": "an exact version like 4.4.1"
       },
       "description": "Libraries for custom code: name to exact version."
     },
