@@ -79,6 +79,11 @@ function testValue(field: FieldIR, model: ModelIR): string {
     case "picture":
       // A stored picture's record: the file need not exist for the access rules.
       return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }`;
+    case "pictures":
+      // Several, at least one when required: one stored picture's record (a mutable list, as the column takes).
+      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }].slice()`;
+    case "files":
+      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4 }].slice()`;
     default:
       return `\`${model.name} ${field.name} \${n}\``;
   }
