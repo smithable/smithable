@@ -241,9 +241,11 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
     if (part === "fields" && (depth === 3 || (depth === 4 && key === "type")))
       return [...SCALAR_TYPES, ...kinds, USER_MODEL];
     if (depth === 2 && key === "ownedBy") return fieldsOf(entry);
+    // The picture and file fields a model holds for review (any field is offered; the check says which).
+    if (depth === 2 && key === "review") return ["all", ...fieldsOf(entry)];
   }
   if (section === "pages" && depth === 2) {
-    if (["crud", "calendar", "articles", "data"].includes(key ?? "")) return kinds;
+    if (["crud", "calendar", "articles", "data", "review"].includes(key ?? "")) return kinds;
     if (["search", "filters", "sortable"].includes(key ?? ""))
       return fieldsOf(pages.get(entry ?? ""));
     if (key === "actions") return [...actions.keys()];

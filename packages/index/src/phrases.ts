@@ -9,6 +9,7 @@ import {
   type FieldIR,
   filterable,
   identifier,
+  isUpload,
   kebab,
   type ModelIR,
   type PageIR,
@@ -694,6 +695,47 @@ const RULES: Rule[] = [
       const models = names.map((n) => modelFor(scope.ir, n)?.name);
       if (!models.length || models.some((m) => !m)) return undefined;
       return [{ op: "addDataPage", args: { models } }];
+    },
+  },
+  {
+    // "review photos before they are shown", "moderate listing photos before others see them",
+    // "check the contracts of tenants before anyone sees them": the field joins its model's
+    // review, and a review page comes with it when none lists the model yet.
+    name: "review files",
+    match(text, scope) {
+      const what =
+        /^(?:review|moderate|check|approve) (?<what>.+?) before (?:they are|they're|it is|it's|others see (?:them|it)|anyone sees (?:them|it)|people see (?:them|it))(?: (?:shown|published|visible|seen))?(?: (?:to|by) (?:others|anyone|everyone))?$/.exec(
+          text,
+        )?.groups?.what;
+      if (!what) return undefined;
+      const of = /^(?<field>.+?) (?:of|on|in) (?<model>.+)$/.exec(what)?.groups;
+      const lead = /^(?<model>\S+) (?<field>.+)$/.exec(what)?.groups;
+      const within = (m?: string, f?: string) => {
+        const model = m ? modelFor(scope.ir, m) : undefined;
+        const field = model && f ? fieldFor(model, f) : undefined;
+        return model && field ? { model, field } : undefined;
+      };
+      const found =
+        (of && within(of.model, of.field)) ??
+        (lead && within(lead.model, lead.field)) ??
+        fieldAnywhere(scope.ir, what);
+      if (!found || !isUpload(found.field)) return undefined;
+      const { model, field } = found;
+      const reviewed = model.review ?? [];
+      if (reviewed.includes(field.name)) return null;
+      const ops: PhraseOperation[] = [
+        { op: "setReview", args: { model: model.name, fields: [...reviewed, field.name] } },
+      ];
+      const listed = scope.ir.pages.some(
+        (p) =>
+          p.pattern.kind === "review" && (p.pattern.all || p.pattern.models.includes(model.name)),
+      );
+      if (!listed && scope.auth?.signIn !== "none")
+        ops.push({
+          op: "addReviewPage",
+          args: scope.ir.pages.some((p) => p.id === "review") ? { page: "file-review" } : {},
+        });
+      return ops;
     },
   },
   {
