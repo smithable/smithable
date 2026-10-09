@@ -1380,18 +1380,20 @@ test("setLanguage sets the content file's language; the kit's languages only", (
 });
 
 test("setLogo sets the app's mark, keeps its alt on a new file, and an empty src removes it", () => {
-  expect(applyOperation(files, "setLogo", { src: "logo.webp" })).toMatchObject({ ok: false });
-  expect(applyOperation(files, "setLogo", { src: "" })).toMatchObject({ ok: false });
-  const set = applyOperation(files, "setLogo", { src: "images/logo.webp", alt: "A lotus" });
+  // From an app without one (the CRM starter has its own).
+  const bare = { ...files, content: files.content.replace(/^logo: .*\n/m, "") };
+  expect(applyOperation(bare, "setLogo", { src: "logo.webp" })).toMatchObject({ ok: false });
+  expect(applyOperation(bare, "setLogo", { src: "" })).toMatchObject({ ok: false });
+  const set = applyOperation(bare, "setLogo", { src: "images/logo.webp", alt: "A lotus" });
   expect(set).toMatchObject({ ok: true, description: "Use images/logo.webp as the app's logo" });
   if (!set.ok) throw new Error(set.message);
   expect(set.files.content).toContain("logo:");
-  const replaced = applyOperation({ ...files, ...set.files }, "setLogo", {
+  const replaced = applyOperation({ ...bare, ...set.files }, "setLogo", {
     src: "images/mine.svg",
   });
   if (!replaced.ok) throw new Error(replaced.message);
   expect(replaced.files.content).toMatch(/src: images\/mine\.svg[\s\S]*alt: A lotus/);
-  const removed = applyOperation({ ...files, ...replaced.files }, "setLogo", { src: "" });
+  const removed = applyOperation({ ...bare, ...replaced.files }, "setLogo", { src: "" });
   expect(removed).toMatchObject({ ok: true, description: "Remove the app's logo" });
-  expect(removed.ok && removed.files.content).toBe(files.content);
+  expect(removed.ok && removed.files.content).toBe(bare.content);
 });
