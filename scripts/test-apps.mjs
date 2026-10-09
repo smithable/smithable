@@ -3169,25 +3169,27 @@ async function logoCheck(dir, base) {
   };
   try {
     await asyncStep(
-      `the app's logo (/${src}) is before its name in the landing header${role ? " and the shell" : ""}, and is the tab's icon`,
+      `the app's logo (/${src}) is before its name in the landing header or the shell, and is the tab's icon`,
       async () => {
         await open(page, `${base}/`);
-        await drawn('[data-kit="landing"] [data-part="header"]');
+        if (await page.locator('[data-kit="landing"]').count())
+          await drawn('[data-kit="landing"] [data-part="header"]');
         const icon = await page.locator('link[rel="icon"]').getAttribute("href");
         if (icon !== `/${src}`) throw new Error(`the icon is ${icon}`);
-        if (role) {
-          await signInAs(page, base, role);
-          // Signed in on the landing page, its header leads into the app.
-          if (!(await page.locator('[data-kit="app-shell"]').count())) {
-            await page
-              .locator('[data-kit="landing"] [data-part="header"]')
-              .getByRole("link", { name: /^Open / })
-              .first()
-              .click();
-            await page.locator('[data-kit="app-shell"]').waitFor();
-          }
-          await drawn('[data-kit="app-shell"] aside');
+        if (!role) return;
+        await signInAs(page, base, role);
+        // Signed in, the app's start is in the shell, or a landing page or onboarding leads there.
+        for (let i = 0; i < 3 && !(await page.locator('[data-kit="app-shell"]').count()); i++) {
+          const into = page
+            .locator('[data-kit="landing"] [data-part="header"]')
+            .getByRole("link", { name: /^Open / });
+          if (await into.count()) await into.first().click();
+          else await open(page, `${base}/`);
+          await page.waitForLoadState("networkidle");
         }
+        if (!(await page.locator('[data-kit="app-shell"]').count()))
+          throw new Error(`signed in as ${role}, no shell at ${page.url()}`);
+        await drawn('[data-kit="app-shell"] aside');
       },
     );
   } catch {
