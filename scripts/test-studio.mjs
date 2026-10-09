@@ -215,11 +215,39 @@ try {
         await card.waitFor({ state: "detached" });
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await card.waitFor();
-        // The first stop's Code ends the tour in Code mode, which is remembered.
+        // The first stop's Code switches to Code mode, which is remembered, and goes on with
+        // Code mode's own tour.
         await card.getByRole("button", { name: "Code", exact: true }).click();
+        const code = [];
+        for (let i = 0; i < 5; i++) {
+          await fresh.waitForFunction(
+            (seen) => {
+              const at = document
+                .querySelector("[data-guide-card]")
+                ?.getAttribute("data-guide-card");
+              return at && at !== seen;
+            },
+            code.at(-1) ?? "mode",
+            { timeout: 20000 },
+          );
+          const at = await card.getAttribute("data-guide-card");
+          code.push(at);
+          if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
+            throw new Error(`the Code card for ${at} is beside nothing`);
+          await card.getByRole("button", { name: i === 4 ? "Done" : "Next", exact: true }).click();
+        }
+        if (code.join() !== "files,problems,concepts,operation,last-change")
+          throw new Error(`Code mode's tour: ${code.join()}`);
         await card.waitFor({ state: "detached" });
         if (!(await fresh.getByRole("radio", { name: "Code", exact: true }).isChecked()))
           throw new Error("Code in the guide did not switch to Code mode");
+        // Guide in Code mode is Code mode's tour.
+        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+        await card.waitFor();
+        if ((await card.getAttribute("data-guide-card")) !== "files")
+          throw new Error("Guide in Code mode did not start Code mode's tour");
+        await fresh.keyboard.press("Escape");
+        await card.waitFor({ state: "detached" });
         await fresh.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
         await fresh.reload();
         await fresh.getByRole("region", { name: "Customers", exact: true }).waitFor();
@@ -765,11 +793,15 @@ try {
       await trace.waitFor();
       await panels.getByLabel("Your app + Details").check();
       await current("Your app,Details");
-      // A narrow window: the preview is a panel of the strip, the frame placed over it.
+      // A wide window has the preview's column: no Preview in the mode switch.
+      const viewPreview = page.getByRole("radio", { name: "Preview", exact: true });
+      if (await viewPreview.count()) throw new Error("Preview in the mode switch on a wide window");
+      // A narrow window: Preview is the mode switch's third choice, the frame the window's
+      // width, and the panels have no Preview of their own.
       await page.setViewportSize({ width: 800, height: 900 });
-      await panels.getByRole("button", { name: "Preview" }).click();
-      await current("Preview");
-      // Once the strip has snapped, the frame covers the window's width.
+      if (await panels.getByRole("button", { name: "Preview" }).count())
+        throw new Error("a Preview panel on a narrow window");
+      await viewPreview.check({ force: true });
       await page.waitForFunction(
         () => {
           const r = document.querySelector('iframe[title="App preview"]')?.getBoundingClientRect();
@@ -778,14 +810,10 @@ try {
         null,
         { timeout: 5000 },
       );
-      // A sideways swipe on the preview's edge moves the row on, as on the other panels.
-      const grip = page.locator('[data-part="swipe-grip"]').last();
-      const at = await grip.boundingBox();
-      if (!at) throw new Error("no grip on the preview's edge");
-      await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(at.x - 500, at.y + at.height / 2, { steps: 8 });
-      await page.mouse.up();
+      if (await panels.isVisible()) throw new Error("the panels show beside the Preview");
+      // Back to No code, as it was.
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+      await panels.getByRole("button", { name: "Details" }).click();
       await current("Details");
       // With nothing selected, Details shows the app's own details and how to see a part's.
       // An earlier step's selection may still be open: closed, the app's own details show.
@@ -873,6 +901,46 @@ try {
         .getByRole("navigation", { name: "Concepts" })
         .locator('[aria-current="true"]')
         .waitFor({ timeout: 30000 });
+      // Code mode keeps the file open, its cursor and an unsaved edit across a switch to No code
+      // and back, and across a reload.
+      await page.getByRole("tab", { name: "Files" }).click();
+      await page.getByLabel("File", { exact: true }).selectOption("smithable.ux.yml");
+      // Beside the file, its part of the spec reference, following the file chosen.
+      const howTo = await page
+        .getByRole("link", { name: "How this file is written" })
+        .getAttribute("href");
+      if (!howTo?.endsWith("spec.html#smithableuxyml-how-the-app-looks"))
+        throw new Error(`the ux file links to ${howTo}`);
+      const ux = page.getByLabel("smithable.ux.yml");
+      const saved = await ux.evaluate((e) => e.value);
+      await ux.focus();
+      await ux.evaluate((e) => e.setSelectionRange(0));
+      await page.keyboard.type("#");
+      const kept = async (when) => {
+        const editor = page.getByLabel("smithable.ux.yml");
+        await editor.waitFor({ timeout: 30000 });
+        if ((await page.getByLabel("File", { exact: true }).inputValue()) !== "smithable.ux.yml")
+          throw new Error(`${when}: another file is open`);
+        if ((await editor.evaluate((e) => e.value)) !== `#${saved}`)
+          throw new Error(`${when}: the unsaved edit is gone`);
+        if ((await editor.evaluate((e) => e.selectionStart)) !== 1)
+          throw new Error(`${when}: the cursor moved`);
+      };
+      await page.locator("label", { hasText: /^No code$/ }).click();
+      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await kept("after No code and back");
+      // The browser asks before a reload loses an unsaved edit; here it is kept, so leave.
+      const leave = (dialog) => dialog.accept();
+      page.on("dialog", leave);
+      await page.reload();
+      page.off("dialog", leave);
+      await kept("after a reload");
+      // The edit taken back is no edit: nothing is kept.
+      await page.getByLabel("smithable.ux.yml").evaluate((e, text) => {
+        e.value = text;
+      }, saved);
+      await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
       await page.locator("label", { hasText: /^No code$/ }).click();
       await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
     },

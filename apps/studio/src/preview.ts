@@ -1,3 +1,5 @@
+import type { EditableFile } from "@smithable/core";
+
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
   | { type: "ready" }
@@ -28,9 +30,12 @@ export type Selection = Extract<PreviewMessage, { type: "select" }>;
  */
 export interface Place {
   builder: { tab?: "app" | "look" | "change"; selection?: Selection };
-  studio: { tab?: string; concept?: string };
+  /** Code mode: its tab, the concept picked and the file open in the editor. */
+  studio: { tab?: string; concept?: string; file?: EditableFile };
   /** The preview's column is hidden (wide windows), for more room for the mode. */
   previewHidden?: boolean;
+  /** Preview is chosen in the mode switch (narrow windows): the preview alone, the mode hidden. */
+  viewing?: boolean;
 }
 
 /** A concept picked in either mode that the other can show too: a field or a model. */

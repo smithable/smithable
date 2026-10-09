@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { STOPS } from "./guide";
+import { TOURS } from "./guide";
 
 // Every component's source, to find the places the guide's stops are beside.
 const sources = import.meta.glob<string>("./**/*.tsx", {
@@ -16,9 +16,24 @@ const found = new Set(
   ]),
 );
 
-test("every stop of the guide has its place in Studio, and every place has a stop", () => {
-  const stops = STOPS.map((s) => s.anchor);
+test("every stop of the guides has its place in Studio, and every place has a stop", () => {
+  const stops = [...TOURS.builder, ...TOURS.studio].map((s) => s.anchor);
   expect(stops.filter((a) => !found.has(a))).toEqual([]);
   expect([...found].filter((a) => !stops.includes(a))).toEqual([]);
-  expect(stops).toEqual(["mode", "preview", "summary", "details", "change", "look", "publish"]);
+  expect(TOURS.builder.map((s) => s.anchor)).toEqual([
+    "mode",
+    "preview",
+    "summary",
+    "details",
+    "change",
+    "look",
+    "publish",
+  ]);
+  expect(TOURS.studio.map((s) => s.anchor)).toEqual([
+    "files",
+    "problems",
+    "concepts",
+    "operation",
+    "last-change",
+  ]);
 });
