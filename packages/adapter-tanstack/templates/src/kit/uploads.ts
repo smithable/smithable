@@ -172,6 +172,22 @@ export function saveFile(model: string, bytes: Uint8Array, name: string): Stored
   return { file, name: shown, type: kind.type, size: bytes.length };
 }
 
+/**
+ * The virus check (docs/design/file-review.md §5): with SCAN_URL set, a file's bytes are sent
+ * there before anything is stored, and any answer but OK refuses it, as does no answer at all
+ * (a check that cannot run lets nothing through). Without SCAN_URL nothing is scanned.
+ */
+export async function scanned(bytes: Uint8Array): Promise<void> {
+  const url = process.env.SCAN_URL;
+  if (!url) return;
+  const answer = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: new Uint8Array(bytes),
+  }).catch(() => undefined);
+  if (!answer?.ok) throw new BadFile(w.virusRefused);
+}
+
 /** The bytes of a stored document, or undefined when it is gone. */
 export function readFile(stored: StoredFile): Buffer | undefined {
   if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/.test(stored.file)) return undefined;

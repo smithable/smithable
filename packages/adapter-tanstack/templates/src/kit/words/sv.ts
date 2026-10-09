@@ -28,12 +28,15 @@ export const w = {
   any: "Alla",
   anything: "Vad som helst",
   apiIsAt: "API:et finns på",
+  approve: "Godkänn",
+  approved: "Godkänd",
   areRequired: "är obligatoriska.",
   as: "Som",
   ask: "Fråga",
   askPlaceholder: "Hur många … ? Visa de … som …",
   askTheApp: "Fråga appen",
   asking: "Frågar…",
+  awaitingReview: "Väntar på granskning",
   belongTo: (count: number, noun: string, name: string) => `${count} ${noun} tillhör ${name}.`,
   bookAPlace: "Boka en plats",
   booking: "Bokar…",
@@ -136,6 +139,21 @@ export const w = {
   moveToTrashAsk: (what: string) => `Flytta ${what} till papperskorgen?`,
   goesWith: (list: string, n: number) =>
     `${list} följer med; ${n === 1 ? "den" : "de"} återställs tillsammans.`,
+  reject: "Avvisa",
+  rejected: "Avvisad",
+  rejectedBecause: (reason: string) => `Avvisad av en granskare: ${reason}`,
+  rejectReason: "Varför (visas för den som skickade den)",
+  reviewDecided: "Avgjort de senaste 30 dagarna",
+  reviewEmpty: "Inget väntar på granskning.",
+  reviewLead:
+    "Bilder och filer som väntar tills någon godkänner dem. Andra ser dem först när de är godkända.",
+  reviewMailSubject: (n: number, app: string) =>
+    `${n === 1 ? "En fil väntar" : `${n} filer väntar`} på granskning i ${app}`,
+  reviewMailText: (n: number, link: string) =>
+    `${n === 1 ? "En bild eller fil som någon skickat väntar" : `${n} bilder och filer som andra skickat väntar`} på din granskning innan andra ser dem.\n\n${link}\n`,
+  reviewRejectSure: "Avvisa den? Filen tas bort, och skälet visas för den som skickade den.",
+  sentBy: (who: string, when: string) => `Skickad av ${who}, ${when}`,
+  virusRefused: "Filen stoppades av viruskontrollen.",
   willShowNone: (list: string, label: string) => `${list} kommer att sakna ${label.toLowerCase()}.`,
   cannotDeleteUsed: (title: string, list: string) =>
     `”${title}” används av ${list}, så den kan inte tas bort.`,

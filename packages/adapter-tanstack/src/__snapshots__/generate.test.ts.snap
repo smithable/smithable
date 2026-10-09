@@ -6674,6 +6674,7 @@ import {
   PICTURE_MAX_BYTES,
   saveFile,
   savePicture,
+  scanned,
   uploadResponse,
 } from "#/kit/uploads";
 
@@ -6704,8 +6705,14 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
-          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
           let stored: unknown;
+          try {
+            await scanned(bytes);
+          } catch (error) {
+            if (error instanceof BadFile) throw new BadInput(error.message);
+            throw error;
+          }
+          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
           try {
             stored = field.kind === "file" ? saveFile("note", bytes, named("x-file-name")) : savePicture("note", bytes, named("x-alt"));
           } catch (error) {
@@ -8058,7 +8065,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
@@ -8096,9 +8103,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "1b275f23 kit",
+  "src/kit/uploads.ts": "2ebac8c4 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -8119,7 +8126,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "61449d08 generated",
   "src/routes/admin/tasks/new.tsx": "15a327c2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "5bd4f5d8 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "497e29a6 generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
@@ -8131,7 +8138,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
-  "src/routes/files/$model.$field.ts": "7dee5900 kit",
+  "src/routes/files/$model.$field.ts": "48cd51aa kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -16051,7 +16058,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Articles.tsx": "34dd9a3a kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "37ba7570 kit",
@@ -16091,8 +16098,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "1b275f23 kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/uploads.ts": "2ebac8c4 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -16126,7 +16133,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/$id.tsx": "f85dffb1 generated",
   "src/routes/class-types/index.tsx": "1989a832 generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
-  "src/routes/files/$model.$field.ts": "7dee5900 kit",
+  "src/routes/files/$model.$field.ts": "48cd51aa kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -20505,7 +20512,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
@@ -20535,7 +20542,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -25601,7 +25608,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -25639,8 +25646,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "1b275f23 kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/uploads.ts": "2ebac8c4 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -25652,7 +25659,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/$id.tsx": "281919c4 generated",
   "src/routes/clients/index.tsx": "ce28521d generated",
   "src/routes/clients/new.tsx": "4bcda80c generated",
-  "src/routes/files/$model.$field.ts": "7dee5900 kit",
+  "src/routes/files/$model.$field.ts": "48cd51aa kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -25931,6 +25938,30 @@ export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);
+
+export const fileReviews = sqliteTable(
+  "file_reviews",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    field: text().notNull(),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    /** pending, approved or rejected. */
+    state: text().notNull().default("pending"),
+    /** Why it was rejected, shown to the uploader on the record. */
+    reason: text(),
+    uploadedBy: text(),
+    uploadedAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    decidedBy: text(),
+    decidedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [
+    index("file_reviews_record").on(t.model, t.recordId, t.state),
+    index("file_reviews_state").on(t.state, t.uploadedAt),
+  ],
 );
 
 export const items = sqliteTable("items", {
@@ -26319,8 +26350,82 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { deletePicture } from "#/kit/uploads";
+import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { ItemValues } from "./item";
+
+/**
+ * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
+ * reviewer sent it; a file that is replaced or removed leaves the list, and with it a rejection
+ * and its reason.
+ */
+function queueReviews(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  viewer: Viewer | null,
+  recordId: number,
+  before: Record<string, unknown> | undefined,
+  after: Record<string, unknown>,
+) {
+  const files = (value: unknown) =>
+    (Array.isArray(value) ? value : value ? [value] : []).map((v) => (v as { file: string }).file);
+  let queued = false;
+  for (const [field, key] of [["photos","photos"]] as [string, string][]) {
+    const had = files(before?.[key]);
+    const has = files(after[key]);
+    const gone = had.filter((f) => !has.includes(f));
+    if (gone.length)
+      tx.delete(schema.fileReviews)
+        .where(and(eq(schema.fileReviews.model, "Item"), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), inArray(schema.fileReviews.file, gone)))
+        .run();
+    if (viewer && REVIEWERS.includes(viewer.role)) continue;
+    for (const file of has.filter((f) => !had.includes(f))) {
+      // The same file sent again (files are named by their content) starts afresh: an earlier
+      // decision about it, a rejection above all, is replaced.
+      tx.delete(schema.fileReviews)
+        .where(and(eq(schema.fileReviews.model, "Item"), eq(schema.fileReviews.recordId, recordId), eq(schema.fileReviews.field, field), eq(schema.fileReviews.file, file)))
+        .run();
+      tx.insert(schema.fileReviews)
+        .values({ model: "Item", recordId, field, file, uploadedBy: viewer?.id ?? null })
+        .run();
+      queued = true;
+    }
+  }
+  // The reviewers are told once the change is saved (a rolled-back one leaves nothing waiting).
+  if (queued) setTimeout(() => void tellReviewers("Torget", "Item"), 0);
+}
+
+/**
+ * The waiting or rejected files of the optional reviewed fields, left out for everyone but the
+ * record's owner and the reviewers (docs/design/file-review.md): the record shows, the file not.
+ */
+function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[] {
+  if (!rows.length || (viewer && REVIEWERS.includes(viewer.role))) return rows;
+  const waiting = db
+    .select({ recordId: schema.fileReviews.recordId, field: schema.fileReviews.field, file: schema.fileReviews.file })
+    .from(schema.fileReviews)
+    .where(and(eq(schema.fileReviews.model, "Item"), inArray(schema.fileReviews.recordId, rows.map((r) => r.id)), inArray(schema.fileReviews.state, ["pending", "rejected"]), inArray(schema.fileReviews.field, ["photos"])))
+    .all();
+  if (!waiting.length) return rows;
+  const owners = new Map(
+    db.select({ id: schema.items.id, owner: schema.items.ownerId }).from(schema.items).where(inArray(schema.items.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, o.owner]),
+  );
+  const keys: Record<string, string> = {"photos":"photos"};
+  return rows.map((row) => {
+    const mine = waiting.filter((w) => w.recordId === row.id);
+    if (!mine.length || (viewer && owners.get(row.id) === viewer.id)) return row;
+    const shown: Record<string, unknown> = { ...row };
+    for (const w of mine) {
+      const key = keys[w.field] as string;
+      const value = shown[key];
+      shown[key] = Array.isArray(value)
+        ? value.filter((v) => (v as { file: string }).file !== w.file)
+        : (value as { file?: string } | null)?.file === w.file
+          ? null
+          : value;
+    }
+    return shown as R;
+  });
+}
 
 /** Who may read, create, change and delete items. */
 export const itemAccess: ModelAccess = {
@@ -26329,6 +26434,8 @@ export const itemAccess: ModelAccess = {
   write: { public: false, roles: ["admin"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
+/** The roles that approve or reject items' waiting files (docs/design/file-review.md). */
+export const REVIEWERS: string[] = ["admin"];
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
@@ -26345,6 +26452,20 @@ export const itemData = {
     const scope = readScope(itemAccess.read, viewer);
     if (scope === "all") return undefined;
     return scope === "own" && viewer ? eq(schema.items.ownerId, viewer.id) : sql\`false\`;
+  },
+
+  /** The record's files waiting for review, or rejected with a reason: for its owner and the reviewers only. */
+  reviewNotes(viewer: Viewer | null, id: number): { field: string; state: string; reason: string | null }[] {
+    if (!viewer) return [];
+    if (!REVIEWERS.includes(viewer.role)) {
+      const own = db.select({ owner: schema.items.ownerId }).from(schema.items).where(eq(schema.items.id, id)).get();
+      if (own?.owner !== viewer.id) return [];
+    }
+    return db
+      .select({ field: schema.fileReviews.field, state: schema.fileReviews.state, reason: schema.fileReviews.reason })
+      .from(schema.fileReviews)
+      .where(and(eq(schema.fileReviews.model, "Item"), eq(schema.fileReviews.recordId, id), inArray(schema.fileReviews.state, ["pending", "rejected"])))
+      .all();
   },
 
   canRead(viewer: Viewer | null, id: number): boolean {
@@ -26384,7 +26505,7 @@ export const itemData = {
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     });
     const rows = found.map((row) => shownTo(viewer, row));
-    return rows;
+    return veiled(viewer, rows);
   },
 
   /**
@@ -26403,7 +26524,7 @@ export const itemData = {
       offset: (at - 1) * size,
     });
     const rows = found.map((row) => shownTo(viewer, row));
-    return { rows: rows, total, page: at, size };
+    return { rows: veiled(viewer, rows), total, page: at, size };
   },
 
   async get(viewer: Viewer | null, id: number) {
@@ -26411,7 +26532,7 @@ export const itemData = {
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
     });
     const row = found && shownTo(viewer, found);
-    return row ? row : null;
+    return row ? veiled(viewer, [row])[0] : null;
   },
 
   /** Who owns a item the viewer may read, for the server only (a message to its owner). */
@@ -26432,6 +26553,7 @@ export const itemData = {
       row = db.transaction((tx) => {
         const made = tx.insert(schema.items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
+        queueReviews(tx, viewer, made.id, undefined, made);
         return made;
       });
     } catch (error) {
@@ -26457,6 +26579,7 @@ export const itemData = {
         const before = tx.select().from(schema.items).where(eq(schema.items.id, id)).get();
         const after = tx.update(schema.items).set(updated).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        queueReviews(tx, viewer, id, before, after);
         return after;
       });
     } catch (error) {
@@ -26650,6 +26773,8 @@ export const getItem = createServerFn()
     if (!row) return null;
     return {
       row,
+      // Its files waiting for review, or rejected with the reason: for its owner and the reviewers.
+      review: itemData.reviewNotes(viewer, id),
       saved: itemData.saved(viewer).includes(id),
       canWrite: allows(itemAccess.write, viewer, row.ownerId),
       canDelete: allows(itemAccess.delete, viewer, row.ownerId),
@@ -26691,7 +26816,217 @@ export const pageAccess = {
   catalog: { public: true, roles: ["admin", "member"], owner: false },
   myItems: { public: false, roles: ["admin", "member"], owner: false },
   saved: { public: false, roles: ["admin", "member"], owner: false },
+  review: { public: false, roles: ["admin"], owner: false },
 } satisfies Record<string, Rule>;
+"
+`;
+
+exports[`../../../examples/marketplace/smithable.yml > file list and generated code > src/generated/review.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// Files reviewed before others see them (docs/design/file-review.md): the review page's list
+// and decisions, the menu's count, and the waiting file itself for a reviewer.
+import { and, desc, eq, gte, inArray, ne, or, sql } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import type { ReviewItem } from "#/kit/Review";
+import { deleteFile, deletePicture, uploadResponse } from "#/kit/uploads";
+import { REVIEWERS as itemReviewers } from "./item.server";
+
+interface Reviewed {
+  label: string;
+  reviewers: string[];
+  titles(ids: number[]): Map<number, string>;
+  href(id: number): string | undefined;
+  fields: Record<string, { label: string; kind: "picture" | "file" }>;
+  usedElsewhere(file: string, id: number): boolean;
+  takeOut(id: number, field: string, file: string): void;
+}
+
+const MODELS: Record<string, Reviewed> = {
+  "Item": {
+    label: "Item",
+    reviewers: itemReviewers,
+    titles: (ids) =>
+      new Map(
+        db
+          .select({ id: schema.items.id, title: schema.items.title })
+          .from(schema.items)
+          .where(inArray(schema.items.id, ids))
+          .all()
+          .map((r) => [r.id, String(r.title ?? r.id)]),
+      ),
+    href: (id) => \`/\${id}\`,
+    fields: {
+      "photos": { label: "Photos", kind: "picture" },
+    },
+    // A rejected file leaves the record: out of a list, or the field emptied; a required single
+    // file stays (it cannot be empty), held from others until a new one is sent.
+    takeOut: (id, field, file) => {
+      if (field === "photos") {
+        const row = db.select({ value: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get();
+        db.update(schema.items).set({ photos: (row?.value ?? []).filter((v) => v.file !== file) }).where(eq(schema.items.id, id)).run();
+      }
+    },
+    // Another record still shows the same file (files are named by their content).
+    usedElsewhere: (file, id) =>
+      !!db
+        .select({ id: schema.items.id })
+        .from(schema.items)
+        .where(and(ne(schema.items.id, id), sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`))
+        .get(),
+  },
+};
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/** The models among \`models\` whose files the viewer reviews. */
+function reviewing(viewer: Viewer | null, models: string[]): string[] {
+  return viewer ? models.filter((m) => MODELS[m]?.reviewers.includes(viewer.role)) : [];
+}
+
+/** What waits for review (newest first), and what was decided in the last thirty days. */
+export function reviewList(
+  viewer: Viewer | null,
+  models: string[],
+): { waiting: (ReviewItem & { model: string })[]; decided: (ReviewItem & { model: string })[] } {
+  const mine = reviewing(viewer, models);
+  if (!mine.length) throw new AccessDenied(viewer !== null);
+  const rows = db
+    .select()
+    .from(schema.fileReviews)
+    .where(
+      and(
+        inArray(schema.fileReviews.model, mine),
+        or(
+          eq(schema.fileReviews.state, "pending"),
+          gte(schema.fileReviews.decidedAt, new Date(Date.now() - 30 * DAY)),
+        ),
+      ),
+    )
+    .orderBy(desc(schema.fileReviews.uploadedAt))
+    .limit(500)
+    .all();
+  const titles = new Map(
+    mine.map((m) => [m, MODELS[m]?.titles(rows.filter((r) => r.model === m).map((r) => r.recordId)) ?? new Map()]),
+  );
+  const senders = new Map(
+    rows.some((r) => r.uploadedBy)
+      ? db
+          .select({ id: schema.user.id, name: schema.user.name, email: schema.user.email })
+          .from(schema.user)
+          .where(inArray(schema.user.id, rows.flatMap((r) => (r.uploadedBy ? [r.uploadedBy] : []))))
+          .all()
+          .map((u) => [u.id, u.name || u.email])
+      : [],
+  );
+  const items = rows.flatMap((r) => {
+    const model = MODELS[r.model];
+    const field = model?.fields[r.field];
+    const title = titles.get(r.model)?.get(r.recordId);
+    // A record that is gone takes its waiting files with it.
+    if (!model || !field || title === undefined) return [];
+    return [
+      {
+        id: r.id,
+        model: r.model,
+        label: model.label,
+        title,
+        href: model.href(r.recordId),
+        fieldLabel: field.label,
+        kind: field.kind,
+        sender: (r.uploadedBy && senders.get(r.uploadedBy)) || "—",
+        sentAt: r.uploadedAt,
+        state: r.state,
+        reason: r.reason,
+      },
+    ];
+  });
+  return {
+    waiting: items.filter((i) => i.state === "pending"),
+    decided: items.filter((i) => i.state !== "pending"),
+  };
+}
+
+/** How many files wait for the viewer's review: the number on the menu entry. */
+export function waitingCount(viewer: Viewer | null, models: string[]): number {
+  const mine = reviewing(viewer, models);
+  if (!mine.length) return 0;
+  return db
+    .select({ id: schema.fileReviews.id })
+    .from(schema.fileReviews)
+    .where(and(inArray(schema.fileReviews.model, mine), eq(schema.fileReviews.state, "pending")))
+    .all().length;
+}
+
+/**
+ * Approves a waiting file (others see it from now on) or rejects it with a reason its sender reads
+ * on the record; a rejected file is removed unless another record shows the same one.
+ */
+export function decide(viewer: Viewer | null, id: number, approve: boolean, reason?: string): void {
+  const row = db.select().from(schema.fileReviews).where(eq(schema.fileReviews.id, id)).get();
+  if (!row || !reviewing(viewer, [row.model]).length) throw new AccessDenied(viewer !== null);
+  if (row.state !== "pending") return;
+  db.transaction((tx) => {
+    tx.update(schema.fileReviews)
+      .set({
+        state: approve ? "approved" : "rejected",
+        reason: approve ? null : (reason ?? null),
+        decidedBy: viewer?.id ?? null,
+        decidedAt: new Date(),
+      })
+      .where(eq(schema.fileReviews.id, id))
+      .run();
+    audit(tx, viewer, {
+      action: approve ? "file approved" : "file rejected",
+      model: row.model,
+      record: row.recordId,
+      fields: [row.field],
+      ...(reason && !approve ? { details: { reason } } : {}),
+    });
+  });
+  const model = MODELS[row.model];
+  if (approve || !model) return;
+  model.takeOut(row.recordId, row.field, row.file);
+  const stored = { file: row.file, alt: "", width: 0, height: 0, name: "", type: "", size: 0 };
+  const used = model.usedElsewhere(row.file, row.recordId);
+  if (model.fields[row.field]?.kind === "picture") deletePicture(stored, used);
+  else deleteFile(stored, used);
+}
+
+/** The rejected files of a record, with the reviewer's reasons: what its owner reads on it. */
+export function rejections(model: string, recordId: number): { field: string; reason: string | null }[] {
+  return db
+    .select({ field: schema.fileReviews.field, reason: schema.fileReviews.reason })
+    .from(schema.fileReviews)
+    .where(
+      and(
+        eq(schema.fileReviews.model, model),
+        eq(schema.fileReviews.recordId, recordId),
+        eq(schema.fileReviews.state, "rejected"),
+      ),
+    )
+    .all();
+}
+
+/** The waiting file itself, for a reviewer only (who may not read the record otherwise). */
+export function reviewFile(request: Request, viewer: Viewer | null, id: number): Response {
+  const row = db.select().from(schema.fileReviews).where(eq(schema.fileReviews.id, id)).get();
+  if (!row || !reviewing(viewer, [row.model]).length) return new Response("Not found", { status: 404 });
+  const kind = MODELS[row.model]?.fields[row.field]?.kind ?? "file";
+  const name = row.file.split("/").at(-1) ?? "file";
+  return uploadResponse(request, kind, { file: row.file, name, type: "", size: 0 }, false);
+}
+"
+`;
+
+exports[`../../../examples/marketplace/smithable.yml > file list and generated code > src/generated/review.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// Who reviews each model's waiting files, and the review page (docs/design/file-review.md).
+export const REVIEWER_ROLES: Record<string, string[]> = {"Item":["admin"]};
+
+export const REVIEW_PAGE: string | undefined = "/review";
 "
 `;
 
@@ -26916,6 +27251,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, toggleSavedItem, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
+import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -26994,7 +27330,7 @@ export const Route = createFileRoute("/$id")({
 });
 
 function ItemPage() {
-  const { row, canWrite, canDelete, saved, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, review, saved, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
@@ -27014,6 +27350,7 @@ function ItemPage() {
         title={row.title || \`Item #\${row.id}\`}
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
+      <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={itemUi}
@@ -27059,7 +27396,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { createRootRoute, HeadContent, Scripts, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Package } from "lucide-react";
+import { Package,  } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -27068,6 +27405,7 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
+import { waitingCount } from "#/generated/review.server";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
@@ -27094,6 +27432,12 @@ const menus: MenuUi[] = [
         icon: Package,
         access: pageAccess["saved"],
       },
+      {
+        to: "/review",
+        label: "Review",
+        icon: undefined,
+        access: pageAccess["review"],
+      },
     ],
   },
 ];
@@ -27106,6 +27450,7 @@ const visitorRoutes = ["/", "/sign-in"];
 const pageRoutes: [string, string][] = [
   ["/my-items", "myItems"],
   ["/welcome", "home"],
+  ["/review", "review"],
   ["/saved", "saved"],
   ["/", "catalog"],
 ];
@@ -27118,11 +27463,16 @@ function pageOf(path: string): string | undefined {
 
 // Who is signed in, and, when a hosting service runs a copy of the app's data from an earlier
 // time to look at (DATA_AS_OF), that time.
-const getViewer = createServerFn().handler(async () => ({
-  viewer: await currentViewer(),
-  asOf: process.env.DATA_AS_OF,
-  demo: process.env.DEMO_SIGN_IN === "1",
-}));
+const getViewer = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return {
+    viewer,
+    asOf: process.env.DATA_AS_OF,
+    demo: process.env.DEMO_SIGN_IN === "1",
+    // How many files wait for the viewer's review, beside the review page in the menu.
+    counts: { "/review": waitingCount(viewer, ["Item"]) },
+  };
+});
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -27149,7 +27499,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo } = Route.useRouteContext();
+  const { viewer, asOf, demo, counts } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -27188,7 +27538,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
-          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["catalog"] }} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
+          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["catalog"] }} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename} counts={counts}>
             {children}
           </AppShell>
         )}
@@ -27390,6 +27740,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
+import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -27433,12 +27784,13 @@ export const Route = createFileRoute("/my-items/$id")({
 });
 
 function ItemPage() {
-  const { row, canWrite, canDelete, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, review, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/my-items" });
   return (
     <>
       <PageHeader title={row.title || \`Item #\${row.id}\`} />
+      <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={itemUi}
@@ -27663,6 +28015,73 @@ function NewItemPage() {
 "
 `;
 
+exports[`../../../examples/marketplace/smithable.yml > file list and generated code > src/routes/review/file.$id.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute } from "@tanstack/react-router";
+import { reviewFile } from "#/generated/review.server";
+import { currentViewer } from "#/lib/viewer.server";
+
+export const Route = createFileRoute("/review/file/$id")({
+  server: {
+    handlers: {
+      GET: async ({ request, params }) =>
+        reviewFile(request, await currentViewer(), Number(params.id)),
+    },
+  },
+});
+"
+`;
+
+exports[`../../../examples/marketplace/smithable.yml > file list and generated code > src/routes/review/index.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { decide, reviewList } from "#/generated/review.server";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { Review } from "#/kit/Review";
+import { w } from "#/kit/words";
+import { currentViewer } from "#/lib/viewer.server";
+
+const MODELS = ["Item"];
+
+const getReviews = createServerFn().handler(async () => reviewList(await currentViewer(), MODELS));
+
+const decideReview = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.number().int(), approve: z.boolean(), reason: z.string().trim().max(500).optional() }))
+  .handler(async ({ data }) => decide(await currentViewer(), data.id, data.approve, data.reason));
+
+export const Route = createFileRoute("/review/")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["review"], context.viewer, location.href),
+  loader: () => getReviews(),
+  component: ReviewPage,
+});
+
+function ReviewPage() {
+  const { waiting, decided } = Route.useLoaderData();
+  const router = useRouter();
+  return (
+    <>
+      <PageHeader title={"Review"} subtitle={w.reviewLead} />
+      <Review
+        app={app}
+        waiting={waiting}
+        decided={decided}
+        fileUrl={(id) => \`/review/file/\${id}\`}
+        onDecide={async (id, approve, reason) => {
+          await decideReview({ data: { id, approve, reason } });
+          await router.invalidate();
+        }}
+      />
+    </>
+  );
+}
+"
+`;
+
 exports[`../../../examples/marketplace/smithable.yml > file list and generated code > src/routes/robots[.]txt.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute } from "@tanstack/react-router";
@@ -27692,6 +28111,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, toggleSavedItem, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
+import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -27736,7 +28156,7 @@ export const Route = createFileRoute("/saved/$id")({
 });
 
 function ItemPage() {
-  const { row, canWrite, canDelete, saved, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, review, saved, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
@@ -27756,6 +28176,7 @@ function ItemPage() {
         title={row.title || \`Item #\${row.id}\`}
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
+      <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={itemUi}
@@ -28327,7 +28748,7 @@ test.beforeAll(async ({ browser }) => {
     await context.close();
   };
   await warm(undefined, ["/welcome", "/"]);
-  await warm("admin", ["/my-items", "/saved"]);
+  await warm("admin", ["/my-items", "/saved", "/review"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
 
@@ -28345,6 +28766,10 @@ test("Saved needs sign-in", async ({ page }) => {
   await page.goto("/saved");
   await expect(page).toHaveURL(/sign-in/);
 });
+test("Review needs sign-in", async ({ page }) => {
+  await page.goto("/review");
+  await expect(page).toHaveURL(/sign-in/);
+});
 
 test.describe("signed in as admin", () => {
   test.beforeEach(async ({ page }) => {
@@ -28356,6 +28781,9 @@ test.describe("signed in as admin", () => {
   });
   test("Saved opens", async ({ page }) => {
     await visit(page, "/saved");
+  });
+  test("Review opens", async ({ page }) => {
+    await visit(page, "/review");
   });
 });
 
@@ -28438,6 +28866,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "generated: src/generated/item.server.ts",
   "generated: src/generated/item.ts",
   "generated: src/generated/pages.ts",
+  "generated: src/generated/review.server.ts",
+  "generated: src/generated/review.ts",
   "generated: src/generated/site.ts",
   "generated: src/generated/uploads.ts",
   "kit: src/kit/ActionButton.tsx",
@@ -28456,6 +28886,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/MoreOnScroll.tsx",
   "kit: src/kit/Overflow.tsx",
   "kit: src/kit/PictureInput.tsx",
+  "kit: src/kit/Review.tsx",
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
   "kit: src/kit/SignIn.tsx",
@@ -28474,6 +28905,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/model.ts",
   "kit: src/kit/origin.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/review-mail.server.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
   "kit: src/kit/trace.server.ts",
@@ -28497,6 +28929,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "generated: src/routes/my-items/index.tsx",
   "generated: src/routes/my-items/new.tsx",
   "generated: src/routes/new.tsx",
+  "generated: src/routes/review/file.$id.ts",
+  "generated: src/routes/review/index.tsx",
   "generated: src/routes/robots[.]txt.ts",
   "generated: src/routes/saved/$id.tsx",
   "generated: src/routes/saved/index.tsx",
@@ -28541,22 +28975,24 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "0d802f59 generated",
+  "src/db/schema.ts": "0a65a3b2 generated",
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "8dad91ce generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "13b2dd1a generated",
-  "src/generated/item.server.ts": "73eadbe2 generated",
-  "src/generated/item.ts": "2ee0eec2 generated",
-  "src/generated/pages.ts": "97ddeb86 generated",
+  "src/generated/item.server.ts": "c15d0ebd generated",
+  "src/generated/item.ts": "f0a49b41 generated",
+  "src/generated/pages.ts": "c244f170 generated",
+  "src/generated/review.server.ts": "05473a16 generated",
+  "src/generated/review.ts": "c0f62730 generated",
   "src/generated/site.ts": "b9832c55 generated",
   "src/generated/uploads.ts": "2ea504cf generated",
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
@@ -28569,6 +29005,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
   "src/kit/PictureInput.tsx": "3f183c83 kit",
+  "src/kit/Review.tsx": "5f595873 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
@@ -28587,31 +29024,34 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
   "src/kit/params.ts": "8833a84a kit",
+  "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "1b275f23 kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/uploads.ts": "2ebac8c4 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "f282f420 generated",
-  "src/routes/__root.tsx": "322cb3ff generated",
+  "src/routes/$id.tsx": "bb7b3190 generated",
+  "src/routes/__root.tsx": "e34f4474 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/files/$model.$field.ts": "7dee5900 kit",
+  "src/routes/files/$model.$field.ts": "48cd51aa kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "eed77249 generated",
-  "src/routes/my-items/$id.tsx": "c4e29a1d generated",
+  "src/routes/my-items/$id.tsx": "0bf039ab generated",
   "src/routes/my-items/index.tsx": "93e89fb5 generated",
   "src/routes/my-items/new.tsx": "cc85bb39 generated",
   "src/routes/new.tsx": "ec30513e generated",
+  "src/routes/review/file.$id.ts": "e0b138f6 generated",
+  "src/routes/review/index.tsx": "95a8c2e4 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "dcce714d generated",
+  "src/routes/saved/$id.tsx": "1dcbf0cf generated",
   "src/routes/saved/index.tsx": "ba1832d5 generated",
   "src/routes/saved/new.tsx": "062ab243 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
@@ -28620,7 +29060,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "96d86081 kit",
   "src/theme.css": "20ab3225 generated",
-  "tests/smoke.spec.ts": "a1478d06 generated",
+  "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -30691,7 +31131,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
@@ -30720,7 +31160,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -39581,7 +40021,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActionButton.tsx": "373feaa3 kit",
   "src/kit/ActivityLog.tsx": "de7670ab kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "09b317fc kit",
+  "src/kit/AppShell.tsx": "e5768ca0 kit",
   "src/kit/Articles.tsx": "34dd9a3a kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -39622,7 +40062,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "574a0f10 kit",
+  "src/kit/words.ts": "14bed668 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",

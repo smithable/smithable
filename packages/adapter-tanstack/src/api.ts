@@ -619,6 +619,7 @@ import {
   PICTURE_MAX_BYTES,
   saveFile,
   savePicture,
+  scanned,
   uploadResponse,
 } from "#/kit/uploads";
 
@@ -649,8 +650,14 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
-          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
           let stored: unknown;
+          try {
+            await scanned(bytes);
+          } catch (error) {
+            if (error instanceof BadFile) throw new BadInput(error.message);
+            throw error;
+          }
+          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
           try {
             stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name")) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"));
           } catch (error) {
