@@ -3,15 +3,9 @@ pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Keep your clients in one place, send clear invoices in minutes and see at a glance what has been paid and what is still outstanding.
+      subtitle: Keep your clients, invoices and payments in one place, and always know who still owes you.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
     callToAction:
       title: Send your first invoice today
-models:
-  Payment:
-    fields:
-      method:
-        values:
-          bankTransfer: Bank transfer

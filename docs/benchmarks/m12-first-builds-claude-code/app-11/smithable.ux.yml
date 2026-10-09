@@ -7,6 +7,7 @@ tones:
   Incident.status:
     investigating: danger
     identified: warning
+    monitoring: warning
     resolved: success
 pages:
   incidents:
@@ -14,6 +15,4 @@ pages:
       sort: -detectedAt
   maintenance:
     table:
-      sort: -startsAt
-theme:
-  preset: modern
+      sort: startsAt
