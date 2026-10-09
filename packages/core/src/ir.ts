@@ -51,6 +51,12 @@ export interface ModelIR extends SemanticText {
    * them; the app's readers skip them (docs/design/trash.md).
    */
   trash?: boolean;
+  /**
+   * The picture and file fields whose uploads wait for a reviewer before others see them
+   * (docs/design/file-review.md), `all` already read as every such field. A required one holds
+   * the record; an optional one only the file.
+   */
+  review?: string[];
 }
 
 export interface CapacityIR {
@@ -165,6 +171,11 @@ export interface PageIR extends SemanticText {
       }
     /** An admin view of models: `data: all` (every model, in spec order) or a list of them. */
     | { kind: "data"; models: string[]; all: boolean }
+    /**
+     * What waits for review, to approve or reject (docs/design/file-review.md): `review: all`
+     * (every model with `review`) or a list of them. For admins and the roles granted review.
+     */
+    | { kind: "review"; models: string[]; all: boolean }
     /** Inputs and results computed as you type, stored nowhere (docs/design/calculator.md). */
     | { kind: "calculator"; calculator: CalculatorIR }
     /** A page of your own: the component in src/custom/pages/, in a route Smithable owns. */

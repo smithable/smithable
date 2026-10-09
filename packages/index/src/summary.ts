@@ -183,6 +183,20 @@ export function summarize(
       sentences.push(
         `Deleted ${pluralLabel(model).toLowerCase()} stay in the trash for thirty days, where they can be restored.`,
       );
+    if (model.review) {
+      // "Photos of listings are reviewed before others see them; a listing waits until its photo is."
+      const reviewed = model.review.flatMap((n) => model.fields.find((f) => f.name === n) ?? []);
+      const word = (f: FieldIR) => humanize(f.name).toLowerCase();
+      const plain = list(reviewed.map((f) => (/s$/.test(f.name) ? word(f) : plural(word(f)))));
+      const holding = reviewed.filter((f) => f.required);
+      sentences.push(
+        `${capitalize(plain)} of ${pluralLabel(model).toLowerCase()} are reviewed before others see them${
+          holding.length
+            ? `; ${article(humanize(model.name).toLowerCase())} waits until its ${list(holding.map(word))} ${holding.length > 1 ? "are" : "is"}`
+            : ""
+        }.`,
+      );
+    }
     for (const rule of model.rules ?? []) sentences.push(`Rule: ${rule.text}`);
     sections.push({
       concept: `model:${model.name}`,
@@ -600,6 +614,8 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
   calendar: (p) => `a calendar of ${plural(humanize(p.model)).toLowerCase()} by week or month`,
   articles: (p) =>
     `${plural(humanize(p.model)).toLowerCase()} as articles, newest first, each on its own page`,
+  review: (p) =>
+    `the pictures and files waiting for review${p.all ? "" : ` (${list(p.models.map((m) => plural(humanize(m)).toLowerCase()))})`}, to approve or reject`,
   data: (p) =>
     p.all
       ? "every kind of record, to find, open, change and delete"

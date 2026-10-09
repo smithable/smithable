@@ -176,6 +176,22 @@
                   }
                 ],
                 "description": "Custom actions the role may run (a standard action follows write)."
+              },
+              "review": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Models whose waiting pictures and files the role approves or rejects; opens the review page for them."
               }
             }
           }

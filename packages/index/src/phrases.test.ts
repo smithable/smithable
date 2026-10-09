@@ -462,3 +462,34 @@ describe("the words box, as a first-time owner types into it (studio-review-2026
     ]);
   });
 });
+
+test("Review a model's photos before others see them, with a review page when none lists it", () => {
+  const market = `smithable: 0.1
+app: { name: Market }
+models:
+  Listing:
+    fields: { title: string!, photo: picture!, price: money }
+pages:
+  listings: { crud: Listing }
+`;
+  const listing = validateSpec({ path: "smithable.yml", text: market }).ir;
+  if (!listing) throw new Error("invalid");
+  const auth = authOf(AUTH);
+  const asked = (request: string) => matchRequest(listing, request, ROLES, auth)?.operations;
+  const wanted = [
+    { op: "setReview", args: { model: "Listing", fields: ["photo"] } },
+    { op: "addReviewPage", args: {} },
+  ];
+  expect(asked("Review photos before they are shown")).toEqual(wanted);
+  expect(asked("Moderate listing photos before others see them")).toEqual(wanted);
+  expect(asked("Check the photos of listings before anyone sees them")).toEqual(wanted);
+  // A field that is no picture or file is for a model to read.
+  expect(asked("Review prices before they are shown")).toBeUndefined();
+  let files: { spec: string; auth?: string } = { spec: market, auth: AUTH };
+  for (const { op, args } of wanted) {
+    const result = applyOperation(files, op, args);
+    if (!result.ok) throw new Error(`${op}: ${result.message}`);
+    files = result.files;
+  }
+  expect(files.spec).toContain("review: [photo]");
+});

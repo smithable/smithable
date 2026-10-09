@@ -218,6 +218,24 @@
             "type": "string",
             "description": "A User field whose user owns the record, instead of its creator."
           },
+          "review": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "all"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ],
+            "description": "Pictures and files that wait for a reviewer before others see them: all (every picture and file field) or a list of them. A required one holds the whole record until it is approved; an optional one only the file."
+          },
           "trash": {
             "type": "boolean",
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
@@ -584,7 +602,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, calendar, calculator, articles, custom or legal.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, review, calendar, calculator, articles, custom or legal.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -624,6 +642,11 @@
           {
             "required": [
               "data"
+            ]
+          },
+          {
+            "required": [
+              "review"
             ]
           },
           {
@@ -855,6 +878,24 @@
               }
             ],
             "description": "An administrator's view of the app's data: all (every model) or a list of models, each with its records to find, open, change and delete. For admins, unless the page's access says otherwise."
+          },
+          "review": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "all"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ],
+            "description": "The pictures and files waiting for review, to approve or reject with a reason: all (every model with review) or a list of models. For admins and the roles granted review in smithable.auth.yml."
           },
           "calendar": {
             "oneOf": [

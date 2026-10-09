@@ -312,3 +312,25 @@ pages:
   );
   expect(sentences("").join(" ")).not.toContain("Other programs");
 });
+
+test("files reviewed before others see them, and the review page, in plain words", () => {
+  const text = `smithable: 0.1
+app: { name: Market }
+models:
+  Listing:
+    fields: { title: string!, photo: picture!, contract: file }
+    review: all
+pages:
+  listings: { crud: Listing }
+  moderation: { review: all }
+`;
+  const ir = validateSpec({ path: "smithable.yml", text }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const sections = summarize(ir, undefined, emptyContent());
+  expect(sections.find((s) => s.concept === "model:Listing")?.sentences).toContain(
+    "Photos and contracts of listings are reviewed before others see them; a listing waits until its photo is.",
+  );
+  expect(sections.find((s) => s.concept === "pages")?.sentences.join("\n")).toContain(
+    "the pictures and files waiting for review, to approve or reject",
+  );
+});
