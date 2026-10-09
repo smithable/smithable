@@ -6,6 +6,7 @@ import {
   type AccessOperation,
   humanize,
   identifier,
+  isUpload,
   modelAccess,
   plural,
 } from "@smithable/core";
@@ -177,6 +178,7 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
           />
         )}
         <ListToggle spec={spec} run={run} model={name} field={fieldName} />
+        {isUpload(field) && <ReviewChip spec={spec} run={run} model={name} field={fieldName} />}
         <TextSetting
           label="Label"
           path={["models", name, "fields", fieldName, "label"]}
@@ -278,6 +280,39 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
     );
   }
   return null;
+}
+
+/**
+ * A picture or file field held for review before others see it (docs/design/file-review.md):
+ * one chip that adds the field to its model's review, or takes it out (setReview).
+ */
+function ReviewChip({
+  spec,
+  run,
+  model,
+  field,
+}: {
+  spec: Spec;
+  run: Run;
+  model: string;
+  field: string;
+}) {
+  const reviewed = spec.ir?.models.find((m) => m.name === model)?.review ?? [];
+  const on = reviewed.includes(field);
+  const next = on ? reviewed.filter((f) => f !== field) : [...reviewed, field];
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => void run("setReview", { model, fields: next.length ? next : ["none"] })}
+      className={cx(
+        "h-6 rounded-full border px-2 text-xs",
+        on ? "border-accent bg-accent-soft text-accent" : "border-line text-muted",
+      )}
+    >
+      Reviewed before others see it
+    </button>
+  );
 }
 
 const ACCESS_WORDS: Record<AccessOperation, string> = {

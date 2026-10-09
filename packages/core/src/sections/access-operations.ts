@@ -13,12 +13,13 @@ const VERBS: Record<GrantKey, string> = {
   write: "change everyone's",
   delete: "delete everyone's",
   actions: "run",
+  review: "review the files of",
 };
 
 const grant: Operation<{ role: string; what: string; names?: string[] }> = {
   name: "grant",
   summary:
-    'Set what a role may do beyond the record rule, in smithable.auth.yml: the pages it opens, the models it adds to (create), reads, changes (write) or deletes for everyone, or the custom actions it runs. "all" names everything, "none" nothing; "grant <role> all" is the whole app and "grant <role> none" the record rule only.',
+    'Set what a role may do beyond the record rule, in smithable.auth.yml: the pages it opens, the models it adds to (create), reads, changes (write) or deletes for everyone, the custom actions it runs, or the models whose waiting pictures and files it approves (review). "all" names everything, "none" nothing; "grant <role> all" is the whole app and "grant <role> none" the record rule only.',
   schema: {
     type: "object",
     required: ["role", "what"],
@@ -29,7 +30,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
         type: "string",
         enum: [...WHATS],
         description:
-          "pages, read, create, write, delete or actions; or all / none for the role as a whole.",
+          "pages, read, create, write, delete, actions or review; or all / none for the role as a whole.",
       },
       names: refTo(
         { ref: "grantNames", what: "what", label: "Which" },
@@ -53,7 +54,9 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
           ? `${role} may run no custom action`
           : what === "create"
             ? `${role} may add no records`
-            : `${role} may ${what === "read" ? "read" : what === "write" ? "change" : "delete"} only their own records`;
+            : what === "review"
+              ? `${role} may review no files`
+              : `${role} may ${what === "read" ? "read" : what === "write" ? "change" : "delete"} only their own records`;
     if (names[0] === "all")
       return `${role} may ${verb} every ${what === "pages" ? "page" : what === "actions" ? "custom action" : "kind of record"}`;
     const named = names.map((n) =>

@@ -49,6 +49,7 @@ import {
   dataOperations,
   landingOperations,
   legalOperations,
+  reviewOperations,
   usersOperations,
 } from "./sections/page-operations.js";
 import { didYouMean } from "./suggest.js";
@@ -854,6 +855,63 @@ const data: PagePattern<"data"> = {
   operations: dataOperations,
 };
 
+const review: PagePattern<"review"> = {
+  kind: "review",
+  schema: {
+    oneOf: [
+      { type: "string", enum: ["all"] },
+      { type: "array", items: { type: "string" }, minItems: 1 },
+    ],
+    description:
+      "The pictures and files waiting for review, to approve or reject with a reason: all (every model with review) or a list of models. For admins and the roles granted review in smithable.auth.yml.",
+  },
+  example: "review: all",
+  parse(ctx, value, where, parsed) {
+    const reviewed = (parsed.models ?? []).filter((m) => m.review);
+    if (isScalarNode(value)) {
+      if (readString(ctx, value, `"review" in ${where}`) !== "all") {
+        ctx.error(value, "invalid-value", `"review" in ${where} is "all" or a list of models.`);
+        return undefined;
+      }
+      if (!reviewed.length)
+        ctx.warning(
+          value,
+          "review-nothing",
+          `No model has "review", so the page in ${where} has nothing to show.`,
+          `Add "review: [<picture field>]" to a model, or remove the page.`,
+        );
+      return { kind: "review", models: reviewed.map((m) => m.name), all: true };
+    }
+    const models = readNameList(ctx, value, `"review" in ${where}`);
+    if (!models.length) {
+      if (isSeq(value))
+        ctx.error(
+          value,
+          "invalid-value",
+          `"review" in ${where} is "all" or a list of at least one model.`,
+        );
+      return undefined;
+    }
+    for (const { name, at } of models) {
+      ctx.reference("model", name, at);
+      const model = parsed.models?.find((m) => m.name === name);
+      if (model && !model.review)
+        ctx.warning(
+          at,
+          "review-nothing",
+          `${name} has no "review", so none of its files wait here.`,
+          `Add "review: [<picture field>]" to ${name}, or leave it out of the list.`,
+        );
+    }
+    return { kind: "review", models: models.map((m) => m.name), all: false };
+  },
+  models: (p) => p.models,
+  icon: "shield",
+  inMenu: true,
+  access: ["admin"],
+  operations: reviewOperations,
+};
+
 export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   crud,
   landing,
@@ -862,6 +920,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   onboarding,
   users,
   data,
+  review,
   calendar,
   calculator,
   articles,

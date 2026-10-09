@@ -440,6 +440,8 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
     `articles of ${p.model}: ${p.title} and ${p.body}${p.picture ? `, ${p.picture}` : ""}${p.date ? `, by ${p.date}` : ""}${p.address ? `, at ${p.address}` : ""}`,
   data: (p) =>
     `data: ${p.all ? "every model" : p.models.join(", ")}, their records to find, open, change and delete`,
+  review: (p) =>
+    `review: the waiting pictures and files of ${p.all ? "every reviewed model" : p.models.join(", ")}, to approve or reject`,
   calculator: (p) =>
     `calculator: ${p.calculator.fields
       .filter((f) => !f.formula)

@@ -122,12 +122,21 @@ export interface SignInIR {
 
 /** Names a grant lists, or `all`. */
 export type GrantNames = "all" | string[];
-export const GRANT_KEYS = ["pages", "read", "create", "write", "delete", "actions"] as const;
+export const GRANT_KEYS = [
+  "pages",
+  "read",
+  "create",
+  "write",
+  "delete",
+  "actions",
+  "review",
+] as const;
 export type GrantKey = (typeof GRANT_KEYS)[number];
 /**
  * What a role may do beyond the record rule (docs/design/access-in-auth.md): the pages it opens,
- * the models it adds to, reads (with private access), changes and deletes for anyone, and the
- * custom actions it runs. `all` on the role is every grant; `all` in a grant is every name.
+ * the models it adds to, reads (with private access), changes and deletes for anyone, the
+ * custom actions it runs, and the models whose waiting files it approves or rejects (review,
+ * docs/design/file-review.md). `all` on the role is every grant; `all` in a grant is every name.
  */
 export type RoleGrants = Partial<Record<GrantKey, GrantNames>>;
 
@@ -276,7 +285,7 @@ export function validateAuth(
         ctx.error(
           value,
           "invalid-value",
-          `${capitalize(where)} is "all" (the whole app) or a block: description, pages, read, create, write, delete, actions.`,
+          `${capitalize(where)} is "all" (the whole app) or a block: description, pages, read, create, write, delete, actions, review.`,
         );
       } else if (value !== null && !isScalar(value)) {
         for (const entry of checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
