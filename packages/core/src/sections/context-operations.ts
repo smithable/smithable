@@ -1,4 +1,4 @@
-import { ANALYTICS, type AnalyticsProvider } from "../context-file.js";
+import { ANALYTICS, type AnalyticsProvider, EXACT_VERSION } from "../context-file.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 
 /** An npm package name, e.g. chart.js or @turf/turf. */
@@ -35,7 +35,7 @@ const setPackage: Operation<{ name: string; version: string }> = {
       return [];
     }
     // Exact, so a build is the same every time (the lockfile then pins its dependencies).
-    if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version))
+    if (!EXACT_VERSION.test(version))
       throw new OperationError(`Use an exact version like 4.4.1, not "${version}".`);
     if (context.has(["packages", name])) context.set(["packages", name], version);
     else context.add(["packages"], name, version);
