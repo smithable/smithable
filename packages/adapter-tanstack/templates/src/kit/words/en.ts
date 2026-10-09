@@ -27,12 +27,15 @@ export const w = {
   any: "Any",
   anything: "Anything",
   apiIsAt: "The API is at",
+  approve: "Approve",
+  approved: "Approved",
   areRequired: "are required.",
   as: "As",
   ask: "Ask",
   askPlaceholder: "How many … ? Show the … that …",
   askTheApp: "Ask the app",
   asking: "Asking…",
+  awaitingReview: "Awaiting review",
   belongTo: (count: number, noun: string, name: string) =>
     `${count} ${noun} ${count === 1 ? "belongs" : "belong"} to ${name}.`,
   bookAPlace: "Book a place",
@@ -139,6 +142,22 @@ export const w = {
   goesWith: (list: string, n: number) =>
     `${list} ${n === 1 ? "goes" : "go"} with it; ${n === 1 ? "it is" : "they are"} restored together.`,
   /** "5 notes will show no customer." */
+  reject: "Reject",
+  rejected: "Rejected",
+  rejectedBecause: (reason: string) => `Rejected by a reviewer: ${reason}`,
+  rejectReason: "Why (shown to the person who sent it)",
+  reviewDecided: "Decided in the last 30 days",
+  reviewEmpty: "Nothing waits for review.",
+  reviewLead:
+    "Pictures and files people sent, waiting until someone approves them. Others see them once they are approved.",
+  reviewMailSubject: (n: number, app: string) =>
+    `${n === 1 ? "A file awaits" : `${n} files await`} review in ${app}`,
+  reviewMailText: (n: number, link: string) =>
+    `${n === 1 ? "A picture or file someone sent waits" : `${n} pictures and files people sent wait`} for your review before others see them.\n\n${link}\n`,
+  reviewRejectSure:
+    "Reject it? The file is removed, and the reason is shown to the person who sent it.",
+  sentBy: (who: string, when: string) => `Sent by ${who}, ${when}`,
+  virusRefused: "This file was refused by the virus check.",
   willShowNone: (list: string, label: string) => `${list} will show no ${label.toLowerCase()}.`,
   cannotDeleteUsed: (title: string, list: string) =>
     `“${title}” is used by ${list}, so it cannot be deleted.`,

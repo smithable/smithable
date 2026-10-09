@@ -3,6 +3,7 @@
 import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
 import { calculatorRoute } from "../calculators.js";
 import { hasKeys } from "../keys.js";
+import { reviewFileRoute, reviewRoute } from "../review.js";
 import { type GenContext, trashedLists } from "../shared.js";
 import { articlesRoutes } from "./articles.js";
 import { calendarRoute } from "./calendar.js";
@@ -80,9 +81,14 @@ export const PAGE_GENERATORS: {
     kit: ["src/kit/LegalPage.tsx"],
     routes: (page, ctx) => ({ "index.tsx": legalRoute(page, ctx) }),
   },
-  // Until the adapter's part of backlog 60 (docs/design/file-review.md), generateApp refuses an
-  // app with review, so this is never reached.
-  review: { routes: () => ({}) },
+  review: {
+    // What waits for review, and the waiting file a reviewer opens (docs/design/file-review.md).
+    kit: ["src/kit/Review.tsx", "src/kit/review-mail.server.ts"],
+    routes: (page, { t }) => ({
+      "index.tsx": reviewRoute(page, t),
+      "file.$id.ts": reviewFileRoute(page),
+    }),
+  },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.
     routes: (page, ctx) => dataRoutes(page, ctx),

@@ -14,6 +14,7 @@ import {
   PICTURE_MAX_BYTES,
   saveFile,
   savePicture,
+  scanned,
 } from "#/kit/uploads";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -39,11 +40,13 @@ export const Route = createFileRoute("/files/$model/$field")({
           if (entry.kind === "file") {
             if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
             const bytes = new Uint8Array(await request.arrayBuffer());
+            await scanned(bytes);
             const name = decodeURIComponent(request.headers.get("x-file-name") ?? "");
             return Response.json(saveFile(params.model, bytes, name));
           }
           if (length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
           const bytes = new Uint8Array(await request.arrayBuffer());
+          await scanned(bytes);
           const { file, width, height } = savePicture(params.model, bytes, "");
           return Response.json({ file, width, height });
         } catch (error) {

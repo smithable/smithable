@@ -171,7 +171,7 @@ export const ${n.table}Favorites = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -199,6 +199,35 @@ const AUDIT_TABLE = `export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);`;
+
+/**
+ * Uploads that wait for review (docs/design/file-review.md): one row per file a person sent to a
+ * reviewed field. Pending until a reviewer decides; a file with no row (sample data, files from
+ * before review was turned on, a reviewer's own) is not held. Kept thirty days after the decision.
+ */
+const FILE_REVIEW_TABLE = `export const fileReviews = sqliteTable(
+  "file_reviews",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    field: text().notNull(),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    /** pending, approved or rejected. */
+    state: text().notNull().default("pending"),
+    /** Why it was rejected, shown to the uploader on the record. */
+    reason: text(),
+    uploadedBy: text(),
+    uploadedAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    decidedBy: text(),
+    decidedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [
+    index("file_reviews_record").on(t.model, t.recordId, t.state),
+    index("file_reviews_state").on(t.state, t.uploadedAt),
+  ],
 );`;
 
 /**

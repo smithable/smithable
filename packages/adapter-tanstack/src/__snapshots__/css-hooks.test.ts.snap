@@ -17,6 +17,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="header"",
     "data-kit="drawer"",
     "data-kit="nav"",
+    "data-part="count"",
     "data-part="title"",
     "data-part="actions"",
     "data-part=save])]:flex-1"",
@@ -119,6 +120,12 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Reserve.tsx": [
     "data-kit="reserve"",
+  ],
+  "src/kit/Review.tsx": [
+    "data-kit="review"",
+    "data-part="decided"",
+    "data-part="waiting"",
+    "data-part="review-notice"",
   ],
   "src/kit/SearchBox.tsx": [
     "data-kit="search-box"",
