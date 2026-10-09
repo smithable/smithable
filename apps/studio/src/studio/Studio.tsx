@@ -15,6 +15,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import type { Run } from "../builder/ChangeForms";
+import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
 import type { Place } from "../preview";
 import { Properties } from "../properties";
@@ -24,7 +25,7 @@ import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
 // The editor is its own piece of code, fetched when the spec tab is first shown.
 const SpecText = lazy(() => import("./SpecText"));
 
-type Tab = "spec" | "operation" | "diff" | "logs" | "preview";
+type Tab = "spec" | "operation" | "diff" | "logs";
 
 const STATUS: Record<string, string> = {
   "not-implemented": "Not implemented",
@@ -42,7 +43,6 @@ export function Studio({
   version,
   logs,
   onCustomize,
-  previewSlot,
   place,
   onPlace,
   previewHidden,
@@ -53,15 +53,16 @@ export function Studio({
   version: number;
   logs: string[];
   onCustomize: (page: string) => void;
-  /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
-  previewSlot: (element: HTMLElement | null) => void;
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["studio"];
   onPlace: (place: Place["studio"]) => void;
   /** With the preview's column hidden there is room for the details beside the tree from lg. */
   previewHidden: boolean;
 }) {
-  const [tab, setTabState] = useState<Tab>((place.tab as Tab | undefined) ?? "spec");
+  // A tab kept from before there was no Preview tab opens the files.
+  const [tab, setTabState] = useState<Tab>(() =>
+    TABS.includes(place.tab as Tab) ? (place.tab as Tab) : "spec",
+  );
   const setTab = (next: Tab) => {
     setTabState(next);
     onPlace({ tab: next });
@@ -184,12 +185,10 @@ export function Studio({
           title={
             <Tabs
               tabs={[
-                ["spec", "Files"],
-                ["operation", "Operation"],
-                ["diff", "Last change"],
+                ["spec", "Files", "files"],
+                ["operation", "Operation", "operation"],
+                ["diff", "Last change", "last-change"],
                 ["logs", "Logs"],
-                // Narrow windows only: from lg the preview has its own column.
-                ...(framed ? [] : [["preview", "Preview"] as [Tab, string]]),
               ]}
               value={tab}
               onChange={setTab}
@@ -197,7 +196,14 @@ export function Studio({
           }
         >
           {tab === "spec" && (
-            <SpecEditor project={project} plugins={spec.plugins} run={run} jump={jump} />
+            <SpecEditor
+              project={project}
+              plugins={spec.plugins}
+              run={run}
+              jump={jump}
+              file={place.file ?? "smithable.yml"}
+              onFile={(file) => onPlace({ file })}
+            />
           )}
           {tab === "operation" && <OperationForm run={run} spec={spec} />}
           {/* Remounted for every new change. */}
@@ -209,7 +215,6 @@ export function Studio({
               </pre>
             </section>
           )}
-          {tab === "preview" && !framed && <div ref={previewSlot} className="h-full" />}
         </Panel>
       </div>
     </div>
@@ -262,7 +267,7 @@ function ConceptTree({
     ["Pages", concepts.filter((c) => c.concept.startsWith("page:"))],
   ];
   return (
-    <nav aria-label="Concepts" className="space-y-3 p-2">
+    <nav aria-label="Concepts" data-guide="concepts" className="space-y-3 p-2">
       {groups.map(([title, list]) =>
         list.length ? (
           <div key={title}>
@@ -387,22 +392,38 @@ function SpecEditor({
   plugins,
   run,
   jump,
+  file,
+  onFile: setFile,
 }: {
   project: Project;
   plugins: Spec["plugins"];
   run: Run;
   jump?: { concept: string; at: number };
+  /** The file open, kept in Code mode's place (App.tsx), so a mode switch comes back to it. */
+  file: EditableFile;
+  onFile: (file: EditableFile) => void;
 }) {
-  const [file, setFile] = useState<EditableFile>("smithable.yml");
   const offered = (Object.keys(EDITABLE_FILES) as EditableFile[]).filter(
     (f) => project.files[EDITABLE_FILES[f]] !== undefined || emptyFile(f) !== undefined,
   );
   const saved = project.files[EDITABLE_FILES[file]] ?? emptyFile(file) ?? "";
   // Unsaved edits, by file, and each file as it was when its editing began: a change on disk
   // replaces the text only when it has not been edited, and is otherwise offered, so typing is
-  // never lost.
-  const [drafts, setDrafts] = useState<Partial<Record<EditableFile, string>>>({});
-  const [bases, setBases] = useState<Partial<Record<EditableFile, string>>>({});
+  // never lost. Kept for the browser tab's session, so a mode switch or a reload keeps them
+  // (studio-v2.md §2).
+  const [drafts, setDrafts] = useState(() => keptDrafts(project.name, "text"));
+  const [bases, setBases] = useState(() => keptDrafts(project.name, "base"));
+  useEffect(() => {
+    for (const f of Object.keys(EDITABLE_FILES) as EditableFile[]) {
+      const key = draftKey(project.name, f);
+      const text = drafts[f];
+      const base = bases[f];
+      try {
+        if (text === undefined || base === undefined) sessionStorage.removeItem(key);
+        else sessionStorage.setItem(key, JSON.stringify({ text, base }));
+      } catch {}
+    }
+  }, [drafts, bases, project.name]);
   const text = drafts[file] ?? saved;
   const base = bases[file] ?? saved;
   const edited = text !== base;
@@ -468,6 +489,15 @@ function SpecEditor({
               : f,
           ])}
         />
+        {/* How the open file is written: its part of the spec reference, as Help opens. */}
+        <a
+          href={FILE_DOCS[file]}
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 text-xs text-neutral-600 hover:underline"
+        >
+          How this file is written
+        </a>
         {project.files[EDITABLE_FILES[file]] === undefined && (
           <span className="text-neutral-500">Not in the project yet: saving adds it.</span>
         )}
@@ -491,7 +521,7 @@ function SpecEditor({
           onChange={setText}
           problems={diagnostics.filter((d) => d.file === file)}
           select={select}
-          kept={`smithable:editor:${file}`}
+          kept={`smithable:editor:${project.name}:${file}`}
           assist
           ask={ask}
           known={{
@@ -511,7 +541,10 @@ function SpecEditor({
           </Button>
         </p>
       )}
-      <div className="flex items-center justify-between gap-3 border-t border-neutral-200 p-2">
+      <div
+        data-guide="problems"
+        className="flex items-center justify-between gap-3 border-t border-neutral-200 p-2"
+      >
         <ul aria-label="Problems" aria-live="polite" className="min-w-0 space-y-0.5 text-xs">
           {diagnostics.length === 0 ? (
             <li className="text-green-700">No problems.</li>
@@ -535,6 +568,24 @@ function SpecEditor({
       </div>
     </div>
   );
+}
+
+/** Where a file's unsaved edit is kept for the session: its text and the file as it was. */
+const draftKey = (app: string, file: EditableFile) => `smithable:draft:${app}:${file}`;
+
+/** The kept edits' texts, or the files as they were when editing began, by file. */
+function keptDrafts(app: string, part: "text" | "base"): Partial<Record<EditableFile, string>> {
+  const kept: Partial<Record<EditableFile, string>> = {};
+  for (const f of Object.keys(EDITABLE_FILES) as EditableFile[]) {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(draftKey(app, f)) ?? "null") as {
+        text: string;
+        base: string;
+      } | null;
+      if (value) kept[f] = value[part];
+    } catch {}
+  }
+  return kept;
 }
 
 /** What common arguments mean, for operations whose schema doesn't say. */
@@ -733,6 +784,8 @@ export function specRange(text: string, concept: string): [number, number] | und
   );
   return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
 }
+
+const TABS: Tab[] = ["spec", "operation", "diff", "logs"];
 
 type PhonePanel = "editor" | "concepts" | "details";
 const PHONE_PANELS: [PhonePanel, string][] = [
