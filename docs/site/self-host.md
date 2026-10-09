@@ -71,7 +71,7 @@ $ smithable restore --container acme-crm --from s3://backups
 Restored acme-crm/20261003-094317 (1 file(s)).
 ```
 
-The app's name is added to the path, so one bucket holds several apps. A backup is a consistent copy taken while the app runs; `restore` brings back the newest one (or `--backup <time>`) and restarts the app. Run the backup from cron for a nightly copy. For every change as it happens, `smithable backup --continuous` streams the database with [Litestream](https://litestream.io) (installed separately), and `smithable restore --at <time>` then reaches any second of the last 30 days.
+The app's name is added to the path, so one bucket holds several apps. A backup is a consistent copy taken while the app runs; `restore` brings back the newest one (or `--backup <time>`) and restarts the app. Run the backup from cron for a nightly copy. Smithable does not encrypt the copies: a folder's permissions, or the bucket's own encryption at rest and its access policy, are what protect them, so keep the folder or the bucket private. For every change as it happens, `smithable backup --continuous` streams the database with [Litestream](https://litestream.io) (installed separately), and `smithable restore --at <time>` then reaches any second of the last 30 days.
 
 ## With Docker Compose
 

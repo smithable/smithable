@@ -16,6 +16,14 @@ test("smithable.context.yml is checked against its schema, each problem on its k
   expect(check("adapter: tanstack\n")).toEqual([
     [1, 'smithable.context.yml: "smithableContext" is missing.'],
   ]);
+  // A hand edit may not ask for a range, a tag or an address: builds would differ.
+  expect(
+    check("smithableContext: 0.1\npackages: { chart.js: latest, dayjs: ^1, luxon: 3.4 }\n"),
+  ).toEqual([
+    [2, 'smithable.context.yml: "packages.chart.js" must be an exact version like 4.4.1.'],
+    [2, 'smithable.context.yml: "packages.dayjs" must be an exact version like 4.4.1.'],
+    [2, 'smithable.context.yml: "packages.luxon" must be a string.'],
+  ]);
 });
 
 test("an operation cannot leave smithable.context.yml invalid", () => {
