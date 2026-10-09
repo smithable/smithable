@@ -3,11 +3,11 @@ pages:
   recipes:
     table:
       view: cards
-      sort: name
-  shopping-lists:
+    icon: book
+  shoppingLists:
     table:
-      columns: [name, shopOn, status]
-      sort: -shopOn
+      sort: -forDate
+    icon: cart
 tones:
   ShoppingList.status:
     done: success

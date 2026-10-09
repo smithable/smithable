@@ -1,19 +1,25 @@
 smithableContent: 0.1
+models:
+  Instructor:
+    label: Teacher
+    pluralLabel: Teachers
+  Session:
+    fields:
+      instructor:
+        label: Teacher
 pages:
   home:
     hero:
-      title: Find your breath, find your practice
-      subtitle: Yoga classes for every level, led by experienced teachers. See the schedule and book your place online.
+      title: Find your calm at Open Sky Yoga
+      subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
     classes:
       title: Our classes
-    teachers:
+    ourTeachers:
       title: Meet our teachers
     callToAction:
       title: Ready to roll out your mat?
       button: Book a class
-    contact:
-      title: Questions? Write to us

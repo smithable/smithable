@@ -1,16 +1,9 @@
 smithable: 0.1
 app:
   name: Billfold
-  description: "Simple invoicing for freelancers: keep track of clients, send invoices and record the payments that come in."
+  description: "Invoicing for freelancers: keep track of clients, send invoices and record the payments that come in."
   currency: EUR
 models:
-  BusinessProfile:
-    fields:
-      businessName: string!
-      vatNumber: string
-      iban: string
-      paymentTermDays: int! = 30
-      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -18,6 +11,15 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -30,18 +32,12 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-      amountPaid:
+      paid:
         type: money
         formula: SUM(payments.amount)
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
+      balance:
         type: money
-        formula: quantity * unitPrice
+        formula: total - paid
   Payment:
     fields:
       invoice: Invoice!
@@ -50,6 +46,11 @@ models:
       method: bankTransfer | card | cash | other
       note: string
 pages:
+  clients:
+    crud: Client
+    search: [name, email]
+  invoice-lines:
+    crud: InvoiceLine
   home:
     route: /
     landing:
@@ -58,12 +59,19 @@ pages:
       features:
       faq:
       callToAction:
-        button: overview
+        button: invoices
+  privacy:
+    route: /privacy
+    legal: privacy
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid]
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
   overview:
     dashboard:
-      latest:
-        list: Invoice
-        limit: 5
       outstanding:
         sum: Invoice.total
         where:
@@ -75,27 +83,9 @@ pages:
       received:
         sum: Payment.amount
         by: paidOn
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    search: [number]
-    actions: [markSent, markPaid]
-  clients:
-    crud: Client
-    search: [name, email]
-  invoice-lines:
-    crud: InvoiceLine
-  business:
-    crud: BusinessProfile
-  privacy:
-    route: /privacy
-    legal: privacy
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
+      latest:
+        list: Invoice
+        limit: 5
 actions:
   markSent:
     on: Invoice
