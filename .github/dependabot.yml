@@ -1,0 +1,11 @@
+# Actions only: they are pinned by commit, and Dependabot moves the pin and the version comment.
+# Packages are bumped weekly by hand (the stack bump) and checked daily (stack-advisories.yml).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
