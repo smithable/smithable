@@ -1770,7 +1770,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         },
         {
           "name": "photos",
-          "required": false,
+          "required": true,
           "type": {
             "kind": "scalar",
             "name": "pictures",
