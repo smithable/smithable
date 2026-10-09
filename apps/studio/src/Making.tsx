@@ -69,7 +69,7 @@ export function Making({
         <blockquote
           title={making.description}
           className={cx(
-            "border-l-2 border-neutral-300 pl-3 text-sm text-neutral-700",
+            "border-l-2 border-line-strong pl-3 text-sm text-fg-soft",
             sections.length > 0 && "truncate",
           )}
         >
@@ -97,7 +97,7 @@ export function Making({
         </div>
       ) : (
         <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-neutral-600">
+          <div className="flex justify-between text-xs text-muted">
             <span role="status">{STAGES[making.stage]}…</span>
             {elapsed > usual && <span>Taking a little longer than usual</span>}
           </div>
@@ -107,7 +107,7 @@ export function Making({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress(elapsed, usual) * 100)}
-            className="h-1.5 overflow-hidden rounded-full bg-neutral-200"
+            className="h-1.5 overflow-hidden rounded-full bg-line"
           >
             <div
               className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
@@ -118,12 +118,12 @@ export function Making({
       )}
       {sections.length > 0 && (
         <section aria-label="What it does" className="space-y-4">
-          <h2 className="text-sm font-semibold text-neutral-600">What it does</h2>
+          <h2 className="text-sm font-semibold text-muted">What it does</h2>
           {sections.map((s) => (
             <div key={s.concept} className="space-y-1">
               <h3 className="text-sm font-medium">{s.title}</h3>
               {s.sentences.map((line) => (
-                <p key={line} className="text-sm text-neutral-700">
+                <p key={line} className="text-sm text-fg-soft">
                   {line}
                 </p>
               ))}
@@ -132,7 +132,7 @@ export function Making({
         </section>
       )}
       {/* The words box from the start: what is typed is made once the app is in place. */}
-      <div className="-mx-4 rounded-lg border border-neutral-200 bg-white">
+      <div className="-mx-4 rounded-lg border border-line bg-panel">
         <Ask making waiting={project.waiting} onEdit={() => {}} />
       </div>
       {/* A place for an animation later (docs/design/while-it-is-made.md §7). */}
@@ -177,7 +177,7 @@ function Questions({ questions }: { questions: NonNullable<MakingState["question
                 className={
                   answers[i] === option
                     ? "rounded-full border border-accent bg-accent-soft px-3 py-1 text-sm text-accent"
-                    : "rounded-full border border-neutral-300 px-3 py-1 text-sm text-neutral-700 hover:border-accent"
+                    : "rounded-full border border-line-strong px-3 py-1 text-sm text-fg-soft hover:border-accent"
                 }
               >
                 {option}
@@ -192,7 +192,7 @@ function Questions({ questions }: { questions: NonNullable<MakingState["question
           />
         </fieldset>
       ))}
-      <p className="text-xs text-neutral-500">Leave a question empty to skip it.</p>
+      <p className="text-xs text-quiet">Leave a question empty to skip it.</p>
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>
           Make it
