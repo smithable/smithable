@@ -1,10 +1,75 @@
 @import "tailwindcss";
 
-@theme {
+/* Studio follows the system's light or dark setting, as the generated apps do; there is no switch.
+   The components use these tokens, never a grey of their own: the page (surface), a panel, a
+   quiet fill (subtle), lines, and five steps of text. Light is Tailwind's neutral scale. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+:root {
+  color-scheme: light dark;
+  --surface: var(--color-neutral-50);
+  --panel: var(--color-white);
+  --subtle: var(--color-neutral-100);
+  --line: var(--color-neutral-200);
+  --line-strong: var(--color-neutral-300);
+  --fg: var(--color-neutral-900);
+  --fg-soft: var(--color-neutral-700);
+  --muted: var(--color-neutral-600);
+  --quiet: var(--color-neutral-500);
+  --faint: var(--color-neutral-400);
+  --accent: #3b5bdb;
+  --accent-soft: #edf2ff;
+}
+
+/* A navy-grey page, panels a step lighter, lines a step lighter still, text near white; the
+   accent lighter so it reads on dark. The status tones (red, green, amber) keep their names and
+   take dark values: a pale fill becomes a deep one, a deep text a pale one. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: oklch(17% 0.015 260);
+    --panel: oklch(21% 0.015 260);
+    --subtle: oklch(26% 0.016 260);
+    --line: oklch(31% 0.016 260);
+    --line-strong: oklch(39% 0.016 260);
+    --fg: oklch(95% 0.005 260);
+    --fg-soft: oklch(87% 0.008 260);
+    --muted: oklch(76% 0.01 260);
+    --quiet: oklch(68% 0.012 260);
+    --faint: oklch(55% 0.012 260);
+    --accent: oklch(64% 0.16 268);
+    --accent-soft: oklch(31% 0.07 268);
+    --color-red-50: oklch(25% 0.06 25);
+    --color-red-100: oklch(30% 0.08 25);
+    --color-red-200: oklch(38% 0.1 25);
+    --color-red-700: oklch(78% 0.13 25);
+    --color-red-800: oklch(84% 0.1 25);
+    --color-green-50: oklch(24% 0.05 150);
+    --color-green-100: oklch(29% 0.07 150);
+    --color-green-200: oklch(37% 0.08 150);
+    --color-green-700: oklch(80% 0.13 150);
+    --color-green-800: oklch(85% 0.1 150);
+    --color-amber-50: oklch(25% 0.05 75);
+    --color-amber-200: oklch(40% 0.08 75);
+    --color-amber-700: oklch(82% 0.13 75);
+    --color-amber-950: oklch(92% 0.05 75);
+  }
+}
+
+@theme inline {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --color-accent: #3b5bdb;
-  --color-accent-soft: #edf2ff;
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted: var(--muted);
+  --color-quiet: var(--quiet);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
 }
 
 html,
@@ -14,7 +79,7 @@ body,
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
+  @apply bg-surface text-fg antialiased;
 }
 
 /* Shown only when what it says lasts: a preview reloaded within half a second shows nothing. */

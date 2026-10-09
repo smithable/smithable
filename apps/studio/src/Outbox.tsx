@@ -30,11 +30,11 @@ export function OutboxDialog({ onClose }: { onClose: () => void }) {
       ref={dialog}
       aria-label="Outbox"
       onClose={onClose}
-      className="m-auto w-[min(56rem,94vw)] rounded-lg p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto w-[min(56rem,94vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/40"
     >
       <div className="space-y-3 p-4">
         <h2 className="text-base font-semibold">Outbox</h2>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-muted">
           The preview sends no mail. What the app would have sent is kept here: invitations, sign-in
           codes, messages and notifications. Mail goes out once the app is published.
         </p>
@@ -53,12 +53,12 @@ export function OutboxDialog({ onClose }: { onClose: () => void }) {
                     type="button"
                     aria-current={m.file === open || undefined}
                     onClick={() => setOpen(m.file)}
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-100 aria-[current]:bg-neutral-100"
+                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-subtle aria-[current]:bg-subtle"
                   >
                     <span className="block truncate font-medium">
                       {m.subject || "(no subject)"}
                     </span>
-                    <span className="block truncate text-xs text-neutral-600">
+                    <span className="block truncate text-xs text-muted">
                       {m.to} · {when(m.at)}
                     </span>
                   </button>
@@ -68,9 +68,9 @@ export function OutboxDialog({ onClose }: { onClose: () => void }) {
             {shown && (
               <div className="min-w-0 space-y-2">
                 <p className="text-sm">
-                  <span className="text-neutral-600">To</span> {shown.to}
+                  <span className="text-muted">To</span> {shown.to}
                 </p>
-                <pre className="max-h-[50vh] overflow-auto rounded border border-neutral-200 bg-neutral-50 p-2 text-xs whitespace-pre-wrap">
+                <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-surface p-2 text-xs whitespace-pre-wrap">
                   {linked(shown.text)}
                 </pre>
               </div>
