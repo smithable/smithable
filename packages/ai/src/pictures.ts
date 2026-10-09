@@ -1,5 +1,6 @@
 // Pictures for a first build, chosen from the Smithable image library's index by its tags: a
-// hero for the landing page and a few sample pictures for the records. Pure: the host fetches
+// hero for the landing page, a mark for the app (docs/design/app-logo.md §4) and a few sample
+// pictures for the records. Pure: the host fetches
 // the index and the files (docs/design/showcase.md, the image library).
 import type { SpecIR } from "@smithable/core";
 
@@ -16,6 +17,8 @@ export interface PictureEntry {
 
 export interface PickedPictures {
   hero?: PictureEntry;
+  /** Always one when the library has marks: a fitting one, else an abstract one. */
+  logo?: PictureEntry;
   samples: PictureEntry[];
 }
 
@@ -23,6 +26,8 @@ export interface PickedPictures {
 const GENERIC = new Set([
   "hero",
   "sample",
+  "logo",
+  "mark",
   "indoor",
   "outdoor",
   "calm",
@@ -102,6 +107,18 @@ function hash(text: string): number {
 }
 
 /**
+ * The hash's bits stirred (murmur3's finaliser). FNV-1a's low bits hear only the characters'
+ * low bits, whatever their order, so a salt alone would make the mark's pick among two the
+ * hero's pick among two; stirred, the two are independent. The hero keeps the plain hash, so
+ * an app picks the hero it always did.
+ */
+function stir(h: number): number {
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/**
  * Whether a hero is as good a choice as the best one: it fits (a score of 1), comes close to the
  * best's score, and its strongest tag is as strong as the best's, so a picture of books (which
  * "library" says once) is not as good as one of tools for "a tool library … tools".
@@ -142,20 +159,32 @@ export function pickPictures(
     ),
   );
   const wordSet: Words = { said, spec };
-  const heroes = index.filter((e) => e.kind === "hero").sort(byScore(wordSet));
-  const best = heroes[0];
-  const fitting = best ? heroes.filter((e) => asGood(e, best, wordSet)) : [];
+  const text = `${options.description}\n${options.ir?.app.name ?? ""}`;
+  /** Of the entries of a kind that fit as well as the best, the one the text's hash picks. */
+  const fitting = (kind: string, n: number) => {
+    const all = index.filter((e) => e.kind === kind).sort(byScore(wordSet));
+    const best = all[0];
+    const good = best ? all.filter((e) => asGood(e, best, wordSet)) : [];
+    return { all, chosen: good[n % (good.length || 1)] };
+  };
+  const heroes = fitting("hero", hash(text));
   const hero =
-    fitting[
-      hash(`${options.description}\n${options.ir?.app.name ?? ""}`) % (fitting.length || 1)
-    ] ??
+    heroes.chosen ??
     // The calm abstract one, whatever its file is called after a remake (hero-abstract-calm-b).
-    heroes.find((e) => e.id.startsWith("hero-abstract-calm")) ??
-    heroes[0];
+    heroes.all.find((e) => e.id.startsWith("hero-abstract-calm")) ??
+    heroes.all[0];
+  // The mark's tie-break is salted and stirred, so it does not follow the hero's. No mark fits:
+  // an abstract one by the same number, so no app is without one.
+  const n = stir(hash(`logo\n${text}`));
+  const marks = fitting("logo", n);
+  const abstract = marks.all
+    .filter((e) => e.tags.includes("abstract"))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const logo = marks.chosen ?? abstract[n % (abstract.length || 1)];
   const samples = index
     .filter((e) => e.kind === "sample")
     .sort(byScore(wordSet))
     .filter((e, i, all) => score(e, wordSet) >= 1 || i < Math.min(count, all.length))
     .slice(0, count);
-  return { ...(hero ? { hero } : {}), samples };
+  return { ...(hero ? { hero } : {}), ...(logo ? { logo } : {}), samples };
 }

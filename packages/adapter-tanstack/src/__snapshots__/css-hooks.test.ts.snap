@@ -16,6 +16,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="app-shell"",
     "data-part="header"",
     "data-kit="drawer"",
+    "data-part="logo"",
     "data-kit="nav"",
     "data-part="count"",
     "data-part="title"",
@@ -63,6 +64,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="key-row"",
   ],
   "src/kit/Landing.tsx": [
+    "data-part="logo"",
     "data-kit="landing"",
     "data-part="header"",
     "data-part="footer"",
