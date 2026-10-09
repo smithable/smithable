@@ -102,7 +102,7 @@ if plain_docs; then
   git show origin/main:.gitleaks.toml > "$rules"
   # The repository's objects are in the main checkout's .git, whichever worktree this runs in.
   if ! docker run --rm -v "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)"):/repo:ro" \
-    -v "$rules:/cfg.toml:ro" zricethezav/gitleaks:v8.30.1 git /repo --no-banner --config /cfg.toml \
+    -v "$rules:/cfg.toml:ro" ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git /repo --no-banner --config /cfg.toml \
     --log-opts="$base..$head"; then
     rm -f "$rules"
     refuse "the scan found a secret in its commits (above), or could not run."
