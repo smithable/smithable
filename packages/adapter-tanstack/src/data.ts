@@ -87,7 +87,7 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   // Records visitors add, without an account (e.g. a contact form's messages).
   const visitors = modelAccess(model, auth).create.public;
   const refinements = storedFields(model).flatMap((f) => {
-    const r = refinement(f, visitors);
+    const r = refinement(f, visitors, kebab(model.name));
     return r ? [`  ${f.name}: ${r},`] : [];
   });
   const schema = refinements.length
@@ -179,7 +179,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   // Records visitors add, without an account (e.g. a contact form's messages).
   const visitors = modelAccess(model, auth).create.public;
   const refinements = stored.flatMap((f) => {
-    const r = refinement(f, visitors);
+    const r = refinement(f, visitors, kebab(model.name));
     return r ? [`  ${f.name}: ${r},`] : [];
   });
   const schema = refinements.length
@@ -1812,9 +1812,14 @@ export function textBounds(field: FieldIR, visitors = false): string {
   return `${field.required ? ".trim()" : ""}${min > 0 ? `.min(${min}, ${min === 1 ? "w.required" : `w.atLeastCharacters(${min})`})` : ""}.max(${max}, w.atMostCharacters(${max}))`;
 }
 
-/** Zod refinements that go beyond the column types: formats, required text, bounds. */
-export function refinement(field: FieldIR, visitors = false): string | undefined {
+/**
+ * Zod refinements that go beyond the column types: formats, required text, bounds. A picture or
+ * document is one stored in this model's own folder (`folder`, as src/kit/uploads.ts names it),
+ * never a path the browser made up or another model's file.
+ */
+export function refinement(field: FieldIR, visitors = false, folder = ""): string | undefined {
   const optional = field.required ? "" : ".nullish()";
+  const stored = (ext: string) => `z.string().regex(/^${folder}\\/[a-f0-9]{24}\\.${ext}$/)`;
   if (field.type.kind !== "scalar") return undefined;
   const bounds = (scale: number) =>
     `${field.min !== undefined ? `.min(${field.min * scale})` : ""}${field.max !== undefined ? `.max(${field.max * scale})` : ""}`;
@@ -1838,15 +1843,16 @@ export function refinement(field: FieldIR, visitors = false): string | undefined
       return bounds(100) ? `(s) => s${bounds(100)}` : undefined;
     case "picture":
       // What src/kit/uploads.ts returned, plus the description a person wrote.
-      return `z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })${optional}`;
+      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })${optional}`;
     case "pictures":
       // Several of them, at most the field's maximum.
-      return `z.array(z.object({ file: z.string().max(100), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(${field.max ?? PICTURES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(${field.max ?? PICTURES_MAX})${optional}`;
     case "file":
-      // What src/kit/uploads.ts returned for a document.
-      return `z.object({ file: z.string().max(100), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })${optional}`;
+      // What src/kit/uploads.ts returned for a document. Its type is shown, never served: the
+      // file is sent with the type of its extension (fileHeaders).
+      return `z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })${optional}`;
     case "files":
-      return `z.array(z.object({ file: z.string().max(100), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })).max(${FILES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })).max(${FILES_MAX})${optional}`;
     default:
       return undefined;
   }

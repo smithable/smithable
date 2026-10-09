@@ -3,6 +3,7 @@
 // app's own server functions: creating, changing and deleting records, booking, inviting, and
 // the sign-in codes it mails.
 // Counts live in memory: the app runs as one process, so that is the whole picture.
+import { getRequestIP } from "@tanstack/react-start/server";
 import { w } from "./words";
 
 /** Refused because of how often, not because of who: the words are shown as they are. */
@@ -46,12 +47,18 @@ export function count(
 }
 
 /**
- * The address a request came from, as the last proxy saw it (the rightmost forwarded address,
- * which a client behind one proxy cannot choose); "unknown" when nothing says.
+ * The address a request came from: behind a proxy that says who the visitor is (TRUST_PROXY=1,
+ * e.g. the hosted service) the last hop of X-Forwarded-For, the one that proxy added; otherwise
+ * the connection's own, since anyone could send a new X-Forwarded-For (or X-Real-IP) with every
+ * request and so escape every limit. As in server.mjs and address.server.ts; "unknown" when
+ * nothing says.
  */
-export function address(headers: Headers): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  return forwarded || headers.get("x-real-ip") || "unknown";
+export function address(headers: Pick<Headers, "get">): string {
+  const forwarded =
+    process.env.TRUST_PROXY === "1"
+      ? headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
+      : undefined;
+  return forwarded || getRequestIP() || "unknown";
 }
 
 /** Counts a write by the viewer, or by the visitor's address (from the request's headers). */
