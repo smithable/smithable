@@ -189,13 +189,22 @@ export function deleteFile(stored: StoredFile | null | undefined, stillUsed: boo
 export const fileTag = (stored: StoredFile) => `"${stored.file.split("/")[1]?.split(".")[0]}"`;
 
 /**
+ * The type a stored document is sent with: its extension's, which saveFile checked against its
+ * first bytes. The type a record keeps is only shown: it came with the record from a browser.
+ */
+export function fileType(stored: StoredFile): string {
+  return KINDS[stored.file.split(".").at(-1) ?? ""]?.type ?? "application/octet-stream";
+}
+
+/**
  * The headers a document is sent with: its own type, never sniffed, and as a download, except a
  * PDF or a picture, which the browser shows itself; sandboxed, so nothing in it can run here.
  */
 export function fileHeaders(stored: StoredFile): Record<string, string> {
-  const shown = stored.type === "application/pdf" || stored.type.startsWith("image/");
+  const type = fileType(stored);
+  const shown = type === "application/pdf" || type.startsWith("image/");
   return {
-    "Content-Type": stored.type,
+    "Content-Type": type,
     "Content-Disposition": `${shown ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(stored.name)}`,
     "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": "sandbox",
