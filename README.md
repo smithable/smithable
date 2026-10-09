@@ -31,7 +31,7 @@ cd my-crm && node ../packages/cli/dist/bin.js studio   # the editor (No code and
 The packages are not on npm yet, so `smithable` below means `node <repo>/packages/cli/dist/bin.js` (an alias does it: `alias smithable="node $PWD/packages/cli/dist/bin.js"` from the repository root). From inside a project, the everyday commands:
 
 ```sh
-smithable op addField Customer phone phone     # a deterministic change: spec, migration, forms, tables
+smithable op addField Customer taxId string     # a deterministic change: spec, migration, forms, tables
 smithable ask "Customers should have a website" # in your own words; confirmed before it applies
 smithable undo                                  # takes back the last change, database included
 smithable mcp                                   # the same operations as tools for Claude Code, Cursor, …
