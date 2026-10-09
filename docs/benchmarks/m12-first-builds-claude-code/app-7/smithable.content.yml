@@ -4,12 +4,12 @@ pages:
     hero:
       title: Welcome to the club
       subtitle: Fixtures, results, teams and players, all in one place.
-      button: See fixtures and results
+      button: See the fixtures
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
-    fixtures:
-      title: Upcoming fixtures
+    upcoming:
+      title: Upcoming matches
     results:
       title: Latest results
     ourTeams:

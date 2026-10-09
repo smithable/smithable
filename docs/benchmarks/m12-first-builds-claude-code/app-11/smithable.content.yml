@@ -3,8 +3,7 @@ pages:
   home:
     hero:
       title: API Status
-      subtitle: The current state of our API, open incidents and upcoming maintenance.
-      button: Incident history
+      subtitle: Is the API working? Its current state, open incidents and planned maintenance, updated live.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town

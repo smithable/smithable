@@ -1,20 +1,20 @@
 smithable: 0.1
 app:
   name: Conference Registration
-  description: Talks, speakers and registration for attendees of a conference.
+  description: Programme, speakers and attendee registration for a conference.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
       title: string
-      bio: markdown
-      portrait: picture
-    access:
-      create: [admin]
+      organization: string
+      bio: text
   Talk:
     fields:
       title: string!
-      summary: text
+      abstract: text
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
@@ -24,8 +24,6 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(registrations)
-    access:
-      create: [admin]
   Registration:
     fields:
       talk: Talk! unique
@@ -33,16 +31,16 @@ models:
       per: talk
       max: talk.capacity
 pages:
-  schedule:
-    calendar: Talk
-  my-registrations:
-    crud: Registration
   talks:
     crud: Talk
-    access: [admin]
   speakers:
     crud: Speaker
-    access: [admin]
+  my-registrations:
+    crud: Registration
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
   home:
     route: /
     landing:

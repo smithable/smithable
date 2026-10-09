@@ -2,14 +2,14 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: A student who books classes.
+    pages: [my-bookings]
+    create: [Booking]
 public:
   pages: [home, schedule, privacy]
   read: [ClassType, Instructor, Session]
-  create: [Message]
-roles:
-  admin:
-    description: Studio staff. Manage the schedule, classes and teachers.
-  member:
-    description: A student who books classes.
 defaultRole: member
 admins: [johan@smithable.ai]
