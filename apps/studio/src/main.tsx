@@ -18,7 +18,7 @@ class Boundary extends Component<{ children: ReactNode }, { error?: Error }> {
         <p>Your app and its changes are saved. Reloading shows them again.</p>
         <button
           type="button"
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-white"
+          className="rounded-md bg-fg px-3 py-1.5 text-panel"
           onClick={() => location.reload()}
         >
           Reload

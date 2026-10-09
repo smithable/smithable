@@ -49,7 +49,7 @@ function TextSetting({
         type="submit"
         variant="ghost"
         aria-label={`Save ${label.toLowerCase()}`}
-        className="border border-neutral-200"
+        className="border border-line"
         disabled={text.trim() === (current ?? "")}
       >
         Save
@@ -108,7 +108,7 @@ function RecordNames({
       <Button
         type="submit"
         variant="ghost"
-        className="border border-neutral-200"
+        className="border border-line"
         disabled={!single.trim() || (single.trim() === one && many.trim() === several)}
       >
         Rename everywhere
@@ -149,17 +149,17 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
   const [name = "", fieldName] = rest.split(".");
   const [rename, setRename] = useState("");
   if (!ir) return null;
-  const heading = <h3 className="text-xs font-semibold text-neutral-500">Properties</h3>;
+  const heading = <h3 className="text-xs font-semibold text-quiet">Properties</h3>;
   if (kind === "field" && fieldName) {
     const field = ir.models.find((m) => m.name === name)?.fields.find((f) => f.name === fieldName);
     if (!field) return null;
     const models = ir.models.map((m) => m.name);
     const to = identifier(rename);
     return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+      <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
         {field.formula || (field.type.kind === "relation" && field.type.many) ? (
-          <p className="text-neutral-600">
+          <p className="text-muted">
             {field.formula ? "Calculated" : "Lists related records"}: change it in smithable.yml.
           </p>
         ) : (
@@ -197,12 +197,7 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
           >
             <Input aria-label="Rename" value={rename} onChange={(e) => setRename(e.target.value)} />
           </Label>
-          <Button
-            type="submit"
-            variant="ghost"
-            className="border border-neutral-200"
-            disabled={!to}
-          >
+          <Button type="submit" variant="ghost" className="border border-line" disabled={!to}>
             Rename
           </Button>
         </form>
@@ -221,7 +216,7 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
     if (!page) return null;
     const texts = spec.content?.pages[name];
     return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+      <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
         <TextSetting
           label="Title"
@@ -267,7 +262,7 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
   if (kind === "model") {
     const texts = spec.content?.models[name];
     return (
-      <div className="space-y-3 border-b border-neutral-200 p-3 text-sm">
+      <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
         <RecordNames
           key={`${texts?.label}/${texts?.pluralLabel}`}
@@ -307,8 +302,8 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
   const kinds = spec.ir?.models.map((m) => m.name) ?? [];
   return (
     <fieldset className="space-y-2">
-      <legend className="text-xs font-semibold text-neutral-500">Who can</legend>
-      <p className="text-xs text-neutral-500">
+      <legend className="text-xs font-semibold text-quiet">Who can</legend>
+      <p className="text-xs text-quiet">
         {auth.defaultAccess === "shared"
           ? "Everyone sees all records and changes and deletes their own; a role ticked here may for everyone's. Admins always may."
           : "Everyone sees, changes and deletes their own records; a role ticked here may for everyone's. Admins always may."}
@@ -317,7 +312,7 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
         const shared = op === "read" && auth.defaultAccess === "shared";
         return (
           <div key={op} className="flex flex-wrap items-center gap-1">
-            <span className="w-14 text-xs text-neutral-600">{ACCESS_WORDS[op]}</span>
+            <span className="w-14 text-xs text-muted">{ACCESS_WORDS[op]}</span>
             {roles.map((role) => {
               const on = allowed[op].roles.includes(role.name);
               const grants = role.grants === "all" ? undefined : role.grants[op];
@@ -340,9 +335,7 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
                   }
                   className={cx(
                     "h-6 rounded-full border px-2 text-xs",
-                    on
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "border-neutral-200 text-neutral-600",
+                    on ? "border-accent bg-accent-soft text-accent" : "border-line text-muted",
                     shared && "opacity-60",
                   )}
                 >
@@ -351,13 +344,13 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
               );
             })}
             {allowed[op].owner && (
-              <span className="text-xs text-neutral-500">and each one their own</span>
+              <span className="text-xs text-quiet">and each one their own</span>
             )}
           </div>
         );
       })}
       {allowed.read.public && (
-        <p className="text-xs text-neutral-500">Visitors may see these too (smithable.auth.yml).</p>
+        <p className="text-xs text-quiet">Visitors may see these too (smithable.auth.yml).</p>
       )}
     </fieldset>
   );

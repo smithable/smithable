@@ -4,9 +4,11 @@
 // complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
 import { completionStatus, startCompletion } from "@codemirror/autocomplete";
 import { yaml } from "@codemirror/lang-yaml";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
-import { EditorSelection, EditorState } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView, hoverTooltip, type ViewUpdate } from "@codemirror/view";
+import { tags } from "@lezer/highlight";
 import { completeSpec, type EditedFile, hoverSpec, type Known } from "@smithable/core";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
@@ -46,6 +48,8 @@ export default function SpecText({
   const knows = useRef(known);
   knows.current = known;
   const file = label as EditedFile;
+  const dark = matchMedia("(prefers-color-scheme: dark)");
+  const scheme = useRef(new Compartment()).current;
   // Made once. The text, the problems and the selection reach it through the effects below.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the editor is made once
   useEffect(() => {
@@ -115,6 +119,8 @@ export default function SpecText({
           basicSetup,
           yaml(),
           lintGutter(),
+          // Studio's colours follow the system's light or dark setting, as it changes.
+          scheme.of(dark.matches ? DARK : []),
           ...(assist ? [EditorState.languageData.of(() => sources), hover] : []),
           EditorView.contentAttributes.of({ "aria-label": label, spellcheck: "false" }),
           EditorView.theme({
@@ -136,6 +142,9 @@ export default function SpecText({
       }),
     });
     editor.scrollDOM.addEventListener("scroll", () => keep(editor), { passive: true });
+    const recolour = () =>
+      editor.dispatch({ effects: scheme.reconfigure(dark.matches ? DARK : []) });
+    dark.addEventListener("change", recolour);
     // The text and the selection answer as a text box's do (value, selectionStart,
     // selectionEnd, setSelectionRange), for tools and tests that read or set a field's text: only the lines in
     // view are in the page, so the element's own content is not the text.
@@ -169,6 +178,7 @@ export default function SpecText({
     }
     view.current = editor;
     return () => {
+      dark.removeEventListener("change", recolour);
       view.current = undefined;
       editor.destroy();
     };
@@ -217,6 +227,54 @@ export default function SpecText({
   // (which pushed Save out of sight).
   return <div ref={host} className="min-h-0 min-w-0 flex-1 overflow-hidden" />;
 }
+
+/**
+ * The editor in dark mode: Studio's dark panel and lines (styles.css), and YAML's parts in colours
+ * that read on it (the editor's own highlighting is made for a white page).
+ */
+const DARK = [
+  EditorView.theme(
+    {
+      "&": { backgroundColor: "var(--panel)", color: "var(--fg)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--surface)",
+        color: "var(--faint)",
+        borderRight: "1px solid var(--line)",
+      },
+      ".cm-activeLine": { backgroundColor: "oklch(100% 0 0 / 0.04)" },
+      ".cm-activeLineGutter": { backgroundColor: "var(--subtle)" },
+      ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--fg)" },
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+        backgroundColor: "oklch(45% 0.08 268 / 0.6)",
+      },
+      ".cm-tooltip": {
+        backgroundColor: "var(--panel)",
+        color: "var(--fg)",
+        border: "1px solid var(--line-strong)",
+      },
+      ".cm-tooltip-autocomplete ul li[aria-selected]": {
+        backgroundColor: "var(--accent-soft)",
+        color: "var(--fg)",
+      },
+      ".cm-panels": { backgroundColor: "var(--surface)", color: "var(--fg)" },
+      ".cm-searchMatch": { backgroundColor: "oklch(60% 0.12 85 / 0.35)" },
+      ".cm-foldPlaceholder": { backgroundColor: "var(--subtle)", color: "var(--muted)" },
+    },
+    { dark: true },
+  ),
+  syntaxHighlighting(
+    HighlightStyle.define([
+      { tag: tags.definition(tags.propertyName), color: "oklch(80% 0.09 250)" },
+      { tag: [tags.string, tags.special(tags.string)], color: "oklch(82% 0.11 145)" },
+      { tag: [tags.lineComment, tags.comment], color: "var(--faint)", fontStyle: "italic" },
+      { tag: [tags.labelName, tags.typeName, tags.keyword], color: "oklch(80% 0.1 310)" },
+      {
+        tag: [tags.separator, tags.punctuation, tags.squareBracket, tags.brace],
+        color: "var(--quiet)",
+      },
+    ]),
+  ),
+];
 
 /**
  * The cursor has just come to the end of an empty indented line (a click or tap there, an arrow

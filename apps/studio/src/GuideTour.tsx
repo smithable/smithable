@@ -134,7 +134,7 @@ export function Guide({
           aria-labelledby="guide-title"
           aria-describedby="guide-text"
           data-guide-card={current.stop.anchor}
-          className="fixed space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-lg"
+          className="fixed space-y-3 rounded-lg border border-line bg-panel p-4 shadow-lg"
           style={{ ...position, width: CARD.width }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
@@ -144,13 +144,13 @@ export function Guide({
             }
           }}
         >
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-quiet">
             {at + 1} of {stops.length}
           </p>
           <h2 id="guide-title" className="text-sm font-semibold">
             {current.stop.title}
           </h2>
-          <p id="guide-text" className="text-sm text-neutral-700">
+          <p id="guide-text" className="text-sm text-fg-soft">
             {current.stop.text}
           </p>
           {current.stop.choice ? (

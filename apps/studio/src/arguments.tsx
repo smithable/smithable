@@ -104,7 +104,7 @@ export function ArgumentField({
     const chosen = (values[name] as string[] | undefined) ?? [];
     return (
       <fieldset className="space-y-1">
-        <legend className="text-xs font-medium text-neutral-600">{text}</legend>
+        <legend className="text-xs font-medium text-muted">{text}</legend>
         {choices.map(([value, shown]) => (
           <label key={value} className="flex items-center gap-2 text-sm">
             <input
@@ -117,7 +117,7 @@ export function ArgumentField({
             {shown}
           </label>
         ))}
-        {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+        {hint && <p className="text-xs text-quiet">{hint}</p>}
       </fieldset>
     );
   }
