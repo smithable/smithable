@@ -1785,14 +1785,15 @@ async function pictureFlow(dir, base) {
     const seeded = await page.request.get(`${base}/files/instructor/1/portrait`);
     if (!seeded.ok() || seeded.headers()["content-type"] !== "image/webp")
       throw new Error(`the seeded portrait is not served (${seeded.status()})`);
+    // As the page's own upload says it comes from the app (a browser sends Sec-Fetch-Site).
     const refused = await page.request.post(`${base}/files/instructor/portrait`, {
-      headers: { "content-type": "image/webp" },
+      headers: { "content-type": "image/webp", "sec-fetch-site": "same-origin" },
       data: Buffer.from("not a picture"),
     });
     if (refused.status() !== 401) throw new Error(`a visitor could upload (${refused.status()})`);
     await signInAs(page, base, "admin");
     const junk = await page.request.post(`${base}/files/instructor/portrait`, {
-      headers: { "content-type": "image/webp" },
+      headers: { "content-type": "image/webp", "sec-fetch-site": "same-origin" },
       data: Buffer.from("not a picture"),
     });
     if (junk.status() !== 400) throw new Error(`junk was stored (${junk.status()})`);
@@ -2666,7 +2667,7 @@ async function documentFlow(dir, base) {
     if (visitor.status !== 404) throw new Error(`a visitor gets ${visitor.status}`);
     // Larger than 10 MB: refused before it is stored.
     const large = await page.request.post(`${base}/files/invoice/contract`, {
-      headers: { "x-file-name": "big.pdf", "x-smithable": "1" },
+      headers: { "x-file-name": "big.pdf", "x-smithable": "1", "sec-fetch-site": "same-origin" },
       data: Buffer.concat([pdf, Buffer.alloc(10_000_001)]),
     });
     if (large.status() !== 400) throw new Error(`a file over 10 MB gets ${large.status()}`);
@@ -4453,16 +4454,10 @@ for (const [index, example] of examples.entries()) {
           const big = await lengthOnly("/", 1_000_001);
           if (big !== 413) throw new Error(`1 MB and a byte gave ${big}`);
           // A document (up to 10 MB, src/kit/uploads.ts) goes to /files/…: 2 MB reaches the app
-          // (which knows no such field: 404), 10 MB and a byte does not.
-          const upload = await fetch(`${base}/files/no-model/no-field`, {
-            method: "POST",
-            headers: {
-              "content-type": "application/octet-stream",
-              "sec-fetch-site": "same-origin",
-            },
-            body: new Uint8Array(2_000_000),
-          });
-          if (upload.status !== 404) throw new Error(`a 2 MB document gave ${upload.status}`);
+          // (which knows no such field: 404, answered without reading the body), 10 MB and a
+          // byte does not.
+          const upload = await lengthOnly("/files/no-model/no-field", 2_000_000);
+          if (upload !== 404) throw new Error(`a 2 MB document gave ${upload}`);
           const huge = await lengthOnly("/files/no-model/no-field", 10_000_001);
           if (huge !== 413) throw new Error(`10 MB and a byte to /files gave ${huge}`);
           const chunked = await fetch(`${base}/`, {
