@@ -448,6 +448,20 @@ export const CONTENT_SCHEMA: JsonSchema = {
       enum: [...LANGUAGES],
       description: `The language of everything a person reads in the app (the app's own words follow it): ${LANGUAGES.join(", ")}; en is the default.`,
     },
+    logo: {
+      type: "object",
+      description:
+        "The app's mark, before its name in the menu and the landing page's header, and its tab icon: { src: images/logo.webp, alt: what it shows }.",
+      required: ["src", "alt"],
+      additionalProperties: false,
+      properties: {
+        src: {
+          type: "string",
+          description: "A file under public/images/: webp, avif, jpg, png or svg.",
+        },
+        alt: { type: "string", description: "What the mark shows." },
+      },
+    },
     models: {
       type: "object",
       description: "Each model's texts, by the model's name.",

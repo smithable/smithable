@@ -85,6 +85,12 @@ export function texts(content: ContentIR, appName = "") {
   return {
     /** The app's language: the kit's words and the page's `lang` follow it. */
     language: content.language,
+    /** The app's mark as a prop of the shell or the landing frame (its file's address), or nothing. */
+    logo: content.logo ? ` logo=${attr(`/${content.logo.src}`)}` : "",
+    /** The tab's icon: the app's mark when it has one, else the generated one with its initial. */
+    icon: content.logo
+      ? { rel: "icon", href: `/${content.logo.src}` }
+      : { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];

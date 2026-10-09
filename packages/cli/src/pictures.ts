@@ -71,7 +71,8 @@ async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefi
 
 /**
  * The pictures a drafted app gets: the hero into public/images/hero.webp (and the content file's
- * hero image, when the landing page's hero has none), samples into public/images/samples/<n>.webp.
+ * hero image, when the landing page's hero has none), its mark into public/images/logo.webp (and
+ * the content file's logo, when it has none), samples into public/images/samples/<n>.webp.
  * Returns what was written; says one line either way.
  */
 export async function addLibraryPictures(options: {
@@ -126,7 +127,20 @@ export async function addLibraryPictures(options: {
       }
     }
   }
-  const wanted = (pictured && picked.samples.length > 0) || (picked.hero && landing && hero);
+  // The app's mark (docs/design/app-logo.md §4), unless its texts already name one.
+  if (picked.logo) {
+    const bytes = await bytesOf(picked.logo.url, fetchFn);
+    const editor = new YamlEditor(
+      options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
+    );
+    if (bytes && !editor.has(["logo"])) {
+      written.push({ file: "logo.webp", alt: picked.logo.alt, bytes });
+      editor.add([], "logo", { src: "images/logo.webp", alt: picked.logo.alt });
+      options.files["smithable.content.yml"] = editor.text;
+    }
+  }
+  const wanted =
+    (pictured && picked.samples.length > 0) || (picked.hero && landing && hero) || picked.logo;
   options.io.out(
     written.length
       ? `Pictures from the Smithable image library: ${written.map((w) => w.file).join(", ")}.\n`
@@ -177,7 +191,11 @@ export function dropMissingPictures(dir: string, io: Io): void {
     if (!value || typeof value !== "object" || Array.isArray(value)) return;
     for (const [key, v] of Object.entries(value)) {
       const src =
-        key === "image" ? (typeof v === "string" ? v : (v as { src?: unknown })?.src) : undefined;
+        key === "image" || (key === "logo" && path.length === 0)
+          ? typeof v === "string"
+            ? v
+            : (v as { src?: unknown })?.src
+          : undefined;
       if (typeof src === "string" && !/^https?:/.test(src) && !existsSync(join(dir, "public", src)))
         missing.push([...path, key]);
       else walk(v, [...path, key]);

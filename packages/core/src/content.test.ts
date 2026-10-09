@@ -309,3 +309,18 @@ test("an outgoing mail's subject and text come from the content file, for entrie
     read("smithableContent: 0.1\noutgoing:\n  gone: { subject: X }\n").diagnostics,
   ).toMatchObject([{ code: "unknown-outgoing" }]);
 });
+
+test("reads the app's logo, and says what is wrong with one", () => {
+  expect(check("smithableContent: 0.1\n").content?.logo).toBeUndefined();
+  const { content, diagnostics } = check(
+    "smithableContent: 0.1\nlogo: { src: images/logo.svg, alt: A lotus }\n",
+  );
+  expect(diagnostics).toEqual([]);
+  expect(content?.logo).toEqual({ src: "images/logo.svg", alt: "A lotus" });
+  expect(
+    check("smithableContent: 0.1\nlogo: { src: /logo.webp, alt: A lotus }\n").diagnostics,
+  ).toMatchObject([{ code: "logo-src" }]);
+  expect(
+    check("smithableContent: 0.1\nlogo: { src: images/logo.webp }\n").diagnostics,
+  ).toMatchObject([{ code: "logo-alt" }]);
+});
