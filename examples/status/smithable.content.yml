@@ -1,5 +1,6 @@
 # What visitors read. Derived from names when not given here.
 smithableContent: 0.1
+logo: { src: images/logo.webp, alt: A pulse line in a circle }
 
 models:
   IncidentUpdate: { label: Update }

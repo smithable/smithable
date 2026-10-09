@@ -139,8 +139,13 @@ export const api = {
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
   diff: () => call<{ patch: string }>("/api/diff"),
-  operation: (name: string, args: Record<string, unknown>, confirm = false) =>
-    changing(call<Result>("/api/op", { name, args, confirm })),
+  /** `file`: a picture the change brings, written under its path in the project (base64). */
+  operation: (
+    name: string,
+    args: Record<string, unknown>,
+    confirm = false,
+    file?: { path: string; data: string },
+  ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
   undo: () => changing(call<Result>("/api/undo", {})),
   redo: () => changing(call<Result>("/api/redo", {})),

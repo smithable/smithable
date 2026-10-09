@@ -1004,6 +1004,33 @@ try {
       if (i === 60) throw new Error("English did not take the language line away");
       await new Promise((r) => setTimeout(r, 1000));
     }
+    // The app's logo (app-logo.md §5): a file from the computer, shown in the preview's frame,
+    // then removed.
+    const mark = join(dir, "..", "studio-test-mark.png");
+    writeFileSync(
+      mark,
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    );
+    await look("Logo").locator('input[type="file"]').setInputFiles(mark);
+    for (let i = 0; !/src: images\/logo\.png/.test(content()); i++) {
+      if (i === 60) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    if (!existsSync(join(dir, "public", "images", "logo.png")))
+      throw new Error("the logo's file was not written under public/images/");
+    await preview
+      .locator('img[data-part="logo"][src="/images/logo.png"] >> visible=true')
+      .first()
+      .waitFor({ timeout: 60000 });
+    await look("Logo").getByRole("button", { name: "Remove" }).click();
+    for (let i = 0; /^logo:/m.test(content()); i++) {
+      if (i === 60) throw new Error("Remove did not take the logo away");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    await look("Logo").getByText("Add a logo").waitFor({ timeout: 60000 });
     await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
     await look("Font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })

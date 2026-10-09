@@ -400,7 +400,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.lengt
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName=${attr(ir.app.name)} link={${header}}${footer} site={site}>
+    <LandingLayout appName=${attr(ir.app.name)}${t.logo} link={${header}}${footer} site={site}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );

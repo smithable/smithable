@@ -137,6 +137,9 @@ export function Look({
           onChange={(motion) => run("setTheme", { motion })}
         />
       </Group>
+      <Group title="Logo">
+        <Logo spec={spec} run={run} />
+      </Group>
       <Group title="Language">
         <Select
           aria-label="The app's language"
@@ -230,6 +233,65 @@ export function Look({
           ))}
         </Group>
       )}
+    </div>
+  );
+}
+
+/** The app's mark (docs/design/app-logo.md §5): as it is, Replace with a file, Remove. */
+function Logo({ spec, run }: { spec: Spec; run: Run }) {
+  const logo = spec.content?.logo;
+  // A file replaced under the same name is fetched again.
+  const [version, setVersion] = useState(0);
+  const replace = (file: File | undefined) => {
+    const ext = file?.name.toLowerCase().match(/\.(webp|avif|jpe?g|png|svg)$/)?.[1];
+    if (!file || !ext) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const data = String(reader.result).split(",")[1] ?? "";
+      const src = `images/logo.${ext}`;
+      if (await run("setLogo", { src }, false, { path: `public/${src}`, data }))
+        setVersion((v) => v + 1);
+    };
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div data-look="logo" className="space-y-2">
+      <div className="flex items-center gap-3">
+        {logo ? (
+          <img
+            src={`/api/${logo.src}?v=${version}`}
+            alt={logo.alt}
+            className="size-12 shrink-0 rounded border border-line object-contain"
+          />
+        ) : (
+          <span className="text-sm text-quiet">No logo: the app shows its name alone.</span>
+        )}
+        <label className="ml-auto cursor-pointer rounded-md border border-line px-3 py-1.5 text-sm hover:border-line-strong focus-within:ring-2 focus-within:ring-accent">
+          {logo ? "Replace" : "Add a logo"}
+          <input
+            type="file"
+            accept=".webp,.avif,.png,.jpg,.jpeg,.svg"
+            className="sr-only"
+            onChange={(e) => {
+              replace(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {logo && (
+          <button
+            type="button"
+            onClick={() => run("setLogo", {})}
+            className="rounded-md border border-line px-3 py-1.5 text-sm hover:border-line-strong"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-quiet">
+        Your app's mark, before its name and in the browser's tab. Square, about 512 px: webp, png,
+        jpg, avif or svg, at most 2 MB.
+      </p>
     </div>
   );
 }

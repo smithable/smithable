@@ -56,12 +56,15 @@ export interface LandingSite {
 
 export function LandingLayout({
   appName,
+  logo,
   link,
   footer,
   site,
   children,
 }: {
   appName: string;
+  /** The app's mark, drawn before its name in the header (with an empty alt: the name says it). */
+  logo?: string;
   link?: LandingLink;
   footer?: LandingFooter;
   site?: LandingSite;
@@ -72,13 +75,30 @@ export function LandingLayout({
   const contact = site?.contact;
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
+  const named = logo ? (
+    <>
+      <img
+        src={logo}
+        alt=""
+        data-part="logo"
+        width={28}
+        height={28}
+        className="size-7 shrink-0 rounded-[4px] object-contain"
+      />
+      <span className="min-w-0 truncate">{appName}</span>
+    </>
+  ) : (
+    appName
+  );
+  // With a mark, a row of the two; either way a long name ends in an ellipsis instead of
+  // pushing the header wider.
+  const nameClass = `${logo ? "flex items-center gap-2" : "block truncate"} min-w-0 text-xl font-bold`;
   const name = site?.home ? (
-    // A block, so a long name ends in an ellipsis instead of pushing the header wider.
-    <Link to={site.home} className="block min-w-0 truncate text-xl font-bold">
-      {appName}
+    <Link to={site.home} className={nameClass}>
+      {named}
     </Link>
   ) : (
-    <p className="min-w-0 truncate text-xl font-bold">{appName}</p>
+    <p className={nameClass}>{named}</p>
   );
   const footerLinks = footer && footer.links.length > 0 && (
     <ul className="flex flex-wrap gap-x-6 gap-y-2">
