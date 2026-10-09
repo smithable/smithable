@@ -199,9 +199,21 @@ for attempt in 1 2 3 4 5 6 7 8; do
     # gh's own exit status is not asked here: it is 1 for a failed check and 8 for a pending
     # one, and with pipefail that made a failed required check look like one not yet listed,
     # so the script waited its hour with the merge lock held instead of refusing.
-    listed=$(gh pr checks "$pr" "${repo[@]}" --required 2>/dev/null || true)
-    case "$listed" in *"$(printf '\t')"*) break ;; esac
+    # The head's checks, one line each: name, status, conclusion. The required check is "check",
+    # made when a run's other jobs end; a run GitHub cancelled (a newer run for the same head, or
+    # no runner) leaves one that `gh pr checks` lists as failed yet exits 0 on, so a PR opened
+    # with the full-ci label read as green while its full job still ran (C, 2026-10-09). Only a
+    # finished "check" ends the wait; while any job of the head still runs, the wait goes on.
+    rollup=$(gh pr view "$pr" "${repo[@]}" --json statusCheckRollup --jq '.statusCheckRollup[] | "\(.name // .context)\t\(.status // "COMPLETED")\t\(.conclusion // .state // "")"' 2>/dev/null || true)
+    case "$rollup" in
+      *"$(printf 'check\tCOMPLETED\tSUCCESS')"*|*"$(printf 'check\tCOMPLETED\tFAILURE')"*) break ;;
+    esac
     merged && { echo "Merged #$pr."; exit 0; }
+    if [ -n "$rollup" ] && [ "$(printf '%s\n' "$rollup" | grep -c -v "$(printf '\tCOMPLETED\t')")" != 0 ]; then
+      [ $((i % 30)) = 0 ] && echo "#$pr: its checks are still running"
+      sleep 10
+      continue
+    fi
     # A run GitHub itself cancelled (its runners were not to be had, 2026-10-05) leaves the
     # required check cancelled and nothing pending: it is never reported, and waiting on it held
     # the merge lock for an hour. A check cancelled by a newer run still has that run's pending.
