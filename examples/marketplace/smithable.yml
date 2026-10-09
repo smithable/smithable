@@ -18,6 +18,7 @@ models:
       condition: likeNew | good | worn
       place: string
       available: bool = true
+    review: [photos]               # a seller's photos are seen once someone has approved them
 
 pages:
   home:
@@ -40,6 +41,8 @@ pages:
   saved:
     crud: Item
     favorites: only
+  review:
+    review: all                    # for admins: the photos waiting for approval
 
 navigation:
-  main: [catalog, myItems, saved]
+  main: [catalog, myItems, saved, review]

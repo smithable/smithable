@@ -3,6 +3,7 @@
 import {
   type AuthIR,
   camel,
+  type FieldIR,
   humanize,
   kebab,
   type ModelIR,
@@ -332,6 +333,7 @@ export function detailRoute(
     ...(trash
       ? ([["#/kit/Trash", ["rememberTrashed", "TrashedBanner"]]] as [string, string[]][])
       : []),
+    ...(model.review ? ([["#/kit/Review", ["ReviewNotice"]]] as [string, string[]][]) : []),
   ]);
   // Places on this record (a session's bookings): staff book and cancel here too.
   const reserve =
@@ -488,7 +490,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${adds.length ? ", canAdd" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${adds.length ? ", canAdd" : ""}${model.review ? ", review" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite
@@ -522,6 +524,11 @@ function ${component}() {
         }
       />`
             : `<PageHeader title={${heading}} />`
+      }${
+        model.review
+          ? `
+      <ReviewNotice notes={review} labels={${JSON.stringify(Object.fromEntries((model.review ?? []).map((f) => [f, t.field(model, model.fields.find((x) => x.name === f) as FieldIR).label ?? humanize(f)])))}} />`
+          : ""
       }${
         trash
           ? `
