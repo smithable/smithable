@@ -1116,6 +1116,129 @@ async function contactFlow(dir, base) {
  * under My items, saves and unsaves another; an admin writes to the seller, and the mail reaches
  * the seller's outbox with the admin as reply-to.
  */
+/**
+ * Files reviewed before others see them (docs/design/file-review.md), on the marketplace's photos
+ * (an optional field: the item shows, its waiting photo not): a seller's new photo waits; its
+ * seller is told so, a visitor does not get it; the admin is told and sees the number in the menu,
+ * rejects it with a reason the seller then reads, approves the next one, and visitors get it.
+ */
+async function reviewFlow(dir, base) {
+  const browser = await chromium.launch();
+  const seller = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const admin = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const samples = join(dir, "public", "images", "samples");
+  const sample = readFileSync(
+    join(
+      samples,
+      readdirSync(samples).find((f) => f.endsWith(".webp")),
+    ),
+  );
+  const outbox = join(dir, "data", "mail", "outbox");
+  const addPhoto = async (name) => {
+    // A file chosen before the page's handlers are attached is lost (body[data-hydrated]).
+    await seller.locator("body[data-hydrated]").waitFor({ timeout: 30000 });
+    const form = seller.locator('[data-kit="model-form"]');
+    const before = await form.locator('[data-part="picture"]').count();
+    await form.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+      name,
+      mimeType: "image/webp",
+      buffer: sample,
+    });
+    await seller
+      .waitForFunction(
+        (n) =>
+          document.querySelectorAll('[data-kit="model-form"] [data-part="picture"]').length > n,
+        before,
+        { timeout: 20000 },
+      )
+      .catch(async (error) => {
+        const said = await form.getByRole("alert").allInnerTexts();
+        throw new Error(
+          `the photo was not added${said.length ? `: ${said.join(" ")}` : ""} (${error.message})`,
+        );
+      });
+  };
+  const notice = () => seller.locator('[data-part="review-notice"]');
+  const photo = async (id) => (await fetch(`${base}/files/item/${id}/photos/0`)).status;
+  try {
+    // The admin first, so a reviewer exists to be told.
+    await signInAs(admin, base, "admin");
+    await signInAs(seller, base, "member");
+    await open(seller, `${base}/new`);
+    await seller.getByRole("textbox", { name: "Title *" }).fill("Reviewed lamp");
+    await seller
+      .getByRole("textbox", { name: "Description *" })
+      .fill("A lamp whose photo is reviewed.");
+    await addPhoto("lamp.webp");
+    await seller.getByRole("button", { name: "Create item" }).click();
+    await seller.waitForURL(`${base}/`);
+    await open(seller, `${base}/my-items`);
+    await seller
+      .locator('[data-part="row"]', { hasText: "Reviewed lamp" })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await seller.waitForURL(/\/my-items\/\d+$/);
+    const id = seller.url().match(/(\d+)$/)?.[1];
+    await notice().getByText("Awaiting review").waitFor({ timeout: 10000 });
+    if ((await photo(id)) !== 404) throw new Error("a visitor gets the waiting photo");
+    console.log(
+      "  ✓ browser: a seller's new photo waits for review: the seller is told, a visitor does not get it",
+    );
+
+    await open(admin, `${base}/`);
+    const count = admin.locator('[data-part="count"]').filter({ visible: true }).first();
+    await count.waitFor({ timeout: 10000 });
+    if (Number(await count.innerText()) < 1)
+      throw new Error(`the menu says ${await count.innerText()} wait`);
+    for (let i = 0; ; i++) {
+      const told =
+        existsSync(outbox) &&
+        readdirSync(outbox).some((f) =>
+          /await(s)? review in Torget/.test(readFileSync(join(outbox, f), "utf8")),
+        );
+      if (told) break;
+      if (i === 50) throw new Error("no reviewer was told by mail");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    await open(admin, `${base}/review`);
+    const card = admin.locator('[data-part="waiting"]', { hasText: "Reviewed lamp" });
+    await card.getByRole("button", { name: "Reject" }).click();
+    await card.getByLabel(/Why/).fill("Too dark to see the lamp.");
+    await card.getByRole("button", { name: "Reject" }).click();
+    await card.waitFor({ state: "detached", timeout: 10000 });
+    await admin
+      .locator('[data-part="decided"]', { hasText: "Too dark to see the lamp." })
+      .waitFor();
+    await seller.reload();
+    await notice()
+      .getByText("Rejected by a reviewer: Too dark to see the lamp.")
+      .waitFor({ timeout: 10000 });
+    if (await seller.locator('[data-kit="model-form"] [data-part="picture"]').count())
+      throw new Error("the rejected photo is still on the item");
+    console.log(
+      "  ✓ browser: the admin is told by mail and in the menu, rejects the photo with a reason, and the seller reads it",
+    );
+
+    await addPhoto("lamp-2.webp");
+    await seller.getByRole("button", { name: "Save changes" }).click();
+    await seller.waitForURL(/\/my-items$/);
+    await open(admin, `${base}/review`);
+    await admin
+      .locator('[data-part="waiting"]', { hasText: "Reviewed lamp" })
+      .getByRole("button", { name: "Approve" })
+      .click();
+    await admin
+      .locator('[data-part="decided"]', { hasText: "Approved" })
+      .first()
+      .waitFor({ timeout: 10000 });
+    if ((await photo(id)) !== 200) throw new Error("a visitor does not get the approved photo");
+    console.log("  ✓ browser: a new photo waits again, and once approved a visitor gets it");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function marketplaceFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -5185,6 +5308,7 @@ test("the session cookie's name and attributes", async () => {
         await picturesFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
+      if (example === "marketplace") await reviewFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);

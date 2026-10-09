@@ -28,6 +28,8 @@ interface ShellProps {
   onSignOut?: () => Promise<void>;
   /** Sets the signed-in person's own name, the one others see (an invited person has none yet). */
   onRename?: (name: string) => Promise<void>;
+  /** A number beside a menu entry, by its route: the files waiting on the review page. */
+  counts?: Record<string, number>;
 }
 
 // Links and buttons on the sidebar's own colors, with 44 px targets.
@@ -123,6 +125,7 @@ function Navigation({
   viewer,
   onSignOut,
   onRename,
+  counts,
   onNavigate,
 }: ShellProps & { onNavigate?: () => void }) {
   return (
@@ -155,6 +158,14 @@ function Navigation({
                 >
                   {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
                   {item.label}
+                  {(counts?.[String(item.to)] ?? 0) > 0 && (
+                    <span
+                      data-part="count"
+                      className="ml-auto rounded-full bg-primary px-2 text-xs text-primary-foreground"
+                    >
+                      {counts?.[String(item.to)]}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

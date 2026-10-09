@@ -41,6 +41,7 @@ import { hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
+import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
   dataKey,
@@ -89,12 +90,6 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // Files held for review are the spec's now and the adapter's next (backlog 60): an app that
-  // shows them unreviewed would break its promise, so it is not made at all until then.
-  if (ir.models.some((m) => m.review) || ir.pages.some((p) => p.pattern.kind === "review"))
-    throw new Error(
-      "Reviewing files before others see them (review) is not in generated apps yet: remove review from the models and the review page for now.",
-    );
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent(), ir.app.name),
@@ -571,6 +566,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/db/schema.ts", schemaModule(ir, auth)),
       generated("src/db/seed.ts", seedModule(ir, options)),
       ...(hasUploads(ir) ? [generated("src/generated/uploads.ts", uploadsModule(ir, t))] : []),
+      // Files reviewed before others see them (docs/design/file-review.md).
+      ...(reviewed(ir).length && options.auth
+        ? [
+            generated("src/generated/review.server.ts", reviewServerModule(ir, t, options.auth)),
+            generated("src/generated/review.ts", reviewRolesModule(ir, options.auth)),
+          ]
+        : []),
       // The daily emptying of the trash, in the order the models point to each other.
       ...(ir.models.some((m) => m.trash)
         ? [generated("src/generated/trash.server.ts", trashModule(ir, t))]
@@ -647,6 +649,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 // The site's frame (LandingLayout) is the landing kit's: a public blog or
                 // catalog uses it without a landing page.
                 (kind === "landing" && hasSite(ir, auth)) ||
+                // The owner's notice on a record (ReviewNotice) is the review kit's too.
+                (kind === "review" && hasSignIn(auth) && ir.models.some((m) => m.review)) ||
                 ir.pages.some(
                   (p) =>
                     p.pattern.kind === kind ||
