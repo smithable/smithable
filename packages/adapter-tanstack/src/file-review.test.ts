@@ -71,6 +71,10 @@ test("a required reviewed field holds the record; an optional one only its file"
     expect(data).toContain("queueReviews(tx, viewer, made.id, undefined, made);");
     expect(data).toContain("queueReviews(tx, viewer, id, before, after);");
     expect(data).toContain("tellReviewers(");
+    // A new file answers a rejection: the field's rejected rows go, so a held record is let go.
+    expect(data).toContain(
+      'or(eq(schema.fileReviews.file, file), eq(schema.fileReviews.state, "rejected"))',
+    );
   }
 });
 

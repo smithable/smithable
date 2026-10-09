@@ -1182,8 +1182,16 @@ async function reviewFlow(dir, base) {
     const id = seller.url().match(/(\d+)$/)?.[1];
     await notice().getByText("Awaiting review").waitFor({ timeout: 10000 });
     if ((await photo(id)) !== 404) throw new Error("a visitor gets the waiting photo");
+    // Photos are required: until they are approved the item is not there for anyone else.
+    const listed = async () =>
+      // The search box echoes what was asked: ask for less than the title.
+      (await (await fetch(`${base}/?q=Reviewed`)).text()).includes("Reviewed lamp");
+    if (await listed()) throw new Error("a visitor finds the item whose photo waits");
+    const page = await fetch(`${base}/${id}`);
+    if ((await page.text()).includes("A lamp whose photo is reviewed."))
+      throw new Error("a visitor opens the item whose photo waits");
     console.log(
-      "  ✓ browser: a seller's new photo waits for review: the seller is told, a visitor does not get it",
+      "  ✓ browser: a seller's new item waits for its photo's review: the seller is told, a visitor neither finds nor opens it",
     );
 
     await open(admin, `${base}/`);
@@ -1233,7 +1241,10 @@ async function reviewFlow(dir, base) {
       .first()
       .waitFor({ timeout: 10000 });
     if ((await photo(id)) !== 200) throw new Error("a visitor does not get the approved photo");
-    console.log("  ✓ browser: a new photo waits again, and once approved a visitor gets it");
+    if (!(await listed())) throw new Error("a visitor does not find the approved item");
+    console.log(
+      "  ✓ browser: a new photo waits again, and once approved a visitor finds the item and gets its photo",
+    );
   } finally {
     await browser.close();
   }
@@ -1283,8 +1294,29 @@ async function marketplaceFlow(dir, base) {
     await open(page, `${base}/new`);
     await page.getByRole("textbox", { name: "Title *" }).fill("Test lamp");
     await page.getByRole("textbox", { name: "Description *" }).fill("A lamp for the test.");
+    // Photos are required and reviewed (reviewFlow tests the review): one, approved at once.
+    await page.locator("body[data-hydrated]").waitFor({ timeout: 30000 });
+    const samples = join(dir, "public", "images", "samples");
+    await page
+      .locator('[data-kit="model-form"] input[type="file"][accept="image/*"]')
+      .first()
+      .setInputFiles({
+        name: "lamp.webp",
+        mimeType: "image/webp",
+        buffer: readFileSync(
+          join(
+            samples,
+            readdirSync(samples).find((f) => f.endsWith(".webp")),
+          ),
+        ),
+      });
+    await page
+      .locator('[data-kit="model-form"] [data-part="picture"]')
+      .first()
+      .waitFor({ timeout: 20000 });
     await page.getByRole("button", { name: "Create item" }).click();
     await page.waitForURL(`${base}/`);
+    write(dir, "update file_reviews set state = 'approved', decided_at = 0");
     await open(page, `${base}/my-items`);
     if ((await titles()).join() !== "Test lamp")
       throw new Error(`My items shows ${(await titles()).join()}`);
