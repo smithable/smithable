@@ -89,6 +89,12 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  // Files held for review are the spec's now and the adapter's next (backlog 60): an app that
+  // shows them unreviewed would break its promise, so it is not made at all until then.
+  if (ir.models.some((m) => m.review) || ir.pages.some((p) => p.pattern.kind === "review"))
+    throw new Error(
+      "Reviewing files before others see them (review) is not in generated apps yet: remove review from the models and the review page for now.",
+    );
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent(), ir.app.name),

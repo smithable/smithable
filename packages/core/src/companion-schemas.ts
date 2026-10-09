@@ -112,6 +112,9 @@ export const AUTH_SCHEMA: JsonSchema = {
               write: grant("Models whose every record the role may change."),
               delete: grant("Models whose every record the role may delete."),
               actions: grant("Custom actions the role may run (a standard action follows write)."),
+              review: grant(
+                "Models whose waiting pictures and files the role approves or rejects; opens the review page for them.",
+              ),
             },
           },
         ],

@@ -6,9 +6,11 @@ import {
   mapEntries,
   type ParseContext,
   readBoolean,
+  readNameList,
   readNumber,
   readString,
 } from "../context.js";
+import type { YamlEditor } from "../edit.js";
 import {
   checkFormula,
   type Expr,
@@ -115,6 +117,7 @@ export const modelsSection: SpecSection<"models"> = {
     // Formulas (and their examples) and an owner field follow a renamed field.
     // A field a capacity counts on cannot go while it does.
     if (effect.kind === "remove-field") {
+      followReview(spec, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
         if (!c) continue;
@@ -156,6 +159,7 @@ export const modelsSection: SpecSection<"models"> = {
       return undefined;
     }
     if (effect.kind !== "rename-field") return undefined;
+    followReview(spec, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
@@ -200,6 +204,14 @@ export const modelsSection: SpecSection<"models"> = {
         ownedBy: {
           type: "string",
           description: "A User field whose user owns the record, instead of its creator.",
+        },
+        review: {
+          oneOf: [
+            { type: "string", enum: ["all"] },
+            { type: "array", items: { type: "string" }, minItems: 1 },
+          ],
+          description:
+            "Pictures and files that wait for a reviewer before others see them: all (every picture and file field) or a list of them. A required one holds the whole record until it is approved; an optional one only the file.",
         },
         trash: {
           type: "boolean",
@@ -268,7 +280,7 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "capacity", "trash", ...TEXT_KEYS],
+    allowed: ["fields", "ownedBy", "capacity", "trash", "review", ...TEXT_KEYS],
     later: ["unique", "examples"],
     content: ["label", "title"],
     moved: {
@@ -319,7 +331,72 @@ function readModel(
       relationNodes.set(`${name}.${field.name}`, entry.value ?? entry.keyNode);
     }
   }
+  const review = known.find((e) => e.key === "review");
+  if (review) readReview(ctx, model, review);
   return model;
+}
+
+/**
+ * A field named in a model's `review` list that is renamed (to) or removed (no to): the list
+ * follows, and goes when it is left empty. `review: all` names no field and needs nothing.
+ */
+function followReview(spec: YamlEditor, model: string, field: string, to?: string): void {
+  const path = ["models", model, "review"];
+  const listed = spec.get(path);
+  if (!Array.isArray(listed) || !listed.includes(field)) return;
+  const next = listed.flatMap((f) => (f === field ? (to ? [to] : []) : [f as string]));
+  if (next.length) spec.set(path, next);
+  else spec.remove(path);
+}
+
+/**
+ * A model's `review` (docs/design/file-review.md): `all`, every picture and file field, or a
+ * list of them. A name that is no such field is an error; `all` with none is a warning.
+ */
+function readReview(ctx: ParseContext, model: ModelIR, { value }: Entry): void {
+  const uploads = model.fields.filter(isUpload).map((f) => f.name);
+  const where = `"review" of "${model.name}"`;
+  if (isScalar(value)) {
+    if (readString(ctx, value, where) !== "all") {
+      ctx.error(
+        value,
+        "invalid-value",
+        `${capitalize(where)} is "all" or a list of picture and file fields.`,
+      );
+      return;
+    }
+    if (!uploads.length) {
+      ctx.warning(
+        value,
+        "review-nothing",
+        `${model.name} has no picture or file field, so "review: all" holds nothing.`,
+        `Remove "review", or add a picture or file field.`,
+      );
+      return;
+    }
+    model.review = uploads;
+    return;
+  }
+  const named = readNameList(ctx, value, where);
+  const fields: string[] = [];
+  for (const { name, at } of named) {
+    if (uploads.includes(name)) {
+      if (!fields.includes(name)) fields.push(name);
+      continue;
+    }
+    const field = model.fields.find((f) => f.name === name);
+    ctx.error(
+      at,
+      "review-not-file",
+      field
+        ? `"${name}" of ${model.name} is not a picture or a file, so there is nothing to review.`
+        : `${model.name} has no field named "${name}".`,
+      field
+        ? `Review lists picture, pictures, file and files fields: ${uploads.join(", ") || "none here"}.`
+        : didYouMean(name, uploads),
+    );
+  }
+  if (fields.length) model.review = fields;
 }
 
 export function readField(

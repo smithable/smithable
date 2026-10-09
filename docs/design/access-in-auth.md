@@ -40,7 +40,7 @@ Two conventions, named in the spec rather than implied:
 - A **standard action** (`set`, `add`, `copy`…) is run by the roles that may change the record, as today; `actions` lists custom actions.
 - `pages: all` is every page except the administrators' pages (the users page and a data page), which a role gets by naming them.
 
-A role's block has the keys `description`, `pages`, `read`, `create`, `write`, `delete` and `actions`. `read` matters with `private` (staff that reads every booking); with `shared` it says nothing, and the validator says so.
+A role's block has the keys `description`, `pages`, `read`, `create`, `write`, `delete`, `actions` and `review` (the models whose waiting files the role approves or rejects, [file-review.md](file-review.md); added 2026-10-09). `read` matters with `private` (staff that reads every booking); with `shared` it says nothing, and the validator says so.
 
 ## What leaves `smithable.yml`
 

@@ -80,6 +80,9 @@ export const PAGE_GENERATORS: {
     kit: ["src/kit/LegalPage.tsx"],
     routes: (page, ctx) => ({ "index.tsx": legalRoute(page, ctx) }),
   },
+  // Until the adapter's part of backlog 60 (docs/design/file-review.md), generateApp refuses an
+  // app with review, so this is never reached.
+  review: { routes: () => ({}) },
   data: {
     // An overview and each model's crud routes inside the page; no kit of its own.
     routes: (page, ctx) => dataRoutes(page, ctx),
