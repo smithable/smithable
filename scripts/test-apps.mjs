@@ -1785,14 +1785,15 @@ async function pictureFlow(dir, base) {
     const seeded = await page.request.get(`${base}/files/instructor/1/portrait`);
     if (!seeded.ok() || seeded.headers()["content-type"] !== "image/webp")
       throw new Error(`the seeded portrait is not served (${seeded.status()})`);
+    // As the page's own upload says it comes from the app (a browser sends Sec-Fetch-Site).
     const refused = await page.request.post(`${base}/files/instructor/portrait`, {
-      headers: { "content-type": "image/webp" },
+      headers: { "content-type": "image/webp", "sec-fetch-site": "same-origin" },
       data: Buffer.from("not a picture"),
     });
     if (refused.status() !== 401) throw new Error(`a visitor could upload (${refused.status()})`);
     await signInAs(page, base, "admin");
     const junk = await page.request.post(`${base}/files/instructor/portrait`, {
-      headers: { "content-type": "image/webp" },
+      headers: { "content-type": "image/webp", "sec-fetch-site": "same-origin" },
       data: Buffer.from("not a picture"),
     });
     if (junk.status() !== 400) throw new Error(`junk was stored (${junk.status()})`);
@@ -2666,7 +2667,7 @@ async function documentFlow(dir, base) {
     if (visitor.status !== 404) throw new Error(`a visitor gets ${visitor.status}`);
     // Larger than 10 MB: refused before it is stored.
     const large = await page.request.post(`${base}/files/invoice/contract`, {
-      headers: { "x-file-name": "big.pdf", "x-smithable": "1" },
+      headers: { "x-file-name": "big.pdf", "x-smithable": "1", "sec-fetch-site": "same-origin" },
       data: Buffer.concat([pdf, Buffer.alloc(10_000_001)]),
     });
     if (large.status() !== 400) throw new Error(`a file over 10 MB gets ${large.status()}`);
@@ -4372,6 +4373,13 @@ for (const [index, example] of examples.entries()) {
             if (!headers.get(name)) throw new Error(`${path} has no ${name} header`);
           if (!/script-src 'self' 'nonce-/.test(headers.get("content-security-policy") ?? ""))
             throw new Error("the policy does not use a nonce");
+          if (headers.get("x-frame-options") !== "DENY")
+            throw new Error(`X-Frame-Options: ${headers.get("x-frame-options")}`);
+          if (!/camera=\(\).*geolocation=\(\)/.test(headers.get("permissions-policy") ?? ""))
+            throw new Error(`Permissions-Policy: ${headers.get("permissions-policy")}`);
+          // HSTS only over https (a proxy says so only when trusted): this request was plain http.
+          if (headers.get("strict-transport-security"))
+            throw new Error("Strict-Transport-Security over plain http");
           const browser = await chromium.launch();
           try {
             const page = await browser.newPage();
@@ -4387,7 +4395,7 @@ for (const [index, example] of examples.entries()) {
         },
       ).catch(() => {});
       await asyncStep(
-        "a server function answers the app's own pages, and no other site or sibling app",
+        "a server function, and a file sent to a record, answer the app's own pages, and no other site or sibling app",
         async () => {
           // A server function's address is its id, which the built pages carry.
           const assets = join(dir, "dist/client/assets");
@@ -4409,26 +4417,49 @@ for (const [index, example] of examples.entries()) {
           // An older browser names the page instead; behind a proxy only the host matches.
           if ((await call({ Origin: `https://localhost:${port}` })) === 403)
             throw new Error("the app's own address is refused");
+          // A picture or document sent to a record is a session's call too, checked the same way.
+          const send = async (headers) =>
+            (await fetch(`${base}/files/no-model/no-field`, { method: "POST", headers, body: "x" }))
+              .status;
+          if ((await send({ "Sec-Fetch-Site": "cross-site" })) !== 403)
+            throw new Error("an upload from another site was answered");
+          if ((await send({ Origin: "https://other.example" })) !== 403)
+            throw new Error("an upload from another origin was answered");
+          if ((await send({ "Sec-Fetch-Site": "same-origin" })) === 403)
+            throw new Error("an upload from the app's own pages is refused");
         },
       ).catch(() => {});
       await asyncStep(
-        "a request may carry at most 1 MB, said by its length: more is refused (413), and one without a length too (411)",
+        "a request may carry at most 1 MB, a document sent to its record 10 MB, said by its length: more is refused (413), and one without a length too (411)",
         async () => {
           // Only the length is sent: the server answers from it before any body, and a body
           // still being sent when it closes the connection would race its answer.
-          const big = await new Promise((resolve, reject) => {
-            const asked = request(`${base}/`, {
-              method: "POST",
-              headers: { "content-type": "application/octet-stream", "content-length": 1_000_001 },
+          const lengthOnly = (path, length) =>
+            new Promise((resolve, reject) => {
+              const asked = request(`${base}${path}`, {
+                method: "POST",
+                headers: {
+                  "content-type": "application/octet-stream",
+                  "content-length": length,
+                  "sec-fetch-site": "same-origin",
+                },
+              });
+              asked.on("response", (answer) => {
+                resolve(answer.statusCode);
+                asked.destroy();
+              });
+              asked.on("error", reject);
+              asked.flushHeaders();
             });
-            asked.on("response", (answer) => {
-              resolve(answer.statusCode);
-              asked.destroy();
-            });
-            asked.on("error", reject);
-            asked.flushHeaders();
-          });
+          const big = await lengthOnly("/", 1_000_001);
           if (big !== 413) throw new Error(`1 MB and a byte gave ${big}`);
+          // A document (up to 10 MB, src/kit/uploads.ts) goes to /files/…: 2 MB reaches the app
+          // (which knows no such field: 404, answered without reading the body), 10 MB and a
+          // byte does not.
+          const upload = await lengthOnly("/files/no-model/no-field", 2_000_000);
+          if (upload !== 404) throw new Error(`a 2 MB document gave ${upload}`);
+          const huge = await lengthOnly("/files/no-model/no-field", 10_000_001);
+          if (huge !== 413) throw new Error(`10 MB and a byte to /files gave ${huge}`);
           const chunked = await fetch(`${base}/`, {
             method: "POST",
             body: new ReadableStream({

@@ -13,10 +13,13 @@ const trace = createMiddleware().server(({ request, next }) =>
  * Server functions are what the app's own pages call, with the visitor's session. A call from
  * another site, a sibling app on the same domain included, is refused (403): the browser says
  * where a request comes from (Sec-Fetch-Site), and an older one names the page's address, which
- * must be this app's. The API and /mcp are not server functions: they take a key, not a session.
+ * must be this app's. A picture or document sent before its record is saved (POST /files/…, a
+ * server route) is checked the same way. The API and /mcp are not: they take a key, not a session.
  */
 const ownPages = createCsrfMiddleware({
-  filter: (ctx) => ctx.handlerType === "serverFn",
+  filter: (ctx) =>
+    ctx.handlerType === "serverFn" ||
+    (ctx.request.method === "POST" && ctx.pathname.startsWith("/files/")),
   // Behind a proxy the request arrives as http, so the address is compared by host.
   origin: (origin, { request }) => URL.parse(origin)?.host === request.headers.get("host"),
 });
