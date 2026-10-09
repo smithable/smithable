@@ -9,14 +9,11 @@ models:
       summary: text
       level: allLevels | beginner | advanced
       durationMinutes: int! = 60
-    access:
-      create: [admin]
   Instructor:
     fields:
       name: string!
-      bio: text
-    access:
-      create: [admin]
+      bio: markdown
+      portrait: picture
   Session:
     fields:
       classType: ClassType!
@@ -24,45 +21,25 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
-      placesLeft:
-        type: int
-        formula: capacity - COUNT(bookings)
-    access:
-      create: [admin]
   Booking:
     fields:
       session: Session! unique
     capacity:
       per: session
       max: session.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
 pages:
+  sessions:
+    crud: Session
+  class-types:
+    crud: ClassType
+  teachers:
+    crud: Instructor
   my-bookings:
     crud: Booking
   schedule:
     calendar:
       model: Session
       starts: startsAt
-  sessions:
-    crud: Session
-    access: [admin]
-  class-types:
-    crud: ClassType
-    access: [admin]
-  instructors:
-    crud: Instructor
-    access: [admin]
-  messages:
-    crud: Message
-    access: [admin]
   home:
     route: /
     landing:
@@ -70,23 +47,12 @@ pages:
       footer:
       classes:
         records: ClassType
-      teachers:
+      ourTeachers:
         records: Instructor
       callToAction:
         button: schedule
-      contact:
-        form: Message
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
-outgoing:
-  bookingMade:
-    when: Booking created
-    to: mail
-    recipient: owner
-  bookingCancelled:
-    when: Booking deleted
-    to: mail
-    recipient: owner

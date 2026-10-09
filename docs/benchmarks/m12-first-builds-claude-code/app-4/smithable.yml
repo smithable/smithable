@@ -1,29 +1,29 @@
 smithable: 0.1
 app:
-  name: Toolshed
+  name: Shared Shed
   description: Neighbors lend each other tools instead of each buying their own.
-  currency: EUR
 models:
   Tool:
     fields:
       name: string!
-      photos: pictures
+      photos: pictures!
       description: text!
       category: power | hand | garden | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
+    review: [photos]
   Loan:
     fields:
       tool: Tool!
-      borrower: string!
+      borrower: User!
       lentOn: date!
       dueOn: date
       status: out | returned
       returnedOn: date
       notes: text
 pages:
-  catalog:
+  tools:
     route: /
     crud: Tool
     search: [name, description, place]
@@ -41,6 +41,8 @@ pages:
     crud: Loan
     filters: [status, tool]
     actions: [markReturned]
+  review:
+    review: all
   home:
     route: /welcome
     landing:
@@ -62,4 +64,4 @@ actions:
       status: returned
       returnedOn: TODAY()
     intent: Record that the borrowed tool has come back.
-navigation: [catalog, myTools, loans, saved]
+navigation: [tools, myTools, saved, loans, review]
