@@ -6,11 +6,13 @@ import { expect, test } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
 import { captureIo } from "./test-io.js";
+import { VERSION } from "./version.js";
 
 test("--version prints the Smithable and spec versions", async () => {
   const io = captureIo();
   expect(await run(["--version"], io)).toBe(0);
-  expect(io.stdout).toBe("smithable 0.0.0 (spec 0.1)\n");
+  // The version is whatever is stamped (scripts/set-version.mjs runs before the publish workflow's tests).
+  expect(io.stdout).toBe(`smithable ${VERSION} (spec 0.1)\n`);
 });
 
 test("no arguments prints help", async () => {
