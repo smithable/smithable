@@ -256,6 +256,8 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     additionalProperties?: boolean | JsonSchema;
     items?: JsonSchema;
     pattern?: string;
+    /** What a value must be, in words, said instead of the pattern: "an exact version like 4.4.1". */
+    "x-expected"?: string;
     minItems?: number;
     uniqueItems?: boolean;
   };
@@ -272,7 +274,7 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
   if (s.enum && !s.enum.includes(value))
     return [`"${path}" must be one of ${s.enum.map((v) => JSON.stringify(v)).join(", ")}.`];
   if (s.pattern && typeof value === "string" && !new RegExp(s.pattern).test(value))
-    return [`"${path}" must match ${s.pattern}.`];
+    return [`"${path}" must ${s["x-expected"] ? `be ${s["x-expected"]}` : `match ${s.pattern}`}.`];
   const problems: string[] = [];
   if (kind === "object") {
     const object = value as Record<string, unknown>;
