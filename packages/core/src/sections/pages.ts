@@ -142,6 +142,18 @@ export const pagesSection: SpecSection<"pages"> = {
       }
       pages.push(page);
     }
+    // Files that wait for review with no page to approve them would wait for ever.
+    const listed = new Set(
+      pages.flatMap((p) => (p.pattern.kind === "review" ? p.pattern.models : [])),
+    );
+    for (const model of parsed.models ?? [])
+      if (model.review && !listed.has(model.name))
+        ctx.warning(
+          node,
+          "review-no-page",
+          `${model.name}'s ${model.review.join(", ")} wait for review, but no review page lists ${model.name}, so nothing is ever approved.`,
+          `Add one: smithable op addReviewPage (a page with "review: all").`,
+        );
     return pages;
   },
 };

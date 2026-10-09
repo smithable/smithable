@@ -2,7 +2,7 @@ import { defaultColumns } from "../columns.js";
 import { conditionArgs } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula, renameTextInFormula } from "../formula.js";
-import { type FieldIR, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
+import { type FieldIR, isUpload, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import {
   type AnyOperation,
@@ -462,6 +462,62 @@ const setTrash: Operation<{ model: string; trash: boolean }> = {
   },
 };
 
+/**
+ * Pictures and files that wait for a reviewer before others see them (docs/design/file-review.md):
+ * a list of a model's picture and file fields, all of them, or none. A required one holds the
+ * record until it is approved, an optional one only the file. Who reviews is the auth file's
+ * `review` grant; the files wait on a review page (addReviewPage).
+ */
+const setReview: Operation<{ model: string; fields: string[] }> = {
+  name: "setReview",
+  summary:
+    'Hold a model\'s pictures and files for review before others see them: the fields named, "all" (every picture and file field), or "none". A required one holds the whole record until approved, an optional one only the file; admins and the roles granted review approve them on a review page.',
+  schema: {
+    type: "object",
+    required: ["model", "fields"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      fields: refTo(
+        { ref: "field", model: "model", label: "Reviewed" },
+        { description: 'Picture and file fields, ["all"] for every one, or ["none"].' },
+        true,
+      ),
+    },
+  },
+  positional: ["model", "...fields"],
+  describe: ({ model, fields }) =>
+    fields[0] === "none" || fields.length === 0
+      ? `Show ${model} pictures and files without review`
+      : fields[0] === "all"
+        ? `Review every picture and file of ${model} before others see it`
+        : `Review ${fields.join(", ")} of ${model} before others see ${fields.length === 1 ? "it" : "them"}`,
+  destructive: () => false,
+  apply({ spec }, { model, fields }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found) throw new OperationError(`There is no model named "${model}".`);
+    const uploads = found.fields.filter(isUpload).map((f) => f.name);
+    const path = ["models", model, "review"];
+    if (fields.length === 0 || fields[0] === "none") {
+      if (!found.review) throw new OperationError(`${model} has no review.`);
+      spec.remove(path);
+      return [];
+    }
+    if (!uploads.length)
+      throw new OperationError(`${model} has no picture or file field to review.`);
+    const value = fields[0] === "all" ? "all" : fields;
+    if (value !== "all")
+      for (const f of fields)
+        if (!uploads.includes(f))
+          throw new OperationError(
+            `${f} is not a picture or file field of ${model}: ${uploads.join(", ")}.`,
+          );
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["models", model], "review", value);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
   addModel,
   addField,
@@ -470,6 +526,7 @@ export const modelOperations: AnyOperation[] = [
   removeField,
   setCapacity,
   setTrash,
+  setReview,
   importRecords,
 ];
 
