@@ -247,7 +247,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      ${literal(t.icon)},
     ],
   }),
   shellComponent: RootDocument,
@@ -307,17 +307,17 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
               }${
                 visitorPages.length
                   ? `!viewer && visitorRoutes.some((r) => pathname === r || ${catalog ? `(r === "/" ? /^\\/(new|\\d+)$/.test(pathname) : ${under})` : under}) ? (
-          <LandingLayout appName={app.name} link={{ to: "/sign-in", label: w.signIn }} site={site}>
+          <LandingLayout appName={app.name}${t.logo} link={{ to: "/sign-in", label: w.signIn }} site={site}>
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+          <AppShell appName={app.name}${t.logo}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+            : `<AppShell appName={app.name}${t.logo}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
           {children}
         </AppShell>`
         }

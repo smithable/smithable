@@ -20,6 +20,8 @@ export interface MenuUi {
 
 interface ShellProps {
   appName: string;
+  /** The app's mark, drawn before its name (the name says what it is, so its alt is empty). */
+  logo?: string;
   /** The page at "/", if the app has one: the name leads there when the viewer may open it. */
   home?: { to: LinkProps["to"]; access: Rule };
   menus: MenuUi[];
@@ -99,6 +101,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
 /** The app's name, a way back to its start: the page at "/", else the first the viewer may open. */
 function AppName({
   appName,
+  logo,
   home,
   menus,
   viewer,
@@ -108,14 +111,29 @@ function AppName({
     home && allows(home.access, viewer)
       ? home.to
       : menus.flatMap((m) => m.items).find((item) => allows(item.access, viewer))?.to;
-  if (!start) return appName;
+  const name = logo ? (
+    <span className="inline-flex max-w-full items-center gap-2 align-middle">
+      <img
+        src={logo}
+        alt=""
+        data-part="logo"
+        width={24}
+        height={24}
+        className="size-6 shrink-0 rounded-[4px] object-contain"
+      />
+      <span className="min-w-0 truncate">{appName}</span>
+    </span>
+  ) : (
+    appName
+  );
+  if (!start) return name;
   return (
     <Link
       to={start}
       onClick={onNavigate}
       className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
     >
-      {appName}
+      {name}
     </Link>
   );
 }

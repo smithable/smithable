@@ -143,3 +143,39 @@ test("among heroes that fit as well, the description and the app's name choose: 
   // Nothing fits: the calm abstract one, under the name its remake has.
   expect(pick("Quarterly compliance filings", "Alpha")).toBe("hero-abstract-calm-b");
 });
+
+const marks: PictureEntry[] = [
+  entry("logo-cup", "logo", ["logo", "mark", "cafe", "coffee"]),
+  entry("logo-bean", "logo", ["logo", "mark", "cafe", "coffee"]),
+  entry("logo-lotus", "logo", ["logo", "mark", "starter-booking", "yoga"]),
+  entry("logo-leaf", "logo", ["logo", "mark", "abstract", "garden", "nature"]),
+  entry("logo-wave", "logo", ["logo", "mark", "abstract", "sea"]),
+  entry("logo-star", "logo", ["logo", "mark", "abstract", "bold"]),
+];
+
+test("a mark that fits wins, and no fitting mark still gives an abstract one", () => {
+  expect(pickPictures(marks, { description: "A yoga studio's classes" }).logo?.id).toBe(
+    "logo-lotus",
+  );
+  expect(pickPictures(marks, { description: "Our garden club's plots" }).logo?.id).toBe(
+    "logo-leaf",
+  );
+  const none = pickPictures(marks, { description: "Quarterly compliance filings" }).logo;
+  expect(none?.tags).toContain("abstract");
+  expect(pickPictures(index, { description: "A café" }).logo).toBeUndefined();
+});
+
+test("the same input the same mark; two cafés can get two marks, independent of the hero's choice", () => {
+  const cafe = (description: string) => pickPictures(marks, { description }).logo?.id as string;
+  expect(cafe("A café by the harbour")).toBe(cafe("A café by the harbour"));
+  const descriptions = Array.from({ length: 12 }, (_, i) => `Café number ${i} and its menu`);
+  const chosen = new Set(descriptions.map(cafe));
+  expect(chosen).toEqual(new Set(["logo-cup", "logo-bean"]));
+  // Salted: the mark's pick among two is not the hero's pick among two.
+  const both = [...index, entry("hero-cafe-b", "hero", ["hero", "cafe", "coffee"]), ...marks];
+  const pairs = descriptions.map((description) => {
+    const p = pickPictures(both, { description });
+    return `${p.hero?.id === "hero-cafe"}/${p.logo?.id === "logo-cup"}`;
+  });
+  expect(new Set(pairs).size).toBe(4);
+});

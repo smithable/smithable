@@ -64,6 +64,7 @@ export {
   emptyContent,
   LANGUAGES,
   type Language,
+  LOGO_SRC,
   RESERVE_TEXTS,
   validateContent,
 } from "./content.js";

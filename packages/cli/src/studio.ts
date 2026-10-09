@@ -589,6 +589,24 @@ export async function studio(
       if (url.pathname === "/api/logs") return json(logs);
       // What the preview kept instead of sending: invitations, sign-in codes, notifications.
       if (url.pathname === "/api/outbox") return json(readOutbox(dir));
+      // A picture of the project's (the Look tab shows its logo); an SVG may not run anything.
+      const image =
+        /^\/api\/images\/((?:[\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg))$/.exec(
+          url.pathname,
+        );
+      if (image) {
+        const file = join(dir, "public", "images", image[1] as string);
+        if (!existsSync(file)) return json({ ok: false }, 404);
+        res.writeHead(200, {
+          "Content-Type":
+            image[2] === "svg"
+              ? "image/svg+xml"
+              : `image/${image[2] === "jpg" ? "jpeg" : image[2]}`,
+          "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+          "Cache-Control": "no-cache",
+        });
+        return res.end(readFileSync(file));
+      }
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
       if (plugin && declaredPlugins(dir).includes(plugin)) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
@@ -653,7 +671,26 @@ export async function studio(
           409,
         );
       if (req.method === "POST" && url.pathname === "/api/op") {
-        const { name, args, confirm } = await body();
+        const { name, args, confirm, file } = await body();
+        // A picture the change brings (the Look tab's logo): under public/images/, at most 2 MB.
+        const given = file as { path?: unknown; data?: unknown } | undefined;
+        const bytes =
+          typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
+        if (
+          given &&
+          (typeof given.path !== "string" ||
+            !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(given.path) ||
+            !bytes ||
+            bytes.byteLength === 0 ||
+            bytes.byteLength > 2 * 1024 * 1024)
+        )
+          return json(
+            {
+              ok: false,
+              output: "A picture must be a webp, avif, jpg, png or svg file of at most 2 MB.",
+            },
+            400,
+          );
         const asked = new Date().toISOString();
         const packages = installed();
         const result = await capture((io) =>
@@ -661,6 +698,7 @@ export async function studio(
             yes: confirm === true,
             reportLater: true,
             trace: traceIdOf(req.headers.traceparent),
+            ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),
           }),
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.

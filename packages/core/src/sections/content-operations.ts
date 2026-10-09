@@ -1,4 +1,4 @@
-import { LANGUAGES } from "../content.js";
+import { LANGUAGES, LOGO_SRC } from "../content.js";
 import type { YamlEditor } from "../edit.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -151,4 +151,48 @@ const setLanguage: Operation<{ language: string }> = {
   },
 };
 
-export const contentOperations: AnyOperation[] = [setText, nameRecords, setLanguage];
+/**
+ * The app's mark (docs/design/app-logo.md §1): a file under public/images/, shown before the
+ * name in the shell and the landing header and linked as the tab icon. An empty src removes it.
+ */
+const setLogo: Operation<{ src?: string; alt?: string }> = {
+  name: "setLogo",
+  summary:
+    'The app\'s mark, a file under public/images/ shown before its name and as its tab icon ("" removes it).',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      src: {
+        type: "string",
+        description:
+          "The file, e.g. images/logo.webp (webp, avif, jpg, png or svg); none removes it.",
+      },
+      alt: {
+        type: "string",
+        description: "What the mark shows; without it, the one it has, else the app's name.",
+      },
+    },
+  },
+  positional: ["src"],
+  describe: ({ src }) => (src ? `Use ${src} as the app's logo` : "Remove the app's logo"),
+  destructive: () => false,
+  apply({ content }, { src, alt }, ir) {
+    if (!src) {
+      if (!content.has(["logo"])) throw new OperationError("The app has no logo.");
+      content.remove(["logo"]);
+      return [];
+    }
+    if (!LOGO_SRC.test(src))
+      throw new OperationError(
+        `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg, png or svg).`,
+      );
+    const had = content.get(["logo", "alt"]);
+    const text = alt?.trim() || (typeof had === "string" ? had : `The ${ir.app.name} logo`);
+    if (content.has(["logo"])) content.set(["logo"], { src, alt: text });
+    else content.add([], "logo", { src, alt: text });
+    return [];
+  },
+};
+
+export const contentOperations: AnyOperation[] = [setText, nameRecords, setLanguage, setLogo];

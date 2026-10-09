@@ -233,6 +233,58 @@ test("a picture the texts name but the project does not have is left out", async
   expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toBe("smithableContent: 0.1\n");
 });
 
+test("every drafted app gets a mark: the content file's logo and public/images/logo.webp", async () => {
+  const marks = [
+    ...index,
+    {
+      id: "logo-star",
+      kind: "logo",
+      url: "https://x/logo/star.webp",
+      alt: "A star",
+      tags: ["logo", "abstract"],
+    },
+  ];
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Bageri }\nmodels:\n  Loaf: { fields: { name: string! } }\npages:\n  loaves: { crud: Loaf }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const files: Record<string, string> = {};
+  const out: string[] = [];
+  const written = await addLibraryPictures({
+    description: "a bakery's loaves",
+    ir,
+    files,
+    io: { out: (s: string) => out.push(s), err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: marks,
+  });
+  expect(written.map((w) => w.file)).toEqual(["logo.webp"]);
+  expect(out.join("")).toContain("Pictures from the Smithable image library: logo.webp");
+  const text = files["smithable.content.yml"] ?? "";
+  expect(text).toContain("logo:\n  src: images/logo.webp\n  alt: A star");
+  expect(validateContent({ path: "smithable.content.yml", text }, ir).diagnostics).toEqual([]);
+  // A logo the texts already name is kept.
+  const own: Record<string, string> = {
+    "smithable.content.yml": "smithableContent: 0.1\nlogo: { src: images/mine.svg, alt: Mine }\n",
+  };
+  const again = await addLibraryPictures({
+    description: "a bakery's loaves",
+    ir,
+    files: own,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: marks,
+  });
+  expect(again).toEqual([]);
+  expect(own["smithable.content.yml"]).toContain("images/mine.svg");
+  // And a logo whose file the project does not have is left out, like a hero's picture.
+  const dir = temp();
+  writeFileSync(join(dir, "smithable.content.yml"), text);
+  dropMissingPictures(dir, { out: () => {}, err: () => {} });
+  expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toBe("smithableContent: 0.1\n");
+});
+
 test("a name someone typed names the app, over the starter's or the draft's own", async () => {
   const files = {
     "smithable.yml": "smithable: 0.1\napp:\n  name: Payments API Status\n  description: Ours.\n",
