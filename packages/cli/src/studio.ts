@@ -151,9 +151,11 @@ export function refusal(
 ): { status: number; message: string } | undefined {
   // A change comes from Studio's own page: JSON with Studio's header (which a form or a simple
   // request from another site cannot send), and no other site's origin. MCP clients are not
-  // pages, and MCP's own content rules keep simple requests out.
+  // pages and send no origin: one that names another site is a page there (MCP's own advice).
+  const sameSite = !headers.origin || URL.parse(headers.origin)?.host === headers.host;
+  if (path === "/mcp" && !sameSite)
+    return { status: 403, message: "Only Studio's own page or an MCP client may use /mcp." };
   if (!["GET", "HEAD"].includes(method) && path !== "/mcp") {
-    const sameSite = !headers.origin || new URL(headers.origin).host === headers.host;
     if (
       headers["x-smithable"] !== "1" ||
       !String(headers["content-type"] ?? "").startsWith("application/json") ||

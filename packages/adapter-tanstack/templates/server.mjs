@@ -44,16 +44,34 @@ function allowed(request) {
 }
 
 /**
- * The most a request may carry, 1 MB (a picture's limit too): told by Content-Length before
- * anything is read. A body without a length (sent in chunks) is refused, so nothing unbounded is
- * ever read into memory.
+ * The most a request may carry, 1 MB (a picture's limit too), and 10 MB for a document
+ * (src/kit/uploads.ts FILE_MAX_BYTES) sent to a record: by its page before saving (POST /files/…)
+ * or through the API (PUT /api/v1/…, whose JSON bodies the API itself holds to 1 MB). Told by
+ * Content-Length before anything is read. A body without a length (sent in chunks) is refused,
+ * so nothing unbounded is ever read into memory.
  */
 const MAX_BODY = 1_000_000;
+const MAX_UPLOAD = 10_000_000;
+function maxBody(request) {
+  const path = new URL(request.url).pathname;
+  return (request.method === "POST" && path.startsWith("/files/")) ||
+    (request.method === "PUT" && path.startsWith("/api/v1/"))
+    ? MAX_UPLOAD
+    : MAX_BODY;
+}
 function tooLarge(request) {
   if (request.method === "GET" || request.method === "HEAD" || !request.body) return undefined;
   const length = request.headers.get("content-length");
   if (length === null) return 411;
-  return Number(length) > MAX_BODY ? 413 : undefined;
+  return Number(length) > maxBody(request) ? 413 : undefined;
+}
+
+/** Whether the visitor came over https: the request's own scheme, or a trusted proxy's word. */
+function overHttps(request) {
+  if (new URL(request.url).protocol === "https:") return true;
+  return (
+    TRUST_PROXY && request.headers.get("x-forwarded-proto")?.split(",").at(-1)?.trim() === "https"
+  );
 }
 
 serve({
@@ -70,13 +88,19 @@ serve({
       const refused = tooLarge(request);
       if (refused)
         return new Response(
-          refused === 413 ? "The request is larger than 1 MB." : "Say the request's length.",
+          refused === 413
+            ? `The request is larger than ${maxBody(request) / 1_000_000} MB.`
+            : "Say the request's length.",
           // The body was not read: the connection closes, so no unread bytes meet the next request.
           { status: refused, headers: { ...HEADERS, Connection: "close" } },
         );
       const response = await next();
       for (const [name, value] of Object.entries(HEADERS))
         if (!response.headers.has(name)) response.headers.set(name, value);
+      // Reached over https (or, behind a trusted proxy, its visitor was): the browser keeps to
+      // https for this host for a year, so no later visit can be turned back to http.
+      if (overHttps(request) && !response.headers.has("Strict-Transport-Security"))
+        response.headers.set("Strict-Transport-Security", "max-age=31536000");
       if (!response.headers.has("Cache-Control")) {
         // The build's files have their content's hash in the name, so a browser keeps them a
         // year; a page (often a signed-in person's own) is asked for again every time.

@@ -31,6 +31,11 @@ function smtp() {
       host: env.SMTP_HOST,
       port: Number(env.SMTP_PORT ?? 587),
       secure: env.SMTP_PORT === "465",
+      // On any other port the connection must turn to TLS (STARTTLS) before the password is sent:
+      // a server, or someone between, that leaves it out gets no password in clear. (SMTP_URL is
+      // taken as written: the hosted service's relay is on its own network, and an address may
+      // ask for it with ?requireTLS=true.)
+      requireTLS: env.SMTP_PORT !== "465",
       ...(env.SMTP_USER ? { auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? "" } } : {}),
     };
   return undefined;

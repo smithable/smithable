@@ -23,8 +23,11 @@ test("a change needs Studio's header, JSON and no other site's origin", () => {
   expect(post({ ...json, origin: "https://evil.example" })?.status).toBe(403);
   expect(post({ "content-type": "text/plain" })?.status).toBe(403);
   expect(post({ "content-type": "application/json" })?.status).toBe(403);
-  // MCP clients are not pages.
+  // MCP clients are not pages; a page on another site that calls /mcp is refused.
   expect(post({ "content-type": "application/json" }, "/mcp")).toBeUndefined();
+  expect(
+    post({ "content-type": "application/json", origin: "https://evil.example" }, "/mcp")?.status,
+  ).toBe(403);
 });
 
 test("on the network, Studio does not start without a token unless told to run open", async () => {
