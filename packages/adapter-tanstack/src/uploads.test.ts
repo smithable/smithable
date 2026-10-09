@@ -6,7 +6,7 @@ const kit = (await import(path)) as {
   webpSize(bytes: Uint8Array): { width: number; height: number } | undefined;
   pictureTag(picture: { file: string }): string;
   fileKind(bytes: Uint8Array, name: string): { ext: string; type: string } | undefined;
-  fileHeaders(stored: { name: string; type: string }): Record<string, string>;
+  fileHeaders(stored: { file: string; name: string; type: string }): Record<string, string>;
 };
 
 /** A WebP file's header: RIFF, then one chunk of the given kind with its bytes. */
@@ -90,13 +90,26 @@ test("a document's kind is read from its own first bytes, not only its name", ()
 });
 
 test("a PDF opens in the browser, a document downloads, and neither can run anything", () => {
-  const pdf = kit.fileHeaders({ name: "Contract 2026.pdf", type: "application/pdf" });
+  const pdf = kit.fileHeaders({
+    file: "invoice/0123456789abcdef01234567.pdf",
+    name: "Contract 2026.pdf",
+    type: "application/pdf",
+  });
   expect(pdf["Content-Disposition"]).toBe("inline; filename*=UTF-8''Contract%202026.pdf");
   expect(pdf["Content-Security-Policy"]).toBe("sandbox");
   expect(pdf["X-Content-Type-Options"]).toBe("nosniff");
   const docx = kit.fileHeaders({
+    file: "person/0123456789abcdef01234567.docx",
     name: "cv.docx",
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
   expect(docx["Content-Disposition"]).toMatch(/^attachment;/);
+  // The type a record keeps came from a browser: the file is sent with its extension's type.
+  const claimed = kit.fileHeaders({
+    file: "person/0123456789abcdef01234567.txt",
+    name: "notes.txt",
+    type: "text/html",
+  });
+  expect(claimed["Content-Type"]).toBe("text/plain; charset=utf-8");
+  expect(claimed["Content-Disposition"]).toMatch(/^attachment;/);
 });
