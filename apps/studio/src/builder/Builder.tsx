@@ -18,15 +18,12 @@ export function Builder({
   project,
   spec,
   run,
-  previewSlot,
   place,
   onPlace,
 }: {
   project: Project;
   spec: Spec;
   run: Run;
-  /** Where the app's preview frame goes on a narrow window (App.tsx places it over this). */
-  previewSlot: (element: HTMLElement | null) => void;
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
@@ -76,15 +73,14 @@ export function Builder({
     return `For example: ${many(first.name)} should have ${field}. Or: who can delete ${many(last.name)}?`;
   }, [spec]);
   // The panels are a strip that snaps, one wide each; the change box stays docked under
-  // whichever is shown. From lg the app's preview has its own column beside the panels (App.tsx);
-  // below it the Preview panel is where the frame is placed. Very wide windows may show Your
-  // app and Details side by side.
+  // whichever is shown. From lg the app's preview has its own column beside the panels; below it,
+  // Preview in the mode switch (App.tsx). Very wide windows may show Your app and Details side
+  // by side.
   const strip = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<PanelId>("app");
-  const framed = useMedia("(min-width: 1024px)");
   const wide = useMedia("(min-width: 1680px)");
   const phone = useMedia("(max-width: 639px)");
-  const panels = framed ? PANELS.filter(([id]) => id !== "preview") : PANELS;
+  const panels = PANELS;
   const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
   // The change box folded to one line: as the person left it, else folded at phone width.
   const [folded, setFolded] = useState(() => {
@@ -226,15 +222,6 @@ export function Builder({
             )}
           </Panel>
         </div>
-        {!framed && (
-          // The preview frame is placed over this panel (it never moves, so it keeps its page).
-          <div
-            data-panel="preview"
-            data-guide-place="preview"
-            ref={previewSlot}
-            className="w-full shrink-0 snap-start border-l border-neutral-200"
-          />
-        )}
         <div
           data-panel="details"
           data-guide="details"
@@ -309,9 +296,8 @@ export function Builder({
   );
 }
 
-type PanelId = "app" | "preview" | "details";
+type PanelId = "app" | "details";
 const PANELS: [PanelId, string][] = [
   ["app", "Your app"],
-  ["preview", "Preview"],
   ["details", "Details"],
 ];

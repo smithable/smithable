@@ -1,10 +1,12 @@
+import { humanize } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
+import wordmark from "./brand/wordmark.svg";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
 import { Guide } from "./GuideTour";
-import { doneKey, guideOff } from "./guide";
+import { doneKey, guideOff, TOURS } from "./guide";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
 import { isPreviewMessage, type Place, shared, touched } from "./preview";
@@ -12,7 +14,7 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { Preview } from "./shared";
 import { Studio } from "./studio/Studio";
-import { Button, cx } from "./ui";
+import { Button, cx, useMedia } from "./ui";
 
 type Mode = "builder" | "studio";
 
@@ -105,8 +107,18 @@ export function App() {
     () => (changeKey && concepts ? { key: changeKey, concepts: concepts.split("\n") } : undefined),
     [changeKey, concepts],
   );
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  const box = useSlotBox(slot);
+  // On a narrow window the preview is the mode switch's third choice, the window's width
+  // (Johan, 2026-10-09); from lg it is a column beside either mode.
+  const narrow = useMedia("(max-width: 1023px)");
+  const viewing = narrow && Boolean(place.viewing);
+  const view = (on: boolean) =>
+    setPlace((p) => (Boolean(p.viewing) === on ? p : { ...p, viewing: on }));
+  // A guide's stop brings its place on screen: the preview chosen (narrow) or shown (wide), any
+  // other the mode again.
+  const guideStop = (anchor: string) => {
+    if (anchor === "preview" && !narrow) setPlace((p) => ({ ...p, previewHidden: false }));
+    else view(anchor === "preview");
+  };
 
   const refresh = useCallback(async () => {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
@@ -135,6 +147,19 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
+  // The pages the preview's address offers: each page's address and title, and sign-in.
+  const pages = useMemo(
+    (): [string, string][] => [
+      ...(spec.ir?.pages ?? [])
+        .filter((p) => !p.route.includes("$"))
+        .map((p): [string, string] => [
+          p.route,
+          spec.content?.pages[p.id]?.title ?? humanize(p.id),
+        ]),
+      ...(spec.auth ? [["/sign-in", "Sign in"] as [string, string]] : []),
+    ],
+    [spec],
+  );
 
   // After a change went through: the spec as it is now, before the app has restarted with it
   // ("changed" later reloads the preview), so the left side never shows the old state.
@@ -302,11 +327,11 @@ export function App() {
       <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-neutral-200 bg-white px-4 py-1.5 sm:flex-nowrap sm:py-0">
         {project.home ? (
           // Hosted: back to the apps overview.
-          <a href={project.home} className="text-sm font-semibold tracking-tight hover:underline">
-            Smithable
+          <a href={project.home} className="shrink-0">
+            <Wordmark />
           </a>
         ) : (
-          <span className="text-sm font-semibold tracking-tight">Smithable</span>
+          <Wordmark />
         )}
         {/* While an app is being made, the project is a placeholder: its name says nothing. */}
         <span className="min-w-0 truncate text-sm text-neutral-500">
@@ -314,25 +339,34 @@ export function App() {
         </span>
         <fieldset data-guide="mode" className="flex rounded-md bg-neutral-100 p-0.5 sm:ml-4">
           <legend className="sr-only">Mode</legend>
-          {(["builder", "studio"] as const).map((m) => (
-            <label
-              key={m}
-              className={cx(
-                "flex h-7 cursor-pointer items-center rounded px-3 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                mode === m ? "bg-white shadow-xs" : "text-neutral-600",
-              )}
-            >
-              <input
-                type="radio"
-                name="mode"
-                className="sr-only"
-                checked={mode === m}
-                disabled={Boolean(project.making)}
-                onChange={() => switchMode(m)}
-              />
-              {m === "builder" ? "No code" : "Code"}
-            </label>
-          ))}
+          {(narrow
+            ? (["builder", "preview", "studio"] as const)
+            : (["builder", "studio"] as const)
+          ).map((m) => {
+            const checked = viewing ? m === "preview" : mode === m;
+            return (
+              <label
+                key={m}
+                className={cx(
+                  "flex h-7 cursor-pointer items-center rounded px-3 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                  checked ? "bg-white shadow-xs" : "text-neutral-600",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  className="sr-only"
+                  checked={checked}
+                  disabled={Boolean(project.making)}
+                  onChange={() => {
+                    view(m === "preview");
+                    if (m !== "preview") switchMode(m);
+                  }}
+                />
+                {{ builder: "No code", preview: "Preview", studio: "Code" }[m]}
+              </label>
+            );
+          })}
         </fieldset>
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-neutral-500">Working…</span>}
@@ -369,11 +403,8 @@ export function App() {
           {!project.making && !guideOff() && (
             <button
               type="button"
-              // The tour is Builder's: from Code mode it switches there first.
-              onClick={() => {
-                if (mode !== "builder") switchMode("builder");
-                setGuiding(true);
-              }}
+              // The tour of the mode shown.
+              onClick={() => setGuiding(true)}
               className="text-xs font-medium text-neutral-600 hover:underline"
             >
               Guide
@@ -464,16 +495,24 @@ export function App() {
       )}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
       {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
-      {guiding && mode === "builder" && !project.making && (
+      {guiding && !project.making && (
+        // Made again for the other mode's tour, which finds that mode's places.
         <Guide
+          key={mode}
           app={project.name}
-          onEnd={() => setGuiding(false)}
+          stops={TOURS[mode]}
+          onEnd={() => {
+            setGuiding(false);
+            view(false);
+          }}
           onCode={() => switchMode("studio")}
+          onStop={guideStop}
         />
       )}
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
-          the right; narrow ones place it over the mode's preview slot. */}
+          the right; narrow ones show it alone when Preview is chosen, the mode hidden (not
+          unmade, so it is as it was). */}
       {project.making ? (
         // Until the described app is in place: what is being made, not the placeholder.
         <main className="min-h-0 flex-1 overflow-auto">
@@ -481,13 +520,12 @@ export function App() {
         </main>
       ) : (
         <main className="flex min-h-0 flex-1">
-          <div className="min-h-0 min-w-0 flex-1">
+          <div className={cx("min-h-0 min-w-0 flex-1", viewing && "hidden")}>
             {mode === "builder" ? (
               <Builder
                 project={project}
                 spec={spec}
                 run={run}
-                previewSlot={setSlot}
                 place={place.builder}
                 onPlace={builderPlace}
               />
@@ -499,7 +537,6 @@ export function App() {
                 version={version}
                 logs={logs}
                 onCustomize={customize}
-                previewSlot={setSlot}
                 place={place.studio}
                 onPlace={studioPlace}
                 previewHidden={Boolean(place.previewHidden)}
@@ -507,21 +544,27 @@ export function App() {
             )}
           </div>
           <div
-            style={box}
+            data-guide-view
             className={cx(
-              "flex min-h-0 flex-col border-l border-neutral-200 bg-white",
-              box ? "fixed z-10" : place.previewHidden ? "hidden" : "max-lg:hidden lg:w-[55%]",
+              "flex min-h-0 flex-col bg-white",
+              narrow
+                ? viewing
+                  ? "min-w-0 flex-1"
+                  : "hidden"
+                : place.previewHidden
+                  ? "hidden"
+                  : "w-[55%] border-l border-neutral-200",
             )}
           >
-            {box && <SwipeGrips />}
             <Preview
               url={project.preview}
               version={version}
               updating={updating || busy}
               selecting={selecting}
               onSelecting={setSelecting}
-              onHide={box ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
+              onHide={narrow ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
               highlight={highlight}
+              pages={pages}
             />
           </div>
         </main>
@@ -530,31 +573,9 @@ export function App() {
   );
 }
 
-/**
- * Where a mode's preview slot is on the screen, followed frame by frame while it exists (a
- * snapping strip moves it); none means the preview has its own column.
- */
-function useSlotBox(slot: HTMLElement | null) {
-  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number }>();
-  useEffect(() => {
-    if (!slot) {
-      setBox(undefined);
-      return;
-    }
-    let frame = 0;
-    const measure = () => {
-      const r = slot.getBoundingClientRect();
-      setBox((b) =>
-        b && b.top === r.top && b.left === r.left && b.width === r.width && b.height === r.height
-          ? b
-          : { top: r.top, left: r.left, width: r.width, height: r.height },
-      );
-      frame = requestAnimationFrame(measure);
-    };
-    measure();
-    return () => cancelAnimationFrame(frame);
-  }, [slot]);
-  return box;
+/** The wordmark (docs/site/brand), 20 px tall. */
+function Wordmark() {
+  return <img src={wordmark} alt="Smithable" className="h-5 w-auto shrink-0" />;
 }
 
 /** Whether this browser has seen the guide for this app. */
@@ -564,49 +585,4 @@ function seenGuide(app: string): boolean {
   } catch {
     return false;
   }
-}
-
-/**
- * On a phone the preview lies over its panel in the snapping row, and the page inside it takes
- * every touch: a strip at each edge takes a sideways swipe instead and moves the row, so the
- * preview snaps like the other panels.
- */
-function SwipeGrips() {
-  const drag = useRef<{ x: number; left: number; strip: HTMLElement }>(undefined);
-  const down = (e: React.PointerEvent<HTMLDivElement>) => {
-    const strip = document.querySelector<HTMLElement>("[data-strip]");
-    if (!strip) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    strip.style.scrollSnapType = "none";
-    drag.current = { x: e.clientX, left: strip.scrollLeft, strip };
-  };
-  const move = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    if (d) d.strip.scrollLeft = d.left - (e.clientX - d.x);
-  };
-  const up = () => {
-    const d = drag.current;
-    if (!d) return;
-    drag.current = undefined;
-    const width = d.strip.clientWidth;
-    d.strip.style.scrollSnapType = "";
-    d.strip.scrollTo({ left: Math.round(d.strip.scrollLeft / width) * width, behavior: "smooth" });
-  };
-  const grip = "absolute inset-y-0 z-20 w-6 touch-none";
-  return (
-    <>
-      {(["left-0", "right-0"] as const).map((side) => (
-        <div
-          key={side}
-          aria-hidden
-          data-part="swipe-grip"
-          className={`${grip} ${side}`}
-          onPointerDown={down}
-          onPointerMove={move}
-          onPointerUp={up}
-          onPointerCancel={up}
-        />
-      ))}
-    </>
-  );
 }
