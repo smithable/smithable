@@ -20,11 +20,15 @@ import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
 
-/** Applies an operation; `confirm` accepts a loss of data the user has already seen. */
+/**
+ * Applies an operation; `confirm` accepts a loss of data the user has already seen, and `file`
+ * is a picture the change brings (its path in the project, base64).
+ */
 export type Run = (
   name: string,
   args: Record<string, unknown>,
   confirm?: boolean,
+  file?: { path: string; data: string },
 ) => Promise<boolean>;
 
 const KINDS: [string, string][] = [

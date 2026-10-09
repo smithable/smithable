@@ -148,7 +148,7 @@ function ArticlesPage() {
   return ${
     framed
       ? `(
-    <LandingLayout appName={app.name} site={site}>
+    <LandingLayout appName={app.name}${ctx.t.logo} site={site}>
       <div className="mx-auto max-w-6xl px-5 py-12">
         ${header}
         {list}
@@ -257,7 +257,7 @@ function ArticlePage() {
   return ${
     framed
       ? `(
-    <LandingLayout appName={app.name} site={site}>
+    <LandingLayout appName={app.name}${ctx.t.logo} site={site}>
       <div className="px-5 py-12">{view}</div>
     </LandingLayout>
   );`

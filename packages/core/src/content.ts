@@ -17,6 +17,8 @@ export type Language = (typeof LANGUAGES)[number];
 export interface ContentIR {
   /** The language of everything a person reads in the app: the kit's words follow it. */
   language: Language;
+  /** The app's mark, before its name in the shell and the landing header, and its tab icon. */
+  logo?: ContentImage;
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
@@ -72,6 +74,8 @@ export interface ContentImage {
 
 /** A picture's file, relative to the app's public/ folder. */
 const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
+/** A mark's file: a picture's, or an SVG (a maker's own logo usually is one). */
+export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/;
 
 /** The texts each kind of section takes, and the keys of its items. */
 const SECTION_TEXTS: Record<
@@ -172,7 +176,16 @@ export function validateContent(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.content.yml", {
-    allowed: ["smithableContent", "language", "models", "pages", "menus", "consent", "outgoing"],
+    allowed: [
+      "smithableContent",
+      "language",
+      "logo",
+      "models",
+      "pages",
+      "menus",
+      "consent",
+      "outgoing",
+    ],
     later: ["actions"],
   });
 
@@ -190,6 +203,17 @@ export function validateContent(
           "unknown-language",
           `The app kit has no words in "${language}". Languages: ${LANGUAGES.join(", ")}.`,
         );
+    }
+    if (key === "logo") {
+      const { src, alt } = readTexts(ctx, value, '"logo"', ["src", "alt"]);
+      if (!src || !LOGO_SRC.test(src))
+        ctx.error(
+          value,
+          "logo-src",
+          '"src" of "logo" must be a file in the app\'s public/images/ folder, e.g. images/logo.webp (webp, avif, jpg, png or svg).',
+        );
+      else if (!alt) ctx.error(value, "logo-alt", '"logo" needs "alt": what the mark shows.');
+      else content.logo = { src, alt };
     }
     if (key === "consent")
       content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);
