@@ -8,7 +8,7 @@ Five stops, each a small card beside the thing it is about, with one or two sent
 
 | Stop | Beside | Says |
 |---|---|---|
-| 0 | The mode switch (No code, Code) | How do you want to work? No code changes the app in plain words and forms; Code edits its definition as text. **No code** goes on with the tour; **Code** ends it in Code mode, remembered. (Johan, 2026-10-06) |
+| 0 | The mode switch (No code, Code) | How do you want to work? No code changes the app in plain words and forms; Code edits its definition as text. **No code** goes on with the tour; **Code** switches to Code mode, remembered, and goes on with its tour, below. (Johan, 2026-10-06 and 2026-10-09) |
 | 1 | The preview | This is your app, running: click around as anyone would. What you change shows here at once. (The samples are the preview's own notice, above it; the card does not say it again.) |
 | 2 | "What it does" | Your app in plain words, kept true as it changes. Click a sentence to change that part; the buttons add a record, a page, an action. |
 | 2b | The Details panel | Choose Select above the preview and click a part, or click a sentence in What it does: its details and forms open here; with nothing chosen, the app's own details. (Johan, 2026-10-06) |
@@ -16,13 +16,23 @@ Five stops, each a small card beside the thing it is about, with one or two sent
 | 4 | The Look tab | Colors, type, the app's language and how lists and forms are laid out: the look is separate from what the app does. |
 | 5 | Publish and share | When it does what you want, publish it: an address people can open, with sign-in and backups. Until then, nothing leaves this page. |
 
-Code mode has no tour of its own: its editor is for people who read a spec, and the Problems list and the completions are the guide there. The header gets a **Guide** link that starts the tour again at any time, in Builder.
+Code mode has a tour of its own (Johan, 2026-10-09):
+
+| Stop | Beside | Says |
+|---|---|---|
+| 1 | The Files tab | Your app as text: smithable.yml says what it does; its companions say who may sign in, how it looks and what it says. Ctrl-Space, or What goes here?, lists what can be written at the cursor. |
+| 2 | The editor's Problems and Save | Checked as you type: a problem is named here and marked in the text. Save keeps the file as one change. |
+| 3 | The concept tree | Every part of your app, with its rules and the files each became; Show in smithable.yml takes you to its lines. |
+| 4 | The Operation tab | Every change is an operation, with a form; the line under it is the same change for a terminal. |
+| 5 | The Last change tab | The generated code the last change changed, with the logs beside it; Ctrl+Z takes any change back. |
+
+The header's **Guide** link starts the tour of the mode shown, at any time.
 
 ## 2. When it shows
 
 - The first time a browser opens a project's Studio in Builder, once the project is loaded and, for a described app, after the making screen has handed over (docs/design/while-it-is-made.md): never over the stage; and once the preview shows the app (its second stop points at it), or after twenty seconds when the preview is slow to start. The hosted beta's claim lands here too.
 - Not again for that project in that browser after Done or Skip (`localStorage`, `guideDone:<app>`); a new project starts it once more, since the first visit to any app is what the tour is for. Through **Guide** whenever wanted.
-- Never in Code mode, never in the Studio tests except the one that walks it, and never when `?guide=off` is in the address (the screenshot scripts).
+- Not by itself in Code mode (only from **Guide** or the first stop's **Code**), never in the Studio tests except the one that walks it, and never when `?guide=off` is in the address (the screenshot scripts).
 
 ## 3. How it behaves
 
@@ -37,7 +47,7 @@ Studio's words are inline English in the beta (language.md §4: Studio stays Eng
 
 ## 5. How it stays true when Studio changes
 
-- Each thing a stop is about carries `data-guide="<name>"` (`mode`, `preview`, `summary`, `details`, `change`, `look`, `publish`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
+- Each thing a stop is about carries `data-guide="<name>"` (`mode`, `preview`, `summary`, `details`, `change`, `look`, `publish`; in Code mode `files`, `problems`, `concepts`, `operation`, `last-change`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
 - A unit test holds the two lists together: every stop's anchor appears in the components, and every `data-guide` in the components has a stop. A new place in Studio either gets a stop in the same change or has no attribute.
 - The Studio test walks the tour once on a fresh project: five cards in order, each beside a visible anchor, Done ends it and the project is as it was; **Guide** starts it again; a reload shows nothing.
 

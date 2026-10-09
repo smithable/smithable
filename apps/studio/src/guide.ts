@@ -1,6 +1,7 @@
 // The Studio guide's stops (docs/design/studio-guide.md): each is shown beside the element that
-// carries its `data-guide` name. This table is where the tour's words live, and what is
-// translated when Studio gets a language. guide.test.ts holds it and the anchors together.
+// carries its `data-guide` name. One tour for each mode; these tables are where the tours' words
+// live, and what is translated when Studio gets a language. guide.test.ts holds them and the
+// anchors together.
 
 export interface Stop {
   /** The `data-guide` name of the element the card is beside. */
@@ -11,7 +12,7 @@ export interface Stop {
   choice?: boolean;
 }
 
-export const STOPS: Stop[] = [
+const BUILDER: Stop[] = [
   {
     anchor: "mode",
     title: "How do you want to work?",
@@ -49,6 +50,37 @@ export const STOPS: Stop[] = [
     text: "When it does what you want, publish it: an address people can open, with sign-in and backups. Until then, nothing leaves this page.",
   },
 ];
+
+const STUDIO: Stop[] = [
+  {
+    anchor: "files",
+    title: "Your app as text",
+    text: "smithable.yml says what your app does; its companions say who may sign in, how it looks and what it says. Ctrl-Space, or What goes here?, lists what can be written at the cursor.",
+  },
+  {
+    anchor: "problems",
+    title: "Checked as you type",
+    text: "A problem is named here and marked in the text. Save keeps the file as one change, undoable like any other.",
+  },
+  {
+    anchor: "concepts",
+    title: "Every part of your app",
+    text: "Its records, actions and pages, with their rules and the files each became. Pick one: its details open beside, and Show in smithable.yml takes you to its lines.",
+  },
+  {
+    anchor: "operation",
+    title: "Every change as a form",
+    text: "Every change is an operation: pick one and fill in its form. The line under it is the same change for a terminal.",
+  },
+  {
+    anchor: "last-change",
+    title: "What the last change did",
+    text: "The generated code it changed, line by line, with the logs beside it. Ctrl+Z takes any change back.",
+  },
+];
+
+/** The tour of each mode: Builder's starts by asking which mode, and its Code goes on with Code's. */
+export const TOURS = { builder: BUILDER, studio: STUDIO };
 
 /** The key that says this browser has seen the tour for this app. */
 export const doneKey = (app: string) => `guideDone:${app}`;
