@@ -5,8 +5,13 @@ import { resolvePlugin, type SpecPlugin, YamlEditor } from "@smithable/core";
 
 const require = createRequire(import.meta.url);
 
-/** Where a project plugin lives: smithable/plugins/<name>/plugin.mjs. */
+/**
+ * Where a project plugin lives: smithable/plugins/<name>/plugin.mjs. A name is one folder's
+ * name (letters, digits, dashes and underscores), never a path out of the project ("../x").
+ */
 export function pluginPath(dir: string, name: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name))
+    throw new Error(`A plugin's name is letters, digits, dashes and underscores, not "${name}".`);
   return join(dir, "smithable", "plugins", name, "plugin.mjs");
 }
 

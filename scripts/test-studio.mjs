@@ -152,6 +152,10 @@ try {
     await page.goto(`${base}/?guide=off`);
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
+    // A new app has no repository until its first change: its last change is none, not Git's
+    // refusal.
+    const { patch } = await (await fetch(`${base}/api/diff`)).json();
+    if (patch !== "") throw new Error(`the last change of a new app: ${patch}`);
   });
   await step(
     "the header has How to publish and Help, which open the docs (finding 14)",
@@ -1531,17 +1535,22 @@ try {
         throw new Error(JSON.stringify(stale));
     },
   );
-  await step("a web page cannot reach Studio through another host name", async () => {
-    const status = await new Promise((resolve, reject) =>
-      request({ port, path: "/api/project", headers: { host: "evil.example" } }, (r) => {
-        r.resume();
-        resolve(r.statusCode);
-      })
-        .on("error", reject)
-        .end(),
-    );
-    if (status !== 403) throw new Error(`answered ${status}`);
-  });
+  await step(
+    "a web page cannot reach Studio through another host name, its events included",
+    async () => {
+      for (const path of ["/api/project", "/api/events"]) {
+        const status = await new Promise((resolve, reject) =>
+          request({ port, path, headers: { host: "evil.example" } }, (r) => {
+            r.destroy();
+            resolve(r.statusCode);
+          })
+            .on("error", reject)
+            .end(),
+        );
+        if (status !== 403) throw new Error(`${path} answered ${status}`);
+      }
+    },
+  );
   await step("a message from a window other than the preview is ignored", async () => {
     const before = (await project()).files.content;
     // Studio's own window, not the preview frame, pretending to be the preview.
@@ -1581,6 +1590,14 @@ try {
         JSON.stringify({ name: "removeField", args: { model: "Customer", field: "notes" } }),
       );
       if (form !== 403) throw new Error(`a cross-site form answered ${form}`);
+      // The tools for assistants: a page on another site that calls them is refused.
+      const tools = await answer(
+        "/mcp",
+        "POST",
+        { "content-type": "application/json", origin: "https://evil.example" },
+        JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      );
+      if (tools !== 403) throw new Error(`/mcp from another site answered ${tools}`);
       if ((await answer("/assets", "GET", {})) !== 200) throw new Error("a folder path failed");
     },
   );
