@@ -31,6 +31,9 @@ export interface AnalyticsSetting {
   id: string;
 }
 
+/** An exact version like 4.4.1 (a prerelease tag allowed); what `packages` may hold. */
+export const EXACT_VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
+
 export const CONTEXT_SCHEMA: JsonSchema = {
   type: "object",
   required: ["smithableContext"],
@@ -42,7 +45,16 @@ export const CONTEXT_SCHEMA: JsonSchema = {
     conventions: strings,
     guidance: { type: "string" },
     plugins: strings,
-    packages: { type: "object", additionalProperties: { type: ["string", "number"] } },
+    // Exact versions only (as setPackage insists), so a hand edit cannot ask for "latest",
+    // "^1" or a git address: a build is then the same every time.
+    packages: {
+      type: "object",
+      additionalProperties: {
+        type: "string",
+        pattern: EXACT_VERSION.source,
+        "x-expected": "an exact version like 4.4.1",
+      },
+    },
     analytics: {
       type: "object",
       additionalProperties: false,
