@@ -152,6 +152,10 @@ try {
     await page.goto(`${base}/?guide=off`);
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
+    // A new app has no repository until its first change: its last change is none, not Git's
+    // refusal.
+    const { patch } = await (await fetch(`${base}/api/diff`)).json();
+    if (patch !== "") throw new Error(`the last change of a new app: ${patch}`);
   });
   await step(
     "the header has How to publish and Help, which open the docs (finding 14)",

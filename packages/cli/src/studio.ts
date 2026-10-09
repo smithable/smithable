@@ -593,7 +593,9 @@ export async function studio(
         return res.end(readFileSync(pluginPath(dir, plugin)));
       }
       if (url.pathname === "/api/diff") {
-        // The last change Smithable made, as a patch without its bookkeeping files.
+        // The last change Smithable made, as a patch without its bookkeeping files. A new app has
+        // no repository until its first change (ensureRepository): then there is no change yet,
+        // and Git's refusal is not a patch.
         const last = git(dir, [
           "log",
           "-1",
@@ -601,7 +603,7 @@ export async function studio(
           "--grep=^smithable: ",
           '--grep=^Revert "smithable: ',
         ]);
-        const sha = last.out.trim();
+        const sha = last.ok ? last.out.trim() : "";
         return json({
           patch: sha
             ? git(dir, [
