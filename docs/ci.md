@@ -21,6 +21,11 @@ curl -sL "https://github.com/actions/runner/releases/download/v$ver/actions-runn
 ./config.sh --unattended --url https://github.com/smithable/smithable \
   --token "$(gh api -X POST repos/smithable/smithable/actions/runners/registration-token --jq .token)" \
   --name smithable-engine --labels smithable --work _work --replace
+# The service starts runsvc.sh, as the runner's own svc.sh install does: it turns systemd's SIGTERM into
+# SIGINT, on which the runner stops its own listener. Started as run.sh, each stop or restart left
+# that listener running (KillMode=process ends only run.sh), and two listeners on one folder fail
+# each other's checkouts (2026-10-08).
+cp bin/runsvc.sh .
 # A user service (systemd --user; linger is on for this user, so it starts at boot):
 mkdir -p ~/.config/systemd/user && cat > ~/.config/systemd/user/actions-runner-engine.service <<'UNIT'
 [Unit]
@@ -28,7 +33,7 @@ Description=GitHub Actions runner (smithable engine)
 After=network-online.target
 [Service]
 WorkingDirectory=%h/repos/.actions-runner/engine
-ExecStart=%h/repos/.actions-runner/engine/run.sh
+ExecStart=%h/repos/.actions-runner/engine/runsvc.sh
 Restart=always
 RestartSec=10
 # A user service's soft open-files limit is 1024 by default; seven dev servers and a browser need
