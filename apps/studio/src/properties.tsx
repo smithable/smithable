@@ -18,12 +18,15 @@ import { Button, cx, Input, Label, Select } from "./ui";
 /** One visible text, saved with setText; empty restores the text Smithable derives. */
 function TextSetting({
   label,
+  shown = label,
   path,
   current,
   fallback,
   run,
 }: {
   label: string;
+  /** The words above the box, when they say more than its name. */
+  shown?: string;
   path: string[];
   current?: string;
   fallback: string;
@@ -38,7 +41,7 @@ function TextSetting({
         void run("setText", { path, text: text.trim() });
       }}
     >
-      <Label text={label}>
+      <Label text={shown}>
         <Input
           aria-label={label}
           value={text}
@@ -181,28 +184,39 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
         {isUpload(field) && <ReviewChip spec={spec} run={run} model={name} field={fieldName} />}
         <TextSetting
           label="Label"
+          shown="Label (what people see)"
           path={["models", name, "fields", fieldName, "label"]}
           current={spec.content?.models[name]?.fields[fieldName]?.label}
           fallback={humanize(fieldName)}
           run={run}
         />
-        <form
-          className="flex items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (to) void run("renameField", { model: name, from: fieldName, to });
-          }}
-        >
-          <Label
-            text="Rename"
-            hint={to ? `Will be named ${to}; the data is kept` : "The data is kept"}
+        {/* The name in the spec is not what people see (the label is): folded, second. */}
+        <details>
+          <summary className="cursor-pointer text-xs font-medium text-muted">
+            Name in the spec (used in code)
+          </summary>
+          <form
+            className="mt-2 flex items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (to) void run("renameField", { model: name, from: fieldName, to });
+            }}
           >
-            <Input aria-label="Rename" value={rename} onChange={(e) => setRename(e.target.value)} />
-          </Label>
-          <Button type="submit" variant="ghost" className="border border-line" disabled={!to}>
-            Rename
-          </Button>
-        </form>
+            <Label
+              text={`Rename ${fieldName}`}
+              hint={to ? `Will be named ${to}; the data is kept` : "The data is kept"}
+            >
+              <Input
+                aria-label="Rename"
+                value={rename}
+                onChange={(e) => setRename(e.target.value)}
+              />
+            </Label>
+            <Button type="submit" variant="ghost" className="border border-line" disabled={!to}>
+              Rename
+            </Button>
+          </form>
+        </details>
         <Button
           variant="ghost"
           className="border border-red-200 text-red-700"

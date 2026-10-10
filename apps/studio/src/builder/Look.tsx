@@ -242,9 +242,27 @@ function Logo({ spec, run }: { spec: Spec; run: Run }) {
   const logo = spec.content?.logo;
   // A file replaced under the same name is fetched again.
   const [version, setVersion] = useState(0);
-  const replace = (file: File | undefined) => {
-    const ext = file?.name.toLowerCase().match(/\.(webp|avif|jpe?g|png|svg)$/)?.[1];
-    if (!file || !ext) return;
+  // What is wrong with the file chosen, said before anything is sent.
+  const [refused, setRefused] = useState<string>();
+  const replace = async (file: File | undefined) => {
+    setRefused(undefined);
+    if (!file) return;
+    const ext = file.name.toLowerCase().match(/\.(webp|avif|jpe?g|png|svg)$/)?.[1];
+    if (!ext) return setRefused("A logo is a webp, png, jpg, avif or svg file.");
+    if (file.size > 2 * 1024 * 1024)
+      return setRefused(`This file is ${(file.size / 1024 / 1024).toFixed(1)} MB; at most 2 MB.`);
+    // Its proportions and size, from the picture itself (an SVG without its own size has none).
+    const { width, height } = await measure(file);
+    if (width && height) {
+      if (Math.max(width, height) / Math.min(width, height) > 1.25)
+        return setRefused(
+          `This picture is ${width} × ${height} px: a logo is square or nearly so (a wide wordmark is not; the app's name stands beside the mark).`,
+        );
+      if (ext !== "svg" && Math.min(width, height) < 64)
+        return setRefused(
+          `This picture is ${width} × ${height} px: at least 64 px, about 512 px is best.`,
+        );
+    }
     const reader = new FileReader();
     reader.onload = async () => {
       const data = String(reader.result).split(",")[1] ?? "";
@@ -273,7 +291,7 @@ function Logo({ spec, run }: { spec: Spec; run: Run }) {
             accept=".webp,.avif,.png,.jpg,.jpeg,.svg"
             className="sr-only"
             onChange={(e) => {
-              replace(e.target.files?.[0]);
+              void replace(e.target.files?.[0]);
               e.target.value = "";
             }}
           />
@@ -288,12 +306,32 @@ function Logo({ spec, run }: { spec: Spec; run: Run }) {
           </button>
         )}
       </div>
+      {refused && (
+        <p role="alert" className="text-xs text-red-700">
+          {refused}
+        </p>
+      )}
       <p className="text-xs text-quiet">
         Your app's mark, before its name and in the browser's tab. Square, about 512 px: webp, png,
         jpg, avif or svg, at most 2 MB.
       </p>
     </div>
   );
+}
+
+/** A picture's own width and height in pixels; zero when the browser cannot tell. */
+function measure(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    const done = (width: number, height: number) => {
+      URL.revokeObjectURL(url);
+      resolve({ width, height });
+    };
+    image.onload = () => done(image.naturalWidth, image.naturalHeight);
+    image.onerror = () => done(0, 0);
+    image.src = url;
+  });
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
