@@ -74,6 +74,7 @@ export function makeKey(
   until?: Date,
 ): string {
   const by = admin(viewer);
+  if (until && until.getTime() < Date.now()) throw new Error("The end date is in the past.");
   const key = \`smk_\${randomBytes(24).toString("base64url")}\`;
   db.transaction((tx) => {
     tx.insert(apiKey)
@@ -129,6 +130,7 @@ export function keysTestSource(auth: AuthIR): string {
   const other = auth.roles.map((r) => r.name).find((r) => r !== "admin");
   const role = other ?? "admin";
   return `${HEADER}// A key's life: made by an administrator, standing for its role, revoked or past its end.
+import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
@@ -149,7 +151,10 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(made?.lastUsedAt).toBeInstanceOf(Date);
   revokeKey(admin, made?.id ?? 0);
   expect(keyViewer(\`Bearer \${key}\`)).toBeNull();
-  const old = makeKey(admin, "Old", ${JSON.stringify(role)}, new Date(Date.now() - 1000));
+  // A key cannot be made already ended; one whose end has passed stops working.
+  expect(() => makeKey(admin, "Ended", ${JSON.stringify(role)}, new Date(Date.now() - 1000))).toThrow("The end date is in the past.");
+  const old = makeKey(admin, "Old", ${JSON.stringify(role)}, new Date(Date.now() + 1000));
+  db.update(apiKey).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(apiKey.name, "Old")).run();
   expect(keyViewer(\`Bearer \${old}\`)).toBeNull();
   expect(keyViewer("Bearer smk_madeup")).toBeNull();
   expect(keyViewer(null)).toBeNull();

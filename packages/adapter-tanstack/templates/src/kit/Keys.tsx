@@ -1,7 +1,7 @@
 // Smithable app kit: keys for the API (docs/design/integrations.md §2), on the users page. A key
 // has a name saying what it is for, a role and an optional end date; it is shown once, then only
 // its first characters. Revoking it stops it at once.
-import { useEffect, useId, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
@@ -30,22 +30,46 @@ export interface KeyUse {
   tools: boolean;
 }
 
+/**
+ * Copies the text and says so. Where the browser refuses (a frame that may not write to the
+ * clipboard, a page not on https), it selects the text instead, for Ctrl+C.
+ */
+function CopyButton({ text, shown }: { text: string; shown: RefObject<HTMLElement | null> }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch {
+          const selection = window.getSelection();
+          if (shown.current && selection) selection.selectAllChildren(shown.current);
+        }
+      }}
+    >
+      {copied ? w.copied : w.copy}
+    </Button>
+  );
+}
+
 /** One block of text to copy, with its button. */
 function Copyable({ label, text }: { label: string; text: string }) {
+  const shown = useRef<HTMLPreElement>(null);
   return (
     <div className="space-y-1">
       <p className="text-sm">{label}</p>
       <div className="flex items-start gap-2">
-        <pre className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded bg-muted px-3 py-2 text-xs">
+        <pre
+          ref={shown}
+          className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded bg-muted px-3 py-2 text-xs"
+        >
           {text}
         </pre>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => navigator.clipboard?.writeText(text)}
-        >
-          {w.copy}
-        </Button>
+        <CopyButton text={text} shown={shown} />
       </div>
     </div>
   );
@@ -134,6 +158,7 @@ export function Keys({
   const [failure, setFailure] = useState<string>();
   const label = (value: string) => roles.find((r) => r.value === value)?.label ?? value;
   const id = useId();
+  const shownKey = useRef<HTMLElement>(null);
   return (
     <section data-kit="keys" className="mt-10 space-y-4">
       <div>
@@ -183,6 +208,7 @@ export function Keys({
           <Input
             id={`${id}-until`}
             type="date"
+            min={new Date().toISOString().slice(0, 10)}
             value={until}
             onChange={(e) => setUntil(e.target.value)}
           />
@@ -198,16 +224,14 @@ export function Keys({
         <Card role="status" className="space-y-2 p-card">
           <p className="text-sm font-medium">{w.copyKeyNow}</p>
           <div className="flex items-center gap-2">
-            <code data-part="key" className="break-all rounded bg-muted px-2 py-1 text-sm">
+            <code
+              ref={shownKey}
+              data-part="key"
+              className="break-all rounded bg-muted px-2 py-1 text-sm"
+            >
               {made}
             </code>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigator.clipboard?.writeText(made)}
-            >
-              {w.copy}
-            </Button>
+            <CopyButton text={made} shown={shownKey} />
           </div>
           <UsingAKey use={use} secret={made} />
         </Card>
