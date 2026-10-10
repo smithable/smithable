@@ -529,7 +529,7 @@ operation(s) → validate → write manifest → compile → migrate (dev DB)
 2. **Manifest free text.** Proposed `description`, `intent`, `rules` or `examples`.
 3. **Custom code.** Edits restricted to the custom files of specific concepts, with the generated contract as the interface. When AI implements a rule, it must also write a test that names the rule, so the rule can reach **Implemented and tested** (§2.3).
 
-A drafted app's pictures (the landing page's hero, its mark, a few sample pictures) come from the Smithable image library by its tags, chosen in `@smithable/ai` from the index the host fetches and caches; offline, the app starts without pictures.
+A drafted app's pictures (the landing page's hero, its mark, a few sample pictures) come from the Smithable image library by its tags, chosen in `@smithable/ai` from the index the host fetches and caches; offline, the app starts without pictures. They are made with an AI, so each carries `generated: true` (the content file's pictures, the sample files' and the seeded record pictures' JSON), and the kit's `AiMarked` labels a picture so marked where it is shown whole (AI Act art. 50); the flag is data, so a maker's own pictures are labelled only when the maker sets it. The app's owner can switch the labels off (`aiBadge: false` in smithable.ux.yml, presentation): the owner is the deployer who answers for disclosure, and the engine keeps one default, on, wherever the app is hosted.
 
 AI never edits generated or kit files.
 

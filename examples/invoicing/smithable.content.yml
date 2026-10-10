@@ -1,6 +1,6 @@
 # What visitors read. Derived from names when not given here.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: A receipt with a torn edge and a coin }
+logo: { src: images/logo.webp, alt: A receipt with a torn edge and a coin, generated: true }
 
 models:
   BusinessProfile:
@@ -26,6 +26,7 @@ pages:
       image:
         src: images/hero.webp
         alt: A calculator, receipts and a laptop on a wooden desk
+        generated: true
     features:
       title: Everything a freelancer needs
       items:

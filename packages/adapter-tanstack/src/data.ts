@@ -1996,10 +1996,10 @@ export function refinement(field: FieldIR, visitors = false, folder = ""): strin
       return bounds(100) ? `(s) => s${bounds(100)}` : undefined;
     case "picture":
       // What src/kit/uploads.ts returned, plus the description a person wrote.
-      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })${optional}`;
+      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() })${optional}`;
     case "pictures":
       // Several of them, at most the field's maximum.
-      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive() })).max(${field.max ?? PICTURES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() })).max(${field.max ?? PICTURES_MAX})${optional}`;
     case "file":
       // What src/kit/uploads.ts returned for a document. Its type is shown, never served: the
       // file is sent with the type of its extension (fileHeaders).

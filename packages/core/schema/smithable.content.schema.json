@@ -39,6 +39,10 @@
         "alt": {
           "type": "string",
           "description": "What the mark shows."
+        },
+        "generated": {
+          "type": "boolean",
+          "description": "Made by an AI (a mark is never badged)."
         }
       }
     },
@@ -204,6 +208,10 @@
                 },
                 "alt": {
                   "type": "string"
+                },
+                "generated": {
+                  "type": "boolean",
+                  "description": "Made by an AI: the app marks it as such where it could pass for a photograph."
                 }
               }
             },
@@ -260,6 +268,10 @@
                       },
                       "alt": {
                         "type": "string"
+                      },
+                      "generated": {
+                        "type": "boolean",
+                        "description": "Made by an AI: the app marks it as such where it could pass for a photograph."
                       }
                     }
                   },

@@ -12,6 +12,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="activity-log"",
     "data-part="line"",
   ],
+  "src/kit/AiMark.tsx": [
+    "data-part="ai-mark"",
+  ],
   "src/kit/AppShell.tsx": [
     "data-kit="app-shell"",
     "data-part="header"",

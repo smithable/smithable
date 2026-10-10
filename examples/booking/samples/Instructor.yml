@@ -1,6 +1,6 @@
 - name: Emma Lindqvist
   bio: Emma has taught Hatha and Yin for twelve years. Her classes are calm, precise and full of small adjustments.
-  portrait: { file: 0.webp, alt: Emma's class stretching sideways in the bright studio }
+  portrait: { file: 0.webp, alt: Emma's class stretching sideways in the bright studio, generated: true }
 - name: Oskar Berg
   bio: Oskar came to yoga from distance running and teaches Vinyasa and Power flow. He likes a good playlist and a clear count.
 - name: Aino Virtanen

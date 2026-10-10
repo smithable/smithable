@@ -23,6 +23,7 @@ export const w = {
   adding: "Lägger till…",
   address: "Adress",
   ai: "AI",
+  aiGenerated: "AI-genererad",
   aiMayBeWrong: "Svaren kan komma från en AI och kan vara fel. Kontrollera det som är viktigt.",
   all: "Alla",
   any: "Alla",

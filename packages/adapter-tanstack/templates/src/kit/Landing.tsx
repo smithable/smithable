@@ -20,6 +20,7 @@ import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
+import { AiMarked } from "./AiMark";
 import { AppLink } from "./AppLink";
 import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
@@ -310,6 +311,8 @@ export function Section({
 export interface LandingImage {
   src: string;
   alt: string;
+  /** Made by an AI: marked where it is shown whole (AiMark.tsx). */
+  generated?: boolean;
 }
 
 export function Hero({
@@ -483,17 +486,23 @@ export function Hero({
         shortcutList && "pb-20 sm:pb-28",
       )}
     >
-      <img
-        src={image.src}
-        alt={image.alt}
-        width={1200}
-        height={800}
-        fetchPriority="high"
-        className={cn(
-          "aspect-[3/2] w-full rounded-xl object-cover",
-          imageSide === "right" && "lg:order-2",
-        )}
-      />
+      <AiMarked
+        generated={image.generated}
+        full
+        className={cn(imageSide === "right" && "lg:order-2")}
+      >
+        <img
+          src={image.src}
+          alt={image.alt}
+          width={1200}
+          height={800}
+          fetchPriority="high"
+          className={cn(
+            "aspect-[3/2] w-full rounded-xl object-cover",
+            imageSide === "right" && "lg:order-2",
+          )}
+        />
+      </AiMarked>
       {text}
       {/* After the picture too (it moves to the right with order-2), across both columns. */}
       {!shortcutList && more && (
@@ -574,7 +583,7 @@ export function RecordCards({
     tone?: "success" | "warning" | "danger";
     /** Where the card opens, e.g. its article. */
     href?: string;
-    picture?: { src: string; alt: string; width: number; height: number };
+    picture?: { src: string; alt: string; width: number; height: number; generated?: boolean };
   }[];
   /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
   layout?: "cards" | "list" | "grid";
@@ -611,14 +620,16 @@ export function RecordCards({
     !card.picture ? (
       icon && <PicturePlaceholder icon={icon} className={className} />
     ) : (
-      <img
-        src={card.picture.src}
-        alt={card.picture.alt}
-        width={card.picture.width}
-        height={card.picture.height}
-        loading="lazy"
-        className={className}
-      />
+      <AiMarked generated={card.picture.generated} className="shrink-0">
+        <img
+          src={card.picture.src}
+          alt={card.picture.alt}
+          width={card.picture.width}
+          height={card.picture.height}
+          loading="lazy"
+          className={className}
+        />
+      </AiMarked>
     );
   const details = (card: CardItem) => (
     <>
@@ -1119,21 +1130,23 @@ export function Gallery({
             <figure>
               <button
                 type="button"
-                className="block w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="relative block w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 aria-label={w.openPicture(item.image.alt)}
                 onClick={() => {
                   show(i);
                   dialog.current?.showModal();
                 }}
               >
-                <img
-                  src={item.image.src}
-                  alt={item.image.alt}
-                  loading="lazy"
-                  width={600}
-                  height={400}
-                  className="aspect-[3/2] w-full object-cover transition-transform hover:scale-105"
-                />
+                <AiMarked generated={item.image.generated}>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.alt}
+                    loading="lazy"
+                    width={600}
+                    height={400}
+                    className="aspect-[3/2] w-full object-cover transition-transform hover:scale-105"
+                  />
+                </AiMarked>
               </button>
               {item.caption && (
                 <figcaption
@@ -1160,11 +1173,14 @@ export function Gallery({
       >
         {current && (
           <figure className="relative">
-            <img
-              src={current.image.src}
-              alt={current.image.alt}
-              className="max-h-[80vh] w-full rounded-lg object-contain"
-            />
+            {/* As wide as the picture, so the mark sits on its corner. */}
+            <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
+              <img
+                src={current.image.src}
+                alt={current.image.alt}
+                className="mx-auto block max-h-[80vh] max-w-full rounded-lg"
+              />
+            </AiMarked>
             {current.caption && (
               <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
             )}
