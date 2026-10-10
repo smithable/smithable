@@ -172,6 +172,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
       event.preventDefault();
       post({ type: "undo" });
     }
+    // Ctrl+R (Cmd+R) in the preview reloads the preview alone, not Studio around it.
+    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "r") {
+      event.preventDefault();
+      location.reload();
+    }
   });
   // The page the preview is on, for Studio's address bar: after every navigation, including
   // the app's own (the router uses the History API) and Back.
