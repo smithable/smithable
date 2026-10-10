@@ -722,6 +722,38 @@ function LandingLook({
           className="w-44"
         />
       </div>
+      {/* The sections show in the order written: each moves past its neighbour. */}
+      <ul aria-label={`Sections of ${title}`} className="space-y-1">
+        {sections.map((section, i) => {
+          const name = humanize(section.name);
+          const move = (other: string | undefined, where: "before" | "after") => {
+            if (other) void run("moveSection", { page, section: section.name, [where]: other });
+          };
+          return (
+            <li key={section.name} className="flex items-center gap-2">
+              <span className="flex-1">{name}</span>
+              <button
+                type="button"
+                aria-label={`Move ${name} up`}
+                disabled={i === 0}
+                onClick={() => move(sections[i - 1]?.name, "before")}
+                className="px-1 disabled:opacity-30"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                aria-label={`Move ${name} down`}
+                disabled={i === sections.length - 1}
+                onClick={() => move(sections[i + 1]?.name, "after")}
+                className="px-1 disabled:opacity-30"
+              >
+                ↓
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
           const label = `${humanize(key)} of ${humanize(section.name)}`;
