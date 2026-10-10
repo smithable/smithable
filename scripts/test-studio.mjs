@@ -1171,6 +1171,25 @@ try {
         .waitFor({ timeout: 60000 });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
+      // The contact section, added last, moved above the footer with its arrow.
+      await page
+        .getByRole("list", { name: "Sections of Home" })
+        .getByRole("button", { name: "Move Contact up" })
+        .click();
+      const above = () => {
+        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+        const home = spec.slice(spec.indexOf("\n  home:"));
+        return home.indexOf("contact:") < home.indexOf("footer:");
+      };
+      for (let i = 0; i < 60 && !above(); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (!above()) throw new Error("the contact section was not moved above the footer");
+      // The panel follows: the contact section is no longer last.
+      const down = page
+        .getByRole("list", { name: "Sections of Home" })
+        .getByRole("button", { name: "Move Contact down" });
+      for (let i = 0; i < 60 && (await down.isDisabled()); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
       await page.getByRole("tab", { name: "What it does" }).click();
     },
   );
