@@ -3,6 +3,7 @@ import { CURRENCIES } from "../currencies.js";
 import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
+import { TIME_ZONES } from "../time-zones.js";
 import { appOperations } from "./app-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -58,7 +59,7 @@ export const appSection: SpecSection<"app"> = {
             value,
             "invalid-timezone",
             `Unknown time zone "${timezone}".`,
-            `Use a name like "Europe/Mariehamn".`,
+            didYouMean(timezone, TIME_ZONES) ?? `Use a name like "Europe/Mariehamn".`,
           );
         } else if (timezone !== undefined) {
           app.timezone = timezone;

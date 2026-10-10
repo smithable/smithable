@@ -9,6 +9,7 @@ import { SCALAR_TYPES, USER_MODEL } from "./ir.js";
 import { LANDING_SECTIONS } from "./patterns.js";
 import { buildJsonSchema } from "./schema.js";
 import type { JsonSchema } from "./section.js";
+import { TIME_ZONES } from "./time-zones.js";
 
 export interface Suggestion {
   label: string;
@@ -237,6 +238,7 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
   const key = place.key;
   const kinds = [...models.keys()];
   if (depth === 0 && key === "navigation") return [...pages.keys()];
+  if (depth === 1 && section === "app" && key === "timezone") return [...TIME_ZONES];
   if (section === "models") {
     if (part === "fields" && (depth === 3 || (depth === 4 && key === "type")))
       return [...SCALAR_TYPES, ...kinds, USER_MODEL];
