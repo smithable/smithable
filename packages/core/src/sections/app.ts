@@ -1,6 +1,8 @@
 import { checkKeys, mapEntries, readString } from "../context.js";
+import { CURRENCIES } from "../currencies.js";
 import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
+import { didYouMean } from "../suggest.js";
 import { appOperations } from "./app-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
@@ -18,7 +20,7 @@ export const appSection: SpecSection<"app"> = {
       name: { type: "string", minLength: 1, description: "The application's name." },
       currency: {
         type: "string",
-        pattern: "^[A-Z]{3}$",
+        enum: CURRENCIES,
         description: "ISO 4217 currency code, e.g. EUR.",
       },
       timezone: { type: "string", description: "IANA time zone, e.g. Europe/Mariehamn." },
@@ -39,11 +41,12 @@ export const appSection: SpecSection<"app"> = {
         app.name = readString(ctx, value, `"app.name"`) ?? "";
       } else if (key === "currency") {
         const currency = readString(ctx, value, `"app.currency"`);
-        if (currency !== undefined && !/^[A-Z]{3}$/.test(currency)) {
+        if (currency !== undefined && !CURRENCIES.includes(currency)) {
           ctx.error(
             value,
             "invalid-currency",
-            `Currency "${currency}" must be a three-letter code like EUR or USD.`,
+            `Currency "${currency}" is not an ISO 4217 code like EUR or USD.`,
+            didYouMean(currency, CURRENCIES),
           );
         } else if (currency !== undefined) {
           app.currency = currency;
