@@ -109,7 +109,7 @@ export function Selected({
         >
           <Input
             aria-label="New name"
-            placeholder="New name"
+            placeholder="Name in the spec (used in code)"
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />

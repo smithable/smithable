@@ -5929,7 +5929,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true })}
+        onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
@@ -6206,7 +6206,7 @@ function AdminNotesPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by title or body"
-        onSearch={(text) => navigate({ to: "/admin/notes", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/notes", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -6418,7 +6418,7 @@ function AdminProjectsPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or description"
-        onSearch={(text) => navigate({ to: "/admin/projects", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/projects", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -6599,7 +6599,7 @@ function AdminTasksPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by title, status or details"
-        onSearch={(text) => navigate({ to: "/admin/tasks", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/tasks", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -7465,7 +7465,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true })}
+        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
@@ -8079,7 +8079,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "2a3ec1fa kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -8120,17 +8120,17 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "f81aa6c4 generated",
-  "src/routes/admin/activity.tsx": "10f1cf91 generated",
+  "src/routes/admin/activity.tsx": "c5154348 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "679d3210 generated",
   "src/routes/admin/notes/$id.tsx": "ca4991ea generated",
-  "src/routes/admin/notes/index.tsx": "bf77ab81 generated",
+  "src/routes/admin/notes/index.tsx": "baab28ee generated",
   "src/routes/admin/notes/new.tsx": "a58aaa05 generated",
   "src/routes/admin/projects/$id.tsx": "9b862da1 generated",
-  "src/routes/admin/projects/index.tsx": "fb106433 generated",
+  "src/routes/admin/projects/index.tsx": "2a832f5a generated",
   "src/routes/admin/projects/new.tsx": "ffcaf793 generated",
   "src/routes/admin/tasks/$id.tsx": "6f4b808e generated",
-  "src/routes/admin/tasks/index.tsx": "61449d08 generated",
+  "src/routes/admin/tasks/index.tsx": "55644ad7 generated",
   "src/routes/admin/tasks/new.tsx": "15a327c2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.$field.ts": "497e29a6 generated",
@@ -8153,7 +8153,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "efde7e0b generated",
-  "src/routes/team/activity.tsx": "1a9c5e5b generated",
+  "src/routes/team/activity.tsx": "9b327b8e generated",
   "src/routes/team/index.tsx": "59b3387f generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "96d86081 kit",
@@ -12371,7 +12371,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true })}
+        onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
@@ -12679,7 +12679,7 @@ function AdminClassTypesPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name, summary or level"
-        onSearch={(text) => navigate({ to: "/admin/class-types", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/class-types", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -12939,7 +12939,7 @@ function AdminInstructorsPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or bio"
-        onSearch={(text) => navigate({ to: "/admin/instructors", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/instructors", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -13118,7 +13118,7 @@ function AdminMessagesPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name, email or message"
-        onSearch={(text) => navigate({ to: "/admin/messages", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/messages", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -13297,7 +13297,7 @@ function AdminPostsPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by title, address, summary, body or status"
-        onSearch={(text) => navigate({ to: "/admin/posts", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/admin/posts", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {more && (
         <p className="text-sm text-muted-foreground">The newest 500 are shown; search to find the others.</p>
@@ -16079,7 +16079,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -16116,22 +16116,22 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "ae2a0c70 generated",
-  "src/routes/admin/activity.tsx": "61d5fa75 generated",
+  "src/routes/admin/activity.tsx": "2660647c generated",
   "src/routes/admin/bookings/$id.tsx": "06d4ddfd generated",
   "src/routes/admin/bookings/index.tsx": "4ac07a9d generated",
   "src/routes/admin/bookings/new.tsx": "788212c8 generated",
   "src/routes/admin/class-types/$id.tsx": "637dd4d6 generated",
-  "src/routes/admin/class-types/index.tsx": "4f46dd43 generated",
+  "src/routes/admin/class-types/index.tsx": "ca92a2f2 generated",
   "src/routes/admin/class-types/new.tsx": "4e81dbe1 generated",
   "src/routes/admin/index.tsx": "63b091f7 generated",
   "src/routes/admin/instructors/$id.tsx": "377020a1 generated",
-  "src/routes/admin/instructors/index.tsx": "4c86f3dd generated",
+  "src/routes/admin/instructors/index.tsx": "fc87eb00 generated",
   "src/routes/admin/instructors/new.tsx": "d5aff10f generated",
   "src/routes/admin/messages/$id.tsx": "edf5cb21 generated",
-  "src/routes/admin/messages/index.tsx": "d0ebbc5e generated",
+  "src/routes/admin/messages/index.tsx": "1e7da793 generated",
   "src/routes/admin/messages/new.tsx": "a01adbd7 generated",
   "src/routes/admin/posts/$id.tsx": "3f1840af generated",
-  "src/routes/admin/posts/index.tsx": "7c80bf07 generated",
+  "src/routes/admin/posts/index.tsx": "968f38a4 generated",
   "src/routes/admin/posts/new.tsx": "65198788 generated",
   "src/routes/admin/sessions/$id.tsx": "96712101 generated",
   "src/routes/admin/sessions/index.tsx": "d432c3ef generated",
@@ -19172,7 +19172,7 @@ function CustomersPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or email"
-        onSearch={(text) => navigate({ to: "/customers", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/customers", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -19503,7 +19503,7 @@ function OrdersPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by number or customer"
-        onSearch={(text) => navigate({ to: "/orders", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/orders", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -19921,7 +19921,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true })}
+        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
@@ -20527,7 +20527,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -20564,18 +20564,18 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "f39699c3 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
-  "src/routes/customers/index.tsx": "9629a54b generated",
+  "src/routes/customers/index.tsx": "6f16f2c6 generated",
   "src/routes/customers/new.tsx": "a80fd5cc generated",
   "src/routes/customers/trash.tsx": "79ca3586 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "c596748a generated",
-  "src/routes/orders/index.tsx": "ab0e006b generated",
+  "src/routes/orders/index.tsx": "a11a106a generated",
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "2d049a58 generated",
-  "src/routes/team/activity.tsx": "95063ee2 generated",
+  "src/routes/team/activity.tsx": "d271c9df generated",
   "src/routes/team/index.tsx": "184b5fba generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "b45a0afb kit",
@@ -24653,7 +24653,7 @@ function InvoicesPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/invoices", search: { q, ...next }, replace: true })}
+        onChange={(next) => navigate({ to: "/invoices", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -25629,7 +25629,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
@@ -25681,7 +25681,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoice-lines/index.tsx": "915d0808 generated",
   "src/routes/invoice-lines/new.tsx": "f02e0160 generated",
   "src/routes/invoices/$id.tsx": "e966a2d8 generated",
-  "src/routes/invoices/index.tsx": "6585a26b generated",
+  "src/routes/invoices/index.tsx": "8922d18a generated",
   "src/routes/invoices/new.tsx": "3c460685 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -27653,12 +27653,12 @@ function CatalogPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by title, description or place"
-        onSearch={(text) => navigate({ to: "/", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true })}
+        onSearch={(text) => navigate({ to: "/", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
       />
       {viewer && (
         <SavedTabs
           saved={view === "saved"}
-          onChange={(saved) => navigate({ to: "/", search: (prev) => ({ ...prev, view: saved ? "saved" : undefined, page: undefined }), replace: true })}
+          onChange={(saved) => navigate({ to: "/", search: (prev) => ({ ...prev, view: saved ? "saved" : undefined, page: undefined }), replace: true, resetScroll: false })}
         />
       )}
       <Filters
@@ -27697,7 +27697,7 @@ function CatalogPage() {
   { value: "-createdAt", label: "Added, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/", search: { q, view, ...next }, replace: true })}
+        onChange={(next) => navigate({ to: "/", search: { q, view, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -29008,7 +29008,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -29051,7 +29051,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "eed77249 generated",
+  "src/routes/index.tsx": "09118de2 generated",
   "src/routes/my-items/$id.tsx": "0bf039ab generated",
   "src/routes/my-items/index.tsx": "93e89fb5 generated",
   "src/routes/my-items/new.tsx": "cc85bb39 generated",
@@ -30552,7 +30552,7 @@ function ItemsPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or summary"
-        onSearch={(text) => navigate({ to: "/items", search: { q: text || undefined }, replace: true })}
+        onSearch={(text) => navigate({ to: "/items", search: { q: text || undefined }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -31146,7 +31146,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -31182,7 +31182,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1586d9ed generated",
   "src/routes/items/$id.tsx": "2201c947 generated",
-  "src/routes/items/index.tsx": "058d2480 generated",
+  "src/routes/items/index.tsx": "3fcf1851 generated",
   "src/routes/items/new.tsx": "b2461bfe generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
@@ -39149,7 +39149,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true })}
+        onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
@@ -40048,7 +40048,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "6b887c75 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "2ac31c35 kit",
+  "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "bb730f23 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "b2542cc9 kit",
@@ -40114,7 +40114,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "86edddef generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
-  "src/routes/team/activity.tsx": "fb17a3c3 generated",
+  "src/routes/team/activity.tsx": "a4af8796 generated",
   "src/routes/team/index.tsx": "9100f9bd generated",
   "src/routes/updates/$id.tsx": "0fffa578 generated",
   "src/routes/updates/index.tsx": "40f4b24a generated",

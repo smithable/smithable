@@ -154,8 +154,12 @@ export function Guide({
             {current.stop.text}
           </p>
           {current.stop.choice ? (
-            // How the person wants to work: No code goes on with the tour, Code switches to it.
+            // How the person wants to work: No code goes on with the tour, Code switches to it, and
+            // Skip guide ends it here (in the mode Studio is in).
             <div className="flex justify-end gap-2">
+              <Button variant="ghost" className="mr-auto" onClick={end}>
+                Skip guide
+              </Button>
               <Button variant="ghost" onClick={onCode}>
                 Code
               </Button>

@@ -16,6 +16,7 @@ import { request } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { crc32, deflateSync } from "node:zlib";
 import { chromium } from "playwright";
 // The MCP SDK is the CLI's dependency.
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
@@ -32,6 +33,29 @@ const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
 checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3]);
 const base = `http://localhost:${port}`;
 let failed = false;
+
+/** A grey PNG of the size given, for the logo. */
+function png(width, height) {
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(Buffer.concat([Buffer.from(type), data])));
+    return Buffer.concat([length, Buffer.from(type), data, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 0, 0, 0, 0], 8); // 8-bit greyscale
+  const rows = Buffer.alloc((width + 1) * height, 0x80);
+  for (let y = 0; y < height; y++) rows[y * (width + 1)] = 0; // each row: no filter
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(rows)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
 
 async function step(name, fn) {
   try {
@@ -1005,15 +1029,13 @@ try {
       await new Promise((r) => setTimeout(r, 1000));
     }
     // The app's logo (app-logo.md §5): a file from the computer, shown in the preview's frame,
-    // then removed.
+    // then removed. One too small is refused before it is sent, saying what is wanted.
+    const tiny = join(dir, "..", "studio-test-tiny.png");
+    writeFileSync(tiny, png(1, 1));
+    await look("Logo").locator('input[type="file"]').setInputFiles(tiny);
+    await look("Logo").getByRole("alert").getByText("at least 64 px").waitFor();
     const mark = join(dir, "..", "studio-test-mark.png");
-    writeFileSync(
-      mark,
-      Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-        "base64",
-      ),
-    );
+    writeFileSync(mark, png(64, 64));
     await look("Logo").locator('input[type="file"]').setInputFiles(mark);
     for (let i = 0; !/src: images\/logo\.png/.test(content()); i++) {
       if (i === 60) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
