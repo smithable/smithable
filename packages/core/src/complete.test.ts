@@ -211,3 +211,9 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     "default access",
   );
 });
+
+test("the app's currency is offered from the ISO 4217 codes", () => {
+  const found = at("smithable: 0.1\napp:\n  name: Shop\n  currency: SE‸");
+  expect(found.labels).toEqual(expect.arrayContaining(["SEK"]));
+  expect(found.labels).not.toContain("EUR");
+});
