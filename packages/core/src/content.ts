@@ -1,5 +1,12 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { checkKeys, type Entry, mapEntries, ParseContext, readString } from "./context.js";
+import {
+  checkKeys,
+  type Entry,
+  mapEntries,
+  ParseContext,
+  readBoolean,
+  readString,
+} from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
 import { capitalize, humanize, plural } from "./naming.js";
@@ -70,6 +77,8 @@ export interface SectionContent {
 export interface ContentImage {
   src: string;
   alt: string;
+  /** Made by an AI (the image library's pictures): the app says so on pictures that could pass for photographs. */
+  generated?: true;
 }
 
 /** A picture's file, relative to the app's public/ folder. */
@@ -205,7 +214,7 @@ export function validateContent(
         );
     }
     if (key === "logo") {
-      const { src, alt } = readTexts(ctx, value, '"logo"', ["src", "alt"]);
+      const { src, alt, generated } = readPicture(ctx, value, '"logo"');
       if (!src || !LOGO_SRC.test(src))
         ctx.error(
           value,
@@ -213,7 +222,7 @@ export function validateContent(
           '"src" of "logo" must be a file in the app\'s public/images/ folder, e.g. images/logo.webp (webp, avif, jpg, png or svg).',
         );
       else if (!alt) ctx.error(value, "logo-alt", '"logo" needs "alt": what the mark shows.');
-      else content.logo = { src, alt };
+      else content.logo = { src, alt, ...(generated ? { generated } : {}) };
     }
     if (key === "consent")
       content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);
@@ -479,13 +488,35 @@ function readFieldTexts(
   return result;
 }
 
-/** A picture: `{ src: images/<file>, alt: <what it shows> }`. */
+/** A picture's texts, and whether an AI made it (`generated: true`). */
+function readPicture(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+): { src?: string; alt?: string; generated?: true } {
+  const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
+    allowed: ["src", "alt", "generated"],
+  });
+  const flag = entries.find((e) => e.key === "generated");
+  const texts = readTexts(
+    ctx,
+    node,
+    where,
+    ["src", "alt"],
+    entries.filter((e) => e !== flag),
+  );
+  return flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
+    ? { ...texts, generated: true }
+    : texts;
+}
+
+/** A picture: `{ src: images/<file>, alt: <what it shows>, generated?: true }`. */
 function readImage(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
 ): ContentImage | undefined {
-  const { src, alt } = readTexts(ctx, node, where, ["src", "alt"]);
+  const { src, alt, generated } = readPicture(ctx, node, where);
   if (!src || !IMAGE_SRC.test(src)) {
     ctx.error(
       node,
@@ -502,7 +533,7 @@ function readImage(
     );
     return undefined;
   }
-  return { src, alt };
+  return { src, alt, ...(generated ? { generated } : {}) };
 }
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */

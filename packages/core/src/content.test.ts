@@ -140,6 +140,15 @@ pages:
     sections: { hero: { image: { src: "images/hero.webp", alt: "A yoga class" } } },
   });
   expect(hero("{ src: images/hero.webp }").diagnostics[0]?.message).toContain('needs "alt"');
+  // One an AI made says so, for the badge; a flag that is not a yes or no is an error.
+  expect(
+    hero("{ src: images/hero.webp, alt: A yoga class, generated: true }").content?.pages.home,
+  ).toEqual({
+    sections: {
+      hero: { image: { src: "images/hero.webp", alt: "A yoga class", generated: true } },
+    },
+  });
+  expect(hero("{ src: images/hero.webp, alt: x, generated: yes }").diagnostics).not.toEqual([]);
   expect(hero("{ src: ../secret.webp, alt: x }").diagnostics[0]?.message).toContain(
     "public/images/",
   );
@@ -317,6 +326,10 @@ test("reads the app's logo, and says what is wrong with one", () => {
   );
   expect(diagnostics).toEqual([]);
   expect(content?.logo).toEqual({ src: "images/logo.svg", alt: "A lotus" });
+  expect(
+    check("smithableContent: 0.1\nlogo: { src: images/logo.webp, alt: A lotus, generated: true }\n")
+      .content?.logo,
+  ).toEqual({ src: "images/logo.webp", alt: "A lotus", generated: true });
   expect(
     check("smithableContent: 0.1\nlogo: { src: /logo.webp, alt: A lotus }\n").diagnostics,
   ).toMatchObject([{ code: "logo-src" }]);

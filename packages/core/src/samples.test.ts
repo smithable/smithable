@@ -151,6 +151,15 @@ pages:
     { picture: "a.webp", alt: "A picture of Bike" },
     { picture: "b.webp", alt: "The back wheel" },
   ]);
+  // A picture an AI made says so, for the app's mark on it.
+  const made = run("- { title: Bike, photos: [{ file: c.webp, alt: A bike, generated: true }] }\n");
+  expect(made.samples.Item?.[0]?.photos).toEqual([
+    { picture: "c.webp", alt: "A bike", generated: true },
+  ]);
+  expect(
+    run("- { title: Bike, photos: [{ file: c.webp, alt: A bike, generated: maybe }] }\n")
+      .diagnostics,
+  ).not.toEqual([]);
   const messages = (items: string) => run(items).diagnostics.map((d) => d.message);
   const eleven = Array.from({ length: 11 }, (_, i) => `p${i}.webp`).join(", ");
   expect(messages(`- { title: Bike, photos: [${eleven}] }\n`)[0]).toContain("at most 10 pictures");

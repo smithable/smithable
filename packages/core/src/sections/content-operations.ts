@@ -43,6 +43,9 @@ const setText: Operation<{ path: string[]; text: string }> = {
       if (!content.has(path)) throw new OperationError(`${path.join(".")} has no text of its own.`);
       content.removeAndPrune(path, 0);
     } else put(content, path, text);
+    // Another file is not known to be made by an AI: the picture loses its mark.
+    if (path[path.length - 1] === "src" && content.has([...parent, "generated"]))
+      content.remove([...parent, "generated"]);
     return [];
   },
 };

@@ -2,6 +2,7 @@
 // picture, date, author and formatted body, and links to the ones before and after it.
 // To change them, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
+import { AiMarked } from "./AiMark";
 import { AppLink } from "./AppLink";
 import { MarkdownText } from "./Markdown";
 import { w } from "./words";
@@ -11,7 +12,7 @@ export interface ArticleCard {
   title: string;
   summary?: string;
   date?: string;
-  picture?: { src: string; alt: string; width: number; height: number };
+  picture?: { src: string; alt: string; width: number; height: number; generated?: boolean };
 }
 
 export function ArticleList({
@@ -32,14 +33,16 @@ export function ArticleList({
           <li key={item.href} data-part="row">
             <Card className="relative h-full overflow-hidden hover:bg-hover">
               {item.picture && (
-                <img
-                  src={item.picture.src}
-                  alt={item.picture.alt}
-                  width={item.picture.width}
-                  height={item.picture.height}
-                  loading="lazy"
-                  className="aspect-[3/2] w-full object-cover"
-                />
+                <AiMarked generated={item.picture.generated}>
+                  <img
+                    src={item.picture.src}
+                    alt={item.picture.alt}
+                    width={item.picture.width}
+                    height={item.picture.height}
+                    loading="lazy"
+                    className="aspect-[3/2] w-full object-cover"
+                  />
+                </AiMarked>
               )}
               <div className="space-y-2 p-card">
                 {item.date && <p className="text-sm text-muted-foreground">{item.date}</p>}
@@ -101,14 +104,16 @@ export function ArticleView({
   return (
     <article data-kit="article" className="mx-auto max-w-3xl space-y-6">
       {picture && (
-        <img
-          src={picture.src}
-          alt={picture.alt}
-          width={picture.width}
-          height={picture.height}
-          fetchPriority="high"
-          className="aspect-[3/2] w-full rounded-xl object-cover"
-        />
+        <AiMarked generated={picture.generated} full>
+          <img
+            src={picture.src}
+            alt={picture.alt}
+            width={picture.width}
+            height={picture.height}
+            fetchPriority="high"
+            className="aspect-[3/2] w-full rounded-xl object-cover"
+          />
+        </AiMarked>
       )}
       <header className="space-y-2">
         <h1 data-part="title" className="text-3xl leading-tight font-bold sm:text-4xl">
