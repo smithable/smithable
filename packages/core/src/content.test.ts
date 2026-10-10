@@ -47,8 +47,27 @@ menus:
     },
     pages: { customers: { title: "Our clients" } },
     menus: { admin: { label: "Administration" } },
+    actions: {},
     outgoing: {},
   });
+});
+
+test("an action's label, by its name in smithable.yml", () => {
+  const withAction = validateSpec({
+    path: "smithable.yml",
+    text: `${spec}actions:\n  upgrade: { on: Customer, set: { segment: enterprise } }\n`,
+  }).ir as SpecIR;
+  const read = (text: string) =>
+    validateContent({ path: "smithable.content.yml", text }, withAction);
+  expect(
+    read("smithableContent: 0.1\nactions:\n  upgrade: { label: Uppgradera }\n").content?.actions,
+  ).toEqual({ upgrade: { label: "Uppgradera" } });
+  expect(
+    read("smithableContent: 0.1\nactions:\n  upgrad: { label: X }\n").diagnostics.map((d) => [
+      d.code,
+      d.hint,
+    ]),
+  ).toEqual([["unknown-action", 'Did you mean "upgrade"?']]);
 });
 
 test("every reference must exist in the spec", () => {

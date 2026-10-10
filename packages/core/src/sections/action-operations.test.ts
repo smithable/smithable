@@ -200,6 +200,18 @@ describe("removeAction", () => {
     );
   });
 
+  test("its label in the content file goes with it", () => {
+    const labelled = applyOperation(status, "setText", {
+      path: ["actions", "resolve", "label"],
+      text: "Åtgärdad",
+    });
+    if (!labelled.ok) throw new Error(labelled.message);
+    expect(labelled.files.content).toContain("actions:\n  resolve:\n    label: Åtgärdad\n");
+    const result = applyOperation(labelled.files, "removeAction", { action: "resolve" });
+    if (!result.ok) throw new Error(result.message);
+    expect(result.files.content ?? "").not.toContain("resolve");
+  });
+
   test("an action there is not is refused", () => {
     expect(run(status, "removeAction", ["close"])).toMatchObject({
       ok: false,

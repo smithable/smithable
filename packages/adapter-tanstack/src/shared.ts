@@ -91,6 +91,9 @@ export function texts(content: ContentIR, appName = "") {
     icon: content.logo
       ? { rel: "icon", href: `/${content.logo.src}` }
       : { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    /** An action's button and page title: its label, else its name in words. */
+    action: (action: { name: string }) =>
+      content.actions[action.name]?.label ?? humanize(action.name),
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];

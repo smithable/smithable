@@ -29,6 +29,8 @@ export interface ContentIR {
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
+  /** An action's button and page title, by its name in smithable.yml; else its name in words. */
+  actions: Record<string, { label?: string }>;
   /** An outgoing mail's subject and the text above the record (integrations.md §4.1b). */
   outgoing: Record<string, { subject?: string; text?: string }>;
   /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
@@ -139,7 +141,7 @@ export interface FieldContent {
 export const CONTENT_VERSION = "0.1";
 
 export function emptyContent(): ContentIR {
-  return { language: LANGUAGES[0], models: {}, pages: {}, menus: {}, outgoing: {} };
+  return { language: LANGUAGES[0], models: {}, pages: {}, menus: {}, actions: {}, outgoing: {} };
 }
 
 /** Parses smithable.content.yml and checks every reference against the spec. */
@@ -192,10 +194,10 @@ export function validateContent(
       "models",
       "pages",
       "menus",
+      "actions",
       "consent",
       "outgoing",
     ],
-    later: ["actions"],
   });
 
   // Where each model's entry is, for a warning about the model.
@@ -247,6 +249,19 @@ export function validateContent(
         "menu",
       )) {
         content.menus[menu.key] = readTexts(ctx, menu.value, `menu "${menu.key}"`, ["label"]);
+      }
+    }
+    if (key === "actions") {
+      for (const action of named(
+        ctx,
+        value,
+        `"actions"`,
+        ir.actions.map((a) => a.name),
+        "action",
+      )) {
+        content.actions[action.key] = readTexts(ctx, action.value, `action "${action.key}"`, [
+          "label",
+        ]);
       }
     }
     if (key === "outgoing") {

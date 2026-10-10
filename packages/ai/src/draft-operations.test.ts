@@ -11,6 +11,7 @@ import {
   openLinked,
   repaired,
   repairFieldShorthand,
+  untranslated,
   visitorFlaws,
 } from "./draft-operations.js";
 import type { Provider } from "./provider.js";
@@ -655,4 +656,42 @@ test("a Swedish description sets the app's language before the model answers, an
   expect(draft.operations?.[0]).toEqual({ op: "setLanguage", args: { language: "sv" } });
   expect(draft.operations?.filter((o) => o.op === "setLanguage")).toHaveLength(1);
   expect(draft.files["smithable.content.yml"]).toContain("language: sv");
+});
+
+test("in a Swedish app, every label, choice, action and page left in English is named, to go back to the model", () => {
+  let files: ProjectFiles = {
+    spec: `smithable: 0.1
+app: { name: Elbolaget }
+models:
+  Outage:
+    fields:
+      title: string!
+      state: new | handled
+pages:
+  outages: { crud: Outage, actions: [resolve] }
+actions:
+  resolve: { on: Outage, set: { state: handled } }
+`,
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [email]\ndefaultAccess: shared\n",
+  };
+  expect(untranslated(files)).toBeUndefined();
+  const step = (op: string, args: Record<string, unknown>) => {
+    const result = applyOperation(files, op, args);
+    if (!result.ok) throw new Error(result.message);
+    files = result.files;
+  };
+  step("setLanguage", { language: "sv" });
+  step("setText", { path: ["models", "Outage", "label"], text: "Avbrott" });
+  step("setText", { path: ["models", "Outage", "fields", "state", "values", "new"], text: "Ny" });
+  expect(untranslated(files)).toEqual({
+    language: "Swedish",
+    paths: [
+      "models.Outage.pluralLabel",
+      "models.Outage.fields.title.label",
+      "models.Outage.fields.state.label",
+      "models.Outage.fields.state.values.handled",
+      "actions.resolve.label",
+      "pages.outages.title",
+    ],
+  });
 });
