@@ -5,3 +5,12 @@ Licensed under the Apache License, Version 2.0 (see LICENSE). The app kit and
 templates in packages/adapter-tanstack/templates are licensed under the
 Zero-Clause BSD licence instead (see packages/adapter-tanstack/KIT-LICENSE), so
 generated applications carry no obligations from this repository.
+
+Pictures. The photographs and the app marks in this repository (the starters' sample
+pictures under examples/*/public/images, the pictures the generated apps show) come from the
+Smithable image library (github.com/smithable/smithable-images): generated with an image
+model, no people photographed, and dedicated to the public domain under CC0 1.0, so they may
+be used for anything without credit. The screenshots in docs/site/starters are of those apps
+and are under this repository's licence. The Smithable name, the wordmark, the icon and the
+smithy pictures in docs/site/brand and apps/studio/src/brand are Smithable's brand: they are
+not covered by the licences above and may not be used to mark another product or service.
