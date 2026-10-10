@@ -31,6 +31,16 @@ cd apps/studio && pnpm dev                                  # in a second termin
 
 Open http://localhost:5173. It is the same Studio on the same app: changes you make there go through `smithable studio` as always. What `smithable studio` itself serves on 4321 is the last `pnpm build`.
 
+## Compatibility
+
+Smithable has three contracts. Each has its own version, and they are kept separate:
+
+- **The spec** (`smithable.yml` and its companions) is versioned by the file's `smithable:` line. A breaking change to it ships with a migration in core's `migrateSpec`, and the version line changes only together with that migration.
+- **The engine** (operations, CLI flags and the MCP tools) follows the packages' semver. An operation, an argument or a CLI flag that goes away is still accepted for one minor release, with a message that names its replacement.
+- **A generated app's API** (`/api/v1`) moves to `v2` only when the generator changes the API's shape incompatibly.
+
+During 0.x, every breaking change gets a line under **Breaking** in [CHANGELOG.md](CHANGELOG.md) that names which contract it hits. Nothing breaks a generated app that is not upgraded: an app is its owner's, and `smithable upgrade` is the only way forward. It is checked like any change, and it can be undone. Hosted apps are offered engine upgrades, never forced to take them ([ARCHITECTURE §14.3](docs/ARCHITECTURE.md)).
+
 ## Sign-off
 
 Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/). Add `Signed-off-by: Your Name <you@example.com>` to each commit (`git commit -s`) to say that you wrote the change or have the right to submit it under the repository's licences: Apache-2.0 for Smithable, 0BSD for the app kit and templates ([NOTICE](NOTICE)).
