@@ -1,5 +1,13 @@
 import { expect, test } from "vitest";
-import { languageNote, writtenIn, writtenInEnglish } from "./language.js";
+import { describedWith } from "./clarify.js";
+import {
+  languageNote,
+  languageQuestion,
+  PAGE_START,
+  textLanguage,
+  writtenIn,
+  writtenInEnglish,
+} from "./language.js";
 
 test("an English description is English, also when it names a place; others are left to the model", () => {
   expect(
@@ -34,5 +42,36 @@ test("a Swedish description is Swedish, and the note says so; a mixed or short l
   expect(writtenIn("Yoga Åbo")).toBeUndefined();
   expect(
     languageNote("Ett schema med klasser som folk kan boka och avboka när de vill."),
-  ).toContain("written in Swedish");
+  ).toContain("texts are in Swedish");
+});
+
+test("the app's language: the language question's answer, else the page's or description's own words", () => {
+  const page = `${PAGE_START} (https://el.ax/). Derive its records, pages, roles and sections; write new texts for it, never copy the site's.
+Title: Ålands Elandelslag
+Text:
+Vi levererar el till hushåll och företag på Åland. Här kan du anmäla avbrott och se när de är lagade, och läsa våra nyheter.`;
+  expect(textLanguage(page)).toBe("sv");
+  const question = languageQuestion("sv");
+  expect(question).toEqual({
+    question: "The site is in Swedish. Should the app's texts be in Swedish or English?",
+    options: ["Swedish", "English"],
+  });
+  const answered = (answer: string) =>
+    describedWith(page, [
+      { question: "Who will use it?", answer: "Our customers and the staff who handle them" },
+      { question: question.question, answer },
+    ]);
+  expect(textLanguage(answered("English"))).toBe("en");
+  expect(textLanguage(answered("Swedish"))).toBe("sv");
+  // Answered in order (--answers), the language's name alone is the answer.
+  expect(
+    textLanguage(
+      describedWith(page, [
+        { question: "(1)", answer: "Our customers" },
+        { question: "(2)", answer: "English" },
+      ]),
+    ),
+  ).toBe("en");
+  // Unanswered, English answers to the other questions do not make the app English.
+  expect(textLanguage(answered(""))).toBe("sv");
 });

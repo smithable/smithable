@@ -287,10 +287,11 @@ const removeAction: Operation<{ action: string }> = {
   positional: ["action"],
   describe: ({ action }) => `Remove the action ${action}`,
   destructive: () => false,
-  apply({ spec }, { action }, ir) {
+  apply({ spec, content }, { action }, ir) {
     const found = ir.actions.find((a) => a.name === action);
     if (!found) throw new OperationError(`There is no action named "${action}".`);
     spec.removeAndPrune(["actions", action], 0);
+    if (content.has(["actions", action])) content.removeAndPrune(["actions", action], 0);
     for (const page of ir.pages) {
       if (!page.actions?.includes(action)) continue;
       const rest = page.actions.filter((a) => a !== action);

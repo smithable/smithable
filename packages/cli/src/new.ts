@@ -10,12 +10,10 @@ import {
   draftProject,
   draftProjectByOperations,
   type Edit,
-  LANGUAGE_NAMES,
   type Question,
   readDescription,
   readEdit,
   STARTER_TEXTS,
-  writtenIn,
 } from "@smithable/ai";
 import {
   fitSamples,
@@ -32,6 +30,7 @@ import {
   describePage,
   downloadPictures,
   fetchPage,
+  languageAsked,
   PageError,
   readPage,
   tooLittle,
@@ -116,12 +115,6 @@ export async function create(
       io.out(
         `Read ${page.url}: ${reading.headings.length} headings, ${reading.navigation.length} menu links, ${reading.forms.length} forms${options.withPictures ? `, ${pictures.length} pictures` : ""}.\n`,
       );
-      // The questions are the person's, in English; the app's texts are the business's.
-      const language = writtenIn([...reading.headings, ...reading.text].join(" "));
-      if (language && language !== "en")
-        io.out(
-          `The site is in ${LANGUAGE_NAMES[language]}: the questions are in English, and the app's texts may follow the site.\n`,
-        );
       options = { ...options, describe: describePage(reading, pictures) };
     } catch (error) {
       if (!(error instanceof PageError)) throw error;
@@ -185,8 +178,9 @@ export async function create(
       askIn: askIn(description),
     });
     if (asked.starter && starter === undefined) name = asked.starter;
-    if (asking && asked.questions.length) {
-      const answers = await askQuestions(io, asked.questions);
+    const questions = withLanguage(asked.questions, description);
+    if (asking && questions.length) {
+      const answers = await askQuestions(io, questions);
       if (answers === undefined) return 1;
       description = describedWith(description, answers);
     }
@@ -335,16 +329,17 @@ export async function clarify(io: Io, description: string, json: boolean): Promi
         providers: providersFor(),
         askIn: askIn(description),
       }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
+  const questions = withLanguage(asked.questions, description);
   const result = {
     ...(asked.starter ? { starter: asked.starter } : {}),
-    questions: asked.questions,
+    questions,
   };
   if (json) io.out(`${JSON.stringify(result)}\n`);
   else {
     io.out(`Starter: ${asked.starter ?? "(the closest by words)"}\n`);
     io.out(
-      asked.questions.length
-        ? asked.questions
+      questions.length
+        ? questions
             .map(
               (q, i) =>
                 `${i + 1}. ${q.question}${q.options.length ? ` (${q.options.join(" / ")})` : ""}\n`,
@@ -382,9 +377,15 @@ export async function openQuestions(description: string): Promise<{
   }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
   return {
     ...(answer.starter ? { starter: answer.starter } : {}),
-    questions: answer.questions,
+    questions: withLanguage(answer.questions, description),
     asked: true,
   };
+}
+
+/** The model's questions, and for a page in another language than the person's, which one the app is in. */
+function withLanguage<Q>(questions: Q[], description: string): (Q | Question)[] {
+  const language = languageAsked(description);
+  return language ? [...questions, language] : questions;
 }
 
 /** Each starter as the questions step sees it: what it is, and its records. */

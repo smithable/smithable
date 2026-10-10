@@ -133,8 +133,8 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
     ? `{ ${action.output.map((f) => `${f.name}: ${outputType(f)}`).join("; ")} }`
     : "void";
   const ui = {
-    label: humanize(action.name),
-    pluralLabel: humanize(action.name),
+    label: t.action(action),
+    pluralLabel: t.action(action),
     titleField: "id",
     columns: [],
     fields: action.input.map((field) => ({
@@ -254,8 +254,8 @@ ${asked.map((x) => `  ${JSON.stringify(x.key)}: ${named(x.model).schema}.shape.$
 
 /** The dialog's fields: the ${n.label.toLowerCase()}'s own, then each added record's under its heading. */
 export const ${a.askUi}: ModelUi = {
-  label: ${JSON.stringify(humanize(action.name))},
-  pluralLabel: ${JSON.stringify(humanize(action.name))},
+  label: ${JSON.stringify(t.action(action))},
+  pluralLabel: ${JSON.stringify(t.action(action))},
   titleField: "id",
   columns: [],
   fields: [
@@ -550,12 +550,12 @@ ${options.length ? "  const { options } = Route.useLoaderData();\n" : ""}  const
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
-      <PageHeader title=${attr(humanize(action.name))} />
+      <PageHeader title=${attr(t.action(action))} />
       <ModelForm
         ui={${a.ui}}
         app={app}
         schema={${a.input}}
-${options.length ? "        options={options}\n" : ""}        submitLabel=${attr(humanize(action.name))}
+${options.length ? "        options={options}\n" : ""}        submitLabel=${attr(t.action(action))}
         onSubmit={async (values) => {
           await ${action.name}({ data: values });
           await back();
