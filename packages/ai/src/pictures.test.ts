@@ -163,6 +163,11 @@ test("a mark that fits wins, and no fitting mark still gives an abstract one", (
   const none = pickPictures(marks, { description: "Quarterly compliance filings" }).logo;
   expect(none?.tags).toContain("abstract");
   expect(pickPictures(index, { description: "A café" }).logo).toBeUndefined();
+  // A starter's monogram is its own name's letter: never another app's mark.
+  const monogram = entry("logo-mono-northwind-c", "logo", ["logo", "monogram", "monogram-status"]);
+  expect(pickPictures([monogram, ...marks], { description: "A status page" }).logo?.id).not.toBe(
+    monogram.id,
+  );
 });
 
 test("the same input the same mark; two cafés can get two marks, independent of the hero's choice", () => {

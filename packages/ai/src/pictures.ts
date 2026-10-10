@@ -161,8 +161,8 @@ export function pickPictures(
   const wordSet: Words = { said, spec };
   const text = `${options.description}\n${options.ir?.app.name ?? ""}`;
   /** Of the entries of a kind that fit as well as the best, the one the text's hash picks. */
-  const fitting = (kind: string, n: number) => {
-    const all = index.filter((e) => e.kind === kind).sort(byScore(wordSet));
+  const fitting = (kind: string, n: number, keep = (_: PictureEntry) => true) => {
+    const all = index.filter((e) => e.kind === kind && keep(e)).sort(byScore(wordSet));
     const best = all[0];
     const good = best ? all.filter((e) => asGood(e, best, wordSet)) : [];
     return { all, chosen: good[n % (good.length || 1)] };
@@ -176,7 +176,8 @@ export function pickPictures(
   // The mark's tie-break is salted and stirred, so it does not follow the hero's. No mark fits:
   // an abstract one by the same number, so no app is without one.
   const n = stir(hash(`logo\n${text}`));
-  const marks = fitting("logo", n);
+  // A starter's monogram is its own name's letter, so another app never gets one.
+  const marks = fitting("logo", n, (e) => !e.tags.includes("monogram"));
   const abstract = marks.all
     .filter((e) => e.tags.includes("abstract"))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
