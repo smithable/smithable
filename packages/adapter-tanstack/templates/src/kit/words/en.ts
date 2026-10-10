@@ -63,6 +63,7 @@ export const w = {
   consentTitle: "Cookies",
   contactUs: "Contact us",
   cookieSettings: "Cookie settings",
+  copied: "Copied",
   copy: "Copy",
   copyKeyNow: "Copy the key now: it is not shown again.",
   copyLink: "Copy link",
