@@ -1,21 +1,21 @@
-# M12 first builds: claude-code (2026-10-09)
+# M12 first builds: claude-code (2026-10-10)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 418,158 tokens (393,802 in, 24,356 out), €0.0000 + $0.9740 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 0 tokens (0 in, 0 out), €0.0000; 13 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 61,330 | 2,282 | $0.3143 | 0 | 2 | 35 s |
-| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 15 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 62,072 | 4,153 | $0.1357 | 0 | 2 | 51 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 29,824 | 2,192 | $0.0605 | 0 | 1 | 38 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 29,616 | 1,182 | $0.0386 | 0 | 1 | 23 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 29,823 | 2,963 | $0.0759 | 0 | 1 | 36 s |
-| A football club's site: teams, players, matches and results. | records | yes | yes | 29,607 | 2,433 | $0.0636 | 0 | 1 | 32 s |
-| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 30,837 | 1,683 | $0.0584 | 0 | 1 | 25 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 29,614 | 1,157 | $0.0381 | 0 | 1 | 22 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 29,612 | 1,320 | $0.0413 | 0 | 1 | 23 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 30,732 | 2,597 | $0.0758 | 0 | 1 | 31 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 30,735 | 2,394 | $0.0718 | 0 | 1 | 32 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 0 | 0 | €0.0000 | 2 | 2 | 32 s |
+| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 26 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 0 | 0 | €0.0000 | 2 | 2 | 24 s |
+| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 21 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 17 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 20 s |
+| A football club's site: teams, players, matches and results. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 19 s |
+| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 16 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 12 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 13 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 13 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 12 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code/](m12-first-builds-claude-code/), one folder per description (app-1 …).
 
@@ -94,18 +94,18 @@ Sign-in and access
   - member (A student who books classes): opens the my bookings page; adds bookings
   New users get the member role.
   Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors and reading sessions.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 138 files (138 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-1. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-1. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-1
+  cd /tmp/smithable-bench-m12-M26AyD/app-1
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-1/smithable.yml:41:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+/tmp/smithable-bench-m12-M26AyD/app-1/smithable.yml:41:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
-/tmp/smithable-bench-m12-NkskBq/app-1/smithable.content.yml:11:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-1/smithable.content.yml:11:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 2. A CRM for a small sales team: companies, contacts, deals and follow-ups.
@@ -128,9 +128,9 @@ Added follow-ups with a name and notes: say what else they hold.
 The starter let only acme.example addresses sign in (a sample domain no one has); that limit is gone.
 Generated 126 files (125 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-2. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-2. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-2
+  cd /tmp/smithable-bench-m12-M26AyD/app-2
   smithable studio
 
 or only run the app with smithable run.
@@ -207,24 +207,24 @@ Sign-in and access
   - member: opens every page; adds every kind of record
   New users get the member role.
   Open to anyone without signing in: the home page and the privacy page.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 127 files (127 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-3. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-3. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-3
+  cd /tmp/smithable-bench-m12-M26AyD/app-3
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 
-/tmp/smithable-bench-m12-NkskBq/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
+/tmp/smithable-bench-m12-M26AyD/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
 		return this.stmt.run(...params);
 		                 ^
 SqliteError: FOREIGN KEY constraint failed
-    at PreparedQuery.run (/tmp/smithable-bench-m12-NkskBq/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-NkskBq/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-NkskBq/app-3/src/db/seed.ts:59:6)
+    at PreparedQuery.run (/tmp/smithable-bench-m12-M26AyD/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-M26AyD/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-M26AyD/app-3/src/db/seed.ts:59:6)
     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
     at async node:internal/modules/esm/loader:647:26
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
@@ -283,16 +283,16 @@ Sign-in and access
   - member (Lends and borrows tools): opens every page; adds every kind of record
   New users get the member role.
   Open to anyone without signing in: the home page, the tools page, the privacy page and reading tools.
-Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.
+Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 125 files (125 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-4
+  cd /tmp/smithable-bench-m12-M26AyD/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
@@ -334,12 +334,12 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-No pictures: the app has no picture fields and no landing page with a hero.
+Pictures from the Smithable image library: logo.webp.
 Generated 102 files (102 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-5. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-5. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-5
+  cd /tmp/smithable-bench-m12-M26AyD/app-5
   smithable studio
 
 or only run the app with smithable run.
@@ -410,16 +410,16 @@ Sign-in and access
   - member (Union member: browses jobs and applies): opens the home page, the jobs page and the my applications page; sees everyone's jobs; adds applications
   New users get the member role.
   Open to anyone without signing in: the home page, the jobs page and reading jobs where status is open.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 115 files (115 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-6. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-6. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-6
+  cd /tmp/smithable-bench-m12-M26AyD/app-6
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
@@ -480,16 +480,16 @@ Sign-in and access
   - member (Follows the club; only administrators add to the site): opens every page
   New users get the member role.
   Open to anyone without signing in: the home page, the matches page, the teams page, the players page, the privacy page, reading teams, reading players and reading matches.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 112 files (112 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-7. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-7. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-7
+  cd /tmp/smithable-bench-m12-M26AyD/app-7
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
@@ -539,16 +539,16 @@ Sign-in and access
   - member (An attendee who registers for talks): opens the my registrations page; adds registrations
   New users get the member role.
   Open to anyone without signing in: the home page, the schedule page, the speakers page, the privacy page, reading talks and reading speakers.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 121 files (121 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-8. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-8. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-8
+  cd /tmp/smithable-bench-m12-M26AyD/app-8
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
@@ -590,12 +590,12 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-No pictures: the app has no picture fields and no landing page with a hero.
+Pictures from the Smithable image library: logo.webp.
 Generated 103 files (103 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-9. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-9. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-9
+  cd /tmp/smithable-bench-m12-M26AyD/app-9
   smithable studio
 
 or only run the app with smithable run.
@@ -659,12 +659,12 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-No pictures: the app has no picture fields and no landing page with a hero.
+Pictures from the Smithable image library: logo.webp.
 Generated 113 files (113 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-10. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-10. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-10
+  cd /tmp/smithable-bench-m12-M26AyD/app-10
   smithable studio
 
 or only run the app with smithable run.
@@ -739,16 +739,16 @@ Sign-in and access
   New users get the staff role.
   Open to anyone without signing in: the home page, the privacy page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
   Other programs can read and change components and incidents with a key, and run resolve. AI assistants can use it too.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 145 files (145 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-11. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-11. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-11
+  cd /tmp/smithable-bench-m12-M26AyD/app-11
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
@@ -810,14 +810,14 @@ Sign-in and access
   - staff (Writes incidents and their updates): opens the overview page, the incidents page and the updates page; adds every kind of record; changes everyone's records
   New users get the staff role.
   Open to anyone without signing in: the home page, the privacy page, reading components, reading incidents where status is investigating or identified or monitoring or resolved and reading incident updates.
-Pictures from the Smithable image library: hero.webp.
+Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 122 files (122 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-NkskBq/app-12. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M26AyD/app-12. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-NkskBq/app-12
+  cd /tmp/smithable-bench-m12-M26AyD/app-12
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-NkskBq/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-M26AyD/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```

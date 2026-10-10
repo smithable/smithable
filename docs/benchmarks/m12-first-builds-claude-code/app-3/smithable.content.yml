@@ -9,3 +9,6 @@ pages:
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
     callToAction:
       title: Send your first invoice today
+logo:
+  src: images/logo.webp
+  alt: Three nested arcs

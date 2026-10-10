@@ -13,3 +13,6 @@ pages:
     callToAction:
       title: Save your seat
       button: Register for talks
+logo:
+  src: images/logo.webp
+  alt: Two overlapping circles
