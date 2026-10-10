@@ -566,7 +566,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || favorites 
       (a) => `
   const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
     <Link to=${attr(join(page.route, `actions/${kebab(a.name)}`))} className={buttonVariants({ variant: "outline" })}>
-      ${humanize(a.name)}
+      ${t.action(a)}
     </Link>
   );`,
     )
@@ -617,7 +617,7 @@ ${
             .map(
               (a) => `
             {
-              label: ${JSON.stringify(humanize(a.name))},
+              label: ${JSON.stringify(t.action(a))},
               applies: chosen.filter((row) => ${fits(a)}).length,${askedFields(a).length ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks} },` : ""}
               run: (${askedFields(a).length ? "values" : ""}) => ${actionNames(a).many}({ data: { ids: chosen.map((row) => row.id)${askedFields(a).length ? ", values: values as never" : ""} } }),
             },`,
@@ -672,7 +672,7 @@ ${
                 (
                   a,
                 ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row) && (
-              ${actionButton(a, "row", page.route)}
+              ${actionButton(a, "row", page.route, t)}
             )}`,
               )
               .join("\n            ")}

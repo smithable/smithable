@@ -4,6 +4,7 @@
 // navigation, its forms and its pictures' places and alt texts. That becomes the description the
 // questions and the draft work from; nothing of it is copied into the app.
 import { readFileSync } from "node:fs";
+import { languageQuestion, PAGE_START, textLanguage } from "@smithable/ai";
 import { parse } from "node-html-parser";
 import type { Io } from "./io.js";
 import { VERSION } from "./version.js";
@@ -191,8 +192,6 @@ export function tooLittle(reading: PageReading): boolean {
   return words.length < 25;
 }
 
-const PAGE_START = "The app behind a site like this one";
-
 /**
  * The language to ask the questions in: a page's text is the business's words, not the
  * person's, so a description made from one is asked about in English (the beta's language),
@@ -200,6 +199,16 @@ const PAGE_START = "The app behind a site like this one";
  */
 export const askIn = (description: string): "en" | undefined =>
   description.startsWith(PAGE_START) ? "en" : undefined;
+
+/**
+ * The question a page's description adds when the site is in another language than the
+ * person's (English): which one the app's texts are in. The site's is the business's, the
+ * person's may be what they want to work in; nothing said, the texts follow the site.
+ */
+export function languageAsked(description: string) {
+  const site = askIn(description) && textLanguage(description);
+  return site && site !== "en" ? languageQuestion(site) : undefined;
+}
 
 /** The reading as a description for the questions and the draft, within a model's budget. */
 export function describePage(

@@ -37,11 +37,44 @@ export function writtenIn(text: string): Language | undefined {
 /** Whether a description is written in English: a sixth of its words or more are short English ones. */
 export const writtenInEnglish = (text: string): boolean => writtenIn(text) === "en";
 
-/** What the prompts say about the language, when a word count can tell; else nothing. */
+/** Where a description is a page's (`new --from`, `read-page`): its first words. */
+export const PAGE_START = "The app behind a site like this one";
+
+/** The question when a page's language is not the person's: which one the app's texts are in. */
+export function languageQuestion(site: Language, person: Language = "en") {
+  return {
+    question: `The site is in ${NAMES[site]}. Should the app's texts be in ${NAMES[site]} or ${NAMES[person]}?`,
+    options: [NAMES[site], NAMES[person]],
+  };
+}
+
+/**
+ * The language of the app's texts, where it can be told: the answer to the language question;
+ * else the description's own words, without the answers folded into it, and for a page's
+ * description without its English frame.
+ */
+export function textLanguage(description: string): Language | undefined {
+  // Asked, the answer follows the question; answered in order (--answers), it is a language's
+  // name on its own after the question's number.
+  const answer = (/^- The site is in \w+\. Should the app's texts be in \w+ or \w+\? (.+)$/m.exec(
+    description,
+  ) ??
+    new RegExp(`^- \\(\\d+\\) (${Object.values(NAMES).join("|")})$`, "im").exec(description))?.[1]
+    ?.trim()
+    .toLowerCase();
+  const named = (Object.entries(NAMES) as [Language, string][]).find(([, name]) =>
+    answer?.startsWith(name.toLowerCase()),
+  );
+  if (named) return named[0];
+  const own = description.split("\n\nAnswers:\n")[0] ?? "";
+  return writtenIn(own.startsWith(PAGE_START) ? own.slice(own.indexOf("\n") + 1) : own);
+}
+
+/** What the prompts say about the language, when it can be told; else nothing. */
 export function languageNote(description: string): string {
-  const language = writtenIn(description);
+  const language = textLanguage(description);
   return language
-    ? `\n\nThe description is written in ${NAMES[language]}: write every question, suggested answer and text a person reads in ${NAMES[language]}, whatever names of places or people it mentions.`
+    ? `\n\nThe app's texts are in ${NAMES[language]}: write every question, suggested answer and text a person reads in ${NAMES[language]}, whatever names of places or people the description mentions.`
     : "";
 }
 
