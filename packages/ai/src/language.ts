@@ -18,7 +18,9 @@ const SHORT_WORDS: Record<Language, Set<string>> = {
   ),
 };
 
-const NAMES: Record<Language, string> = { en: "English", sv: "Swedish" };
+/** Each language by its English name, for prompts and messages. */
+export const LANGUAGE_NAMES: Record<Language, string> = { en: "English", sv: "Swedish" };
+const NAMES = LANGUAGE_NAMES;
 
 /** The language a description is written in, when a sixth of its words or more are that language's short ones; else undefined. */
 export function writtenIn(text: string): Language | undefined {
@@ -41,4 +43,11 @@ export function languageNote(description: string): string {
   return language
     ? `\n\nThe description is written in ${NAMES[language]}: write every question, suggested answer and text a person reads in ${NAMES[language]}, whatever names of places or people it mentions.`
     : "";
+}
+
+/** What the questions' prompt says about their language: `askIn` when the person's language is known (a page's description is not theirs), else the description's. */
+export function questionsNote(description: string, askIn?: Language): string {
+  return askIn
+    ? `\n\nWrite every question and suggested answer in ${NAMES[askIn]}, the language of the person you ask, whatever language the description is in.`
+    : languageNote(description);
 }

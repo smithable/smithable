@@ -25,6 +25,20 @@ const starters = {
   records: { description: "Things and what we know about them.", models: ["Item"] },
 };
 
+test("questions follow the description's language, or askIn when the description is a page's", async () => {
+  const swedish =
+    "Elbolaget på Åland: vi har kunder som kan anmäla avbrott och se när de är lagade.";
+  const model = scripted([
+    { starter: "records", questions: [] },
+    { starter: "records", questions: [] },
+  ]);
+  await clarifyProject({ description: swedish, starters, providers: [model] });
+  await clarifyProject({ description: swedish, starters, providers: [model], askIn: "en" });
+  expect(model.prompts[0]).toContain("written in Swedish");
+  expect(model.prompts[1]).not.toContain("written in Swedish");
+  expect(model.prompts[1]).toContain("suggested answer in English");
+});
+
 test("the questions step picks a starter and asks at most three questions; a bad answer asks none", async () => {
   const model = scripted([
     {

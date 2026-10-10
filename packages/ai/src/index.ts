@@ -11,6 +11,7 @@ export {
   openLinked,
   visitorFlaws,
 } from "./draft-operations.js";
+export { LANGUAGE_NAMES, writtenIn } from "./language.js";
 export type { PickedPictures, PictureEntry } from "./pictures.js";
 export { pickPictures } from "./pictures.js";
 export type { Proposal, ProposedOperation } from "./propose.js";
