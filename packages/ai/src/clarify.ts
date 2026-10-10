@@ -2,7 +2,8 @@
 // description, picks the starter that is the best example for it, and asks at most three
 // questions when the description leaves the app's shape open. A clear description gets none.
 
-import { languageNote } from "./language.js";
+import type { Language } from "@smithable/core";
+import { questionsNote } from "./language.js";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
 export interface Question {
@@ -19,7 +20,7 @@ export interface Clarification {
 }
 
 const SYSTEM = `Someone describes an app they want in one or two sentences. Smithable will draft it from a starter app that serves as the example of the format, adapted to the description.
-The description may be in any language: judge it by what the app is, never by which words it shares with a starter, and write your questions and their suggested answers in the description's language.
+The description may be in any language: judge it by what the app is, never by which words it shares with a starter, and write your questions and their suggested answers in the description's language unless you are told another.
 Two jobs: pick the starter that is the best example for this description, and ask at most three short questions, only about what changes the app's shape and the description leaves open: who uses it (only the person, a team, anyone on the internet), what visitors may see without signing in, what the main kinds of records are and what they hold. Read the description closely first: what it already says is settled, and asking it again is a mistake (if it says only the team posts, never ask who may post). Never ask about looks, colors or names. Give each question two to four suggested answers. When the description already says enough, ask nothing. Pick a starter only when its main records are what this app is mainly about (people reserving times: a booking starter; a team's customers and their orders: a CRM; invoices and payments; things people list for others to find; services and their incidents); a shared detail is not a match (a car log is not a status page, a museum's collection is not a marketplace). When no starter's main records are the app's, the answer is "records".
 Answer with JSON only: {"starter": "<name>", "questions": [{"question": "...", "options": ["...", "..."]}]}.`;
 
@@ -54,6 +55,8 @@ export async function clarifyProject(options: {
   /** Each starter by name, with what it is (its app description) and its models. */
   starters: Record<string, { description: string; models: string[] }>;
   providers: Provider[];
+  /** The language to ask in, when it is not the description's (a page's text is not the person's words). */
+  askIn?: Language;
 }): Promise<Clarification> {
   const usage: Usage[] = [];
   const names = Object.keys(options.starters);
@@ -65,7 +68,7 @@ export async function clarifyProject(options: {
         `- ${n}: ${options.starters[n]?.description ?? ""} Records: ${options.starters[n]?.models.join(", ")}.`,
     )
     .join("\n");
-  const user = `Description: ${options.description}${languageNote(options.description)}\n\nStarters:\n${list}`;
+  const user = `Description: ${options.description}${questionsNote(options.description, options.askIn)}\n\nStarters:\n${list}`;
   try {
     const answer = (await completeJson(
       provider,

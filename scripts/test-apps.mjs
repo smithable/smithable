@@ -1412,8 +1412,11 @@ async function statusFlow(base) {
 
     await signInAs(page, base, "admin");
     await open(page, `${base}/incidents`);
-    // A standard action: the row's button resolves it and adds an update saying so.
+    // A standard action: the row's button resolves it and adds an update saying so. With three
+    // actions or more, all but the first are behind the row's "…" button.
     const card = page.locator("tr", { hasText: "Card payments slow at checkout" });
+    const more = card.locator('[data-part="more-actions"] summary');
+    if (await more.count()) await more.click();
     await card.getByRole("button", { name: "Resolve" }).click();
     await card.getByText("Resolved").waitFor({ timeout: 10000 });
     // Signed out again, the public page shows it.

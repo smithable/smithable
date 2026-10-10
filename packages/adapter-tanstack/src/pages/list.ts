@@ -457,6 +457,7 @@ export function listParts(
       ...(askedFields(a).length ? [actionNames(a).askUi, actionNames(a).asks] : []),
     );
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
+  if (offered.length > 2) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
   // The trash (docs/design/trash.md): Undo after Move to trash, and the way to the Trash page.
@@ -665,7 +666,7 @@ ${
           offered.length
             ? `
         rowActions={(row) => (
-          <>
+          ${offered.length > 2 ? "<Overflow inRow>" : "<>"}
             ${offered
               .map(
                 (
@@ -675,7 +676,7 @@ ${
             )}`,
               )
               .join("\n            ")}
-          </>
+          ${offered.length > 2 ? "</Overflow>" : "</>"}
         )}`
             : ""
         }${
