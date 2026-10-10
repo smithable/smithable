@@ -920,10 +920,55 @@ export const crudOperations: AnyOperation[] = [
   setMine,
 ];
 /** Operations of the landing pattern. */
+const moveSection: Operation<{ page: string; section: string; before?: string; after?: string }> = {
+  name: "moveSection",
+  summary:
+    "Move a landing page's section above or below another of its sections: they show in the order written.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+      before: refTo(
+        { ref: "section", page: "page", label: "Above" },
+        { description: "The section it goes above (one of before and after)." },
+      ),
+      after: refTo(
+        { ref: "section", page: "page", label: "Below" },
+        { description: "The section it goes below (one of before and after)." },
+      ),
+    },
+  },
+  positional: ["page", "section"],
+  describe: ({ page, section, before, after }) =>
+    `Move the ${section} section of the ${page} page ${before ? `above ${before}` : `below ${after}`}`,
+  destructive: () => false,
+  apply({ spec }, { page, section, before, after }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const names =
+      existing?.pattern.kind === "landing" ? existing.pattern.sections.map((s) => s.name) : [];
+    if (!names.includes(section))
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if ((before ? 1 : 0) + (after ? 1 : 0) !== 1)
+      throw new OperationError(
+        "Say which section it goes above (before) or below (after), one of them.",
+      );
+    const other = (before ?? after) as string;
+    if (!names.includes(other))
+      throw new OperationError(`The ${page} page has no section named "${other}".`);
+    if (other === section) throw new OperationError("A section cannot be moved beside itself.");
+    spec.move(["pages", page, "landing"], section, before ? { before } : { after: other });
+    return [];
+  },
+};
+
 export const landingOperations: AnyOperation[] = [
   addLandingPage,
   addSection,
   removeSection,
+  moveSection,
   setSectionWhere,
   setShortcuts,
 ];

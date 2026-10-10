@@ -216,3 +216,33 @@ test("a text with line breaks stays on its line through set, add and setItem, an
   expect(editor.get(["app", "tagline"])).toBe(two);
   expect((editor.get(["rules"]) as { rule: string }[])[0]?.rule).toBe(two);
 });
+
+describe("YamlEditor moves an entry", () => {
+  test("a block entry moves with its comment line, nothing else changes", () => {
+    const e = new YamlEditor(spec);
+    e.move(["models", "Customer", "fields"], "email", { before: "name" });
+    expect(e.text).toContain(
+      "    fields:\n      email: email unique\n      name: string!          # the company name\n      notes: text",
+    );
+    const back = new YamlEditor(e.text);
+    back.move(["models", "Customer", "fields"], "email", { after: "notes" });
+    expect(back.text).toBe(spec);
+  });
+
+  test("a flow entry moves by rewriting the mapping", () => {
+    const e = new YamlEditor("pages: { a: { crud: A }, b: { crud: B }, c: { crud: C } }\n");
+    e.move(["pages"], "c", { before: "a" });
+    expect(Object.keys(e.get(["pages"]) as object)).toEqual(["c", "a", "b"]);
+  });
+
+  test("refuses what is not there, and both or neither direction", () => {
+    const e = new YamlEditor(spec);
+    expect(() => e.move(["models", "Customer", "fields"], "nope", { before: "name" })).toThrow();
+    expect(() => e.move(["models", "Customer", "fields"], "name", { before: "nope" })).toThrow();
+    expect(() => e.move(["models", "Customer", "fields"], "name", {})).toThrow();
+    expect(() =>
+      e.move(["models", "Customer", "fields"], "name", { before: "notes", after: "notes" }),
+    ).toThrow();
+    expect(e.text).toBe(spec);
+  });
+});

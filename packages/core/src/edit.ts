@@ -130,7 +130,44 @@ export class YamlEditor {
       this.splice(before ? key.range[0] - before[0].length : key.range[0], end, "");
       return;
     }
-    // The comment lines right above it, at its indent, are about it and go with it.
+    const [start, stop] = this.blockEntry(pair);
+    this.splice(start, stop, "");
+  }
+
+  /**
+   * Moves the entry `key` of the mapping at `path` before or after another of its entries, with
+   * its comment lines; in block style only the entry's lines move, everything else stays as it is.
+   */
+  move(path: Path, key: string, to: { before?: string; after?: string }): void {
+    const other = to.before ?? to.after;
+    if (!other || (to.before && to.after)) throw new EditError("Say before or after which key.");
+    if (other === key) return;
+    const map = this.doc.getIn(path, true) as ParsedNode;
+    if (!isMap(map)) throw new EditError(`${path.join(".")} is not a mapping.`);
+    const keys = map.items.map((p) => (isScalar(p.key) ? String(p.key.value) : ""));
+    for (const k of [key, other])
+      if (!keys.includes(k)) throw new EditError(`Nothing at ${[...path, k].join(".")}.`);
+    if (map.flow) {
+      const value = this.get(path) as Record<string, YamlValue>;
+      const order = keys.filter((k) => k !== key);
+      order.splice(order.indexOf(other) + (to.after ? 1 : 0), 0, key);
+      this.set(path, Object.fromEntries(order.map((k) => [k, value[k] as YamlValue])) as YamlValue);
+      return;
+    }
+    const [start, stop] = this.blockEntry(this.pair([...path, key]));
+    const entry = this.source.slice(start, stop);
+    this.splice(start, stop, "");
+    const [otherStart, otherStop] = this.blockEntry(this.pair([...path, other]));
+    const at = to.after ? otherStop : otherStart;
+    const lead = at === this.source.length && !this.source.endsWith("\n") ? "\n" : "";
+    this.splice(at, at, `${lead}${entry.endsWith("\n") ? entry : `${entry}\n`}`);
+  }
+
+  /** The whole lines of a block-style entry: the comment lines right above it, at its indent, are about it and go with it. */
+  private blockEntry(pair: Pair<ParsedNode, ParsedNode | null>): [number, number] {
+    const key = pair.key as ParsedNode;
+    const value = pair.value as ParsedNode | null;
+    const end = value ? value.range[1] : key.range[1];
     let start = this.lineStart(key.range[0]);
     const indent = key.range[0] - start;
     while (start > 0) {
@@ -139,7 +176,7 @@ export class YamlEditor {
       if (!/^\s*#/.test(line) || line.length - line.trimStart().length !== indent) break;
       start = above;
     }
-    this.splice(start, Math.min(this.lineEnd(end - 1) + 1, this.source.length), "");
+    return [start, Math.min(this.lineEnd(end - 1) + 1, this.source.length)];
   }
 
   /** Adds `key: value` to the mapping at `path`, creating missing mappings on the way. */
