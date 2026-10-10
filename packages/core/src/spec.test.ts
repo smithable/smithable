@@ -70,3 +70,18 @@ function expectedDiagnostics(text: string): string[] {
     })
     .sort();
 }
+
+test("an app's currency is an ISO 4217 code, with the nearest one suggested", () => {
+  const app = (currency: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp:\n  name: Shop\n  currency: ${currency}\n`,
+    });
+  expect(app("SEK").diagnostics).toEqual([]);
+  expect(app("SEK").ir?.app.currency).toBe("SEK");
+  const [wrong] = app("EUO").diagnostics;
+  expect(wrong).toMatchObject({ code: "invalid-currency", hint: 'Did you mean "EUR"?' });
+  // Three letters are not enough: a code no country uses is refused too.
+  expect(app("ABC").diagnostics.map((d) => d.code)).toEqual(["invalid-currency"]);
+  expect(app("eur").diagnostics[0]?.hint).toBe('Did you mean "EUR"?');
+});
