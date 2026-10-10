@@ -85,3 +85,18 @@ test("an app's currency is an ISO 4217 code, with the nearest one suggested", ()
   expect(app("ABC").diagnostics.map((d) => d.code)).toEqual(["invalid-currency"]);
   expect(app("eur").diagnostics[0]?.hint).toBe('Did you mean "EUR"?');
 });
+
+test("an app's time zone is one the runtime knows, with the nearest one suggested", () => {
+  const app = (timezone: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp:\n  name: Shop\n  timezone: ${timezone}\n`,
+    });
+  expect(app("Europe/Mariehamn").ir?.app.timezone).toBe("Europe/Mariehamn");
+  expect(app("UTC").diagnostics).toEqual([]);
+  expect(app("Europe/Marieham").diagnostics[0]).toMatchObject({
+    code: "invalid-timezone",
+    hint: 'Did you mean "Europe/Mariehamn"?',
+  });
+  expect(app("Nowhere/At-all").diagnostics.map((d) => d.code)).toEqual(["invalid-timezone"]);
+});
