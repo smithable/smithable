@@ -334,3 +334,42 @@ pages:
     "the pictures and files waiting for review, to approve or reject",
   );
 });
+
+test("in another language the summary quotes the app's texts instead of bending them", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Elbolaget }
+models:
+  News:
+    fields:
+      title: string!
+      kind: outage | notice
+pages:
+  arenden: { crud: News }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const content = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: `smithableContent: 0.1
+language: sv
+models:
+  News:
+    label: Nyhet
+    pluralLabel: Nyheter
+    fields:
+      title: { label: Rubrik }
+      kind: { label: Typ, values: { outage: Avbrott, notice: Meddelande } }
+`,
+    },
+    ir,
+  ).content;
+  const sections = summarize(ir, undefined, content);
+  const text = sections.flatMap((s) => [s.title, ...s.sentences]).join("\n");
+  expect(text).toContain("a field “Rubrik” (required)");
+  expect(text).toContain("“Avbrott” or “Meddelande”");
+  expect(text).toContain("Nyheter");
+  expect(text).not.toMatch(/newses|a rubrik|Arenden/);
+});

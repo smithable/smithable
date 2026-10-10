@@ -104,6 +104,7 @@ pages:
       },
       pages: { customers: { title: "Our clients" } },
       menus: {},
+      actions: {},
       outgoing: {},
     },
   });
@@ -121,6 +122,7 @@ pages:
       models: {},
       pages: { customers: { title: 'Our "best" clients' } },
       menus: {},
+      actions: {},
       outgoing: {},
     },
   });
@@ -393,7 +395,7 @@ pages:
   );
   const swedish = generateApp(spec, {
     ...options,
-    content: { language: "sv", models: {}, pages: {}, menus: {}, outgoing: {} },
+    content: { language: "sv", models: {}, pages: {}, menus: {}, actions: {}, outgoing: {} },
   });
   const words = swedish.find((f) => f.path === "src/kit/words.ts")?.content ?? "";
   expect(words).toContain('signIn: "Logga in"');
@@ -401,4 +403,26 @@ pages:
   expect(words).not.toContain("./en");
   expect(words).toContain("export type Words = typeof w;");
   expect(swedish.some((f) => f.path.startsWith("src/kit/words/"))).toBe(false);
+});
+
+test("an action's label from the content file is its button, in the list's row and the selection bar", () => {
+  const path = "../../../examples/status/smithable.yml";
+  const status = ir(path, examples[path] as string);
+  const auth = authOf(authFiles[path.replace("smithable.yml", "smithable.auth.yml")] as string);
+  const files = generateApp(status, {
+    ...options,
+    auth,
+    content: {
+      language: "sv",
+      models: {},
+      pages: {},
+      menus: {},
+      actions: { resolve: { label: "Åtgärdad" } },
+      outgoing: {},
+    },
+  });
+  const list = files.find((f) => f.path === "src/routes/incidents/index.tsx")?.content ?? "";
+  expect(list).toContain('label="Åtgärdad"');
+  expect(list).toContain('label: "Åtgärdad"');
+  expect(list).not.toContain('label="Resolve"');
 });

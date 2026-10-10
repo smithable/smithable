@@ -69,7 +69,10 @@ export function summarize(
   content: ContentIR = emptyContent(),
   plugins: readonly SpecPlugin[] = [],
 ): SummarySection[] {
-  const { label, pluralLabel, fieldLabel, choice, modelNamed, words, item } = wordsFor(ir, content);
+  const { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item } = wordsFor(
+    ir,
+    content,
+  );
 
   const sections: SummarySection[] = [];
   if (ir.app.description) {
@@ -83,7 +86,10 @@ export function summarize(
     const pages = ordered.map((p) => {
       const crud = pageModel(p);
       const model = crud === undefined ? undefined : modelNamed(crud);
-      const title = content.pages[p.id]?.title ?? humanize(p.id);
+      // A list's page without a title of its own is its records' label, with its letters.
+      const title =
+        content.pages[p.id]?.title ??
+        (model && content.language !== "en" ? pluralLabel(model) : humanize(p.id));
       const labels = (names: string[] | undefined) =>
         (names ?? []).map((name) => {
           const field = model?.fields.find((f) => f.name === name);
@@ -105,7 +111,7 @@ export function summarize(
             )
           : [];
       const notes = [
-        model ? `lists ${pluralLabel(model).toLowerCase()}` : "",
+        model ? `lists ${many(model)}` : "",
         p.pattern.kind === "landing"
           ? `a landing page: ${list(landingWords(p.pattern.sections))}`
           : (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
@@ -122,7 +128,7 @@ export function summarize(
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         narrowed ? `only for ${who(opens)}` : "",
         shown.length && model
-          ? `visitors see ${pluralLabel(model).toLowerCase()} on the ${list(shown.map((o) => content.pages[o.id]?.title ?? humanize(o.id)))} page`
+          ? `visitors see ${many(model)} on the ${list(shown.map((o) => content.pages[o.id]?.title ?? humanize(o.id)))} page`
           : "",
       ].filter(Boolean);
       return `${title} (${notes.join("; ")})`;
@@ -139,7 +145,7 @@ export function summarize(
       const shownModel = x.kind === "records" && x.model ? modelNamed(x.model) : undefined;
       if (!shownModel) return humanize(x.name).toLowerCase();
       const only = x.where ? ` where ${conditionWords(x.where)}` : "";
-      return `${pluralLabel(shownModel).toLowerCase()}${only}`;
+      return `${many(shownModel)}${only}`;
     });
   }
 
@@ -148,23 +154,23 @@ export function summarize(
       !f.formula && !(f.type.kind === "relation" && (f.type.many || f.type.model === USER_MODEL));
     const own = model.fields.filter(isOwnValue);
     const parts = own.map((f) => item(model, f));
-    const one = label(model).toLowerCase();
+    const single = one(model);
     // The fields as a list, one per line, which is also how they are edited.
     const sentences = parts.length
       ? [`${pluralLabel(model)} have:`, ...parts.map((p) => `- ${p}`)]
       : [];
     for (const f of model.fields) {
       if (f.type.kind === "relation" && f.type.model === USER_MODEL) {
-        sentences.push(`Each ${one} can have ${article(fieldLabel(model, f))} (a user).`);
+        sentences.push(`Each ${single} can have ${article(fieldLabel(model, f))} (a user).`);
       } else if (f.type.kind === "relation" && f.type.many) {
         const target = modelNamed(f.type.model);
-        if (target) sentences.push(`Each ${one} lists its ${pluralLabel(target).toLowerCase()}.`);
+        if (target) sentences.push(`Each ${single} lists its ${many(target)}.`);
       } else if (f.formula) {
         sentences.push(`The ${fieldLabel(model, f)} is calculated as ${words(model, f.formula)}.`);
       }
     }
     const owner = model.fields.find((f) => f.name === model.ownedBy);
-    if (owner) sentences.push(`The ${fieldLabel(model, owner)} owns the ${one}.`);
+    if (owner) sentences.push(`The ${fieldLabel(model, owner)} owns the ${single}.`);
     if (model.capacity) {
       const per = model.fields.find((f) => f.name === model.capacity?.per);
       const target = per?.type.kind === "relation" ? per.type.model : model.capacity.per;
@@ -176,12 +182,12 @@ export function summarize(
         .map(([k, v]) => `${humanize(k).toLowerCase()} ${valueWords(v)}`)
         .join(" and ");
       sentences.push(
-        `At most ${limit} ${pluralLabel(model).toLowerCase()} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
+        `At most ${limit} ${many(model)} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
       );
     }
     if (model.trash)
       sentences.push(
-        `Deleted ${pluralLabel(model).toLowerCase()} stay in the trash for thirty days, where they can be restored.`,
+        `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
     if (model.review) {
       // "Photos of listings are reviewed before others see them; a listing waits until its photo is."
@@ -190,7 +196,7 @@ export function summarize(
       const plain = list(reviewed.map((f) => (/s$/.test(f.name) ? word(f) : plural(word(f)))));
       const holding = reviewed.filter((f) => f.required);
       sentences.push(
-        `${capitalize(plain)} of ${pluralLabel(model).toLowerCase()} are reviewed before others see them${
+        `${capitalize(plain)} of ${many(model)} are reviewed before others see them${
           holding.length
             ? `; ${article(humanize(model.name).toLowerCase())} waits until its ${list(holding.map(word))} ${holding.length > 1 ? "are" : "is"}`
             : ""
@@ -253,9 +259,7 @@ export function summarize(
         return target
           ? a.values.flatMap((v) => {
               const w = valueWords(target, v);
-              return "asked" in w && w.asked
-                ? [`the ${label(target).toLowerCase()}'s ${w.asked}`]
-                : [];
+              return "asked" in w && w.asked ? [`the ${one(target)}'s ${w.asked}`] : [];
             })
           : [];
       }),
@@ -267,11 +271,9 @@ export function summarize(
         const w = valueWords(target, v);
         return "pair" in w && w.pair ? [w.pair] : [];
       });
-      return [
-        `${article(label(target).toLowerCase())}${given.length ? ` (${given.join(", ")})` : ""}`,
-      ];
+      return [`${article(one(target))}${given.length ? ` (${given.join(", ")})` : ""}`];
     });
-    const item = label(model).toLowerCase();
+    const item = one(model);
     // A copy: "Makes a copy of an invoice with status draft, asking for the number; its lines are copied too."
     if (action.copy) {
       const words = action.copy.map((v) => valueWords(model, v));
@@ -320,7 +322,7 @@ export function summarize(
       sentences: [
         outgoingText(o, (name) => {
           const model = modelNamed(name);
-          return model ? label(model).toLowerCase() : humanize(name).toLowerCase();
+          return model ? one(model) : humanize(name).toLowerCase();
         }),
         ...(subject ? [`The mail's subject is “${subject}”.`] : []),
       ],
@@ -333,7 +335,7 @@ export function summarize(
       concept: `query:${query.name}`,
       title: humanize(query.name),
       sentences: [
-        `${query.intent ?? query.description ?? "Chosen by custom code."} (${model ? pluralLabel(model).toLowerCase() : query.returns})`,
+        `${query.intent ?? query.description ?? "Chosen by custom code."} (${model ? many(model) : query.returns})`,
         ...(query.rules ?? []).map((r) => `Rule: ${r.text}`),
       ],
     });
@@ -356,7 +358,7 @@ export function summarize(
       : list(
           offered.models.flatMap((name) => {
             const model = modelNamed(name);
-            return model ? [pluralLabel(model).toLowerCase()] : [];
+            return model ? [many(model)] : [];
           }),
         );
     const run = offered.actions.length
@@ -392,15 +394,29 @@ export function summarize(
 
 /** The summary's words for models and fields, with the labels from the content file. */
 export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
+  // In another language the English sentences quote the app's own texts as they are ("a field
+  // “Rubrik” (required)"), never bending them by English rules ("a rubrik", "newses").
+  const foreign = content.language !== "en";
+  const quote = (text: string) => `“${text}”`;
   const label = (m: ModelIR) => content.models[m.name]?.label ?? humanize(m.name);
   const pluralLabel = (m: ModelIR) => {
     const own = content.models[m.name];
-    return own?.pluralLabel ?? (own?.label ? plural(own.label) : humanize(plural(m.name)));
+    return (
+      own?.pluralLabel ??
+      (own?.label ? (foreign ? own.label : plural(own.label)) : humanize(plural(m.name)))
+    );
   };
-  const fieldLabel = (m: ModelIR, f: FieldIR) =>
-    lower(content.models[m.name]?.fields[f.name]?.label ?? humanize(f.name));
-  const choice = (m: ModelIR, f: FieldIR, value: string) =>
-    (content.models[m.name]?.fields[f.name]?.values?.[value] ?? humanize(value)).toLowerCase();
+  /** A model inside a sentence, one and several. */
+  const one = (m: ModelIR) => (foreign ? quote(label(m)) : label(m).toLowerCase());
+  const many = (m: ModelIR) => (foreign ? quote(pluralLabel(m)) : pluralLabel(m).toLowerCase());
+  const fieldLabel = (m: ModelIR, f: FieldIR) => {
+    const own = content.models[m.name]?.fields[f.name]?.label;
+    return foreign && own ? quote(own) : lower(own ?? humanize(f.name));
+  };
+  const choice = (m: ModelIR, f: FieldIR, value: string) => {
+    const own = content.models[m.name]?.fields[f.name]?.values?.[value];
+    return foreign && own ? quote(own) : (own ?? humanize(value)).toLowerCase();
+  };
   const modelNamed = (name: string) => ir.models.find((m) => m.name === name);
   // A formula's field in words: this model's own, or one of a related model's.
   const words = (model: ModelIR, expr: Parameters<typeof formulaInWords>[0]) =>
@@ -427,7 +443,7 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
       if (f.default !== undefined) notes.push(`${choice(model, f, String(f.default))} by default`);
     } else if (f.type.kind === "relation") {
       const target = modelNamed(f.type.model);
-      if (target) notes.push(article(label(target).toLowerCase()));
+      if (target) notes.push(article(one(target)));
     } else if (KINDS[f.type.name] && !name.includes(f.type.name)) {
       notes.push(KINDS[f.type.name] as string);
     }
@@ -451,10 +467,14 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
       const rest = notes.filter((n) => n !== kind);
       return `the ${kind ?? "date"} ${name}${rest.length ? ` (${rest.join(", ")})` : ""}`;
     }
-    const named = /s$| (on|at)$/.test(name) ? name : article(name);
+    const named = name.startsWith("“")
+      ? `a field ${name}`
+      : /s$| (on|at)$/.test(name)
+        ? name
+        : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
   };
-  return { label, pluralLabel, fieldLabel, choice, modelNamed, words, item };
+  return { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item };
 }
 
 function access(auth: AuthIR): string[] {

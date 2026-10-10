@@ -6,6 +6,7 @@ import {
   describePage,
   downloadPictures,
   fetchPage,
+  languageAsked,
   PageError,
   readPage,
   tooLittle,
@@ -132,4 +133,19 @@ test("read-page prints the description of a saved page, and refuses one that sho
 test("a page's description is asked about in English, a typed one in its own language", () => {
   expect(askIn(describePage(readPage(PAGE, "https://cafe.example/")))).toBe("en");
   expect(askIn("Ett bokningssystem för vår yogastudio")).toBeUndefined();
+});
+
+test("a page in another language than the person's asks which one the app is in", () => {
+  expect(languageAsked(describePage(readPage(PAGE, "https://cafe.example/")))).toBeUndefined();
+  const swedish = `<html><head><title>Ålands Elandelslag</title></head><body><h1>Elavbrott och nyheter</h1>
+<p>Vi levererar el till hushåll och företag på Åland, och här kan du anmäla avbrott.</p>
+<p>Du kan också se när ett avbrott är lagat och läsa våra senaste nyheter om nätet.</p></body></html>`;
+  expect(languageAsked(describePage(readPage(swedish, "https://el.ax/")))).toEqual({
+    question: "The site is in Swedish. Should the app's texts be in Swedish or English?",
+    options: ["Swedish", "English"],
+  });
+  // A typed description is asked about in its own language: no such question.
+  expect(
+    languageAsked("Ett system där kunder kan anmäla elavbrott och se när de är lagade"),
+  ).toBeUndefined();
 });
