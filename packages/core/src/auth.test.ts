@@ -527,3 +527,30 @@ pages:
   expect(warnings("pages: [home], read: [Tool], create: [Message]")).toEqual([]);
   expect(warnings("pages: [home, loans], read: [Tool], create: [Message]")).toHaveLength(1);
 });
+
+test("a role for keys opens no page without a warning; write without read under private access is warned", () => {
+  const api = "api: { models: [Note] }\n";
+  const roles = (r: string, top = "") =>
+    `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\n${top}roles:\n  admin: all\n${r}`;
+  // Granted on a model the API offers: used through keys, no page needed.
+  expect(codes(roles("  bot: { create: [Note] }\n", api))).toEqual([]);
+  // Granted nothing the API offers: still the warning.
+  expect(codes(roles("  bot: { create: [Customer] }\n", api))).toEqual([
+    "warning role-opens-nothing",
+  ]);
+  // No api block: the warning as before.
+  expect(codes(roles("  bot: { create: [Customer] }\n"))).toEqual(["warning role-opens-nothing"]);
+  // write on others' records the role cannot read.
+  expect(codes(roles("  sales: { pages: all, write: [Customer] }\n"))).toEqual([
+    "warning write-without-read",
+  ]);
+  expect(codes(roles("  sales: { pages: all, delete: all }\n"))).toEqual([
+    "warning write-without-read",
+  ]);
+  // With read, or create alone, nothing.
+  expect(codes(roles("  sales: { pages: all, read: [Customer], write: [Customer] }\n"))).toEqual(
+    [],
+  );
+  expect(codes(roles("  sales: { pages: all, read: all, delete: all }\n"))).toEqual([]);
+  expect(codes(roles("  sales: { pages: all, create: [Customer] }\n"))).toEqual([]);
+});
