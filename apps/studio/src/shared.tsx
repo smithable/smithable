@@ -5,6 +5,15 @@ import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
 
+const PAGE_KEY = "smithable:preview-page";
+const keptPage = () => {
+  try {
+    return sessionStorage.getItem(PAGE_KEY) ?? "/";
+  } catch {
+    return "/";
+  }
+};
+
 export function Preview({
   url,
   version,
@@ -43,11 +52,25 @@ export function Preview({
       localStorage.setItem("samplesNoticeDismissed", "1");
     } catch {}
   };
-  // The page the preview is on, as it reports it: a reload after a change comes back to it.
-  const current = useRef("/");
+  // The page the preview is on, as it reports it: a reload after a change comes back to it, and
+  // so does reloading Studio (kept for the browser tab's session, like the place in each mode).
+  const current = useRef(keptPage());
   const [opened, setOpened] = useState(0);
-  const [typed, setTyped] = useState("/");
+  const [typed, setTyped] = useState(current.current);
   const frame = useRef<HTMLIFrameElement>(null);
+  // Ctrl+R with the pointer over the preview reloads the preview alone (Johan, 2026-10-10); with
+  // the preview focused, its page's editor does the same.
+  const over = useRef(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (over.current && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        setAttempt((n) => n + 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   // The app's dev server may be starting, or restarting after a change, and a frame never
   // retries a page that failed to load: the frame is made once the server answers ("Starting…"
   // until then, retried with a short backoff), and after a few minutes a Retry button.
@@ -141,6 +164,9 @@ export function Preview({
         return;
       current.current = e.data.path;
       setTyped(e.data.path);
+      try {
+        sessionStorage.setItem(PAGE_KEY, e.data.path);
+      } catch {}
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -350,7 +376,15 @@ export function Preview({
               )}
             </div>
           ) : (
-            <div className="relative h-full">
+            <div
+              className="relative h-full"
+              onPointerEnter={() => {
+                over.current = true;
+              }}
+              onPointerLeave={() => {
+                over.current = false;
+              }}
+            >
               {/* The last ready page, kept (same key, so not loaded again) until the new one is. */}
               {stale && (
                 <iframe
