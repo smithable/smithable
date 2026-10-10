@@ -1,6 +1,6 @@
 # What visitors read. Derived from names when not given here.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: A lotus over a ripple }
+logo: { src: images/logo.webp, alt: A lotus over a ripple, generated: true }
 
 models:
   ClassType:
@@ -48,6 +48,7 @@ pages:
       image:
         src: images/hero.webp
         alt: People stretching on yoga mats in a bright studio with large windows
+        generated: true
     classes:
       title: Our classes
       text: Something for every level, from first steps to deep stretches.
@@ -66,11 +67,11 @@ pages:
     gallery:
       title: Inside the studio
       items:
-        - image: { src: images/gallery/studio.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window }
+        - image: { src: images/gallery/studio.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window, generated: true }
           caption: Morning light in the studio
-        - image: { src: images/gallery/class.webp, alt: Three people stretching sideways in a bright room }
+        - image: { src: images/gallery/class.webp, alt: Three people stretching sideways in a bright room, generated: true }
           caption: Our Tuesday evening class
-        - image: { src: images/gallery/coast.webp, alt: A runner on a path by the sea at sunset }
+        - image: { src: images/gallery/coast.webp, alt: A runner on a path by the sea at sunset, generated: true }
           caption: Summer sessions by the sea
     contact:
       title: Questions? Write to us

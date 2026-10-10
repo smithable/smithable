@@ -24,6 +24,8 @@ import { convertValue } from "./values.js";
 export interface SamplePicture {
   picture: string;
   alt: string;
+  /** Made by an AI (the image library's): the app marks it where it is shown. */
+  generated?: true;
 }
 /**
  * A sample record's values as the seed writes them: money in cents, a reference as the
@@ -235,6 +237,11 @@ function samplePicture(
   if (isMap(node)) {
     const file = node.get("file");
     const alt = node.get("alt");
+    const generated: unknown = node.get("generated");
+    if (typeof file === "string" && typeof alt === "string" && generated !== undefined)
+      return typeof generated === "boolean"
+        ? { picture: file, alt, ...(generated ? { generated } : {}) }
+        : undefined;
     if (typeof file === "string" && typeof alt === "string") return { picture: file, alt };
   }
   return undefined;

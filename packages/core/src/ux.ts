@@ -1,5 +1,12 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { checkKeys, mapEntries, ParseContext, readNameList, readString } from "./context.js";
+import {
+  checkKeys,
+  mapEntries,
+  ParseContext,
+  readBoolean,
+  readNameList,
+  readString,
+} from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { FieldIR, PageIR, SpecIR } from "./ir.js";
 import { capitalize } from "./naming.js";
@@ -27,6 +34,8 @@ export interface UxIR {
   pages: Record<string, PageUx>;
   /** Colors of choice values by meaning, by "Model.field"; values not listed are neutral. */
   tones: Record<string, Record<string, Tone>>;
+  /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
+  aiBadge: boolean;
 }
 
 export interface PageUx {
@@ -212,6 +221,7 @@ export function emptyUx(): UxIR {
     theme: { preset: "modern", density: "comfortable", motion: "subtle" },
     pages: {},
     tones: {},
+    aiBadge: true,
   };
 }
 
@@ -259,12 +269,13 @@ export function validateUx(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: ["smithableUx", "theme", "pages", "tones"],
+    allowed: ["smithableUx", "theme", "pages", "tones", "aiBadge"],
     later: ["menus", "sections"],
   });
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
+    if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
     if (key === "tones") {
       for (const entry of mapEntries(ctx, value, `"tones"`) ?? []) {
         const [modelName = "", fieldName = ""] = entry.key.split(".");
