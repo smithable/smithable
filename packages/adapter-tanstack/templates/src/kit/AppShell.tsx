@@ -146,6 +146,11 @@ function Navigation({
   counts,
   onNavigate,
 }: ShellProps & { onNavigate?: () => void }) {
+  // A link with another under it (Team over Team's activity) is lit only on its own page: by
+  // default a link is lit on every page under it, which would light both.
+  const routes = menus.flatMap((menu) => menu.items.map((item) => String(item.to)));
+  const hasBelow = (to: string) =>
+    routes.some((other) => other !== to && other.startsWith(to.endsWith("/") ? to : `${to}/`));
   return (
     <>
       <nav
@@ -169,6 +174,7 @@ function Navigation({
                   to={item.to}
                   onClick={onNavigate}
                   className={sidebarItem}
+                  activeOptions={{ exact: hasBelow(String(item.to)) }}
                   activeProps={{
                     className:
                       "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",

@@ -7,6 +7,14 @@ import type { Selection } from "../preview";
 import { Button, Input, Panel } from "../ui";
 import { listOf, type Run, shorthandOf } from "./ChangeForms";
 
+/** The field a selection is, when this panel can show it (not a model, nor a field since removed). */
+export function selectedField(selection: Selection, spec: Spec) {
+  const [modelName, fieldName] = selection.concept.replace(/^field:/, "").split(".");
+  const model = spec.ir?.models.find((m) => m.name === modelName);
+  const field = model?.fields.find((f) => f.name === fieldName);
+  return model && field ? { model, field } : undefined;
+}
+
 export function Selected({
   selection,
   spec,
@@ -19,10 +27,9 @@ export function Selected({
   onClose: () => void;
 }) {
   const [to, setTo] = useState("");
-  const [modelName, fieldName] = selection.concept.replace(/^field:/, "").split(".");
-  const model = spec.ir?.models.find((m) => m.name === modelName);
-  const field = model?.fields.find((f) => f.name === fieldName);
-  if (!model || !field) return null;
+  const picked = selectedField(selection, spec);
+  if (!picked) return null;
+  const { model, field } = picked;
   const canBeRequired = !field.formula && field.type.kind !== "choice";
   const list = listOf(spec, model.name);
   return (

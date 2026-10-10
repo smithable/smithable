@@ -63,6 +63,7 @@ export const w = {
   consentTitle: "Kakor",
   contactUs: "Kontakta oss",
   cookieSettings: "Inställningar för kakor",
+  copied: "Kopierad",
   copy: "Kopiera",
   copyKeyNow: "Kopiera nyckeln nu: den visas inte igen.",
   copyLink: "Kopiera länk",
