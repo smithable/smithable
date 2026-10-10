@@ -70,7 +70,8 @@ async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefi
 }
 
 /**
- * The pictures a drafted app gets: the hero into public/images/hero.webp (and the content file's
+ * The pictures a drafted app gets, each marked as made by an AI (`generated: true`, the library's
+ * are): the hero into public/images/hero.webp (and the content file's
  * hero image, when the landing page's hero has none), its mark into public/images/logo.webp (and
  * the content file's logo, when it has none), samples into public/images/samples/<n>.webp.
  * Returns what was written; says one line either way.
@@ -116,7 +117,7 @@ export async function addLibraryPictures(options: {
       // A landing section's texts are under the page by the section's name (pages.home.hero).
       const at = ["pages", landing.id, hero.name];
       if (!editor.has([...at, "image"])) {
-        const image = { src: "images/hero.webp", alt: picked.hero.alt };
+        const image = { src: "images/hero.webp", alt: picked.hero.alt, generated: true };
         if (editor.has(at)) editor.add(at, "image", image);
         else if (editor.has(["pages", landing.id]))
           editor.add(["pages", landing.id], hero.name, { image });
@@ -135,7 +136,7 @@ export async function addLibraryPictures(options: {
     );
     if (bytes && !editor.has(["logo"])) {
       written.push({ file: "logo.webp", alt: picked.logo.alt, bytes });
-      editor.add([], "logo", { src: "images/logo.webp", alt: picked.logo.alt });
+      editor.add([], "logo", { src: "images/logo.webp", alt: picked.logo.alt, generated: true });
       options.files["smithable.content.yml"] = editor.text;
     }
   }

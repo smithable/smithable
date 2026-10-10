@@ -21,6 +21,8 @@ export interface Picture {
   alt: string;
   width: number;
   height: number;
+  /** Made by an AI: the image library's sample pictures; a person's own only when they say so. */
+  generated?: true;
 }
 
 export const PICTURE_MAX_BYTES = 1_000_000;
@@ -83,9 +85,15 @@ export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}
 
 /**
  * For `pnpm db:seed`: the n-th sample picture (public/images/samples/<n>.webp) as a record's
- * picture, copied into uploads/; null when the app has no sample pictures.
+ * picture, copied into uploads/; null when the app has no sample pictures. The numbered ones are
+ * the image library's (an AI made them); a sample file says so of its own with `generated: true`.
  */
-export function samplePicture(model: string, n: number | string, alt: string): Picture | null {
+export function samplePicture(
+  model: string,
+  n: number | string,
+  alt: string,
+  generated = typeof n === "number",
+): Picture | null {
   // A starter's numbered pictures (0.webp, 1.webp, …), or a sample file's own by name.
   const source = join("public", "images", "samples", typeof n === "number" ? `${n}.webp` : n);
   if (!existsSync(source)) return null;
@@ -93,7 +101,7 @@ export function samplePicture(model: string, n: number | string, alt: string): P
   const picture = savePicture(model, bytes, alt);
   const path = join(uploadsDir(), picture.file);
   if (!existsSync(path)) copyFileSync(source, path);
-  return picture;
+  return generated ? { ...picture, generated: true } : picture;
 }
 
 /** What a document field stores: the file under uploads/, the name it was sent with, its kind and size. */

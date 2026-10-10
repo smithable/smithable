@@ -589,6 +589,11 @@ test("setText changes a landing section's list texts in place, by their position
   expect(feature.ok && feature.files.content).toContain("Any number of clients");
   expect(feature.ok && feature.files.content).toContain("Reminders for overdue invoices");
   expect(set("pages.home.faq.items.9.question", "Hi").ok).toBe(false);
+  // The library's hero is marked as made by an AI; another file is not known to be.
+  expect(invoicing.content).toMatch(/hero\.webp\n.*\n\s*generated: true/);
+  const hero = set("pages.home.hero.image.src", "images/mine.webp");
+  expect(hero.ok && hero.files.content).toContain("src: images/mine.webp");
+  expect(hero.ok && hero.files.content).not.toMatch(/mine\.webp\n.*\n\s*generated/);
 });
 
 test("removePage takes a page out of the spec, the menus and its texts", () => {

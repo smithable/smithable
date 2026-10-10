@@ -17,6 +17,19 @@ const codes = (text: string) =>
   validateUx({ path: "smithable.ux.yml", text }, ir).diagnostics.map((d) => d.code);
 
 describe("smithable.ux.yml", () => {
+  test("the AI badge is on unless the owner switches it off", () => {
+    const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+    expect(read("smithableUx: 0.1\n").ux?.aiBadge).toBe(true);
+    expect(read("smithableUx: 0.1\naiBadge: false\n").ux?.aiBadge).toBe(false);
+    expect(codes("smithableUx: 0.1\naiBadge: maybe\n")).not.toEqual([]);
+    const off = applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setAiBadge", {
+      shown: "false",
+    });
+    expect(off.ok && off.files.ux).toContain("aiBadge: false");
+    const on = off.ok && applyOperation({ spec: crm, ux: off.files.ux }, "setAiBadge", {});
+    expect(on && on.ok && on.files.ux).not.toContain("aiBadge");
+  });
+
   test("theme, brand and page settings", () => {
     const { ux } = validateUx(
       {
@@ -47,6 +60,7 @@ tones:
       pages: {
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
+      aiBadge: true,
       tones: { "Order.status": { shipped: "success", canceled: "danger" } },
     });
   });

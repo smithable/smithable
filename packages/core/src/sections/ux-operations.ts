@@ -419,6 +419,34 @@ const setView: Operation<{ page: string; view: "table" | "cards" }> = {
   },
 };
 
+/**
+ * Whether the app marks the pictures an AI made (the AI-generated badge, on by default). The
+ * app's owner decides whether their audience needs it; the engine has one default everywhere.
+ */
+const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
+  name: "setAiBadge",
+  summary:
+    'Mark pictures an AI made with "AI-generated" or "AI" (true, the default) or not (false): whether your audience needs it is your responsibility.',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      shown: { type: "string", enum: ["true", "false"], description: "true (default) or false." },
+    },
+  },
+  positional: ["shown"],
+  describe: ({ shown = "true" }) =>
+    shown === "false"
+      ? "Show no badge on pictures an AI made"
+      : "Mark pictures an AI made with a badge",
+  destructive: () => false,
+  apply(editors, { shown = "true" }) {
+    // On is the default, so it is written only when off.
+    put(editors.ux, ["aiBadge"], shown === "false" ? false : undefined);
+    return [];
+  },
+};
+
 const setSort: Operation<{ page: string; field: string }> = {
   name: "setSort",
   summary:
@@ -502,5 +530,6 @@ export const uxOperations: AnyOperation[] = [
   setFormSections,
   setFormColumns,
   setView,
+  setAiBadge,
   setSort,
 ];

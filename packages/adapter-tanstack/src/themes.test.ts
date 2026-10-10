@@ -2,6 +2,13 @@ import { BUILT_IN_THEMES, emptyUx } from "@smithable/core";
 import { expect, test } from "vitest";
 import { FONT_PACKAGES, themeCss } from "./themes.js";
 
+test("the owner's switch for the AI badge (aiBadge: false) hides every mark", () => {
+  expect(themeCss(emptyUx())).not.toContain("ai-mark");
+  expect(themeCss({ ...emptyUx(), aiBadge: false })).toContain(
+    '[data-part="ai-mark"] {\n  display: none;',
+  );
+});
+
 test("an owner's background goes in under the brand color, in both modes", () => {
   const ux = {
     ...emptyUx(),

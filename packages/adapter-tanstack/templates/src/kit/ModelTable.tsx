@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
+import { AiMarked } from "./AiMark";
 import { csvName, csvOf, download } from "./csv";
 import { displayValue, formatValue } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
@@ -116,6 +117,15 @@ export function SaveButton({
     >
       <Heart aria-hidden className={cn("size-5", saved && "fill-current text-primary")} />
     </button>
+  );
+}
+
+/** Whether a record's picture (for several, the cover) was made by an AI (AiMark.tsx). */
+function generatedPicture<R>(row: R, field: RecordFieldUi<R>): boolean {
+  const value = field.get(row);
+  const picture = Array.isArray(value) ? value[0] : value;
+  return Boolean(
+    picture && typeof picture === "object" && "generated" in picture && picture.generated,
   );
 }
 
@@ -314,12 +324,22 @@ export function ModelTable<R extends Row>({
               {view === "cards" &&
                 pictureField &&
                 (formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
-                  <img
-                    src={pictureSrc(pictureField, row)}
-                    alt={formatValue(pictureField, displayValue(pictureField, row), app)}
-                    loading="lazy"
-                    className="-mx-5 aspect-[3/2] w-[calc(100%+2.5rem)] max-w-none object-cover"
-                  />
+                  <AiMarked
+                    generated={generatedPicture(row, pictureField)}
+                    className="-mx-5 w-[calc(100%+2.5rem)]"
+                  >
+                    <img
+                      src={pictureSrc(pictureField, row)}
+                      alt={formatValue(pictureField, displayValue(pictureField, row), app)}
+                      loading="lazy"
+                      className={cn(
+                        "aspect-[3/2] object-cover",
+                        generatedPicture(row, pictureField)
+                          ? "w-full"
+                          : "-mx-5 w-[calc(100%+2.5rem)] max-w-none",
+                      )}
+                    />
+                  </AiMarked>
                 ) : (
                   <PicturePlaceholder
                     icon={icon}
