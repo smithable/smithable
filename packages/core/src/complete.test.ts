@@ -217,3 +217,8 @@ test("the app's currency is offered from the ISO 4217 codes", () => {
   expect(found.labels).toEqual(expect.arrayContaining(["SEK"]));
   expect(found.labels).not.toContain("EUR");
 });
+
+test("the app's time zone is offered from the IANA names", () => {
+  const found = at("smithable: 0.1\napp:\n  name: Shop\n  timezone: Europe/Mari‸");
+  expect(found.labels).toEqual(["Europe/Mariehamn"]);
+});
