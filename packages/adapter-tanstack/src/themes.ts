@@ -225,7 +225,7 @@ ${
   ux.aiBadge
     ? ""
     : `
-/* aiBadge: false in smithable.ux.yml: no badge on pictures an AI made (src/kit/AiMark.tsx). */
+/* The owner switched the badge on pictures an AI made off (aiBadge: false; src/kit/AiMark.tsx). */
 [data-part="ai-mark"] {
   display: none;
 }
