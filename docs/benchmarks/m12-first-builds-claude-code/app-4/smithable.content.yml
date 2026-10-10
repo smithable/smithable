@@ -10,3 +10,6 @@ pages:
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
     latest:
       title: Available now
+logo:
+  src: images/logo.webp
+  alt: A single wave line
