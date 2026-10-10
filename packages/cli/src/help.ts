@@ -16,9 +16,9 @@ export interface Command {
 export const COMMANDS: Command[] = [
   {
     name: "read-page",
-    usage: "read-page <file.html> --url <address>",
+    usage: "read-page [file.html] --url <address>",
     text: [
-      "Print the description new --from would draft from, for a page saved elsewhere;",
+      "Print the description new --from would draft from: the page fetched, or one saved elsewhere;",
       "fails when the page shows too little without JavaScript",
     ],
     options: ["url"],

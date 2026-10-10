@@ -191,6 +191,16 @@ export function tooLittle(reading: PageReading): boolean {
   return words.length < 25;
 }
 
+const PAGE_START = "The app behind a site like this one";
+
+/**
+ * The language to ask the questions in: a page's text is the business's words, not the
+ * person's, so a description made from one is asked about in English (the beta's language),
+ * whatever language the site is in; a typed description is asked about in its own.
+ */
+export const askIn = (description: string): "en" | undefined =>
+  description.startsWith(PAGE_START) ? "en" : undefined;
+
 /** The reading as a description for the questions and the draft, within a model's budget. */
 export function describePage(
   reading: PageReading,
@@ -200,7 +210,7 @@ export function describePage(
     lines.length ? `\n${title}:\n${lines.map((l) => `- ${l}`).join("\n")}` : "";
   let text = reading.text.join("\n");
   if (text.length > 4000) text = `${text.slice(0, 4000)}…`;
-  return `The app behind a site like this one (${reading.url}). Derive its records, pages, roles and sections; write new texts for it, never copy the site's.
+  return `${PAGE_START} (${reading.url}). Derive its records, pages, roles and sections; write new texts for it, never copy the site's.
 Title: ${reading.title}${section("Navigation", reading.navigation)}${section("Headings", reading.headings.slice(0, 30))}${section(
     "Forms",
     reading.forms.map((f) => f.fields.join(", ")),
@@ -251,28 +261,42 @@ export async function downloadPictures(
 }
 
 /**
- * `smithable read-page <file.html> --url <address>`: the description `new --from` would draft
- * from, for a page fetched elsewhere (the hosted service fetches it with its own guards and
- * runs this in a sandbox, then the usual clarify and new --describe).
+ * `smithable read-page [file.html] --url <address>`: the description `new --from` would draft
+ * from. Without a file it fetches the page as `new --from` does; with one it reads a page fetched
+ * elsewhere (the hosted service fetches it with its own guards and runs this in a sandbox, then
+ * the usual clarify and new --describe).
  */
-export function readPageCommand(file: string | undefined, url: string | undefined, io: Io): number {
-  if (!file || !url) {
-    io.err(
-      "read-page needs a saved page and its address: smithable read-page page.html --url https://…\n",
-    );
+export async function readPageCommand(
+  file: string | undefined,
+  url: string | undefined,
+  io: Io,
+): Promise<number> {
+  if (!url) {
+    io.err("read-page needs the page's address: smithable read-page [page.html] --url https://…\n");
     return 2;
   }
   let html: string;
-  try {
-    html = readFileSync(file, "utf8");
-  } catch {
-    io.err(`Cannot read ${file}.\n`);
-    return 1;
+  let address = url;
+  if (file) {
+    try {
+      html = readFileSync(file, "utf8");
+    } catch {
+      io.err(`Cannot read ${file}.\n`);
+      return 1;
+    }
+  } else {
+    try {
+      ({ html, url: address } = await fetchPage(url));
+    } catch (error) {
+      if (!(error instanceof PageError)) throw error;
+      io.err(`${error.message}\n`);
+      return 1;
+    }
   }
-  const reading = readPage(html, url);
+  const reading = readPage(html, address);
   if (tooLittle(reading)) {
     io.err(
-      `${url} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead.\n`,
+      `${address} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead.\n`,
     );
     return 1;
   }

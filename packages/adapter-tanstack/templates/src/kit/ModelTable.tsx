@@ -463,8 +463,11 @@ export function ModelTable<R extends Row>({
                   ))}
                   {saved && <TableCell className="py-0">{heart(row)}</TableCell>}
                   {rowActions && (
-                    <TableCell data-part="row-actions" className="relative z-10 py-0 text-right">
-                      {rowActions(row)}
+                    // At its natural width, so the title is not the column that wraps.
+                    <TableCell data-part="row-actions" className="relative z-10 w-px py-2">
+                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                        {rowActions(row)}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
