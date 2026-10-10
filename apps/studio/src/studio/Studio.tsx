@@ -423,7 +423,7 @@ function SpecEditor({
     setDrafts((d) => ({ ...d, [file]: next }));
     if (bases[file] === undefined) setBases((b) => ({ ...b, [file]: saved }));
   };
-  const useDisk = () => {
+  const dropEdits = () => {
     setDrafts(({ [file]: _, ...rest }) => rest);
     setBases(({ [file]: _, ...rest }) => rest);
   };
@@ -527,7 +527,7 @@ function SpecEditor({
           className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 p-2 text-xs"
         >
           {file} changed on disk while you were editing.
-          <Button variant="ghost" onClick={useDisk}>
+          <Button variant="ghost" onClick={dropEdits}>
             Use the file on disk
           </Button>
         </p>
@@ -550,12 +550,24 @@ function SpecEditor({
             ))
           )}
         </ul>
-        <Button
-          disabled={errors.length > 0 || text === saved}
-          onClick={() => run("editSpec", { text, ...(file === "smithable.yml" ? {} : { file }) })}
-        >
-          Save
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          {/* A mistaken edit, or one that cannot be saved, is dropped for the file as saved. */}
+          <Button
+            variant="ghost"
+            disabled={text === saved}
+            onClick={() => {
+              if (confirm(`Discard your edits to ${file}?`)) dropEdits();
+            }}
+          >
+            Discard
+          </Button>
+          <Button
+            disabled={errors.length > 0 || text === saved}
+            onClick={() => run("editSpec", { text, ...(file === "smithable.yml" ? {} : { file }) })}
+          >
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1314,6 +1314,25 @@ try {
       throw new Error("Ctrl+Z in the editor undid a change of the app");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
+    // A broken edit cannot be saved, but it can be discarded: the file as saved comes back.
+    const discard = page.getByRole("button", { name: "Discard", exact: true });
+    if (await discard.isEnabled()) throw new Error("Discard is offered with nothing edited");
+    const savedText = await editor.evaluate((e) => e.value);
+    await editor.focus();
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.type("\nmodels: [broken");
+    const save = page.getByRole("button", { name: "Save", exact: true });
+    const until = async (done, what) => {
+      for (let i = 0; i < 100 && !(await done()); i++) await new Promise((r) => setTimeout(r, 100));
+      if (!(await done())) throw new Error(what);
+    };
+    await until(async () => !(await save.isEnabled()), "a broken edit could be saved");
+    page.once("dialog", (dialog) => dialog.accept());
+    await discard.click();
+    await until(
+      async () => (await editor.evaluate((e) => e.value)) === savedText,
+      "Discard did not bring the saved file back",
+    );
   });
   await step("the companion files are edited the same way, each with its own checks", async () => {
     // The auth file: a grant must name a model there is; a role added is saved as one change.
