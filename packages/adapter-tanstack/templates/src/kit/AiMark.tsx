@@ -3,7 +3,7 @@
 // picture's bottom right corner, away from menus and buttons; "AI-generated" on a picture across
 // the page, "AI" on a small one. A picture styled where it is used (under the hero's wash or
 // veil) is not marked; a maker's own pictures are marked only when they say so. The owner can
-// switch every mark off (aiBadge: false in smithable.ux.yml): the theme then hides them.
+// switch every mark off (aiBadge: false in the app's presentation settings): the theme hides them.
 import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { w } from "./words";
