@@ -373,6 +373,8 @@ export function Preview({
                   }}
                   key={frameKey}
                   title="App preview"
+                  // The kit's copy buttons (keys, invitation links) write to the clipboard.
+                  allow="clipboard-write"
                   data-flashed={flashedConcepts}
                   src={src}
                   onLoad={loaded}

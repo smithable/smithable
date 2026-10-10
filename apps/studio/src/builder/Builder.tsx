@@ -12,7 +12,7 @@ import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Look } from "./Look";
-import { Selected } from "./Selected";
+import { Selected, selectedField } from "./Selected";
 
 export function Builder({
   project,
@@ -112,13 +112,13 @@ export function Builder({
   // Something picked in the preview is changed in the Details panel.
   const select = (s: Selection | undefined) => {
     setSelection(s);
-    if (s && !paired) show("details");
+    if (s && selectedField(s, spec) && !paired) show("details");
   };
   selectRef.current = select;
   // Back in this mode with something picked (here or in Code mode): open at its details.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the mode opens
   useEffect(() => {
-    if (place.selection && !paired) show("details");
+    if (place.selection && selectedField(place.selection, spec) && !paired) show("details");
   }, []);
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -230,7 +230,9 @@ export function Builder({
             paired ? "w-[22rem]" : "w-full snap-start",
           )}
         >
-          {selection ? (
+          {/* What this panel cannot show (a model picked in Code mode, a field since removed)
+              leaves the app's details, not an empty panel. */}
+          {selection && selectedField(selection, spec) ? (
             <Selected
               selection={selection}
               spec={spec}
