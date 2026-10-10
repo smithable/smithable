@@ -312,6 +312,10 @@
         }
       }
     },
+    "aiBadge": {
+      "type": "boolean",
+      "description": "Whether pictures an AI made carry the badge (\"AI-generated\", \"AI\"): on unless you switch it off; whether your audience needs it is your responsibility."
+    },
     "tones": {
       "type": "object",
       "description": "The meaning of a choice field's values, shown as the badge's colour: { \"Order.status\": { paid: success, overdue: danger } }.",

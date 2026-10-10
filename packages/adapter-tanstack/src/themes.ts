@@ -221,5 +221,14 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
 @media (prefers-color-scheme: dark) {
 ${[app.dark, ...pages.map((p) => p.dark)].join("\n")}
 }
-`;
+${
+  ux.aiBadge
+    ? ""
+    : `
+/* aiBadge: false in smithable.ux.yml: no badge on pictures an AI made (src/kit/AiMark.tsx). */
+[data-part="ai-mark"] {
+  display: none;
+}
+`
+}`;
 }

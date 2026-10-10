@@ -22,6 +22,7 @@ export const w = {
   adding: "Adding…",
   address: "Address",
   ai: "AI",
+  aiGenerated: "AI-generated",
   aiMayBeWrong: "Answers may come from an AI and can be wrong. Check what matters.",
   all: "All",
   any: "Any",

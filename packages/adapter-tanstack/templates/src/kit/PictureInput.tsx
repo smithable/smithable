@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
+import { AiMarked } from "./AiMark";
 import type { FieldControlProps } from "./model";
 import { w } from "./words";
 
@@ -14,6 +15,8 @@ export interface PictureValue {
   alt: string;
   width: number;
   height: number;
+  /** Made by an AI (a sample record's picture from the image library): marked where shown. */
+  generated?: true;
 }
 
 const MAX_SIDE = 1600;
@@ -92,13 +95,15 @@ export function PictureInput({
       {picture ? (
         <div className="flex flex-wrap items-start gap-4">
           {src ? (
-            <img
-              src={src}
-              alt={picture.alt}
-              width={picture.width}
-              height={picture.height}
-              className="h-32 w-auto rounded-md border object-cover"
-            />
+            <AiMarked generated={picture.generated} className="shrink-0">
+              <img
+                src={src}
+                alt={picture.alt}
+                width={picture.width}
+                height={picture.height}
+                className="h-32 w-auto rounded-md border object-cover"
+              />
+            </AiMarked>
           ) : (
             <div className="flex h-32 w-32 items-center justify-center rounded-md border bg-muted text-sm text-muted-foreground">
               {picture.width}×{picture.height}
@@ -259,13 +264,15 @@ export function PicturesInput({
                 {src(p) ? (
                   // Opens large: a link, so it works where the form is read only.
                   <a href={src(p)} target="_blank" rel="noreferrer">
-                    <img
-                      src={src(p)}
-                      alt={p.alt}
-                      width={p.width}
-                      height={p.height}
-                      className="aspect-[3/2] w-full rounded-md object-cover"
-                    />
+                    <AiMarked generated={p.generated}>
+                      <img
+                        src={src(p)}
+                        alt={p.alt}
+                        width={p.width}
+                        height={p.height}
+                        className="aspect-[3/2] w-full rounded-md object-cover"
+                      />
+                    </AiMarked>
                   </a>
                 ) : (
                   <div className="flex aspect-[3/2] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground">

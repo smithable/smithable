@@ -96,7 +96,7 @@ export function landingRoute(
           link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""} }}`
               : ""
           }${
             section.shortcuts?.length
@@ -231,8 +231,8 @@ export function landingRoute(
             picture: ${
               isPictures(picture)
                 ? // Several pictures: the cover, the first.
-                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height } : undefined`
-                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height } : undefined`
+                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height, generated: row.${picture.name}[0].generated } : undefined`
+                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height, generated: row.${picture.name}.generated } : undefined`
             },`
                 : ""
             }${
