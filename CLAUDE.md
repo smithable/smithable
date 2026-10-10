@@ -46,7 +46,7 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
 8. Engine packages (`core`, `adapter-tanstack`, `index`) must run in the browser as well as Node: no Node built-in imports, I/O only through the host interface. Only host packages (`cli`, `daemon`) touch disk, Git or processes.
 9. Do not add DSL constructs without passing the five questions in ARCHITECTURE §2.4. Built-in features are internal plugins (ARCHITECTURE §5.1): each spec section registers its schema, operations and generator through the plugin interface.
 10. Keep code (Smithable's and generated) concise. No abstraction before a concrete second use.
-11. Every change must be undoable. Never suppress test or security findings.
+11. Every change must be possible to undo. Never suppress test or security findings.
 12. Build incrementally; each roadmap milestone's exit criteria must be verified by tests.
 
 ## Git

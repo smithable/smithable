@@ -60,7 +60,7 @@ const STUDIO: Stop[] = [
   {
     anchor: "problems",
     title: "Checked as you type",
-    text: "A problem is named here and marked in the text. Save keeps the file as one change, undoable like any other.",
+    text: "A problem is named here and marked in the text. Save keeps the file as one change, which can be undone like any other.",
   },
   {
     anchor: "concepts",
