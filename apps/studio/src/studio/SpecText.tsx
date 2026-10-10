@@ -3,11 +3,12 @@
 // the cursor and what a word means, from the spec's schema and the app's own names (core's
 // complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
 import { completionStatus, startCompletion } from "@codemirror/autocomplete";
+import { indentWithTab } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
 import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
-import { EditorView, hoverTooltip, type ViewUpdate } from "@codemirror/view";
+import { EditorView, hoverTooltip, keymap, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { completeSpec, type EditedFile, hoverSpec, type Known } from "@smithable/core";
 import { basicSetup } from "codemirror";
@@ -117,6 +118,9 @@ export default function SpecText({
         doc: value,
         extensions: [
           basicSetup,
+          // Tab indents and Shift+Tab outdents, as in any code editor; Escape then Tab leaves the
+          // editor for the next control (CodeMirror's own way out, for the keyboard).
+          keymap.of([indentWithTab]),
           yaml(),
           lintGutter(),
           // Studio's colours follow the system's light or dark setting, as it changes.

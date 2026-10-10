@@ -105,8 +105,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   }
 
   /**
-   * A field is checked when it is left, with the message saving would give, and its message goes
-   * as soon as what is typed is right. One left empty is not reported before saving (tabbing past
+   * A field is checked when it is left, with the message saving would give. One left empty is not reported before saving (tabbing past
    * a field is no mistake), unless it already was.
    */
   function check(field: FieldUi, current = inputs) {
@@ -119,10 +118,16 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     );
   }
 
+  /**
+   * Typing in a field with a message takes the message away once what is typed is right; until
+   * then the message stays as it was, not changing with every key, and leaving the field checks
+   * it again.
+   */
   function change(field: FieldUi, value: string | boolean) {
     const next = { ...inputs, [field.name]: value };
     setInputs(next);
-    if (errors[field.name]) check(field, next);
+    if (errors[field.name] && !problems(storedValues(ui, next, app.timeZone)).messages[field.name])
+      setErrors(({ [field.name]: _, ...rest }) => rest);
   }
 
   async function run(action: () => Promise<unknown>) {

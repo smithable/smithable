@@ -581,7 +581,7 @@ ${
     ? `      <SearchBox
         value={q ?? ""}
         placeholder=${attr(search.placeholder)}
-        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: ${filtering ? "(prev) => ({ ...prev, q: text || undefined, page: undefined })" : "{ q: text || undefined }"}, replace: true })}
+        onSearch={(text) => navigate({ to: ${JSON.stringify(page.route)}, search: ${filtering ? "(prev) => ({ ...prev, q: text || undefined, page: undefined })" : "{ q: text || undefined }"}, replace: true, resetScroll: false })}
       />
 `
     : ""
@@ -590,7 +590,7 @@ ${
     ? `      {viewer && (
         <SavedTabs
           saved={view === "saved"}
-          onChange={(saved) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, view: saved ? "saved" : undefined, page: undefined }), replace: true })}
+          onChange={(saved) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, view: saved ? "saved" : undefined, page: undefined }), replace: true, resetScroll: false })}
         />
       )}
 `
@@ -600,7 +600,7 @@ ${
     ? `      <Filters
         filters={${literal(filtering.controls)}}
         values={values}${filtering.mine ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
-        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true })}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true, resetScroll: false })}
       />
 `
     : ""
