@@ -621,6 +621,54 @@ test("setPackage adds a library at an exact version to smithable.context.yml, an
   );
 });
 
+test("moveSection reorders a landing page's sections", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const file = (s: string) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string;
+  const invoicing = { spec: file(""), auth: file(".auth"), content: file(".content") };
+  const order = (spec: string) =>
+    [...spec.matchAll(/^ {6}(hero|features|pricing|faq|callToAction):/gm)].map((m) => m[1]);
+  expect(order(invoicing.spec)).toEqual(["hero", "features", "pricing", "faq", "callToAction"]);
+  const up = applyOperation(invoicing, "moveSection", {
+    page: "home",
+    section: "faq",
+    before: "features",
+  });
+  expect(up.ok && order(up.files.spec)).toEqual([
+    "hero",
+    "faq",
+    "features",
+    "pricing",
+    "callToAction",
+  ]);
+  const down = applyOperation(invoicing, "moveSection", {
+    page: "home",
+    section: "hero",
+    after: "callToAction",
+  });
+  expect(down.ok && order(down.files.spec)).toEqual([
+    "features",
+    "pricing",
+    "faq",
+    "callToAction",
+    "hero",
+  ]);
+  expect(applyOperation(invoicing, "moveSection", { page: "home", section: "faq" }).ok).toBe(false);
+  expect(
+    applyOperation(invoicing, "moveSection", { page: "home", section: "faq", before: "x" }).ok,
+  ).toBe(false);
+  expect(
+    applyOperation(invoicing, "moveSection", { page: "home", section: "faq", before: "faq" }).ok,
+  ).toBe(false);
+  expect(
+    applyOperation(invoicing, "moveSection", { page: "overview", section: "faq", before: "hero" })
+      .ok,
+  ).toBe(false);
+});
+
 test("addSection and removeSection change a landing page's sections, with their texts", () => {
   const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
     query: "?raw",

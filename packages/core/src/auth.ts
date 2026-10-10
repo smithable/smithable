@@ -824,6 +824,23 @@ function checkGrants(
         didYouMean(name, names),
       );
     }
+    // With private access a role reads only its own records unless granted "read", so "write" or
+    // "delete" on records it cannot read is odd: nothing lets it open them. "create" without
+    // "read" is fine (a form-only role).
+    if ((key === "write" || key === "delete") && auth.defaultAccess === "private") {
+      const grants = auth.roles.find((r) => r.name === role)?.grants;
+      const read = grants && grants !== "all" ? grants.read : undefined;
+      const wanted = items.length ? items.map((i) => i.name) : ["all"];
+      const unread =
+        read === "all" ? [] : wanted.filter((n) => n === "all" || !(read ?? []).includes(n));
+      if (unread.length)
+        ctx.warning(
+          at,
+          "write-without-read",
+          `${role} may ${key === "write" ? "change" : "delete"} ${unread.includes("all") ? "every record" : `others' ${unread.join(", ")}`} it cannot read: with private access a role reads only its own records unless granted "read".`,
+          `Grant ${role} "read" on ${unread.includes("all") ? "all" : "them"} too, or drop the "${key}".`,
+        );
+    }
     if (key === "read" && auth.defaultAccess === "shared")
       ctx.warning(
         at,
@@ -834,9 +851,22 @@ function checkGrants(
   }
   if (auth.signIn === "none") return;
   const closed = ir.pages.filter((p) => !auth.public.pages.includes(p.id));
+  // A role for keys: with an api block, a role granted something on a model the API offers is
+  // used through the API (docs/design/integrations.md §2) and needs no page.
+  const offered = !auth.api
+    ? []
+    : auth.api.models === "all"
+      ? models.filter((m) => !auth.api?.except.includes(m))
+      : auth.api.models;
+  const keyed = (grants: RoleGrants) =>
+    (["read", "create", "write", "delete"] as const).some((k) => {
+      const g = grants[k];
+      return g === "all" ? offered.length > 0 : (g ?? []).some((n) => offered.includes(n));
+    });
   for (const role of auth.roles) {
     if (role.grants === "all" || !closed.length) continue;
     const opens = role.grants.pages === "all" || (role.grants.pages?.length ?? 0) > 0;
+    if (!opens && keyed(role.grants)) continue;
     if (!opens)
       ctx.warning(
         roleNodes.get(role.name) ?? at,
