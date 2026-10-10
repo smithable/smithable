@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import {
   allowedByRobots,
+  askIn,
   describePage,
   downloadPictures,
   fetchPage,
@@ -115,9 +116,20 @@ test("read-page prints the description of a saved page, and refuses one that sho
   const out: string[] = [];
   const err: string[] = [];
   const io = { out: (s: string) => out.push(s), err: (s: string) => err.push(s) };
-  expect(readPageCommand(join(dir, "page.html"), "https://cafe.example/", io)).toBe(0);
+  expect(await readPageCommand(join(dir, "page.html"), "https://cafe.example/", io)).toBe(0);
   expect(out.join("")).toBe(`${describePage(readPage(PAGE, "https://cafe.example/"))}\n`);
-  expect(readPageCommand(join(dir, "empty.html"), "https://spa.example/", io)).toBe(1);
+  expect(await readPageCommand(join(dir, "empty.html"), "https://spa.example/", io)).toBe(1);
   expect(err.join("")).toContain("shows almost nothing without JavaScript");
-  expect(readPageCommand(join(dir, "page.html"), undefined, io)).toBe(2);
+  expect(await readPageCommand(join(dir, "page.html"), undefined, io)).toBe(2);
+  // Without a file it fetches the page as new --from does, with the same refusals.
+  out.length = 0;
+  expect(await readPageCommand(undefined, `${base}/old`, io)).toBe(0);
+  expect(out.join("")).toBe(`${describePage(readPage(PAGE, `${base}/`))}\n`);
+  expect(await readPageCommand(undefined, `${base}/secret`, io)).toBe(1);
+  expect(err.join("")).toContain("robots.txt asks not to read /secret");
+});
+
+test("a page's description is asked about in English, a typed one in its own language", () => {
+  expect(askIn(describePage(readPage(PAGE, "https://cafe.example/")))).toBe("en");
+  expect(askIn("Ett bokningssystem för vår yogastudio")).toBeUndefined();
 });
