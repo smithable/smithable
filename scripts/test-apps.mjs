@@ -1255,8 +1255,13 @@ async function marketplaceFlow(dir, base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const outbox = join(dir, "data", "mail", "outbox");
   const titles = async () =>
-    (await page.locator('[data-part="row"]').filter({ visible: true }).allInnerTexts()).map((t) =>
-      t.split("\n")[0].trim(),
+    (await page.locator('[data-part="row"]').filter({ visible: true }).allInnerTexts()).map(
+      // The first line, after the mark on a picture an AI made.
+      (t) =>
+        t
+          .split("\n")
+          .find((line) => line.trim() !== "AI")
+          ?.trim(),
     );
   try {
     await open(page, `${base}/welcome`);
@@ -3196,6 +3201,62 @@ async function logoCheck(dir, base) {
     // Reported by the step.
   } finally {
     await browser.close();
+  }
+}
+
+/**
+ * The mark on pictures an AI made (AiMark.tsx), on each landing page as the server sends it:
+ * "AI" on every gallery picture marked `generated: true` and on the cards of records seeded with
+ * the library's pictures; on a hero, "AI-generated" when shown whole, none under the theme's
+ * wash or veil (cover, centered).
+ */
+async function aiMarkCheck(dir, base) {
+  const content = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+  const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+  const samples = existsSync(join(dir, "samples"))
+    ? readdirSync(join(dir, "samples"))
+        .map((f) => readFileSync(join(dir, "samples", f), "utf8"))
+        .join("\n")
+    : "";
+  const gallery = (content.match(/- image: \{[^}]*generated: true/g) ?? []).length;
+  const hero = /image:\n\s+src: .*\n\s+alt: .*\n\s+generated: true/.test(content);
+  const sampled = samples.includes("generated: true");
+  // Switched off by the owner (aiBadge: false), the theme hides every mark.
+  if ((!gallery && !hero && !sampled) || /^aiBadge: false/m.test(ux)) return;
+  const veiled = /hero: \{[^}]*layout: (cover|centered)/.test(ux);
+  // The landing pages: the routes that use the kit's landing sections.
+  const routes = [];
+  const walk = (at, route) => {
+    for (const entry of readdirSync(at, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(join(at, entry.name), `${route}/${entry.name}`);
+      else if (
+        entry.name === "index.tsx" &&
+        readFileSync(join(at, entry.name), "utf8").includes('from "#/kit/Landing"')
+      )
+        routes.push(route || "/");
+    }
+  };
+  walk(join(dir, "src", "routes"), "");
+  try {
+    await asyncStep(
+      `pictures an AI made are marked: ${gallery} gallery picture(s), ${sampled ? "the sample records' cards, " : ""}${hero ? (veiled ? "not the hero under its wash" : "the hero") : "no hero"} (${routes.join(", ")})`,
+      async () => {
+        const html = (
+          await Promise.all(routes.map(async (r) => (await fetch(`${base}${r}`)).text()))
+        ).join("");
+        const small = (html.match(/data-part="ai-mark"[^>]*>AI</g) ?? []).length;
+        const cards = sampled && html.includes('src="/files/') ? 1 : 0;
+        if (small < gallery + cards)
+          throw new Error(`${small} "AI" mark(s), expected at least ${gallery + cards}`);
+        const first = /<section[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+        const marked = first.includes('data-part="ai-mark"');
+        if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
+        if (hero && !veiled && !/data-part="ai-mark"[^>]*>AI-generated</.test(first))
+          throw new Error("the hero is not marked AI-generated");
+      },
+    );
+  } catch {
+    // Reported by the step.
   }
 }
 
@@ -5375,6 +5436,7 @@ test("the session cookie's name and attributes", async () => {
       await sitemapCheck(dir, base);
       await legalCheck(dir, base);
       await logoCheck(dir, base);
+      await aiMarkCheck(dir, base);
       if (example === "crm") {
         await browserFlow(dir, base);
         await filtersFlow(base);

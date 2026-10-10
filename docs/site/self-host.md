@@ -44,6 +44,8 @@ The container serves plain HTTP. In front of it, put a proxy that handles HTTPS 
 
 **Signing in.** A production build signs people in with a code by email, so a self-hosted app needs mail settings (`SMTP_URL` and `MAIL_FROM`); without them its sign-in page says it cannot send mail, and other mail is written to `/data/mail/outbox` instead of sent. An app that also offers Google or Facebook needs an OAuth client of its own for each: the app's README says how to make one, with the redirect address for your domain. The development sign-in (any role, one click) is left out of production builds.
 
+**Pictures an AI made.** The pictures from the Smithable image library are made with an AI, and the app marks them with a small "AI-generated" or "AI" badge where they could pass for photographs. The badge is on unless you switch it off (`aiBadge: false` in `smithable.ux.yml`, or `smithable op setAiBadge false`); whether your audience needs it is your responsibility.
+
 ## Where the data lives
 
 Everything the app keeps is in the `/data` volume (here `acme-crm-data`): the SQLite database in `db/app.db`, uploaded pictures in `uploads/`, and the mail outbox. The image itself holds no data, so a container can be replaced at any time; the volume stays.

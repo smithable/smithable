@@ -54,7 +54,7 @@ function shared(page: ArticlesPage, ctx: GenContext) {
   const crud = ir.pages.find((x) => pageModel(x) === model.name);
   if (crud) imports.add("#/generated/pages", "pageAccess");
   const picture = p.picture
-    ? `row.${p.picture} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${p.picture}\`, alt: row.${p.picture}.alt, width: row.${p.picture}.width, height: row.${p.picture}.height } : undefined`
+    ? `row.${p.picture} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${p.picture}\`, alt: row.${p.picture}.alt, width: row.${p.picture}.width, height: row.${p.picture}.height, generated: row.${p.picture}.generated } : undefined`
     : "undefined";
   const code = `
 // The row type from the model's module: a type of the data function would keep its server

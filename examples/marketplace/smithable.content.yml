@@ -1,6 +1,6 @@
 # What visitors read. Derived from names when not given here.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: A price tag }
+logo: { src: images/logo.webp, alt: A price tag, generated: true }
 
 models:
   Item:
@@ -26,5 +26,6 @@ pages:
       image:
         src: images/hero.webp
         alt: An outdoor market with stalls of vegetables and flowers
+        generated: true
     latest:
       title: Just in

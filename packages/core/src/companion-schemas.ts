@@ -334,6 +334,11 @@ export const UX_SCHEMA: JsonSchema = {
         },
       },
     },
+    aiBadge: {
+      type: "boolean",
+      description:
+        'Whether pictures an AI made carry the badge ("AI-generated", "AI"): on unless you switch it off; whether your audience needs it is your responsibility.',
+    },
     tones: {
       type: "object",
       description:
@@ -376,7 +381,15 @@ const section: JsonSchema = {
       type: "object",
       description: "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",
       additionalProperties: false,
-      properties: { src: { type: "string" }, alt: { type: "string" } },
+      properties: {
+        src: { type: "string" },
+        alt: { type: "string" },
+        generated: {
+          type: "boolean",
+          description:
+            "Made by an AI: the app marks it as such where it could pass for a photograph.",
+        },
+      },
     },
     items: {
       type: "array",
@@ -400,7 +413,15 @@ const section: JsonSchema = {
             type: "object",
             description: "A gallery picture: { src: images/…, alt: what it shows }.",
             additionalProperties: false,
-            properties: { src: { type: "string" }, alt: { type: "string" } },
+            properties: {
+              src: { type: "string" },
+              alt: { type: "string" },
+              generated: {
+                type: "boolean",
+                description:
+                  "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+            },
           },
           caption: { type: "string" },
           label: { type: "string" },
@@ -460,6 +481,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
           description: "A file under public/images/: webp, avif, jpg, png or svg.",
         },
         alt: { type: "string", description: "What the mark shows." },
+        generated: { type: "boolean", description: "Made by an AI (a mark is never badged)." },
       },
     },
     models: {
