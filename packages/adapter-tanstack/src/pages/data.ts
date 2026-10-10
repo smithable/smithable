@@ -427,7 +427,7 @@ function ActivityPage() {
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
         actions={actions}
         app={app}
-        onFilter={(next) => navigate({ to: ${JSON.stringify(route)}, search: next, replace: true })}
+        onFilter={(next) => navigate({ to: ${JSON.stringify(route)}, search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {
           await forget({ data: target });
           await router.invalidate();
