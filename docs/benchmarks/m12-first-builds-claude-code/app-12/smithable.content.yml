@@ -14,3 +14,6 @@ pages:
       title: Ongoing outages
     recent:
       title: Recently resolved
+logo:
+  src: images/logo.webp
+  alt: Two triangles as mountains

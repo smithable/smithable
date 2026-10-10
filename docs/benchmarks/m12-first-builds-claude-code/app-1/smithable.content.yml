@@ -23,3 +23,6 @@ pages:
     callToAction:
       title: Ready to roll out your mat?
       button: Book a class
+logo:
+  src: images/logo.webp
+  alt: A water drop

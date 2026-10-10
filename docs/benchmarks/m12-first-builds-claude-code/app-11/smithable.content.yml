@@ -7,3 +7,6 @@ pages:
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
