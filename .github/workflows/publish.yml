@@ -46,10 +46,13 @@ jobs:
           echo "## Version $VERSION" >> "$GITHUB_STEP_SUMMARY"
           for tarball in "$RUNNER_TEMP"/packed/*.tgz; do
             if [ "$DRY_RUN" = true ]; then
-              npm publish "$tarball" --access public --dry-run
+              npm publish "$tarball" --access public --provenance=false --dry-run
               echo "- dry run: $(basename "$tarball")" >> "$GITHUB_STEP_SUMMARY"
             else
-              out=$(npm stage publish "$tarball" --access public 2>&1) || { echo "$out" >&2; exit 1; }
+              # --provenance=false until the repository is public: npm adds provenance by itself
+              # with trusted publishing and refuses a private source repository (run 38027857607).
+              # Remove it at the public flip, so releases carry provenance.
+              out=$(npm stage publish "$tarball" --access public --provenance=false 2>&1) || { echo "$out" >&2; exit 1; }
               echo "$out"
               echo "- staged $(basename "$tarball"): $(echo "$out" | tail -n 1)" >> "$GITHUB_STEP_SUMMARY"
             fi
