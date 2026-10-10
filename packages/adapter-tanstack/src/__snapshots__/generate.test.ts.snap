@@ -8080,9 +8080,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "2a3ec1fa kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "17900588 kit",
@@ -16080,9 +16080,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Reserve.tsx": "9f0c730c kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -20528,9 +20528,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
@@ -25630,10 +25630,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
@@ -29009,9 +29009,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Review.tsx": "5f595873 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -31147,9 +31147,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Landing.tsx": "6b887c75 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
@@ -38210,6 +38210,7 @@ import { identified, identifiedAccess, identifiedFits, identifiedMany } from "#/
 import { monitoring, monitoringAccess, monitoringFits, monitoringMany } from "#/generated/actions/monitoring";
 import { resolve, resolveAccess, resolveFits, resolveMany } from "#/generated/actions/resolve";
 import { ActionButton } from "#/kit/ActionButton";
+import { Overflow } from "#/kit/Overflow";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { csvName, csvOf, download } from "#/kit/csv";
@@ -38298,7 +38299,7 @@ function IncidentsPage() {
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
-          <>
+          <Overflow inRow>
             {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) && (
               <ActionButton
                 label="Identified"
@@ -38326,7 +38327,7 @@ function IncidentsPage() {
                 }}
               />
             )}
-          </>
+          </Overflow>
         )}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/incidents/$id", params: { id: String(row.id) } })}
@@ -40049,9 +40050,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "bb730f23 kit",
+  "src/kit/ModelTable.tsx": "c4a6bb7a kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Overflow.tsx": "b2542cc9 kit",
+  "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "dc45cd74 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
@@ -40103,7 +40104,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "973b9b6e generated",
   "src/routes/incidents/$id.tsx": "c730d86f generated",
-  "src/routes/incidents/index.tsx": "41a6b837 generated",
+  "src/routes/incidents/index.tsx": "ac48dcc7 generated",
   "src/routes/incidents/new.tsx": "ca089b54 generated",
   "src/routes/index.tsx": "dca8d976 generated",
   "src/routes/maintenance/$id.tsx": "2c670e92 generated",
