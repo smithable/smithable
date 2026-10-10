@@ -1,5 +1,7 @@
 # Smithable documentation
 
+*Soft to change. Hard as steel.*
+
 Smithable is an app builder for people who have never written code and for developers who want to move faster. You describe a web application in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification, `smithable.yml`, and generates an ordinary full-stack web application from it.
 
 Routine changes are made by deterministic generators, not by an AI rewriting code: adding a phone number to customers is one operation, in milliseconds, for no tokens. The generated app is a normal TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. It has no dependency on Smithable at build time or run time, and a developer can take it over at any time.

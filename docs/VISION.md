@@ -83,7 +83,7 @@ The bet can be measured, and we will measure it (roadmap M7).
 5. **Beautiful by default.** Design quality comes from carefully crafted themes and page patterns, not from AI improvisation.
 6. **Open source stands alone.** The engine, CLI, Studio and MCP server are fully useful without an account or subscription. The hosted service builds on the open-source product, never the reverse.
 7. **Concise code.** No routine boilerplate. Each domain definition is written once and derived everywhere else.
-8. **Everything is undoable.** Every change can be reviewed and reverted.
+8. **Everything can be undone.** Every change can be reviewed and reverted.
 9. **Tests and scanners are authoritative.** AI may explain findings; it never silences them.
 
 ## Non-goals

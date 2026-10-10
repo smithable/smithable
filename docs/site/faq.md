@@ -4,7 +4,7 @@ Checked against the code on 2026-10-01. Where something is not built yet, this p
 
 ## How is this different from Lovable, Bolt, v0 or Replit?
 
-Those tools have a model write and rewrite the application's code from your prompts. Smithable keeps a short description of the application, `smithable.yml`, and generates the code from it. Routine changes are operations that need no model and cannot produce broken code; a model is used only to turn a request in your own words into operations, and it proposes, you confirm. The result is an ordinary application a developer can read, and changes that are cheap, tested and undoable. The reasoning and the measurements are on [Why Smithable](why.md).
+Those tools have a model write and rewrite the application's code from your prompts. Smithable keeps a short description of the application, `smithable.yml`, and generates the code from it. Routine changes are operations that need no model and cannot produce broken code; a model is used only to turn a request in your own words into operations, and it proposes, you confirm. The result is an ordinary application a developer can read, and changes that are cheap, tested and can be undone. The reasoning and the measurements are on [Why Smithable](why.md).
 
 ## Does my app depend on Smithable?
 
@@ -24,7 +24,7 @@ Yes. `smithable deploy --target docker` runs the release checks and builds a con
 
 ## Is there a hosted version?
 
-A private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
+We can run it, but it's all yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
 
 ## Where does my data live?
 
