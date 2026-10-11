@@ -346,7 +346,18 @@ export function column(field: FieldIR): { expr: string; uses: string } {
  */
 function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
   const own = options.samples?.[model.name];
-  if (!own) return sampleRows(model);
+  // A generated reference points at one of the related model's rows: a sample file may have
+  // fewer than the generated ones (a starter's four clients).
+  if (!own)
+    return sampleRows(model).map((row) => {
+      for (const field of model.fields) {
+        const rows = field.type.kind === "relation" && options.samples?.[field.type.model];
+        const id = row[field.name];
+        if (rows && typeof id === "number")
+          row[field.name] = rows.length ? ((id - 1) % rows.length) + 1 : null;
+      }
+      return row;
+    });
   return own.map((row) =>
     Object.fromEntries(
       Object.entries(row).map(([name, value]) => {
@@ -433,7 +444,8 @@ ${rows.join("\n")}
   // has nothing to import.
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
 ${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? 'import { samplePicture } from "#/kit/uploads";\n' : ""}${
-  ir.pages.some((p) => p.pattern.kind === "calendar")
+  // The calendar's helper, only when a sample is moved with it (a skipped model moves none).
+  blocks.some((b) => b.includes("aroundToday("))
     ? `import { app } from "#/generated/app";
 import { ${blocks.some((b) => b.includes("instantOf(")) ? "instantOf, wallTime" : "wallTime"} } from "#/kit/zoned";
 
