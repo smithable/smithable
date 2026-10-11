@@ -5,7 +5,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { describedWith, type Proposal } from "@smithable/ai";
-import { BUILT_IN_THEMES, type OperationArgs, themeThumbnail } from "@smithable/core";
+import {
+  BUILT_IN_THEMES,
+  EDITABLE_FILES,
+  type OperationArgs,
+  themeThumbnail,
+} from "@smithable/core";
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
@@ -58,6 +63,8 @@ const TYPES: Record<string, string> = {
 
 /** One entry of the change trace (ARCHITECTURE §9.7), from the project's Git history. */
 export interface TraceEntry {
+  /** The change's commit. */
+  id: string;
   description: string;
   at: string;
   /** The generator (no model), or the tier of the model that proposed the change. */
@@ -71,7 +78,14 @@ export interface TraceEntry {
   isUndo: boolean;
   /** The operation, for the Builder to word it like its summary; an undo has the undone one. */
   operation?: { op: string; args: Record<string, unknown> };
+  /** The files it changed that a person edits: the spec files and src/custom/** (Code mode). */
+  files: string[];
+  /** What the person asked a model, for a change it made (several changes may share one). */
+  request?: string;
 }
+
+/** A file a person edits, as opposed to the generated ones (docs/design/studio-changes.md §3). */
+export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWith("src/custom/");
 
 const ENGINES = {
   generator: "generator",
@@ -80,12 +94,20 @@ const ENGINES = {
   frontier: "frontier model",
 } as const;
 
-function trace(dir: string): TraceEntry[] {
+export function trace(dir: string): TraceEntry[] {
   // Only the app's own history: a repository around it is someone else's.
   if (!ownRepository(dir)) return [];
-  const log = git(dir, ["log", "--format=%H%x1f%s%x1f%aI%x1f%b%x1e"]);
+  // Each commit's fields, then (after \x1d) the files it changed, one a line.
+  const log = git(dir, ["log", "--name-only", "--format=%x1e%H%x1f%s%x1f%aI%x1f%b%x1d"]);
   if (!log.ok) return [];
-  const entries = log.out.split("\x1e").filter((e) => e.trim());
+  const records = log.out.split("\x1e").filter((e) => e.trim());
+  const entries = records.map((r) => r.split("\x1d")[0] ?? "");
+  const changed = new Map(
+    records.map((r) => {
+      const [head = "", names = ""] = r.split("\x1d");
+      return [head.trim().split("\x1f")[0] ?? "", names.split("\n").filter((n) => n && ownFile(n))];
+    }),
+  );
   const reverted = new Set(
     entries.flatMap((e) => [...e.matchAll(/This reverts commit ([0-9a-f]{40})/g)].map((m) => m[1])),
   );
@@ -110,6 +132,7 @@ function trace(dir: string): TraceEntry[] {
     const ai = trailer(body, "Smithable-AI");
     const model = ai
       ? (JSON.parse(ai) as {
+          request?: string;
           tier: keyof typeof ENGINES;
           model: string;
           tokens: number;
@@ -119,6 +142,7 @@ function trace(dir: string): TraceEntry[] {
       : undefined;
     return [
       {
+        id: sha,
         description: isUndo ? `Undid: ${subject.slice(19, -1)}` : subject.slice(11),
         at,
         // A change a wording rule read, or none a model made: the generator's (tier 0).
@@ -131,9 +155,39 @@ function trace(dir: string): TraceEntry[] {
         undone: reverted.has(sha),
         isUndo,
         ...(operation ? { operation } : {}),
+        files: changed.get(sha) ?? [],
+        ...(model?.request ? { request: model.request } : {}),
       },
     ];
   });
+}
+
+/**
+ * One change opened (GET /api/change/<id>): the patch of the person's files (all of it with
+ * `all`), the number of other files it changed, and the editable files before and after it.
+ */
+export function changeDetail(dir: string, id: string, all = false) {
+  if (!/^[0-9a-f]{40}$/.test(id) || !git(dir, ["cat-file", "-e", `${id}^{commit}`]).ok)
+    return undefined;
+  const names = git(dir, ["show", "--format=", "--name-only", id]).out.split("\n").filter(Boolean);
+  const own = names.filter(ownFile);
+  const parent = git(dir, ["rev-parse", "--verify", "--quiet", `${id}^`]);
+  const at = (rev: string) =>
+    Object.fromEntries(
+      Object.entries(EDITABLE_FILES).flatMap(([path, key]) => {
+        const shown = git(dir, ["show", `${rev}:${path}`]);
+        return shown.ok ? [[key, shown.out]] : [];
+      }),
+    );
+  return {
+    patch:
+      all || own.length
+        ? git(dir, ["show", "--format=", id, ...(all ? [] : ["--", ...own])]).out
+        : "",
+    generated: names.length - own.length,
+    before: parent.ok ? at(parent.out.trim()) : {},
+    after: at(id),
+  };
 }
 
 /**
@@ -611,6 +665,12 @@ export async function studio(
       if (plugin && declaredPlugins(dir).includes(plugin)) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
         return res.end(readFileSync(pluginPath(dir, plugin)));
+      }
+      const change = /^\/api\/change\/([0-9a-f]{40})$/.exec(url.pathname)?.[1];
+      if (change && ownRepository(dir)) {
+        const detail = changeDetail(dir, change, url.searchParams.has("all"));
+        if (!detail) return json({ error: "There is no such change." }, 404);
+        return json(detail);
       }
       if (url.pathname === "/api/diff") {
         // The last change Smithable made, as a patch without its bookkeeping files. A new app has

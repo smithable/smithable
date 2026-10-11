@@ -534,6 +534,7 @@ export function App() {
                 run={run}
                 place={place.builder}
                 onPlace={builderPlace}
+                undo={() => void undo()}
               />
             ) : (
               <Studio

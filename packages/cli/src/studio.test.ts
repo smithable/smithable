@@ -1,5 +1,9 @@
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "vitest";
-import { refusal, studio } from "./studio.js";
+import { changeDetail, refusal, studio, trace } from "./studio.js";
 import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
@@ -47,4 +51,48 @@ test("a crashed preview restarts at once a few times, then with a growing pause,
   expect([1, 2, 5].map(previewRestartDelay)).toEqual([1000, 1000, 1000]);
   expect([6, 7, 8, 9].map(previewRestartDelay)).toEqual([10_000, 20_000, 40_000, 80_000]);
   expect([10, 11, 50].map(previewRestartDelay)).toEqual([120_000, 120_000, 120_000]);
+});
+
+test("the trace has each change's id, the person's files it changed and a model's request; a change opens as its patch", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-trace-"));
+  const commit = (message: string, files: Record<string, string>) => {
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(join(dir, path, ".."), { recursive: true });
+      writeFileSync(join(dir, path), text);
+    }
+    spawnSync("git", ["add", "-A"], { cwd: dir });
+    spawnSync(
+      "git",
+      ["-c", "user.name=T", "-c", "user.email=t@t.invalid", "commit", "-qm", message],
+      { cwd: dir },
+    );
+  };
+  try {
+    spawnSync("git", ["init", "-q"], { cwd: dir });
+    commit("smithable: start of history", { "smithable.yml": "smithable: 0.1\n" });
+    commit("smithable: Add field phone to Customer", {
+      "smithable.yml": "smithable: 0.1\nmodels: {}\n",
+      "src/generated/schema.ts": "export {};\n",
+      "src/custom/actions/merge.ts": "export {};\n",
+    });
+    commit(
+      'smithable: Add field website to Customer\n\nSmithable-AI: {"request":"customers need a website","tier":"frontier","model":"m","tokens":10,"cost":0.01}',
+      { "smithable.yml": "smithable: 0.1\nmodels: { A: {} }\n" },
+    );
+    const [asked, added] = trace(dir);
+    expect(asked).toMatchObject({ files: ["smithable.yml"], request: "customers need a website" });
+    expect(added?.id).toMatch(/^[0-9a-f]{40}$/);
+    expect(added?.files).toEqual(["smithable.yml", "src/custom/actions/merge.ts"]);
+    expect(added?.request).toBeUndefined();
+    const detail = changeDetail(dir, added?.id ?? "");
+    expect(detail?.patch).toContain("+models: {}");
+    expect(detail?.patch).not.toContain("src/generated");
+    expect(detail?.generated).toBe(1);
+    expect(detail?.before.spec).toBe("smithable: 0.1");
+    expect(detail?.after.spec).toContain("models: {}");
+    expect(changeDetail(dir, added?.id ?? "", true)?.patch).toContain("src/generated/schema.ts");
+    expect(changeDetail(dir, "0".repeat(40))).toBeUndefined();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

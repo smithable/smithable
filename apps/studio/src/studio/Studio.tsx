@@ -178,7 +178,9 @@ export function Studio({
                 <p className="p-3 text-sm text-quiet">Choose a concept.</p>
               )}
             </Panel>
-            <Trace entries={project.trace} />
+            <Panel title="Changes" className="h-full">
+              <Trace entries={project.trace} />
+            </Panel>
           </div>
         </div>
         {/* On a phone the editor comes first: Code mode is for editing the text. */}
