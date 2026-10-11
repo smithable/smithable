@@ -99,6 +99,7 @@ jobs:
     needs: scope
     if: needs.scope.outputs.basics == 'true'
     runs-on: ubuntu-latest
+    permissions: { contents: read }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0 }   # the whole history, for the secrets scan
@@ -120,6 +121,7 @@ jobs:
     if: needs.scope.outputs.full == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, smithable]
     timeout-minutes: 90
+    permissions: { contents: read }
     env:
       # The generated apps' commits need an identity; the machine's own global config is left alone.
       GIT_AUTHOR_NAME: CI
@@ -178,6 +180,7 @@ jobs:
     needs: [scope, lint-build-units, full]
     if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Every job passed
         env:
