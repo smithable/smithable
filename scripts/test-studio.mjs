@@ -557,6 +557,16 @@ try {
       await roles.getByLabel("New users get").selectOption("teacher");
       changes++;
       await waitAuth((t) => /defaultRole: teacher/.test(t), "defaultRole: teacher");
+      // Ask, the assistant in the app: on for everyone who signs in, its button in the preview,
+      // then off again.
+      const asking = page.getByRole("region", { name: "Ask, the assistant in the app" });
+      await asking.getByLabel("Who gets Ask").selectOption("signed-in");
+      changes++;
+      await waitAuth((t) => /assistant:\n {2}for: signed-in/.test(t), "assistant for signed-in");
+      await preview.getByRole("button", { name: "Ask", exact: true }).waitFor({ timeout: 90000 });
+      await asking.getByLabel("Who gets Ask").selectOption("off");
+      changes++;
+      await waitAuth((t) => !/^assistant:/m.test(t), "no assistant");
       // Everything undone, as later steps expect the file as it was.
       for (let i = 0; i < changes; i++) {
         const undone = await fetch(`${base}/api/undo`, {
