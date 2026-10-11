@@ -1400,6 +1400,26 @@ test("addField shows the new field in its list in the same change", () => {
   expect(result.description).toContain("shown in its list");
 });
 
+test("addField ignores list for a list of related records, which is never a column", () => {
+  // A draft asks for every field in its list; a list of related records cannot be shown there
+  // (the ux file would be invalid), so the field is added and the column is left out.
+  const added = applyOperation(files, "addModel", {
+    model: "Note",
+    fields: { body: "text!", customer: "Customer!" },
+  });
+  if (!added.ok) throw new Error(added.message);
+  const result = applyOperation({ ...files, spec: added.files.spec }, "addField", {
+    model: "Customer",
+    field: "memos",
+    type: "Note[]",
+    list: true,
+  });
+  if (!result.ok) throw new Error(result.message);
+  expect(result.files.spec).toContain("memos: Note[]");
+  expect(result.files.ux ?? "").not.toContain("memos");
+  expect(result.description).not.toContain("shown in its list");
+});
+
 test("addField shows a field the default columns leave out, and refuses a model with no list", () => {
   // Orders' page names no columns, and the app never picks a long text: they are written out.
   const notes = applyOperation(files, "addField", {
