@@ -3,7 +3,16 @@ import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { parseTheme } from "../theme.js";
-import { CONTROLS, FONTS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES } from "../ux.js";
+import {
+  CONTROLS,
+  FONTS,
+  ICONS,
+  SECTION_LOOKS,
+  THEME_PRESETS,
+  TONES,
+  VOICES,
+  type Voice,
+} from "../ux.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
 export function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
@@ -447,6 +456,28 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   },
 };
 
+/** Ask's manner (docs/design/ask-defaults.md §2): plain, the default, is written as nothing. */
+const setAssistantVoice: Operation<{ voice: Voice }> = {
+  name: "setAssistantVoice",
+  summary:
+    "Set the manner of Ask, the assistant in the app: plain (the default: short, no pleasantries), friendly or formal.",
+  schema: {
+    type: "object",
+    required: ["voice"],
+    additionalProperties: false,
+    properties: {
+      voice: { type: "string", enum: [...VOICES], description: "plain, friendly or formal." },
+    },
+  },
+  positional: ["voice"],
+  describe: ({ voice }) => `Ask answers ${voice === "plain" ? "plainly" : `in a ${voice} voice`}`,
+  destructive: () => false,
+  apply(editors, { voice }) {
+    put(editors.ux, ["assistant", "voice"], voice === "plain" ? undefined : voice);
+    return [];
+  },
+};
+
 const setSort: Operation<{ page: string; field: string }> = {
   name: "setSort",
   summary:
@@ -531,5 +562,6 @@ export const uxOperations: AnyOperation[] = [
   setFormColumns,
   setView,
   setAiBadge,
+  setAssistantVoice,
   setSort,
 ];
