@@ -13,6 +13,7 @@ import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Look } from "./Look";
 import { Selected, selectedField } from "./Selected";
+import { WhoCan } from "./WhoCan";
 
 export function Builder({
   project,
@@ -28,12 +29,14 @@ export function Builder({
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTabState] = useState<"app" | "look" | "change">(place.tab ?? "app");
-  const setTab = (next: "app" | "look" | "change") => {
+  const [tab, setTabState] = useState<"app" | "look" | "who" | "change">(place.tab ?? "app");
+  const setTab = (next: "app" | "look" | "who" | "change") => {
     setTabState(next);
     onPlace({ tab: next });
   };
   const [prefill, setPrefill] = useState<Prefill>();
+  // A column of the Who can tab a click in the summary points at (a role, or "anyone").
+  const [marked, setMarked] = useState<string>();
   const [selection, setSelectionState] = useState<Selection | undefined>(place.selection);
   const setSelection = (next: Selection | undefined) => {
     setSelectionState(next);
@@ -191,6 +194,7 @@ export function Builder({
                 tabs={[
                   ["app", "What it does"],
                   ["look", "Look", "look"],
+                  ["who", "Who can"],
                   ["change", "Change"],
                 ]}
                 value={tab}
@@ -200,6 +204,8 @@ export function Builder({
           >
             {tab === "look" ? (
               <Look spec={spec} run={run} themes={project.themes} />
+            ) : tab === "who" ? (
+              <WhoCan spec={spec} run={run} authText={project.files.auth} marked={marked} />
             ) : tab === "app" ? (
               <AppSummary
                 app={project.name}
@@ -209,6 +215,10 @@ export function Builder({
                 onAdd={(p) => {
                   setPrefill(p);
                   setTab("change");
+                }}
+                onWho={(column) => {
+                  setMarked(column);
+                  setTab("who");
                 }}
               />
             ) : (
@@ -246,6 +256,10 @@ export function Builder({
               run={run}
               onLook={() => {
                 setTab("look");
+                show("app");
+              }}
+              onWho={() => {
+                setTab("who");
                 show("app");
               }}
             />
