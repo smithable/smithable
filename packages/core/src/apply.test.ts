@@ -1055,6 +1055,18 @@ describe("standard actions", () => {
   });
 });
 
+test("setAssistantTexts sets Ask's texts, clears one with an empty text, and wants one", () => {
+  const set = applyOperation(files, "setAssistantTexts", { name: "Nova", greeting: "Hej." });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.content).toMatch(/assistant:\n {2}name: Nova\n {2}greeting: Hej\./);
+  expect(set.description).toBe('Ask\'s texts: name "Nova", greeting "Hej."');
+  const cleared = applyOperation({ ...files, ...set.files }, "setAssistantTexts", { name: "" });
+  if (!cleared.ok) throw new Error(cleared.message);
+  expect(cleared.files.content).not.toContain("Nova");
+  expect(cleared.files.content).toContain("greeting: Hej.");
+  expect(applyOperation(files, "setAssistantTexts", {})).toMatchObject({ ok: false });
+});
+
 test("setDomains sets and lifts the email domains, and refuses an address or a bad domain", () => {
   const set = applyOperation(files, "setDomains", { domains: ["Acme.example", "north.example"] });
   if (!set.ok) throw new Error(set.message);

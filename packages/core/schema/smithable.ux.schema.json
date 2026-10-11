@@ -312,6 +312,21 @@
         }
       }
     },
+    "assistant": {
+      "type": "object",
+      "description": "Ask, the assistant in the app: its manner, as a theme is a manner (its texts are smithable.content.yml's).",
+      "additionalProperties": false,
+      "properties": {
+        "voice": {
+          "enum": [
+            "plain",
+            "friendly",
+            "formal"
+          ],
+          "description": "plain (the default: short, no pleasantries), friendly or formal."
+        }
+      }
+    },
     "aiBadge": {
       "type": "boolean",
       "description": "Whether pictures an AI made carry the badge (\"AI-generated\", \"AI\"): on unless you switch it off; whether your audience needs it is your responsibility."

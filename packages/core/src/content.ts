@@ -35,7 +35,23 @@ export interface ContentIR {
   outgoing: Record<string, { subject?: string; text?: string }>;
   /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
   consent?: { text?: string; accept?: string; decline?: string };
+  /**
+   * Ask, the assistant in the app (docs/design/ask-defaults.md §2): the panel's name, the first
+   * line it shows, the input's placeholder, and one sentence of what it is for (shown under the
+   * greeting and given to the model). The kit's words where none is said.
+   */
+  assistant?: AssistantTexts;
 }
+
+export interface AssistantTexts {
+  name?: string;
+  greeting?: string;
+  placeholder?: string;
+  about?: string;
+}
+
+/** The assistant's texts, in the order the operation and the file give them. */
+export const ASSISTANT_TEXTS = ["name", "greeting", "placeholder", "about"] as const;
 
 export interface PageContent {
   title?: string;
@@ -197,6 +213,7 @@ export function validateContent(
       "actions",
       "consent",
       "outgoing",
+      "assistant",
     ],
   });
 
@@ -228,6 +245,8 @@ export function validateContent(
     }
     if (key === "consent")
       content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);
+    if (key === "assistant")
+      content.assistant = readTexts(ctx, value, '"assistant"', [...ASSISTANT_TEXTS]);
     if (key === "models") readModels(ctx, value, ir, content, modelKeys);
     if (key === "pages") {
       for (const page of named(

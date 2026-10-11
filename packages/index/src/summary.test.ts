@@ -404,3 +404,30 @@ models:
   expect(text).toContain("Nyheter");
   expect(text).not.toMatch(/newses|a rubrik|Arenden/);
 });
+
+test("Ask in the summary: who, its name from the content file, and its voice", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Order:\n    fields: { number: string! }\npages:\n  orders: { crud: Order }\n",
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, staff: { pages: all } }\ndefaultRole: staff\nassistant: { for: signed-in }\n",
+    },
+    ir,
+  ).auth;
+  const content = validateContent(
+    { path: "smithable.content.yml", text: "smithableContent: 0.1\nassistant: { name: Nova }\n" },
+    ir,
+  ).content;
+  const said = (voice?: "plain" | "friendly" | "formal") =>
+    summarize(ir, auth, content, [], voice ? { assistant: { voice } } : undefined)
+      .find((s) => s.concept === "auth")
+      ?.sentences.join(" ");
+  expect(said()).toContain(
+    "Everyone who signs in can ask the app questions as Nova; it changes nothing. It answers plainly.",
+  );
+  expect(said("formal")).toContain("It answers formally.");
+});
