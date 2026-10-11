@@ -35,3 +35,7 @@ api:
   models: [Component, Incident]
   actions: [resolve]
   assistants: true                 # the same as tools for AI assistants, at /mcp (no deleting)
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in
