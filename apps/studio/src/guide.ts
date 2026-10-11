@@ -37,7 +37,7 @@ const BUILDER: Stop[] = [
   {
     anchor: "change",
     title: "Change it in your own words",
-    text: "Describe a change, or ask a question about the app. A change is checked and shown before it is kept, and every change can be undone.",
+    text: "In Changes, describe a change or ask a question about the app. A change is checked and shown before it is kept; the list below says what each one changed, and every change can be undone.",
   },
   {
     anchor: "look",

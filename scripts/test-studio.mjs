@@ -134,8 +134,15 @@ try {
   const preview = page.frameLocator('iframe[title="App preview"]');
   const status = page.getByRole("status");
   const trace = page.getByRole("list", { name: "Change trace" });
+  // Builder's newest change, under the panels; the list itself is in the Changes tab.
+  const last = page.getByRole("region", { name: "Last change" });
+  const changeCount = async () => (await (await fetch(`${base}/api/project`)).json()).trace.length;
+  const changesTab = () => page.getByRole("tab", { name: "Changes" }).click();
   const change = async (label) => {
-    await page.getByRole("tab", { name: "Change" }).click();
+    await changesTab();
+    const forms = page.locator("details", { hasText: "Change by form" });
+    if (!(await forms.getAttribute("open").then((v) => v !== null)))
+      await forms.locator("summary").click();
     await page.getByLabel("What do you want to change?").selectOption({ label });
   };
   const openPreview = async (path) => {
@@ -193,13 +200,13 @@ try {
           throw new Error(`${name} does not lead to ${href}`);
     },
   );
-  await step("the change box folds to one line and opens again (finding 10)", async () => {
-    await page.getByRole("button", { name: "Fold", exact: true }).click();
-    await page.getByRole("button", { name: "Show the change box" }).waitFor();
-    if (await page.getByLabel("Change trace").isVisible())
-      throw new Error("the folded change box still shows the changes");
-    await page.getByRole("button", { name: "Show the change box" }).click();
+  await step("the Changes tab: the prompt first, the forms folded, then the list", async () => {
+    await changesTab();
+    const forms = page.locator("details", { hasText: "Change by form" });
+    if ((await forms.getAttribute("open")) !== null) throw new Error("the forms are not folded");
     await page.getByLabel("Describe a change").waitFor();
+    await page.getByRole("tab", { name: "What it does" }).click();
+    await last.waitFor();
   });
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
@@ -326,14 +333,12 @@ try {
       await page.getByLabel("Holds").selectOption({ label: "Web address" });
       await page.getByRole("button", { name: "Add field" }).click();
       // The field, then its column in the list (Show it in the list): the trace has both.
-      await trace
+      await last
         .getByText("Customers: added a website (a web address)")
         .waitFor({ timeout: 60000 });
       // The left side has the change as soon as it is done, before the app has restarted with
       // it (finding 12), and the form starts again empty rather than inviting a second click.
-      await trace
-        .getByText("Customers: added a website (a web address)")
-        .waitFor({ timeout: 3000 });
+      await last.getByText("Customers: added a website (a web address)").waitFor({ timeout: 3000 });
       if ((await page.getByLabel("Name", { exact: true }).inputValue()) !== "")
         throw new Error("The add-field form kept its values after the change went through");
       await page.getByRole("tab", { name: "What it does" }).click();
@@ -374,7 +379,7 @@ try {
       await page.getByLabel("Values").fill("smb, enterprise, public sector");
       await page.getByLabel("Records with government get").selectOption("publicSector");
       await page.getByRole("button", { name: "Change field" }).click();
-      await trace
+      await last
         .getByText(/public sector/i)
         .first()
         .waitFor({ timeout: 90000 });
@@ -405,7 +410,7 @@ try {
         )
         .waitFor();
       await page.getByRole("button", { name: "Add button" }).click();
-      await trace
+      await last
         .getByText(/cancel ?order/i)
         .first()
         .waitFor({ timeout: 90000 });
@@ -444,10 +449,10 @@ try {
         .getByText("this deletes the phone column")
         .waitFor({ timeout: 60000 });
       await page.getByRole("button", { name: "Apply anyway" }).click();
-      await trace.getByText("Customers: removed the phone").waitFor({ timeout: 60000 });
+      await last.getByText("Customers: removed the phone").waitFor({ timeout: 60000 });
       await status.getByRole("button", { name: "Undo this change" }).click();
       await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 });
-      await trace.getByText("Undid: Customers: removed the phone").waitFor();
+      await last.getByText("Undid: Customers: removed the phone").waitFor();
     },
   );
   await step(
@@ -457,7 +462,7 @@ try {
       await page.getByLabel("Action").selectOption("mergeCustomers");
       await page.getByLabel("Intent").fill("Fold a duplicate customer into the one to keep.");
       await page.getByRole("button", { name: "Change action" }).click();
-      await trace
+      await last
         .getByText(/mergeCustomers/)
         .first()
         .waitFor({ timeout: 60000 });
@@ -600,7 +605,7 @@ try {
         .waitFor({ state: "attached", timeout: 60000 });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
       await header("email").dragTo(header("name"), { timeout: 60000 });
-      await trace.getByText("in the customers table").first().waitFor({ timeout: 60000 });
+      await last.getByText("in the customers table").first().waitFor({ timeout: 60000 });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
@@ -619,7 +624,7 @@ try {
       await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
-      await trace.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
+      await last.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
@@ -635,7 +640,7 @@ try {
     if ((await orders.getByLabel("Called, for several").inputValue()) !== "Jobs")
       throw new Error("the name for several did not follow");
     await orders.getByRole("button", { name: "Rename everywhere" }).click();
-    await trace
+    await last
       .getByText("Order records are now called jobs (one job)")
       .first()
       .waitFor({ timeout: 60000 });
@@ -643,7 +648,7 @@ try {
     if (!(await project()).files.content.includes("title: Jobs"))
       throw new Error("the orders page kept its title");
     await page.locator("header").getByRole("button", { name: "Undo", exact: true }).click();
-    await trace
+    await last
       .getByText("Undid: Order records are now called jobs (one job)")
       .first()
       .waitFor({ timeout: 60000 });
@@ -656,7 +661,7 @@ try {
       .getByRole("group", { name: "Status of Order" })
       .getByLabel("Color of Shipped")
       .selectOption("success");
-    await trace
+    await last
       .getByText("Show Order.status shipped as success")
       .first()
       .waitFor({ timeout: 60000 });
@@ -664,7 +669,7 @@ try {
       .getByRole("region", { name: "Pages" })
       .getByLabel("Icon of Orders")
       .selectOption("truck");
-    await trace.getByText(/truck/i).first().waitFor({ timeout: 60000 });
+    await last.getByText(/truck/i).first().waitFor({ timeout: 60000 });
     const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     if (!ux.includes("shipped: success") || !ux.includes("truck")) throw new Error(ux);
   });
@@ -703,7 +708,7 @@ try {
         }, 50);
       });
       await themes.getByRole("button", { name: /Playful/ }).click();
-      await trace.getByText("Use the Playful theme").first().waitFor({ timeout: 60000 });
+      await last.getByText("Use the Playful theme").first().waitFor({ timeout: 60000 });
       await themes
         .getByRole("button", { name: /Playful/, pressed: true })
         .waitFor({ timeout: 60000 });
@@ -783,7 +788,7 @@ try {
         .getByLabel("Theme", { exact: true })
         .fill(forest.replace("name: forest", "name: moss"));
       await look.getByRole("button", { name: "Add and use" }).click();
-      await trace.getByText("Add theme moss and use it").first().waitFor({ timeout: 60000 });
+      await last.getByText("Add theme moss and use it").first().waitFor({ timeout: 60000 });
       if (!existsSync(join(dir, "themes/moss.yml"))) throw new Error("no themes/moss.yml");
       await page
         .getByRole("list", { name: "Themes" })
@@ -797,6 +802,7 @@ try {
 
   await step("a question about the app is answered from the spec, not applied", async () => {
     const before = (await project()).files.spec;
+    await changesTab();
     await page.getByLabel("Describe a change").fill("Who can add orders?");
     await page.getByRole("button", { name: "Make the change" }).click();
     await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
@@ -805,6 +811,7 @@ try {
   await step(
     "a change that deletes data is proposed first, and opens in a form with its values filled in",
     async () => {
+      await changesTab();
       await page.getByLabel("Describe a change").fill("Customers without notes");
       await page.getByRole("button", { name: "Make the change" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
@@ -821,6 +828,7 @@ try {
   await step(
     "describe a change: one that loses no data is made at once, and traced with its model",
     async () => {
+      await changesTab();
       await page
         .getByLabel("Describe a change")
         .fill("A mobile number for every customer would help");
@@ -835,6 +843,12 @@ try {
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 });
       await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
+      // Opened, it says what changed in the summary's words.
+      await trace.getByRole("button", { name: /Customers: added a mobile/ }).click();
+      await trace
+        .getByRole("region", { name: "What changed" })
+        .getByText(/a mobile \(a phone number\)/)
+        .waitFor({ timeout: 60000 });
     },
   );
 
@@ -846,19 +860,19 @@ try {
       await customers.getByRole("button", { name: "a phone", exact: true }).click();
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
       await customers.getByRole("button", { name: "Save label" }).click();
-      await trace.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
+      await last.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
       // Who can: a record's properties, a chip per role; a chip grants the role the operation
       // on this kind of record in the auth file, and again takes it back. Each one's own
       // records stay theirs, and seeing is the record rule's under shared access.
       await customers.getByRole("button", { name: "Customers", exact: true }).click();
       await customers.getByRole("button", { name: "Delete: sales" }).click();
-      await trace
+      await last
         .getByText(/sales may delete everyone's customers/i)
         .first()
         .waitFor({ timeout: 60000 });
       await customers.getByText("and each one their own").first().waitFor();
       await customers.getByRole("button", { name: "Delete: sales" }).click();
-      await trace
+      await last
         .getByText("sales may delete only their own records")
         .first()
         .waitFor({ timeout: 60000 });
@@ -872,17 +886,16 @@ try {
       await page.getByLabel("Name", { exact: true }).fill("loyalty code");
       await page.getByRole("checkbox", { name: "Unique" }).check();
       await page.getByRole("button", { name: "Add field" }).click();
-      await trace.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
+      await last.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
       // In my words: the wording only, for this session; no change is made.
       await page.getByRole("tab", { name: "What it does" }).click();
-      const changes = await trace.locator("li").count();
+      const changes = await changeCount();
       const again = page.getByRole("region", { name: "Customers", exact: true });
       await again.getByRole("button", { name: "In my words" }).click();
       await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
       await again.getByRole("button", { name: "Keep my words" }).click();
       await again.getByText("Our clients and how to reach them.").waitFor();
-      if ((await trace.locator("li").count()) !== changes)
-        throw new Error("rewording made a change");
+      if ((await changeCount()) !== changes) throw new Error("rewording made a change");
       await again.getByRole("button", { name: "Back to the generated text" }).click();
       await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
     },
@@ -906,9 +919,8 @@ try {
       await current("Details");
       await page.keyboard.press("ArrowLeft");
       await current("Your app");
-      // The change box, and the changes under it, stay under every panel.
-      await page.getByLabel("Describe a change").waitFor();
-      await trace.waitFor();
+      // The newest change stays under every panel.
+      await last.waitFor();
       await panels.getByLabel("Your app + Details").check();
       await current("Your app,Details");
       // A wide window has the preview's column: no Preview in the mode switch.
@@ -1072,7 +1084,7 @@ try {
     beforeUndo = (await (await fetch(`${base}/api/logs`)).json()).at(-1);
     await page.locator("header").first().click();
     await page.keyboard.press("Control+z");
-    await trace
+    await last
       .getByText("Undid: Customers: added a loyalty code (unique)")
       .waitFor({ timeout: 60000 });
   });
@@ -1093,8 +1105,8 @@ try {
     // The button is off while Studio works too: first the change made again, then nothing left.
     let newest = "";
     for (const deadline = Date.now() + 90000; ; ) {
-      newest = await trace.locator("li").first().innerText();
-      if (newest.includes("loyalty code") && !newest.startsWith("Undid")) break;
+      newest = await last.innerText();
+      if (newest.includes("loyalty code") && !newest.includes("Undid")) break;
       if (Date.now() > deadline) throw new Error(`after Redo the newest change is ${newest}`);
       await new Promise((r) => setTimeout(r, 500));
     }
@@ -1150,18 +1162,18 @@ try {
       .getByRole("button", { name: "Comfortable", pressed: true })
       .waitFor({ timeout: 60000 });
     await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
-    await trace.getByText(/draft/i).first().waitFor({ timeout: 60000 });
+    await last.getByText(/draft/i).first().waitFor({ timeout: 60000 });
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
     for (let i = 0; i < 60 && !/email: phone/.test(ux()); i++)
       await new Promise((r) => setTimeout(r, 1000));
     if (!/email: phone/.test(ux())) throw new Error(`no second line in smithable.ux.yml:\n${ux()}`);
     // A change made while another runs is dropped: wait for the trace.
-    await trace
+    await last
       .getByText("Show phone under email in the customers table")
       .waitFor({ timeout: 60000 });
     const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
-    const before = await trace.locator("li").count();
+    const before = await changeCount();
     await columns
       .getByRole("button", { name: /^Hide / })
       .last()
@@ -1172,10 +1184,9 @@ try {
       .waitFor({ timeout: 60000 });
     // The last change is done before the next (a change while one runs is not made).
     // (Which columns depends on the fields added before: one change more is enough.)
-    for (let i = 0; i < 60 && (await trace.locator("li").count()) === before; i++)
+    for (let i = 0; i < 60 && (await changeCount()) === before; i++)
       await new Promise((r) => setTimeout(r, 1000));
-    if ((await trace.locator("li").count()) === before)
-      throw new Error("hiding a column made no change");
+    if ((await changeCount()) === before) throw new Error("hiding a column made no change");
     // A list page's view and order, and its form's columns and sections (look.md §1.1–1.3).
     const waitUx = async (re) => {
       for (let i = 0; i < 60 && !re.test(ux()); i++) await new Promise((r) => setTimeout(r, 1000));
@@ -1210,7 +1221,7 @@ try {
       await page.getByText("Saved as OrderLine").waitFor();
       await page.getByLabel("First field").fill("product name");
       await page.getByRole("button", { name: "Add", exact: true }).click();
-      await trace
+      await last
         .getByText("Added a new kind of record: order lines")
         .first()
         .waitFor({ timeout: 60000 });
@@ -1237,12 +1248,12 @@ try {
       await page.getByLabel("Page name").fill("home");
       await page.getByLabel("Kind of page").selectOption({ label: "A landing page for visitors" });
       await page.getByRole("button", { name: "Add page" }).click();
-      await trace
+      await last
         .getByText("Added the Home page, a landing page for visitors")
         .waitFor({ timeout: 60000 });
       await change("A section on a landing page");
       await page.getByRole("button", { name: "Add section" }).click();
-      await trace.getByText("Added a contact section to the Home page").waitFor({ timeout: 60000 });
+      await last.getByText("Added a contact section to the Home page").waitFor({ timeout: 60000 });
       await openPreview("/");
       await preview
         .getByRole("heading", { name: "Acme CRM", level: 1 })
@@ -1250,14 +1261,14 @@ try {
       // Its own theme, from the Look tab (look.md §1.5).
       await page.getByRole("tab", { name: "Look" }).click();
       await page.getByLabel("Theme of Home").selectOption("playful");
-      await trace
+      await last
         .getByText(/theme on the home page/i)
         .first()
         .waitFor({ timeout: 60000 });
       // A background of the owner's: picked, applied when the picker closes, in the CSS.
       await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
       await page.getByLabel("Background", { exact: true }).blur();
-      await trace
+      await last
         .getByText(/background #f5efe6/i)
         .first()
         .waitFor({ timeout: 60000 });
@@ -2184,11 +2195,18 @@ try {
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 });
           // In place: the request that waited is made, and nothing waits any more.
-          await watcher
-            .getByLabel("Change trace")
-            .getByText("Sessions: added a phone")
-            .first()
-            .waitFor({ timeout: 90000 });
+          // The list of changes: Builder's is in its Changes tab, there once the app is.
+          const changesTab = watcher.getByRole("tab", { name: "Changes" });
+          const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
+          for (let i = 0; i < 180 && !(await made.first().isVisible()); i++) {
+            if (
+              (await changesTab.isVisible()) &&
+              (await changesTab.getAttribute("aria-selected")) !== "true"
+            )
+              await changesTab.click();
+            await new Promise((r) => setTimeout(r, 500));
+          }
+          await made.first().waitFor({ timeout: 1000 });
           const after = await (await fetch(`${other}/api/project`)).json();
           if (after.waiting?.length) throw new Error(`still waiting: ${after.waiting}`);
         } catch (error) {

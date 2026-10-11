@@ -1,6 +1,9 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
+
+import type { SpecPlugin } from "@smithable/core";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { api, type TraceEntry } from "./api";
+import { api, type ChangeDetail, type TraceEntry } from "./api";
+import { type PartChange, summaryDiff } from "./builder/change-diff";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
@@ -432,32 +435,52 @@ export function Preview({
 }
 
 /** `words` words an entry the Builder's way ("Customers: added a website"), where it can. */
+/** Consecutive changes made for one request to a model, which the list shows as one. */
+function grouped(entries: TraceEntry[]): TraceEntry[][] {
+  const groups: TraceEntry[][] = [];
+  for (const e of entries) {
+    const last = groups.at(-1);
+    if (e.request && last?.[0]?.request === e.request && !e.isUndo && !last[0].isUndo) last.push(e);
+    else groups.push([e]);
+  }
+  return groups;
+}
+
 export function Trace({
   entries,
   words,
+  plugins = [],
 }: {
   entries: TraceEntry[];
+  /** Builder's wording of an operation: given, an opened change says what changed in the summary's words; not, it shows the files' patch. */
   words?: (op: string, args: Record<string, unknown>) => string | undefined;
+  plugins?: SpecPlugin[];
 }) {
+  const [open, setOpen] = useState<string>();
   const text = (e: TraceEntry) => {
     const plain = e.operation && words?.(e.operation.op, e.operation.args);
     return plain ? (e.isUndo ? `Undid: ${plain}` : plain) : e.description;
   };
+  if (entries.length === 0) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
   return (
-    <Panel title="Changes" className="h-full">
-      {entries.length === 0 ? (
-        <p className="p-3 text-sm text-quiet">No changes yet.</p>
-      ) : (
-        <ol aria-label="Change trace" className="divide-y divide-line">
-          {entries.map((e) => (
-            <li
-              key={`${e.at}-${e.description}`}
-              className={cx("px-3 py-2", e.undone && "opacity-50")}
+    <ol aria-label="Change trace" className="divide-y divide-line">
+      {grouped(entries).map((group) => {
+        const [e] = group as [TraceEntry, ...TraceEntry[]];
+        const opened = open === e.id;
+        return (
+          <li key={e.id} className={cx("px-3 py-2", e.undone && "opacity-50")}>
+            <button
+              type="button"
+              aria-expanded={opened}
+              onClick={() => setOpen(opened ? undefined : e.id)}
+              className="block w-full text-left"
             >
-              <p className={cx("text-sm", e.undone && "line-through")}>{text(e)}</p>
-              <p className="mt-0.5 text-xs text-quiet">
+              <span className={cx("block text-sm", e.undone && "line-through")}>
+                {group.length > 1 && e.request ? `You asked: ${e.request}` : text(e)}
+              </span>
+              <span className="mt-0.5 block text-xs text-quiet">
                 {/* The Builder (words given) says only when, and the model's use where there was
-                    one; Studio says how every change was made. */}
+                    one; Studio says how every change was made, and the files. */}
                 {!words || e.tokens > 0 ? (
                   <>
                     {e.isUndo ? "undo" : e.engine}
@@ -467,12 +490,107 @@ export function Trace({
                   </>
                 ) : null}
                 {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </li>
+                {!words && e.files.length > 0 && ` · ${e.files.join(", ")}`}
+              </span>
+            </button>
+            {opened && (
+              <div className="mt-2 space-y-2">
+                {group.length > 1 && (
+                  <ul className="list-disc pl-5 text-xs text-muted">
+                    {[...group].reverse().map((g) => (
+                      <li key={g.id}>{text(g)}</li>
+                    ))}
+                  </ul>
+                )}
+                {words ? (
+                  <PlainChange newest={e} oldest={group.at(-1) ?? e} plugins={plugins} />
+                ) : (
+                  <FilesChange entry={e} />
+                )}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** A change in the summary's words: the sentences that went struck through, those that came. */
+function PlainChange({
+  newest,
+  oldest,
+  plugins,
+}: {
+  newest: TraceEntry;
+  oldest: TraceEntry;
+  plugins: SpecPlugin[];
+}) {
+  const [parts, setParts] = useState<PartChange[]>();
+  useEffect(() => {
+    let current = true;
+    void Promise.all([api.change(oldest.id), api.change(newest.id)]).then(
+      ([first, last]) => current && setParts(summaryDiff(first.before, last.after, plugins)),
+      () => current && setParts([]),
+    );
+    return () => {
+      current = false;
+    };
+  }, [newest.id, oldest.id, plugins]);
+  if (!parts) return <p className="text-xs text-quiet">Reading the change…</p>;
+  if (!parts.length)
+    return (
+      <p className="text-xs text-quiet">
+        Nothing the summary says changed (the look, a text, or code).
+      </p>
+    );
+  return (
+    <section aria-label="What changed" className="space-y-2 text-sm">
+      {parts.map((p) => (
+        <div key={p.concept}>
+          <p className="text-xs font-semibold text-muted">{p.title}</p>
+          {p.removed.map((l) => (
+            <p key={`-${l}`} className="text-quiet line-through">
+              {l.replace(/^[-•*]\s+/, "")}
+            </p>
           ))}
-        </ol>
+          {p.added.map((l) => (
+            <p key={`+${l}`}>{l.replace(/^[-•*]\s+/, "")}</p>
+          ))}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** A change's patch of the person's files, and the whole patch on request. */
+function FilesChange({ entry }: { entry: TraceEntry }) {
+  const [all, setAll] = useState(false);
+  const [detail, setDetail] = useState<ChangeDetail>();
+  useEffect(() => {
+    let current = true;
+    void api.change(entry.id, all).then(
+      (d) => current && setDetail(d),
+      () => current && setDetail({ patch: "", generated: 0, before: {}, after: {} }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [entry.id, all]);
+  if (!detail) return <p className="text-xs text-quiet">Reading the change…</p>;
+  return (
+    <div className="space-y-1">
+      <section aria-label="The change's patch">
+        <pre className="max-h-96 overflow-auto rounded bg-subtle p-2 text-xs">
+          {detail.patch || "No file a person edits changed."}
+        </pre>
+      </section>
+      {!all && detail.generated > 0 && (
+        <button type="button" className="text-xs text-accent" onClick={() => setAll(true)}>
+          and {detail.generated} generated {detail.generated === 1 ? "file" : "files"}
+        </button>
       )}
-    </Panel>
+    </div>
   );
 }
 
