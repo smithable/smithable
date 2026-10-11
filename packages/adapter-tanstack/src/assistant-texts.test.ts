@@ -77,7 +77,8 @@ test("the model is given the voice's line and what the assistant is for; without
     voice: "friendly",
     about: "Finds orders.",
   });
-  expect(sent[0]).toContain("You are this app's assistant, for: Finds orders.");
+  // The owner's sentence is quoted as a description, not given as an instruction.
+  expect(sent[0]).toContain('The app\'s owner describes this assistant as: "Finds orders."');
   expect(sent[0]).toContain("Be warm and friendly");
   const none = await answer("anything at all please", { offer, kinds: [], call: async () => null });
   expect(none.note).toBe(

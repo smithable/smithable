@@ -143,7 +143,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
   const messages: Record<string, unknown>[] = [
     {
       role: "system",
-      content: `${parts.offer.summary}\n${parts.about ? `You are this app's assistant, for: ${parts.about}\n` : ""}Answer with the tools. The app shows what they return, so keep any words to a short caption. ${VOICES[parts.voice ?? "plain"]}`,
+      content: `${parts.offer.summary}\n${parts.about ? `The app's owner describes this assistant as: ${JSON.stringify(parts.about)}\n` : ""}Answer with the tools. The app shows what they return, so keep any words to a short caption. ${VOICES[parts.voice ?? "plain"]}`,
     },
     { role: "user", content: question },
   ];
