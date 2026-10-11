@@ -16,7 +16,7 @@ export interface PartChange {
 
 const sentences = (files: Project["files"], plugins: SpecPlugin[]) => {
   const spec = readSpec(files, files.spec, plugins);
-  return spec.ir ? summarize(spec.ir, spec.auth, spec.content, plugins) : [];
+  return spec.ir ? summarize(spec.ir, spec.auth, spec.content, plugins, spec.ux) : [];
 };
 
 export function summaryDiff(

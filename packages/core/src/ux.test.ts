@@ -30,6 +30,30 @@ describe("smithable.ux.yml", () => {
     expect(on && on.ok && on.files.ux).not.toContain("aiBadge");
   });
 
+  test("Ask's voice: plain unless said, set and returned by its operation, an unknown one refused", () => {
+    const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+    expect(read("smithableUx: 0.1\n").ux?.assistant.voice).toBe("plain");
+    expect(read("smithableUx: 0.1\nassistant: { voice: formal }\n").ux?.assistant.voice).toBe(
+      "formal",
+    );
+    expect(codes("smithableUx: 0.1\nassistant: { voice: chatty }\n")).toContain("invalid-value");
+    const friendly = applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setAssistantVoice", {
+      voice: "friendly",
+    });
+    if (!friendly.ok) throw new Error(friendly.message);
+    expect(friendly.files.ux).toMatch(/assistant:\n {2}voice: friendly/);
+    expect(friendly.description).toBe("Ask answers in a friendly voice");
+    const plain = applyOperation({ spec: crm, ux: friendly.files.ux }, "setAssistantVoice", {
+      voice: "plain",
+    });
+    expect(plain.ok && plain.files.ux).not.toContain("assistant");
+    expect(
+      applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setAssistantVoice", {
+        voice: "chatty",
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
   test("theme, brand and page settings", () => {
     const { ux } = validateUx(
       {
@@ -61,6 +85,7 @@ tones:
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
       aiBadge: true,
+      assistant: { voice: "plain" },
       tones: { "Order.status": { shipped: "success", canceled: "danger" } },
     });
   });

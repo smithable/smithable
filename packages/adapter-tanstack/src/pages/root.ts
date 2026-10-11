@@ -66,6 +66,7 @@ export function rootRoute(
   ux: UxIR,
   analytics?: AnalyticsSetting,
   consent?: ContentIR["consent"],
+  assistant?: ContentIR["assistant"],
 ): string {
   // The consent bar's link to the privacy page, when the app has one (docs/design/analytics.md).
   const privacy = (
@@ -321,7 +322,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""} />}\n` : ""}        <Consent${consentProps} />
+${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}        <Consent${consentProps} />
         <Scripts />
       </body>
     </html>

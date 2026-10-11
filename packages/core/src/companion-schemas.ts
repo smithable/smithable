@@ -334,6 +334,18 @@ export const UX_SCHEMA: JsonSchema = {
         },
       },
     },
+    assistant: {
+      type: "object",
+      description:
+        "Ask, the assistant in the app: its manner, as a theme is a manner (its texts are smithable.content.yml's).",
+      additionalProperties: false,
+      properties: {
+        voice: {
+          enum: ["plain", "friendly", "formal"],
+          description: "plain (the default: short, no pleasantries), friendly or formal.",
+        },
+      },
+    },
     aiBadge: {
       type: "boolean",
       description:
@@ -585,6 +597,22 @@ export const CONTENT_SCHEMA: JsonSchema = {
         text: { type: "string", description: "The sentence that says what the yes is for." },
         accept: { type: "string", description: "The button that says yes." },
         decline: { type: "string", description: "The button that says no." },
+      },
+    },
+    assistant: {
+      type: "object",
+      description:
+        "Ask, the assistant in the app: its visible texts, in the app's language (who gets it is smithable.auth.yml's; its voice smithable.ux.yml's).",
+      additionalProperties: false,
+      properties: {
+        name: { type: "string", description: 'The panel\'s name, "Ask" by default, e.g. Nova.' },
+        greeting: { type: "string", description: "The first line it shows." },
+        placeholder: { type: "string", description: "The question box's placeholder." },
+        about: {
+          type: "string",
+          description:
+            "One sentence of what it is for, shown under the greeting and given to the model.",
+        },
       },
     },
     menus: {

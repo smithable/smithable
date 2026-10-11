@@ -183,7 +183,7 @@ export const w = {
   noActivityInPeriod: "Ingen aktivitet under perioden.",
   nobodyLeaveEmpty: "Ingen (lämna tomt)",
   noModelToAsk:
-    "Reglerna kunde inte läsa frågan, och appen har ingen modell att fråga (ASSISTANT_URL).",
+    "Appens assistent har ingen modell än som kan svara på det här; fråga den som driver appen.",
   noPlacesLeft: "Inga platser kvar.",
   nobodyYet: "Ingen ännu. Bjud in den första personen ovan.",
   notAllowed: "Du får inte göra det här.",

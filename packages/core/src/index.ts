@@ -52,6 +52,7 @@ export type { ConceptRules } from "./concepts.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export { conditionArgs, conditionText, readCondition } from "./condition.js";
 export type {
+  AssistantTexts,
   ContentImage,
   ContentIR,
   FieldContent,
@@ -60,6 +61,7 @@ export type {
   SectionContent,
 } from "./content.js";
 export {
+  ASSISTANT_TEXTS,
   CONTENT_VERSION,
   emptyContent,
   LANGUAGES,
@@ -183,7 +185,7 @@ export {
   withBackground,
 } from "./theme.js";
 export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
-export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR } from "./ux.js";
+export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";
 export {
   CONTROLS,
   controlUnfit,
@@ -195,6 +197,7 @@ export {
   THEME_PRESETS,
   TONES,
   UX_VERSION,
+  VOICES,
   validateUx,
 } from "./ux.js";
 export { convertValue } from "./values.js";
