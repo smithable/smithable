@@ -63,6 +63,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Keys.tsx": [
     "data-part="using-a-key"",
     "data-kit="keys"",
+    "data-part="preview-note"",
     "data-part="key"",
     "data-part="key-row"",
   ],

@@ -117,8 +117,12 @@ export const w = {
     "Den som bjuds in väljer namnet andra ser efter inloggningen: sitt namn längst ned i menyn.",
   keepIt: "Behåll den",
   keys: "Nycklar",
+  keysInPreview:
+    "I förhandsvisningen fungerar en nyckel bara på den här datorn: andra program och assistenter når appen med den när den är publicerad.",
   keysLead:
     "För andra program som använder appens API. En nyckel agerar med sin roll och äger ingenting.",
+  keptInPreview: "behöll ett mejl i förhandsvisningen (publicerad hade den skickats)",
+  skippedInPreview: "hoppade över ett anrop i förhandsvisningen (publicerad hade det gjorts)",
   lastPlaceTaken: "Tyvärr, den sista platsen togs just.",
   leaveThisEmpty: "Lämna det här tomt",
   less: "Mindre",

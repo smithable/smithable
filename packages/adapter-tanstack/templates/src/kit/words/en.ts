@@ -117,8 +117,12 @@ export const w = {
     "An invited person chooses the name others see after signing in: their name at the bottom of the menu.",
   keepIt: "Keep it",
   keys: "Keys",
+  keysInPreview:
+    "In the preview a key works only on this computer: other programs and assistants reach the app with it once it is published.",
   keysLead:
     "For other programs that use this app's API. A key acts with its role and owns nothing.",
+  keptInPreview: "kept a mail in the preview (published, it would have been sent)",
+  skippedInPreview: "skipped a call in the preview (published, it would have been made)",
   lastPlaceTaken: "Sorry, the last place was just taken.",
   leaveThisEmpty: "Leave this empty",
   less: "Less",
