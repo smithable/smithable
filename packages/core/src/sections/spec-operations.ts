@@ -49,7 +49,7 @@ export const emptyFile = (file: EditableFile): string | undefined =>
  * one, through the same checks, migrations, checkpoint and undo as every operation. The specific
  * operations stay better for agents: a renamed field shows here as a removed and an added one.
  */
-const editSpec: Operation<{ text: string; file?: EditableFile }> = {
+const editSpec: Operation<{ text: string; file?: EditableFile; grow?: string }> = {
   name: "editSpec",
   summary:
     "Replace smithable.yml, or one of its companion files, with an edited version, as a whole.",
@@ -62,6 +62,12 @@ const editSpec: Operation<{ text: string; file?: EditableFile }> = {
       file: {
         enum: Object.keys(EDITABLE_FILES),
         description: "Which file; smithable.yml when not said.",
+      },
+      grow: {
+        type: "string",
+        pattern: "^[0-9a-f]{40}$",
+        description:
+          "Studio's editor: the change its editing of this file made. When that is still the newest change, the host folds the two into one (docs/design/studio-changes.md §4); the engine does nothing with it.",
       },
     },
   },

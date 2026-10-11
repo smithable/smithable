@@ -9,11 +9,13 @@ import {
   operationsFor,
   pageModel,
   refHint,
+  validateSpec,
 } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { api, type Project } from "../api";
+import type { Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
+import { Ask } from "../builder/Ask";
 import type { Run } from "../builder/ChangeForms";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
@@ -25,7 +27,7 @@ import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
 // The editor is its own piece of code, fetched when the spec tab is first shown.
 const SpecText = lazy(() => import("./SpecText"));
 
-type Tab = "spec" | "operation" | "diff" | "logs";
+type Tab = "spec" | "operation" | "changes" | "logs";
 
 const STATUS: Record<string, string> = {
   "not-implemented": "Not implemented",
@@ -40,7 +42,6 @@ export function Studio({
   project,
   spec,
   run,
-  version,
   logs,
   onCustomize,
   place,
@@ -51,7 +52,6 @@ export function Studio({
   project: Project;
   spec: Spec;
   run: Run;
-  version: number;
   logs: string[];
   onCustomize: (page: string) => void;
   /** Opens No code's Look tab: where the ux file's choices have controls. */
@@ -148,7 +148,7 @@ export function Studio({
           <div
             data-panel="details"
             className={cx(
-              "grid min-h-0 grid-rows-[1fr_1fr] divide-y divide-line border-t border-line",
+              "grid min-h-0 grid-rows-[1fr] border-t border-line",
               PHONE_PANEL,
               "max-lg:border-t-0",
               previewHidden
@@ -178,9 +178,6 @@ export function Studio({
                 <p className="p-3 text-sm text-quiet">Choose a concept.</p>
               )}
             </Panel>
-            <Panel title="Changes" className="h-full">
-              <Trace entries={project.trace} />
-            </Panel>
           </div>
         </div>
         {/* On a phone the editor comes first: Code mode is for editing the text. */}
@@ -192,7 +189,7 @@ export function Studio({
               tabs={[
                 ["spec", "Files", "files"],
                 ["operation", "Operation", "operation"],
-                ["diff", "Last change", "last-change"],
+                ["changes", "Changes", "changes"],
                 ["logs", "Logs"],
               ]}
               value={tab}
@@ -212,8 +209,18 @@ export function Studio({
             />
           )}
           {tab === "operation" && <OperationForm run={run} spec={spec} />}
-          {/* Remounted for every new change. */}
-          {tab === "diff" && <Diff key={version} />}
+          {/* The prompt first, as in No code, then every change; an entry opens as its files'
+              patch. */}
+          {tab === "changes" && (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="shrink-0 border-b border-line">
+                <Ask waiting={project.waiting} onEdit={() => setTab("operation")} />
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto">
+                <Trace entries={project.trace} />
+              </div>
+            </div>
+          )}
           {tab === "logs" && (
             <section aria-label="Logs">
               <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-fg-soft">
@@ -470,6 +477,65 @@ function SpecEditor({
     [project.files, file, text, plugins, project.ownThemes],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  // An edit saves itself after a pause (docs/design/studio-changes.md §4): when it is valid and
+  // removes no field (one that does keeps the Save button, which asks first). Going on in the
+  // same file grows the same change while it is still the newest; another file, another change
+  // made anywhere, leaving the editor or five minutes without a keystroke start a new one.
+  const removes = useMemo(() => {
+    if (file !== "smithable.yml" || text === saved) return false;
+    const fields = (t: string) =>
+      (validateSpec({ path: "smithable.yml", text: t }, { plugins }).ir?.models ?? []).flatMap(
+        (m) => m.fields.map((f) => `${m.name}.${f.name}`),
+      );
+    const now = fields(text);
+    return fields(saved).some((f) => !now.includes(f));
+  }, [file, text, saved, plugins]);
+  const head = project.trace[0]?.id;
+  const growing = useRef<{ file: EditableFile; id?: string; at: number } | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [awaiting, setAwaiting] = useState(false);
+  useEffect(() => {
+    if (!awaiting || !head) return;
+    growing.current = { file, id: head, at: Date.now() };
+    setAwaiting(false);
+  }, [awaiting, head, file]);
+  const save = async (by: "pause" | "button") => {
+    const kept = growing.current;
+    const grow =
+      by === "pause" && kept?.file === file && kept.id === head && Date.now() - kept.at < 5 * 60_000
+        ? kept.id
+        : undefined;
+    setSaving(true);
+    const ok = await run("editSpec", {
+      text,
+      ...(file === "smithable.yml" ? {} : { file }),
+      ...(grow ? { grow } : {}),
+    });
+    setSaving(false);
+    if (ok && by === "pause") setAwaiting(true);
+    else growing.current = undefined;
+  };
+  const ready = text !== saved && errors.length === 0 && !removes && !saving;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a pause after the last keystroke
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => void save("pause"), 1500);
+    return () => clearTimeout(t);
+  }, [ready, text]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another file is another change
+  useEffect(() => {
+    growing.current = undefined;
+  }, [file]);
+  const state =
+    text === saved
+      ? "Saved"
+      : saving
+        ? "Saving…"
+        : errors.length
+          ? "Not saved: fix the problems first"
+          : removes
+            ? "Not saved: it removes a field, so Save asks first"
+            : "Edited";
   // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
   // which has no Ctrl-Space.
   const [ask, setAsk] = useState(0);
@@ -584,9 +650,12 @@ function SpecEditor({
           >
             Discard
           </Button>
+          <span aria-live="polite" className="self-center text-xs text-quiet">
+            {state}
+          </span>
           <Button
-            disabled={errors.length > 0 || text === saved}
-            onClick={() => run("editSpec", { text, ...(file === "smithable.yml" ? {} : { file }) })}
+            disabled={errors.length > 0 || text === saved || saving}
+            onClick={() => void save("button")}
           >
             Save
           </Button>
@@ -750,36 +819,6 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
   );
 }
 
-function Diff() {
-  const [patch, setPatch] = useState<string>();
-  useEffect(() => {
-    api.diff().then((d) => setPatch(d.patch));
-  }, []);
-  if (patch === undefined) return null;
-  if (!patch) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
-  return (
-    <section aria-label="Last change">
-      <pre className="p-3 font-mono text-xs leading-5">
-        {patch
-          .split("\n")
-          .map((text, number) => ({ text, number }))
-          .map(({ text: line, number }) => (
-            <div
-              key={number}
-              className={cx(
-                line.startsWith("+") && !line.startsWith("+++") && "bg-green-50 text-green-800",
-                line.startsWith("-") && !line.startsWith("---") && "bg-red-50 text-red-800",
-                line.startsWith("diff ") && "mt-3 font-semibold text-fg",
-              )}
-            >
-              {line || " "}
-            </div>
-          ))}
-      </pre>
-    </section>
-  );
-}
-
 /**
  * Where a concept is declared in smithable.yml, as character offsets: a model, page, action or
  * query's name line under its section, or a field's line inside its model.
@@ -811,7 +850,7 @@ export function specRange(text: string, concept: string): [number, number] | und
   return line < 0 ? undefined : [offset(line), offset(line) + (lines[line]?.length ?? 0)];
 }
 
-const TABS: Tab[] = ["spec", "operation", "diff", "logs"];
+const TABS: Tab[] = ["spec", "operation", "changes", "logs"];
 
 type PhonePanel = "editor" | "concepts" | "details";
 const PHONE_PANELS: [PhonePanel, string][] = [

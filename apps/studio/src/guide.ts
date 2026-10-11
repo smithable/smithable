@@ -73,9 +73,9 @@ const STUDIO: Stop[] = [
     text: "Pick an operation and fill in its form; the line under it is the same change for a terminal.",
   },
   {
-    anchor: "last-change",
-    title: "What the last change did",
-    text: "The generated code it changed, line by line, with the logs beside it. Ctrl+Z takes any change back.",
+    anchor: "changes",
+    title: "Every change, and what it did",
+    text: "Describe a change here as in No code. Each change names the files it touched and opens as their patch; an edit in Files saves itself after a pause. Ctrl+Z takes any change back.",
   },
 ];
 

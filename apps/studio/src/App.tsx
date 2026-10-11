@@ -541,7 +541,6 @@ export function App() {
                 project={project}
                 spec={spec}
                 run={run}
-                version={version}
                 logs={logs}
                 onCustomize={customize}
                 place={place.studio}
