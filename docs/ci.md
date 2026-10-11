@@ -6,6 +6,7 @@ Two kinds of run, by cost. GitHub's runners are billed by the minute . The self-
 |---|---|---|
 | Every pull request (not plain documents) | GitHub, `ubuntu-latest` | `lint-build-units`: secrets scan, lint, build, units, site. About two minutes. |
 | The full check: engine pull requests with the `full-ci` label (every engine pull request once `FULL_CI` is on), main twice a day, Run workflow | the self-hosted runner, labels `self-hosted, smithable` | `full`: one job running `scripts/gate.sh` (`pnpm check`: lint, build, units, site, every example in parallel, Studio in a real browser) with `SESSION=ci`, so it takes its turn in the machine's gate queue like a session's gate. |
+| A green scheduled full check on main | GitHub, `ubuntu-latest` | `release`: asks smithable-cloud's Release images to release that commit (`if_new`: only when either repository moved since the last release), so the beta gets at most two releases a day. Needs the secret `CLOUD_RELEASE_TOKEN` (smithable-cloud only, Actions read and write); without it, or when it has lapsed, the job is yellow and the cloud's own daily schedule releases. |
 | Pull requests from forks | never on the self-hosted runner | the `full` job's condition; relevant after the public flip |
 
 ## The runner on the machine
