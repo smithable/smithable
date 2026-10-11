@@ -1,7 +1,8 @@
 // While a described app is being made (docs/design/while-it-is-made.md, stage one): the
-// description, the stage, a bar on the usual time, and "What it does" as soon as the model has
-// answered. Until the app is in place the project's own files are the waiting workspace's
-// placeholder, so nothing of them is shown.
+// description, the stage, a bar on the usual time (held at half while questions wait), and once
+// the model has answered the app's name and its one line, not the whole summary (Johan, round
+// 4: there is no time to read it). Until the app is in place the project's own files are the
+// waiting workspace's placeholder, so nothing of them is shown.
 import { summarize } from "@smithable/index";
 import { useEffect, useMemo, useState } from "react";
 import { api, type Making as MakingState, type Project } from "./api";
@@ -28,6 +29,22 @@ const USUAL = 25_000;
 export function progress(elapsed: number, usual = USUAL): number {
   if (elapsed <= usual) return (0.9 * Math.max(elapsed, 0)) / usual;
   return 0.9 + 0.09 * (1 - Math.exp(-(elapsed - usual) / usual));
+}
+
+/**
+ * The bar when the draft waited for answers (Johan, round 4): it climbs to half and holds
+ * there while the questions are open, then goes on from half once they are answered or
+ * skipped, over the usual time again.
+ */
+export function heldProgress(
+  elapsed: number,
+  usual = USUAL,
+  answeredAfter?: number,
+  asking = false,
+): number {
+  if (asking) return Math.min(progress(elapsed, usual), 0.5);
+  if (answeredAfter === undefined) return progress(elapsed, usual);
+  return 0.5 + 0.5 * progress(elapsed - answeredAfter, usual);
 }
 
 export function Making({
@@ -57,12 +74,30 @@ export function Making({
   );
   const [retrying, setRetrying] = useState(false);
   const failed = making.stage === "failed";
-  const asking = making.stage === "asking" && making.questions?.length;
+  const asking = Boolean(making.stage === "asking" && making.questions?.length);
+  // When the questions were answered or skipped, counted from the start: the bar goes on from
+  // half from there.
+  const [answeredAfter, setAnsweredAfter] = useState<number>();
+  const [asked, setAsked] = useState(false);
+  useEffect(() => {
+    if (asking) setAsked(true);
+    else if (asked && answeredAfter === undefined)
+      setAnsweredAfter(Date.now() - Date.parse(making.since));
+  }, [asking, asked, answeredAfter, making.since]);
+  const shown = heldProgress(elapsed, usual, answeredAfter, asking);
+  // The drafted app's name and its one line, once the model has answered: there is no time to
+  // read the whole summary while it is made.
+  const name = spec.ir?.app.name;
+  const line = spec.ir?.app.description ?? sections[0]?.sentences[0];
   return (
     <section aria-label="Your app is being made" className="mx-auto w-full max-w-2xl space-y-6 p-6">
       <div className="space-y-2">
         <h1 className="text-lg font-semibold">
-          {failed ? "Your app could not be made" : "Your app is being made"}
+          {failed
+            ? "Your app could not be made"
+            : name
+              ? `Preparing Studio for ${name}`
+              : "Your app is being made"}
         </h1>
         {/* The person's own words stay in sight: whole while drafting, one line once What it
             does says what was made of them. */}
@@ -70,15 +105,13 @@ export function Making({
           title={making.description}
           className={cx(
             "border-l-2 border-line-strong pl-3 text-sm text-fg-soft",
-            sections.length > 0 && "truncate",
+            line && "truncate",
           )}
         >
           {making.description}
         </blockquote>
       </div>
-      {asking ? (
-        <Questions questions={making.questions ?? []} />
-      ) : failed ? (
+      {failed ? (
         <div
           role="alert"
           className="space-y-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm"
@@ -99,36 +132,28 @@ export function Making({
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted">
             <span role="status">{STAGES[making.stage]}…</span>
-            {elapsed > usual && <span>Taking a little longer than usual</span>}
+            {!asking && elapsed > usual && <span>Taking a little longer than usual</span>}
           </div>
           <div
             role="progressbar"
             aria-label="How far it is"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={Math.round(progress(elapsed, usual) * 100)}
+            aria-valuenow={Math.round(shown * 100)}
             className="h-1.5 overflow-hidden rounded-full bg-line"
           >
             <div
               className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
-              style={{ width: `${progress(elapsed, usual) * 100}%` }}
+              style={{ width: `${shown * 100}%` }}
             />
           </div>
         </div>
       )}
-      {sections.length > 0 && (
-        <section aria-label="What it does" className="space-y-4">
+      {asking && <Questions questions={making.questions ?? []} />}
+      {line && !asking && (
+        <section aria-label="What it does" className="space-y-1">
           <h2 className="text-sm font-semibold text-muted">What it does</h2>
-          {sections.map((s) => (
-            <div key={s.concept} className="space-y-1">
-              <h3 className="text-sm font-medium">{s.title}</h3>
-              {s.sentences.map((line) => (
-                <p key={line} className="text-sm text-fg-soft">
-                  {line}
-                </p>
-              ))}
-            </div>
-          ))}
+          <p className="text-sm text-fg-soft">{line}</p>
         </section>
       )}
       {/* The words box from the start: what is typed is made once the app is in place. */}
