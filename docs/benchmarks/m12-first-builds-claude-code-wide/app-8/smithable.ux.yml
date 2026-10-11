@@ -3,14 +3,9 @@ pages:
   shelf:
     table:
       view: cards
-  myItems:
-    table:
-      columns: [title, category, status, claimedBy]
 tones:
   Item.status:
     available: success
     claimed: warning
 theme:
   preset: playful
-  brand:
-    primary: "#0f766e"

@@ -1,29 +1,17 @@
 smithableUx: 0.1
-pages:
-  huoltotyot:
-    table:
-      columns: [car, description, status, scheduledAt, mechanic, total]
-      sort: -scheduledAt
-    icon: clipboard
-  autot:
-    table:
-      columns: [registration, make, carModel, year, customer]
-    icon: truck
-  asiakkaat:
-    table:
-      below:
-        name: phone
-    icon: users
-  laskut:
-    icon: receipt
 tones:
   Job.status:
     inProgress: warning
     done: success
   Invoice.status:
-    sent: warning
+    unpaid: warning
     paid: success
-theme:
-  preset: corporate
-  brand:
-    primary: "#1d4ed8"
+pages:
+  huoltotyot:
+    icon: clipboard
+  asiakkaat:
+    icon: users
+  autot:
+    icon: truck
+  laskut:
+    icon: receipt

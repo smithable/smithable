@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Freelance Invoicing
-  description: Invoicing for freelancers, with clients, invoices and payments.
+  name: Invoicely
+  description: Simple invoicing for freelancers. Each user manages their own clients and invoices.
   currency: EUR
 models:
   BusinessProfile:
@@ -25,6 +25,7 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
+      contract: file
       lines: InvoiceLine[]
       total:
         type: money
@@ -39,17 +40,34 @@ models:
         type: money
         formula: quantity * unitPrice
 pages:
-  clients:
-    crud: Client
-    search: [name, email, vatNumber]
-    sortable: [name]
+  overview:
+    crud: Invoice
   invoices:
     crud: Invoice
-    actions: [markSent, markPaid]
-    search: [number, client]
-    filters: [client, status, issuedOn, dueOn]
+    filters: [client, status]
+    search: [number]
+  clients:
+    crud: Client
+    sortable: [name]
+    search: [name, email]
   invoice-lines:
     crud: InvoiceLine
+    search: [description]
+  settings:
+    crud: BusinessProfile
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      pricing:
+      faq:
+      callToAction:
+        button: overview
+  privacy:
+    route: /privacy
+    legal: privacy
 actions:
   markSent:
     on: Invoice
@@ -65,3 +83,8 @@ actions:
     set:
       status: paid
     intent: The client paid the invoice.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

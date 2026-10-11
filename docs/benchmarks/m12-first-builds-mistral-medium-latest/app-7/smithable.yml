@@ -8,46 +8,31 @@ models:
       name: string!
       description: text
       founded: int
-      logo: url
-    access:
-      delete: [admin]
-      write: [admin]
-      create: [admin]
+      logo: file
   Player:
     fields:
       name: string!
       position: goalkeeper | defender | midfielder | forward
       team: Team!
       number: int
-      birthDate: date
       bio: text
-    access:
-      delete: [admin]
-      write: [admin]
-      create: [admin]
+      photo: file
   Match:
     fields:
       homeTeam: Team!
       awayTeam: Team!
       date: datetime!
-      location: string
-      status: scheduled | inProgress | completed | canceled
-      homeScore: int = 0
-      awayScore: int = 0
-    access:
-      delete: [admin]
-      write: [admin]
-      create: [admin]
+      venue: string
+      status: scheduled | played | canceled
+      homeScore: int
+      awayScore: int
 pages:
   teams:
     crud: Team
-    search: [name, description]
   players:
     crud: Player
-    search: [name, position, bio]
   matches:
     crud: Match
-    filters: [status, homeTeam, awayTeam]
   home:
     route: /
     landing:
@@ -58,7 +43,8 @@ pages:
       matches:
         records: Match
         where:
-          status: [scheduled, inProgress]
-  team:
-    users: manage
-navigation: [home, teams, players, matches, team]
+          status: [scheduled, played]
+  privacy:
+    route: /privacy
+    legal: privacy
+navigation: [home, teams, players, matches]

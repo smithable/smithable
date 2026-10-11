@@ -1,19 +1,25 @@
 smithableUx: 0.1
 pages:
+  clients:
+    table:
+      columns: [name, company, email, phone]
+    icon: users
   quotes:
     table:
-      columns: [client, description, amount, quotedOn, status]
       sort: -quotedOn
+      columns: [title, client, amount, paid, status, quotedOn, deadline]
+    icon: file
+  overview:
+    icon: chart
   payments:
     table:
-      columns: [client, quote, amount, paidOn]
+      columns: [paidOn, client, quote, amount, method]
       sort: -paidOn
+    icon: receipt
 tones:
   Quote.status:
     accepted: success
-    declined: danger
     sent: warning
+    declined: danger
 theme:
-  preset: minimal
-  brand:
-    primary: "#2563eb"
+  preset: editorial

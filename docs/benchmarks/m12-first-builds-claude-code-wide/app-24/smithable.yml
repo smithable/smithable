@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
-  name: My Projects
+  name: Project Memory
   description: Tasks and notes, grouped by project, that my AI assistant keeps for me.
+  timezone: Europe/Stockholm
 models:
   Project:
     fields:
@@ -9,10 +10,6 @@ models:
       description: text
       tasks: Task[]
       notes: Note[]
-    access:
-      create: [admin, member]
-      write: [admin, member]
-      delete: [admin, member]
   Task:
     fields:
       title: string!
@@ -20,23 +17,18 @@ models:
       status: todo | doing | done
       dueDate: date
       details: text
-    access:
-      write: [admin, member, assistant]
-      delete: [admin, member]
   Note:
     fields:
       title: string!
       project: Project!
       body: text
-    access:
-      write: [admin, member, assistant]
-      delete: [admin, member]
+      attachment: file
 pages:
-  admin:
-    data: all
-    access: [admin, member]
   team:
     users: manage
+  admin:
+    route: /admin
+    data: all
 actions:
   complete:
     on: Task

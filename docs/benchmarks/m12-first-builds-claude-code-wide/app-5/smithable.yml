@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Shutter Ledger
-  description: "Invoices for my photography work: clients, shoots and what is still unpaid."
+  description: "Invoicing for a photographer: clients, shoots and what is still unpaid."
+  currency: EUR
 models:
   Client:
     fields:
@@ -17,10 +18,11 @@ models:
       title: string!
       client: Client!
       date: date!
-      kind: portrait | wedding | event | commercial | product | other
       location: string
+      kind: portrait | wedding | event | commercial | product | other
+      status: planned | done | invoiced | canceled
+      fee: money
       notes: text
-      invoices: Invoice[]
   Invoice:
     fields:
       number: string! unique
@@ -29,6 +31,7 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
+      paidOn: date
       lines: InvoiceLine[]
       total:
         type: money
@@ -50,16 +53,21 @@ pages:
         limit: 5
   invoices:
     crud: Invoice
-    filters: [status, client]
+    filters: [client, status]
     actions: [markSent, markPaid]
   shoots:
     crud: Shoot
-    filters: [kind, client, date]
+    filters: [client, kind, status, date]
+    actions: [markDone]
   clients:
     crud: Client
     search: [name, email]
   invoice-lines:
     crud: InvoiceLine
+  calendar:
+    calendar:
+      model: Shoot
+      starts: date
 actions:
   markSent:
     on: Invoice
@@ -74,4 +82,12 @@ actions:
       status: [sent, overdue]
     set:
       status: paid
+      paidOn: TODAY()
     intent: The client paid the invoice.
+  markDone:
+    on: Shoot
+    when:
+      status: planned
+    set:
+      status: done
+    intent: The shoot took place.

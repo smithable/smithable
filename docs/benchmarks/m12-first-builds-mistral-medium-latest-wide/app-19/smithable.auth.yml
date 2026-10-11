@@ -2,12 +2,17 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home]
 roles:
   admin:
-    description: Håller loppis-sidan ren och snygg.
+    description: Administratör med fullständig åtkomst.
   member:
-    description: Lägger upp och sparar saker.
+    description: Användare som kan lägga upp och spara annonser.
+    pages: [hem, katalog, mina-annonser, sparade]
+    create: [Item]
+    write: [Item]
+    delete: [Item]
+public:
+  pages: [hem, integritetspolicy]
+  read: [Item]
 defaultRole: member
 admins: [johan@smithable.ai]

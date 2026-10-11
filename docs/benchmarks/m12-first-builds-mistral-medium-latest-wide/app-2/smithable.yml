@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Web Agency CRM
-  description: "A sales pipeline for our six-person web agency: leads, deals and who follows up when."
+  description: A sales pipeline for a six-person web agency to track leads, deals, and follow-ups.
 models:
   Lead:
     fields:
@@ -14,69 +14,66 @@ models:
       notes: text
       assignee: User
       followUpDate: date
-    access:
-      delete: [admin]
+    ownedBy: assignee
   Deal:
     fields:
       name: string!
-      lead: Lead!
+      customer: string!
       value: money
       status: proposal | negotiation | won | lost
       closeDate: date
-      notes: text
       assignee: User
-    access:
-      delete: [admin]
+      notes: text
+      lead: Lead
+    ownedBy: assignee
 pages:
   leads:
     crud: Lead
     search: [name, email, company]
-    sortable: [name, followUpDate, createdAt]
-    actions: [markContacted, markQualified, markLost]
+    sortable: [followUpDate, createdAt]
+    actions: [markAsContacted, markAsQualified, markAsLost]
   deals:
     crud: Deal
-    search: [name, lead]
-    sortable: [name, value, closeDate, createdAt]
-    actions: [markProposal, markNegotiation, markWon]
+    search: [name, customer]
+    sortable: [closeDate, value, createdAt]
+    actions: [markAsWon, markAsLostDeal]
   team:
     users: manage
 actions:
-  markContacted:
+  markAsContacted:
     on: Lead
     when:
       status: new
     set:
       status: contacted
       followUpDate:
-  markQualified:
+    intent: Mark a lead as contacted and set a follow-up date.
+  markAsQualified:
     on: Lead
     when:
       status: contacted
     set:
       status: qualified
-  markLost:
+    intent: Mark a lead as qualified.
+  markAsLost:
     on: Lead
     when:
       status: [new, contacted, qualified]
     set:
       status: lost
-  markProposal:
-    on: Deal
-    when:
-      status: [proposal, negotiation]
-    set:
-      status: proposal
-  markNegotiation:
-    on: Deal
-    when:
-      status: proposal
-    set:
-      status: negotiation
-  markWon:
+    intent: Mark a lead as lost.
+  markAsWon:
     on: Deal
     when:
       status: [proposal, negotiation]
     set:
       status: won
-      closeDate: TODAY()
+    intent: Mark a deal as won.
+  markAsLostDeal:
+    on: Deal
+    when:
+      status: [proposal, negotiation]
+    set:
+      status: lost
+    intent: Mark a deal as lost.
 navigation: [leads, deals, team]

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Status Board
-  description: Internal status board for IT systems showing what is down and when it will be back.
+  description: Internal status board for IT systems so staff see what is down and when it is back.
 models:
   Component:
     fields:
@@ -9,10 +9,6 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
   Incident:
     fields:
       title: string!
@@ -22,20 +18,12 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
-    access:
-      create: [admin, staff]
-      write: [admin, staff]
-      delete: [admin]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
-    access:
-      create: [admin, staff]
-      write: [admin, staff]
-      delete: [admin]
   Maintenance:
     fields:
       title: string!
@@ -43,26 +31,6 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-    access:
-      create: [admin, staff]
-      write: [admin, staff]
-      delete: [admin]
-pages:
-  incidents:
-    crud: Incident
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
-  team:
-    users: manage
-  admin:
-    data: all
-navigation: [incidents, updates, maintenance, components, team, admin]
 actions:
   identified:
     on: Incident
@@ -75,7 +43,6 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -88,7 +55,6 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -102,5 +68,20 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    allow: [admin, staff]
-    intent: The incident is over, with an update saying so.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.
+pages:
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    search: [title, summary]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+  maintenance:
+    crud: Maintenance
+  overview:
+    crud: Incident
+  team:
+    users: manage
+navigation: [overview, incidents, updates, maintenance, components, team]

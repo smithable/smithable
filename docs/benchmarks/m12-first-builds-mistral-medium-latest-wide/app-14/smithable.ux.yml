@@ -2,18 +2,12 @@ smithableUx: 0.1
 pages:
   guests:
     table:
-      sort: name
-      columns: [name, email, phone, attending, mealChoice, partySize, tableNumber, notes]
+      columns: [name, email, attending, mealChoice, tableNumber, group]
     form:
-      sections: [{ name: details, fields: [name, email, phone, partySize] }, { name: rsvp, fields: [attending, mealChoice, notes] }, { name: seating, fields: [tableNumber] }]
-      columns: 2
+      sections: [{ name: contact, fields: [name, email, phone] }, { name: details, fields: [group, attending, mealChoice, tableNumber, notes] }]
       control:
         attending: radio
-        mealChoice: select
-  tables:
-    table:
-      sort: number
-      columns: [number, capacity, location, notes]
+        mealChoice: radio
 tones:
   Guest.attending:
     yes: success

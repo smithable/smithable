@@ -3,7 +3,7 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "What are the main kinds of records besides leads and deals?",
+    "What details should each lead and deal record hold?",
     "Who can see the pipeline?"
   ]
 }

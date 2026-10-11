@@ -2,27 +2,14 @@ smithableUx: 0.1
 pages:
   pupils:
     table:
-      columns: [name, lessonDay, lessonTime, lessonMinutes, level, status]
-      below:
-        name: phone
+      columns: [name, lessonDay, lessonTime, minutes, level]
       sort: lessonDay
-    form:
-      sections: [{ name: pupil, fields: [name, level, status] }, { name: weeklyLesson, fields: [lessonDay, lessonTime, lessonMinutes] }, { name: contact, fields: [email, phone] }, { name: notes, fields: [notes] }]
-      control:
-        lessonMinutes: stepper
     icon: users
   pieces:
     table:
       columns: [title, composer, pupil, status, startedOn]
     icon: book
 tones:
-  Pupil.status:
-    active: success
-    paused: warning
   Piece.status:
     polishing: warning
-    done: success
-theme:
-  preset: minimal
-  brand:
-    primary: "#7c3aed"
+    learned: success

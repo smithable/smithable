@@ -1,10 +1,36 @@
 smithableContent: 0.1
+models:
+  Component:
+    label: Service
+    pluralLabel: Services
+  Incident:
+    fields:
+      component:
+        label: Service
+  Maintenance:
+    fields:
+      component:
+        label: Service
 pages:
+  components:
+    title: Services
   home:
     hero:
       title: Are our online services working?
-      subtitle: The current state of the municipality's online services, any ongoing disruptions and planned maintenance.
-      button: Past incidents
+      subtitle: Check the live status of the municipality's online services, current outages and planned maintenance.
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+    services:
+      title: Our services
+    open:
+      title: Current outages
+    recent:
+      title: Recently resolved
+    planned:
+      title: Planned maintenance
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

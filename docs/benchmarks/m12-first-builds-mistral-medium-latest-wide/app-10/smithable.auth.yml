@@ -2,13 +2,16 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+roles:
+  admin:
+    description: Manages the collection.
+  member:
+    description: Browses the collection.
+    pages: [home, artifacts]
+    create: all
+    read: [Artifact]
 public:
   pages: [home, artifacts]
   read: [Artifact]
-roles:
-  admin:
-    description: Manages the museum collection.
-  visitor:
-    description: Browses the museum collection.
-defaultRole: visitor
+defaultRole: member
 admins: [johan@smithable.ai]

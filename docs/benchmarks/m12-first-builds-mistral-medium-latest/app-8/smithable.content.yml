@@ -1,7 +1,75 @@
 smithableContent: 0.1
 pages:
   home:
+    title: Welcome to the Conference
+    subtitle: Register for talks and meet the speakers
     hero:
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
+        generated: true
+  talks:
+    title: Talks
+  speakers:
+    title: Speakers
+  attendees:
+    title: Attendees
+  registrations:
+    title: My Registrations
+models:
+  Talk:
+    label: Talk
+    pluralLabel: Talks
+    fields:
+      title:
+        label: Title
+      summary:
+        label: Summary
+      startsAt:
+        label: Starts At
+      endsAt:
+        label: Ends At
+      room:
+        label: Room
+      capacity:
+        label: Capacity
+  Speaker:
+    label: Speaker
+    pluralLabel: Speakers
+    fields:
+      name:
+        label: Name
+      bio:
+        label: Bio
+      photo:
+        label: Photo
+      email:
+        label: Email
+      company:
+        label: Company
+  Attendee:
+    label: Attendee
+    pluralLabel: Attendees
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      company:
+        label: Company
+      phone:
+        label: Phone
+  Registration:
+    label: Registration
+    pluralLabel: Registrations
+    fields:
+      talk:
+        label: Talk
+      attendee:
+        label: Attendee
+      registeredAt:
+        label: Registered At
+logo:
+  src: images/logo.webp
+  alt: A ticket
+  generated: true

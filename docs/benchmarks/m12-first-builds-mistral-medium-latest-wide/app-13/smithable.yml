@@ -3,33 +3,32 @@ app:
   name: Car Log
   description: A log of my car's fuel, service visits and costs.
 models:
-  FuelEntry:
+  Fuel:
     fields:
       date: date!
       odometer: int!
       liters: decimal!
       cost: money
       notes: text
-  ServiceVisit:
+  Service:
     fields:
       date: date!
       odometer: int!
-      provider: string!
-      description: text
+      description: string!
       cost: money
       notes: text
   Cost:
     fields:
       date: date!
-      category: string!
+      description: string!
       amount: money!
-      description: text
-      receipt: url
+      category: fuel | service | other
+      notes: text
 pages:
-  fuel-entries:
-    crud: FuelEntry
-  service-visits:
-    crud: ServiceVisit
+  fuel:
+    crud: Fuel
+  service:
+    crud: Service
   costs:
     crud: Cost
-navigation: [fuel-entries, service-visits, costs]
+navigation: [fuel, service, costs]

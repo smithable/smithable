@@ -1,48 +1,5 @@
 smithableContent: 0.1
 models:
-  Product:
-    label: Produkt
-    pluralLabel: Produkte
-    fields:
-      name:
-        label: Name
-      description:
-        label: Beschreibung
-      price:
-        label: Preis
-      category:
-        label: Kategorie
-      available:
-        label: Verfügbar
-      image:
-        label: Bild
-  PreOrder:
-    label: Vorbestellung
-    pluralLabel: Vorbestellungen
-    fields:
-      customerName:
-        label: Kundenname
-      customerEmail:
-        label: Kunden-E-Mail
-      customerPhone:
-        label: Kundentelefon
-      product:
-        label: Produkt
-      quantity:
-        label: Menge
-      orderDate:
-        label: Bestelldatum
-      pickupDate:
-        label: Abholdatum
-      status:
-        label: Status
-        values:
-          pending: Ausstehend
-          confirmed: Bestätigt
-          pickedUp: Abgeholt
-          canceled: Storniert
-      notes:
-        label: Notizen
   PickupTime:
     label: Abholzeit
     pluralLabel: Abholzeiten
@@ -57,10 +14,70 @@ models:
         label: Maximale Plätze
       notes:
         label: Notizen
+  Product:
+    label: Produkt
+    pluralLabel: Produkte
+    fields:
+      name:
+        label: Name
+      description:
+        label: Beschreibung
+      price:
+        label: Preis
+      category:
+        label: Kategorie
+        values:
+          obst: Obst
+          gemuese: Gemüse
+          backwaren: Backwaren
+          milchprodukte: Milchprodukte
+          fleisch: Fleisch
+          sonstiges: Sonstiges
+      available:
+        label: Verfügbar
+      image:
+        label: Bild
+  PreOrder:
+    label: Vorbestellung
+    pluralLabel: Vorbestellungen
+    fields:
+      product:
+        label: Produkt
+      quantity:
+        label: Menge
+      customerName:
+        label: Kundenname
+      customerPhone:
+        label: Kundentelefon
+      orderDate:
+        label: Bestelldatum
+      status:
+        label: Status
+        values:
+          offen: offen
+          bestaetigt: bestätigt
+          abgeholt: abgeholt
+          storniert: storniert
+      pickupTime:
+        label: Abholzeit
 pages:
+  home:
+    title: Mein Hofladen
+    hero:
+      title: Willkommen im Hofladen
+      subtitle: Frische Produkte direkt vom Hof
+      button: Zu den Produkten
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  abholzeiten:
+    title: Abholzeiten
   produkte:
     title: Produkte
   vorbestellungen:
     title: Vorbestellungen
-  abholzeiten:
-    title: Abholzeiten
+logo:
+  src: images/logo.webp
+  alt: Two offset rounded squares
+  generated: true

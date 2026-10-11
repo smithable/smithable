@@ -4,4 +4,9 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: Rows of bookshelves and reading tables in a quiet library
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

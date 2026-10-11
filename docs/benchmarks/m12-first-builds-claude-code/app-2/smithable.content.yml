@@ -1,6 +1,6 @@
 # Visible text. Only what differs from the texts Smithable derives from names.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: Two interlinked rings }
+logo: { src: images/logo.webp, alt: Two interlinked rings, generated: true }
 
 models:
   Customer:

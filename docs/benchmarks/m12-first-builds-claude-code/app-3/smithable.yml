@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Billfold
-  description: "Invoicing for freelancers: keep track of clients, send invoices and record the payments that come in."
+  description: "Invoicing for freelancers: keep track of clients, invoices and the payments that come in."
   currency: EUR
 models:
   Client:
@@ -32,19 +32,19 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-      paid:
+      paidAmount:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: total - paid
+        formula: total - paidAmount
   Payment:
     fields:
       invoice: Invoice!
-      paidOn: date! = TODAY()
       amount: money!
+      paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
-      note: string
+      reference: string
 pages:
   clients:
     crud: Client
@@ -59,7 +59,7 @@ pages:
       features:
       faq:
       callToAction:
-        button: invoices
+        button: overview
   privacy:
     route: /privacy
     legal: privacy
@@ -73,11 +73,11 @@ pages:
   overview:
     dashboard:
       outstanding:
-        sum: Invoice.total
+        sum: Invoice.balance
         where:
           status: sent
       overdue:
-        sum: Invoice.total
+        sum: Invoice.balance
         where:
           status: overdue
       received:
@@ -102,10 +102,10 @@ actions:
       status: paid
     add:
       Payment:
-        paidOn: TODAY()
         amount:
+        paidOn: TODAY()
         method:
-    intent: The client paid the invoice; the payment is recorded with it.
+    intent: The client paid the invoice; the payment is recorded.
 outgoing:
   invoiceSent:
     when: markSent

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Municipal Service Status
-  description: Check whether the municipality's online services are working, what is being fixed and what maintenance is planned.
+  name: Municipal Services Status
+  description: The live status of the municipality's online services, so residents can check for outages and planned maintenance.
 models:
   Component:
     fields:
@@ -41,7 +41,6 @@ pages:
     crud: Maintenance
   components:
     crud: Component
-    access: [admin]
   home:
     route: /
     landing:
@@ -59,6 +58,9 @@ pages:
           status: resolved
       planned:
         records: Maintenance
+  privacy:
+    route: /privacy
+    legal: privacy
   overview:
     dashboard:
       open:
@@ -84,8 +86,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
+        message: The cause has been found and a fix is being worked on.
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -97,8 +98,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
+        message: A fix has been applied. We are monitoring the service before closing this incident.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -111,7 +111,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved.
-    allow: [admin, staff]
+        message: This incident is resolved and the service is working normally.
     intent: The incident is over, with an update saying so.
 navigation: [overview, incidents, updates, maintenance, components, team]

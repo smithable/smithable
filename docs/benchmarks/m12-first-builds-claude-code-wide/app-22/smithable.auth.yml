@@ -1,14 +1,9 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-defaultAccess: private
-public:
-  pages: [home, produkte]
-  read: [{ Product: { where: { available: true } } }]
+  selfSignUp: false
+defaultAccess: shared
 roles:
-  admin:
-    description: Betreiber des Hofladens. Pflegt Produkte, Abholzeiten und bearbeitet Vorbestellungen.
-  customer:
-    description: Kunde, der Produkte vorbestellt und abholt.
-defaultRole: customer
+  admin: all
+  member: { pages: all, create: all }
 admins: [johan@smithable.ai]

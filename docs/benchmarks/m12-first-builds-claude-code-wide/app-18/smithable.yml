@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Byggkoll
-  description: Håller ordning på kunder, offerter och fakturor för en liten byggfirma.
+  description: Håll koll på kunder, offerter och fakturor i en liten byggfirma.
   currency: SEK
   timezone: Europe/Stockholm
 models:
@@ -58,13 +58,12 @@ models:
 pages:
   offerter:
     crud: Quote
+    filters: [customer, status]
     actions: [sendQuote, acceptQuote, declineQuote]
-    search: [number, title]
-    filters: [status, customer]
   fakturor:
     crud: Invoice
-    actions: [markSent, markPaid]
-    filters: [status, customer]
+    filters: [customer, status]
+    actions: [sendInvoice, markPaid]
   kunder:
     crud: Customer
     search: [name, email, phone]
@@ -72,11 +71,6 @@ pages:
     crud: QuoteLine
   fakturarader:
     crud: InvoiceLine
-  oversikt:
-    dashboard:
-      latestQuotes:
-        list: Quote
-        limit: 5
   team:
     users: manage
 actions:
@@ -93,7 +87,7 @@ actions:
       status: sent
     set:
       status: accepted
-    intent: Kunden har godkänt offerten.
+    intent: Kunden har tackat ja till offerten.
   declineQuote:
     on: Quote
     when:
@@ -101,7 +95,7 @@ actions:
     set:
       status: declined
     intent: Kunden har tackat nej till offerten.
-  markSent:
+  sendInvoice:
     on: Invoice
     when:
       status: draft

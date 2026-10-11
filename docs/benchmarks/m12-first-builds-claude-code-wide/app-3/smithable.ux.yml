@@ -1,18 +1,9 @@
 smithableUx: 0.1
 pages:
-  schedule:
-    icon: calendar
-  my-bookings:
-    icon: clipboard
-  stylists:
-    icon: users
-  services:
-    icon: tag
   slots:
     table:
       sort: startsAt
 theme:
-  preset: modern
+  preset: editorial
   brand:
-    primary: "#b4547a"
-    font: Nunito Sans
+    primary: "#b5446e"
