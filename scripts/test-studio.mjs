@@ -183,10 +183,10 @@ try {
     await page.goto(`${base}/?guide=off`);
     await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
     await page.getByText("an email (unique)", { exact: true }).waitFor();
-    // A new app has no repository until its first change: its last change is none, not Git's
+    // A new app has no repository until its first change: its changes are none, not Git's
     // refusal.
-    const { patch } = await (await fetch(`${base}/api/diff`)).json();
-    if (patch !== "") throw new Error(`the last change of a new app: ${patch}`);
+    const { trace: made } = await (await fetch(`${base}/api/project`)).json();
+    if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
   });
   await step(
     "the header has How to publish and Help, which open the docs (finding 14)",
@@ -271,7 +271,7 @@ try {
             throw new Error(`the Code card for ${at} is beside nothing`);
           await card.getByRole("button", { name: i === 4 ? "Done" : "Next", exact: true }).click();
         }
-        if (code.join() !== "files,problems,concepts,operation,last-change")
+        if (code.join() !== "files,problems,concepts,operation,changes")
           throw new Error(`Code mode's tour: ${code.join()}`);
         await card.waitFor({ state: "detached" });
         if (!(await fresh.getByRole("radio", { name: "Code", exact: true }).isChecked()))
@@ -1351,111 +1351,123 @@ try {
       if (!/^\s+email:/.test(selected)) throw new Error(`selected: ${selected}`);
     },
   );
-  await step("the spec editor checks as you type, and saves an edit as a change", async () => {
-    // The editor's text element answers `value` like a text box (only the lines in view are in
-    // the page), for reading and for setting the whole text.
-    const editor = page.getByLabel("smithable.yml");
-    const text = await editor.evaluate((e) => e.value);
-    const write = (to) =>
-      editor.evaluate((e, value) => {
-        e.value = value;
-      }, to);
-    await write(text.replace("      notes: text\n", "      notes: txt\n"));
-    // The problem is shown in the text where it is, and in the list.
-    await page.locator(".cm-lintRange-error").first().waitFor();
-    await page
-      .getByRole("list", { name: "Problems" })
-      .getByText(/Unknown field type "txt"/)
-      .waitFor();
-    if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
-      throw new Error("Save is enabled");
-    await write(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
-    await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
-    // What can be written at the cursor is offered as it is typed: one of the app's own pages
-    // in the navigation, and at the start of a line the sections the spec does not have yet.
-    const good = await editor.evaluate((e) => e.value);
-    const cursor = (at) => editor.evaluate((e, to) => e.setSelectionRange(to), at);
-    const offered = page.locator(".cm-tooltip-autocomplete");
-    // The editor takes Enter for the list only a moment after it opens (75 ms), so that a line
-    // break typed just then is not swallowed.
-    const accept = async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      await page.keyboard.press("Enter");
-    };
-    const nav = /^navigation: \[(.*), ([\w-]+)\]$/m.exec(good);
-    if (!nav) throw new Error("the navigation is not a list on one line");
-    const [line, before, last] = nav;
-    await write(good.replace(line, `navigation: [${before}]`));
-    await editor.focus();
-    await cursor(nav.index + line.length - `, ${last}]`.length);
-    await page.keyboard.type(`, ${last.slice(0, -1)}`);
-    await offered.getByText(last, { exact: true }).waitFor();
-    await accept();
-    if ((await editor.evaluate((e) => e.value)) !== good)
-      throw new Error("the page offered was not put in the text");
-    await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.type("qu");
-    await offered.getByText("queries", { exact: true }).waitFor();
-    await offered.getByText(/Records chosen or ordered by code/).waitFor();
-    await accept();
-    if (!(await editor.evaluate((e) => e.value)).endsWith("queries: "))
-      throw new Error("the key offered was not put in the text with its colon");
-    // On an empty indented line, where a key goes, the keys are offered as soon as the cursor
-    // lands there, with no keystroke (a phone has no Ctrl-Space); "What goes here?" asks too.
-    const crud = "    crud: Customer\n";
-    await write(good.replace(crud, `${crud}    \n`));
-    await editor.focus();
-    await cursor(good.indexOf(crud) + crud.length + 4);
-    await offered.getByText("route", { exact: true }).waitFor();
-    await page.keyboard.press("Escape");
-    await offered.waitFor({ state: "hidden" });
-    await page.getByRole("button", { name: "What goes here?" }).click();
-    await offered.getByText("route", { exact: true }).waitFor();
-    await page.keyboard.press("Escape");
-    await write(good);
-    // A key says what it is for when the pointer rests on it.
-    await cursor(good.indexOf("    crud: Customer"));
-    await page.locator(".cm-line", { hasText: "crud: Customer" }).getByText("crud").hover();
-    await page
-      .locator(".cm-tooltip-hover")
-      .getByText(/list, view, create, edit and delete/)
-      .waitFor();
-    await page.mouse.move(0, 0);
-    // Typed text, and Ctrl+Z in the editor: the editor's own undo, not the app's last change.
-    const changes = await trace.locator("li").count();
-    await editor.focus();
-    await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.type("# typed");
-    if (!(await editor.evaluate((e) => e.value)).endsWith("# typed"))
-      throw new Error("typing did not reach the editor");
-    await page.keyboard.press("ControlOrMeta+z");
-    if ((await editor.evaluate((e) => e.value)).endsWith("# typed"))
-      throw new Error("Ctrl+Z in the editor did not undo the typing");
-    await new Promise((r) => setTimeout(r, 500));
-    if ((await trace.locator("li").count()) !== changes)
-      throw new Error("Ctrl+Z in the editor undid a change of the app");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await status.getByText("Edit smithable.yml").waitFor({ timeout: 60000 });
-    // A broken edit cannot be saved, but it can be discarded: the file as saved comes back.
-    const discard = page.getByRole("button", { name: "Discard", exact: true });
-    if (await discard.isEnabled()) throw new Error("Discard is offered with nothing edited");
-    const savedText = await editor.evaluate((e) => e.value);
-    await editor.focus();
-    await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.type("\nmodels: [broken");
-    const save = page.getByRole("button", { name: "Save", exact: true });
-    const until = async (done, what) => {
-      for (let i = 0; i < 100 && !(await done()); i++) await new Promise((r) => setTimeout(r, 100));
-      if (!(await done())) throw new Error(what);
-    };
-    await until(async () => !(await save.isEnabled()), "a broken edit could be saved");
-    page.once("dialog", (dialog) => dialog.accept());
-    await discard.click();
-    await until(
-      async () => (await editor.evaluate((e) => e.value)) === savedText,
-      "Discard did not bring the saved file back",
-    );
-  });
+  await step(
+    "the spec editor checks as you type, and saves a valid edit by itself, growing one change",
+    async () => {
+      // The editor's text element answers `value` like a text box (only the lines in view are in
+      // the page), for reading and for setting the whole text.
+      const editor = page.getByLabel("smithable.yml");
+      const text = await editor.evaluate((e) => e.value);
+      const startCount = await changeCount();
+      const settled = () => page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
+      const write = (to) =>
+        editor.evaluate((e, value) => {
+          e.value = value;
+        }, to);
+      await write(text.replace("      notes: text\n", "      notes: txt\n"));
+      // The problem is shown in the text where it is, and in the list.
+      await page.locator(".cm-lintRange-error").first().waitFor();
+      await page
+        .getByRole("list", { name: "Problems" })
+        .getByText(/Unknown field type "txt"/)
+        .waitFor();
+      if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
+        throw new Error("Save is enabled");
+      await write(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
+      await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+      // Valid, it is saved by itself after a pause: one change.
+      await settled();
+      if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      fax: phone\n"))
+        throw new Error("the valid edit was not saved by itself");
+      // What can be written at the cursor is offered as it is typed: one of the app's own pages
+      // in the navigation, and at the start of a line the sections the spec does not have yet.
+      const good = await editor.evaluate((e) => e.value);
+      const cursor = (at) => editor.evaluate((e, to) => e.setSelectionRange(to), at);
+      const offered = page.locator(".cm-tooltip-autocomplete");
+      // The editor takes Enter for the list only a moment after it opens (75 ms), so that a line
+      // break typed just then is not swallowed.
+      const accept = async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        await page.keyboard.press("Enter");
+      };
+      const nav = /^navigation: \[(.*), ([\w-]+)\]$/m.exec(good);
+      if (!nav) throw new Error("the navigation is not a list on one line");
+      const [line, before, last] = nav;
+      await write(good.replace(line, `navigation: [${before}]`));
+      await editor.focus();
+      await cursor(nav.index + line.length - `, ${last}]`.length);
+      await page.keyboard.type(`, ${last.slice(0, -1)}`);
+      await offered.getByText(last, { exact: true }).waitFor();
+      await accept();
+      if ((await editor.evaluate((e) => e.value)) !== good)
+        throw new Error("the page offered was not put in the text");
+      await page.keyboard.press("ControlOrMeta+End");
+      await page.keyboard.type("qu");
+      await offered.getByText("queries", { exact: true }).waitFor();
+      await offered.getByText(/Records chosen or ordered by code/).waitFor();
+      await accept();
+      if (!(await editor.evaluate((e) => e.value)).endsWith("queries: "))
+        throw new Error("the key offered was not put in the text with its colon");
+      // On an empty indented line, where a key goes, the keys are offered as soon as the cursor
+      // lands there, with no keystroke (a phone has no Ctrl-Space); "What goes here?" asks too.
+      const crud = "    crud: Customer\n";
+      await write(good.replace(crud, `${crud}    \n`));
+      await editor.focus();
+      await cursor(good.indexOf(crud) + crud.length + 4);
+      await offered.getByText("route", { exact: true }).waitFor();
+      await page.keyboard.press("Escape");
+      await offered.waitFor({ state: "hidden" });
+      await page.getByRole("button", { name: "What goes here?" }).click();
+      await offered.getByText("route", { exact: true }).waitFor();
+      await page.keyboard.press("Escape");
+      await write(good);
+      // A key says what it is for when the pointer rests on it.
+      await cursor(good.indexOf("    crud: Customer"));
+      await page.locator(".cm-line", { hasText: "crud: Customer" }).getByText("crud").hover();
+      await page
+        .locator(".cm-tooltip-hover")
+        .getByText(/list, view, create, edit and delete/)
+        .waitFor();
+      await page.mouse.move(0, 0);
+      // Every edit since went on in the same file: they grew the one change.
+      await settled();
+      if ((await changeCount()) !== startCount + 1)
+        throw new Error(`the edits made ${(await changeCount()) - startCount} changes, not one`);
+      // Typed text, and Ctrl+Z in the editor: the editor's own undo, not the app's last change.
+      const changes = await changeCount();
+      await editor.focus();
+      await page.keyboard.press("ControlOrMeta+End");
+      await page.keyboard.type("# typed");
+      if (!(await editor.evaluate((e) => e.value)).endsWith("# typed"))
+        throw new Error("typing did not reach the editor");
+      await page.keyboard.press("ControlOrMeta+z");
+      if ((await editor.evaluate((e) => e.value)).endsWith("# typed"))
+        throw new Error("Ctrl+Z in the editor did not undo the typing");
+      await new Promise((r) => setTimeout(r, 500));
+      if ((await changeCount()) !== changes)
+        throw new Error("Ctrl+Z in the editor undid a change of the app");
+      // A broken edit cannot be saved, but it can be discarded: the file as saved comes back.
+      const discard = page.getByRole("button", { name: "Discard", exact: true });
+      if (await discard.isEnabled()) throw new Error("Discard is offered with nothing edited");
+      const savedText = await editor.evaluate((e) => e.value);
+      await editor.focus();
+      await page.keyboard.press("ControlOrMeta+End");
+      await page.keyboard.type("\nmodels: [broken");
+      const save = page.getByRole("button", { name: "Save", exact: true });
+      const until = async (done, what) => {
+        for (let i = 0; i < 100 && !(await done()); i++)
+          await new Promise((r) => setTimeout(r, 100));
+        if (!(await done())) throw new Error(what);
+      };
+      await until(async () => !(await save.isEnabled()), "a broken edit could be saved");
+      page.once("dialog", (dialog) => dialog.accept());
+      await discard.click();
+      await until(
+        async () => (await editor.evaluate((e) => e.value)) === savedText,
+        "Discard did not bring the saved file back",
+      );
+    },
+  );
   await step("the companion files are edited the same way, each with its own checks", async () => {
     // The auth file: a grant must name a model there is; a role added is saved as one change.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.auth.yml");
@@ -1499,8 +1511,10 @@ try {
         .replace("admins:", "defaultRole: sales\nadmins:"),
     );
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await status.getByText("Edit smithable.auth.yml").waitFor({ timeout: 60000 });
+    // Another file: saved by itself as a change of its own.
+    await page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
+    if (!readFileSync(join(dir, "smithable.auth.yml"), "utf8").includes("  support:"))
+      throw new Error("the auth file's edit was not saved by itself");
     // A role's grant is completed with the spec's names: a kind of record for "create".
     const saved = await auth.evaluate((e) => e.value);
     // (sales may add orders since the access step: the grant is a list.)
@@ -1530,13 +1544,24 @@ try {
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
   });
-  await step("the last change is shown as a diff", async () => {
-    await page.getByRole("tab", { name: "Last change" }).click();
-    await page
-      .getByLabel("Last change")
-      .getByText("+  support: { description: Answers questions., pages: all }")
-      .waitFor();
-  });
+  await step(
+    "the Changes tab: the prompt first; a change names its files and opens as their patch",
+    async () => {
+      await page.getByRole("tab", { name: "Changes" }).click();
+      await page.getByLabel("Describe a change").waitFor();
+      const entry = trace
+        .getByRole("button", { name: /Edit smithable\.auth\.yml.*smithable\.auth\.yml/ })
+        .first();
+      await entry.click();
+      const patch = trace.getByRole("region", { name: "The change's patch" });
+      await patch
+        .getByText("+  support: { description: Answers questions., pages: all }")
+        .waitFor();
+      if (/^diff --git a\/src\//m.test(await patch.innerText()))
+        throw new Error("the patch shows generated files");
+      await page.getByRole("tab", { name: "Files" }).click();
+    },
+  );
   await step("any operation can be applied from a form built from its schema", async () => {
     await page.getByRole("tab", { name: "Operation" }).click();
     // A name is checked as it is typed, in the words the operation would refuse it with, and
@@ -1677,11 +1702,12 @@ try {
     },
   );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
-    // An unsaved edit in the spec editor is kept when the file changes under it.
+    // An unsaved edit in the spec editor (one with a problem: a valid one saves itself) is kept
+    // when the file changes under it.
     await page.getByRole("tab", { name: "Files" }).click();
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
     const editor = page.getByLabel("smithable.yml");
-    const typed = `${await editor.evaluate((e) => e.value)}# unsaved\n`;
+    const typed = `${await editor.evaluate((e) => e.value)}unsaved: [broken\n`;
     await editor.evaluate((e, value) => {
       e.value = value;
     }, typed);
@@ -1695,11 +1721,16 @@ try {
     });
     await client.close();
     if (result.isError) throw new Error(result.content[0].text);
+    for (let i = 0; i < 60; i++) {
+      const { trace: made } = await (await fetch(`${base}/api/project`)).json();
+      if (made[0]?.description === "Add field vatNumber (text) to Customer") break;
+      if (i === 59)
+        throw new Error(`the agent's change is not the newest: ${made[0]?.description}`);
+      await new Promise((r) => setTimeout(r, 500));
+    }
     await page
-      .getByText("Add field vatNumber (text) to Customer")
-      .first()
+      .getByText("smithable.yml changed on disk while you were editing.")
       .waitFor({ timeout: 30000 });
-    await page.getByText("smithable.yml changed on disk while you were editing.").waitFor();
     if ((await editor.evaluate((e) => e.value)) !== typed)
       throw new Error("the unsaved edit was replaced");
     await page.getByRole("button", { name: "Use the file on disk" }).click();
