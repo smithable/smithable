@@ -12,7 +12,7 @@ Generation is byte-identical: the same spec always gives the same code. Nothing 
 
 Routine work never calls a model. In the [M7 benchmark](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m7-report.md), Smithable's operations did six of seven everyday tasks on a CRM in eleven seconds for zero tokens, with no regression. A coding agent did the same seven tasks for $3.15 and 3.6 million tokens, and left every file out of step with the spec. With Smithable's operations offered to the agent as tools, its cost fell three to seven times on the tasks an operation covers.
 
-When a request does need interpretation, the cheapest capable model gets a small slice of the spec and answers with operations, never with code. A small EU-hosted model did [seven of seven tasks for about €0.002](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m12-report.md); a 7-billion-parameter model on a laptop's CPU did six, offline. Every change shows what handled it and what it cost.
+When a request does need interpretation, the cheapest capable model gets a small slice of the spec and answers with operations, never with code. A small hosted open model did [seven of seven tasks for about €0.002](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m12-report.md); a 7-billion-parameter model on a laptop's CPU did six, offline. Every change shows what handled it and what it cost.
 
 ## The app is yours
 
@@ -24,9 +24,9 @@ When you want to continue without Smithable, `smithable detach` removes what onl
 
 Who may read, create, change or delete each kind of record is declared in `smithable.auth.yml`, enforced by the generated server functions, and covered by generated tests. A rule that is not implemented is shown as not implemented, never assumed. Every write is validated against a schema derived from the spec. Production builds send security headers and a Content Security Policy with a per-request nonce, run as a non-root user on a distroless image with pinned dependencies, and `smithable security` runs a dependency audit, a secrets scan, static analysis and a container scan whose findings are reported, never suppressed.
 
-## EU by default, local when you want it
+## Runs where you want it
 
-Everything on this site runs on your own machine, with no account: the engine, the CLI, Studio and the MCP server. A local model through Ollama keeps a request from ever leaving your network. The hosted service and the model behind `smithable ask` run in the EU (AWS Stockholm and an EU-hosted open model), and the hosted service is built on the open-source product, never the other way round.
+Everything on this site runs on your own machine, with no account: the engine, the CLI, Studio and the MCP server. A local model through Ollama keeps a request from ever leaving your network. The hosted service is built on the open-source product, never the other way round, and where a project's data and model calls may go is a setting of the project, not a plan.
 
 ## Designed, not improvised
 
