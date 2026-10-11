@@ -3116,7 +3116,9 @@ async function sitemapCheck(dir, base) {
       const listPage = await (await fetch(`${base}${route}`)).text();
       const linked = new Set(
         [
-          ...listPage.matchAll(new RegExp(`href="(${prefix.replace(/\//g, "\\/")}[^"?#]+)"`, "g")),
+          ...listPage.matchAll(
+            new RegExp(`href="(${prefix.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}[^"?#]+)"`, "g"),
+          ),
         ].map((m) => m[1]),
       );
       const listed = [...text.matchAll(/<loc>([^<]+)<\/loc>(<lastmod>[^<]*<\/lastmod>)?/g)]

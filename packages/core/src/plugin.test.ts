@@ -79,10 +79,7 @@ test("an expansion that clashes with the spec points at the plugin's section", (
   const { diagnostics } = validateSpec(
     {
       path: "smithable.yml",
-      text: spec("  subscribers: { crud: Class }\nnewsletter:\n  from: hi@example.com\n").replace(
-        "  classes: { crud: Class }\n",
-        "  classes: { crud: Class }\n",
-      ),
+      text: spec("  subscribers: { crud: Class }\nnewsletter:\n  from: hi@example.com\n"),
     },
     { plugins: [newsletter] },
   );
