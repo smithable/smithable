@@ -156,7 +156,9 @@ export function answerQuestion(
     if (found) {
       const { model: owner, field } = found;
       // The field's notes as its list line gives them: "a phone (a phone number, required)".
-      const notes = /\((.*)\)$/.exec(w.item(owner, field))?.[1];
+      const item = w.item(owner, field);
+      const open = item.endsWith(")") ? item.lastIndexOf("(") : -1;
+      const notes = open === -1 ? undefined : item.slice(open + 1, -1);
       const calculated = field.formula ? `calculated as ${w.words(owner, field.formula)}` : "";
       const what = [notes, calculated].filter(Boolean).join(", ");
       return {
