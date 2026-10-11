@@ -513,6 +513,15 @@ for (const starter of rescore ? [] : starters) {
 // ── Report ──────────────────────────────────────────────────────────────────
 
 const cell = (s) => String(s ?? "").replaceAll("|", "\\|");
+// Correctness apart from valid tool calls (C 25): a tool call that failed is in the trace with its
+// error after "→"; a wrong answer either states something as fact or says the model could not tell.
+const toolErrors = (r) => (r.trace ?? []).filter((t) => t.includes(" → ")).length;
+const allValid = (r) => r.toolCalls > 0 && toolErrors(r) === 0;
+const unsure = (r) =>
+  /\b(could not|couldn't|can't|cannot|unable|not sure|don't know|do not know|did you mean|which one)\b/i.test(
+    r.answer ?? "",
+  );
+const wrongKind = (r) => (unsure(r) ? "said unsure" : "stated as fact");
 /** A question whose answer is a count, sum or average over records. */
 const adds = (q) =>
   q.kind === "pairs" ||
@@ -534,14 +543,20 @@ const totals = models.map((m) => {
   const added = rows.filter(
     (r) => r.outcome === "wrong" && adds(QUESTIONS[r.starter][r.n - 1]) && byModel(r),
   ).length;
-  return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${added} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
+  const wrong = rows.filter((r) => r.outcome === "wrong");
+  const asFact = wrong.filter((r) => !unsure(r)).length;
+  const valid = rows.filter(allValid);
+  const validRight = valid.filter((r) => r.outcome === "right").length;
+  return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${asFact} | ${added} | ${validRight} / ${valid.length} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
 });
 const report = `# bench-ask: ${label} (${today})${voice ? `, voice ${voice}` : ""}
 
 The questions of [bench-ask-questions.mjs](../../scripts/bench-ask-questions.mjs), asked of each starter's assistant tools at \`/mcp\` with an administrator's key ([bench-ask.mjs](../../scripts/bench-ask.mjs)), by each model: it calls tools until it answers (at most ${MAX_CALLS} model calls). A read is right when its answer gives the number, names, words or pairs worked out from the records; a change is right when the records afterwards say so. Each change starts from the starter's records.
 
-| Model | Right | Wrong | Of them, a count or sum the model worked out | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
-|---|---|---|---|---|---|---|---|---|---|---|
+Correctness is judged on the answer's facts against the records (a count, a name or id found, a record changed), never on the tool calls: a confident answer that is wrong counts as wrong. "Stated as fact" is a wrong answer given as true, such as a total, a name or "there is no such invoice", rather than one saying the model could not tell; it is the kind a person would act on. "Right when every tool call was valid" counts the questions whose tool calls all succeeded, and how many of them were answered right: valid calls are not a right answer.
+
+| Model | Right | Wrong | Of them, stated as fact | Of them, a count or sum the model worked out | Right when every tool call was valid | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 ${totals.join("\n")}
 
 The tools each starter offers (\`tools/list\`, about four characters a token):
@@ -581,7 +596,7 @@ ${results_
   .filter((r) => r.model && r.outcome !== "right")
   .map(
     (r) =>
-      `| ${r.model} | ${r.starter} | ${r.n} | ${cell(QUESTIONS[r.starter][r.n - 1].q)} | ${r.outcome}${r.note ? ` (${cell(r.note)})` : ""} | ${cell(r.expected === undefined ? "" : JSON.stringify(r.expected))} | ${cell(String(r.answer ?? "").slice(0, 240))} |`,
+      `| ${r.model} | ${r.starter} | ${r.n} | ${cell(QUESTIONS[r.starter][r.n - 1].q)} | ${r.outcome}${r.outcome === "wrong" ? ` (${wrongKind(r)})` : ""}${r.note ? ` (${cell(r.note)})` : ""} | ${cell(r.expected === undefined ? "" : JSON.stringify(r.expected))} | ${cell(String(r.answer ?? "").slice(0, 240))} |`,
   )
   .join("\n")}
 `;
