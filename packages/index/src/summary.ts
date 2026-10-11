@@ -198,7 +198,7 @@ export function summarize(
       sentences.push(
         `${capitalize(plain)} of ${many(model)} are reviewed before others see them${
           holding.length
-            ? `; ${article(humanize(model.name).toLowerCase())} waits until its ${list(holding.map(word))} ${holding.length > 1 ? "are" : "is"}`
+            ? `; ${article(humanize(model.name).toLowerCase())} waits until its ${list(holding.map(word))} ${holding.length > 1 || /s$/.test(holding[0]?.name ?? "") ? "are" : "is"}`
             : ""
         }.`,
       );
@@ -465,13 +465,15 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     const verbNamed = /^(?:[a-z]+(?:ed|en)|due|sent|paid|born)$/.test(name) && dated;
     if (verbNamed) {
       const rest = notes.filter((n) => n !== kind);
-      return `the ${kind ?? "date"} ${name}${rest.length ? ` (${rest.join(", ")})` : ""}`;
+      return `the ${(kind ?? "date").replace(/^an? /, "")} ${name}${rest.length ? ` (${rest.join(", ")})` : ""}`;
     }
-    const named = name.startsWith("“")
-      ? `a field ${name}`
-      : /s$| (on|at)$/.test(name)
-        ? name
-        : article(name);
+    // No "a" before a plural, a yes/no field ("available", "paid": a state, not a thing) or a
+    // label that is a question word or preposition ("about", "where").
+    const bare =
+      /s$| (on|at)$/.test(name) ||
+      (f.type.kind === "scalar" && f.type.name === "bool") ||
+      /^(about|where|when|who|what|how|why|with|for|after|before)$/.test(name);
+    const named = name.startsWith("“") ? `a field ${name}` : bare ? name : article(name);
     return notes.length ? `${named} (${notes.join(", ")})` : named;
   };
   return { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item };
