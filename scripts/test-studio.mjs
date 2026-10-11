@@ -476,6 +476,96 @@ try {
     await page.getByText(/adds orders/).waitFor();
   });
 
+  await step(
+    "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",
+    async () => {
+      const authFile = join(dir, "smithable.auth.yml");
+      const before = readFileSync(authFile, "utf8");
+      const waitAuth = async (fits, what) => {
+        for (let i = 0; i < 60 && !fits(readFileSync(authFile, "utf8")); i++)
+          await new Promise((r) => setTimeout(r, 1000));
+        if (!fits(readFileSync(authFile, "utf8")))
+          throw new Error(`no ${what} in smithable.auth.yml:\n${readFileSync(authFile, "utf8")}`);
+        // A change made while another runs is dropped: the next waits for Studio to be done.
+        await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
+      };
+      await page.getByRole("tab", { name: "Who can" }).click();
+      const grid = page.getByRole("region", { name: "Who can" });
+      const box = (name) => grid.getByRole("checkbox", { name, exact: true });
+      let changes = 0;
+      const tick = async (name, fits, what) => {
+        await box(name).click();
+        changes++;
+        await waitAuth(fits, what);
+      };
+      // One tick is the role's grant written whole (the access step left create: [Order]).
+      if (!(await box("sales may add orders").isChecked())) throw new Error("orders not ticked");
+      await tick(
+        "sales may add customers",
+        (t) => /create: \[Customer, Order\]/.test(t),
+        "create: [Customer, Order]",
+      );
+      await status.getByText("sales may add customers, orders").waitFor({ timeout: 60000 });
+      // Under "pages: all" an untick writes the rest; the header writes all again.
+      await tick("sales may open the customers page", (t) => !/pages: all/.test(t), "a page list");
+      await tick(
+        "sales: Every page (also pages added later)",
+        (t) => /pages: all/.test(t),
+        "pages: all",
+      );
+      // Private records: changing everyone's customers without seeing them is marked in place.
+      await page.getByLabel("Everyone sees, changes and deletes only their own records").click();
+      changes++;
+      await waitAuth((t) => /defaultAccess: private/.test(t), "defaultAccess: private");
+      const unseen = grid.getByText(
+        "Tick See too, or sales cannot open the customers they may change.",
+      );
+      await unseen.waitFor({ state: "attached", timeout: 60000 });
+      await tick(
+        "sales may see everyone's customers",
+        (t) => /read: \[Customer\]/.test(t),
+        "read: [Customer]",
+      );
+      await unseen.waitFor({ state: "detached", timeout: 60000 });
+      // Anyone reading customers is told they hold personal data.
+      await tick(
+        "Anyone may read customers",
+        (t) => /read: \[Customer\]\n/.test(t.split("public:")[1] ?? ""),
+        "public read",
+      );
+      await grid
+        .getByText(/Anyone on the internet can read .*email/)
+        .waitFor({ state: "attached", timeout: 60000 });
+      // A new role starts empty, with the note to tick its pages; new users may get it.
+      const roles = page.getByRole("region", { name: "Roles" });
+      await roles.getByLabel("New role's name").fill("teacher");
+      await roles.getByLabel("New role's description").fill("Teaches the classes.");
+      await roles.getByRole("button", { name: "Add a role" }).click();
+      changes++;
+      await waitAuth(
+        (t) => /teacher:\n\s+description: Teaches the classes\./.test(t),
+        "the teacher role",
+      );
+      await grid
+        .getByText("teacher opens no page yet: tick the pages they use.")
+        .waitFor({ timeout: 60000 });
+      await roles.getByLabel("New users get").selectOption("teacher");
+      changes++;
+      await waitAuth((t) => /defaultRole: teacher/.test(t), "defaultRole: teacher");
+      // Everything undone, as later steps expect the file as it was.
+      for (let i = 0; i < changes; i++) {
+        const undone = await fetch(`${base}/api/undo`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: "{}",
+        });
+        if (!undone.ok) throw new Error(`undo answered ${undone.status}`);
+      }
+      await waitAuth((t) => t === before, "the file as it was");
+      await page.getByRole("tab", { name: "What it does" }).click();
+    },
+  );
+
   const project = async () => (await fetch(`${base}/api/project`)).json();
   await step(
     "click the email field in the preview, make it required: spec, validation and form follow",

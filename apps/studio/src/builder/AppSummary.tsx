@@ -44,6 +44,7 @@ export function AppSummary({
   spec,
   run,
   onAdd,
+  onWho,
 }: {
   app: string;
   sections: SummarySection[];
@@ -51,6 +52,8 @@ export function AppSummary({
   run: Run;
   /** Opens the Change tab's form for an addition, filled in. */
   onAdd: (prefill: Prefill) => void;
+  /** Opens the Who can tab with a column marked: a role's name, or "anyone". */
+  onWho: (column: string) => void;
 }) {
   const [wording, setWording] = useState(() => loadWording(app));
   const [updated, setUpdated] = useState<string[]>([]);
@@ -108,6 +111,7 @@ export function AppSummary({
             open={open}
             onOpen={(concept) => setOpen((o) => (o === concept ? undefined : concept))}
             onAdd={onAdd}
+            onWho={onWho}
             onWording={(text) =>
               setWording((w) => {
                 const { [s.concept]: _, ...rest } = w;
@@ -133,6 +137,12 @@ function conceptOf(
   spec: Spec,
 ): string | undefined {
   const item = /^[-•*]\s+(.*)$/.exec(line)?.[1];
+  // Access: a role's line, or what anyone may do, opens that column of the Who can tab.
+  if (section.concept === "auth") {
+    if (line.startsWith("Open to anyone")) return "who:anyone";
+    const role = item && /^([a-z][a-zA-Z0-9]*)[ :]/.exec(item)?.[1];
+    return role && spec.auth?.roles.some((r) => r.name === role) ? `who:${role}` : undefined;
+  }
   if (item === undefined) return undefined;
   if (kind(section.concept) === "model") {
     const field = section.fields?.find((f) => f.text === item);
@@ -155,6 +165,7 @@ function Part({
   open,
   onOpen,
   onAdd,
+  onWho,
   onWording,
 }: {
   section: SummarySection;
@@ -166,6 +177,7 @@ function Part({
   open?: string;
   onOpen: (concept: string) => void;
   onAdd: (prefill: Prefill) => void;
+  onWho: (column: string) => void;
   onWording: (text: string | undefined) => void;
 }) {
   const generated = section.sentences.join("\n");
@@ -271,8 +283,12 @@ function Part({
                     "text-left align-top hover:text-accent",
                     open === concept && "font-medium text-accent",
                   )}
-                  aria-expanded={open === concept}
-                  onClick={() => onOpen(concept)}
+                  aria-expanded={concept.startsWith("who:") ? undefined : open === concept}
+                  onClick={() =>
+                    concept.startsWith("who:")
+                      ? onWho(concept.slice("who:".length))
+                      : onOpen(concept)
+                  }
                 >
                   {text}
                 </button>

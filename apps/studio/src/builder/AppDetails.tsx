@@ -11,11 +11,14 @@ export function AppDetails({
   spec,
   run,
   onLook,
+  onWho,
 }: {
   spec: Spec;
   run: Run;
   /** Opens the Look tab, where the theme is chosen. */
   onLook: () => void;
+  /** Opens the Who can tab, where sign-in and the roles are chosen. */
+  onWho: () => void;
 }) {
   const app = spec.ir?.app;
   const [name, setName] = useState(app?.name ?? "");
@@ -72,16 +75,15 @@ export function AppDetails({
           </p>
         </div>
         {signIn && signIn !== "none" && (
-          <Label text="Who may sign up">
-            <Select
-              value={signIn.selfSignUp ? "anyone" : "invited"}
-              onChange={(e) => void run("setSignUp", { who: e.target.value })}
-              options={[
-                ["anyone", "Anyone"],
-                ["invited", "Only people who are invited"],
-              ]}
-            />
-          </Label>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted">Who may sign up</p>
+            <p className="flex items-center justify-between gap-2">
+              <span>{signIn.selfSignUp ? "Anyone" : "Only people who are invited"}</span>
+              <Button variant="ghost" onClick={onWho}>
+                Change it in Who can
+              </Button>
+            </p>
+          </div>
         )}
       </div>
     </section>
