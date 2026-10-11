@@ -24,7 +24,7 @@ Code mode has a tour of its own (Johan, 2026-10-09):
 | 2 | The editor's Problems and Save | Checked as you type: a problem is named here and marked in the text. Save keeps the file as one change. |
 | 3 | The concept tree | Every part of your app, with its rules and the files each became; Show in smithable.yml takes you to its lines. |
 | 4 | The Operation tab | Every change is an operation, with a form; the line under it is the same change for a terminal. |
-| 5 | The Last change tab | The generated code the last change changed, with the logs beside it; Ctrl+Z takes any change back. |
+| 5 | The Changes tab | Describe a change as in No code; each change names its files and opens as their patch; an edit in Files saves itself after a pause; Ctrl+Z takes any change back. |
 
 The header's **Guide** link starts the tour of the mode shown, at any time.
 
@@ -47,7 +47,7 @@ Studio's words are inline English in the beta (language.md §4: Studio stays Eng
 
 ## 5. How it stays true when Studio changes
 
-- Each thing a stop is about carries `data-guide="<name>"` (`mode`, `preview`, `summary`, `details`, `change`, `look`, `publish`; in Code mode `files`, `problems`, `concepts`, `operation`, `last-change`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
+- Each thing a stop is about carries `data-guide="<name>"` (`mode`, `preview`, `summary`, `details`, `change`, `look`, `publish`; in Code mode `files`, `problems`, `concepts`, `operation`, `changes`); the tour finds its anchors by that and by nothing else, so a moved or restyled element keeps its stop and a removed one drops it.
 - A unit test holds the two lists together: every stop's anchor appears in the components, and every `data-guide` in the components has a stop. A new place in Studio either gets a stop in the same change or has no attribute.
 - The Studio test walks the tour once on a fresh project: five cards in order, each beside a visible anchor, Done ends it and the project is as it was; **Guide** starts it again; a reload shows nothing.
 

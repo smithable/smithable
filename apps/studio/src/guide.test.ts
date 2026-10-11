@@ -34,6 +34,6 @@ test("every stop of the guides has its place in Studio, and every place has a st
     "problems",
     "concepts",
     "operation",
-    "last-change",
+    "changes",
   ]);
 });
