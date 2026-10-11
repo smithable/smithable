@@ -97,6 +97,8 @@ export interface Result {
   needsConfirm?: boolean;
   /** A failure: its report was sent (the person chose "always"), or can be offered. */
   report?: "sent" | "offer";
+  /** For an editSpec: the newest change's id after it (grown or new), for the editor to grow. */
+  change?: string;
 }
 
 /**
@@ -133,9 +135,14 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
  * ("changed", a few seconds later): until then the preview is updating (see Preview).
  */
 export const EXPECT_RELOAD = "smithable:expect-reload";
+/** The change the last editSpec made or grew, as the server said. */
+let latestChange: string | undefined;
+export const lastChange = () => latestChange;
+
 const changing = async (result: Promise<Result>) => {
   const r = await result;
   if (r.ok) window.dispatchEvent(new Event(EXPECT_RELOAD));
+  latestChange = r.ok ? r.change : undefined;
   return r;
 };
 

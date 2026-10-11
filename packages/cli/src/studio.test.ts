@@ -104,13 +104,14 @@ test("an edit of the same file right after the editor's last grows that change; 
       cwd: dir,
       encoding: "utf8",
     }).stdout.trim();
+  let snapshots = 0;
   const edit = (text: string, file = "smithable.yml") => {
     writeFileSync(join(dir, file), text);
     git("add", "-A");
     git(
       "commit",
       "-qm",
-      `smithable: Edit ${file}\n\nSmithable-Op: ${JSON.stringify({ op: "editSpec", args: { text, ...(file === "smithable.yml" ? {} : { file }) } })}`,
+      `smithable: Edit ${file}\n\nSmithable-Op: ${JSON.stringify({ op: "editSpec", args: { text, ...(file === "smithable.yml" ? {} : { file }) } })}\nSmithable-Snapshot: snap-${++snapshots}`,
     );
     return git("rev-parse", "HEAD");
   };
@@ -123,6 +124,10 @@ test("an edit of the same file right after the editor's last grows that change; 
     expect(git("rev-list", "--count", "HEAD")).toBe("2");
     expect(git("show", "HEAD:smithable.yml")).toBe("smithable: 0.1\n# a\n# b");
     expect(git("log", "-1", "--format=%B", grown)).toContain('"text":"smithable: 0.1\\n# a\\n"');
+    // The first change's database snapshot stays: undo goes back to before the typing began.
+    expect(git("log", "-1", "--format=%(trailers:key=Smithable-Snapshot,valueonly)", grown)).toBe(
+      "snap-2",
+    );
     // Another file's edit in between: the next save is a change of its own.
     edit("smithableUx: 0.1\n", "smithable.ux.yml");
     edit("smithable: 0.1\n# c\n");
