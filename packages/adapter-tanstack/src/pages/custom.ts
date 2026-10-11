@@ -18,6 +18,14 @@ import { listParts, listRoute } from "./list.js";
  * component moves to src/custom/pages/, and the route is generated again. Only when the
  * edit left the route itself (loading, search, access) as generated; otherwise the reason.
  */
+
+/** The generated route block, `export const Route = createFileRoute(` up to its closing `});`. */
+function routeBlock(text: string): string | undefined {
+  const start = text.indexOf("export const Route = createFileRoute(");
+  if (start === -1) return undefined;
+  const end = text.indexOf("\n});\n", start);
+  return end === -1 ? undefined : text.slice(start, end + "\n});\n".length);
+}
 export function customPageFromEdit(
   ir: SpecIR,
   pageId: string,
@@ -36,8 +44,7 @@ export function customPageFromEdit(
     undefined,
     options.auth,
   );
-  const routeBlock = /export const Route = createFileRoute\([\s\S]*?\n\}\);\n/;
-  const generatedRoute = routeBlock.exec(
+  const generatedRoute = routeBlock(
     listRoute(
       page,
       crudModel(ir, page),
@@ -48,8 +55,8 @@ export function customPageFromEdit(
       undefined,
       options.auth,
     ),
-  )?.[0];
-  const editedRoute = routeBlock.exec(edited)?.[0];
+  );
+  const editedRoute = routeBlock(edited);
   if (
     !editedRoute ||
     editedRoute !== generatedRoute ||

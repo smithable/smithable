@@ -206,7 +206,9 @@ function namesIn(text: string) {
       if (section === "models" && fields)
         models.set(
           entry,
-          [...fields.matchAll(/([a-z][A-Za-z0-9]*)\s*:/g)].map((m) => m[1] as string),
+          [...fields.matchAll(/(?<![A-Za-z0-9])([a-z][A-Za-z0-9]*)\s*:/g)].map(
+            (m) => m[1] as string,
+          ),
         );
     } else if (at === 4 && key && entry) {
       inFields = section === "models" && key === "fields";

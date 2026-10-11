@@ -106,11 +106,11 @@ interface Rule {
 
 /** Lowercase, one space between words, no final punctuation, and the polite openers gone. */
 export function normalize(request: string): string {
-  let text = request
-    .trim()
-    .toLowerCase()
-    .replace(/[.!?]+$/, "")
-    .replace(/\s+/g, " ");
+  let text = request.trim().toLowerCase();
+  // The final punctuation, however much of it (not a regex: `[.!?]+$` backtracks per character).
+  let end = text.length;
+  while (end > 0 && ".!?".includes(text[end - 1] as string)) end -= 1;
+  text = text.slice(0, end).replace(/\s+/g, " ");
   for (;;) {
     const shorter = text.replace(OPENERS, "").trim();
     if (shorter === text) break;
@@ -300,7 +300,7 @@ function newField(phrase: string, scope: Scope, requiredByDefault = false): NewF
   if (reference?.[1]) {
     const target = modelFor(scope.ir, reference[1]);
     if (!target) return undefined;
-    const name = identifier(key(reference[1]).replace(/ /g, " "));
+    const name = identifier(key(reference[1]));
     return { name, type: `${target.name}${required ? "!" : ""}` };
   }
   const list = /^(?:a list of|many|several|its) (.+)$/.exec(text);

@@ -253,7 +253,10 @@ export function readDescription(given: string): Reading {
 
   // An item of the list after ":" or "with" that no word list knows may be a thing to keep or
   // a wish ("shopping lists", "SMS reminders"): noted as it was written, and still left over.
-  const listed = /(?::| with )(.+)$/s.exec(text)?.[1] ?? "";
+  const colon = text.indexOf(":");
+  const withAt = text.indexOf(" with ");
+  const starts = [colon, withAt === -1 ? -1 : withAt + " with ".length - 1].filter((i) => i !== -1);
+  const listed = starts.length ? text.slice(Math.min(...starts) + 1) : "";
   for (const item of listed.split(/,|;|\.|\band\b|\bor\b/)) {
     const parts = (item.match(/[\p{L}\p{N}][\p{L}\p{N}’'-]*/gu) ?? []).filter(
       (w) => !STOP.has(w) && !STOP.has(stem(w)),
