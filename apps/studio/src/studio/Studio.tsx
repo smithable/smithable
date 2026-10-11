@@ -13,7 +13,7 @@ import {
 } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type { Project } from "../api";
+import { lastChange, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import { Ask } from "../builder/Ask";
 import type { Run } from "../builder/ChangeForms";
@@ -481,24 +481,24 @@ function SpecEditor({
   // removes no field (one that does keeps the Save button, which asks first). Going on in the
   // same file grows the same change while it is still the newest; another file, another change
   // made anywhere, leaving the editor or five minutes without a keystroke start a new one.
+  const fields = (t: string) =>
+    (validateSpec({ path: "smithable.yml", text: t }, { plugins }).ir?.models ?? []).flatMap((m) =>
+      m.fields.map((f) => `${m.name}.${f.name}`),
+    );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the saved file's fields, once per save
+  const savedFields = useMemo(
+    () => (file === "smithable.yml" ? fields(saved) : []),
+    [file, saved, plugins],
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: as the text changes
   const removes = useMemo(() => {
     if (file !== "smithable.yml" || text === saved) return false;
-    const fields = (t: string) =>
-      (validateSpec({ path: "smithable.yml", text: t }, { plugins }).ir?.models ?? []).flatMap(
-        (m) => m.fields.map((f) => `${m.name}.${f.name}`),
-      );
     const now = fields(text);
-    return fields(saved).some((f) => !now.includes(f));
-  }, [file, text, saved, plugins]);
+    return savedFields.some((f) => !now.includes(f));
+  }, [file, text, saved, savedFields]);
   const head = project.trace[0]?.id;
   const growing = useRef<{ file: EditableFile; id?: string; at: number } | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-  const [awaiting, setAwaiting] = useState(false);
-  useEffect(() => {
-    if (!awaiting || !head) return;
-    growing.current = { file, id: head, at: Date.now() };
-    setAwaiting(false);
-  }, [awaiting, head, file]);
   const save = async (by: "pause" | "button") => {
     const kept = growing.current;
     const grow =
@@ -512,8 +512,9 @@ function SpecEditor({
       ...(grow ? { grow } : {}),
     });
     setSaving(false);
-    if (ok && by === "pause") setAwaiting(true);
-    else growing.current = undefined;
+    // The server says which change the save made or grew: the next save grows that one.
+    const made = ok && by === "pause" ? lastChange() : undefined;
+    growing.current = made ? { file, id: made, at: Date.now() } : undefined;
   };
   const ready = text !== saved && errors.length === 0 && !removes && !saving;
   // biome-ignore lint/correctness/useExhaustiveDependencies: a pause after the last keystroke
