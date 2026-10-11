@@ -498,10 +498,18 @@ try {
       const grid = page.getByRole("region", { name: "Who can" });
       const box = (name) => grid.getByRole("checkbox", { name, exact: true });
       let changes = 0;
+      // A tick, its file, and the box showing it: "Working…" goes before Studio has read the
+      // project again, and a box clicked on the old state would write the old grant (an "every
+      // page" header still showing all writes none).
       const tick = async (name, fits, what) => {
+        const was = await box(name).isChecked();
         await box(name).click();
         changes++;
         await waitAuth(fits, what);
+        for (let i = 0; i < 60 && (await box(name).isChecked()) === was; i++)
+          await new Promise((r) => setTimeout(r, 500));
+        if ((await box(name).isChecked()) === was)
+          throw new Error(`${name} did not follow the file`);
       };
       // One tick is the role's grant written whole (the access step left create: [Order]).
       if (!(await box("sales may add orders").isChecked())) throw new Error("orders not ticked");
