@@ -26,3 +26,7 @@ public:
     - Session
     - Post: { where: { status: published } }   # visitors read published posts, not drafts
   create: [Message]                # the contact form; only admins read the messages
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

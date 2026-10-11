@@ -25,3 +25,7 @@ api:
   actions: all
   assistants: true
 admins: [admin@team-tasks.example]
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

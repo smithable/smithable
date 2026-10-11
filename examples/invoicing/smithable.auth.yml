@@ -16,3 +16,7 @@ admins: [owner@invoicely.example]
 # signing in. Never add models that contain personal or business data.
 public:
   pages: [home]                    # the landing page
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

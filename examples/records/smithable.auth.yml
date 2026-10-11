@@ -15,3 +15,7 @@ roles:
 public:
   pages: [home, items]             # the collection is a public site
   read: [Item]
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in
