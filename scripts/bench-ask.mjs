@@ -1,10 +1,12 @@
 // bench-ask (docs/design/assistant.md §9): the questions of bench-ask-questions.mjs put to an app's
 // assistant tools at /mcp, with a key, by a model. Per model: right or wrong, model calls per
 // question, tokens in and out, cost and time, and how big the tools are.
-//   node scripts/bench-ask.mjs <model>… [--starter crm,status] [--label today]
+//   node scripts/bench-ask.mjs <model>… [--starter crm,status] [--label today] [--voice friendly]
 //   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API); ask before running.
 // Each starter is made, offers everything to programs and assistants (setApi all), gets an admin
 // key, and is served; questions that change records each start from the starter's records again.
+// --voice sets Ask's voice (setAssistantVoice) and gives the model the generated kit's line for it,
+// to see that the manner costs no accuracy (docs/design/ask-defaults.md §5).
 // Writes docs/benchmarks/bench-ask-<label>.md.
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
@@ -29,6 +31,7 @@ const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : u
 const models = args.filter((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"));
 const starters = option("--starter")?.split(",") ?? Object.keys(QUESTIONS);
 const label = option("--label") ?? "today";
+const voice = option("--voice");
 const only = option("--only")?.split(",").map(Number);
 // --score: the stored answers judged again (after the judging changed), without asking anything.
 const rescore = args.includes("--score");
@@ -337,6 +340,7 @@ for (const starter of rescore ? [] : starters) {
   }).ir;
   if (!spec0.pages.some((p) => p.pattern.kind === "users"))
     op(dir, "addUsersPage", "team", "/team");
+  if (voice) op(dir, "setAssistantVoice", voice);
   // Deleting too, where setApi can say so (--assistants-delete, #276).
   try {
     op(
@@ -387,7 +391,14 @@ for (const starter of rescore ? [] : starters) {
     };
     keep(sizes[starter]);
   }
-  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.${instructions ? `\n\n${instructions}` : ""}`;
+  // The voice's line as the generated app gives it to its model.
+  const voiceLine =
+    voice &&
+    new RegExp(`${voice}: "([^"]+)"`).exec(
+      readFileSync(join(dir, "src/kit/assistant.server.ts"), "utf8"),
+    )?.[1];
+  if (voice && !voiceLine) throw new Error(`No line for the voice ${voice} in the app's kit.`);
+  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.${voiceLine ? ` ${voiceLine}` : ""}${instructions ? `\n\n${instructions}` : ""}`;
   const reset = async () => {
     stop();
     copyFileSync(pristine, join(dir, "data/db/app.db"));
@@ -525,7 +536,7 @@ const totals = models.map((m) => {
   ).length;
   return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${added} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
 });
-const report = `# bench-ask: ${label} (${today})
+const report = `# bench-ask: ${label} (${today})${voice ? `, voice ${voice}` : ""}
 
 The questions of [bench-ask-questions.mjs](../../scripts/bench-ask-questions.mjs), asked of each starter's assistant tools at \`/mcp\` with an administrator's key ([bench-ask.mjs](../../scripts/bench-ask.mjs)), by each model: it calls tools until it answers (at most ${MAX_CALLS} model calls). A read is right when its answer gives the number, names, words or pairs worked out from the records; a change is right when the records afterwards say so. Each change starts from the starter's records.
 
