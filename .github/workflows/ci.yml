@@ -142,6 +142,34 @@ jobs:
           path: /tmp/smithable-studio-*/failure.png
           if-no-files-found: ignore
 
+  # Twice a day a main that passed everything goes to the beta (Johan, 2026-10-11): the cloud's
+  # Release images run builds this commit, and skips it when neither repository has moved since
+  # its last release. A scheduled run skipped because main had not moved asks nothing (the run
+  # before it did); the cloud's own daily schedule stays the fallback. CLOUD_RELEASE_TOKEN: a
+  # fine-grained token for smithable/smithable-cloud alone, with Actions read and write.
+  release:
+    needs: [lint-build-units, full]
+    if: github.event_name == 'schedule' && needs.lint-build-units.result == 'success' && needs.full.result == 'success'
+    runs-on: ubuntu-latest
+    permissions: {}
+    # A lapsed token must not turn main's scheduled run red (scope then fails the next runs on an
+    # unchanged main): the job shows yellow with a line in the summary, and the fallbacks release.
+    continue-on-error: true
+    steps:
+      - name: Start the cloud's release of this commit
+        env:
+          GH_TOKEN: ${{ secrets.CLOUD_RELEASE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "No CLOUD_RELEASE_TOKEN secret: the cloud releases on its own schedule." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! gh workflow run images.yml --repo smithable/smithable-cloud -f oss_ref="$GITHUB_SHA" -f if_new=true; then
+            echo "::warning::Could not start smithable-cloud's Release images: is CLOUD_RELEASE_TOKEN lapsed? The cloud's own schedule still releases." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Asked smithable-cloud's Release images to release $GITHUB_SHA if anything is new." | tee -a "$GITHUB_STEP_SUMMARY"
+
   # The required status: green when every job it needs passed, or was skipped on the short run.
   # Not for a run that was cancelled (a newer push, or the full-ci label added while the first
   # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
