@@ -61,3 +61,11 @@ test("without a calendar, no kit file, no search on the new form and no moved sa
   expect(plain("src/routes/sessions/new.tsx")).not.toContain("validateSearch");
   expect(plain("src/db/seed.ts")).not.toContain("aroundToday");
 });
+
+test("a calendar of records that need a person gets no samples, and no helper to move them", () => {
+  const seed = generate(
+    spec.replace("startsAt: datetime! }", "startsAt: datetime!, coach: User! }"),
+  )("src/db/seed.ts");
+  expect(seed).not.toContain("aroundToday");
+  expect(seed).not.toContain("#/kit/zoned");
+});
