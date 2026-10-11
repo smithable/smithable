@@ -1,11 +1,11 @@
 smithable: 0.1
 app:
   name: Vår Loppis
-  description: En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.
+  description: En plats där folk kan lägga upp saker de vill sälja, med bilder och pris.
   currency: SEK
 pages:
-  home:
-    route: /welcome
+  hem:
+    route: /
     landing:
       hero:
       footer:
@@ -13,26 +13,35 @@ pages:
         records: Item
         where:
           available: true
-  catalog:
-    route: /
+  granska:
+    review: all
+  integritetspolicy:
+    route: /integritetspolicy
+    legal: privacy
+  katalog:
+    route: /katalog
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
     sortable: [price, createdAt]
     favorites: true
     contact: owner
-  myItems:
+  mina-annonser:
     crud: Item
     mine: true
+  sparade:
+    crud: Item
+    favorites: only
 models:
   Item:
     fields:
       title: string!
-      photos: pictures
+      photos: pictures!
       description: text!
       price: money
       category: klaeder | moebler | elektronik | leksaker | boecker | sport | oevrigt
-      condition: ny | somNy | bra | sliten
+      condition: ny | naestanNy | bra | sliten
       place: string
       available: bool = true
-navigation: [catalog, myItems]
+    review: [photos]
+navigation: [katalog, mina-annonser, sparade, granska]

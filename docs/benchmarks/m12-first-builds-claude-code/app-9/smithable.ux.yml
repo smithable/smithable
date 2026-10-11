@@ -4,8 +4,7 @@ tones:
     high: warning
     urgent: danger
   Ticket.status:
-    waiting: warning
     resolved: success
-pages:
-  tickets:
-    icon: clipboard
+    waiting: warning
+theme:
+  preset: corporate

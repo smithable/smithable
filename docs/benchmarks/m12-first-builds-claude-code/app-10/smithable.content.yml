@@ -1,4 +1,9 @@
 smithableContent: 0.1
+models:
+  ShoppingItem:
+    label: Shopping item
+    pluralLabel: Shopping list
 logo:
   src: images/logo.webp
-  alt: A single wave line
+  alt: Three stacked cards
+  generated: true

@@ -1,4 +1,5 @@
 smithableContent: 0.1
+language: sv
 models:
   Service:
     label: Tjänst
@@ -13,53 +14,66 @@ models:
       price:
         label: Pris
   Stylist:
-    label: Frisör
-    pluralLabel: Frisörer
+    label: Stylist
+    pluralLabel: Stylister
     fields:
       name:
         label: Namn
       bio:
-        label: Beskrivning
+        label: Biografi
       portrait:
         label: Porträtt
-  Session:
-    label: Tidsbokning
-    pluralLabel: Tidsbokningar
+  TimeSlot:
+    label: Tidslucka
+    pluralLabel: Tidsluckor
     fields:
       service:
         label: Tjänst
       stylist:
-        label: Frisör
+        label: Stylist
       startsAt:
         label: Starttid
       capacity:
         label: Kapacitet
+      bookings:
+        label: Bokningar
+      placesLeft:
+        label: Lediga platser
   Booking:
     label: Bokning
     pluralLabel: Bokningar
     fields:
-      session:
-        label: Tidsbokning
+      timeSlot:
+        label: Tidslucka
       customerName:
         label: Namn
       customerEmail:
         label: E-post
       customerPhone:
         label: Telefon
+      notes:
+        label: Anteckningar
 pages:
-  home:
-    title: Min Frisörsalong
+  hem:
+    title: Hem
     hero:
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-  schedule:
-    title: Boka tid
-  services:
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  tjanster:
     title: Tjänster
-  stylists:
-    title: Frisörer
-  sessions:
-    title: Tidsbokningar
-  bookings:
+  stylister:
+    title: Stylister
+  tider:
+    title: Tidsluckor
+  mina-bokningar:
     title: Mina bokningar
+  schema:
+    title: Schema
+  integritetspolicy:
+    title: Integritetspolicy
+logo:
+  src: images/logo.webp
+  alt: Two overlapping circles
+  generated: true

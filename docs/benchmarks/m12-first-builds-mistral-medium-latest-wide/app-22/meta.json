@@ -1,10 +1,12 @@
 {
   "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
-  "starter": "crm",
+  "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Wer kann Vorbestellungen aufgeben?",
-    "Was soll für jedes Produkt gespeichert werden?"
+    "Wer kann die Produkte und Vorbestellungen einsehen?",
+    "Was sind die wichtigsten Informationen zu den Produkten?",
+    "Was sind die wichtigsten Informationen zu den Vorbestellungen?"
   ],
+  "dropped": "setCapacity PreOrder",
   "lang": "de"
 }

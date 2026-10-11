@@ -1,6 +1,6 @@
 {
   "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
-  "starter": "booking",
+  "starter": "crm",
   "wordStarter": "records",
   "questions": [
     "Wer gibt die Vorbestellungen ein?",

@@ -2,11 +2,14 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, catalog]
-  read: [Item]
 roles:
+  admin: all
   member:
-    description: Lägger upp och sparar saker.
+    description: Lägger upp saker till försäljning och sparar favoriter.
+    pages: all
+    create: all
+public:
+  pages: [home, catalog, privacy]
+  read: [Item]
 defaultRole: member
 admins: [johan@smithable.ai]

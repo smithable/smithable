@@ -11,15 +11,11 @@ models:
       summary: text
       level: beginner | allLevels | advanced
       durationMinutes: int! = 60
-    access:
-      create: [admin]
   Instructor:
     fields:
       name: string!
       bio: markdown
       portrait: picture
-    access:
-      create: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -30,38 +26,57 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
-    access:
-      create: [admin]
   Booking:
     fields:
       session: Session! unique
     capacity:
       per: session
       max: session.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
-  class-types:
-    crud: ClassType
-    access: [admin]
-  instructors:
-    crud: Instructor
-    access: [admin]
   sessions:
     crud: Session
-    access: [admin]
+  class-types:
+    crud: ClassType
+  instructors:
+    crud: Instructor
+  messages:
+    crud: Message
   my-bookings:
     crud: Booking
-    access: [member, admin]
-  koti:
+    mine: true
+  home:
     route: /
     landing:
       hero:
-        shortcuts: [aikataulu]
       footer:
       classes:
         records: ClassType
-      gallery:
-      faq:
-  aikataulu:
+      contact:
+        form: Message
+  schedule:
     calendar:
       model: Session
       starts: startsAt
+  privacy:
+    route: /privacy
+    legal: privacy
+  admin:
+    data: all
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingChanged:
+    when: Booking changed
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner

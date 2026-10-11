@@ -9,15 +9,11 @@ models:
       summary: text
       level: beginner | allLevels | advanced
       durationMinutes: int! = 60
-    access:
-      create: [admin]
   Instructor:
     fields:
       name: string!
       bio: markdown
       portrait: picture
-    access:
-      create: [admin]
   Session:
     fields:
       classType: ClassType!
@@ -28,8 +24,6 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
-    access:
-      create: [admin]
   Booking:
     fields:
       session: Session! unique
@@ -45,37 +39,24 @@ models:
       body: markdown!
       publishedOn: date
       status: draft | published
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
   Message:
     fields:
       name: string!
       email: email!
       message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
 pages:
-  class-types:
-    crud: ClassType
-    access: [admin]
-  instructors:
-    crud: Instructor
-    access: [admin]
   sessions:
     crud: Session
-    access: [admin]
-  my-bookings:
-    crud: Booking
-  posts:
-    crud: Post
-    access: [admin]
+  class-types:
+    crud: ClassType
+  instructors:
+    crud: Instructor
   messages:
     crud: Message
-    access: [admin]
+  posts:
+    crud: Post
+  my-bookings:
+    crud: Booking
   home:
     route: /
     landing:
@@ -89,15 +70,17 @@ pages:
         records: Post
       contact:
         form: Message
-  schedule:
-    calendar:
-      model: Session
-      starts: startsAt
-  blog:
-    articles: Post
-  admin:
-    data: all
-    access: [admin]
-  team:
-    users: manage
-    access: [admin]
+      estimate:
+        custom: EstimateCalculator
+  estimate:
+    calculator:
+      fields:
+        classesPerMonth: int = 8
+        dropIn: money = 16
+        pass: money = 99
+        withoutPass:
+          type: money
+          formula: classesPerMonth * dropIn
+        saved:
+          type: money
+          formula: classesPerMonth * dropIn - pass

@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "status",
   "questions": [
-    "Is this log just for one car, or for several vehicles?",
-    "Who else should be able to use the log?",
+    "Is this just for one car, or should it handle several vehicles?",
+    "Who will use the log?",
     "What should a fuel entry record?"
   ]
 }

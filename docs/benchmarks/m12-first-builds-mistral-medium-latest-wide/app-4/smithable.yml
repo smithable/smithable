@@ -9,17 +9,13 @@ models:
       email: email
       phone: phone
       notes: text
-    access:
-      delete: [teacher]
   Lesson:
     fields:
       pupil: Pupil!
       dayOfWeek: monday | tuesday | wednesday | thursday | friday | saturday | sunday
       startTime: string!
-      durationMinutes: int! = 60
+      durationMinutes: int! = 30
       notes: text
-    access:
-      delete: [teacher]
   Practice:
     fields:
       lesson: Lesson!
@@ -27,8 +23,6 @@ models:
       piece: string!
       minutes: int
       notes: text
-    access:
-      delete: [teacher]
 pages:
   pupils:
     crud: Pupil

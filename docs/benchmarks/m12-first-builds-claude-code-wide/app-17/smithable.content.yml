@@ -1,39 +1,43 @@
 smithableContent: 0.1
+language: sv
 pages:
   home:
     hero:
-      title: Boka din frisörtid på nätet
-      subtitle: Välj behandling, frisör och tid som passar dig – dygnet runt.
-      button: Boka tid
+      title: Boka din tid hos oss
+      subtitle: Välj behandling, frisör och en tid som passar dig – direkt på nätet, när det passar dig.
+      button: Se lediga tider
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-    services:
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    tjanster:
       title: Våra behandlingar
-    stylists:
-      title: Våra frisörer
-    faq:
-      title: Vanliga frågor
     callToAction:
       title: Dags för en ny frisyr?
-      button: Boka tid nu
-    title: Hem
-  boka:
-    title: Boka tid
+      button: Boka tid
+    contact:
+      title: Har du en fråga? Skriv till oss
+    title: Startsida
+  tider:
+    title: Lediga tider
   mina-bokningar:
     title: Mina bokningar
-  tider:
+  tidsluckor:
     title: Tider
-  tjanster:
-    title: Tjänster
+  behandlingar:
+    title: Behandlingar
   frisorer:
     title: Frisörer
+  meddelanden:
+    title: Meddelanden
   admin:
     title: Administration
+  integritet:
+    title: Integritet
 models:
   Service:
-    label: Tjänst
-    pluralLabel: Tjänster
+    label: Behandling
+    pluralLabel: Behandlingar
     fields:
       name:
         label: Namn
@@ -57,21 +61,39 @@ models:
     label: Tid
     pluralLabel: Tider
     fields:
-      service:
-        label: Tjänst
       stylist:
         label: Frisör
       startsAt:
         label: Starttid
       capacity:
-        label: Antal platser
+        label: Platser
+      bookings:
+        label: Bokningar
+      placesLeft:
+        label: Platser kvar
   Booking:
     label: Bokning
     pluralLabel: Bokningar
     fields:
       slot:
         label: Tid
+      service:
+        label: Behandling
       phone:
         label: Telefon
       note:
         label: Meddelande till frisören
+  Message:
+    label: Meddelande
+    pluralLabel: Meddelanden
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      message:
+        label: Meddelande
+logo:
+  src: images/logo.webp
+  alt: Two triangles as mountains
+  generated: true

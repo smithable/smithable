@@ -4,7 +4,7 @@
   "wordStarter": "invoicing",
   "questions": [
     "Who will use the app?",
-    "What can someone see without signing in?",
-    "How should guests be organized?"
+    "How are guests grouped on the list?",
+    "How should meal choices work?"
   ]
 }

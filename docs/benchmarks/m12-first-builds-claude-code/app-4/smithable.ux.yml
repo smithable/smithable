@@ -6,7 +6,7 @@ pages:
   loans:
     table:
       columns: [tool, borrower, lentOn, dueOn, status]
-      sort: -lentOn
+      sort: dueOn
 tones:
   Loan.status:
     out: warning

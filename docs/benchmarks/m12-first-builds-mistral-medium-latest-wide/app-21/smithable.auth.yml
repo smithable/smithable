@@ -1,6 +1,14 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Works at the car repair shop.
+    pages: [customers, cars, maintenance-jobs, invoices, invoice-lines]
+    create: [Customer, Car, MaintenanceJob, Invoice, InvoiceLine]
+    write: [Customer, Car, MaintenanceJob, Invoice, InvoiceLine]
+    delete: [Customer, Car, MaintenanceJob, Invoice, InvoiceLine]
+defaultRole: member
 admins: [johan@smithable.ai]

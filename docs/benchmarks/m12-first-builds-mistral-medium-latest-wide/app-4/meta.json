@@ -1,9 +1,9 @@
 {
   "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
   "starter": "booking",
-  "wordStarter": "crm",
+  "wordStarter": "booking",
   "questions": [
     "Who can see the lesson schedule?",
-    "What details are recorded for each pupil's practice?"
+    "What details are recorded for each pupil?"
   ]
 }

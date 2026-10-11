@@ -1,4 +1,15 @@
 smithableContent: 0.1
+pages:
+  vorbestellungen:
+    title: Vorbestellungen
+  abholzeiten:
+    title: Abholzeiten
+  produkte:
+    title: Produkte
+  kunden:
+    title: Kunden
+  team:
+    title: Team
 models:
   Product:
     label: Produkt
@@ -8,12 +19,29 @@ models:
         label: Name
       description:
         label: Beschreibung
-      price:
-        label: Preis
       unit:
         label: Einheit
+        values:
+          piece: Stück
+          kg: kg
+          bunch: Bund
+          liter: Liter
+      price:
+        label: Preis
       available:
         label: Verfügbar
+  Customer:
+    label: Kunde
+    pluralLabel: Kunden
+    fields:
+      name:
+        label: Name
+      email:
+        label: E-Mail
+      phone:
+        label: Telefon
+      notes:
+        label: Notizen
   PickupSlot:
     label: Abholzeit
     pluralLabel: Abholzeiten
@@ -24,22 +52,26 @@ models:
         label: Ende
       capacity:
         label: Plätze
+      notes:
+        label: Notizen
   Preorder:
     label: Vorbestellung
     pluralLabel: Vorbestellungen
     fields:
+      customer:
+        label: Kunde
       pickupSlot:
         label: Abholzeit
-      note:
-        label: Anmerkung
       status:
         label: Status
         values:
           open: Offen
           ready: Abholbereit
-          pickedUp: Abgeholt
+          collected: Abgeholt
           canceled: Storniert
-  OrderLine:
+      notes:
+        label: Notizen
+  PreorderLine:
     label: Position
     pluralLabel: Positionen
     fields:
@@ -49,28 +81,18 @@ models:
         label: Produkt
       quantity:
         label: Menge
-pages:
-  vorbestellungen:
-    title: Vorbestellungen
-  produkte:
-    title: Produkte
-  abholzeiten:
-    title: Abholzeiten
-  home:
-    title: Startseite
-    hero:
-      title: Frisch vom Hof – einfach vorbestellen
-      subtitle: Bestellen Sie Gemüse, Eier und mehr aus unserem Hofladen vor und holen Sie alles zu Ihrer Wunschzeit ab.
-      button: Zum Angebot
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-    angebot:
-      title: Unser Angebot
-    faq:
-      title: Häufige Fragen
-    callToAction:
-      title: Jetzt vorbestellen
-      button: Vorbestellung aufgeben
-  admin:
-    title: Verwaltung
+      unitPrice:
+        label: Einzelpreis
+      amount:
+        label: Betrag
+actions:
+  markReady:
+    label: Abholbereit
+  markCollected:
+    label: Abgeholt
+  cancel:
+    label: Stornieren
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

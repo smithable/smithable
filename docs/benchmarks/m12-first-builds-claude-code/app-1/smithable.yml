@@ -2,6 +2,8 @@ smithable: 0.1
 app:
   name: Open Sky Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -21,6 +23,9 @@ models:
       startsAt: datetime!
       capacity: int! = 12
       bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
   Booking:
     fields:
       session: Session! unique
@@ -32,7 +37,7 @@ pages:
     crud: Session
   class-types:
     crud: ClassType
-  teachers:
+  instructors:
     crud: Instructor
   my-bookings:
     crud: Booking
@@ -44,15 +49,15 @@ pages:
     route: /
     landing:
       hero:
+        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
-      ourTeachers:
+      teachers:
         records: Instructor
+      faq:
       callToAction:
         button: schedule
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all

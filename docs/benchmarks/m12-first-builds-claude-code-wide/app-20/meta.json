@@ -3,9 +3,9 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [
-    "Miten asiakkaat varaavat tunnin?",
-    "Mitä vierailija näkee kirjautumatta?",
-    "Pitääkö järjestelmän seurata asiakkaiden sarjakortteja tai jäsenyyksiä?"
+    "Mitä vierailija näkee ilman kirjautumista?",
+    "Miten asiakas varaa tunnin?",
+    "Pitääkö varausten yhteydessä seurata sarjakortteja tai jäsenyyksiä?"
   ],
   "lang": "fi"
 }

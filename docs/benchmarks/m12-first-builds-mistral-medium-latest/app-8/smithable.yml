@@ -1,45 +1,31 @@
 smithable: 0.1
 app:
   name: Conference Registration
-  description: Event registration system for conference talks, speakers and attendees.
+  description: Event registration for a conference with talks, speakers and attendees.
 models:
   Talk:
     fields:
       title: string!
-      description: text
+      summary: text
       startsAt: datetime!
       endsAt: datetime!
       room: string
       capacity: int! = 50
       speaker: Speaker!
       registrations: Registration[]
-    access:
-      read: [admin]
-      create: [admin]
-      write: [admin]
-      delete: [admin]
   Speaker:
     fields:
       name: string!
       bio: text
-      email: email!
       photo: picture
-    access:
-      read: [admin]
-      create: [admin]
-      write: [admin]
-      delete: [admin]
+      email: email
+      company: string
   Attendee:
     fields:
       name: string!
       email: email! unique
       company: string
       phone: phone
-    access:
-      read: [admin, attendee, owner]
-      create: [admin, attendee]
-      write: [admin, attendee, owner]
-      delete: [admin, owner]
   Registration:
     fields:
       talk: Talk! unique
@@ -48,22 +34,15 @@ models:
     capacity:
       per: talk
       max: talk.capacity
-    access:
-      create: [admin, attendee]
-      delete: [admin, owner]
 pages:
   talks:
     crud: Talk
-    access: [admin]
   speakers:
     crud: Speaker
-    access: [admin]
   attendees:
     crud: Attendee
-    access: [admin]
   registrations:
     crud: Registration
-    access: [admin, attendee]
   home:
     route: /
     landing:
@@ -74,3 +53,8 @@ pages:
       speakers:
         records: Speaker
       contact:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage

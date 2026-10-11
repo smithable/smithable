@@ -3,10 +3,21 @@ pages:
   home:
     hero:
       title: API Status
-      subtitle: Is the API working? Its current state, open incidents and planned maintenance, updated live.
+      subtitle: "The live state of our API: what works, what is being fixed, and what is planned."
+      button: Incident history
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+    services:
+      title: Services
+    open:
+      title: Current incidents
+    recent:
+      title: Recently resolved
+    planned:
+      title: Planned maintenance
 logo:
   src: images/logo.webp
-  alt: A flower of five round petals
+  alt: A pulse line in a circle
+  generated: true

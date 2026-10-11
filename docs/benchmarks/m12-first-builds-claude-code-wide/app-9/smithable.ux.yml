@@ -7,6 +7,7 @@ pages:
     icon: layers
   artists:
     table:
+      columns: [name, country, genre]
       sort: name
     icon: users
 tones:
@@ -14,8 +15,7 @@ tones:
     mint: success
     nearMint: success
     good: warning
+    fair: warning
     poor: danger
 theme:
-  preset: modern
-  brand:
-    primary: "#7c3aed"
+  preset: editorial

@@ -5,13 +5,7 @@ pages:
       view: cards
       columns: [name, category, difficulty, servings]
     form:
-      sections: [{ name: details, fields: [name, description, category, difficulty] }, { name: times, fields: [servings, prepTime, cookTime] }, { name: instructions, fields: [instructions] }, { name: media, fields: [image] }]
-      columns: 2
+      sections: [{ name: details, fields: [name, description, category, difficulty] }, { name: times, fields: [servings, prepTime, cookTime] }, { name: instructions, fields: [instructions] }, { name: image, fields: [image] }]
   shopping-lists:
     table:
-      sort: -date
-      columns: [name, date, status]
-tones:
-  ShoppingList.status:
-    completed: success
-    inProgress: warning
+      columns: [name, date, completed]

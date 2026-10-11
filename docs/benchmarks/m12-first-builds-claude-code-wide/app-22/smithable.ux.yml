@@ -1,25 +1,23 @@
 smithableUx: 0.1
-tones:
-  Preorder.status:
-    ready: warning
-    pickedUp: success
-    canceled: danger
 pages:
+  abholzeiten:
+    table:
+      sort: startsAt
+    icon: calendar
   vorbestellungen:
     table:
-      columns: [pickupSlot, status, note]
+      columns: [customer, pickupSlot, status]
     icon: cart
   produkte:
     table:
-      columns: [name, price, unit, available]
+      columns: [name, unit, price, available]
     icon: package
-  abholzeiten:
-    table:
-      sort: -startsAt
-    icon: calendar
+  kunden:
+    icon: users
+tones:
+  Preorder.status:
+    ready: warning
+    collected: success
+    canceled: danger
 theme:
-  preset: modern
-  brand:
-    primary: "#4d7c0f"
-    background: "#f7f3ea"
-    font: Nunito Sans
+  preset: woodland

@@ -8,10 +8,11 @@ models:
   Customer:
     fields:
       name: string!
-      email: email unique
+      email: email
       phone: phone
       notes: text
       cars: Car[]
+    trash: true
   Car:
     fields:
       registration: string! unique
@@ -26,26 +27,26 @@ models:
       car: Car!
       description: text!
       status: booked | inProgress | done
-      scheduledAt: datetime
-      mechanic: User
-      laborCost: money
-      partsCost: money
+      scheduledOn: date
+      labor: money
+      parts: money
       total:
         type: money
-        formula: laborCost + partsCost
-      invoices: Invoice[]
+        formula: labor + parts
   Invoice:
     fields:
       number: string! unique
-      job: Job!
+      customer: Customer!
+      job: Job
       amount: money!
-      status: draft | sent | paid
       dueDate: date
-      paidAt: date
+      status: unpaid | paid
+      paidOn: date
 pages:
   huoltotyot:
     crud: Job
-    actions: [startWork, completeJob]
+    filters: [status, scheduledOn]
+    actions: [startJob, completeJob]
   asiakkaat:
     crud: Customer
     search: [name, email, phone]
@@ -56,37 +57,29 @@ pages:
     crud: Invoice
     search: [number]
     filters: [status, dueDate]
-    actions: [sendInvoice, markPaid]
-  team:
+    actions: [markPaid]
+  kayttajat:
     users: manage
 actions:
-  startWork:
+  startJob:
     on: Job
     when:
       status: booked
     set:
       status: inProgress
-      mechanic: ME()
-    intent: Aloita huoltotyö ja ota se itsellesi.
+    intent: Aloita varattu huoltotyö.
   completeJob:
     on: Job
     when:
-      status: inProgress
+      status: [booked, inProgress]
     set:
       status: done
     intent: Merkitse huoltotyö valmiiksi.
-  sendInvoice:
-    on: Invoice
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: Merkitse lasku lähetetyksi.
   markPaid:
     on: Invoice
     when:
-      status: sent
+      status: unpaid
     set:
       status: paid
-      paidAt: TODAY()
+      paidOn: TODAY()
     intent: Merkitse lasku maksetuksi.

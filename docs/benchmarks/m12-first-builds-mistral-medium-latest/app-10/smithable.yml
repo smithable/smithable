@@ -7,49 +7,35 @@ models:
     fields:
       name: string!
       description: text
-      servings: int = 4
+      servings: int! = 4
       prepTime: int
       cookTime: int
       instructions: text!
       category: breakfast | lunch | dinner | dessert | snack | drink
       difficulty: easy | medium | hard
-      image: url
-    access:
-      delete: [admin]
+      image: file
   Ingredient:
     fields:
       name: string!
-      quantity: string
+      quantity: string!
       unit: string
       recipe: Recipe!
   ShoppingList:
     fields:
       name: string!
       date: date! = TODAY()
-      status: planned | inProgress | completed
-      items: ShoppingItem[]
-    access:
-      delete: [admin, owner]
-  ShoppingItem:
-    fields:
-      name: string!
-      quantity: string
-      unit: string
-      bought: bool = false
-      shoppingList: ShoppingList!
-    access:
-      delete: [admin, owner]
+      completed: bool = false
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category]
+    search: [name, description, category, difficulty]
     filters: [category, difficulty]
     sortable: [name, servings, prepTime, cookTime]
   shopping-lists:
     crud: ShoppingList
-    filters: [status, date]
     search: [name]
-    actions: [markCompleted, startShopping]
+    filters: [completed]
+    sortable: [name, date]
   home:
     route: /
     landing:
@@ -57,19 +43,7 @@ pages:
       footer:
       recipes:
         records: Recipe
-        where:
-          category: [breakfast, lunch, dinner, dessert, snack, drink]
-actions:
-  markCompleted:
-    on: ShoppingList
-    when:
-      status: [planned, inProgress]
-    set:
-      status: completed
-  startShopping:
-    on: ShoppingList
-    when:
-      status: planned
-    set:
-      status: inProgress
+  privacy:
+    route: /privacy
+    legal: privacy
 navigation: [recipes, shopping-lists]

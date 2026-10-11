@@ -1,10 +1,10 @@
 {
   "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
   "starter": "records",
-  "wordStarter": "booking",
+  "wordStarter": "api",
   "questions": [
-    "Can people outside the club see the sightings without signing in?",
+    "What can people outside the club see without signing in?",
     "How should species be recorded?",
-    "Should a sighting hold anything beyond species, place, date and observer?"
+    "What else should a sighting hold besides species, place, date and observer?"
   ]
 }

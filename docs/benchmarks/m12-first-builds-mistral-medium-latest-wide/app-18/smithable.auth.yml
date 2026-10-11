@@ -4,9 +4,11 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Administratör. Full åtkomst.
+  admin: all
   sales:
-    description: Säljare. Hanterar kunder, offerter och fakturor.
+    description: Arbetar med kunder, offerter och fakturor.
+    pages: [kunder, offerter, fakturor]
+    create: [Customer, Quote, Invoice]
+    write: [Customer, Quote, Invoice]
 defaultRole: sales
 admins: [johan@smithable.ai]

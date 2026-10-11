@@ -5,76 +5,43 @@ app:
   currency: SEK
   timezone: Europe/Stockholm
 models:
+  Quote:
+    fields:
+      number: string! unique
+      status: utkast | skickad | accepterad | avvisad
+      total: money!
+      validUntil: date
+      notes: text
+      customer: Customer!
   Customer:
     fields:
       name: string!
       email: email unique
       phone: phone
+      segment: privat | foretag | kommun
       notes: text
       accountManager: User
-    access:
-      delete: [admin]
-  Quote:
-    fields:
-      number: string! unique
-      customer: Customer!
-      status: draft | sent | accepted | rejected
-      total: money!
-      description: text
-      validUntil: date
-    access:
-      delete: [admin]
+    ownedBy: accountManager
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
       quote: Quote
-      status: draft | sent | paid | overdue
+      status: utkast | skickad | betald | forfallen
       total: money!
       dueDate: date
-      paidAt: datetime
-    access:
-      delete: [admin]
+      paidAt: date
+      notes: text
 pages:
-  kunder:
-    crud: Customer
-    search: [name, email]
-    sortable: [name, createdAt]
   offerter:
     crud: Quote
     search: [number, customer]
-    filters: [status, customer]
-    sortable: [number, total, validUntil, createdAt]
-    actions: [acceptQuote, rejectQuote]
+  team:
+    users: manage
+  kunder:
+    crud: Customer
+    search: [name, email]
   fakturor:
     crud: Invoice
     search: [number, customer]
-    filters: [status, customer]
-    sortable: [number, total, dueDate, createdAt]
-    actions: [markInvoicePaid]
-  anvandare:
-    users: manage
-actions:
-  acceptQuote:
-    on: Quote
-    when:
-      status: sent
-    set:
-      status: accepted
-    intent: Acceptera en skickad offert.
-  rejectQuote:
-    on: Quote
-    when:
-      status: sent
-    set:
-      status: rejected
-    intent: Avvisa en skickad offert.
-  markInvoicePaid:
-    on: Invoice
-    when:
-      status: sent
-    set:
-      status: paid
-      paidAt: NOW()
-    intent: Markera en skickad faktura som betald.
-navigation: [kunder, offerter, fakturor, anvandare]
+navigation: [kunder, offerter, fakturor, team]

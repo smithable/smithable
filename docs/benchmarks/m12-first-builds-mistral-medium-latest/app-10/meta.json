@@ -2,5 +2,8 @@
   "description": "A recipe collection for a family, with ingredients and shopping lists.",
   "starter": "records",
   "wordStarter": "records",
-  "questions": []
+  "questions": [
+    "Who can view the recipes?",
+    "What details are stored for each recipe?"
+  ]
 }

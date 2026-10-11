@@ -3,17 +3,19 @@ pages:
   home:
     hero:
       title: Welcome to the club
-      subtitle: Fixtures, results, teams and players, all in one place.
-      button: See the fixtures
+      subtitle: Our teams, our players, the next fixtures and the latest results, all in one place.
+      button: See all matches
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
-    upcoming:
-      title: Upcoming matches
+        generated: true
+    fixtures:
+      title: Upcoming fixtures
     results:
       title: Latest results
-    ourTeams:
+    squads:
       title: Our teams
 logo:
   src: images/logo.webp
-  alt: Two triangles as mountains
+  alt: A football
+  generated: true

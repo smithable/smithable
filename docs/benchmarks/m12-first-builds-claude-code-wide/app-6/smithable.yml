@@ -1,21 +1,20 @@
 smithable: 0.1
 app:
   name: Tidy Ledger
-  description: One place for our cleaning company to invoice its households every month and see what has been paid.
+  description: One place for our cleaning company to send monthly invoices to the households we clean for.
   currency: EUR
 models:
-  Household:
+  Client:
     fields:
       name: string!
       email: email!
       phone: phone
       address: text
-      notes: text
       invoices: Invoice[]
   Invoice:
     fields:
       number: string! unique
-      household: Household!
+      client: Client!
       issuedOn: date! = TODAY()
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
@@ -35,11 +34,10 @@ models:
 pages:
   invoices:
     crud: Invoice
-    actions: [markSent, markPaid, markOverdue, duplicateInvoice]
-    filters: [status, household, issuedOn]
-    search: [number]
-  households:
-    crud: Household
+    filters: [client, status]
+    actions: [markSent, markPaid, nextMonth]
+  clients:
+    crud: Client
     search: [name, email, phone]
   invoice-lines:
     crud: InvoiceLine
@@ -48,6 +46,17 @@ pages:
       latest:
         list: Invoice
         limit: 5
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
   team:
     users: manage
 actions:
@@ -65,14 +74,7 @@ actions:
     set:
       status: paid
     intent: The household paid the invoice.
-  markOverdue:
-    on: Invoice
-    when:
-      status: sent
-    set:
-      status: overdue
-    intent: The household has not paid by the due date.
-  duplicateInvoice:
+  nextMonth:
     on: Invoice
     copy:
       status: draft
@@ -81,3 +83,8 @@ actions:
       dueOn: DATEADD(TODAY(), 30, "day")
     with: [lines]
     intent: Start next month's invoice for the same household from this one.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

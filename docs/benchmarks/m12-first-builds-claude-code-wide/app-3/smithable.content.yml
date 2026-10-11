@@ -2,14 +2,17 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Your next haircut, booked in a minute
+      title: Your next great haircut, booked in a minute
       subtitle: Choose your stylist, pick a free time that suits you, and we'll see you in the chair.
-      button: See free times
+      button: Book a time
       image:
         src: images/hero.webp
         alt: A hair salon with mirrors, chairs and plants in daylight
+        generated: true
     callToAction:
       title: Ready for a fresh look?
-      button: Book now
-  schedule:
-    title: Free times
+      button: See free times
+logo:
+  src: images/logo.webp
+  alt: Open scissors
+  generated: true

@@ -2,13 +2,13 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, items]
-  read: [{ Item: { where: { status: published } } }]
 roles:
-  admin:
-    description: Keeps the collection.
+  admin: all
   member:
-    description: Looks at it.
+    description: Looks at the collection; only administrators add to it.
+    pages: [home, items]
+public:
+  pages: [home, privacy, items]
+  read: [Item]
 defaultRole: member
 admins: [johan@smithable.ai]

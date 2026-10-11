@@ -5,15 +5,27 @@ app:
 models:
   Album:
     fields:
-      name: string!
+      title: string!
       artist: string!
-      condition: mint | nearMint | veryGood | good | fair | poor
-      purchasePrice: money
       releaseYear: int
+      condition: mint | nearMint | veryGood | good | fair | poor
+      pricePaid: money
       notes: text
-      coverImage: url
+      coverImage: file
 pages:
   albums:
     crud: Album
-    search: [name, artist, notes]
+    search: [title, artist, notes]
     filters: [condition, releaseYear]
+    sortable: [title, artist, releaseYear, pricePaid]
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      albums:
+        records: Album
+  privacy:
+    route: /privacy
+    legal: privacy
+navigation: [albums]
