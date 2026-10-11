@@ -149,7 +149,14 @@ export function ActivityLog({
               <span className="font-medium">
                 {line.who === "visitor" ? w.visitor : line.who === "the app" ? w.theApp : line.who}
               </span>
-              <span>{words(line.action)}</span>
+              <span>
+                {/* What the preview leaves undone, said as what a published app would do. */}
+                {line.action === "kept in the preview"
+                  ? w.keptInPreview
+                  : line.action === "skipped in the preview"
+                    ? w.skippedInPreview
+                    : words(line.action)}
+              </span>
               {line.record && <span className="font-medium">{line.record}</span>}
               {line.fields?.length ? (
                 <span className="text-muted-foreground">({line.fields.join(", ")})</span>
