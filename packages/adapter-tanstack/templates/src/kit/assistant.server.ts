@@ -71,9 +71,9 @@ interface Parts {
   fetch?: typeof fetch;
   /** What is said when the rules do not read a question and there is no model to ask. */
   unread?: string;
-  /** Its manner (smithable.ux.yml): a fixed line each, given to the model. */
+  /** Its manner, as the app's look file says it: a fixed line each, given to the model. */
   voice?: Voice;
-  /** What it is for, one sentence (smithable.content.yml): shown, and given to the model. */
+  /** What it is for, one sentence of the app's texts: shown, and given to the model. */
   about?: string;
   /**
    * Ask with may: change: checks a proposed change as the person would make it and keeps it
