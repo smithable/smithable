@@ -833,6 +833,14 @@ try {
         .getByLabel("Describe a change")
         .fill("A mobile number for every customer would help");
       await page.getByRole("button", { name: "Make the change" }).click();
+      // Every proposal is shown first and waits for Apply, losing data or not.
+      const shown = page.getByRole("region", { name: "Proposal" });
+      await shown
+        .getByText("Customers: added a mobile (a phone number)")
+        .waitFor({ timeout: 60000 });
+      await shown.getByRole("button", { name: "Discard" }).waitFor();
+      await shown.getByLabel("Refine the proposal").waitFor();
+      await shown.getByRole("button", { name: "Apply" }).click();
       await page
         .getByText(
           // In No code: which model made it, in words; the trace keeps the tier and tokens.
@@ -2194,8 +2202,13 @@ try {
           await form.getByRole("button").first().click();
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 });
+          // The request that waited is proposed once the app is there (the Changes tab opens
+          // for it), and waits for Apply.
+          await watcher
+            .getByRole("region", { name: "Proposal" })
+            .getByRole("button", { name: "Apply" })
+            .click({ timeout: 90000 });
           // In place: the request that waited is made, and nothing waits any more.
-          // The list of changes: Builder's is in its Changes tab, there once the app is.
           const changesTab = watcher.getByRole("tab", { name: "Changes" });
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
           for (let i = 0; i < 180 && !(await made.first().isVisible()); i++) {
