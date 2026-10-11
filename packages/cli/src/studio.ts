@@ -94,9 +94,20 @@ const ENGINES = {
   frontier: "frontier model",
 } as const;
 
+/** The trace as last read, by the head it was read at: Studio asks for it on every poll. */
+let traced: { dir: string; head: string; entries: TraceEntry[] } | undefined;
+
 export function trace(dir: string): TraceEntry[] {
   // Only the app's own history: a repository around it is someone else's.
   if (!ownRepository(dir)) return [];
+  const head = git(dir, ["rev-parse", "HEAD"]);
+  if (head.ok && traced?.dir === dir && traced.head === head.out) return traced.entries;
+  const entries = readTrace(dir);
+  traced = head.ok ? { dir, head: head.out, entries } : undefined;
+  return entries;
+}
+
+function readTrace(dir: string): TraceEntry[] {
   // Each commit's fields, then (after \x1d) the files it changed, one a line.
   const log = git(dir, ["log", "--name-only", "--format=%x1e%H%x1f%s%x1f%aI%x1f%b%x1d"]);
   if (!log.ok) return [];
@@ -162,6 +173,34 @@ export function trace(dir: string): TraceEntry[] {
   });
 }
 
+/** A change's operation and file, from its Smithable-Op trailer, for editSpec only. */
+function editOf(dir: string, rev: string): string | undefined {
+  const op = trailer(git(dir, ["log", "-1", "--format=%B", rev]).out, "Smithable-Op");
+  if (!op) return undefined;
+  const { op: name, args } = JSON.parse(op) as { op: string; args: { file?: string } };
+  return name === "editSpec" ? (args.file ?? "smithable.yml") : undefined;
+}
+
+/**
+ * An edit that goes on in the same file grows the same change (docs/design/studio-changes.md
+ * §4): when the change just made is an editSpec of the file `grow` (the editor's previous save)
+ * edited, and `grow` is right before it, the two become one with the first's message and
+ * database snapshot and the second's files. Otherwise (the head moved in between) nothing is
+ * folded. The newest change's id, either way.
+ */
+export function foldGrow(dir: string, grow: string): string {
+  const head = git(dir, ["rev-parse", "HEAD"]).out;
+  const parent = git(dir, ["rev-parse", "--verify", "--quiet", "HEAD~1"]);
+  const file = editOf(dir, head);
+  if (!parent.ok || parent.out !== grow || !file || editOf(dir, grow) !== file) return head;
+  const message = git(dir, ["log", "-1", "--format=%B", grow]).out;
+  git(dir, ["reset", "-q", "--soft", `${grow}~1`]);
+  // Typed back to where it began: no change at all.
+  if (git(dir, ["diff", "--cached", "--quiet"]).ok) return git(dir, ["rev-parse", "HEAD"]).out;
+  git(dir, ["commit", "-q", "-m", message]);
+  return git(dir, ["rev-parse", "HEAD"]).out;
+}
+
 /**
  * One change opened (GET /api/change/<id>): the patch of the person's files (all of it with
  * `all`), the number of other files it changed, and the editable files before and after it.
@@ -172,6 +211,7 @@ export function changeDetail(dir: string, id: string, all = false) {
   const names = git(dir, ["show", "--format=", "--name-only", id]).out.split("\n").filter(Boolean);
   const own = names.filter(ownFile);
   const parent = git(dir, ["rev-parse", "--verify", "--quiet", `${id}^`]);
+  // (git() trims its output, so a file comes back without its final newline.)
   const at = (rev: string) =>
     Object.fromEntries(
       Object.entries(EDITABLE_FILES).flatMap(([path, key]) => {
@@ -672,34 +712,6 @@ export async function studio(
         if (!detail) return json({ error: "There is no such change." }, 404);
         return json(detail);
       }
-      if (url.pathname === "/api/diff") {
-        // The last change Smithable made, as a patch without its bookkeeping files. A new app has
-        // no repository until its first change (ensureRepository): then there is no change yet,
-        // and Git's refusal is not a patch.
-        const last = git(dir, [
-          "log",
-          "-1",
-          "--format=%H",
-          "--grep=^smithable: ",
-          '--grep=^Revert "smithable: ',
-        ]);
-        const sha = last.ok ? last.out.trim() : "";
-        return json({
-          patch: sha
-            ? git(dir, [
-                "show",
-                "--format=%s%n",
-                sha,
-                "--",
-                ".",
-                ":!drizzle/meta",
-                ":!.smithable",
-                ":!src/routeTree.gen.ts",
-                ":!pnpm-lock.yaml",
-              ]).out
-            : "",
-        });
-      }
       if (url.pathname === "/api/events") {
         res.writeHead(200, {
           "Content-Type": "text/event-stream",
@@ -763,13 +775,21 @@ export async function studio(
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
+        // An edit in Code mode that goes on grows its change; the editor keeps the id.
+        const grow = (args as { grow?: unknown } | undefined)?.grow;
+        const change =
+          result.ok && name === "editSpec"
+            ? typeof grow === "string" && /^[0-9a-f]{40}$/.test(grow)
+              ? foldGrow(dir, grow)
+              : git(dir, ["rev-parse", "HEAD"]).out
+            : undefined;
         if (result.ok) changed({ description: result.output });
         // A change that failed halfway was rolled back, its database included: the preview
         // reopens it, as after an undo.
         else if (result.output.includes("Nothing was changed.")) restored(packages);
         // A failure of this change (not a refusal, and not an earlier failure).
         const report = result.ok ? undefined : await offerReport(asked);
-        return json({ ...result, needsConfirm, report });
+        return json({ ...result, needsConfirm, report, ...(change ? { change } : {}) });
       }
       // The preview has not answered within Studio's wait: its last log lines, and the failure
       // kept for a report (seen on the hosted beta: a preview that never started).

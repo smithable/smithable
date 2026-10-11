@@ -152,7 +152,6 @@ export const api = {
   project: () => call<Project>("/api/project"),
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
-  diff: () => call<{ patch: string }>("/api/diff"),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
   /** `file`: a picture the change brings, written under its path in the project (base64). */
   operation: (
