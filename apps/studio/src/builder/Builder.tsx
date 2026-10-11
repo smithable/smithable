@@ -75,7 +75,7 @@ export function Builder({
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
   const sections = useMemo(
-    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
+    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
     [spec],
   );
   // The change box's example in the app's own records (a booking app has no customers): the

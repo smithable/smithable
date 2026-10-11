@@ -1,4 +1,4 @@
-import { LANGUAGES, LOGO_SRC } from "../content.js";
+import { ASSISTANT_TEXTS, LANGUAGES, LOGO_SRC } from "../content.js";
 import type { YamlEditor } from "../edit.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -46,6 +46,49 @@ const setText: Operation<{ path: string[]; text: string }> = {
     // Another file is not known to be made by an AI: the picture loses its mark.
     if (path[path.length - 1] === "src" && content.has([...parent, "generated"]))
       content.remove([...parent, "generated"]);
+    return [];
+  },
+};
+
+/**
+ * Ask's visible texts (docs/design/ask-defaults.md §2): its name, greeting, placeholder and the
+ * sentence of what it is for. Each one given is set; "" clears it, so the kit's words come back.
+ */
+const setAssistantTexts: Operation<{
+  name?: string;
+  greeting?: string;
+  placeholder?: string;
+  about?: string;
+}> = {
+  name: "setAssistantTexts",
+  summary:
+    'Set the texts of Ask, the assistant in the app: its name ("Ask" by default), the first line it shows, the question box\'s placeholder, and one sentence of what it is for (shown and given to the model); "" clears one.',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string", description: 'The panel\'s name, e.g. Nova; "" for "Ask".' },
+      greeting: { type: "string", description: "The first line it shows." },
+      placeholder: { type: "string", description: "The question box's placeholder." },
+      about: { type: "string", description: "One sentence of what it is for." },
+    },
+  },
+  positional: [],
+  describe: (args) =>
+    `Ask's texts: ${ASSISTANT_TEXTS.filter((k) => args[k] !== undefined)
+      .map((k) => (args[k] ? `${k} "${args[k]}"` : `${k} as the app says it`))
+      .join(", ")}`,
+  destructive: () => false,
+  apply(editors, args) {
+    const given = ASSISTANT_TEXTS.filter((k) => args[k] !== undefined);
+    if (!given.length)
+      throw new OperationError("Give one of name, greeting, placeholder or about.");
+    for (const key of given) {
+      const text = (args[key] as string).trim();
+      const path = ["assistant", key];
+      if (text) put(editors.content, path, text);
+      else if (editors.content.has(path)) editors.content.removeAndPrune(path, 0);
+    }
     return [];
   },
 };
@@ -198,4 +241,10 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
   },
 };
 
-export const contentOperations: AnyOperation[] = [setText, nameRecords, setLanguage, setLogo];
+export const contentOperations: AnyOperation[] = [
+  setText,
+  nameRecords,
+  setLanguage,
+  setLogo,
+  setAssistantTexts,
+];

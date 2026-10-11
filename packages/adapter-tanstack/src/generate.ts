@@ -402,7 +402,15 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         : []),
       generated(
         "src/routes/__root.tsx",
-        rootRoute(ir, t, auth, ux, options.analytics, options.content?.consent),
+        rootRoute(
+          ir,
+          t,
+          auth,
+          ux,
+          options.analytics,
+          options.content?.consent,
+          options.content?.assistant,
+        ),
       ),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
       ...(auth.public.pages.length
@@ -418,7 +426,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
     // Sign-in (smithable.auth.yml): its kit and files only when the app has sign-in.
     key: "auth",
     kit: [{ files: SIGN_IN_KIT, used: ({ auth }) => hasSignIn(auth) }],
-    files: ({ ir, auth, t, options }) => {
+    files: ({ ir, auth, t, ux, options }) => {
       if (!hasSignIn(auth)) return [];
       const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");
       const users =
@@ -462,7 +470,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           : []),
         // "Ask": the tools over everything the person may read, and ask().
         ...(auth.assistant
-          ? [generated("src/generated/ask.server.ts", askModule(ir, auth, t, options.content))]
+          ? [
+              generated(
+                "src/generated/ask.server.ts",
+                askModule(ir, auth, t, options.content, ux.assistant.voice),
+              ),
+            ]
           : []),
       ];
     },

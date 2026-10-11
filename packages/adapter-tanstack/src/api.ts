@@ -21,6 +21,7 @@ import {
   type SpecIR,
   type StandardActionIR,
   storesFiles,
+  type Voice,
 } from "@smithable/core";
 import { actionNames, askedFields } from "./actions.js";
 import {
@@ -719,8 +720,14 @@ export function mcpModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentI
  * assistant block names, and `ask`, which answers a question as the signed-in person (visitors
  * by the wording rules only).
  */
-export function askModule(ir: SpecIR, auth: AuthIR, t: Texts, content?: ContentIR): string {
-  return toolsModule(ir, auth, t, content, "app");
+export function askModule(
+  ir: SpecIR,
+  auth: AuthIR,
+  t: Texts,
+  content?: ContentIR,
+  voice: Voice = "plain",
+): string {
+  return toolsModule(ir, auth, t, content, "app", voice);
 }
 
 function toolsModule(
@@ -729,6 +736,7 @@ function toolsModule(
   t: Texts,
   content: ContentIR | undefined,
   scope: "api" | "app",
+  voice: Voice = "plain",
 ): string {
   const app = scope === "app";
   // Ask may change things (each confirmed by the person) only when the block says so.
@@ -1044,9 +1052,11 @@ export async function ask(viewer: Viewer | null, question: string): Promise<Answ
     kinds: WORDS[caller],
     call: (tool, args) => callTool(viewer, tool, args),
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
+    // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
-      ? "The app could not read this question by itself, and no AI is set up to answer it here."
-      : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',${confirms ? "\n    propose: viewer ? (tool, args) => propose(viewer, tool, args) : undefined," : ""}
+      ? undefined
+      : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
+    voice: ${JSON.stringify(voice)},${content?.assistant?.about ? `\n    about: ${JSON.stringify(content.assistant.about)},` : ""}${confirms ? "\n    propose: viewer ? (tool, args) => propose(viewer, tool, args) : undefined," : ""}
   });
 }
 ${

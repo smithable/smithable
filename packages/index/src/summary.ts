@@ -21,6 +21,8 @@ import {
   type SpecPlugin,
   type StandardActionIR,
   USER_MODEL,
+  type UxIR,
+  type Voice,
 } from "@smithable/core";
 import { formulaInWords } from "./formula-words.js";
 
@@ -63,11 +65,20 @@ const AUTOMATIC: Record<string, string> = {
  * The spec in plain language for the Builder (ARCHITECTURE §10.1): what the app stores, who
  * may do what, its pages and sign-in. Deterministic and free: no AI involved.
  */
+/** How the assistant answers, in the summary's words (docs/design/ask-defaults.md §2). */
+const VOICE_WORDS: Record<Voice, string> = {
+  plain: "It answers plainly.",
+  friendly: "It answers in a friendly voice.",
+  formal: "It answers formally.",
+};
+
 export function summarize(
   ir: SpecIR,
   auth?: AuthIR,
   content: ContentIR = emptyContent(),
   plugins: readonly SpecPlugin[] = [],
+  /** smithable.ux.yml, for the assistant's voice; plain without it. */
+  ux?: Pick<UxIR, "assistant">,
 ): SummarySection[] {
   const { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item } = wordsFor(
     ir,
@@ -380,7 +391,7 @@ export function summarize(
               : ask.for === "signed-in"
                 ? "Everyone who signs in"
                 : list(ask.for.map((r) => humanize(r)))
-          } can ask the app questions; ${ask.may === "change" ? "it may also add and change records and run actions, each confirmed by the person" : "it changes nothing"}.${ask.for === "anyone" ? " Visitors are answered without a model, over what is public." : ""}`,
+          } can ask the app questions${content.assistant?.name ? ` as ${content.assistant.name}` : ""}; ${ask.may === "change" ? "it may also add and change records and run actions, each confirmed by the person" : "it changes nothing"}.${ask.for === "anyone" ? " Visitors are answered without a model, over what is public." : ""} ${VOICE_WORDS[ux?.assistant.voice ?? "plain"]}`,
         ]
       : [];
     sections.push({
