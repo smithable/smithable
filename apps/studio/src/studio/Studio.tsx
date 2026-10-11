@@ -46,6 +46,7 @@ export function Studio({
   place,
   onPlace,
   previewHidden,
+  onLook,
 }: {
   project: Project;
   spec: Spec;
@@ -53,6 +54,8 @@ export function Studio({
   version: number;
   logs: string[];
   onCustomize: (page: string) => void;
+  /** Opens No code's Look tab: where the ux file's choices have controls. */
+  onLook: () => void;
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["studio"];
   onPlace: (place: Place["studio"]) => void;
@@ -203,6 +206,7 @@ export function Studio({
               jump={jump}
               file={place.file ?? "smithable.yml"}
               onFile={(file) => onPlace({ file })}
+              onLook={onLook}
             />
           )}
           {tab === "operation" && <OperationForm run={run} spec={spec} />}
@@ -386,6 +390,7 @@ function SpecEditor({
   jump,
   file,
   onFile: setFile,
+  onLook,
 }: {
   project: Project;
   plugins: Spec["plugins"];
@@ -394,6 +399,7 @@ function SpecEditor({
   /** The file open, kept in Code mode's place (App.tsx), so a mode switch comes back to it. */
   file: EditableFile;
   onFile: (file: EditableFile) => void;
+  onLook: () => void;
 }) {
   const offered = (Object.keys(EDITABLE_FILES) as EditableFile[]).filter(
     (f) => project.files[EDITABLE_FILES[f]] !== undefined || emptyFile(f) !== undefined,
@@ -504,6 +510,20 @@ function SpecEditor({
           What goes here?
         </Button>
       </div>
+      {/* The look has controls in No code (themes, columns, forms, a landing page's sections);
+          this file is for what they do not cover, or for changing a lot at once. */}
+      {file === "smithable.ux.yml" && (
+        <p className="flex flex-wrap items-center gap-x-2 border-b border-line bg-subtle px-2 py-1 text-xs text-muted">
+          <span>
+            Themes, colours, columns, forms and a landing page's sections have controls in No code's
+            Look tab; edit here for what Look has no control for, or to change a lot at once.
+            Ctrl-Space lists what fits.
+          </span>
+          <Button variant="ghost" className="h-6 whitespace-nowrap text-xs" onClick={onLook}>
+            Open Look
+          </Button>
+        </p>
+      )}
       <Suspense fallback={<p className="flex-1 p-3 text-xs text-quiet">Opening the editor…</p>}>
         <SpecText
           key={file}
@@ -518,6 +538,7 @@ function SpecEditor({
           known={{
             ...(roles ? { roles } : {}),
             spec: drafts["smithable.yml"] ?? project.files.spec ?? "",
+            themes: project.ownThemes.map((t) => t.name),
           }}
         />
       </Suspense>

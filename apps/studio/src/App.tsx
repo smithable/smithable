@@ -546,6 +546,10 @@ export function App() {
                 place={place.studio}
                 onPlace={studioPlace}
                 previewHidden={Boolean(place.previewHidden)}
+                onLook={() => {
+                  builderPlace({ tab: "look" });
+                  switchMode("builder");
+                }}
               />
             )}
           </div>
