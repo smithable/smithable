@@ -2,17 +2,23 @@
 
 Smithable is for two kinds of people: those who have never written code and want an app that keeps working, and developers who want to move faster without inheriting a mess. Both get the same thing: an app described in a short file, generated as ordinary code, and changed by operations that cannot break it.
 
-## Changes don't break your app
+## A supported change is protected
 
-Adding a field, a page, a role or a rule is an operation, not a conversation with a model. The operation checks the change against the spec, regenerates the code, migrates the database so existing records survive, runs the generated tests and commits a checkpoint. If anything fails, nothing is applied. If you change your mind, `smithable undo` takes the change back, database included.
+Adding a field, a page, a role or a rule is an operation, not a conversation with a model. Each one is protected in the same ways:
 
-Generation is byte-identical: the same spec always gives the same code. Nothing drifts, nothing is half-updated, and a change to one part never leaves another part behind.
+- **Validated.** The change is checked against the whole spec before anything is written. If it does not fit, nothing is applied, and the error says why.
+- **Regenerated the same way.** Generation is byte-identical: the same spec always gives the same code, so nothing drifts or is left half-updated.
+- **Migrated with the records kept.** The database is migrated so existing records survive. A change that would lose data, such as removing a field, says what it loses and asks first.
+- **Tested.** The app's generated tests run before the change is committed as a checkpoint.
+- **Reversible, within limits.** `smithable undo` takes the last change back, the development database included, and can be run again to go further back. That undo is for building. A live app's records come back from its backups (`smithable restore`), not from undo.
+
+Your own code is a boundary. Code in `src/custom/` is never overwritten, and when a change no longer fits it, the type check says so; Smithable reports it and does not rewrite it. These protections cover the changes Smithable supports. What you write yourself is yours to keep working, with the type check and tests to tell you when it no longer fits.
 
 ## Most changes cost nothing
 
-Routine work never calls a model. In the [M7 benchmark](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m7-report.md), Smithable's operations did six of seven everyday tasks on a CRM in eleven seconds for zero tokens, with no regression. A coding agent did the same seven tasks for $3.15 and 3.6 million tokens, and left every file out of step with the spec. With Smithable's operations offered to the agent as tools, its cost fell three to seven times on the tasks an operation covers.
+Routine work never calls a model. In the [M7 benchmark](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m7-report.md), Smithable's operations did six of seven everyday tasks on a CRM in eleven seconds for zero tokens. A coding agent did the same seven tasks for $3.15 and 3.6 million tokens. With Smithable's operations offered to the agent as tools, its cost fell three to seven times on the tasks an operation covers. None of the setups broke a task that had worked before. The agent's code was left out of step with the spec: that is a cost for continued use, since the next change made from the spec cannot see it, not proof that its app was broken. M7 is one small app, one run per setup.
 
-When a request does need interpretation, the cheapest capable model gets a small slice of the spec and answers with operations, never with code. A small hosted open model did [seven of seven tasks for about €0.002](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m12-report.md); a 7-billion-parameter model on a laptop's CPU did six, offline. Every change shows what handled it and what it cost.
+When a request does need interpretation, the cheapest capable model gets a small slice of the spec and answers with operations, never with code. In [M12](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m12-report.md), a small hosted open model made the same seven everyday changes for about €0.002 in all, seven of seven in its latest runs; a 7-billion-parameter model on a laptop's CPU did six, offline. A model varies from run to run, and earlier runs did fewer while the instructions were being fixed. Building a first version from a description is a different task, measured on its own: [M12's first builds](https://github.com/smithable/smithable/blob/main/docs/benchmarks/m12-model-comparison.md). Every change shows what handled it and what it cost.
 
 ## The app is yours
 
