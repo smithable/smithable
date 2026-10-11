@@ -1055,6 +1055,31 @@ describe("standard actions", () => {
   });
 });
 
+test("setDomains sets and lifts the email domains, and refuses an address or a bad domain", () => {
+  const set = applyOperation(files, "setDomains", { domains: ["Acme.example", "north.example"] });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.auth).toContain("allowedDomains: [acme.example, north.example]");
+  expect(set.description).toBe("Only acme.example or north.example addresses may sign in");
+  const lifted = applyOperation(files, "setDomains", { domains: ["none"] });
+  if (!lifted.ok) throw new Error(lifted.message);
+  expect(lifted.files.auth).not.toContain("allowedDomains");
+  expect(lifted.description).toBe("Any email domain may sign in");
+  const again = applyOperation({ ...files, ...lifted.files }, "setDomains", {
+    domains: ["acme.example"],
+  });
+  expect(again.ok && again.files.auth).toMatch(
+    /signIn:\n(.*\n)*\s+allowedDomains: \[acme\.example\]/,
+  );
+  expect(applyOperation(files, "setDomains", { domains: ["anna@acme.example"] })).toMatchObject({
+    ok: false,
+    message: expect.stringContaining('give its domain, like "acme.example"'),
+  });
+  expect(applyOperation(files, "setDomains", { domains: ["acme"] })).toMatchObject({
+    ok: false,
+    message: '"acme" is not a domain like "acme.com".',
+  });
+});
+
 test("setProviders chooses the sign-in methods in button order, and refuses none or an unknown one", () => {
   const result = applyOperation(files, "setProviders", { providers: ["email", "google", "email"] });
   if (!result.ok) throw new Error(result.message);
