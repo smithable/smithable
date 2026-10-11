@@ -2084,7 +2084,7 @@ try {
         const other = `http://localhost:${port + 2}`;
         await previewUp(port + 3);
         // The page, open before the description is sent: the making screen comes at once, with
-        // the description and the bar, then What it does once the model has answered, then
+        // the description and the bar, then the app's name and one line once the model has answered, then
         // Builder with the app (docs/design/while-it-is-made.md stage one).
         const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         await watcher.goto(`${other}/?guide=off`);
@@ -2095,11 +2095,12 @@ try {
           await screen.getByRole("progressbar").waitFor();
           if (!(await watcher.getByRole("button", { name: "Undo", exact: true }).isDisabled()))
             throw new Error("Undo is on while the app is being made");
+          // Once drafted: the app's name, and one line of what it does, not the whole summary.
           await screen
-            .getByRole("region", { name: "What it does" })
-            .getByText("Sessions")
-            .first()
+            .getByRole("heading", { name: "Preparing Studio for Lotus Pilates" })
             .waitFor({ timeout: 15000 });
+          if ((await screen.getByRole("region", { name: "What it does" }).locator("p").count()) > 1)
+            throw new Error("the making page shows more than one line of what the app does");
           await screen.waitFor({ state: "detached", timeout: 60000 });
           await watcher
             .locator("header")
