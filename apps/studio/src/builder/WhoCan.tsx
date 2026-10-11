@@ -78,6 +78,7 @@ export function WhoCan({
         </ul>
       )}
       {auth.signIn !== "none" && <Roles auth={auth} run={run} />}
+      <Assistant auth={auth} run={run} />
     </div>
   );
 }
@@ -677,8 +678,88 @@ function Roles({ auth, run }: { auth: AuthIR; run: Run }) {
         </div>
       )}
       <p className="text-xs text-muted">
-        Keys for other programs and Ask in the app are not people: set what they reach in Code mode,
-        in smithable.auth.yml (api and assistant).
+        Keys for other programs are not people: set what they reach in Code mode, in
+        smithable.auth.yml (api).
+      </p>
+    </Block>
+  );
+}
+
+/**
+ * "Ask", the assistant in the app (docs/design/assistant.md §6): who gets it and whether it may
+ * change things, written with setAssistant; off unless chosen.
+ */
+function Assistant({ auth, run }: { auth: AuthIR; run: Run }) {
+  const now = auth.assistant;
+  const who = !now ? "off" : Array.isArray(now.for) ? "roles" : now.for;
+  const roles = auth.roles.map((r) => r.name);
+  const chosen = Array.isArray(now?.for) ? now.for : [];
+  const set = (to: string[], may: string = now?.may ?? "read") =>
+    void run("setAssistant", to.length ? { for: to, may } : { for: [] });
+  return (
+    <Block title="Ask, the assistant in the app">
+      <div className="flex items-center justify-between gap-3">
+        <span>Who gets it</span>
+        <Select
+          aria-label="Who gets Ask"
+          value={who}
+          onChange={(e) => {
+            const v = e.target.value;
+            set(v === "off" ? [] : v === "roles" ? [roles[0] ?? "admin"] : [v]);
+          }}
+          options={[
+            ["off", "Nobody"],
+            ...(auth.signIn !== "none"
+              ? ([
+                  ["roles", "These roles"],
+                  ["signed-in", "Everyone who signs in"],
+                ] as [string, string][])
+              : []),
+            ["anyone", "Anyone, visitors too"],
+          ]}
+          className="w-56"
+        />
+      </div>
+      {who === "roles" && (
+        <fieldset className="flex flex-wrap gap-3">
+          <legend className="sr-only">The roles that get Ask</legend>
+          {roles.map((r) => {
+            const on = chosen.includes(r);
+            return (
+              <label key={r} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={on}
+                  disabled={on && chosen.length === 1}
+                  onChange={() => set(on ? chosen.filter((x) => x !== r) : [...chosen, r])}
+                />
+                {humanize(r)}
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+      {now && (
+        <div className="flex items-center justify-between gap-3">
+          <span>It may</span>
+          <Select
+            aria-label="What Ask may do"
+            value={now.may}
+            onChange={(e) => set(Array.isArray(now.for) ? now.for : [now.for], e.target.value)}
+            options={[
+              ["read", "Find and count"],
+              ["change", "Also add, change and run actions, each confirmed"],
+            ]}
+            className="w-56"
+          />
+        </div>
+      )}
+      <p className="text-xs text-muted">
+        {who === "anyone"
+          ? "Visitors are answered by the wording rules only, never by a model. "
+          : ""}
+        On the hosted service a question uses the owner's allowance, about €0.001 on the current
+        model; a self-hosted app sets ASSISTANT_URL, ASSISTANT_KEY and ASSISTANT_MODEL.
       </p>
     </Block>
   );
