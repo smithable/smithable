@@ -75,6 +75,57 @@ const setProviders: Operation<{ providers: string[] }> = {
   },
 };
 
+/** The domains as written to the file: lower case, each once; "none" stands for none. */
+const domainList = (domains: string[]) => [
+  ...new Set(domains.map((d) => d.trim().toLowerCase()).filter((d) => d && d !== "none")),
+];
+
+const setDomains: Operation<{ domains: string[] }> = {
+  name: "setDomains",
+  summary:
+    "Let only addresses on these email domains sign up (allowedDomains, e.g. acme.com); none (or no domains) lifts it. The admins may always sign in.",
+  schema: {
+    type: "object",
+    required: ["domains"],
+    additionalProperties: false,
+    properties: {
+      domains: {
+        type: "array",
+        items: { type: "string" },
+        description: 'The domains, e.g. [acme.com]; [] or ["none"] lets any address sign up.',
+      },
+    },
+  },
+  positional: ["...domains"],
+  describe: ({ domains }) => {
+    const list = domainList(domains);
+    return list.length
+      ? `Only ${list.join(" or ")} addresses may sign in`
+      : "Any email domain may sign in";
+  },
+  destructive: () => false,
+  apply({ auth }, { domains }) {
+    if (!auth) throw new OperationError("This project has no smithable.auth.yml.");
+    if (auth.get(["signIn"]) === "none")
+      throw new OperationError("This app has no sign-in, so it has no email domains.");
+    const list = domainList(domains);
+    for (const domain of list)
+      if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain))
+        throw new OperationError(
+          domain.includes("@")
+            ? `"${domain}" is an email address: give its domain, like "${domain.split("@").at(-1)}".`
+            : `"${domain}" is not a domain like "acme.com".`,
+        );
+    const path = ["signIn", "allowedDomains"];
+    if (!list.length) {
+      if (auth.has(path)) auth.removeAndPrune(path, 1);
+    } else if (auth.has(path)) auth.set(path, list);
+    else if (auth.has(["signIn"])) auth.add(["signIn"], "allowedDomains", list);
+    else auth.add([], "signIn", { allowedDomains: list });
+    return [];
+  },
+};
+
 const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
   name: "setDefaultAccess",
   summary:
@@ -504,6 +555,7 @@ const setAssistant: Operation<{ for?: string[]; may?: "read" | "change" }> = {
 
 export const authOperations: AnyOperation[] = [
   setSignUp,
+  setDomains,
   setDefaultAccess,
   setAdmins,
   setProviders,
