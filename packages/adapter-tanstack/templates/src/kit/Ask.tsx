@@ -9,14 +9,25 @@ import type { Answer } from "./assistant.server";
 import { Shown } from "./Inspector";
 import { w } from "./words";
 
+/** Its texts from the content file (docs/design/ask-defaults.md §2); the kit's words otherwise. */
+export interface AskTexts {
+  name?: string;
+  greeting?: string;
+  placeholder?: string;
+  about?: string;
+}
+
 export function Ask({
   ask,
   confirm,
+  texts = {},
 }: {
   ask: (question: string) => Promise<Answer>;
   /** With may: change: makes a proposed change once the person confirms it. */
   confirm?: (proposal: string) => Promise<unknown>;
+  texts?: AskTexts;
 }) {
+  const name = texts.name ?? w.ask;
   const sheet = useRef<HTMLDialogElement>(null);
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState<{ question: string; answer?: Answer; failed?: string }[]>([]);
@@ -44,7 +55,7 @@ export function Ask({
         className="fixed right-4 bottom-4 z-20 shadow-lg"
         onClick={() => sheet.current?.showModal()}
       >
-        {w.ask}
+        {name}
       </Button>
       <dialog
         ref={sheet}
@@ -54,23 +65,29 @@ export function Ask({
         <div className="flex max-h-[85vh] flex-col gap-4 overflow-y-auto p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 id="ask-title" className="text-lg font-semibold">
-              {w.ask}
+              {name}
             </h2>
             <Button type="button" variant="ghost" size="sm" onClick={() => sheet.current?.close()}>
               {w.close}
             </Button>
           </div>
+          {(texts.greeting || texts.about) && (
+            <div className="space-y-1 text-sm">
+              {texts.greeting && <p>{texts.greeting}</p>}
+              {texts.about && <p className="text-muted-foreground">{texts.about}</p>}
+            </div>
+          )}
           <form onSubmit={submit} className="space-y-2">
             <div className="flex gap-2">
               <Input
                 aria-label={w.question}
-                placeholder={w.askPlaceholder}
+                placeholder={texts.placeholder ?? w.askPlaceholder}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 className="flex-1"
               />
               <Button type="submit" disabled={busy || !question.trim()}>
-                {busy ? w.asking : w.ask}
+                {busy ? w.asking : name}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">{w.aiMayBeWrong}</p>

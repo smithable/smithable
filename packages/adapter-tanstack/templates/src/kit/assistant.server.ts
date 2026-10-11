@@ -71,12 +71,24 @@ interface Parts {
   fetch?: typeof fetch;
   /** What is said when the rules do not read a question and there is no model to ask. */
   unread?: string;
+  /** Its manner (smithable.ux.yml): a fixed line each, given to the model. */
+  voice?: Voice;
+  /** What it is for, one sentence (smithable.content.yml): shown, and given to the model. */
+  about?: string;
   /**
    * Ask with may: change: checks a proposed change as the person would make it and keeps it
    * for them to confirm; a refusal in the app's words otherwise.
    */
   propose?: (tool: string, args: { [key: string]: Json }) => Promise<{ id: string; card: Card }>;
 }
+
+/** The assistant's voices (docs/design/ask-defaults.md §2), each a fixed line for the model. */
+export type Voice = "plain" | "friendly" | "formal";
+const VOICES: Record<Voice, string> = {
+  plain: "Be brief and plain: no greetings, no pleasantries.",
+  friendly: "Be warm and friendly, in a sentence or two.",
+  formal: "Be formal and courteous, in complete sentences.",
+};
 
 export async function answer(question: string, parts: Parts): Promise<Answer> {
   const started = Date.now();
@@ -131,7 +143,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
   const messages: Record<string, unknown>[] = [
     {
       role: "system",
-      content: `${parts.offer.summary}\nAnswer with the tools. The app shows what they return, so keep any words to a short caption.`,
+      content: `${parts.offer.summary}\n${parts.about ? `You are this app's assistant, for: ${parts.about}\n` : ""}Answer with the tools. The app shows what they return, so keep any words to a short caption. ${VOICES[parts.voice ?? "plain"]}`,
     },
     { role: "user", content: question },
   ];
