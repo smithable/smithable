@@ -1,6 +1,6 @@
 # Questions and answers
 
-Checked against the code on 2026-10-01. Where something is not built yet, this page says so.
+Checked against the code on 2026-10-11. Where something is not built yet, this page says so.
 
 ## How is this different from Lovable, Bolt, v0 or Replit?
 
@@ -12,11 +12,11 @@ No. A generated app has no Smithable package at build time or run time; a test i
 
 ## Do I need an AI model?
 
-No. Everything in [Getting started](start.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, an EU-hosted model with your own key, or none. See [AI setup](../ai.md).
+No. Everything in [Getting started](start.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, a hosted model with your own key, or none. See [AI setup](../ai.md).
 
 ## What does it cost to run?
 
-The software is free and open source under Apache-2.0. Operations cost nothing. A model call costs what your provider charges: in the benchmarks an everyday change with a small EU-hosted model cost a fraction of a cent, and a local model costs nothing but time. Every change in Studio and the CLI shows what handled it and what it cost.
+The software is free and open source under Apache-2.0. Operations cost nothing. A model call costs what your provider charges: in the benchmarks an everyday change with a small hosted model cost a fraction of a cent, and a local model costs nothing but time. Every change in Studio and the CLI shows what handled it and what it cost.
 
 ## Can I host it myself?
 
@@ -24,15 +24,15 @@ Yes. `smithable deploy --target docker` runs the release checks and builds a con
 
 ## Is there a hosted version?
 
-We can run it, but it's all yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
+We can run it, but it's all yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up; [ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
 
 ## Where does my data live?
 
-On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its sub-processors (in the beta, an EU-hosted one), and a project that must keep them in the EU says so with the `eu-only` policy. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
+On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its sub-processors, and a project that must keep its data and model calls in the EU says so with the `eu-only` policy. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
 
 ## What can it build today?
 
-Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Five starters show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget) and a plain records app. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
+Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Seven starters show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget), a plain records app, a status page, and an app for programs and assistants. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
 
 ## Will search engines find my public pages?
 
@@ -44,7 +44,7 @@ You write ordinary code in `src/custom/`, which Smithable never overwrites: a cu
 
 ## Is it production-ready?
 
-It is a beta. The engine is tested on every change against every example: generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Until 1.0, only the latest release is supported, the spec is version 0.1 and may change with a migration path, and the packages are not on npm yet, so you install from the repository. Treat it the way you would treat any 0.x tool: good for real internal tools and small sites, with your own backups.
+It is a beta. The engine is tested on every change against every example: generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Until 1.0, only the latest release is supported, the spec is version 0.1 and may change with a migration path ([CHANGELOG.md](../../CHANGELOG.md) names every breaking change and the contract it breaks), and releases are on npm since 0.1.0. Treat it the way you would treat any 0.x tool: good for real internal tools and small sites, with your own backups.
 
 ## Why YAML, and why one stack?
 

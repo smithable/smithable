@@ -55,7 +55,7 @@ These are the problems users of prompt-to-code builders commonly hit, and each o
 | All generated apps look alike | Designed themes, brand input and a library of page patterns |
 | Database changes that lose data or cannot be rolled back | Migrations that keep data; undo includes the database |
 | Hard to hand over to developers or to leave the platform | Normal, idiomatic code, a detach command, standard hosting |
-| US-hosted, GDPR uncertainty, EU hosting only on expensive plans | EU hosting and EU AI by default on every plan, and fully self-hostable |
+| US-hosted, GDPR uncertainty, EU hosting only on expensive plans | EU hosting and EU-only AI as a setting on every plan, including the free one, and fully self-hostable |
 | Surprise hosting bills | Spending caps on by default |
 
 The headline: **changes don't break your app, and you don't pay for the AI's mistakes.**
@@ -111,7 +111,7 @@ Pricing rules:
 
 - **Included allowances, not opaque credits.** Each plan states what it includes: apps, hosting size, backup retention, AI usage. Extra usage is visible and fairly priced.
 - **You don't pay for the AI's mistakes.** An AI change that fails its checks is rolled back and does not count against the allowance. Undo is always free.
-- **EU hosting on every plan**, including the free tier, and **spending caps on by default**.
+- **Hosting in the region you need on every plan**, including the free tier (the EU for those who must stay there, as a setting, never a plan upgrade), and **spending caps on by default**.
 - **Efficiency is the margin.** Low token usage makes a generous free tier and a no-signup demo affordable, and it lowers the cost of every paid plan.
 
 Paid services plug into open-source extension points (AI provider, preview runtime, deploy target, backup target). Paid code lives in the private `smithable-cloud` repository, which depends on open source and never the reverse.
