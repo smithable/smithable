@@ -8,6 +8,16 @@ One section per release of the `smithable` packages. Each section has a **Breaki
 
 The entries are filled in from the merged pull requests at each release.
 
+## Unreleased
+
+### Breaking
+
+None.
+
+### The engine
+
+- New apps get Ask on for everyone who signs in: the starters and the blank a first draft starts from have `assistant: { for: signed-in }` in `smithable.auth.yml`. An app without the block is unchanged.
+
 ## 0.1.0 (2026-10-11)
 
 The first public release. Spec version `0.1`, API `v1`.

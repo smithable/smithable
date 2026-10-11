@@ -18,3 +18,7 @@ admins: [owner@torget.example]
 public:
   pages: [home, catalog]         # the catalog is the front door
   read: [Item]                     # items, never who sells them: the owner is not shown
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in
