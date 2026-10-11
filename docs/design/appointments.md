@@ -67,7 +67,9 @@ models:
   `duration` (minutes, on the record or one reference away: the same grammar as the calendar's
   `duration`), while `while` holds (the capacity's `where` grammar). `cancelUntil` is how long
   before the start the customer may cancel their own (`12h`, `2d`; without it, until the
-  start). The status values are the owner's: `while` names which ones take the time.
+  start). The status values are the owner's: `while` names which ones take the time. The
+  window is the occupying construct's, read by the customer's Cancel action; an action's `when`
+  stays choices only.
 - Validation: `resource` a required single reference to a model with a `schedule`, `starts` a
   date-and-time field, `duration` as the calendar's, `while` choice or yes/no fields, `hours`
   well-formed ranges, `away` a model with a reference to the scheduled model and two
@@ -133,9 +135,10 @@ models:
   resource covers the brief; a second `occupies` on one model can come when an app needs it.
 - **Reminders** before the appointment (a daily hook can send them; a construct when several
   apps want the same).
-- **Per-person weekly hours in the spec.** The business's hours plus `away` records cover a
-  small shop; a shop where every person's week differs is the first reason to move hours onto
-  the resource's records.
+- **Per-person weekly hours.** The business's hours plus `away` records cover the first
+  version (Fable, 2026-10-11). They come when a tester has two people with different days: hours
+  given on one person's record override the model's `schedule`, in the same grammar, so nothing
+  in the spec changes then.
 - **Recurring appointments** ("every second Tuesday"): an action that makes the copies.
 
 ## 7. Not this construct: an enquiry and a visit
