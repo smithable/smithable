@@ -81,7 +81,8 @@ function filesOf(root: string, under = ""): string[] {
  * that takes the old one's place: a process that has the old file open keeps reading the old
  * one, never half of the new.
  */
-function sync(from: string, dir: string): void {
+/** Writes `from` over `dir`: only what differs, each file by a rename over it; what `from` lacks goes. */
+export function sync(from: string, dir: string): void {
   const wanted = new Set(filesOf(from));
   for (const path of filesOf(dir)) if (!wanted.has(path)) rmSync(join(dir, path), { force: true });
   for (const path of wanted) {
@@ -90,7 +91,13 @@ function sync(from: string, dir: string): void {
     if (existsSync(target) && statSync(target).isFile() && readFileSync(target).equals(source))
       continue;
     mkdirSync(dirname(target), { recursive: true });
-    rmSync(target, { recursive: true, force: true });
+    // A file is replaced by a rename over it, never removed first: the preview's dev server
+    // keeps a list of the public files it serves, and an unlink followed by an add of the same
+    // path can leave it dropped (the two events are handled out of order), so a picture the
+    // replacement rewrote answered 404 until a restart (a demo's mark, 2026-10-11). A rename
+    // over a file is one change to the watcher, and atomic. Only a folder in the way goes first.
+    if (existsSync(target) && !statSync(target).isFile())
+      rmSync(target, { recursive: true, force: true });
     writeFileSync(`${target}.incoming`, source, { mode: statSync(join(from, path)).mode });
     renameSync(`${target}.incoming`, target);
   }
