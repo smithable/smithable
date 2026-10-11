@@ -40,6 +40,12 @@ export function Builder({
   const [prefill, setPrefill] = useState<Prefill>();
   // A column of the Who can tab a click in the summary points at (a role, or "anyone").
   const [marked, setMarked] = useState<string>();
+  // Requests typed while the app was made are taken by the prompt, which is the Changes tab's.
+  const waiting = project.waiting?.length ?? 0;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when requests start waiting
+  useEffect(() => {
+    if (waiting > 0) setTab("changes");
+  }, [waiting > 0]);
   // The Changes tab's forms, folded until a click elsewhere opens one filled in.
   const [forms, setForms] = useState(false);
   const openForm = (p: Prefill | undefined) => {
