@@ -3,6 +3,8 @@ import type { ConceptInfo } from "@smithable/index";
 
 /** The change trace (ARCHITECTURE §9.7), as `smithable studio` reports it. */
 export interface TraceEntry {
+  /** The change's commit. */
+  id: string;
   description: string;
   at: string;
   engine: "generator" | "local model" | "Smithable model" | "frontier model";
@@ -15,6 +17,18 @@ export interface TraceEntry {
   isUndo: boolean;
   /** The operation, for the Builder to word it like its summary. */
   operation?: { op: string; args: Record<string, unknown> };
+  /** The files it changed that a person edits (the spec files, src/custom/**). */
+  files: string[];
+  /** What the person asked a model, for a change it made. */
+  request?: string;
+}
+
+/** One change opened: its patch, how many generated files it changed, the files before and after. */
+export interface ChangeDetail {
+  patch: string;
+  generated: number;
+  before: Project["files"];
+  after: Project["files"];
 }
 
 /** A described app being made (docs/design/while-it-is-made.md). */
@@ -139,6 +153,7 @@ export const api = {
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
   diff: () => call<{ patch: string }>("/api/diff"),
+  change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
   /** `file`: a picture the change brings, written under its path in the project (base64). */
   operation: (
     name: string,

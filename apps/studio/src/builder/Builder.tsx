@@ -21,22 +21,32 @@ export function Builder({
   run,
   place,
   onPlace,
+  undo,
 }: {
   project: Project;
   spec: Spec;
   run: Run;
+  /** Undoes the newest change (App.tsx's, as its status line does). */
+  undo: () => void;
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTabState] = useState<"app" | "look" | "who" | "change">(place.tab ?? "app");
-  const setTab = (next: "app" | "look" | "who" | "change") => {
+  const [tab, setTabState] = useState<"app" | "look" | "who" | "changes">(place.tab ?? "app");
+  const setTab = (next: "app" | "look" | "who" | "changes") => {
     setTabState(next);
     onPlace({ tab: next });
   };
   const [prefill, setPrefill] = useState<Prefill>();
   // A column of the Who can tab a click in the summary points at (a role, or "anyone").
   const [marked, setMarked] = useState<string>();
+  // The Changes tab's forms, folded until a click elsewhere opens one filled in.
+  const [forms, setForms] = useState(false);
+  const openForm = (p: Prefill | undefined) => {
+    setPrefill(p);
+    setForms(true);
+    setTab("changes");
+  };
   const [selection, setSelectionState] = useState<Selection | undefined>(place.selection);
   const setSelection = (next: Selection | undefined) => {
     setSelectionState(next);
@@ -82,22 +92,16 @@ export function Builder({
   const strip = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState<PanelId>("app");
   const wide = useMedia("(min-width: 1680px)");
-  const phone = useMedia("(max-width: 639px)");
   const panels = PANELS;
   const [twoUp, setTwoUp] = useState(() => localStorage.getItem("builder-two-up") !== "no");
-  // The change box folded to one line: as the person left it, else folded at phone width.
-  const [folded, setFolded] = useState(() => {
-    const kept = localStorage.getItem("builder-change-box");
-    return kept ? kept === "folded" : matchMedia("(max-width: 639px)").matches;
-  });
-  const fold = (on: boolean) => {
-    setFolded(on);
-    localStorage.setItem("builder-change-box", on ? "folded" : "open");
-  };
   const last = project.trace[0];
-  const lastWords = last
-    ? ((last.operation && words(last.operation.op, last.operation.args)) ?? last.description)
-    : "";
+  // As the list words it: an undo says so ("Undid: …"), its operation is the one undone.
+  const plain = last?.operation && words(last.operation.op, last.operation.args);
+  const lastWords = !last
+    ? ""
+    : plain
+      ? `${last.isUndo ? "Undid: " : ""}${plain}`
+      : last.description;
   const paired = wide && twoUp;
   const show = (id: PanelId) =>
     strip.current
@@ -195,7 +199,7 @@ export function Builder({
                   ["app", "What it does"],
                   ["look", "Look", "look"],
                   ["who", "Who can"],
-                  ["change", "Change"],
+                  ["changes", "Changes", "change"],
                 ]}
                 value={tab}
                 onChange={setTab}
@@ -212,23 +216,46 @@ export function Builder({
                 sections={sections}
                 spec={spec}
                 run={run}
-                onAdd={(p) => {
-                  setPrefill(p);
-                  setTab("change");
-                }}
+                onAdd={openForm}
                 onWho={(column) => {
                   setMarked(column);
                   setTab("who");
                 }}
               />
             ) : (
-              // A new proposal to edit starts the form afresh with its values.
-              <ChangeForms
-                key={JSON.stringify(prefill ?? null)}
-                spec={spec}
-                run={run}
-                prefill={prefill}
-              />
+              // The prompt first, the forms folded, then every change with the rest of the room.
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="shrink-0 border-b border-line">
+                  <Ask
+                    example={example}
+                    words={words}
+                    waiting={project.waiting}
+                    onEdit={(p) => {
+                      openForm(p);
+                      show("app");
+                    }}
+                  />
+                </div>
+                <details
+                  open={forms}
+                  onToggle={(e) => setForms(e.currentTarget.open)}
+                  className="shrink-0 border-b border-line"
+                >
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+                    Change by form
+                  </summary>
+                  {/* A new proposal to edit starts the form afresh with its values. */}
+                  <ChangeForms
+                    key={JSON.stringify(prefill ?? null)}
+                    spec={spec}
+                    run={run}
+                    prefill={prefill}
+                  />
+                </details>
+                <div className="min-h-0 flex-1 overflow-auto">
+                  <Trace entries={project.trace} words={words} plugins={spec.plugins} />
+                </div>
+              </div>
             )}
           </Panel>
         </div>
@@ -266,48 +293,26 @@ export function Builder({
           )}
         </div>
       </div>
-      {/* The change box and the changes made, newest first, under every panel: type a request
-          while looking at the preview. The box stays; the list scrolls. Folded to one line it
-          leaves the panels the room (at phone width it starts folded). */}
-      {folded ? (
-        // Folded, the bar is the guide's change stop: it says where the box opens.
-        <div
-          data-guide="change"
-          className="flex shrink-0 items-center gap-3 border-t border-line bg-panel px-3 py-1.5 text-xs text-muted"
-        >
-          <span className="min-w-0 flex-1 truncate">
-            {project.trace[0] ? `Last change: ${lastWords}` : "No changes yet."}
-          </span>
-          <Button variant="ghost" className="h-6" onClick={() => fold(false)}>
-            Show the change box
+      {/* The newest change under the panels, while looking at the preview: what it was, and
+          Undo while it is still in place. The list and the prompt are the Changes tab's. */}
+      <section
+        aria-label="Last change"
+        className="flex shrink-0 items-center gap-3 border-t border-line bg-panel px-3 py-1.5 text-xs text-muted"
+      >
+        <span className="min-w-0 flex-1 truncate">
+          {last ? `Last change: ${lastWords}` : "No changes yet."}
+        </span>
+        {last && !last.undone && !last.isUndo && (
+          <Button variant="ghost" className="h-6" onClick={undo} aria-label="Undo the last change">
+            Undo
           </Button>
-        </div>
-      ) : (
-        <div className="flex max-h-[35vh] shrink-0 flex-col border-t border-line bg-panel">
-          <div className="flex justify-end px-3 pt-1">
-            <Button variant="ghost" className="h-6 text-xs" onClick={() => fold(true)}>
-              Fold
-            </Button>
-          </div>
-          <div className="max-h-[22vh] shrink-0 overflow-auto">
-            <Ask
-              example={example}
-              // On a phone the box folds once a change is made, so the preview has the room again.
-              onDone={() => phone && setFolded(true)}
-              words={words}
-              waiting={project.waiting}
-              onEdit={(p) => {
-                setPrefill(p);
-                setTab("change");
-                show("app");
-              }}
-            />
-          </div>
-          <div className="flex min-h-24 flex-1 flex-col border-t border-line *:min-h-0 *:flex-1">
-            <Trace entries={project.trace} words={words} />
-          </div>
-        </div>
-      )}
+        )}
+        {tab !== "changes" && (
+          <Button variant="ghost" className="h-6" onClick={() => setTab("changes")}>
+            All changes
+          </Button>
+        )}
+      </section>
     </div>
   );
 }
