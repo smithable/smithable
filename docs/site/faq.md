@@ -4,7 +4,7 @@ Checked against the code on 2026-10-11. Where something is not built yet, this p
 
 ## How is this different from Lovable, Bolt, v0 or Replit?
 
-Those tools have a model write and rewrite the application's code from your prompts. Smithable keeps a short description of the application, `smithable.yml`, and generates the code from it. Routine changes are operations that need no model and cannot produce broken code; a model is used only to turn a request in your own words into operations, and it proposes, you confirm. The result is an ordinary application a developer can read, and changes that are cheap, tested and can be undone. The reasoning and the measurements are on [Why Smithable](why.md).
+Those tools have a model write and rewrite the application's code from your prompts. Smithable keeps a short description of the application, `smithable.yml`, and generates the code from it. Routine changes are operations that need no model and are checked, migrated, tested and can be undone; a model is used only to turn a request in your own words into operations, and it proposes, you confirm. The result is an ordinary application a developer can read, and changes that are cheap, tested and can be undone. The reasoning and the measurements are on [Why Smithable](why.md).
 
 ## Does my app depend on Smithable?
 
@@ -16,7 +16,7 @@ No. Everything in [Getting started](start.md) works without one: starters, Studi
 
 ## What does it cost to run?
 
-The software is free and open source under Apache-2.0. Operations cost nothing. A model call costs what your provider charges: in the benchmarks an everyday change with a small hosted model cost a fraction of a cent, and a local model costs nothing but time. Every change in Studio and the CLI shows what handled it and what it cost.
+The software is free and open source under Apache-2.0. Operations cost nothing. A model call costs what your provider charges: in the benchmarks, seven everyday changes to a CRM with a small hosted model cost about €0.002 in all, and a local model costs nothing but time. Those are one small app's measurements, and a model's results vary from run to run; a first build from a description is measured apart ([Why Smithable](why.md#most-changes-cost-nothing)). Every change in Studio and the CLI shows what handled it and what it cost.
 
 ## Can I host it myself?
 
