@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "api",
   "questions": [
-    "Who will use the app?",
+    "Who will use the inventory app?",
     "How should stock levels be tracked?",
-    "What should a supplier record hold?"
+    "Should the app also record orders placed with suppliers?"
   ]
 }

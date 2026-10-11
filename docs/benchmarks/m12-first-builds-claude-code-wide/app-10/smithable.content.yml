@@ -1,18 +1,21 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Our museum's collection, online
+      subtitle: Browse the objects in our care and the stories of the people and places behind them.
+      button: Browse the collection
+      image:
+        src: images/hero.webp
+        alt: Rows of bookshelves and reading tables in a quiet library
+        generated: true
+    items:
+      title: On display now
 models:
   Item:
     label: Object
     pluralLabel: Objects
-pages:
-  items:
-    title: Collection
-  home:
-    hero:
-      title: Explore our museum's collection
-      subtitle: Browse the objects in our care and discover the stories behind them.
-      button: Browse the collection
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-    items:
-      title: From the collection
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

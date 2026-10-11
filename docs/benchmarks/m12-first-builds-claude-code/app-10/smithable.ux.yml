@@ -2,14 +2,12 @@ smithableUx: 0.1
 pages:
   recipes:
     table:
-      view: cards
+      sort: name
     icon: book
-  shoppingLists:
-    table:
-      sort: -forDate
+  shopping:
     icon: cart
 tones:
-  ShoppingList.status:
-    done: success
+  ShoppingItem.status:
+    bought: success
 theme:
   preset: craft

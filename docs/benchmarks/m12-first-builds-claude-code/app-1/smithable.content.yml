@@ -1,28 +1,22 @@
 smithableContent: 0.1
-models:
-  Instructor:
-    label: Teacher
-    pluralLabel: Teachers
-  Session:
-    fields:
-      instructor:
-        label: Teacher
 pages:
   home:
     hero:
-      title: Find your calm at Open Sky Yoga
+      title: Find your calm on the mat
       subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        generated: true
     classes:
       title: Our classes
-    ourTeachers:
+    teachers:
       title: Meet our teachers
     callToAction:
-      title: Ready to roll out your mat?
+      title: Ready for your first class?
       button: Book a class
 logo:
   src: images/logo.webp
-  alt: A water drop
+  alt: A lotus over a ripple
+  generated: true

@@ -1,5 +1,27 @@
 smithableContent: 0.1
+language: sv
 models:
+  Quote:
+    label: Offert
+    pluralLabel: Offerter
+    fields:
+      number:
+        label: Offertnummer
+      status:
+        label: Status
+        values:
+          utkast: Utkast
+          skickad: Skickad
+          accepterad: Accepterad
+          avvisad: Avvisad
+      total:
+        label: Totalt belopp
+      validUntil:
+        label: Giltig till
+      notes:
+        label: Anteckningar
+      customer:
+        label: Kund
   Customer:
     label: Kund
     pluralLabel: Kunder
@@ -10,31 +32,16 @@ models:
         label: E-post
       phone:
         label: Telefon
+      segment:
+        label: Segment
+        values:
+          privat: Privat
+          foretag: Företag
+          kommun: Kommun
       notes:
         label: Anteckningar
       accountManager:
-        label: Kontoansvarig
-  Quote:
-    label: Offert
-    pluralLabel: Offerter
-    fields:
-      number:
-        label: Offertnummer
-      customer:
-        label: Kund
-      status:
-        label: Status
-        values:
-          draft: Utkast
-          sent: Skickad
-          accepted: Accepterad
-          rejected: Avvisad
-      total:
-        label: Totalt belopp
-      description:
-        label: Beskrivning
-      validUntil:
-        label: Giltig till
+        label: Kontaktperson
   Invoice:
     label: Faktura
     pluralLabel: Fakturor
@@ -48,22 +55,31 @@ models:
       status:
         label: Status
         values:
-          draft: Utkast
-          sent: Skickad
-          paid: Betald
-          overdue: Försenad
+          utkast: Utkast
+          skickad: Skickad
+          betald: Betald
+          forfallen: Förfallen
       total:
         label: Totalt belopp
       dueDate:
         label: Förfallodatum
       paidAt:
-        label: Betald datum
+        label: Betaldatum
+      notes:
+        label: Anteckningar
 pages:
-  kunder:
-    title: Kunder
   offerter:
     title: Offerter
+    subtitle: Skapa och hantera offerter till kunder
+  team:
+    title: Team
+  kunder:
+    title: Kunder
+    subtitle: Hantera dina kunder och deras information
   fakturor:
     title: Fakturor
-  anvandare:
-    title: Användare
+    subtitle: Skapa och hantera fakturor till kunder
+logo:
+  src: images/logo.webp
+  alt: Two interlinked rings
+  generated: true

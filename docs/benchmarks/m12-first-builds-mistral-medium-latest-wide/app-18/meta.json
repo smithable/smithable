@@ -3,8 +3,9 @@
   "starter": "crm",
   "wordStarter": "records",
   "questions": [
-    "Vem ska kunna se och hantera offerter, kunder och fakturor?",
-    "Vad ska en offert innehålla förutom pris?"
+    "Vilka typer av uppgifter om kunder vill ni spåra förutom offerter och fakturor?",
+    "Vem ska ha tillgång till systemet?",
+    "Vad ska synas för besökare som inte är inloggade?"
   ],
   "lang": "sv"
 }

@@ -1,15 +1,22 @@
 smithableContent: 0.1
+actions:
+  markReturned:
+    label: Mark returned
 pages:
   home:
     hero:
-      title: Borrow it from a neighbor
-      subtitle: Drills, ladders, hedge trimmers and more, shared by the people on your street. Browse what's available, ask the owner, and give it back when you're done.
+      title: Borrow the tool, skip the store
+      subtitle: Find drills, ladders and garden tools your neighbors are happy to lend, and share the ones gathering dust in your shed.
       button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
-    latest:
-      title: Available now
+        generated: true
+    latestTools:
+      title: Ready to borrow
+    features:
+      title: How it works
 logo:
   src: images/logo.webp
-  alt: A single wave line
+  alt: A toolbox
+  generated: true

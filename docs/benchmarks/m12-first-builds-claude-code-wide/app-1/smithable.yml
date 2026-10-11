@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Translation Clients
-  description: Keep track of my translation clients, the quotes I send them and the payments they make.
+  name: Lingua Ledger
+  description: A freelance translator's record of clients, the quotes sent to them and the payments received.
   currency: EUR
 models:
   Client:
@@ -10,54 +10,69 @@ models:
       email: email
       phone: phone
       company: string
+      address: text
       notes: text
       quotes: Quote[]
       payments: Payment[]
   Quote:
     fields:
+      title: string!
       client: Client!
-      description: string!
       sourceLanguage: string
       targetLanguage: string
       wordCount: int
       amount: money!
       quotedOn: date! = TODAY()
-      status: sent | accepted | declined
+      deadline: date
+      status: draft | sent | accepted | declined
+      notes: text
       payments: Payment[]
+      paid:
+        type: money
+        formula: SUM(payments.amount)
   Payment:
     fields:
       client: Client!
       quote: Quote
       amount: money!
       paidOn: date! = TODAY()
-      notes: string
+      method: bankTransfer | card | paypal | cash | other
+      note: string
 pages:
   clients:
     crud: Client
-    search: [name, company, email]
+    search: [name, email, company]
   quotes:
     crud: Quote
-    filters: [status, client]
-    actions: [markAccepted, markDeclined]
-  payments:
-    crud: Payment
+    filters: [client, status, quotedOn]
+    actions: [markSent, markAccepted, markDeclined]
   overview:
     dashboard:
-      openQuotes:
+      awaitingAnswer:
         sum: Quote.amount
         where:
           status: sent
-      acceptedQuotes:
+      accepted:
         sum: Quote.amount
         where:
           status: accepted
+      latestQuotes:
+        list: Quote
+        limit: 5
       received:
         sum: Payment.amount
         by: paidOn
-      latestPayments:
-        list: Payment
-        limit: 5
+  payments:
+    crud: Payment
+    filters: [client, quote, paidOn]
 actions:
+  markSent:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The quote went to the client.
   markAccepted:
     on: Quote
     when:
@@ -71,4 +86,4 @@ actions:
       status: sent
     set:
       status: declined
-    intent: The client declined the quote.
+    intent: The client turned the quote down.

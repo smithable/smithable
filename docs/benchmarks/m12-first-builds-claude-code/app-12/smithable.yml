@@ -16,7 +16,7 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: markdown
+      summary: text
       updates: IncidentUpdate[]
   IncidentUpdate:
     fields:
@@ -101,5 +101,5 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    intent: The incident is over, with an update saying so.
+    intent: The outage is over, with an update saying so.
 navigation: [overview, incidents, updates, components, team]

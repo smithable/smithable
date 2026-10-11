@@ -1,29 +1,9 @@
 smithable: 0.1
 app:
-  name: Hofladen
-  description: Verwaltung von Produkten, Vorbestellungen und Abholzeiten für einen kleinen Hofladen.
-  currency: EUR
+  name: Mein Hofladen
+  description: Produkte, Vorbestellungen der Kunden und Abholzeiten verwalten.
   timezone: Europe/Berlin
 models:
-  Product:
-    fields:
-      name: string!
-      description: text
-      price: money!
-      category: string
-      available: bool = true
-      image: url
-  PreOrder:
-    fields:
-      customerName: string!
-      customerEmail: email
-      customerPhone: phone
-      product: Product!
-      quantity: int!
-      orderDate: date = TODAY()
-      pickupDate: date!
-      status: pending | confirmed | pickedUp | canceled
-      notes: text
   PickupTime:
     fields:
       date: date!
@@ -31,39 +11,38 @@ models:
       endTime: string!
       maxSlots: int! = 10
       notes: text
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money
+      category: obst | gemuese | backwaren | milchprodukte | fleisch | sonstiges
+      available: bool = true
+      image: file
+  PreOrder:
+    fields:
+      product: Product!
+      quantity: int!
+      customerName: string!
+      customerPhone: phone
+      orderDate: date! = TODAY()
+      status: offen | bestaetigt | abgeholt | storniert
+      pickupTime: PickupTime
 pages:
-  produkte:
-    crud: Product
-    search: [name, category]
-  vorbestellungen:
-    crud: PreOrder
-    search: [customerName, customerEmail, product]
-    filters: [status, pickupDate, product]
-    sortable: [orderDate, pickupDate, customerName]
-    actions: [confirmPreOrder, markAsPickedUp, cancelPreOrder]
   abholzeiten:
     crud: PickupTime
-  team:
-    users: manage
-actions:
-  confirmPreOrder:
-    on: PreOrder
-    when:
-      status: pending
-    set:
-      status: confirmed
-    intent: Bestätige die Vorbestellung.
-  markAsPickedUp:
-    on: PreOrder
-    when:
-      status: confirmed
-    set:
-      status: pickedUp
-    intent: Markiere die Vorbestellung als abgeholt.
-  cancelPreOrder:
-    on: PreOrder
-    when:
-      status: [pending, confirmed]
-    set:
-      status: canceled
-    intent: Storniere die Vorbestellung.
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      produkte:
+        records: Product
+  privacy:
+    route: /privacy
+    legal: privacy
+  produkte:
+    crud: Product
+  vorbestellungen:
+    crud: PreOrder
+navigation: [home, produkte, vorbestellungen, abholzeiten]

@@ -3,7 +3,7 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Should the page show the API as one service, or split it into separate parts with their own status?",
-    "Can visitors sign up to get notified about new incidents and maintenance?"
+    "Who should be able to see the status page?",
+    "How should the API be split into components?"
   ]
 }

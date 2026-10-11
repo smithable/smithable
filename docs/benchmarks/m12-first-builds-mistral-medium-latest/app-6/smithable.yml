@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Local Union Job Board
-  description: A job board for a local union to post jobs and receive applications.
+  name: Union Job Board
+  description: A local union job board for posting and applying to jobs.
 models:
   JobPost:
     fields:
@@ -12,66 +12,37 @@ models:
       salary: money
       type: fullTime | partTime | contract | temporary
       status: open | closed
-      postedAt: datetime = NOW()
+      postedBy: User!
   Application:
     fields:
       jobPost: JobPost!
-      name: string!
-      email: email!
-      phone: phone
-      resume: text
+      applicantName: string!
+      applicantEmail: email!
+      resume: file
       coverLetter: text
-      status: submitted | reviewed | interviewed | hired | rejected
-      appliedAt: datetime = NOW()
+      status: submitted | reviewed | rejected | hired
+      appliedBy: User!
 pages:
   jobs:
     crud: JobPost
     search: [title, description, company, location]
-    filters: [type, status, salary]
-    sortable: [postedAt, salary]
-    actions: [closeJob]
+    filters: [type, status]
+    sortable: [salary, createdAt]
+    contact: owner
   applications:
     crud: Application
-    access: [admin]
-    actions: [reviewApplication, interviewApplication, hireApplication, rejectApplication]
+  myJobs:
+    crud: JobPost
+    mine: true
+  myApplications:
+    crud: Application
+    mine: true
   home:
     route: /
     landing:
       hero:
       footer:
-actions:
-  closeJob:
-    on: JobPost
-    when:
-      status: open
-    set:
-      status: closed
-    intent: Close a job post when it is no longer accepting applications.
-  reviewApplication:
-    on: Application
-    when:
-      status: submitted
-    set:
-      status: reviewed
-    intent: Mark an application as reviewed.
-  interviewApplication:
-    on: Application
-    when:
-      status: reviewed
-    set:
-      status: interviewed
-    intent: Mark an application for interview.
-  hireApplication:
-    on: Application
-    when:
-      status: interviewed
-    set:
-      status: hired
-    intent: Mark an application as hired.
-  rejectApplication:
-    on: Application
-    when:
-      status: [submitted, reviewed, interviewed]
-    set:
-      status: rejected
-    intent: Reject an application.
+  privacy:
+    route: /privacy
+    legal: privacy
+navigation: [jobs, myJobs, myApplications]

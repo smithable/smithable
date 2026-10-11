@@ -1,8 +1,28 @@
 smithableContent: 0.1
+language: sv
+pages:
+  hem:
+    title: Välkommen till Vår Loppis
+    subtitle: Köp och sälj begagnade saker enkelt och smidigt.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  granska:
+    title: Granska
+  integritetspolicy:
+    title: Integritetspolicy
+  katalog:
+    title: Katalog
+  mina-annonser:
+    title: Mina annonser
+  sparade:
+    title: Sparade annonser
 models:
   Item:
-    label: Saker
-    pluralLabel: Saker
+    label: Annons
+    pluralLabel: Annonser
     fields:
       title:
         label: Titel
@@ -26,16 +46,14 @@ models:
         label: Skick
         values:
           ny: Ny
-          somNy: Som ny
+          naestanNy: Nästan ny
           bra: Bra
           sliten: Sliten
       place:
         label: Plats
       available:
         label: Tillgänglig
-pages:
-  home:
-    hero:
-      image:
-        src: images/hero.webp
-        alt: An empty sports hall with a polished wooden floor and climbing bars on the wall
+logo:
+  src: images/logo.webp
+  alt: A half sun over a line
+  generated: true

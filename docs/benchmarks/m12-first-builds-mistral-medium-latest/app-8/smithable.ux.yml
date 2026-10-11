@@ -1,1 +1,18 @@
 smithableUx: 0.1
+pages:
+  talks:
+    icon: book
+    table:
+      view: cards
+  speakers:
+    icon: users
+    table:
+      columns: [name, company, email]
+  attendees:
+    icon: user
+    table:
+      columns: [name, email, company, phone]
+  registrations:
+    icon: cart
+    table:
+      columns: [talk, attendee, registeredAt]

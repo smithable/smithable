@@ -3,7 +3,7 @@
   "starter": "records",
   "wordStarter": "booking",
   "questions": [
-    "Who can view the allotment details and waiting list?",
+    "Who can see the plots and the waiting list?",
     "What details are recorded for each plot?"
   ]
 }

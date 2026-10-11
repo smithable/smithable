@@ -2,13 +2,11 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, recipes]
-  read: [Recipe]
 roles:
-  admin:
-    description: Manages the app and all data.
-  member:
-    description: Adds and views recipes and shopping lists.
+  admin: all
+  member: all
 defaultRole: member
+public:
+  pages: [recipes, home, privacy]
+  read: [Recipe]
 admins: [johan@smithable.ai]

@@ -8,19 +8,16 @@ models:
       title: string!
       photos: pictures
       description: text
-      category: furniture | books | electronics | kitchen | stationery | plants | other
+      category: furniture | electronics | books | kitchen | stationery | clothing | other
       condition: likeNew | good | worn
-      pickupSpot: string
+      place: string
       status: available | claimed | gone
       claimedBy: User
-    access:
-      delete: [owner, admin]
-      write: [owner, admin]
 pages:
   shelf:
     route: /
     crud: Item
-    search: [title, description, pickupSpot]
+    search: [title, description, place]
     filters: [category, condition, status]
     sortable: [title, createdAt]
     favorites: true
@@ -38,21 +35,18 @@ actions:
     set:
       status: claimed
       claimedBy: ME()
-    allow: [member, admin]
     intent: Claim an available item for yourself.
-  markGone:
+  handOver:
     on: Item
     when:
       status: claimed
     set:
       status: gone
-    allow: [member, admin]
-    intent: Mark the item as picked up.
+    intent: Mark a claimed item as picked up.
   release:
     on: Item
     when:
       status: claimed
     set:
       status: available
-    allow: [member, admin]
     intent: Put a claimed item back on the shelf.

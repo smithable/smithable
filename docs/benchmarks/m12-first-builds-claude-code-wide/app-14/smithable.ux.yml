@@ -2,27 +2,21 @@ smithableUx: 0.1
 pages:
   guests:
     table:
-      columns: [name, rsvp, meal, table, side]
-      below:
-        name: email
+      columns: [name, group, rsvp, meal, table]
       sort: name
     form:
-      sections: [{ name: guest, fields: [name, email, phone, side] }, { name: answer, fields: [rsvp, meal, dietaryNotes] }, { name: seating, fields: [table, notes] }]
-      control:
-        rsvp: radio
+      sections: [{ name: guest, fields: [name, group, email, phone] }, { name: answer, fields: [rsvp, meal, dietaryNotes] }, { name: seating, fields: [table, notes] }]
     icon: users
   tables:
     table:
-      columns: [name, seats]
       sort: name
     icon: layers
 tones:
   Guest.rsvp:
     attending: success
-    pending: warning
+    waiting: warning
     declined: danger
 theme:
-  preset: minimal
+  preset: pastel
   brand:
-    primary: "#b76e79"
     font: Nunito Sans

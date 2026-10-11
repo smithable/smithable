@@ -1,33 +1,12 @@
 smithableUx: 0.1
-pages:
-  asiakkaat:
-    table:
-      sort: name
-      columns: [name, email, phone]
-    icon: users
-  autot:
-    table:
-      sort: registrationNumber
-      columns: [registrationNumber, make, model, year, customer]
-    icon: truck
-  huoltotyot:
-    table:
-      sort: -number
-      columns: [number, car, status, startDate, endDate, total]
-    icon: clipboard
-  laskut:
-    table:
-      sort: -number
-      columns: [number, customer, workOrder, status, issueDate, dueDate, total]
-    icon: receipt
-  palvelut:
-    table:
-      columns: [name, description, price]
-    icon: settings
 tones:
-  WorkOrder.status:
-    completed: success
-    canceled: danger
   Invoice.status:
     paid: success
-    canceled: danger
+    overdue: danger
+  MaintenanceJob.status:
+    completed: success
+    cancelled: danger
+pages:
+  maintenance-jobs:
+    form:
+      sections: [{ name: car, fields: [car, description] }, { name: status, fields: [status, startDate, endDate] }, { name: costs, fields: [estimatedCost, actualCost, invoice] }]

@@ -3,7 +3,7 @@
   "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Who adds and updates teams, players and results?",
+    "Who keeps the site up to date?",
     "What can visitors see without signing in?",
     "What should a match record hold besides the score?"
   ]

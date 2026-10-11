@@ -4,4 +4,9 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A home kitchen with a wooden table, open shelves and herbs on the windowsill
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

@@ -7,21 +7,17 @@ models:
     fields:
       name: string!
       description: text
-      category: artifact | painting | sculpture | document | other
-      image: url
+      category: artifact | document | photograph | textile | other
       period: string
       origin: string
+      image: file
       story: text
       addedOn: date! = TODAY()
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
 pages:
   artifacts:
     crud: Artifact
     search: [name, description, story, period, origin]
-    sortable: [name, period, addedOn]
+    sortable: [name, addedOn, period]
   home:
     route: /
     landing:
@@ -29,4 +25,7 @@ pages:
       footer:
       artifacts:
         records: Artifact
+  privacy:
+    route: /privacy
+    legal: privacy
 navigation: [artifacts]

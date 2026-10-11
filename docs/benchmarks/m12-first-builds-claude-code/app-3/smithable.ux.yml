@@ -4,11 +4,15 @@ theme:
   brand:
     primary: "#0f766e"
 pages:
+  invoices:
+    table:
+      columns: [number, client, issuedOn, dueOn, status, total, balance]
+      sort: -issuedOn
   payments:
     table:
       sort: -paidOn
 tones:
   Invoice.status:
     paid: success
-    overdue: danger
     sent: warning
+    overdue: danger

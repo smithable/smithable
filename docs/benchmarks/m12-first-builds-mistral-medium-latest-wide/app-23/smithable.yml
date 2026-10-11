@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Habit Tracker
+  description: A backend for tracking habits, daily check-ins and streaks.
+models:
+  Habit:
+    fields:
+      name: string!
+      description: text
+      category: health | productivity | personal
+      frequency: daily | weekly | monthly
+      target: int = 1
+      active: bool = true
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date! = TODAY()
+      completed: bool = false
+      notes: text
+  Streak:
+    fields:
+      habit: Habit!
+      startDate: date!
+      endDate: date
+      length: int
+      active: bool = true
+pages:
+  habits:
+    crud: Habit
+  checkIns:
+    crud: CheckIn
+  streaks:
+    crud: Streak
+  team:
+    users: manage
+navigation: [habits, checkIns, streaks, team]

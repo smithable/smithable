@@ -4,7 +4,6 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  member:
-    description: Offers and claims items.
-defaultRole: member
+  admin: all
+  member: { pages: all, create: all }
 admins: [johan@smithable.ai]

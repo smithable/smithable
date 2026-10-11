@@ -1,0 +1,24 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  member:
+    description: A user who manages tasks and notes.
+    pages: [admin]
+    create: all
+    write: all
+    delete: all
+  assistant:
+    description: "The AI assistant's role: reads everything, adds and changes tasks and notes, never deletes."
+    read: all
+    create: [Task, Note]
+    write: [Task, Note]
+defaultRole: member
+api:
+  models: all
+  actions: all
+  assistants: true
+admins: [johan@smithable.ai]

@@ -5,5 +5,5 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member: { pages: all, create: all, write: [Ticket] }
 admins: [johan@smithable.ai]

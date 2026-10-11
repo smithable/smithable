@@ -2,30 +2,27 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Löydä hetki itsellesi
-      subtitle: Katso viikon joogatunnit ja varaa paikkasi verkossa muutamalla klikkauksella.
-      button: Katso tunnit
+      title: Löydä oma tuntisi ja varaa paikkasi
+      subtitle: Katso viikon joogatunnit, tutustu ohjaajiimme ja varaa paikkasi verkossa muutamalla klikkauksella.
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-    classes:
-      title: Tuntimme
-    instructors:
-      title: Ohjaajamme
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
     callToAction:
-      title: Valmis tulemaan matolle?
-      button: Varaa tunti
+      title: Valmis matolle?
     title: Etusivu
-  schedule:
-    title: Tuntikalenteri
-  my-bookings:
-    title: Omat varaukset
-  sessions:
+  tunnit:
     title: Tunnit
-  class-types:
+  tuntityypit:
     title: Tuntityypit
-  instructors:
+  ohjaajat:
     title: Ohjaajat
+  omat-varaukset:
+    title: Omat varaukset
+  aikataulu:
+    title: Aikataulu
+  privacy:
+    title: Tietosuoja
   admin:
     title: Ylläpito
 models:
@@ -40,7 +37,7 @@ models:
       level:
         label: Taso
         values:
-          allLevels: Kaikille tasoille
+          allLevels: Kaikki tasot
           beginner: Aloittelijat
           advanced: Edistyneet
       durationMinutes:
@@ -67,13 +64,13 @@ models:
         label: Alkaa
       capacity:
         label: Paikkoja
-      bookings:
-        label: Varaukset
-      placesLeft:
-        label: Paikkoja jäljellä
   Booking:
     label: Varaus
     pluralLabel: Varaukset
     fields:
       session:
         label: Tunti
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

@@ -5,7 +5,7 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Lends and borrows tools.
+    description: Lends out their tools and borrows from neighbors.
     pages: all
     create: all
 public:

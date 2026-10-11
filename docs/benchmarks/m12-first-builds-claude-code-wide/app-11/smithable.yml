@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Status Board
-  description: See which of our IT systems are down, what is being done, and when they will be back.
+  description: See which of our IT systems are down, what is being fixed and when they are back.
   timezone: Europe/Stockholm
 models:
   Component:
@@ -10,8 +10,6 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
-    access:
-      write: [admin, it]
   Incident:
     fields:
       title: string!
@@ -22,16 +20,12 @@ models:
       resolvedAt: datetime
       summary: text
       updates: IncidentUpdate[]
-    access:
-      write: [admin, it]
   IncidentUpdate:
     fields:
       incident: Incident!
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
-    access:
-      write: [admin, it]
   Maintenance:
     fields:
       title: string!
@@ -39,19 +33,17 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-    access:
-      write: [admin, it]
 pages:
   components:
     crud: Component
   incidents:
     crud: Incident
-    actions: [identified, monitoring, resolve]
     filters: [status, component]
-  updates:
-    crud: IncidentUpdate
+    actions: [identified, monitoring, resolve]
   maintenance:
     crud: Maintenance
+  updates:
+    crud: IncidentUpdate
   overview:
     dashboard:
       open:
@@ -62,6 +54,9 @@ pages:
         count: Component
         where:
           status: [down, degraded]
+      perMonth:
+        count: Incident
+        by: detectedAt
       latest:
         list: Incident
         limit: 5
@@ -74,14 +69,12 @@ actions:
       status: investigating
     set:
       status: identified
-      expectedBackAt:
     add:
       IncidentUpdate:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, it]
-    intent: The cause is found; the incident moves to identified with an expected time back, and an update saying so.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
     when:
@@ -93,7 +86,6 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, it]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -106,7 +98,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved. The system is back.
-    allow: [admin, it]
-    intent: The incident is over and the system is back, with an update saying so.
+        message: This system is back. The incident is resolved.
+    intent: The system is back; the incident is resolved, with an update saying so.
 navigation: [components, incidents, maintenance, updates, overview, team]

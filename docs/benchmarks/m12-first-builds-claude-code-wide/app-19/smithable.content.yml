@@ -1,22 +1,5 @@
 smithableContent: 0.1
-pages:
-  home:
-    hero:
-      title: Fynda på vår loppis
-      subtitle: Lägg upp det du vill sälja med bilder och pris – och hitta något nytt bland grannarnas saker.
-      button: Se alla saker
-      image:
-        src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-    latest:
-      title: Senast upplagt
-    title: Välkommen
-  catalog:
-    title: Saker till salu
-  myItems:
-    title: Mina saker
-  saved:
-    title: Sparade
+language: sv
 models:
   Item:
     label: Sak
@@ -38,7 +21,7 @@ models:
           books: Böcker
           kitchen: Kök
           electronics: Elektronik
-          toys: Leksaker
+          kids: Barn
           other: Övrigt
       condition:
         label: Skick
@@ -46,5 +29,36 @@ models:
           likeNew: Som ny
           good: Bra
           worn: Sliten
+      place:
+        label: Plats
       available:
         label: Till salu
+pages:
+  catalog:
+    title: Loppisen
+  myItems:
+    title: Mina saker
+  saved:
+    title: Sparade
+  review:
+    title: Granska bilder
+  home:
+    title: Välkommen
+    hero:
+      title: Fynda och sälj på vår loppis
+      subtitle: Lägg upp det du inte längre behöver med bilder och pris, och hitta nya favoriter bland grannarnas saker.
+      button: Titta bland sakerna
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    latest:
+      title: Senast upplagt
+    footer:
+      text: Vår loppis – en mötesplats för begagnade fynd.
+  privacy:
+    title: Integritet
+logo:
+  src: images/logo.webp
+  alt: Two offset rounded squares
+  generated: true

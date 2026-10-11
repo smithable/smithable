@@ -4,4 +4,9 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: A florist arranging a bouquet in a small shop
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

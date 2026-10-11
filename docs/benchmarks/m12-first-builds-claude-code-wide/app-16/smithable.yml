@@ -1,83 +1,109 @@
 smithable: 0.1
 app:
   name: Allotment Society
-  description: Keeps track of who has which plot, the waiting list for plots and each member's yearly fee.
+  description: Keeps track of who has which plot, the waiting list and the yearly fees of our allotment society.
+  currency: EUR
+  timezone: Europe/Mariehamn
 models:
+  Plot:
+    fields:
+      number: string! unique
+      size: decimal
+      status: available | let | reserved
+      description: text
   Member:
     fields:
       name: string!
       email: email
       phone: phone
       address: string
+      plot: Plot
       memberSince: date = TODAY()
-      notes: text
-      plots: Plot[]
       fees: Fee[]
-  Plot:
-    fields:
-      number: string! unique
-      size: decimal
-      member: Member
-      status: vacant | let
-      notes: text
-  WaitingListEntry:
-    fields:
-      name: string!
-      email: email
-      phone: phone
-      addedOn: date! = TODAY()
-      status: waiting | offered | allotted | withdrawn
-      notes: text
   Fee:
     fields:
       member: Member!
       year: int!
       amount: money!
-      status: due | paid
+      status: unpaid | paid
       paidOn: date
+  WaitingListEntry:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      message: text
+      addedOn: date = TODAY()
+      status: waiting | offered | allocated | withdrawn
 pages:
   plots:
     crud: Plot
-    search: [number]
-    filters: [status, member]
-    actions: [vacate]
+    search: [number, description]
+    filters: [status]
   members:
     crud: Member
     search: [name, email, phone]
-  waiting-list:
-    crud: WaitingListEntry
-    search: [name, email]
-    filters: [status]
-    actions: [offerPlot, markAllotted, withdraw]
   fees:
     crud: Fee
-    filters: [status, year, member]
+    filters: [year, status]
     actions: [markPaid]
+  waiting-list:
+    crud: WaitingListEntry
+    filters: [status]
+    actions: [offerPlot, allocate, withdraw]
+  overview:
+    dashboard:
+      availablePlots:
+        count: Plot
+        where:
+          status: available
+      waiting:
+        count: WaitingListEntry
+        where:
+          status: waiting
+      unpaidFees:
+        sum: Fee.amount
+        where:
+          status: unpaid
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      availablePlots:
+        records: Plot
+        where:
+          status: available
+      contact:
+        form: WaitingListEntry
+  privacy:
+    route: /privacy
+    legal: privacy
   team:
     users: manage
 actions:
   markPaid:
     on: Fee
     when:
-      status: due
+      status: unpaid
     set:
       status: paid
       paidOn: TODAY()
-    intent: Record that a member has paid the yearly fee.
+    intent: Record that the yearly fee has been paid.
   offerPlot:
     on: WaitingListEntry
     when:
       status: waiting
     set:
       status: offered
-    intent: Note that a plot has been offered to this person.
-  markAllotted:
+    intent: Mark that a plot has been offered to this person.
+  allocate:
     on: WaitingListEntry
     when:
       status: offered
     set:
-      status: allotted
-    intent: Note that the person accepted a plot.
+      status: allocated
+    intent: Mark that the person accepted a plot and leaves the waiting list.
   withdraw:
     on: WaitingListEntry
     when:
@@ -85,10 +111,3 @@ actions:
     set:
       status: withdrawn
     intent: Take the person off the waiting list.
-  vacate:
-    on: Plot
-    when:
-      status: let
-    set:
-      status: vacant
-    intent: Mark a plot as vacant when its member gives it up.

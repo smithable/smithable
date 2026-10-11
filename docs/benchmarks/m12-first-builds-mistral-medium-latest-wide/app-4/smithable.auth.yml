@@ -3,7 +3,7 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  teacher:
-    description: The piano teacher who manages pupils and lessons.
+  admin: all
+  teacher: all
 defaultRole: teacher
 admins: [johan@smithable.ai]

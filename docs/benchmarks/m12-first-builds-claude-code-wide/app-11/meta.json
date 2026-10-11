@@ -3,8 +3,8 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who can post and update outages?",
-    "Besides current outages, what else should the board track?",
-    "Should staff be able to report a problem they notice?"
+    "Who posts and updates incidents on the board?",
+    "Do staff need to sign in to see the board?",
+    "Should the board also show planned maintenance?"
   ]
 }

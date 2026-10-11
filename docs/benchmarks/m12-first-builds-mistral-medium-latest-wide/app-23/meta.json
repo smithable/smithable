@@ -1,0 +1,9 @@
+{
+  "description": "A backend for my habit app: habits, daily check-ins and streaks.",
+  "starter": "records",
+  "wordStarter": "api",
+  "questions": [
+    "Who can see the habits and streaks?",
+    "What details does a habit record hold?"
+  ]
+}

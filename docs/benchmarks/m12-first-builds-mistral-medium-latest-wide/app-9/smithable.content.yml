@@ -1,1 +1,12 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A music room with a piano, guitars on the wall and a warm lamp
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

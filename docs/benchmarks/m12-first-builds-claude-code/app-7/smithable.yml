@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Club Football
-  description: The football club's site with its teams, players, fixtures and results.
+  name: Club Pitch
+  description: A football club's site with its teams, players, fixtures and results.
   timezone: Europe/Mariehamn
 models:
   Team:
     fields:
       name: string!
-      ageGroup: string
+      ageGroup: senior | youth | junior
       coach: string
       description: text
       players: Player[]
@@ -25,8 +25,8 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      location: string
-      status: scheduled | played | postponed | canceled
+      competition: string
+      status: scheduled | played | postponed
       goalsFor: int
       goalsAgainst: int
       report: text
@@ -34,22 +34,21 @@ pages:
   matches:
     crud: Match
     filters: [team, status, venue]
-    search: [opponent, location]
+    search: [opponent, competition]
     actions: [recordResult, postpone]
   teams:
     crud: Team
     search: [name, coach]
   players:
     crud: Player
-    search: [name]
     filters: [team, position]
+    search: [name]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [matches, teams, players]
       footer:
-      upcoming:
+      fixtures:
         records: Match
         where:
           status: scheduled
@@ -57,7 +56,7 @@ pages:
         records: Match
         where:
           status: played
-      ourTeams:
+      squads:
         records: Team
   privacy:
     route: /privacy
@@ -71,7 +70,7 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match that has been played.
+    intent: Enter the final score of a match and mark it played.
   postpone:
     on: Match
     when:
@@ -79,3 +78,4 @@ actions:
     set:
       status: postponed
     intent: Mark a scheduled match as postponed.
+navigation: [matches, teams, players]

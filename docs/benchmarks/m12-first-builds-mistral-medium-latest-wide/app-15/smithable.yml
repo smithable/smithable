@@ -12,6 +12,13 @@ models:
 pages:
   sightings:
     crud: Sighting
-    search: [species, place, observer]
-  team:
-    users: manage
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      sightings:
+        records: Sighting
+  privacy:
+    route: /privacy
+    legal: privacy

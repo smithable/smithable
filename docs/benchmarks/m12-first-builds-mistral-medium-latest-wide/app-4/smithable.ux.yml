@@ -1,1 +1,10 @@
 smithableUx: 0.1
+pages:
+  lessons:
+    table:
+      sort: dayOfWeek
+      columns: [pupil, dayOfWeek, startTime, durationMinutes]
+  practice:
+    table:
+      sort: -date
+      columns: [lesson, date, piece, minutes]
