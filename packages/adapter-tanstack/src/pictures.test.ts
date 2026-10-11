@@ -324,6 +324,33 @@ pages:
   );
 });
 
+test("generated rows refer only to rows a sample file has (a starter's two clients, eight quotes)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Quotes }
+models:
+  Client:
+    fields: { name: string! }
+  Quote:
+    fields: { title: string!, client: Client! }
+pages:
+  quotes: { crud: Quote }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(spec, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples: { Client: [{ name: "Skerry Software" }, { name: "Kallio Design" }] },
+  });
+  const ids = [
+    ...(gen.find((f) => f.path === "src/db/seed.ts")?.content ?? "").matchAll(/clientId: (\d+)/g),
+  ].map((m) => Number(m[1]));
+  expect(ids.length).toBeGreaterThan(2);
+  expect(Math.max(...ids)).toBe(2);
+});
+
 test("a seed with nothing to add imports nothing; a choice of a record with an optional title still has a name", () => {
   const spec = validateSpec({
     path: "smithable.yml",
