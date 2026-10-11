@@ -84,12 +84,21 @@ function filesOf(root: string, under = ""): string[] {
 /** Writes `from` over `dir`: only what differs, each file by a rename over it; what `from` lacks goes. */
 export function sync(from: string, dir: string): void {
   const wanted = new Set(filesOf(from));
-  for (const path of filesOf(dir)) if (!wanted.has(path)) rmSync(join(dir, path), { force: true });
+  const before = filesOf(dir);
+  // The new app's files are written first and the old app's own files removed after: the
+  // preview's dev server serves whichever route tree is on disk, and a page rendered while the
+  // files move must find every module that tree names. With the removals first, the old tree
+  // named a model's module that was already gone ("Failed to load url
+  // /src/generated/item.ts", a replaceable Studio in main's check, 2026-10-11). Written first,
+  // the old tree's modules stay until the new tree and its modules are there.
   for (const path of wanted) {
     const source = readFileSync(join(from, path));
     const target = join(dir, path);
     if (existsSync(target) && statSync(target).isFile() && readFileSync(target).equals(source))
       continue;
+    // A file of the old app where the new one has a folder: it is not wanted, so it goes now.
+    for (let up = dirname(target); up.startsWith(dir) && up !== dir; up = dirname(up))
+      if (existsSync(up) && statSync(up).isFile()) rmSync(up, { force: true });
     mkdirSync(dirname(target), { recursive: true });
     // A file is replaced by a rename over it, never removed first: the preview's dev server
     // keeps a list of the public files it serves, and an unlink followed by an add of the same
@@ -100,6 +109,12 @@ export function sync(from: string, dir: string): void {
       rmSync(target, { recursive: true, force: true });
     writeFileSync(`${target}.incoming`, source, { mode: statSync(join(from, path)).mode });
     renameSync(`${target}.incoming`, target);
+  }
+  for (const path of before) {
+    const target = join(dir, path);
+    // Still a file: one the writes turned into a folder is the new app's now.
+    if (!wanted.has(path) && existsSync(target) && statSync(target).isFile())
+      rmSync(target, { force: true });
   }
   // Folders that are left empty go too (a page's folder under src/routes would still be a route).
   const prune = (under: string): boolean => {
