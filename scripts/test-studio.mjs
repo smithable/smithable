@@ -486,6 +486,8 @@ try {
           await new Promise((r) => setTimeout(r, 1000));
         if (!fits(readFileSync(authFile, "utf8")))
           throw new Error(`no ${what} in smithable.auth.yml:\n${readFileSync(authFile, "utf8")}`);
+        // A change made while another runs is dropped: the next waits for Studio to be done.
+        await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
       };
       await page.getByRole("tab", { name: "Who can" }).click();
       const grid = page.getByRole("region", { name: "Who can" });
@@ -512,7 +514,7 @@ try {
         "pages: all",
       );
       // Private records: changing everyone's customers without seeing them is marked in place.
-      await page.getByLabel("Everyone sees, changes and deletes only their own records").check();
+      await page.getByLabel("Everyone sees, changes and deletes only their own records").click();
       changes++;
       await waitAuth((t) => /defaultAccess: private/.test(t), "defaultAccess: private");
       const unseen = grid.getByText(
@@ -554,7 +556,7 @@ try {
       for (let i = 0; i < changes; i++) {
         const undone = await fetch(`${base}/api/undo`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", "x-smithable": "1" },
           body: "{}",
         });
         if (!undone.ok) throw new Error(`undo answered ${undone.status}`);
