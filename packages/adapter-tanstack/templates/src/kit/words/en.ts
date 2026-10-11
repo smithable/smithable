@@ -189,8 +189,7 @@ export const w = {
   no: "No",
   noActivityInPeriod: "No activity in this period.",
   nobodyLeaveEmpty: "Nobody (leave them empty)",
-  noModelToAsk:
-    "The rules did not read this question, and the app has no model to ask (ASSISTANT_URL).",
+  noModelToAsk: "The app's assistant has no model yet to answer this; ask whoever runs the app.",
   noPlacesLeft: "No places left.",
   nobodyYet: "Nobody yet. Invite the first person above.",
   notAllowed: "You are not allowed to do this.",

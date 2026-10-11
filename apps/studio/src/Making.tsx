@@ -52,7 +52,7 @@ export function Making({
   );
   const spec = useSpec(drafted);
   const sections = useMemo(
-    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins) : []),
+    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
     [spec],
   );
   const [retrying, setRetrying] = useState(false);

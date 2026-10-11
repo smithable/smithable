@@ -2,6 +2,8 @@
 // role and anyone may do, and the roles. Each control applies one operation at once (grant,
 // setPublic, setRoles, …), undoable like any change; the summary stays the map, this the controls.
 import {
+  ASSISTANT_TEXTS,
+  type AssistantTexts,
   type AuthIR,
   type GrantKey,
   humanize,
@@ -9,6 +11,7 @@ import {
   plural,
   type RoleGrants,
   type SpecIR,
+  type Voice,
   validateAuth,
 } from "@smithable/core";
 import { useEffect, useRef, useState } from "react";
@@ -78,7 +81,12 @@ export function WhoCan({
         </ul>
       )}
       {auth.signIn !== "none" && <Roles auth={auth} run={run} />}
-      <Assistant auth={auth} run={run} />
+      <Assistant
+        auth={auth}
+        run={run}
+        texts={spec.content?.assistant}
+        voice={spec.ux?.assistant.voice}
+      />
     </div>
   );
 }
@@ -689,7 +697,18 @@ function Roles({ auth, run }: { auth: AuthIR; run: Run }) {
  * "Ask", the assistant in the app (docs/design/assistant.md §6): who gets it and whether it may
  * change things, written with setAssistant; off unless chosen.
  */
-function Assistant({ auth, run }: { auth: AuthIR; run: Run }) {
+function Assistant({
+  auth,
+  run,
+  texts = {},
+  voice = "plain",
+}: {
+  auth: AuthIR;
+  run: Run;
+  /** Its texts (smithable.content.yml) and its voice (smithable.ux.yml). */
+  texts?: AssistantTexts;
+  voice?: Voice;
+}) {
   const now = auth.assistant;
   const who = !now ? "off" : Array.isArray(now.for) ? "roles" : now.for;
   const roles = auth.roles.map((r) => r.name);
@@ -754,6 +773,39 @@ function Assistant({ auth, run }: { auth: AuthIR; run: Run }) {
           />
         </div>
       )}
+      {now && (
+        <>
+          {ASSISTANT_TEXTS.map((key) => (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <span>{TEXT_LABELS[key]}</span>
+              <Input
+                aria-label={`Ask's ${key}`}
+                defaultValue={texts[key] ?? ""}
+                placeholder={TEXT_HINTS[key]}
+                onBlur={(e) => {
+                  const text = e.target.value.trim();
+                  if (text !== (texts[key] ?? "")) void run("setAssistantTexts", { [key]: text });
+                }}
+                className="w-56"
+              />
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-3">
+            <span>Its voice</span>
+            <Select
+              aria-label="Ask's voice"
+              value={voice}
+              onChange={(e) => void run("setAssistantVoice", { voice: e.target.value })}
+              options={[
+                ["plain", "Plain: short, no pleasantries"],
+                ["friendly", "Friendly"],
+                ["formal", "Formal"],
+              ]}
+              className="w-56"
+            />
+          </div>
+        </>
+      )}
       <p className="text-xs text-muted">
         {who === "anyone"
           ? "Visitors are answered by the wording rules only, never by a model. "
@@ -764,3 +816,16 @@ function Assistant({ auth, run }: { auth: AuthIR; run: Run }) {
     </Block>
   );
 }
+
+const TEXT_LABELS: Record<(typeof ASSISTANT_TEXTS)[number], string> = {
+  name: "Its name",
+  greeting: "Its first line",
+  placeholder: "In the question box",
+  about: "What it is for",
+};
+const TEXT_HINTS: Record<(typeof ASSISTANT_TEXTS)[number], string> = {
+  name: "Ask",
+  greeting: "Ask me about your orders.",
+  placeholder: "How many orders are open?",
+  about: "Finds and counts orders.",
+};

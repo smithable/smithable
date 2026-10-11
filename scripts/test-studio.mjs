@@ -564,6 +564,23 @@ try {
       changes++;
       await waitAuth((t) => /assistant:\n {2}for: signed-in/.test(t), "assistant for signed-in");
       await preview.getByRole("button", { name: "Ask", exact: true }).waitFor({ timeout: 90000 });
+      // Its name from the content file, shown on its button; its voice in the ux file.
+      await asking.getByLabel("Ask's name").fill("Nova");
+      await asking.getByLabel("Ask's name").blur();
+      changes++;
+      const contentFile = join(dir, "smithable.content.yml");
+      for (let i = 0; i < 60 && !/name: Nova/.test(readFileSync(contentFile, "utf8")); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
+      await preview.getByRole("button", { name: "Nova", exact: true }).waitFor({ timeout: 90000 });
+      await asking.getByLabel("Ask's voice").selectOption("friendly");
+      changes++;
+      const uxFile = join(dir, "smithable.ux.yml");
+      for (let i = 0; i < 60 && !/voice: friendly/.test(readFileSync(uxFile, "utf8")); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (!/voice: friendly/.test(readFileSync(uxFile, "utf8")))
+        throw new Error("no voice in the ux file");
+      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
       await asking.getByLabel("Who gets Ask").selectOption("off");
       changes++;
       await waitAuth((t) => !/^assistant:/m.test(t), "no assistant");

@@ -36,7 +36,13 @@ export interface UxIR {
   tones: Record<string, Record<string, Tone>>;
   /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
   aiBadge: boolean;
+  /** Ask's manner (docs/design/ask-defaults.md §2): a fixed set of prompt lines each, plain by default. */
+  assistant: { voice: Voice };
 }
+
+/** The assistant's voices: plain (short, no pleasantries), friendly, formal. */
+export const VOICES = ["plain", "friendly", "formal"] as const;
+export type Voice = (typeof VOICES)[number];
 
 export interface PageUx {
   /** The page's icon in navigation; without it one is chosen from the model's name. */
@@ -222,6 +228,7 @@ export function emptyUx(): UxIR {
     pages: {},
     tones: {},
     aiBadge: true,
+    assistant: { voice: "plain" },
   };
 }
 
@@ -269,13 +276,28 @@ export function validateUx(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: ["smithableUx", "theme", "pages", "tones", "aiBadge"],
+    allowed: ["smithableUx", "theme", "pages", "tones", "aiBadge", "assistant"],
     later: ["menus", "sections"],
   });
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
+    if (key === "assistant")
+      for (const option of checkKeys(
+        ctx,
+        mapEntries(ctx, value, '"assistant"') ?? [],
+        '"assistant"',
+        {
+          allowed: ["voice"],
+        },
+      )) {
+        const voice = readString(ctx, option.value, '"voice" of "assistant"');
+        if ((VOICES as readonly string[]).includes(voice ?? ""))
+          ux.assistant.voice = voice as Voice;
+        else if (voice !== undefined)
+          ctx.error(option.value, "invalid-value", `"voice" is ${VOICES.join(", ")}.`);
+      }
     if (key === "tones") {
       for (const entry of mapEntries(ctx, value, `"tones"`) ?? []) {
         const [modelName = "", fieldName = ""] = entry.key.split(".");
