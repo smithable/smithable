@@ -186,6 +186,37 @@ pages:
   expect(text).not.toContain("an at");
 });
 
+test("no article before a yes/no field, a question word or preposition label, nor twice before a date", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Torget }
+models:
+  Item:
+    fields: { title: string!, summary: text, place: string, available: bool, addedOn: date!, photos: pictures! }
+    review: [photos]
+pages:
+  items: { crud: Item }
+`,
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const content = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\nmodels:\n  Item:\n    fields:\n      summary: { label: About }\n      place: { label: Where }\n      addedOn: { label: Added }\n",
+    },
+    ir,
+  ).content;
+  const text = summarize(ir, undefined, content)
+    .find((s) => s.concept === "model:Item")
+    ?.sentences.join("\n");
+  expect(text).toContain("- about\n");
+  expect(text).toContain("- where\n");
+  expect(text).toContain("- available (yes or no)");
+  expect(text).toContain("- the date added (required)");
+  expect(text).toContain("an item waits until its photos are.");
+});
+
 test("a standard action in words: for which records, and what it sets", () => {
   const ir = validateSpec({
     path: "smithable.yml",
