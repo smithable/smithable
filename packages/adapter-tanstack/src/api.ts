@@ -676,7 +676,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
       files[`src/routes/api/v1/${path}/$id.actions.$action.ts`] =
         `${HEADER}// The standard actions offered on a ${n.label.toLowerCase()}, for programs with a key.
 import { createFileRoute } from "@tanstack/react-router";
-import { ${camelName}ToApi } from "#/generated/api.server";
+import { ${camelName}ToApi } from "#/generated/api.server";${own.some((a) => a.copy) ? `\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";` : ""}
 ${own.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "#/generated/actions/${kebab(a.name)}";` : ""}`).join("\n")}
 import { apiCall, NotFound } from "#/kit/api.server";
 
@@ -688,10 +688,12 @@ export const Route = createFileRoute("/api/v1/${path}/$id/actions/$action")({
           const id = Number(params.id);
           switch (params.action) {
 ${own
-  .map(
-    (a) => `            case ${JSON.stringify(a.name)}:
-              return ${camelName}ToApi(await ${actionNames(a).run}(viewer, id${askedFields(a).length ? `, ${actionNames(a).asks}.parse(body)` : ""}));`,
-  )
+  .map((a) => {
+    const ran = `await ${actionNames(a).run}(viewer, id${askedFields(a).length ? `, ${actionNames(a).asks}.parse(body)` : ""})`;
+    // A copy gives the new record's id: the answer is that record.
+    return `            case ${JSON.stringify(a.name)}:
+              return ${camelName}ToApi(${a.copy ? `(await ${n.data}.get(viewer, ${ran})) as Record<string, any>` : ran});`;
+  })
   .join("\n")}
             default:
               throw new NotFound(\`There is no action "\${params.action}" here.\`);
@@ -807,9 +809,11 @@ function toolsModule(
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const asked = askedFields(action).length > 0;
     // The record by its id or its title, as the other tools take it.
+    const ran = `await ${actionNames(action).run}(keyed(viewer), row.id${asked ? `, ${actionNames(action).asks}.parse(args.input ?? {})` : ""})`;
+    // A copy gives the new record's id: the answer is that record.
     return `    case ${JSON.stringify(action.name)}: {
       const row = await found(KINDS.${model.name}, viewer, args.id, "change");
-      return ${c}ToApi(await ${actionNames(action).run}(keyed(viewer), row.id${asked ? `, ${actionNames(action).asks}.parse(args.input ?? {})` : ""}));
+      return ${c}ToApi(${action.copy ? `(await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any>` : ran});
     }`;
   });
   // Each caller's kinds of record in the words people use, for the wording rules (only what they read).
