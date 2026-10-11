@@ -170,7 +170,16 @@ export function ModelTable<R extends Row>({
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
-  const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
+  // A computed field the server sent is kept: a total over related records is worked out there,
+  // where the records are (a list strips them). One it did not (a related list's rows) is filled in.
+  const shown = ui.compute
+    ? rows.map((row) => {
+        const computed = Object.entries(ui.compute?.(row) ?? {}).filter(
+          ([name]) => (row as Record<string, unknown>)[name] == null,
+        );
+        return { ...row, ...Object.fromEntries(computed) } as R;
+      })
+    : rows;
   const columns = (chosen ?? ui.columns)
     .filter((name) => !(hide as string[]).includes(name))
     .flatMap((name) => ui.fields.filter((f) => f.name === name));

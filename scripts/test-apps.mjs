@@ -2794,6 +2794,11 @@ async function documentFlow(dir, base) {
   try {
     await signInAs(page, base, "admin");
     await open(page, `${base}/invoices`);
+    // The list's totals are the lines' sums, worked out where the lines are (not €0.00).
+    await page
+      .getByRole("row", { name: /2026-001/ })
+      .getByText("€1,700.00")
+      .waitFor({ timeout: 10000 });
     await page.getByRole("cell", { name: "2026-005", exact: true }).click();
     await page.waitForURL(/\/invoices\/\d+$/);
     const id = page.url().match(/\/invoices\/(\d+)$/)?.[1];
