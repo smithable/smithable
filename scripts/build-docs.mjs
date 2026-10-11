@@ -222,9 +222,21 @@ writeFileSync(
     `<h1>Not found</h1>\n<p>That page does not exist. <a href="/">The documentation starts here.</a></p>\n`,
   ),
 );
+// For search engines: every page, and robots.txt naming the list. robots.txt never refuses the
+// pages: a build that must not be indexed says so on each page (SITE_PRERELEASE=1, noindex),
+// which a crawler can only read if it may fetch them.
+writeFileSync(
+  join(out, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${PAGES.map((p) => `  <url><loc>${SITE}${p.out === "index.html" ? "" : p.out}</loc></url>`).join("\n")}
+</urlset>
+`,
+);
+writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}sitemap.xml\n`);
 
 if (problems.length) {
   console.error(`Dead links:\n${problems.map((p) => `  ${p}`).join("\n")}`);
   process.exit(1);
 }
-console.log(`Built ${PAGES.length + 2} files into ${relative(root, out) || out}.`);
+console.log(`Built ${PAGES.length + 4} files into ${relative(root, out) || out}.`);
