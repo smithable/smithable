@@ -117,6 +117,9 @@ const addModel: Operation<{ model: string; fields: Record<string, FieldArg> }> =
   },
 };
 
+/** The shorthand of a list of related records ("InvoiceLine[]"). */
+const isMany = (type: string) => /\[\]\s*$/.test(type);
+
 const addField: Operation<{
   model: string;
   field: string;
@@ -147,14 +150,16 @@ const addField: Operation<{
   },
   positional: ["model", "field", "...type"],
   describe: ({ model, field, type, formula, list }) =>
-    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}${list ? ", shown in its list" : ""}`,
+    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}${list && !isMany(type) ? ", shown in its list" : ""}`,
   destructive: () => false,
   apply({ spec, ux }, { model: m, field: f, type, formula, list }, ir) {
     checkFieldArg(f, formula ? { type, formula } : type);
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
     spec.add(fieldPath(m, f, ir).slice(0, -1), f, formula ? { type, formula } : type);
-    if (!list) return [];
+    // A list of related records is never a column (the record's page shows them), so "list" is
+    // ignored for one rather than refused: a draft asks for every field in its list.
+    if (!list || isMany(type)) return [];
     // Shown in its list (the model's first list page), in the same change: added to the columns
     // the page names, or, where the app picks them and would not pick it, to the ones it picks.
     const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === m);
