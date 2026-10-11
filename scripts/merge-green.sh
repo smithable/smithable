@@ -20,9 +20,13 @@
 # (which regenerates the embedded files) and the snapshot's tests with -u, commits "Rebased on
 # main: generated files refreshed" and pushes, then waits for the new head's checks like any
 # other; CI's units catch a stale snapshot. Any other conflict is refused: rebase it by hand.
-# One pull request at a time across both repositories and every session on this machine: the
-# lock ~/repos/.merge-lock (or $MERGE_LOCK) names the pull request, repository, session and time;
-# others wait for it, and one older than 60 minutes is taken as stale. SESSION names the caller.
+# The lock ~/repos/.merge-lock (or $MERGE_LOCK), shared with every session and smithable-cloud's
+# merge-green, is held only while this script changes something: the plain documents' scan and
+# merge, the rebase of generated files and its push, bringing a pull request up to date. Waiting
+# for checks holds nothing (a full check queued on the one runner held it for an hour,
+# 2026-10-11); GitHub's auto-merge merges when they pass. The lock names the pull request,
+# repository, session and time; one untouched for 60 minutes is taken as stale. SESSION names
+# the caller.
 # Usage: scripts/merge-green.sh <pr-number> [--repo owner/name]
 set -euo pipefail
 pr="${1:?usage: merge-green.sh <pr-number> [--repo owner/name]}"
@@ -44,6 +48,7 @@ release() {
 trap release EXIT
 # Stopped by a signal, the script still releases the lock (bash runs the EXIT trap only on exit).
 trap 'exit 130' INT TERM HUP
+take_lock() {
 waited=0
 until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
   # A holder refreshes the lock every minute, so one untouched for an hour was left behind; and
@@ -62,6 +67,11 @@ done
 # Its sleep, stopped at the release, would otherwise print "Terminated" after the outcome.
 ( while sleep 60; do touch "$lock"; done ) 2>/dev/null &
 refresher=$!
+}
+drop_lock() {
+  release
+  refresher=""
+}
 # Whether the head has checks listed. gh exits non-zero while any is pending (8) or has failed
 # (1), so its output, not its status, says whether there are any (pipefail would hide them).
 has_checks() { [ -n "$(gh pr checks "$pr" "${repo[@]}" 2>/dev/null || true)" ]; }
@@ -100,6 +110,7 @@ plain_docs() {
   return 0
 }
 if plain_docs; then
+  take_lock
   [ "$(gh pr view "$pr" --json mergeable -q .mergeable)" = CONFLICTING ] && refuse "it has conflicts: rebase it."
   docker info >/dev/null 2>&1 || refuse "plain documents merge after a scan for secrets, which needs Docker running."
   rules=$(mktemp)
@@ -166,11 +177,14 @@ for attempt in 1 2 3 4 5 6 7 8; do
     sleep 5
   done
   if [ "$merge_state" = DIRTY ]; then
+    take_lock
     rebase_generated || refuse "it has conflicts: rebase it."
+    drop_lock
     continue
   fi
   if [ "$merge_state" = BEHIND ]; then
     echo "#$pr is behind main: updating it."
+    take_lock
     before=$(head_sha)
     gh pr update-branch "$pr" "${repo[@]}"
     # Until GitHub has the new head, the checks it shows are the old head's, green and finished.
@@ -178,6 +192,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
       [ "$(head_sha)" != "$before" ] && break
       sleep 5
     done
+    drop_lock
   fi
   # A head's checks are listed only once a runner takes its job, which can take a long while when
   # other sessions' runs fill the runners; a workflow run for the head means they are coming.
@@ -202,7 +217,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
   for i in $(seq 360); do
     # gh's own exit status is not asked here: it is 1 for a failed check and 8 for a pending
     # one, and with pipefail that made a failed required check look like one not yet listed,
-    # so the script waited its hour with the merge lock held instead of refusing.
+    # so the script waited its hour (then with the merge lock held) instead of refusing.
     # The head's checks, one line each: name, status, conclusion. The required check is "check",
     # made when a run's other jobs end; a run GitHub cancelled (a newer run for the same head, or
     # no runner) leaves one that `gh pr checks` lists as failed yet exits 0 on, so a PR opened
@@ -220,7 +235,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
     fi
     # A run GitHub itself cancelled (its runners were not to be had, 2026-10-05) leaves the
     # required check cancelled and nothing pending: it is never reported, and waiting on it held
-    # the merge lock for an hour. A check cancelled by a newer run still has that run's pending.
+    # the merge lock for an hour (when waiting still held it). A check cancelled by a newer run still has that run's pending.
     if [ "$(gh pr view "$pr" "${repo[@]}" --json statusCheckRollup --jq '[.statusCheckRollup[]|select(.name=="check")] | (length > 0 and all(.conclusion=="CANCELLED"))' 2>/dev/null)" = true ]; then
       gh pr checks "$pr" "${repo[@]}" || true
       refuse "its run was cancelled by GitHub. Run it again (gh run rerun <run id>, from gh run list --branch <branch>) and merge again."
