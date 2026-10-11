@@ -5,6 +5,10 @@ exports[`the examples > booking is valid with its auth file 1`] = `
   "admins": [
     "owner@stillwater.example",
   ],
+  "assistant": {
+    "for": "signed-in",
+    "may": "read",
+  },
   "defaultAccess": "private",
   "defaultRole": "member",
   "public": {
@@ -62,6 +66,10 @@ exports[`the examples > crm is valid with its auth file 1`] = `
   "admins": [
     "owner@acme.example",
   ],
+  "assistant": {
+    "for": "signed-in",
+    "may": "read",
+  },
   "defaultAccess": "shared",
   "defaultRole": "sales",
   "public": {
@@ -102,6 +110,10 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
   "admins": [
     "owner@invoicely.example",
   ],
+  "assistant": {
+    "for": "signed-in",
+    "may": "read",
+  },
   "defaultAccess": "private",
   "defaultRole": "member",
   "public": {
