@@ -4,7 +4,7 @@
   "wordStarter": "records",
   "questions": [
     "Kuka sovellusta käyttää?",
-    "Mitä asiakkaat tai muut vierailijat saavat nähdä kirjautumatta?",
+    "Saako asiakas nähdä jotain kirjautumatta?",
     "Mitä huoltotyöhön kirjataan?"
   ],
   "lang": "fi"

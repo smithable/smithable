@@ -2,20 +2,11 @@ smithableUx: 0.1
 pages:
   leads:
     table:
-      sort: -followUpDate
+      sort: followUpDate
     form:
-      fieldOrder: [name, company, email, phone, status, source, assignee, followUpDate, notes]
-      columns: 2
+      sections: [{ name: contact, fields: [name, email, phone, company] }, { name: details, fields: [status, source, notes, assignee, followUpDate] }]
   deals:
     table:
       sort: -closeDate
     form:
-      fieldOrder: [name, lead, value, status, closeDate, assignee, notes]
-      columns: 2
-tones:
-  Lead.status:
-    qualified: success
-    lost: danger
-  Deal.status:
-    won: success
-    lost: danger
+      sections: [{ name: details, fields: [name, customer, value, status, closeDate, notes] }, { name: assignment, fields: [assignee, lead] }]

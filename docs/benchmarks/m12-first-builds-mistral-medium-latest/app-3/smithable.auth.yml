@@ -3,7 +3,12 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
+  admin: all
   member:
-    description: A freelancer using the app.
+    description: A freelancer using Invoicely.
+    pages: all
+    create: all
+public:
+  pages: [home]
 defaultRole: member
 admins: [johan@smithable.ai]

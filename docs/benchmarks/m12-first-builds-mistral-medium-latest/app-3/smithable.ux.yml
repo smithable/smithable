@@ -1,17 +1,26 @@
 smithableUx: 0.1
 pages:
   invoices:
-    table:
-      sort: -issuedOn
     form:
       columns: 2
+    table:
+      sort: -issuedOn
   clients:
     table:
-      sort: name
-      columns: [name, email, vatNumber]
+      columns: [name, email, address]
+      below:
+        name: email
+    form:
+      columns: 2
   invoice-lines:
     table:
       columns: [invoice, description, quantity, unitPrice, amount]
+    form:
+      columns: 2
+  settings:
+    form:
+      sections: [{ name: business, fields: [businessName, vatNumber] }, { name: payment, fields: [iban, paymentTermDays, invoiceFooter] }]
+      columns: 2
 tones:
   Invoice.status:
     paid: success

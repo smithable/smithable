@@ -4,9 +4,11 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Runs the status board and the team.
+  admin: all
   staff:
     description: Writes incidents and their updates.
+    pages: [overview, incidents, updates, maintenance, components]
+    create: all
+    write: all
 defaultRole: staff
 admins: [johan@smithable.ai]

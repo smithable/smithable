@@ -12,8 +12,8 @@ models:
     fields:
       name: string!
       description: text
-      durationMinutes: int! = 30
-      price: money!
+      durationMinutes: int! = 60
+      price: money
   TimeSlot:
     fields:
       stylist: Stylist!
@@ -30,7 +30,9 @@ models:
       customerName: string!
       customerEmail: email!
       customerPhone: phone
-      notes: text
+    capacity:
+      per: timeSlot
+      max: timeSlot.capacity
 pages:
   stylists:
     crud: Stylist
@@ -38,7 +40,7 @@ pages:
     crud: Service
   time-slots:
     crud: TimeSlot
-  my-bookings:
+  bookings:
     crud: Booking
   home:
     route: /
@@ -49,6 +51,6 @@ pages:
         records: Stylist
       services:
         records: Service
-  book-now:
-    crud: TimeSlot
-    filters: [stylist, service, startsAt]
+  privacy:
+    route: /privacy
+    legal: privacy

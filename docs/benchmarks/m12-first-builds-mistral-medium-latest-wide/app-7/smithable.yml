@@ -6,14 +6,24 @@ models:
   Item:
     fields:
       title: string!
-      photos: pictures
+      photos: pictures!
       description: text!
       price: money
       category: furniture | bikes | electronics | sports | kids | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
+    review: [photos]
 pages:
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+      latest:
+        records: Item
+        where:
+          available: true
   catalog:
     route: /
     crud: Item
@@ -28,11 +38,9 @@ pages:
   saved:
     crud: Item
     favorites: only
-  home:
-    route: /welcome
-    landing:
-      hero:
-      footer:
-      latest:
-        records: Item
-navigation: [catalog, myItems, saved]
+  review:
+    review: all
+  privacy:
+    route: /privacy
+    legal: privacy
+navigation: [catalog, myItems, saved, review]

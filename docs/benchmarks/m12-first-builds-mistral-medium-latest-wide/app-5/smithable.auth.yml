@@ -2,4 +2,13 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: A photographer managing their invoices.
+    pages: [invoices, clients]
+    create: [Invoice, Client]
+    write: [Invoice, Client]
+    delete: [Invoice, Client]
+defaultRole: member
 admins: [johan@smithable.ai]

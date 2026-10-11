@@ -1,17 +1,13 @@
 smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
 tones:
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
-pages:
-  invoices:
-    table:
-      sort: -issuedOn
-  households:
-    table:
-      sort: name
-    icon: home
 theme:
   preset: modern
   brand:

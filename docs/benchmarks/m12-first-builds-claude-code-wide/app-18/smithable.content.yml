@@ -1,4 +1,5 @@
 smithableContent: 0.1
+language: sv
 pages:
   offerter:
     title: Offerter
@@ -10,8 +11,8 @@ pages:
     title: Offertrader
   fakturarader:
     title: Fakturarader
-  oversikt:
-    title: Översikt
+  team:
+    title: Användare
 models:
   Customer:
     label: Kund
@@ -25,16 +26,20 @@ models:
         label: Telefon
       address:
         label: Adress
+      quotes:
+        label: Offerter
+      invoices:
+        label: Fakturor
   Quote:
     label: Offert
     pluralLabel: Offerter
     fields:
       number:
-        label: Nummer
+        label: Offertnummer
       customer:
         label: Kund
       title:
-        label: Arbete
+        label: Uppdrag
       issuedOn:
         label: Datum
       validUntil:
@@ -44,8 +49,12 @@ models:
         values:
           draft: Utkast
           sent: Skickad
-          accepted: Godkänd
-          declined: Nekad
+          accepted: Accepterad
+          declined: Avböjd
+      lines:
+        label: Rader
+      total:
+        label: Summa
   QuoteLine:
     label: Offertrad
     pluralLabel: Offertrader
@@ -81,6 +90,10 @@ models:
           sent: Skickad
           paid: Betald
           overdue: Förfallen
+      lines:
+        label: Rader
+      total:
+        label: Summa
   InvoiceLine:
     label: Fakturarad
     pluralLabel: Fakturarader
@@ -95,3 +108,18 @@ models:
         label: À-pris
       amount:
         label: Belopp
+actions:
+  sendQuote:
+    label: Markera som skickad
+  acceptQuote:
+    label: Accepterad
+  declineQuote:
+    label: Avböjd
+  sendInvoice:
+    label: Markera som skickad
+  markPaid:
+    label: Markera som betald
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

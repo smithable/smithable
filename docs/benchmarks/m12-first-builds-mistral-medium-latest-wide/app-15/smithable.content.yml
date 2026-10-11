@@ -1,1 +1,12 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A path through a pine forest with low sunlight between the trunks
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A bird in flight
+  generated: true

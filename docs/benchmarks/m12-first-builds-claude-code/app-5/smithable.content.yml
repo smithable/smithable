@@ -1,4 +1,11 @@
 smithableContent: 0.1
+models:
+  Ingredient:
+    fields:
+      category:
+        values:
+          fruitAndNuts: Fruit and nuts
 logo:
   src: images/logo.webp
-  alt: A water drop
+  alt: A parcel box
+  generated: true

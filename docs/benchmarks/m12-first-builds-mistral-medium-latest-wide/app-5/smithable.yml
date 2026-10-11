@@ -7,35 +7,25 @@ models:
       name: string!
       email: email
       phone: phone
-      address: text
-  Shoot:
-    fields:
-      name: string!
-      client: Client!
-      date: date!
-      location: string
-      description: text
   Invoice:
     fields:
       number: string! unique
       client: Client!
-      shoot: Shoot
       issuedOn: date!
       dueOn: date
-      status: draft | sent | overdue | paid
-      total: money!
-      notes: text
+      status: draft | sent | paid | overdue
+      total: money
+      contract: file
+      lines: text
 pages:
   clients:
     crud: Client
-    search: [name, email]
-  shoots:
-    crud: Shoot
   invoices:
     crud: Invoice
     actions: [markSent, markPaid]
-    filters: [status, client]
-    search: [number]
+    filters: [client, status]
+    sortable: [number, issuedOn, dueOn, total]
+    search: [number, client]
 actions:
   markSent:
     on: Invoice

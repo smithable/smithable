@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
   name: Min Frisörsalong
-  description: Onlinebokning för frisörsalong där kunder kan boka tid själva.
-  currency: SEK
-  timezone: Europe/Stockholm
+  description: Bokningssystem för min frisörsalong där kunder kan boka tid själva på nätet.
 models:
   Service:
     fields:
@@ -11,16 +9,12 @@ models:
       description: text
       durationMinutes: int! = 30
       price: money!
-    access:
-      delete: [admin]
   Stylist:
     fields:
       name: string!
       bio: text
       portrait: picture
-    access:
-      delete: [admin]
-  Session:
+  TimeSlot:
     fields:
       service: Service!
       stylist: Stylist!
@@ -30,40 +24,53 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
-    access:
-      delete: [admin]
   Booking:
     fields:
-      session: Session! unique
+      timeSlot: TimeSlot! unique
       customerName: string!
       customerEmail: email!
       customerPhone: phone
+      notes: text
     capacity:
-      per: session
-      max: session.capacity
+      per: timeSlot
+      max: timeSlot.capacity
 pages:
-  services:
+  tjanster:
     crud: Service
-    access: [admin]
-  stylists:
+  stylister:
     crud: Stylist
-    access: [admin]
-  sessions:
-    crud: Session
-    access: [admin]
-  bookings:
+  tider:
+    crud: TimeSlot
+  mina-bokningar:
     crud: Booking
-  home:
+    mine: true
+  hem:
     route: /
     landing:
       hero:
       footer:
-      services:
+      tjanster:
         records: Service
-      stylists:
+      stylister:
         records: Stylist
-      contact:
-  schedule:
+  integritetspolicy:
+    route: /integritetspolicy
+    legal: privacy
+  schema:
     calendar:
-      model: Session
+      model: TimeSlot
       starts: startsAt
+outgoing:
+  bokningGjord:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bokningAndrad:
+    when: Booking changed
+    to: mail
+    recipient: owner
+  bokningAvbokad:
+    when: Booking deleted
+    to: mail
+    recipient: owner
+navigation: [hem, schema, tjanster, stylister, mina-bokningar]

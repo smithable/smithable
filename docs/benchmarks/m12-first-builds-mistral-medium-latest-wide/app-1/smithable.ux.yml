@@ -1,1 +1,5 @@
 smithableUx: 0.1
+pages:
+  quotes:
+    table:
+      sort: -issuedOn

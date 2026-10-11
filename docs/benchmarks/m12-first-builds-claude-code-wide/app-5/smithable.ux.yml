@@ -4,12 +4,15 @@ pages:
     table:
       sort: -date
     icon: calendar
+  invoices:
+    icon: receipt
 tones:
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
+  Shoot.status:
+    done: success
+    canceled: danger
 theme:
   preset: minimal
-  brand:
-    primary: "#1f2937"

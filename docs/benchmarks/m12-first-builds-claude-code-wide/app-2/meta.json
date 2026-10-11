@@ -3,8 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Should everyone on the team see every lead and deal, or only the ones assigned to them?",
-    "What should a deal hold besides the client?",
+    "How do leads and deals relate?",
+    "What should a deal hold besides its stage?",
     "How should follow-ups work?"
   ]
 }

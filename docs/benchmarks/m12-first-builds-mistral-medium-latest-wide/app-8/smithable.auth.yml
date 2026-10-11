@@ -1,6 +1,15 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
 defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Offers and claims items.
+    pages: all
+    create: all
+public:
+  pages: [home, catalog]
+  read: [Item]
+defaultRole: member
 admins: [johan@smithable.ai]

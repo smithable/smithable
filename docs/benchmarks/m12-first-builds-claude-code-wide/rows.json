@@ -4,19 +4,23 @@
     "starter": "invoicing",
     "created": true,
     "typecheck": true,
-    "tokens": 25630,
-    "tokensIn": 23636,
-    "tokensOut": 1994,
-    "cost": 0.0582,
+    "tokens": 65524,
+    "tokensIn": 62644,
+    "tokensOut": 2880,
+    "cost": 0.1056,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
-    "seconds": 33,
-    "summary": "Translation Clients\n  Keep track of my translation clients, the quotes I send them and the payments they make.\n\nPages\n  - Clients (lists clients; search by name, company or email)\n  - Quotes (lists quotes; filter by status or client; “Mark accepted”; “Mark declined”)\n  - Payments (lists payments)\n  - Overview (a dashboard: open quotes, accepted quotes, received and latest payments)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email\n  - a phone\n  - a company\n  - notes\n  Each client lists its quotes.\n  Each client lists its payments.\n\nQuotes\n  Quotes have:\n  - a client (a client, required)\n  - a description (required)\n  - a source language\n  - a target language\n  - a word count (a whole number)\n  - an amount (an amount, required)\n  - quoted on (a date, required, today by default)\n  - status (sent, accepted or declined, sent by default)\n  Each quote lists its payments.\n\nPayments\n  Payments have:\n  - a client (a client, required)\n  - a quote (a quote)\n  - an amount (an amount, required)\n  - paid on (a date, required, today by default)\n  - notes\n\nMark accepted\n  For a quote that is sent; sets status to accepted.\n  The client accepted the quote.\n\nMark declined\n  For a quote that is sent; sets status to declined.\n  The client declined the quote.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 97 files (97 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-1/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nclients 9 columns 0 indexes 1 fks\npayments 9 columns 0 indexes 3 fks\nquotes 12 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_majestic_xavin.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-1. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-1\n  smithable run\n\n/tmp/smithable-bench-m12-4VaGel/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132\n\t\treturn this.stmt.run(...params);\n\t\t                 ^\nSqliteError: FOREIGN KEY constraint failed\n    at PreparedQuery.run (/tmp/smithable-bench-m12-4VaGel/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)\n    at QueryPromise.run (/tmp/smithable-bench-m12-4VaGel/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)\n    at <anonymous> (/tmp/smithable-bench-m12-4VaGel/app-1/src/db/seed.ts:29:6)\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'\n}\n\nNode.js v24.21.0\nCould not add sample data; the app works without it.",
+    "calls": 2,
+    "seconds": 34,
+    "summary": "Lingua Ledger\n  A freelance translator's record of clients, the quotes sent to them and the payments received.\n\nPages\n  - Clients (lists clients; search by name, email or company)\n  - Quotes (lists quotes; filter by client, status or quoted on; “Mark sent”; “Mark accepted”; “Mark declined”)\n  - Overview (a dashboard: awaiting answer, accepted, latest quotes and received)\n  - Payments (lists payments; filter by client, quote or paid on)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email\n  - a phone\n  - a company\n  - address\n  - notes\n  Each client lists its quotes.\n  Each client lists its payments.\n\nQuotes\n  Quotes have:\n  - a title (required)\n  - a client (a client, required)\n  - a source language\n  - a target language\n  - a word count (a whole number)\n  - an amount (an amount, required)\n  - quoted on (a date, required, today by default)\n  - a deadline (a date)\n  - status (draft, sent, accepted or declined, draft by default)\n  - notes\n  Each quote lists its payments.\n  The paid is calculated as the total amount of its payments.\n\nPayments\n  Payments have:\n  - a client (a client, required)\n  - a quote (a quote)\n  - an amount (an amount, required)\n  - paid on (a date, required, today by default)\n  - a method (bank transfer, card, paypal, cash or other, bank transfer by default)\n  - a note\n\nMark sent\n  For a quote that is draft; sets status to sent.\n  The quote went to the client.\n\nMark accepted\n  For a quote that is sent; sets status to accepted.\n  The client accepted the quote.\n\nMark declined\n  For a quote that is sent; sets status to declined.\n  The client turned the quote down.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 115 files (115 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-1. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-1\n  smithable studio\n\nor only run the app with smithable run.\n\n/tmp/smithable-bench-m12-G0aRVT/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132\n\t\treturn this.stmt.run(...params);\n\t\t                 ^\nSqliteError: FOREIGN KEY constraint failed\n    at PreparedQuery.run (/tmp/smithable-bench-m12-G0aRVT/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)\n    at QueryPromise.run (/tmp/smithable-bench-m12-G0aRVT/app-1/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)\n    at <anonymous> (/tmp/smithable-bench-m12-G0aRVT/app-1/src/db/seed.ts:29:6)\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'\n}\n\nNode.js v24.21.0\nCould not add sample data; the app works without it.",
     "error": "",
     "meta": {
       "wordStarter": "crm",
-      "questions": ["What should each quote hold?", "How do you want to record what clients paid?"]
+      "questions": [
+        "How do you price a quote?",
+        "Should a quote record the job details too?",
+        "How do payments relate to quotes?"
+      ]
     }
   },
   {
@@ -24,21 +28,21 @@
     "starter": "crm",
     "created": true,
     "typecheck": false,
-    "tokens": 25912,
-    "tokensIn": 23578,
-    "tokensOut": 2334,
-    "cost": 0.0645,
+    "tokens": 33263,
+    "tokensIn": 30885,
+    "tokensOut": 2378,
+    "cost": 0.068,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 33,
-    "summary": "Agency Pipeline\n  A sales pipeline for our web agency: leads, deals and who follows up when.\n\nPages\n  - Deals (lists deals; search by title; “Mark won”; “Mark lost”)\n  - Leads (lists leads; search by company, contact name or email; “Qualify”; “Disqualify”)\n  - Follow ups (a calendar of deals by week or month)\n  - Overview (a dashboard: open pipeline, open deals, won deals and new leads)\n  - Team (who has access: invite people, change roles, remove users)\n\nLeads\n  Leads have:\n  - a company (required)\n  - a contact name\n  - an email\n  - a phone\n  - a website (a web address)\n  - a source (referral, website, outreach, event or other, referral by default)\n  - status (new, contacted, qualified or disqualified, new by default)\n  - a next follow up (a date)\n  - notes\n  Each lead can have an assigned to (a user).\n  Each lead lists its deals.\n  Only admins can delete leads.\n\nDeals\n  Deals have:\n  - a title (required)\n  - a lead (a lead, required)\n  - a stage (proposal, negotiation, won or lost, proposal by default)\n  - a value (an amount)\n  - a next follow up (a date)\n  - an expected close (a date)\n  - closed at (a date)\n  - a lost reason\n  - notes\n  Each deal can have an assigned to (a user).\n  Only admins can delete deals.\n\nQualify\n  For a lead that is new or contacted; sets status to qualified.\n  Mark a lead as a real sales opportunity.\n\nDisqualify\n  For a lead that is new, contacted or qualified; sets status to disqualified.\n  Drop a lead that is not a fit.\n\nMark won\n  For a deal that is proposal or negotiation; sets stage to won and closed at to today.\n  Close a deal as won.\n\nMark lost\n  For a deal that is proposal or negotiation; sets stage to lost and closed at to today; asks for the lost reason.\n  Close a deal as lost, with the reason.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - sales (Works with leads and deals)\n  New users get the sales role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 99 files (99 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-2/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ndeals 14 columns 0 indexes 3 fks\ninvitation 7 columns 2 indexes 1 fks\nleads 14 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_massive_sway.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-2. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-2\n  smithable run\n/tmp/smithable-bench-m12-4VaGel/app-2/smithable.yml:47:14  warning  Page \"follow-ups\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".",
+    "seconds": 30,
+    "summary": "Agency Pipeline\n  A sales pipeline for a small web agency: leads, deals and who follows up when.\n\nPages\n  - Leads (lists leads; search by company, contact name or email)\n  - Deals (lists deals; search by title; “Mark won”; “Mark lost”)\n  - Follow-ups (lists follow-ups; “Mark done”)\n  - Schedule (a calendar of follow ups by week or month)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nLeads\n  Leads have:\n  - a company (required)\n  - a contact name\n  - an email\n  - a phone\n  - a website (a web address)\n  - a source (referral, website, event, outreach or other, referral by default)\n  - status (new, contacted, qualified or disqualified, new by default)\n  - notes\n  Each lead can have an account manager (a user).\n  Each lead lists its deals.\n  Each lead lists its follow-ups.\n  The account manager owns the lead.\n  Deleted leads stay in the trash for thirty days, where they can be restored.\n\nDeals\n  Deals have:\n  - a title (required)\n  - a lead (a lead, required)\n  - a stage (proposal, negotiation, won or lost, proposal by default)\n  - a value (an amount)\n  - an expected close (a date)\n  - notes\n  Each deal can have an account manager (a user).\n  The account manager owns the deal.\n  Deleted deals stay in the trash for thirty days, where they can be restored.\n\nFollow-ups\n  Follow-ups have:\n  - a lead (a lead, required)\n  - due on (a date, required)\n  - a note (required)\n  - status (open or done, open by default)\n  Each follow-up can have an assignee (a user).\n  The assignee owns the follow-up.\n\nMark won\n  For a deal that is proposal or negotiation; sets stage to won.\n  Mark a deal as won.\n\nMark lost\n  For a deal that is proposal or negotiation; sets stage to lost.\n  Mark a deal as lost.\n\nMark done\n  For a follow-up that is open; sets status to done.\n  Mark a follow-up as done.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - sales (Works with leads, deals and follow-ups): opens the leads page, the deals page, the follow ups page and the schedule page; adds every kind of record; changes everyone's records\n  New users get the sales role.\nPictures from the Smithable image library: logo.webp.\nGenerated 121 files (121 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-2. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-2\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-2/smithable.yml:53:15  warning  Page \"schedule\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".",
     "error": "",
     "meta": {
       "wordStarter": "crm",
       "questions": [
-        "Should everyone on the team see every lead and deal, or only the ones assigned to them?",
-        "What should a deal hold besides the client?",
+        "How do leads and deals relate?",
+        "What should a deal hold besides its stage?",
         "How should follow-ups work?"
       ]
     }
@@ -48,22 +52,22 @@
     "starter": "booking",
     "created": true,
     "typecheck": true,
-    "tokens": 26206,
-    "tokensIn": 24024,
-    "tokensOut": 2182,
-    "cost": 0.0651,
+    "tokens": 33570,
+    "tokensIn": 31443,
+    "tokensOut": 2127,
+    "cost": 0.0675,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 32,
-    "summary": "Salon Booking\n  Online booking for a hair salon where customers pick a stylist and a free time themselves.\n\nPages\n  - Home (a landing page: hero, services, stylists, faq, call to action and footer)\n  - Free times (a calendar of slots by week or month)\n  - My bookings (lists bookings)\n  - Slots (lists slots; filter by stylist or starts at; only for admins)\n  - Stylists (lists stylists; only for admins; visitors see stylists on the Home page)\n  - Services (lists services; only for admins; visitors see services on the Home page)\n  - Admin (every kind of record, to find, open, change and delete)\n\nServices\n  Services have:\n  - a name (required)\n  - a summary\n  - duration minutes (a whole number, required, 45 by default)\n  Only admins can add services.\n\nStylists\n  Stylists have:\n  - a name (required)\n  - a bio\n  Only admins can add stylists.\n\nSlots\n  Slots have:\n  - a stylist (a stylist, required)\n  - starts at (a date and time, required)\n  Each slot lists its bookings.\n  The places left is calculated as 1 minus the number of its bookings.\n  Only admins can add slots.\n\nBookings\n  Bookings have:\n  - a slot (a slot, required, unique)\n  - a service (a service, required)\n  - a note\n  At most 1 bookings per slot.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Salon staff. Manage stylists, services and free times)\n  - customer (A customer who books appointments)\n  New users get the customer role.\n  Open to anyone without signing in: the home page, the schedule page, reading services, reading stylists and reading slots.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 113 files (113 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-3/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbookings 7 columns 1 indexes 3 fks\nservices 7 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nslots 7 columns 0 indexes 2 fks\nstylists 6 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_grey_madame_web.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-3. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-3\n  smithable run\n/tmp/smithable-bench-m12-4VaGel/app-3/smithable.yml:53:14  warning  Page \"schedule\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".\n/tmp/smithable-bench-m12-4VaGel/app-3/smithable.auth.yml:6:11  warning  Visitors can't open my-bookings from the home hero's shortcuts: list it under public.pages, or choose another page.",
+    "seconds": 28,
+    "summary": "Cut & Comb\n  Online booking for a hair salon, where customers pick a stylist and a free time themselves.\n\nPages\n  - Home (a landing page: hero, services, stylists, faq, call to action and footer)\n  - Schedule (a calendar of slots by week or month)\n  - My bookings (lists bookings)\n  - Slots (lists slots; filter by stylist or starts at; only for admins)\n  - Stylists (lists stylists; only for admins; visitors see stylists on the Home page)\n  - Services (lists services; only for admins; visitors see services on the Home page)\n  - Admin (every kind of record, to find, open, change and delete; only for admins)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nServices\n  Services have:\n  - a name (required)\n  - a summary\n  - duration minutes (a whole number, required, 45 by default)\n  - a price (an amount)\n\nStylists\n  Stylists have:\n  - a name (required)\n  - a bio (formatted text)\n  - a portrait (picture)\n\nSlots\n  Slots have:\n  - a stylist (a stylist, required)\n  - starts at (a date and time, required)\n  - duration minutes (a whole number, required, 45 by default)\n  - a capacity (a whole number, required, 1 by default)\n  Each slot lists its bookings.\n  The places left is calculated as the capacity minus the number of its bookings.\n\nBookings\n  Bookings have:\n  - a slot (a slot, required, unique)\n  - a service (a service)\n  - a note\n  At most the slot's capacity bookings per slot.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (A customer who books appointments): opens the my bookings page; adds bookings\n  New users get the member role.\n  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading services, reading stylists and reading slots.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 142 files (142 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-3. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-3\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-3/smithable.yml:52:14  warning  Page \"schedule\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".\n/tmp/smithable-bench-m12-G0aRVT/app-3/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "booking",
       "questions": [
-        "Do customers need an account to book, or can they book as guests?",
-        "Do customers also choose a service (e.g. cut, color) that sets how long the appointment is and what it costs?",
-        "Who manages the stylists' working hours and appointments?"
+        "Do customers need an account to book?",
+        "Do customers also pick a service, such as a cut, colour or beard trim, with its own length and price?",
+        "Who manages stylists' working hours and appointments?"
       ]
     }
   },
@@ -72,22 +76,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 24518,
-    "tokensIn": 22935,
-    "tokensOut": 1583,
-    "cost": 0.0444,
+    "tokens": 31445,
+    "tokensIn": 30215,
+    "tokensOut": 1230,
+    "cost": 0.0397,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 25,
-    "summary": "Piano Lessons\n  A piano teacher's pupils, their weekly lesson times and the pieces each one practises.\n\nPages\n  - Pupils (lists pupils; search by name or notes; filter by lesson day, level or status)\n  - Pieces (lists pieces; search by title or composer; filter by pupil or status; “Start polishing”; “Mark done”)\n\nPupils\n  Pupils have:\n  - a name (required)\n  - a lesson day (monday, tuesday, wednesday, thursday, friday, saturday or sunday, monday by default)\n  - a lesson time\n  - lesson minutes (a whole number, 30 by default)\n  - a level (beginner, intermediate or advanced, beginner by default)\n  - status (active, paused or left, active by default)\n  - an email\n  - a phone\n  - notes\n  Each pupil lists its pieces.\n\nPieces\n  Pieces have:\n  - a pupil (a pupil, required)\n  - a title (required)\n  - a composer\n  - status (learning, polishing or done, learning by default)\n  - started on (a date, today by default)\n  - practice notes\n\nStart polishing\n  For a piece that is learning; sets status to polishing.\n  Mark that the pupil knows the notes and is now polishing the piece.\n\nMark done\n  For a piece that is learning or polishing; sets status to done.\n  Mark a piece as finished.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 88 files (88 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-4/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\npieces 10 columns 0 indexes 2 fks\npupils 13 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_puzzling_magma.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-4. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-4\n  smithable run",
+    "seconds": 19,
+    "summary": "Piano Lessons\n  Keep track of my piano pupils, their weekly lesson times and the pieces each one practises.\n\nPages\n  - Pupils (lists pupils; search by name or notes; filter by lesson day or level)\n  - Pieces (lists pieces; search by title or composer; filter by pupil or status; “Mark learned”)\n\nPupils\n  Pupils have:\n  - a name (required)\n  - a lesson day (monday, tuesday, wednesday, thursday, friday, saturday or sunday, monday by default)\n  - a lesson time\n  - minutes (a whole number, 30 by default)\n  - a level (beginner, intermediate or advanced, beginner by default)\n  - an email\n  - a phone\n  - notes\n  Each pupil lists its pieces.\n\nPieces\n  Pieces have:\n  - a pupil (a pupil, required)\n  - a title (required)\n  - a composer\n  - status (learning, polishing or learned, learning by default)\n  - started on (a date, today by default)\n  - practice notes\n\nMark learned\n  For a piece that is learning or polishing; sets status to learned.\n  Mark a piece the pupil has learned.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 101 files (101 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-4\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
-      "wordStarter": "crm",
+      "wordStarter": "booking",
       "questions": [
         "Who will use the app?",
-        "How should practice be recorded?",
-        "Should individual lessons be kept as records, or just each pupil's regular weekly slot?"
+        "What should each pupil's practice hold?",
+        "How should lessons be kept?"
       ]
     }
   },
@@ -96,22 +100,22 @@
     "starter": "invoicing",
     "created": true,
     "typecheck": true,
-    "tokens": 25642,
-    "tokensIn": 23635,
-    "tokensOut": 2007,
-    "cost": 0.0584,
+    "tokens": 33122,
+    "tokensIn": 31019,
+    "tokensOut": 2103,
+    "cost": 0.0636,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 31,
-    "summary": "Shutter Ledger\n  Invoices for my photography work: clients, shoots and what is still unpaid.\n\nPages\n  - Overview (a dashboard: latest)\n  - Invoices (lists invoices; filter by status or client; “Mark sent”; “Mark paid”)\n  - Shoots (lists shoots; filter by kind, client or date)\n  - Clients (lists clients; search by name or email)\n  - Invoice lines (lists invoice lines)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email (required)\n  - a phone\n  - address\n  - a VAT number\n  Each client lists its shoots.\n  Each client lists its invoices.\n\nShoots\n  Shoots have:\n  - a title (required)\n  - a client (a client, required)\n  - a date (required)\n  - a kind (portrait, wedding, event, commercial, product or other, portrait by default)\n  - a location\n  - notes\n  Each shoot lists its invoices.\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a client (a client, required)\n  - a shoot (a shoot)\n  - issued on (a date, required, today by default)\n  - due on (a date, required, the issued on plus 30 days by default)\n  - status (draft, sent, paid or overdue, draft by default)\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nInvoice lines\n  Invoice lines have:\n  - an invoice (an invoice, required)\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  The amount is calculated as the quantity times the unit price.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the client.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid.\n  The client paid the invoice.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 102 files (102 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-5/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nclients 9 columns 0 indexes 1 fks\ninvoice_lines 9 columns 0 indexes 2 fks\ninvoices 11 columns 1 indexes 3 fks\nsession 8 columns 2 indexes 1 fks\nshoots 10 columns 0 indexes 2 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_parched_jean_grey.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-5. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-5\n  smithable run\n\n/tmp/smithable-bench-m12-4VaGel/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132\n\t\treturn this.stmt.run(...params);\n\t\t                 ^\nSqliteError: FOREIGN KEY constraint failed\n    at PreparedQuery.run (/tmp/smithable-bench-m12-4VaGel/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)\n    at QueryPromise.run (/tmp/smithable-bench-m12-4VaGel/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)\n    at <anonymous> (/tmp/smithable-bench-m12-4VaGel/app-5/src/db/seed.ts:29:6)\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'\n}\n\nNode.js v24.21.0\nCould not add sample data; the app works without it.",
+    "seconds": 24,
+    "summary": "Shutter Ledger\n  Invoicing for a photographer: clients, shoots and what is still unpaid.\n\nPages\n  - Overview (a dashboard: latest)\n  - Invoices (lists invoices; filter by client or status; “Mark sent”; “Mark paid”)\n  - Shoots (lists shoots; filter by client, kind, status or date; “Mark done”)\n  - Clients (lists clients; search by name or email)\n  - Invoice lines (lists invoice lines)\n  - Calendar (a calendar of shoots by week or month)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email (required)\n  - a phone\n  - address\n  - a VAT number\n  Each client lists its shoots.\n  Each client lists its invoices.\n\nShoots\n  Shoots have:\n  - a title (required)\n  - a client (a client, required)\n  - a date (required)\n  - a location\n  - a kind (portrait, wedding, event, commercial, product or other, portrait by default)\n  - status (planned, done, invoiced or canceled, planned by default)\n  - a fee (an amount)\n  - notes\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a client (a client, required)\n  - a shoot (a shoot)\n  - issued on (a date, required, today by default)\n  - due on (a date, required, the issued on plus 30 days by default)\n  - status (draft, sent, paid or overdue, draft by default)\n  - paid on (a date)\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nInvoice lines\n  Invoice lines have:\n  - an invoice (an invoice, required)\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  The amount is calculated as the quantity times the unit price.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the client.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid and paid on to today.\n  The client paid the invoice.\n\nMark done\n  For a shoot that is planned; sets status to done.\n  The shoot took place.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 123 files (123 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-5. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-5\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-5/smithable.yml:69:14  warning  Page \"calendar\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".\n\n/tmp/smithable-bench-m12-G0aRVT/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132\n\t\treturn this.stmt.run(...params);\n\t\t                 ^\nSqliteError: FOREIGN KEY constraint failed\n    at PreparedQuery.run (/tmp/smithable-bench-m12-G0aRVT/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)\n    at QueryPromise.run (/tmp/smithable-bench-m12-G0aRVT/app-5/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)\n    at <anonymous> (/tmp/smithable-bench-m12-G0aRVT/app-5/src/db/seed.ts:43:6)\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'\n}\n\nNode.js v24.21.0\nCould not add sample data; the app works without it.",
     "error": "",
     "meta": {
       "wordStarter": "invoicing",
       "questions": [
-        "How do shoots and invoices relate?",
-        "How should unpaid amounts be tracked?",
-        "Should clients be able to see anything without signing in?"
+        "Should clients be able to open and view their own invoices, or is the app only for you?",
+        "What should a shoot hold?",
+        "How do clients pay what's still owed?"
       ]
     }
   },
@@ -120,22 +124,22 @@
     "starter": "invoicing",
     "created": true,
     "typecheck": true,
-    "tokens": 25843,
-    "tokensIn": 23636,
-    "tokensOut": 2207,
-    "cost": 0.0624,
+    "tokens": 64713,
+    "tokensIn": 62387,
+    "tokensOut": 2326,
+    "cost": 0.0924,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
-    "seconds": 36,
-    "summary": "Tidy Ledger\n  One place for our cleaning company to invoice its households every month and see what has been paid.\n\nPages\n  - Invoices (lists invoices; search by number; filter by status, household or issued on; “Mark sent”; “Mark paid”; “Mark overdue”; “Duplicate invoice”)\n  - Households (lists households; search by name, email or phone)\n  - Invoice lines (lists invoice lines)\n  - Overview (a dashboard: latest)\n  - Team (who has access: invite people, change roles, remove users)\n\nHouseholds\n  Households have:\n  - a name (required)\n  - an email (required)\n  - a phone\n  - address\n  - notes\n  Each household lists its invoices.\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a household (a household, required)\n  - issued on (a date, required, today by default)\n  - due on (a date, required, the issued on plus 30 days by default)\n  - status (draft, sent, paid or overdue, draft by default)\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nInvoice lines\n  Invoice lines have:\n  - an invoice (an invoice, required)\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  The amount is calculated as the quantity times the unit price.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the household.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid.\n  The household paid the invoice.\n\nMark overdue\n  For an invoice that is sent; sets status to overdue.\n  The household has not paid by the due date.\n\nDuplicate invoice\n  Makes a copy of an invoice with status draft, issued on today and due on today plus 30 days, asking for the number; its lines are copied too.\n  Start next month's invoice for the same household from this one.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 105 files (105 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-6/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nhouseholds 9 columns 0 indexes 1 fks\ninvitation 7 columns 2 indexes 1 fks\ninvoice_lines 9 columns 0 indexes 2 fks\ninvoices 10 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_glossy_roulette.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-6. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-6\n  smithable run",
+    "calls": 2,
+    "seconds": 30,
+    "summary": "Tidy Ledger\n  One place for our cleaning company to send monthly invoices to the households we clean for.\n\nPages\n  - Invoices (lists invoices; filter by household or status; “Mark sent”; “Mark paid”; “Next month”)\n  - Households (lists households; search by name, email or phone)\n  - Invoice lines (lists invoice lines)\n  - Overview (a dashboard: latest, outstanding, overdue and invoiced)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nHouseholds\n  Households have:\n  - a name (required)\n  - an email (required)\n  - a phone\n  - address\n  Each household lists its invoices.\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a household (a household, required)\n  - issued on (a date, required, today by default)\n  - due on (a date, required, the issued on plus 30 days by default)\n  - status (draft, sent, paid or overdue, draft by default)\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nInvoice lines\n  Invoice lines have:\n  - an invoice (an invoice, required)\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  The amount is calculated as the quantity times the unit price.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the household.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid.\n  The household paid the invoice.\n\nNext month\n  Makes a copy of an invoice with status draft, issued on today and due on today plus 30 days, asking for the number; its lines are copied too.\n  Start next month's invoice for the same household from this one.\n\nInvoice sent\n  When “Mark sent” runs on a invoice: mails client's email.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 123 files (123 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-6. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-6\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "booking",
       "questions": [
-        "Should households be able to see their own invoices?",
-        "What should each monthly invoice list?",
-        "Should the app also track payments?"
+        "Should households be able to see their invoices in the app?",
+        "What should an invoice list?",
+        "Should the app record payments?"
       ]
     }
   },
@@ -144,22 +148,22 @@
     "starter": "marketplace",
     "created": true,
     "typecheck": true,
-    "tokens": 24751,
-    "tokensIn": 23069,
-    "tokensOut": 1682,
-    "cost": 0.0474,
+    "tokens": 32143,
+    "tokensIn": 30428,
+    "tokensOut": 1715,
+    "cost": 0.0511,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 53,
-    "summary": "Town Flea Market\n  Post things you want to sell, with photos and a price, and browse what your neighbors are selling.\n\nPages\n  - For sale (lists items; search by title, description or place; filter by category, price, condition or available; sort by price or date added; records can be saved as favorites; contact the owner by mail)\n  - My items (lists items; only the viewer's own records)\n  - Saved (lists items; only the viewer's saved records)\n  - Home (a landing page: hero, items where available is yes and footer)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures)\n  - a description (required)\n  - a price (an amount)\n  - a category (furniture, clothing, books, bikes, electronics, toys, household or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - an available (yes or no, true by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Keeps the flea market tidy)\n  - member (Sells and saves items)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page and reading items.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 93 files (93 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-7/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nitems 12 columns 0 indexes 1 fks\nitems_favorites 4 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_worthless_surge.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-7. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-7\n  smithable run",
+    "seconds": 25,
+    "summary": "Town Flea Market\n  A town flea market where anyone can post things to sell, with photos and a price.\n\nPages\n  - Catalog (lists items; search by title, description or place; filter by category, price, condition or available; sort by price or date added; records can be saved as favorites; contact the owner by mail)\n  - My items (lists items; only the viewer's own records)\n  - Saved (lists items; only the viewer's saved records)\n  - Review (the pictures and files waiting for review, to approve or reject; only for admins)\n  - Home (a landing page: hero, items where available is yes and footer)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a price (an amount)\n  - a category (furniture, clothing, books, electronics, kids, sports, household or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - an available (yes or no, true by default)\n  Photos of items are reviewed before others see them; an item waits until its photos is.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Posts things to sell and saves items they like): opens the catalog page, the my items page and the saved page; adds items\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page, the privacy page and reading items.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 117 files (117 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-7. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-7\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-7/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "marketplace",
       "questions": [
-        "Do people need an account to post something for sale?",
-        "How should buyers get in touch with a seller?",
-        "Besides photos and a price, what should a listing hold?"
+        "Can visitors browse listings without signing in?",
+        "How should a buyer reach a seller?",
+        "What should a listing hold besides photos and price?"
       ]
     }
   },
@@ -168,22 +172,22 @@
     "starter": "marketplace",
     "created": true,
     "typecheck": true,
-    "tokens": 48982,
-    "tokensIn": 46774,
-    "tokensOut": 2208,
-    "cost": 0.0768,
+    "tokens": 62865,
+    "tokensIn": 61188,
+    "tokensOut": 1677,
+    "cost": 0.0698,
     "currency": "$",
     "fromCache": 0,
     "calls": 2,
-    "seconds": 58,
-    "summary": "Swap Shelf\n  Colleagues offer things they no longer need and others claim them.\n\nPages\n  - Shelf (lists items; search by title, description or pickup spot; filter by category, condition or status; sort by title or date added; records can be saved as favorites; contact the owner by mail)\n  - My items (lists items; only the viewer's own records)\n  - Team (who has access: invite people, change roles, remove users)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures)\n  - a description\n  - a category (furniture, books, electronics, kitchen, stationery, plants or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a pickup spot\n  - status (available, claimed or gone, available by default)\n  Each item can have a claimed by (a user).\n  Only the owner and admins can delete items.\n  Only the owner and admins can change items.\n\nClaim\n  For an item that is available; sets status to claimed and claimed by to whoever presses it.\n  Claim an available item for yourself.\n  Only member users and admins can use it.\n\nMark gone\n  For an item that is claimed; sets status to gone.\n  Mark the item as picked up.\n  Only member users and admins can use it.\n\nRelease\n  For an item that is claimed; sets status to available.\n  Put a claimed item back on the shelf.\n  Only member users and admins can use it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member (Offers and claims items)\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 98 files (98 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-8/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nitems 12 columns 0 indexes 2 fks\nitems_favorites 4 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_stiff_wallow.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-8. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-8\n  smithable run",
+    "seconds": 26,
+    "summary": "Swap Shelf\n  Colleagues offer things they no longer need and others claim them.\n\nPages\n  - Shelf (lists items; search by title, description or place; filter by category, condition or status; sort by title or date added; records can be saved as favorites; contact the owner by mail)\n  - My items (lists items; only the viewer's own records)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures)\n  - a description\n  - a category (furniture, electronics, books, kitchen, stationery, clothing or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - status (available, claimed or gone, available by default)\n  Each item can have a claimed by (a user).\n\nClaim\n  For an item that is available; sets status to claimed and claimed by to whoever presses it.\n  Claim an available item for yourself.\n\nHand over\n  For an item that is claimed; sets status to gone.\n  Mark a claimed item as picked up.\n\nRelease\n  For an item that is claimed; sets status to available.\n  Put a claimed item back on the shelf.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, logo.webp.\nGenerated 114 files (114 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-8. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-8\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "invoicing",
       "questions": [
-        "Can people outside the office see the shelf without signing in?",
-        "How should claiming work?",
-        "Besides a title and description, what should each offered item include?"
+        "Can people see the shelf without signing in?",
+        "How does claiming work?",
+        "What should an offered item include?"
       ]
     }
   },
@@ -192,21 +196,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 24751,
-    "tokensIn": 22931,
-    "tokensOut": 1820,
-    "cost": 0.0491,
+    "tokens": 31843,
+    "tokensIn": 30210,
+    "tokensOut": 1633,
+    "cost": 0.0477,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 45,
-    "summary": "Vinyl Shelf\n  A personal catalog of my vinyl records: albums, artists, condition and what I paid.\n\nPages\n  - Albums (lists albums; search by title, label or notes; filter by artist, condition or year; sort by title, year, price paid or bought on)\n  - Artists (lists artists; search by name or country)\n  - Overview (a dashboard: albums, total paid and latest)\n\nArtists\n  Artists have:\n  - a name (required)\n  - a country\n  - notes\n  Each artist lists its albums.\n\nAlbums\n  Albums have:\n  - a title (required)\n  - an artist (an artist, required)\n  - a year (a whole number)\n  - a label\n  - a condition (mint, near mint, very good plus, very good, good or poor, mint by default)\n  - a price paid (an amount)\n  - bought on (a date)\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 86 files (86 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-9/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\nalbums 12 columns 0 indexes 2 fks\nartists 7 columns 0 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_abnormal_dagger.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-9. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-9\n  smithable run",
+    "seconds": 22,
+    "summary": "Vinyl Shelf\n  A personal catalogue of my vinyl records: the albums, their artists, their condition and what I paid.\n\nPages\n  - Albums (lists albums; search by title, label, genre or notes; filter by artist, format, condition or year; sort by title, year, price paid or purchased on)\n  - Artists (lists artists; search by name, country or genre)\n\nArtists\n  Artists have:\n  - a name (required, unique)\n  - a country\n  - a genre\n  - notes\n  Each artist lists its albums.\n\nAlbums\n  Albums have:\n  - a title (required)\n  - an artist (an artist, required)\n  - a year (a whole number)\n  - a label\n  - a genre\n  - a format (lp, ep, single, double lp or box set, lp by default)\n  - a condition (near mint, mint, very good plus (vg+), very good, good, fair or poor, near mint by default)\n  - a price paid (an amount)\n  - purchased on (a date)\n  - a purchased from\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 98 files (98 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-9. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-9\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "crm",
       "questions": [
-        "Who can see your collection?",
-        "Should artists have their own records, or just be a name on each album?"
+        "Can visitors see your collection without signing in?",
+        "Should artists be their own records, or just a name on each album?",
+        "What else should each album hold besides condition and price?"
       ]
     }
   },
@@ -215,22 +220,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 24421,
-    "tokensIn": 22933,
-    "tokensOut": 1488,
-    "cost": 0.0424,
+    "tokens": 63528,
+    "tokensIn": 61176,
+    "tokensOut": 2352,
+    "cost": 0.0833,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
-    "seconds": 34,
-    "summary": "Museum Collection\n  Our local museum's collection online, so visitors can browse the objects and their stories.\n\nPages\n  - Home (a landing page: hero, objects where status is published and footer)\n  - Collection (lists objects; search by name, summary, story, category, maker or origin; filter by status)\n\nObjects\n  Objects have:\n  - a name (required)\n  - an accession number (unique)\n  - a summary\n  - a story\n  - a category\n  - a maker\n  - an origin\n  - a period\n  - status (draft or published, draft by default)\n  - a link (a web address)\n  - added on (a date, required, today by default)\n  Only admins can add objects.\n  Only admins can change objects.\n  Only admins can delete objects.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Keeps the collection)\n  - member (Looks at it)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the items page and reading items where status is published.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 81 files (81 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-10/drizzle.config.ts'\n6 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nitems 15 columns 1 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_early_crusher_hogan.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-10. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-10\n  smithable run",
+    "calls": 2,
+    "seconds": 32,
+    "summary": "Museum Collection\n  Our local museum's collection online, where visitors browse the objects and the stories behind them.\n\nPages\n  - Home (a landing page: hero, objects where on display is yes and footer)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Items (lists objects; search by name, summary, story or origin; filter by category or on display)\n\nObjects\n  Objects have:\n  - a name (required)\n  - a summary\n  - a story\n  - a category (everyday life, tools and crafts, art, maritime, documents and photographs or other, everyday life by default)\n  - a date made\n  - an origin\n  - an on display (yes or no)\n  - added on (a date, required, today by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Looks at the collection; only administrators add to it): opens the home page and the items page\n  New users get the member role.\n  Open to anyone without signing in: the home page, the privacy page, the items page and reading items.\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 98 files (98 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-10. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-10\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-10/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "marketplace",
       "questions": [
         "Who adds and edits the objects?",
-        "How should the objects be organized?",
-        "Are the stories part of each object, or separate?"
+        "Besides its story, what should each object record hold?",
+        "Should objects be grouped into something visitors can browse?"
       ]
     }
   },
@@ -239,22 +244,22 @@
     "starter": "status",
     "created": true,
     "typecheck": true,
-    "tokens": 26871,
-    "tokensIn": 24027,
-    "tokensOut": 2844,
-    "cost": 0.0783,
+    "tokens": 33940,
+    "tokensIn": 31335,
+    "tokensOut": 2605,
+    "cost": 0.0762,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 44,
-    "summary": "IT Status Board\n  See which of our IT systems are down, what is being done, and when they will be back.\n\nPages\n  - Systems (lists components)\n  - Incidents (lists incidents; filter by status or component; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Maintenance (lists maintenances)\n  - Overview (a dashboard: open, down and latest)\n  - Team (who has access: invite people, change roles, remove users)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each component lists its incidents.\n  Only it users and admins can change components.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - expected back at (a date and time)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n  Only it users and admins can change incidents.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n  Only it users and admins can change incident updates.\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n  Only it users and admins can change maintenances.\n\nIdentified\n  For an incident that is investigating; sets status to identified; asks for the expected back at; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified with an expected time back, and an update saying so.\n  Only it users and admins can use it.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n  Only it users and admins can use it.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved. The system is back.).\n  The incident is over and the system is back, with an update saying so.\n  Only it users and admins can use it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - it (The IT team: writes incidents, updates, maintenance and system states)\n  - staff (Sees what is down and when it is back)\n  New users get the staff role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 106 files (106 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-11/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncomponents 7 columns 0 indexes 1 fks\nincident_updates 8 columns 0 indexes 2 fks\nincidents 11 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nmaintenances 9 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_acoustic_shotgun.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-11. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-11\n  smithable run",
+    "seconds": 28,
+    "summary": "IT Status Board\n  See which of our IT systems are down, what is being fixed and when they are back.\n\nPages\n  - System status (lists components)\n  - Incidents (lists incidents; filter by status or component; “Identified”; “Monitoring”; “Resolve”)\n  - Maintenance (lists maintenances)\n  - Updates (lists incident updates)\n  - Overview (a dashboard: open, down, per month and latest)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each component lists its incidents.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - expected back at (a date and time)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This system is back. The incident is resolved.).\n  The system is back; the incident is resolved, with an update saying so.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - staff (Sees which systems are down and when they are back): opens the components page, the incidents page, the maintenance page, the updates page and the overview page\n  - it (The IT team: writes incidents, their updates and planned maintenance): opens the components page, the incidents page, the maintenance page, the updates page and the overview page; adds every kind of record; changes everyone's records\n  New users get the staff role.\nPictures from the Smithable image library: logo.webp.\nGenerated 124 files (124 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-11. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-11\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "status",
       "questions": [
-        "Who can post and update outages?",
-        "Besides current outages, what else should the board track?",
-        "Should staff be able to report a problem they notice?"
+        "Who posts and updates incidents on the board?",
+        "Do staff need to sign in to see the board?",
+        "Should the board also show planned maintenance?"
       ]
     }
   },
@@ -263,21 +268,21 @@
     "starter": "status",
     "created": true,
     "typecheck": true,
-    "tokens": 26894,
-    "tokensIn": 24022,
-    "tokensOut": 2872,
-    "cost": 0.0788,
+    "tokens": 34162,
+    "tokensIn": 31330,
+    "tokensOut": 2832,
+    "cost": 0.0807,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 44,
-    "summary": "Municipal Service Status\n  Check whether the municipality's online services are working, what is being fixed and what maintenance is planned.\n\nPages\n  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)\n  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Maintenance (lists maintenances)\n  - Components (lists components; only for admins; visitors see components on the Home page)\n  - Overview (a dashboard: open, per month and latest)\n  - Team (who has access: invite people, change roles, remove users)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each component lists its incidents.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n  Only staff users and admins can use it.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n  Only staff users and admins can use it.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so.\n  Only staff users and admins can use it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin (Runs the status page and the team)\n  - staff (Writes incidents, their updates and planned maintenance)\n  New users get the staff role.\n  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.\n  Other programs can read and change components and incidents with a key, and run resolve.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 109 files (109 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-12/drizzle.config.ts'\n11 tables\naccount 13 columns 1 indexes 1 fks\napi_key 10 columns 1 indexes 0 fks\naudit_log 13 columns 2 indexes 0 fks\ncomponents 7 columns 0 indexes 1 fks\nincident_updates 8 columns 0 indexes 2 fks\nincidents 10 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nmaintenances 9 columns 0 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_great_glorian.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-12. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-12\n  smithable run",
+    "seconds": 29,
+    "summary": "Municipal Services Status\n  The live status of the municipality's online services, so residents can check for outages and planned maintenance.\n\nPages\n  - Home (a landing page: hero, services, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)\n  - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Maintenance (lists maintenances)\n  - Services (lists services; only for admins; visitors see services on the Home page)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Overview (a dashboard: open, per month and latest)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nServices\n  Services have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each service lists its incidents.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a service (a service)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a service (a service)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause has been found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix has been applied. We are monitoring the service before closing this incident.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved and the service is working normally.).\n  The incident is over, with an update saying so.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - staff (Writes incidents, their updates and planned maintenance): opens the overview page, the incidents page, the updates page and the maintenance page; adds every kind of record; changes everyone's records\n  New users get the staff role.\n  Open to anyone without signing in: the home page, the privacy page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.\n  Other programs can read and change services and incidents with a key, and run resolve. AI assistants can use it too.\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 146 files (146 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-12. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-12\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-12/smithable.content.yml:15:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "status",
       "questions": [
-        "Can residents do anything besides look, like report a problem they've run into?",
-        "Besides outages, should the page also announce planned maintenance ahead of time?"
+        "Who posts and updates outages and incidents?",
+        "Can residents do anything besides view the status page?"
       ]
     }
   },
@@ -286,21 +291,21 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 24456,
-    "tokensIn": 22925,
-    "tokensOut": 1531,
-    "cost": 0.0432,
+    "tokens": 31851,
+    "tokensIn": 30205,
+    "tokensOut": 1646,
+    "cost": 0.048,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 32,
-    "summary": "Car Log\n  A log of my car's fuel, service visits and costs.\n\nPages\n  - Fuel (lists fuel entries)\n  - Service (lists service visits; search by workshop or work; filter by kind or date)\n  - Expenses (lists expenses; filter by category or date)\n  - Overview (a dashboard: fuel costs, service costs, other costs and recent service)\n\nFuel entries\n  Fuel entries have:\n  - a date (required, today by default)\n  - an odometer (a whole number)\n  - liters (a number, required)\n  - a total (an amount, required)\n  - a full tank (yes or no, true by default)\n  - a station\n  The price per liter is calculated as the total divided by the liters.\n\nService visits\n  Service visits have:\n  - a date (required, today by default)\n  - a kind (maintenance, repair, inspection, tires or other, maintenance by default)\n  - an odometer (a whole number)\n  - a workshop\n  - a work\n  - a cost (an amount)\n\nExpenses\n  Expenses have:\n  - a date (required, today by default)\n  - a category (insurance, tax, parking, tolls, washing or other, insurance by default)\n  - an amount (an amount, required)\n  - a note\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 94 files (94 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-13/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nexpenses 8 columns 0 indexes 1 fks\nfuel_entries 11 columns 0 indexes 1 fks\nservice_visits 10 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_eager_sentry.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-13. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-13\n  smithable run",
+    "seconds": 21,
+    "summary": "Car Log\n  A log of my car's fuel fill-ups, service visits and other costs.\n\nPages\n  - Fuel (lists fuel fills; filter by date)\n  - Services (lists service visits; filter by kind or date)\n  - Costs (lists costs; filter by category or date)\n  - Overview (a dashboard: fuel spend, service spend, other costs and latest services)\n\nFuel fills\n  Fuel fills have:\n  - a date (required, today by default)\n  - an odometer (a whole number)\n  - liters (a number, required)\n  - a price per liter (an amount, required)\n  - a full tank (yes or no, true by default)\n  - a station\n  - notes\n  The total is calculated as the liters times the price per liter.\n\nService visits\n  Service visits have:\n  - a date (required, today by default)\n  - an odometer (a whole number)\n  - a kind (maintenance, repair, inspection, tires or other, maintenance by default)\n  - a workshop\n  - a work\n  - a cost (an amount)\n\nCosts\n  Costs have:\n  - a date (required, today by default)\n  - a category (insurance, tax, parking, tolls, washing, parts or other, insurance by default)\n  - a description\n  - an amount (an amount, required)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 110 files (110 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-13. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-13\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "status",
       "questions": [
-        "Is this log just for one car, or for several vehicles?",
-        "Who else should be able to use the log?",
+        "Is this just for one car, or should it handle several vehicles?",
+        "Who will use the log?",
         "What should a fuel entry record?"
       ]
     }
@@ -310,22 +315,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 24744,
-    "tokensIn": 22936,
-    "tokensOut": 1808,
-    "cost": 0.0489,
+    "tokens": 32084,
+    "tokensIn": 30214,
+    "tokensOut": 1870,
+    "cost": 0.0525,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 34,
-    "summary": "Wedding Guests\n  The guest list and seating plan for our wedding, with who has answered and their meal choices.\n\nPages\n  - Guests (lists guests; search by name or email; filter by rsvp, meal, table or side; “Mark attending”; “Mark declined”)\n  - Tables (lists tables)\n  - Overview (a dashboard: attending, awaiting answer, declined and vegetarian meals)\n  - Team (who has access: invite people, change roles, remove users)\n\nTables\n  Tables have:\n  - a name (required)\n  - seats (a whole number, required, 8 by default)\n  - notes\n  Each table lists its guests.\n\nGuests\n  Guests have:\n  - a name (required)\n  - an email\n  - a phone\n  - a side (both, bride or groom, both by default)\n  - a rsvp (pending, attending or declined, pending by default)\n  - a meal (undecided, meat, fish, vegetarian, vegan or child, undecided by default)\n  - dietary notes\n  - a table (a table)\n  - notes\n\nMark attending\n  For a guest that is pending or declined; sets rsvp to attending; asks for the meal.\n  Record that the guest is coming, with their meal choice.\n\nMark declined\n  For a guest that is pending or attending; sets rsvp to declined.\n  Record that the guest cannot come.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 94 files (94 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-14/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nguests 13 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\ntables 7 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_sloppy_prism.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-14. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-14\n  smithable run",
+    "seconds": 22,
+    "summary": "Wedding Guests\n  The guest list and seating plan for our wedding, with who has answered and their meal choices.\n\nPages\n  - Guests (lists guests; search by name, email or phone; filter by rsvp, meal, group or table; “Attending”; “Declined”)\n  - Tables (lists tables)\n  - Overview (a dashboard: attending, waiting, declined and vegetarian meals)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nTables\n  Tables have:\n  - a name (required)\n  - seats (a whole number, required, 8 by default)\n  - notes\n  Each table lists its guests.\n\nGuests\n  Guests have:\n  - a name (required)\n  - a group (family, friends, colleagues or other, family by default)\n  - an email\n  - a phone\n  - a rsvp (waiting, attending or declined, waiting by default)\n  - a meal (undecided, meat, fish, vegetarian, vegan or children, undecided by default)\n  - dietary notes\n  - a table (a table)\n  - notes\n\nAttending\n  For a guest that is waiting or declined; sets rsvp to attending; asks for the meal.\n  Record that the guest is coming and their meal choice.\n\nDeclined\n  For a guest that is waiting or attending; sets rsvp to declined.\n  Record that the guest cannot come.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 110 files (110 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-14. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-14\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "invoicing",
       "questions": [
         "Who will use the app?",
-        "What can someone see without signing in?",
-        "How should guests be organized?"
+        "How are guests grouped on the list?",
+        "How should meal choices work?"
       ]
     }
   },
@@ -334,22 +339,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 23913,
-    "tokensIn": 22934,
-    "tokensOut": 979,
-    "cost": 0.0323,
+    "tokens": 31180,
+    "tokensIn": 30214,
+    "tokensOut": 966,
+    "cost": 0.0344,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "seconds": 28,
-    "summary": "Birding Log\n  The club's shared record of bird sightings: which species, where, when and who saw it.\n\nPages\n  - Sightings (lists sightings; search by place or notes)\n  - Species (lists specieses; search by name or scientific name)\n  - Team (who has access: invite people, change roles, remove users)\n\nSpecieses\n  Specieses have:\n  - a name (required, unique)\n  - a scientific name\n  - notes\n  Each species lists its sightings.\n\nSightings\n  Sightings have:\n  - species (a species, required)\n  - a place (required)\n  - seen on (a date, required, today by default)\n  - a count (a whole number, 1 by default)\n  - notes\n  Each sighting can have an observer (a user).\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member (Logs and looks at sightings)\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 87 files (87 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-15/drizzle.config.ts'\n8 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nsightings 10 columns 0 indexes 3 fks\nspecieses 7 columns 1 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_damp_gwen_stacy.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-15. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-15\n  smithable run",
+    "seconds": 16,
+    "summary": "Club Sightings\n  Bird sightings logged by the members of our birdwatching club: species, place, date and who saw it.\n\nPages\n  - Sightings (lists sightings; search by species or place)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nSightings\n  Sightings have:\n  - species (required)\n  - a place (required)\n  - seen on (a date, required, today by default)\n  - a count (a whole number)\n  - notes\n  Each sighting can have an observer (a user).\n  The observer owns the sighting.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member (A club member: logs sightings and sees everyone's): opens the sightings page; adds sightings\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 97 files (97 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-15. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-15\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
-      "wordStarter": "booking",
+      "wordStarter": "api",
       "questions": [
-        "Can people outside the club see the sightings without signing in?",
+        "What can people outside the club see without signing in?",
         "How should species be recorded?",
-        "Should a sighting hold anything beyond species, place, date and observer?"
+        "What else should a sighting hold besides species, place, date and observer?"
       ]
     }
   },
@@ -358,22 +363,22 @@
     "starter": "records",
     "created": true,
     "typecheck": true,
-    "tokens": 49612,
-    "tokensIn": 47121,
-    "tokensOut": 2491,
-    "cost": 0.0852,
+    "tokens": 32936,
+    "tokensIn": 30214,
+    "tokensOut": 2722,
+    "cost": 0.0696,
     "currency": "$",
     "fromCache": 0,
-    "calls": 2,
-    "seconds": 43,
-    "summary": "Allotment Society\n  Keeps track of who has which plot, the waiting list for plots and each member's yearly fee.\n\nPages\n  - Plots (lists plots; search by number; filter by status or member; “Vacate”)\n  - Members (lists members; search by name, email or phone)\n  - Waiting list (lists waiting list; search by name or email; filter by status; “Offer plot”; “Mark allotted”; “Withdraw”)\n  - Fees (lists fees; filter by status, year or member; “Mark paid”)\n  - Team (who has access: invite people, change roles, remove users)\n\nMembers\n  Members have:\n  - a name (required)\n  - an email\n  - a phone\n  - address\n  - a member since (a date, today by default)\n  - notes\n  Each member lists its plots.\n  Each member lists its fees.\n\nPlots\n  Plots have:\n  - a number (required, unique)\n  - a size (m²) (a number)\n  - a member (a member)\n  - status (vacant or let, vacant by default)\n  - notes\n\nWaiting list\n  Waiting list have:\n  - a name (required)\n  - an email\n  - a phone\n  - added on (a date, required, today by default)\n  - status (waiting, offered, allotted or withdrawn, waiting by default)\n  - notes\n\nFees\n  Fees have:\n  - a member (a member, required)\n  - a year (a whole number, required)\n  - an amount (an amount, required)\n  - status (due or paid, due by default)\n  - paid on (a date)\n\nMark paid\n  For a fee that is due; sets status to paid and paid on to today.\n  Record that a member has paid the yearly fee.\n\nOffer plot\n  For a waiting list entry that is waiting; sets status to offered.\n  Note that a plot has been offered to this person.\n\nMark allotted\n  For a waiting list entry that is offered; sets status to allotted.\n  Note that the person accepted a plot.\n\nWithdraw\n  For a waiting list entry that is waiting or offered; sets status to withdrawn.\n  Take the person off the waiting list.\n\nVacate\n  For a plot that is let; sets status to vacant.\n  Mark a plot as vacant when its member gives it up.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 109 files (109 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-16/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nfees 9 columns 0 indexes 2 fks\ninvitation 7 columns 2 indexes 1 fks\nmembers 10 columns 0 indexes 1 fks\nplots 9 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\nwaiting_list_entries 10 columns 0 indexes 1 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_cool_captain_stacy.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-16. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-16\n  smithable run",
+    "calls": 1,
+    "seconds": 31,
+    "summary": "Allotment Society\n  Keeps track of who has which plot, the waiting list and the yearly fees of our allotment society.\n\nPages\n  - Home (a landing page: hero, plots where status is available, contact and footer)\n  - Plots (lists plots; search by number or description; filter by status)\n  - Members (lists members; search by name, email or phone)\n  - Fees (lists fees; filter by year or status; “Mark paid”)\n  - Waiting list (lists waiting list; filter by status; “Offer plot”; “Allocate”; “Withdraw”)\n  - Overview (a dashboard: available plots, waiting and unpaid fees)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nPlots\n  Plots have:\n  - a number (required, unique)\n  - a size (a number)\n  - status (available, let or reserved, available by default)\n  - a description\n\nMembers\n  Members have:\n  - a name (required)\n  - an email\n  - a phone\n  - address\n  - a plot (a plot)\n  - a member since (a date, today by default)\n  Each member lists its fees.\n\nFees\n  Fees have:\n  - a member (a member, required)\n  - a year (a whole number, required)\n  - an amount (an amount, required)\n  - status (unpaid or paid, unpaid by default)\n  - paid on (a date)\n\nWaiting list\n  Waiting list have:\n  - a name (required)\n  - an email (required)\n  - a phone\n  - a message\n  - added on (a date, today by default)\n  - status (waiting, offered, allocated or withdrawn, waiting by default)\n\nMark paid\n  For a fee that is unpaid; sets status to paid and paid on to today.\n  Record that the yearly fee has been paid.\n\nOffer plot\n  For a waiting list entry that is waiting; sets status to offered.\n  Mark that a plot has been offered to this person.\n\nAllocate\n  For a waiting list entry that is offered; sets status to allocated.\n  Mark that the person accepted a plot and leaves the waiting list.\n\nWithdraw\n  For a waiting list entry that is waiting or offered; sets status to withdrawn.\n  Take the person off the waiting list.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the plots page, the privacy page, reading plots and adding waiting list entries.\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 133 files (133 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-16. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-16\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-16/smithable.content.yml:7:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "booking",
       "questions": [
         "Who will use the app?",
-        "Can people who aren't members do anything without signing in?",
-        "How should the yearly fee be tracked?"
+        "What can visitors see without signing in?",
+        "How is the yearly fee worked out?"
       ]
     }
   },
@@ -382,23 +387,23 @@
     "starter": "booking",
     "created": true,
     "typecheck": true,
-    "tokens": 27672,
-    "tokensIn": 23992,
-    "tokensOut": 3680,
-    "cost": 0.0948,
+    "tokens": 68769,
+    "tokensIn": 64232,
+    "tokensOut": 4537,
+    "cost": 0.1514,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
+    "calls": 2,
     "lang": "sv",
     "seconds": 47,
-    "summary": "Salongen\n  Onlinebokning för en frisörsalong där kunderna själva bokar sin tid.\n\nPages\n  - Hem (a landing page: hero, tjänster, frisörer, faq, call to action and footer)\n  - Boka tid (a calendar of slots by week or month)\n  - Mina bokningar (lists bokningar)\n  - Tider (lists tider; only for admins)\n  - Tjänster (lists tjänster; only for admins; visitors see tjänster on the Hem page)\n  - Frisörer (lists frisörer; only for admins; visitors see frisörer on the Hem page)\n  - Administration (every kind of record, to find, open, change and delete)\n\nTjänster\n  Tjänster have:\n  - a namn (required)\n  - a beskrivning\n  - a längd (minuter) (a whole number, required, 45 by default)\n  - pris (an amount)\n  Only admins can add tjänster.\n\nFrisörer\n  Frisörer have:\n  - a namn (required)\n  - an om frisören (formatted text)\n  - a porträtt (picture)\n  Only admins can add frisörer.\n\nTider\n  Tider have:\n  - a tjänst (a tjänst, required)\n  - a frisör (a frisör, required)\n  - a starttid (a date and time, required)\n  - an antal platser (a whole number, required, 1 by default)\n  Each tid lists its bokningar.\n  The places left is calculated as the antal platser minus the number of its bookings.\n  Only admins can add tider.\n\nBokningar\n  Bokningar have:\n  - a tid (a tid, required, unique)\n  - a telefon (a phone number)\n  - a meddelande till frisören\n  At most the slot's capacity bokningar per slot.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Salongens personal. Hanterar tider, tjänster och frisörer)\n  - customer (En kund som bokar tid)\n  New users get the customer role.\n  Open to anyone without signing in: the home page, the boka page, reading services, reading stylists and reading slots.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 119 files (119 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-17/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbookings 7 columns 1 indexes 2 fks\nservices 8 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nslots 9 columns 0 indexes 3 fks\nstylists 7 columns 0 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_slimy_scarlet_spider.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-17. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-17\n  smithable run\n/tmp/smithable-bench-m12-4VaGel/app-17/smithable.auth.yml:6:11  warning  Visitors can't open mina-bokningar from the home hero's shortcuts: list it under public.pages, or choose another page.",
+    "summary": "Salongen\n  Tidsbokning på nätet för en frisörsalong, där kunderna själva bokar sin tid.\n\nPages\n  - Startsida (a landing page: hero, “Behandlingar”, call to action, contact and footer)\n  - Lediga tider (a calendar of slots by week or month)\n  - Mina bokningar (lists “Bokningar”)\n  - Tider (lists “Tider”; only for admins)\n  - Behandlingar (lists “Behandlingar”; only for admins; visitors see “Behandlingar” on the Startsida page)\n  - Frisörer (lists “Frisörer”; only for admins)\n  - Meddelanden (lists “Meddelanden”; only for admins)\n  - Integritet (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Administration (every kind of record, to find, open, change and delete; only for admins)\n\nBehandlingar\n  Behandlingar have:\n  - a field “Namn” (required)\n  - a field “Beskrivning”\n  - a field “Längd (minuter)” (a whole number, required, 45 by default)\n  - a field “Pris” (an amount)\n\nFrisörer\n  Frisörer have:\n  - a field “Namn” (required)\n  - a field “Om frisören” (formatted text)\n  - a field “Porträtt” (picture)\n\nTider\n  Tider have:\n  - a field “Frisör” (a “Frisör”, required)\n  - a field “Starttid” (a date and time, required)\n  - a field “Platser” (a whole number, required, 1 by default)\n  Each “Tid” lists its “Bokningar”.\n  The “Platser kvar” is calculated as the “Platser” minus the number of its “Bokningar”.\n\nBokningar\n  Bokningar have:\n  - a field “Tid” (a “Tid”, required, unique)\n  - a field “Behandling” (a “Behandling”, required)\n  - a field “Telefon” (a phone number)\n  - a field “Meddelande till frisören”\n  At most the slot's capacity “Bokningar” per slot.\n\nMeddelanden\n  Meddelanden have:\n  - a field “Namn” (required)\n  - a field “E-post” (an email address, required)\n  - a field “Meddelande” (required)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (En kund som bokar tid i salongen): opens the mina bokningar page; adds bookings\n  New users get the member role.\n  Open to anyone without signing in: the home page, the tider page, the integritet page, reading services, reading stylists, reading slots and adding messages.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 149 files (149 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-17. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-17\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-17/smithable.content.yml:4:3  warning  The privacy page \"integritet\" does not say who runs the app: give the operator's name under pages.integritet.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "records",
       "questions": [
-        "Måste kunderna skapa ett konto för att boka, eller räcker det att de anger namn och telefon/e-post?",
-        "Hur många frisörer jobbar i salongen, och ska kunden kunna välja frisör?",
-        "Vad ska en behandling innehålla?"
+        "Hur många frisörer jobbar i salongen?",
+        "Vad behöver kunden ange för att boka?",
+        "Vad ska varje behandling innehålla?"
       ]
     }
   },
@@ -407,23 +412,23 @@
     "starter": "invoicing",
     "created": true,
     "typecheck": true,
-    "tokens": 29036,
-    "tokensIn": 23605,
-    "tokensOut": 5431,
-    "cost": 0.1267,
+    "tokens": 70971,
+    "tokensIn": 65104,
+    "tokensOut": 5867,
+    "cost": 0.185,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
+    "calls": 2,
     "lang": "sv",
-    "seconds": 61,
-    "summary": "Byggkoll\n  Håller ordning på kunder, offerter och fakturor för en liten byggfirma.\n\nPages\n  - Offerter (lists offerter; search by nummer or arbete; filter by status or kund; “Send quote”; “Accept quote”; “Decline quote”)\n  - Fakturor (lists fakturor; filter by status or kund; “Mark sent”; “Mark paid”)\n  - Kunder (lists kunder; search by namn, e-post or telefon)\n  - Offertrader (lists offertrader)\n  - Fakturarader (lists fakturarader)\n  - Översikt (a dashboard: latest quotes)\n  - Team (who has access: invite people, change roles, remove users)\n\nKunder\n  Kunder have:\n  - a namn (required)\n  - an e-post (an email address)\n  - a telefon (a phone number)\n  - adress\n  Each kund lists its offerter.\n  Each kund lists its fakturor.\n\nOfferter\n  Offerter have:\n  - a nummer (required, unique)\n  - a kund (a kund, required)\n  - an arbete (required)\n  - a datum (a date, required, today by default)\n  - a giltig till (a date, the datum plus 30 days by default)\n  - status (utkast, skickad, godkänd or nekad, utkast by default)\n  Each offert lists its offertrader.\n  The total is calculated as the total belopp of its lines.\n\nOffertrader\n  Offertrader have:\n  - an offert (an offert, required)\n  - a beskrivning (required)\n  - an antal (a number, required, 1 by default)\n  - à-pris (an amount, required)\n  The belopp is calculated as the antal times the à-pris.\n\nFakturor\n  Fakturor have:\n  - a fakturanummer (required, unique)\n  - a kund (a kund, required)\n  - an offert (an offert)\n  - a fakturadatum (a date, required, today by default)\n  - a förfallodatum (a date, required, the fakturadatum plus 30 days by default)\n  - status (utkast, skickad, betald or förfallen, utkast by default)\n  Each faktura lists its fakturarader.\n  The total is calculated as the total belopp of its lines.\n\nFakturarader\n  Fakturarader have:\n  - a faktura (a faktura, required)\n  - a beskrivning (required)\n  - an antal (a number, required, 1 by default)\n  - à-pris (an amount, required)\n  The belopp is calculated as the antal times the à-pris.\n\nSend quote\n  For an offert that is utkast; sets status to skickad.\n  Offerten har skickats till kunden.\n\nAccept quote\n  For an offert that is skickad; sets status to godkänd.\n  Kunden har godkänt offerten.\n\nDecline quote\n  For an offert that is skickad; sets status to nekad.\n  Kunden har tackat nej till offerten.\n\nMark sent\n  For a faktura that is utkast; sets status to skickad.\n  Fakturan har skickats till kunden.\n\nMark paid\n  For a faktura that is skickad or förfallen; sets status to betald.\n  Kunden har betalat fakturan.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 119 files (119 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-18/drizzle.config.ts'\n11 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncustomers 8 columns 0 indexes 1 fks\ninvitation 7 columns 2 indexes 1 fks\ninvoice_lines 9 columns 0 indexes 2 fks\ninvoices 11 columns 1 indexes 3 fks\nquote_lines 9 columns 0 indexes 2 fks\nquotes 11 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_bright_fixer.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-18. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-18\n  smithable run",
+    "seconds": 53,
+    "summary": "Byggkoll\n  Håll koll på kunder, offerter och fakturor i en liten byggfirma.\n\nPages\n  - Offerter (lists “Offerter”; filter by “Kund” or “Status”; “Send quote”; “Accept quote”; “Decline quote”)\n  - Fakturor (lists “Fakturor”; filter by “Kund” or “Status”; “Send invoice”; “Mark paid”)\n  - Kunder (lists “Kunder”; search by “Namn”, “E-post” or “Telefon”)\n  - Offertrader (lists “Offertrader”)\n  - Fakturarader (lists “Fakturarader”)\n  - Användare (who has access: invite people, change roles, remove users; only for admins)\n\nKunder\n  Kunder have:\n  - a field “Namn” (required)\n  - a field “E-post” (an email address)\n  - a field “Telefon” (a phone number)\n  - a field “Adress”\n  Each “Kund” lists its “Offerter”.\n  Each “Kund” lists its “Fakturor”.\n\nOfferter\n  Offerter have:\n  - a field “Offertnummer” (required, unique)\n  - a field “Kund” (a “Kund”, required)\n  - a field “Uppdrag” (required)\n  - a field “Datum” (a date, required, today by default)\n  - a field “Giltig till” (a date, the “Datum” plus 30 days by default)\n  - a field “Status” (“Utkast”, “Skickad”, “Accepterad” or “Avböjd”, “Utkast” by default)\n  Each “Offert” lists its “Offertrader”.\n  The “Summa” is calculated as the total “Belopp” of its “Rader”.\n\nOffertrader\n  Offertrader have:\n  - a field “Offert” (a “Offert”, required)\n  - a field “Beskrivning” (required)\n  - a field “Antal” (a number, required, 1 by default)\n  - a field “À-pris” (an amount, required)\n  The “Belopp” is calculated as the “Antal” times the “À-pris”.\n\nFakturor\n  Fakturor have:\n  - a field “Fakturanummer” (required, unique)\n  - a field “Kund” (a “Kund”, required)\n  - a field “Offert” (a “Offert”)\n  - a field “Fakturadatum” (a date, required, today by default)\n  - a field “Förfallodatum” (a date, required, the “Fakturadatum” plus 30 days by default)\n  - a field “Status” (“Utkast”, “Skickad”, “Betald” or “Förfallen”, “Utkast” by default)\n  Each “Faktura” lists its “Fakturarader”.\n  The “Summa” is calculated as the total “Belopp” of its “Rader”.\n\nFakturarader\n  Fakturarader have:\n  - a field “Faktura” (a “Faktura”, required)\n  - a field “Beskrivning” (required)\n  - a field “Antal” (a number, required, 1 by default)\n  - a field “À-pris” (an amount, required)\n  The “Belopp” is calculated as the “Antal” times the “À-pris”.\n\nSend quote\n  For a “Offert” that is “Utkast”; sets “Status” to “Skickad”.\n  Offerten har skickats till kunden.\n\nAccept quote\n  For a “Offert” that is “Skickad”; sets “Status” to “Accepterad”.\n  Kunden har tackat ja till offerten.\n\nDecline quote\n  For a “Offert” that is “Skickad”; sets “Status” to “Avböjd”.\n  Kunden har tackat nej till offerten.\n\nSend invoice\n  For a “Faktura” that is “Utkast”; sets “Status” to “Skickad”.\n  Fakturan har skickats till kunden.\n\nMark paid\n  For a “Faktura” that is “Skickad” or “Förfallen”; sets “Status” to “Betald”.\n  Kunden har betalat fakturan.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 135 files (135 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-18. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-18\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "records",
       "questions": [
-        "Vilka i firman ska använda appen?",
-        "Ska kunderna kunna se något utan att logga in?",
-        "Vad ska en offert innehålla?"
+        "Vem ska använda appen?",
+        "Vad ska en offert innehålla?",
+        "Ska jobben eller projekten vara egna poster?"
       ]
     }
   },
@@ -432,23 +437,23 @@
     "starter": "marketplace",
     "created": true,
     "typecheck": true,
-    "tokens": 25542,
-    "tokensIn": 23042,
-    "tokensOut": 2500,
-    "cost": 0.0636,
+    "tokens": 65495,
+    "tokensIn": 62606,
+    "tokensOut": 2889,
+    "cost": 0.1054,
     "currency": "$",
     "fromCache": 0,
-    "calls": 1,
+    "calls": 2,
     "lang": "sv",
-    "seconds": 35,
-    "summary": "Vår loppis\n  Lägg upp saker du vill sälja, med bilder och pris, och fynda bland andras.\n\nPages\n  - Saker till salu (lists saker; search by rubrik or beskrivning; filter by kategori, pris, skick or till salu; sort by pris or date added; records can be saved as favorites; contact the owner by mail)\n  - Mina saker (lists saker; only the viewer's own records)\n  - Sparade (lists saker; only the viewer's saved records)\n  - Välkommen (a landing page: hero, saker where available is yes and footer)\n\nSaker\n  Saker have:\n  - a rubrik (required)\n  - a bilder (pictures)\n  - a beskrivning (required)\n  - pris (an amount)\n  - a kategori (möbler, kläder, böcker, kök, elektronik, leksaker or övrigt, möbler by default)\n  - a skick (som ny, bra or sliten, som ny by default)\n  - a till salu (yes or no, true by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member (Lägger upp och sparar saker)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page and reading items.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 93 files (93 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-19/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nitems 11 columns 0 indexes 1 fks\nitems_favorites 4 columns 1 indexes 2 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_powerful_domino.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-19. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-19\n  smithable run",
+    "seconds": 33,
+    "summary": "Vår loppis\n  Lägg upp saker du vill sälja med bilder och pris, och fynda bland grannarnas saker.\n\nPages\n  - Loppisen (lists “Saker”; search by “Rubrik”, “Beskrivning” or “Plats”; filter by “Kategori”, “Pris”, “Skick” or “Till salu”; sort by “Pris” or date added; records can be saved as favorites; contact the owner by mail)\n  - Mina saker (lists “Saker”; only the viewer's own records)\n  - Sparade (lists “Saker”; only the viewer's saved records)\n  - Granska bilder (the pictures and files waiting for review, to approve or reject; only for admins)\n  - Välkommen (a landing page: hero, “Saker” where available is yes and footer)\n  - Integritet (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nSaker\n  Saker have:\n  - a field “Rubrik” (required)\n  - a field “Bilder” (pictures, required)\n  - a field “Beskrivning” (required)\n  - a field “Pris” (an amount)\n  - a field “Kategori” (“Möbler”, “Kläder”, “Böcker”, “Kök”, “Elektronik”, “Barn” or “Övrigt”, “Möbler” by default)\n  - a field “Skick” (“Som ny”, “Bra” or “Sliten”, “Som ny” by default)\n  - a field “Plats”\n  - a field “Till salu” (yes or no, true by default)\n  Photos of “Saker” are reviewed before others see them; an item waits until its photos is.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Lägger upp saker till försäljning och sparar favoriter): opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page, the privacy page and reading items.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 117 files (117 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-19. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-19\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-19/smithable.content.yml:37:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "records",
       "questions": [
         "Vem ska kunna lägga upp saker att sälja?",
         "Vad ska besökare kunna se utan att logga in?",
-        "Hur ska en köpare nå säljaren?"
+        "Vad mer ska en annons innehålla utöver bilder och pris?"
       ]
     }
   },
@@ -457,23 +462,23 @@
     "starter": "booking",
     "created": true,
     "typecheck": true,
-    "tokens": 28263,
-    "tokensIn": 24000,
-    "tokensOut": 4263,
-    "cost": 0.1065,
+    "tokens": 35469,
+    "tokensIn": 31414,
+    "tokensOut": 4055,
+    "cost": 0.1058,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
     "lang": "fi",
-    "seconds": 57,
-    "summary": "Joogavaraus\n  Joogastudion tuntikalenteri, ohjaajat ja tuntien varaaminen verkossa.\n\nPages\n  - Etusivu (a landing page: hero, tuntityypit, ohjaajat, call to action and footer)\n  - Tuntikalenteri (a calendar of sessions by week or month)\n  - Omat varaukset (lists varaukset)\n  - Tunnit (lists tunnit; only for admins)\n  - Tuntityypit (lists tuntityypit; only for admins; visitors see tuntityypit on the Etusivu page)\n  - Ohjaajat (lists ohjaajat; only for admins; visitors see ohjaajat on the Etusivu page)\n  - Ylläpito (every kind of record, to find, open, change and delete)\n\nTuntityypit\n  Tuntityypit have:\n  - a nimi (required)\n  - kuvaus\n  - a taso (kaikille tasoille, aloittelijat or edistyneet, kaikille tasoille by default)\n  - a kesto (min) (a whole number, required, 60 by default)\n  Only admins can add tuntityypit.\n\nOhjaajat\n  Ohjaajat have:\n  - a nimi (required)\n  - an esittely\n  - a kuva (picture)\n  Only admins can add ohjaajat.\n\nTunnit\n  Tunnit have:\n  - a tuntityyppi (a tuntityyppi, required)\n  - an ohjaaja (an ohjaaja, required)\n  - an alkaa (a date and time, required)\n  - a paikkoja (a whole number, required, 12 by default)\n  Each tunti lists its varaukset.\n  The paikkoja jäljellä is calculated as the paikkoja minus the number of its varaukset.\n  Only admins can add tunnit.\n\nVaraukset\n  Varaukset have:\n  - a tunti (a tunti, required, unique)\n  At most the session's capacity varaukset per session.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Studion henkilökunta: hallitsee tunteja, tuntityyppejä ja ohjaajia)\n  - member (Joogaaja, joka varaa tunteja)\n  New users get the member role.\n  Open to anyone without signing in: the home page, the schedule page, reading class types, reading instructors and reading sessions.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 117 files (117 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-20/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\nbookings 5 columns 1 indexes 2 fks\nclass_types 8 columns 0 indexes 1 fks\ninstructors 7 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nsessions 9 columns 0 indexes 3 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_plain_starjammers.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-20. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-20\n  smithable run\n/tmp/smithable-bench-m12-4VaGel/app-20/smithable.auth.yml:6:11  warning  Visitors can't open my-bookings from the home hero's shortcuts: list it under public.pages, or choose another page.",
+    "seconds": 40,
+    "summary": "Joogavaraus\n  Joogastudion tuntien aikataulu, ohjaajat ja varaukset verkossa.\n\nPages\n  - Etusivu (a landing page: hero, tuntityypit, ohjaajat, call to action and footer)\n  - Tunnit (lists tunnit; only for admins)\n  - Tuntityypit (lists tuntityypit; only for admins; visitors see tuntityypit on the Etusivu page)\n  - Ohjaajat (lists ohjaajat; only for admins; visitors see ohjaajat on the Etusivu page)\n  - Omat varaukset (lists varaukset)\n  - Aikataulu (a calendar of sessions by week or month)\n  - Tietosuoja (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Ylläpito (every kind of record, to find, open, change and delete; only for admins)\n\nTuntityypit\n  Tuntityypit have:\n  - a nimi (required)\n  - kuvaus\n  - a taso (kaikki tasot, aloittelijat or edistyneet, kaikki tasot by default)\n  - a kesto (min) (a whole number, required, 60 by default)\n\nOhjaajat\n  Ohjaajat have:\n  - a nimi (required)\n  - an esittely\n  - a kuva (picture)\n\nTunnit\n  Tunnit have:\n  - a tuntityyppi (a tuntityyppi, required)\n  - an ohjaaja (an ohjaaja, required)\n  - an alkaa (a date and time, required)\n  - a paikkoja (a whole number, required, 12 by default)\n  Each tunti lists its varaukset.\n  The places left is calculated as the paikkoja minus the number of its bookings.\n\nVaraukset\n  Varaukset have:\n  - a tunti (a tunti, required, unique)\n  At most the session's capacity varaukset per session.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Oppilas, joka varaa paikkoja tunneille): opens the omat varaukset page; adds bookings\n  New users get the member role.\n  Open to anyone without signing in: the home page, the aikataulu page, the privacy page, reading class types, reading instructors and reading sessions.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 138 files (138 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-20. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-20\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-20/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "records",
       "questions": [
-        "Miten asiakkaat varaavat tunnin?",
-        "Mitä vierailija näkee kirjautumatta?",
-        "Pitääkö järjestelmän seurata asiakkaiden sarjakortteja tai jäsenyyksiä?"
+        "Mitä vierailija näkee ilman kirjautumista?",
+        "Miten asiakas varaa tunnin?",
+        "Pitääkö varausten yhteydessä seurata sarjakortteja tai jäsenyyksiä?"
       ]
     }
   },
@@ -482,41 +487,41 @@
     "starter": "crm",
     "created": true,
     "typecheck": true,
-    "tokens": 28234,
-    "tokensIn": 23556,
-    "tokensOut": 4678,
-    "cost": 0.1112,
+    "tokens": 35037,
+    "tokensIn": 30858,
+    "tokensOut": 4179,
+    "cost": 0.1038,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
     "lang": "fi",
-    "seconds": 52,
-    "summary": "Korjaamo\n  Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.\n\nPages\n  - Huoltotyöt (lists huoltotyöt; “Start work”; “Complete job”)\n  - Asiakkaat (lists asiakkaat; search by nimi, sähköposti or puhelin)\n  - Autot (lists autot; search by rekisterinumero, merkki or malli)\n  - Laskut (lists laskut; search by laskun numero; filter by tila or eräpäivä; “Send invoice”; “Mark paid”)\n  - Team (who has access: invite people, change roles, remove users)\n\nAsiakkaat\n  Asiakkaat have:\n  - a nimi (required)\n  - a sähköposti (an email address, unique)\n  - a puhelin (a phone number)\n  - a muistiinpanot\n  Each asiakas lists its autot.\n\nAutot\n  Autot have:\n  - a rekisterinumero (required, unique)\n  - a merkki\n  - a malli\n  - a vuosimalli (a whole number)\n  - a mittarilukema (km) (a whole number)\n  - asiakas (an asiakas, required)\n  Each auto lists its huoltotyöt.\n\nHuoltotyöt\n  Huoltotyöt have:\n  - an auto (an auto, required)\n  - kuvaus (required)\n  - a tila (varattu, työn alla or valmis, varattu by default)\n  - an ajankohta (a date and time)\n  - a työ (an amount)\n  - an osat (an amount)\n  Each huoltotyö can have a mekaanikko (a user).\n  The yhteensä is calculated as the työ plus the osat.\n  Each huoltotyö lists its laskut.\n\nLaskut\n  Laskut have:\n  - a laskun numero (required, unique)\n  - a huoltotyö (a huoltotyö, required)\n  - a summa (an amount, required)\n  - a tila (luonnos, lähetetty or maksettu, luonnos by default)\n  - an eräpäivä (a date)\n  - a maksupäivä (a date)\n\nStart work\n  For a huoltotyö that is varattu; sets tila to työn alla and mekaanikko to whoever presses it.\n  Aloita huoltotyö ja ota se itsellesi.\n\nComplete job\n  For a huoltotyö that is työn alla; sets tila to valmis.\n  Merkitse huoltotyö valmiiksi.\n\nSend invoice\n  For a lasku that is luonnos; sets tila to lähetetty.\n  Merkitse lasku lähetetyksi.\n\nMark paid\n  For a lasku that is lähetetty; sets tila to maksettu and maksupäivä to today.\n  Merkitse lasku maksetuksi.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp.\nGenerated 107 files (107 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-21/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncars 10 columns 1 indexes 2 fks\ncustomers 8 columns 1 indexes 1 fks\ninvitation 7 columns 2 indexes 1 fks\ninvoices 10 columns 1 indexes 2 fks\njobs 12 columns 0 indexes 3 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_overconfident_mentor.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-21. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-21\n  smithable run",
+    "seconds": 39,
+    "summary": "Korjaamo\n  Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.\n\nPages\n  - Huoltotyöt (lists huoltotyöt; filter by tila or päivä; “Start job”; “Complete job”)\n  - Asiakkaat (lists asiakkaat; search by nimi, sähköposti or puhelin)\n  - Autot (lists autot; search by rekisterinumero, merkki or malli)\n  - Laskut (lists laskut; search by laskun numero; filter by tila or eräpäivä; “Mark paid”)\n  - Käyttäjät (who has access: invite people, change roles, remove users; only for admins)\n\nAsiakkaat\n  Asiakkaat have:\n  - a nimi (required)\n  - a sähköposti (an email address)\n  - a puhelin (a phone number)\n  - a muistiinpanot\n  Each asiakas lists its autot.\n  Deleted asiakkaat stay in the trash for thirty days, where they can be restored.\n\nAutot\n  Autot have:\n  - a rekisterinumero (required, unique)\n  - a merkki\n  - a malli\n  - a vuosimalli (a whole number)\n  - a mittarilukema (km) (a whole number)\n  - asiakas (an asiakas, required)\n  Each auto lists its huoltotyöt.\n\nHuoltotyöt\n  Huoltotyöt have:\n  - an auto (an auto, required)\n  - kuvaus (required)\n  - a tila (varattu, työn alla or valmis, varattu by default)\n  - a päivä (a date)\n  - a työ (an amount)\n  - an osat (an amount)\n  The yhteensä is calculated as the työ plus the osat.\n\nLaskut\n  Laskut have:\n  - a laskun numero (required, unique)\n  - asiakas (an asiakas, required)\n  - a huoltotyö (a huoltotyö)\n  - a summa (an amount, required)\n  - an eräpäivä (a date)\n  - a tila (avoin or maksettu, avoin by default)\n  - a maksupäivä (a date)\n\nStart job\n  For a huoltotyö that is varattu; sets tila to työn alla.\n  Aloita varattu huoltotyö.\n\nComplete job\n  For a huoltotyö that is varattu or työn alla; sets tila to valmis.\n  Merkitse huoltotyö valmiiksi.\n\nMark paid\n  For a lasku that is avoin; sets tila to maksettu and maksupäivä to today.\n  Merkitse lasku maksetuksi.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 126 files (126 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-21. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-21\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "records",
       "questions": [
         "Kuka sovellusta käyttää?",
-        "Mitä asiakkaat tai muut vierailijat saavat nähdä kirjautumatta?",
+        "Saako asiakas nähdä jotain kirjautumatta?",
         "Mitä huoltotyöhön kirjataan?"
       ]
     }
   },
   {
     "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
-    "starter": "booking",
+    "starter": "crm",
     "created": true,
     "typecheck": true,
-    "tokens": 28882,
-    "tokensIn": 24000,
-    "tokensOut": 4882,
-    "cost": 0.1189,
+    "tokens": 35384,
+    "tokensIn": 30857,
+    "tokensOut": 4527,
+    "cost": 0.1108,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
     "lang": "de",
-    "seconds": 59,
-    "summary": "Hofladen\n  Produkte, Vorbestellungen der Kunden und Abholzeiten für einen kleinen Hofladen.\n\nPages\n  - Startseite (a landing page: hero, produkte where available is yes, faq, call to action and footer)\n  - Vorbestellungen (lists vorbestellungen; filter by status or abholzeit; “Mark ready”; “Mark picked up”; “Cancel”)\n  - Produkte (lists produkte; search by name or beschreibung)\n  - Abholzeiten (lists abholzeiten)\n  - Verwaltung (every kind of record, to find, open, change and delete)\n\nProdukte\n  Produkte have:\n  - a name (required)\n  - a beschreibung\n  - preis (an amount, required)\n  - an einheit\n  - a verfügbar (yes or no, true by default)\n  Only admins can add produkte.\n  Only admins can change produkte.\n  Only admins can delete produkte.\n\nAbholzeiten\n  Abholzeiten have:\n  - a beginn (a date and time, required)\n  - an ende (a date and time)\n  - a plätze (a whole number, required, 10 by default)\n  Each abholzeit lists its vorbestellungen.\n  Only admins can add abholzeiten.\n  Only admins can change abholzeiten.\n  Only admins can delete abholzeiten.\n\nVorbestellungen\n  Vorbestellungen have:\n  - an abholzeit (an abholzeit, required)\n  - an anmerkung\n  - status (offen, abholbereit, abgeholt or storniert, offen by default)\n  Each vorbestellung lists its positionen.\n  At most the pickup slot's capacity vorbestellungen per pickup slot (counting those with status open or ready).\n\nPositionen\n  Positionen have:\n  - a vorbestellung (a vorbestellung, required)\n  - a produkt (a produkt, required)\n  - a menge (a whole number, required, 1 by default)\n\nMark ready\n  For a vorbestellung that is offen; sets status to abholbereit.\n  Die Vorbestellung ist gepackt und liegt zur Abholung bereit.\n  Only admins can use it.\n\nMark picked up\n  For a vorbestellung that is abholbereit; sets status to abgeholt.\n  Der Kunde hat die Vorbestellung abgeholt.\n  Only admins can use it.\n\nCancel\n  For a vorbestellung that is offen or abholbereit; sets status to storniert.\n  Die Vorbestellung wird storniert.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin (Betreiber des Hofladens. Pflegt Produkte, Abholzeiten und bearbeitet Vorbestellungen)\n  - customer (Kunde, der Produkte vorbestellt und abholt)\n  New users get the customer role.\n  Open to anyone without signing in: the home page, the produkte page and reading products where available is yes.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp.\nGenerated 113 files (113 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-4VaGel/app-22/drizzle.config.ts'\n9 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\norder_lines 7 columns 0 indexes 3 fks\npickup_slots 7 columns 0 indexes 1 fks\npreorders 7 columns 0 indexes 2 fks\nproducts 9 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_mysterious_zodiak.sql 🚀\n\nCreated /tmp/smithable-bench-m12-4VaGel/app-22. Start it with:\n\n  cd /tmp/smithable-bench-m12-4VaGel/app-22\n  smithable run\n/tmp/smithable-bench-m12-4VaGel/app-22/smithable.yml:36:7  warning  Preorder has a capacity per pickupSlot, but \"pickupSlot\" is not unique: one person can take several places.\n    hint: Write \"pickupSlot: PickupSlot! unique\" for one preorder per person and pickupslot (unique per owner with private access).",
+    "seconds": 40,
+    "summary": "Hofladen\n  Produkte, Vorbestellungen der Kunden und Abholzeiten für einen kleinen Hofladen.\n\nPages\n  - Vorbestellungen (lists vorbestellungen; filter by status, abholzeit or kunde; “Mark ready”; “Mark collected”; “Cancel”)\n  - Abholzeiten (lists abholzeiten)\n  - Produkte (lists produkte; search by name)\n  - Kunden (lists kunden; search by name, e-mail or telefon)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nProdukte\n  Produkte have:\n  - a name (required)\n  - a beschreibung\n  - an einheit (stück, kg, bund or liter, stück by default)\n  - preis (an amount, required)\n  - a verfügbar (yes or no, true by default)\n\nKunden\n  Kunden have:\n  - a name (required)\n  - an e-mail (an email address)\n  - a telefon (a phone number)\n  - a notizen\n  Each kunde lists its vorbestellungen.\n\nAbholzeiten\n  Abholzeiten have:\n  - a beginn (a date and time, required)\n  - an ende (a date and time)\n  - a plätze (a whole number, required, 10 by default)\n  - a notizen\n  Each abholzeit lists its vorbestellungen.\n\nVorbestellungen\n  Vorbestellungen have:\n  - a kunde (a kunde, required)\n  - an abholzeit (an abholzeit, required)\n  - status (offen, abholbereit, abgeholt or storniert, offen by default)\n  - a notizen\n  Each vorbestellung lists its positionen.\n  At most the pickup slot's capacity vorbestellungen per pickup slot (counting those with status open or ready or collected).\n\nPositionen\n  Positionen have:\n  - a vorbestellung (a vorbestellung, required)\n  - a produkt (a produkt, required)\n  - a menge (a number, required, 1 by default)\n  - einzelpreis (an amount, required)\n  The betrag is calculated as the menge times the einzelpreis.\n\nMark ready\n  For a vorbestellung that is offen; sets status to abholbereit.\n  Die Vorbestellung ist gepackt und liegt zur Abholung bereit.\n\nMark collected\n  For a vorbestellung that is offen or abholbereit; sets status to abgeholt.\n  Der Kunde hat die Vorbestellung abgeholt.\n\nCancel\n  For a vorbestellung that is offen or abholbereit; sets status to storniert.\n  Die Vorbestellung wird storniert.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\nPictures from the Smithable image library: logo.webp.\nGenerated 126 files (126 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-22. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-22\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-G0aRVT/app-22/smithable.yml:37:7  warning  Preorder has a capacity per pickupSlot, but \"pickupSlot\" is not unique: one person can take several places.\n    hint: Write \"pickupSlot: PickupSlot! unique\" for one preorder per person and pickupslot (unique per owner with private access).",
     "error": "",
     "meta": {
       "wordStarter": "records",
@@ -531,24 +536,23 @@
     "description": "A backend for my habit app: habits, daily check-ins and streaks.",
     "starter": "records",
     "created": true,
-    "typecheck": false,
-    "tokens": 26919,
-    "tokensIn": 25629,
-    "tokensOut": 1290,
-    "cost": 0.039,
+    "typecheck": true,
+    "tokens": 31549,
+    "tokensIn": 30210,
+    "tokensOut": 1339,
+    "cost": 0.0419,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "rerun": "2026-10-05",
-    "seconds": 24,
-    "summary": "Habit Tracker\n  A backend for a habit app: each person's habits, daily check-ins and streaks.\n\nPages\n  - Habits (lists habits; search by name or description; filter by status or frequency; sort by name, current streak, longest streak or started on; “Archive”; “Reactivate”)\n  - Check ins (lists check ins; filter by habit or date)\n\nHabits\n  Habits have:\n  - a name (required)\n  - a description\n  - a frequency (daily, weekdays or weekly, daily by default)\n  - status (active or archived, active by default)\n  - started on (a date, required, today by default)\n  - a current streak (a whole number, 0 by default)\n  - a longest streak (a whole number, 0 by default)\n  Each habit lists its check ins.\n\nCheck ins\n  Check ins have:\n  - a habit (a habit, required)\n  - a date (required, today by default)\n  - a note\n\nArchive\n  For a habit that is active; sets status to archived.\n  Stop tracking a habit while keeping its history.\n\nReactivate\n  For a habit that is archived; sets status to active.\n  Start tracking an archived habit again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees and changes only their own records.\n  Roles:\n  - admin\n  - member\n  New users get the member role.\n  Other programs can read and change habits and check ins with a key, and run archive and reactivate.\nNo pictures: none of the library's files could be fetched.\nGenerated 91 files (91 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-C77g61/app-23/drizzle.config.ts'\n7 tables\naccount 13 columns 1 indexes 1 fks\naudit_log 13 columns 2 indexes 0 fks\ncheck_ins 7 columns 0 indexes 2 fks\nhabits 11 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_tearful_thing.sql 🚀\n\nCreated /tmp/smithable-bench-m12-C77g61/app-23. Start it with:\n\n  cd /tmp/smithable-bench-m12-C77g61/app-23\n  smithable run",
+    "seconds": 18,
+    "summary": "Habit Tracker\n  Keep track of habits, daily check-ins and streaks.\n\nPages\n  - Habits (lists habits; search by name or description; filter by status or frequency; “Pause”; “Resume”; “Check in today”)\n  - Check ins (lists check ins; filter by habit or date)\n\nHabits\n  Habits have:\n  - a name (required)\n  - a description\n  - a frequency (daily, weekdays or weekly, daily by default)\n  - status (active, paused or archived, active by default)\n  - started on (a date, required, today by default)\n  - a current streak (a whole number, 0 by default)\n  - a longest streak (a whole number, 0 by default)\n  Each habit lists its check ins.\n\nCheck ins\n  Check ins have:\n  - a habit (a habit, required)\n  - a date (required, today by default)\n  - a note\n\nPause\n  For a habit that is active; sets status to paused.\n  Pause a habit for a while.\n\nResume\n  For a habit that is paused or archived; sets status to active.\n  Start tracking a habit again.\n\nCheck in today\n  For a habit that is active; asks for the check in's note; adds a check in (date today).\n  Record today's check-in for a habit.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Other programs can read and change habits and check ins with a key, and run pause, resume and check in today.\nPictures from the Smithable image library: logo.webp.\nGenerated 106 files (106 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-23. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-23\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "api",
       "questions": [
         "Who will use the habit app?",
-        "Can anyone see habits or streaks without signing in?",
-        "What does a daily check-in record?"
+        "Can anyone see anything without signing in?",
+        "How often should a habit be done?"
       ]
     }
   },
@@ -557,20 +561,21 @@
     "starter": "api",
     "created": true,
     "typecheck": true,
-    "tokens": 27304,
-    "tokensIn": 25933,
-    "tokensOut": 1371,
-    "cost": 0.0431,
+    "tokens": 31658,
+    "tokensIn": 30504,
+    "tokensOut": 1154,
+    "cost": 0.0405,
     "currency": "$",
     "fromCache": 0,
     "calls": 1,
-    "rerun": "2026-10-05",
-    "seconds": 21,
-    "summary": "My Projects\n  Tasks and notes, grouped by project, that my AI assistant keeps for me.\n\nPages\n  - Admin (every kind of record, to find, open, change and delete; only for member users and admins)\n  - Team (who has access: invite people, change roles, remove users)\n\nProjects\n  Projects have:\n  - a name (required)\n  - a description\n  Each project lists its tasks.\n  Each project lists its notes.\n  Only member users and admins can add projects.\n  Only member users and admins can change projects.\n  Only member users and admins can delete projects.\n\nTasks\n  Tasks have:\n  - a title (required)\n  - a project (a project, required)\n  - status (todo, doing or done, todo by default)\n  - a due date\n  - details\n  Only member users, assistant users and admins can change tasks.\n  Only member users and admins can delete tasks.\n\nNotes\n  Notes have:\n  - a title (required)\n  - a project (a project, required)\n  - a body\n  Only member users, assistant users and admins can change notes.\n  Only member users and admins can delete notes.\n\nComplete\n  For a task that is todo or doing; sets status to done.\n  Mark a task as done.\n\nReopen\n  For a task that is done; sets status to todo.\n  Open a finished task again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin\n  - member (Works with the projects, tasks and notes)\n  - assistant (The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes)\n  New users get the member role.\n  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.\nNo pictures: none of the library's files could be fetched.\nGenerated 117 files (117 changed, 0 removed).\nNo config path provided, using default 'drizzle.config.ts'\nReading config file '/tmp/smithable-bench-m12-C77g61/app-24/drizzle.config.ts'\n10 tables\naccount 13 columns 1 indexes 1 fks\napi_key 10 columns 1 indexes 0 fks\naudit_log 13 columns 2 indexes 0 fks\ninvitation 7 columns 2 indexes 1 fks\nnotes 7 columns 0 indexes 2 fks\nprojects 6 columns 0 indexes 1 fks\nsession 8 columns 2 indexes 1 fks\ntasks 9 columns 0 indexes 2 fks\nuser 8 columns 1 indexes 0 fks\nverification 6 columns 1 indexes 0 fks\n\n[✓] Your SQL migration file ➜ drizzle/0000_lazy_luckman.sql 🚀\n\nCreated /tmp/smithable-bench-m12-C77g61/app-24. Start it with:\n\n  cd /tmp/smithable-bench-m12-C77g61/app-24\n  smithable run",
+    "seconds": 17,
+    "summary": "Project Memory\n  Tasks and notes, grouped by project, that my AI assistant keeps for me.\n\nPages\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n  - Admin (every kind of record, to find, open, change and delete; only for members and admins)\n\nProjects\n  Projects have:\n  - a name (required)\n  - a description\n  Each project lists its tasks.\n  Each project lists its notes.\n\nTasks\n  Tasks have:\n  - a title (required)\n  - a project (a project, required)\n  - status (todo, doing or done, todo by default)\n  - a due date\n  - details\n\nNotes\n  Notes have:\n  - a title (required)\n  - a project (a project, required)\n  - a body\n  - an attachment (a document)\n\nComplete\n  For a task that is todo or doing; sets status to done.\n  Mark a task as done.\n\nReopen\n  For a task that is done; sets status to todo.\n  Open a finished task again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member (Someone who works with the tasks and notes): opens the admin page; adds every kind of record; changes everyone's records; deletes everyone's records\n  - assistant (The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes): adds tasks and notes; changes everyone's tasks and notes\n  New users get the member role.\n  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.\nPictures from the Smithable image library: logo.webp.\nGenerated 145 files (145 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-G0aRVT/app-24. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-G0aRVT/app-24\n  smithable studio\n\nor only run the app with smithable run.",
     "error": "",
     "meta": {
       "wordStarter": "api",
-      "questions": []
+      "questions": [
+        "Besides a title, what should a task hold?"
+      ]
     }
   }
 ]

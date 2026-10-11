@@ -5,7 +5,7 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Follows the club; only administrators add to the site.
+    description: Follows the club; only administrators add and change teams, players and matches.
     pages: all
 public:
   pages: [home, matches, teams, players, privacy]

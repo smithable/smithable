@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
   name: Tool Library
-  description: A tool library where neighbors lend each other tools.
+  description: A neighborhood tool library where neighbors lend each other tools.
 models:
   Tool:
     fields:
       name: string!
       description: text!
       category: garden | power | hand | measuring | other
-      condition: excellent | good | fair
+      condition: likeNew | good | worn
       available: bool = true
 pages:
   tools:
@@ -27,4 +27,7 @@ pages:
     landing:
       hero:
       footer:
+  privacy:
+    route: /privacy
+    legal: privacy
 navigation: [tools, myTools]

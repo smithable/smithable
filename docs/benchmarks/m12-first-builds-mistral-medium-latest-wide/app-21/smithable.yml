@@ -1,16 +1,16 @@
 smithable: 0.1
 app:
-  name: Pieni autokorjaamo
-  description: Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+  name: Pieni Autokorjaamo
+  description: "Small car repair shop: customers, cars, maintenance jobs and invoices in one place."
   currency: EUR
-  timezone: Europe/Helsinki
 models:
   Customer:
     fields:
       name: string!
-      email: email
+      email: email!
       phone: phone
-      notes: text
+      address: text
+      cars: Car[]
   Car:
     fields:
       registrationNumber: string! unique
@@ -18,82 +18,86 @@ models:
       model: string!
       year: int
       customer: Customer!
-      notes: text
-  Service:
-    fields:
-      name: string!
-      description: text
-      price: money!
-  WorkOrder:
-    fields:
-      number: string! unique
-      car: Car!
-      status: pending | inProgress | completed | canceled
-      description: text
-      startDate: date
-      endDate: date
-      total: money
-      notes: text
-  WorkItem:
-    fields:
-      workOrder: WorkOrder!
-      service: Service!
-      quantity: decimal = 1
-      unitPrice: money
-      total:
-        type: money
-        formula: quantity * unitPrice
-      notes: text
+      maintenanceJobs: MaintenanceJob[]
   Invoice:
     fields:
       number: string! unique
-      workOrder: WorkOrder!
       customer: Customer!
-      status: draft | sent | paid | canceled
-      issueDate: date = TODAY()
-      dueDate: date
-      total: money
-      notes: text
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date!
+        default: DATEADD(issuedOn, 14, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+      maintenanceJob: MaintenanceJob
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  MaintenanceJob:
+    fields:
+      car: Car!
+      description: text!
+      status: pending | inProgress | completed | cancelled
+      startDate: date
+      endDate: date
+      invoice: Invoice
+      estimatedCost: money
+      actualCost: money
 pages:
-  asiakkaat:
+  customers:
     crud: Customer
-    search: [name, email, phone]
-  autot:
+  cars:
     crud: Car
-    search: [registrationNumber, make, model]
-  huoltotyot:
-    crud: WorkOrder
-    search: [number, description]
-    filters: [status, car, startDate, endDate]
-    actions: [markWorkOrderCompleted]
-  laskut:
+  invoices:
     crud: Invoice
-    search: [number, customer]
-    filters: [status, customer, issueDate, dueDate]
-    actions: [markInvoiceSent, markInvoicePaid]
-  palvelut:
-    crud: Service
-  team:
-    users: manage
-navigation: [asiakkaat, autot, palvelut, huoltotyot, laskut, team]
+    actions: [markSent, markPaid]
+  invoice-lines:
+    crud: InvoiceLine
+  maintenance-jobs:
+    crud: MaintenanceJob
+    actions: [startJob, completeJob]
 actions:
-  markWorkOrderCompleted:
-    on: WorkOrder
-    when:
-      status: inProgress
-    set:
-      status: completed
-      endDate: TODAY()
-  markInvoiceSent:
+  markSent:
     on: Invoice
     when:
       status: draft
     set:
       status: sent
-      issueDate: TODAY()
-  markInvoicePaid:
+    intent: The invoice was sent to the customer.
+  markPaid:
     on: Invoice
     when:
-      status: sent
+      status: [sent, overdue]
     set:
       status: paid
+    intent: The customer paid the invoice.
+  startJob:
+    on: MaintenanceJob
+    when:
+      status: pending
+    set:
+      status: inProgress
+      startDate: TODAY()
+    intent: Start the maintenance job.
+  completeJob:
+    on: MaintenanceJob
+    when:
+      status: inProgress
+    set:
+      status: completed
+      endDate: TODAY()
+    intent: Complete the maintenance job.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: customer.email

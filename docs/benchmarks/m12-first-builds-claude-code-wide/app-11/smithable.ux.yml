@@ -1,20 +1,8 @@
 smithableUx: 0.1
-tones:
-  Component.status:
-    operational: success
-    degraded: warning
-    down: danger
-    maintenance: warning
-  Incident.status:
-    investigating: danger
-    identified: warning
-    monitoring: warning
-    resolved: success
 pages:
   components:
     table:
-      columns: [name, status]
-    icon: layers
+      columns: [name, status, description]
   incidents:
     table:
       columns: [title, component, status, detectedAt, expectedBackAt, resolvedAt]
@@ -22,7 +10,15 @@ pages:
   maintenance:
     table:
       sort: startsAt
-  overview:
-    icon: chart
+tones:
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+  Incident.status:
+    investigating: danger
+    identified: warning
+    monitoring: warning
+    resolved: success
 theme:
   preset: corporate

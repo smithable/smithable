@@ -2,5 +2,7 @@
   "description": "Somewhere my AI assistant keeps my tasks and notes, by project.",
   "starter": "api",
   "wordStarter": "api",
-  "questions": []
+  "questions": [
+    "Besides a title, what should a task hold?"
+  ]
 }

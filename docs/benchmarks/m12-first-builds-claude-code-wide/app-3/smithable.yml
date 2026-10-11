@@ -1,53 +1,52 @@
 smithable: 0.1
 app:
-  name: Salon Booking
-  description: Online booking for a hair salon where customers pick a stylist and a free time themselves.
+  name: Cut & Comb
+  description: Online booking for a hair salon, where customers pick a stylist and a free time themselves.
+  currency: EUR
 models:
   Service:
     fields:
       name: string!
       summary: text
       durationMinutes: int! = 45
-    access:
-      create: [admin]
+      price: money
   Stylist:
     fields:
       name: string!
-      bio: text
-    access:
-      create: [admin]
+      bio: markdown
+      portrait: picture
   Slot:
     fields:
       stylist: Stylist!
       startsAt: datetime!
+      durationMinutes: int! = 45
+      capacity: int! = 1
       bookings: Booking[]
       placesLeft:
         type: int
-        formula: 1 - COUNT(bookings)
-    access:
-      create: [admin]
+        formula: capacity - COUNT(bookings)
   Booking:
     fields:
       slot: Slot! unique
-      service: Service!
+      service: Service
       note: text
     capacity:
       per: slot
-      max: 1
+      max: slot.capacity
 pages:
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, my-bookings]
-      footer:
-      services:
+        shortcuts: [schedule]
+      ourServices:
         records: Service
-      stylists:
+      ourStylists:
         records: Stylist
       faq:
       callToAction:
         button: schedule
+      footer:
   schedule:
     calendar:
       model: Slot
@@ -56,13 +55,13 @@ pages:
     crud: Booking
   slots:
     crud: Slot
-    access: [admin]
     filters: [stylist, startsAt]
   stylists:
     crud: Stylist
-    access: [admin]
   services:
     crud: Service
-    access: [admin]
   admin:
     data: all
+  privacy:
+    route: /privacy
+    legal: privacy

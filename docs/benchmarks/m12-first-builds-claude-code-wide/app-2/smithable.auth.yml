@@ -4,7 +4,11 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
+  admin: all
   sales:
-    description: Works with leads and deals.
+    description: Works with leads, deals and follow-ups.
+    pages: [leads, deals, follow-ups, schedule]
+    create: all
+    write: all
 defaultRole: sales
 admins: [johan@smithable.ai]

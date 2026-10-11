@@ -3,8 +3,7 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin:
-    description: Organizers. Manage the talks, speakers and registrations.
+  admin: all
   member:
     description: An attendee who registers for talks.
     pages: [my-registrations]

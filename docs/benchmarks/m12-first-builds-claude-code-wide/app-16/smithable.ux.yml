@@ -1,28 +1,13 @@
 smithableUx: 0.1
 pages:
-  plots:
-    table:
-      sort: number
-  members:
-    table:
-      sort: name
   waiting-list:
     table:
       sort: addedOn
-  fees:
-    table:
-      sort: -year
 tones:
   Plot.status:
-    vacant: warning
-    let: success
+    available: success
   Fee.status:
-    due: warning
     paid: success
-  WaitingListEntry.status:
-    offered: warning
-    allotted: success
+    unpaid: warning
 theme:
-  preset: modern
-  brand:
-    primary: "#3f7d3a"
+  preset: woodland

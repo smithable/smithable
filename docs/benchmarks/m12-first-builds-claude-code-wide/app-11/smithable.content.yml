@@ -1,4 +1,8 @@
 smithableContent: 0.1
 pages:
   components:
-    title: Systems
+    title: System status
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

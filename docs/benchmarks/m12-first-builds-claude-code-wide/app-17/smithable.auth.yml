@@ -2,13 +2,15 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, boka]
-  read: [Service, Stylist, Slot]
 roles:
-  admin:
-    description: Salongens personal. Hanterar tider, tjänster och frisörer.
-  customer:
-    description: En kund som bokar tid.
-defaultRole: customer
+  admin: all
+  member:
+    description: En kund som bokar tid i salongen.
+    pages: [mina-bokningar]
+    create: [Booking]
+public:
+  pages: [home, tider, integritet]
+  read: [Service, Stylist, Slot]
+  create: [Message]
+defaultRole: member
 admins: [johan@smithable.ai]

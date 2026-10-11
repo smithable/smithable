@@ -2,7 +2,7 @@ smithable: 0.1
 app:
   name: IT Help Desk
   description: A help desk where the IT team tracks tickets, their priorities and who handles them.
-  timezone: Europe/Mariehamn
+  timezone: Europe/Stockholm
 models:
   Ticket:
     fields:
@@ -17,7 +17,6 @@ pages:
   tickets:
     crud: Ticket
     search: [title, description, requester]
-    sortable: [title, priority, status, createdAt]
     actions: [take, resolve, reopen]
   team:
     users: manage

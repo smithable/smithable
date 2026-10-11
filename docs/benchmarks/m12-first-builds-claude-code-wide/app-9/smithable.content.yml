@@ -2,10 +2,15 @@ smithableContent: 0.1
 models:
   Album:
     fields:
-      recordLabel:
-        label: Label
+      format:
+        values:
+          doubleLp: Double LP
+          lp: LP
+          ep: EP
       condition:
         values:
-          nearMint: Near mint
-          veryGoodPlus: Very good plus
-          veryGood: Very good
+          veryGoodPlus: Very good plus (VG+)
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

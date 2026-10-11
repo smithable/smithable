@@ -8,6 +8,8 @@ pages:
     title: Autot
   laskut:
     title: Laskut
+  kayttajat:
+    title: Käyttäjät
 models:
   Customer:
     label: Asiakas
@@ -51,13 +53,11 @@ models:
           booked: Varattu
           inProgress: Työn alla
           done: Valmis
-      scheduledAt:
-        label: Ajankohta
-      mechanic:
-        label: Mekaanikko
-      laborCost:
+      scheduledOn:
+        label: Päivä
+      labor:
         label: Työ
-      partsCost:
+      parts:
         label: Osat
       total:
         label: Yhteensä
@@ -67,17 +67,29 @@ models:
     fields:
       number:
         label: Laskun numero
+      customer:
+        label: Asiakas
       job:
         label: Huoltotyö
       amount:
         label: Summa
+      dueDate:
+        label: Eräpäivä
       status:
         label: Tila
         values:
-          draft: Luonnos
-          sent: Lähetetty
+          unpaid: Avoin
           paid: Maksettu
-      dueDate:
-        label: Eräpäivä
-      paidAt:
+      paidOn:
         label: Maksupäivä
+actions:
+  startJob:
+    label: Aloita työ
+  completeJob:
+    label: Merkitse valmiiksi
+  markPaid:
+    label: Merkitse maksetuksi
+logo:
+  src: images/logo.webp
+  alt: Two triangles as mountains
+  generated: true

@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "marketplace",
   "questions": [
-    "Do people need an account to post something for sale?",
-    "How should buyers get in touch with a seller?",
-    "Besides photos and a price, what should a listing hold?"
+    "Can visitors browse listings without signing in?",
+    "How should a buyer reach a seller?",
+    "What should a listing hold besides photos and price?"
   ]
 }

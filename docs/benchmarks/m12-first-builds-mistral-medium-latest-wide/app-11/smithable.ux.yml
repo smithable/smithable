@@ -1,1 +1,23 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
+      columns: [title, status, component, detectedAt]
+      below:
+        component: status
+  updates:
+    table:
+      sort: -at
+      columns: [incident, at, status, message]
+  components:
+    table:
+      sort: name
+      columns: [name, status, description]
+  maintenance:
+    table:
+      sort: startsAt
+      columns: [title, component, startsAt, endsAt, description]
+  overview:
+    table:
+      view: cards

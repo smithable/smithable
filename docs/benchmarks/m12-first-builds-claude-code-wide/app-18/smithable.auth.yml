@@ -3,4 +3,7 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  admin: all
+  member: { pages: all, create: all }
 admins: [johan@smithable.ai]

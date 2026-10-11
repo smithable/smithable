@@ -6,13 +6,15 @@ models:
   Item:
     fields:
       title: string!
-      photos: pictures
+      photos: pictures!
       description: text!
-      category: furniture | electronics | books | kitchen | other
+      category: furniture | electronics | books | kitchen | office | other
       condition: likeNew | good | worn
       available: bool = true
+    review: [photos]
 pages:
-  items:
+  catalog:
+    route: /
     crud: Item
     search: [title, description]
     filters: [category, condition, available]
@@ -25,6 +27,14 @@ pages:
   saved:
     crud: Item
     favorites: only
-  team:
-    users: manage
-navigation: [items, myItems, saved]
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  review:
+    review: all
+navigation: [catalog, myItems, saved, review]

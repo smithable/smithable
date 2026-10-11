@@ -1,20 +1,24 @@
 smithableContent: 0.1
 pages:
-  koti:
+  home:
     title: Joogastudio
-    subtitle: Tunnit, ohjaajat ja varaukset verkossa
+    subtitle: Varausjärjestelmä tunnille ja ohjaajille verkossa.
     hero:
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-  aikataulu:
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  schedule:
     title: Aikataulu
+    subtitle: Tarkastele viikon tunteja ja varaa paikkasi.
+  sessions:
+    title: Tunnit
   class-types:
     title: Tuntityypit
   instructors:
     title: Ohjaajat
-  sessions:
-    title: Tunnit
+  messages:
+    title: Viestit
   my-bookings:
     title: Varaukseni
 models:
@@ -55,10 +59,24 @@ models:
       startsAt:
         label: Aloitusaika
       capacity:
-        label: Paikkamäärä
+        label: Kapasiteetti
   Booking:
     label: Varaus
     pluralLabel: Varaukset
     fields:
       session:
         label: Tunti
+  Message:
+    label: Viesti
+    pluralLabel: Viestit
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      message:
+        label: Viesti
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

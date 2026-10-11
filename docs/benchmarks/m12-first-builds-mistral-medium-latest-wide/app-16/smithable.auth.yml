@@ -1,12 +1,17 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
 roles:
   admin:
-    description: Manages plots, waiting list, and fees.
+    description: Manages the society.
   member:
-    description: Views plots and fees.
+    description: Member of the society.
+    pages: [plots, waiting-list, fees]
+    create: [WaitingList]
+    read: [Plot, WaitingList, Fee]
+    write: [WaitingList]
+public:
+  pages: [home, plots]
 defaultRole: member
 admins: [johan@smithable.ai]

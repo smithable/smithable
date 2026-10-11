@@ -4,4 +4,9 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

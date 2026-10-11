@@ -1,66 +1,12 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Welcome to Football Club
-    subtitle: Teams, players, matches and results
     hero:
       image:
         src: images/hero.webp
-        alt: A team standing at a whiteboard by a window over the harbour
-models:
-  Team:
-    label: Team
-    pluralLabel: Teams
-    fields:
-      name:
-        label: Name
-      description:
-        label: Description
-      founded:
-        label: Founded
-      logo:
-        label: Logo
-  Player:
-    label: Player
-    pluralLabel: Players
-    fields:
-      name:
-        label: Name
-      position:
-        label: Position
-        values:
-          goalkeeper: Goalkeeper
-          defender: Defender
-          midfielder: Midfielder
-          forward: Forward
-      team:
-        label: Team
-      number:
-        label: Number
-      birthDate:
-        label: Birth Date
-      bio:
-        label: Bio
-  Match:
-    label: Match
-    pluralLabel: Matches
-    fields:
-      homeTeam:
-        label: Home Team
-      awayTeam:
-        label: Away Team
-      date:
-        label: Date
-      location:
-        label: Location
-      status:
-        label: Status
-        values:
-          scheduled: Scheduled
-          inProgress: In Progress
-          completed: Completed
-          canceled: Canceled
-      homeScore:
-        label: Home Score
-      awayScore:
-        label: Away Score
+        alt: People playing badminton and stretching in a sports hall with a wooden floor
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A football
+  generated: true

@@ -2,7 +2,15 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Views the collection.
+    pages: all
+    create: all
+    read: [Album]
 public:
-  pages: [albums]
+  pages: [home, albums]
   read: [Album]
+defaultRole: member
 admins: [johan@smithable.ai]

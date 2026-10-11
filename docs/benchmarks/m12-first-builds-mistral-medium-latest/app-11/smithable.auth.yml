@@ -3,13 +3,20 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  admin:
+    description: Administrator with full access.
+  staff:
+    description: Writes incidents and their updates.
+    pages: [overview, incidents, updates, maintenance]
+    create: all
+    write: all
 public:
   pages: [home]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
-roles:
-  admin:
-    description: Runs the status page and the team.
-  staff:
-    description: Writes incidents and their updates.
 defaultRole: staff
+api:
+  models: [Component, Incident]
+  actions: [resolve]
+  assistants: true
 admins: [johan@smithable.ai]
