@@ -236,21 +236,25 @@ function analyseCustom(files: SourceFile[]): CustomFile[] {
       isTest,
       exports: all(/export\s+(?:async\s+)?(?:function|const|let|class|type|interface)\s+(\w+)/g),
       imports: [
-        ...text.matchAll(/import(?:\s+type)?\s+\{([^}]*)\}\s+from\s+["']([^"']+)["']/g),
-      ].map((m) => ({
-        path: resolveImport(path, m[2] as string),
-        names: (m[1] as string)
-          .split(",")
-          .map(
-            (n) =>
-              n
-                .trim()
-                .replace(/\s+/g, " ")
-                .replace(/^type /, "")
-                .split(" as ")[0] as string,
-          )
-          .filter(Boolean),
-      })),
+        // Up to the brace without a choice to back over ("import" or "import type", then "{"),
+        // so a long run of spaces costs one pass; what is between is checked after.
+        ...text.matchAll(/\bimport\b([^{;"']*)\{([^}]*)\}\s*from\s*["']([^"']+)["']/g),
+      ]
+        .filter((m) => ["", "type"].includes((m[1] as string).trim()))
+        .map((m) => ({
+          path: resolveImport(path, m[3] as string),
+          names: (m[2] as string)
+            .split(",")
+            .map(
+              (n) =>
+                n
+                  .trim()
+                  .replace(/\s+/g, " ")
+                  .replace(/^type /, "")
+                  .split(" as ")[0] as string,
+            )
+            .filter(Boolean),
+        })),
       implements: isTest ? [] : all(/implements rule ([\w.-]+)/g),
       testsRules: isTest ? all(/\b(?:test|it)\(\s*["'`]rule ([\w.-]+):/g) : [],
       testNames: isTest

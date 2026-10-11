@@ -2,6 +2,14 @@ import { expect, test } from "vitest";
 import { completeSpec, hoverSpec } from "./complete.js";
 import { buildJsonSchema } from "./schema.js";
 
+const booking = Object.values(
+  import.meta.glob("../../../examples/booking/smithable.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }),
+)[0] as string;
+
 const crm = Object.values(
   import.meta.glob("../../../examples/crm/smithable.yml", {
     query: "?raw",
@@ -195,6 +203,69 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     expect.arrayContaining(["number", "customer", "status", "total"]),
   );
   expect(ux("smithableUx: 0.1\ntheme:\n  density: ‸")).toEqual(["comfortable", "compact"]);
+  // The preset: the built-in themes and the project's own; a landing page's own theme too.
+  const own = (marked: string) => {
+    const offset = marked.indexOf("‸");
+    const found = completeSpec(
+      marked.replace("‸", ""),
+      offset,
+      { spec: crm, themes: ["acme"] },
+      "smithable.ux.yml",
+    );
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(own("smithableUx: 0.1\ntheme:\n  preset: ‸")).toEqual(
+    expect.arrayContaining(["modern", "corporate", "nordic", "acme"]),
+  );
+  expect(own("smithableUx: 0.1\npages:\n  customers:\n    theme:\n      preset: n‸")).toEqual([
+    "navy",
+    "nordic",
+  ]);
+  // A form's controls by field, and a form section's fields.
+  expect(ux("smithableUx: 0.1\npages:\n  orders:\n    form:\n      control:\n        ‸")).toEqual(
+    expect.arrayContaining(["number", "status", "total"]),
+  );
+  expect(
+    ux(
+      "smithableUx: 0.1\npages:\n  orders:\n    form:\n      sections:\n        - { name: main, fields: [‸",
+    ),
+  ).toEqual(expect.arrayContaining(["number", "status"]));
+  // A tone names a choice field, and under it the field's values.
+  expect(ux("smithableUx: 0.1\ntones:\n  ‸")).toEqual(
+    expect.arrayContaining(["Customer.segment", "Order.status", "Order.shippingMethod"]),
+  );
+  expect(ux("smithableUx: 0.1\ntones:\n  Order.status:\n    ‸")).toEqual([
+    "draft",
+    "placed",
+    "shipped",
+    "canceled",
+  ]);
+  // A landing page's sections by name (those with a look), and each one's looks.
+  const home = (marked: string) => {
+    const offset = marked.indexOf("‸");
+    const found = completeSpec(
+      marked.replace("‸", ""),
+      offset,
+      { spec: booking },
+      "smithable.ux.yml",
+    );
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      ‸")).toEqual([
+    "hero",
+    "classes",
+    "faq",
+    "news",
+  ]);
+  expect(home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      hero:\n        ‸")).toEqual(
+    expect.arrayContaining(["layout", "image"]),
+  );
+  expect(
+    home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      classes:\n        layout: ‸"),
+  ).toEqual(["cards", "list", "grid"]);
+  expect(
+    home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      faq:\n        layout: ‸"),
+  ).toEqual(["accordion", "list"]);
   // The content file: models and their fields as keys.
   const content = (marked: string) => {
     const offset = marked.indexOf("‸");

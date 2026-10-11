@@ -939,6 +939,8 @@ try {
         .getAttribute("href");
       if (!howTo?.endsWith("spec.html#smithableuxyml-how-the-app-looks"))
         throw new Error(`the ux file links to ${howTo}`);
+      // The ux file says where its choices have controls, with a way there.
+      await page.getByRole("button", { name: "Open Look" }).waitFor({ timeout: 10000 });
       const ux = page.getByLabel("smithable.ux.yml");
       const saved = await ux.evaluate((e) => e.value);
       await ux.focus();
