@@ -18,19 +18,19 @@ A [TanStack Start](https://tanstack.com/start) app with React, Tailwind, shadcn/
 
 ## Try it
 
-Node 24 and pnpm (the version pinned in `package.json`), then:
+Node 24, then:
 
 ```sh
-pnpm install
-pnpm build
-node packages/cli/dist/bin.js new my-crm        # a CRM from the starter, with sample data
-node packages/cli/dist/bin.js new torget --starter marketplace   # or booking, invoicing, records, status
-node packages/cli/dist/bin.js new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
-node packages/cli/dist/bin.js new cafe --from https://example.com            # a page as the description; --with-pictures takes its pictures
-cd my-crm && node ../packages/cli/dist/bin.js studio   # the editor (No code and Code modes) in the browser
+npm install -g smithable                        # or run any command once with npx smithable@latest
+smithable --version                             # smithable 0.1.0 (spec 0.1)
+smithable new my-crm                            # a CRM from the starter, with sample data
+smithable new torget --starter marketplace      # or booking, invoicing, records, status, api
+smithable new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
+smithable new cafe --from https://example.com            # a page as the description; --with-pictures takes its pictures
+cd my-crm && smithable studio                   # the editor (No code and Code modes) in the browser
 ```
 
-The packages are not on npm yet, so `smithable` below means `node <repo>/packages/cli/dist/bin.js` (an alias does it: `alias smithable="node $PWD/packages/cli/dist/bin.js"` from the repository root). From inside a project, the everyday commands:
+From inside a project, the everyday commands:
 
 ```sh
 smithable op addField Customer taxId string     # a deterministic change: spec, migration, forms, tables
@@ -39,6 +39,8 @@ smithable undo                                  # takes back the last change, da
 smithable mcp                                   # the same operations as tools for Claude Code, Cursor, …
 smithable deploy --target docker                # release checks, then the container
 ```
+
+To work on Smithable itself, from a clone: `pnpm install`, `pnpm build`, then `node packages/cli/dist/bin.js` in place of `smithable` ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 The seven starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
 

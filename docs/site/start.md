@@ -4,17 +4,14 @@ Everything here runs on your own machine, with no account.
 
 ## Install
 
-You need Node 24 and pnpm (the version pinned in the repository's `package.json`). The packages are not on npm yet, so install from the repository:
+You need Node 24. Then install the command line from npm:
 
 ```sh
-git clone https://github.com/smithable/smithable.git
-cd smithable
-pnpm install
-pnpm build
-alias smithable="node $PWD/packages/cli/dist/bin.js"
+npm install -g smithable
+smithable --version       # smithable 0.1.0 (spec 0.1)
 ```
 
-`smithable --help` lists every command.
+Or run any command once without installing, as `npx smithable@latest new my-crm`. `smithable --help` lists every command.
 
 ## A first app
 
