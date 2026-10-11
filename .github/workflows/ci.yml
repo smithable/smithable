@@ -166,7 +166,8 @@ jobs:
             echo "No CLOUD_RELEASE_TOKEN secret: the cloud releases on its own schedule." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          if ! gh workflow run images.yml --repo smithable/smithable-cloud -f oss_ref="$GITHUB_SHA" -f if_new=true; then
+          # --ref: without it gh first reads the default branch, which the Actions-only token may not.
+          if ! gh workflow run images.yml --repo smithable/smithable-cloud --ref main -f oss_ref="$GITHUB_SHA" -f if_new=true; then
             echo "::warning::Could not start smithable-cloud's Release images: is CLOUD_RELEASE_TOKEN lapsed? The cloud's own schedule still releases." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
