@@ -87,9 +87,13 @@ plain_docs() {
   for glob in "${globs[@]}"; do excludes+=(":(glob,exclude)$glob"); done
   [ -n "$(git diff --name-only "$base" "$head")" ] || return 1
   [ -z "$(git diff --name-only "$base" "$head" -- . "${excludes[@]}")" ] || return 1
+  local name
   while read -r gone; do
     [ -n "$gone" ] || continue
-    if git grep -qF "$(basename "$gone")" "$head" -- docs/site docs/spec docs/ai.md; then
+    # A page of the site links to another page by its name, and to any other file by its path
+    # (a link to GitHub): the bare name of a file elsewhere, such as smithable.auth.yml, is in every page.
+    case "$gone" in docs/site/*) name=$(basename "$gone") ;; *) name=${gone#docs/} ;; esac
+    if git grep -qF "$name" "$head" -- docs/site docs/spec docs/ai.md; then
       refuse "it removes $gone, which a page of the site may link to: change the link in the same pull request."
     fi
   done < <(git diff --no-renames --diff-filter=D --name-only "$base" "$head")
