@@ -10,6 +10,7 @@ import { LANDING_SECTIONS } from "./patterns.js";
 import { buildJsonSchema } from "./schema.js";
 import type { JsonSchema } from "./section.js";
 import { TIME_ZONES } from "./time-zones.js";
+import { SECTION_LOOKS, THEME_PRESETS } from "./ux.js";
 
 export interface Suggestion {
   label: string;
@@ -35,6 +36,8 @@ export interface Completion {
 export interface Known {
   roles?: string[];
   spec?: string;
+  /** The project's own themes (themes/<name>.yml), which `theme.preset` may name beside the built-in ones. */
+  themes?: string[];
 }
 
 /** The files the editor can help with: smithable.yml and its companions. */
@@ -177,13 +180,35 @@ const schemaAt = (path: string[], file: EditedFile = "smithable.yml"): Node[] =>
   path.reduce((nodes, segment) => under(nodes, segment), [rootOf(file)]);
 
 /** The app's own names, as far as the text's indentation tells them. */
+/** The values of a choice written as "draft | sent | paid" (quoted or not, "!" and a default allowed). */
+function choiceValues(text: string): string[] | undefined {
+  const bare = text
+    .trim()
+    .replace(/#.*$/, "")
+    .replace(/^["']|["']\s*$/g, "")
+    .replace(/\s*=.*$/, "")
+    .replace(/!\s*$/, "")
+    .trim();
+  if (!bare.includes("|")) return undefined;
+  return bare
+    .split("|")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 function namesIn(text: string) {
   const models = new Map<string, string[]>();
   const pages = new Map<string, string | undefined>();
   const actions = new Map<string, string | undefined>();
+  /** "Model.field" to the values of a choice field. */
+  const choices = new Map<string, string[]>();
+  /** A landing page to its sections, each with its kind (a records section's name is its own). */
+  const landing = new Map<string, Map<string, string>>();
   let section = "";
   let entry = "";
   let inFields = false;
+  let inLanding = false;
+  let field = "";
   for (const line of text.split("\n")) {
     if (!line.trim() || /^\s*#/.test(line)) continue;
     const at = /^ */.exec(line)?.[0].length ?? 0;
@@ -194,6 +219,7 @@ function namesIn(text: string) {
     } else if (at === 2 && key) {
       entry = key;
       inFields = false;
+      inLanding = false;
       if (section === "models") models.set(entry, []);
       if (section === "pages") pages.set(entry, undefined);
       if (section === "actions") actions.set(entry, undefined);
@@ -212,12 +238,40 @@ function namesIn(text: string) {
         );
     } else if (at === 4 && key && entry) {
       inFields = section === "models" && key === "fields";
+      inLanding = section === "pages" && key === "landing";
+      if (inLanding) landing.set(entry, new Map());
       const of = /^\s*(?:crud|calendar|articles|on):\s*([A-Z][A-Za-z0-9]*)/.exec(line)?.[1];
       if (of && section === "pages") pages.set(entry, of);
       if (of && section === "actions") actions.set(entry, of);
-    } else if (at === 6 && key && inFields) models.get(entry)?.push(key);
+    } else if (at === 6 && key && inFields) {
+      models.get(entry)?.push(key);
+      field = key;
+      const values = choiceValues(line.slice(line.indexOf(":") + 1));
+      if (values) choices.set(`${entry}.${key}`, values);
+    } else if (at === 6 && key && inLanding) {
+      // A section is what its name says, unless it is a records section, a form or a calculator.
+      const rest = line.slice(line.indexOf(":") + 1);
+      const kind = /\brecords:/.test(rest)
+        ? "records"
+        : /\bform:/.test(rest)
+          ? "form"
+          : /\bcalculator:/.test(rest)
+            ? "calculator"
+            : key;
+      landing.get(entry)?.set(key, kind);
+    } else if (at === 8 && key && inFields && field) {
+      // The block form of a choice: "type: draft | sent" under the field.
+      if (key === "type") {
+        const values = choiceValues(line.slice(line.indexOf(":") + 1));
+        if (values) choices.set(`${entry}.${field}`, values);
+      }
+    } else if (at === 8 && key && inLanding) {
+      const kind = ["records", "calculator", "form"].includes(key) ? key : undefined;
+      const [last] = [...(landing.get(entry)?.keys() ?? [])].slice(-1);
+      if (kind && last) landing.get(entry)?.set(last, kind);
+    }
   }
-  return { models, pages, actions };
+  return { models, pages, actions, choices, landing };
 }
 
 /** The app's own names that fit a place: a value's, or (for `keys`) the keys of a map. */
@@ -277,18 +331,42 @@ function companionNames(
   known: Known,
   keys: boolean,
 ): string[] | undefined {
-  const { models, pages, actions } = namesIn(known.spec ?? "");
+  const { models, pages, actions, choices, landing } = namesIn(known.spec ?? "");
   const kinds = [...models.keys()];
   const pageIds = [...pages.keys()];
-  const [section, entry, part] = place.path;
+  const [section, entry, part, fourth] = place.path;
   const depth = place.path.length;
+  /** The fields of a page's model (every model's when the page names none). */
+  const pageFields = (page: string | undefined) => {
+    const spec = known.spec ?? "";
+    const model = /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
+      spec.slice(spec.indexOf(`\n  ${page}:`)),
+    )?.[1];
+    return model ? (models.get(model) ?? []) : kinds.flatMap((m) => models.get(m) ?? []);
+  };
   if (keys) {
     if (section === "models" && depth === 1) return kinds;
     if (section === "models" && depth === 3 && part === "fields")
       return models.get(entry ?? "") ?? [];
     if (section === "pages" && depth === 1) return pageIds;
-    if (file === "smithable.ux.yml" && section === "tones" && depth === 1)
-      return kinds.flatMap((m) => (models.get(m) ?? []).map((f) => `${m}.${f}`));
+    if (file === "smithable.ux.yml") {
+      // A tone names a choice field as Model.field, and under it the field's values.
+      if (section === "tones" && depth === 1)
+        return [...choices.keys()].length
+          ? [...choices.keys()]
+          : kinds.flatMap((m) => (models.get(m) ?? []).map((f) => `${m}.${f}`));
+      if (section === "tones" && depth === 2) return choices.get(entry ?? "") ?? [];
+      // A landing page's sections by name, and each section's looks.
+      if (section === "pages" && depth === 3 && part === "sections")
+        return [...(landing.get(entry ?? "")?.keys() ?? [])].filter(
+          (name) => (SECTION_LOOKS[landing.get(entry ?? "")?.get(name) ?? ""] ?? false) !== false,
+        );
+      if (section === "pages" && depth === 4 && part === "sections")
+        return Object.keys(SECTION_LOOKS[landing.get(entry ?? "")?.get(fourth ?? "") ?? ""] ?? {});
+      // A form's controls by field.
+      if (section === "pages" && depth === 4 && part === "form" && fourth === "control")
+        return pageFields(entry);
+    }
     return undefined;
   }
   const key = place.key;
@@ -305,16 +383,25 @@ function companionNames(
     }
     if (depth === 0 && key === "defaultRole") return known.roles ?? [];
   }
-  if (file === "smithable.ux.yml" && section === "pages" && depth === 3) {
-    const fields = (() => {
-      const spec = known.spec ?? "";
-      const model = /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
-        spec.slice(spec.indexOf(`\n  ${entry}:`)),
-      )?.[1];
-      return model ? (models.get(model) ?? []) : kinds.flatMap((m) => models.get(m) ?? []);
-    })();
-    if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
-    if (part === "form" && key === "fieldOrder") return fields;
+  if (file === "smithable.ux.yml") {
+    const presets = [...THEME_PRESETS, ...(known.themes ?? [])];
+    // The app's theme, or a landing page's own, by preset: built in or the project's.
+    if (section === "theme" && depth === 1 && key === "preset") return presets;
+    if (section === "pages" && depth === 3 && part === "theme" && key === "preset") return presets;
+    if (section === "pages" && depth === 3) {
+      const fields = pageFields(entry);
+      if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
+      if (part === "form" && key === "fieldOrder") return fields;
+    }
+    // A form section's fields: "- { name: contact, fields: [name, email] }".
+    if (section === "pages" && part === "form" && fourth === "sections" && key === "fields")
+      return pageFields(entry);
+    // A landing section's look: its kind's values for the key ("text" takes anything).
+    if (section === "pages" && depth === 4 && part === "sections") {
+      const kind = landing.get(entry ?? "")?.get(fourth ?? "") ?? "";
+      const allowed = SECTION_LOOKS[kind]?.[key ?? ""];
+      if (Array.isArray(allowed)) return allowed.map(String);
+    }
   }
   return undefined;
 }
@@ -359,6 +446,7 @@ export function completeSpec(
 ): Completion | undefined {
   const place = placeAt(text, offset);
   if (!place) return undefined;
+  const [section, , part] = place.path;
   const names = (keys: boolean) =>
     file === "smithable.yml"
       ? ownNames(place, text, known, keys)
@@ -392,7 +480,11 @@ export function completeSpec(
       return types.includes("boolean") ? ["true", "false"] : [];
     });
     const own = names(false) ?? [];
-    suggestions = [...new Set([...own, ...fixed])]
+    // A landing section's look: the schema's enum is every kind's looks together, so the
+    // section's own kind decides alone.
+    const exclusive =
+      file === "smithable.ux.yml" && section === "pages" && part === "sections" && own.length > 0;
+    suggestions = [...new Set(exclusive ? own : [...own, ...fixed])]
       .filter((label) => !place.written.includes(label))
       .map((label) => ({ label }));
   }
