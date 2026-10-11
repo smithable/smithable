@@ -1,6 +1,18 @@
-# Smithable
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/site/brand/wordmark-dark.svg">
+    <img src="docs/site/brand/wordmark.svg" alt="Smithable" width="420">
+  </picture>
+</h1>
 
-*Soft to change. Hard as steel.*
+<p align="center"><em>Soft to change. Hard as steel.</em></p>
+
+<p align="center">
+  <a href="https://github.com/smithable/smithable/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/smithable/smithable/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI on main"></a>
+  <a href="https://www.npmjs.com/package/smithable"><img src="https://img.shields.io/npm/v/smithable" alt="npm version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Licence: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/node-24-339933" alt="Node 24">
+</p>
 
 Smithable is an app builder for people who have never written code and for developers who want to move faster. You describe a web application in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification, `smithable.yml`, and generates an ordinary full-stack web application from it.
 
