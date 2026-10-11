@@ -1,10 +1,11 @@
-// Describe a change in your own words: a model proposes operations, which apply at once when
-// they lose no data (Undo takes them back); one that deletes data is shown first and waits
-// for Apply (ARCHITECTURE §9.4).
+// Describe a change in your own words: a model proposes operations, and every proposal is shown
+// first, in the summary's words, and waits for Apply (Johan, 2026-10-11: one click more is the
+// design); Discard, Change it in the forms, or Refine it in a few more words (ARCHITECTURE §9.4).
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal } from "../api";
-import { Button, Label } from "../ui";
+import { Button, Input, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
+import { CustomCode, customFile } from "./custom-code";
 
 /**
  * `onEdit` opens a proposed operation in the Change tab, with its values filled in. While the
@@ -56,18 +57,7 @@ export function Ask({
     setBusy(true);
     setOutput("");
     try {
-      const proposed = await api.ask(text);
-      if (proposed.kind === "change" && !proposed.operations.some((o) => o.destructive)) {
-        const result = await api.applyProposal(proposed.id);
-        const done = proposed.operations.map((o) => words?.(o.op, o.args) ?? o.description);
-        setOutput(
-          result.ok ? `Done: ${done.join("; ")}. ${plainUsage(proposed.usage)}` : result.output,
-        );
-        if (result.ok) {
-          setRequest("");
-          onDone?.();
-        }
-      } else setProposal(proposed);
+      setProposal(await api.ask(text));
     } catch (error) {
       setOutput((error as Error).message);
     } finally {
@@ -79,7 +69,15 @@ export function Ask({
     setBusy(true);
     try {
       const result = await api.applyProposal(proposal.id);
-      setOutput(result.output);
+      const done =
+        proposal.kind === "change"
+          ? proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description)
+          : [];
+      setOutput(
+        result.ok && done.length
+          ? `Done: ${done.join("; ")}. ${plainUsage(proposal.usage)}`
+          : result.output,
+      );
       setProposal(undefined);
       if (result.ok) {
         setRequest("");
@@ -164,6 +162,11 @@ export function Ask({
             setRequest(detailed);
             void propose(detailed);
           }}
+          onRefine={(more) => {
+            const detailed = `${request.trim()} (${more})`;
+            setRequest(detailed);
+            void propose(detailed);
+          }}
         />
       )}
       {output && <p className="text-sm text-muted">{output}</p>}
@@ -183,6 +186,7 @@ export function ProposalView({
   onCancel,
   onEdit,
   onOption,
+  onRefine,
 }: {
   proposal: Proposal;
   words?: Words;
@@ -191,7 +195,16 @@ export function ProposalView({
   onCancel: () => void;
   onEdit?: (prefill: Prefill) => void;
   onOption?: (option: string) => void;
+  /** The proposal asked again with a few more words, as the model's question does. */
+  onRefine?: (more: string) => void;
 }) {
+  const [more, setMore] = useState("");
+  const editable =
+    proposal.kind === "change"
+      ? proposal.operations.find((o) => PREFILLED.includes(o.op) && o.args.route === undefined)
+      : undefined;
+  const custom =
+    proposal.kind === "change" ? proposal.operations.flatMap((o) => customFile(o.op, o.args)) : [];
   return (
     <section
       aria-label="Proposal"
@@ -219,14 +232,44 @@ export function ProposalView({
               </li>
             ))}
           </ol>
-          <div className="flex gap-2">
+          {custom.length > 0 && <CustomCode files={custom} />}
+          <div className="flex flex-wrap gap-2">
             <Button onClick={onApply} disabled={busy}>
               Apply
             </Button>
             <Button variant="ghost" onClick={onCancel} disabled={busy}>
-              Cancel
+              Discard
             </Button>
+            {onEdit && editable && (
+              <Button
+                variant="ghost"
+                onClick={() => onEdit({ op: editable.op, args: editable.args })}
+                disabled={busy}
+              >
+                Change it
+              </Button>
+            )}
           </div>
+          {onRefine && (
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (more.trim()) onRefine(more.trim());
+              }}
+            >
+              <Input
+                aria-label="Refine the proposal"
+                placeholder="Say more, e.g. only for enterprise customers"
+                value={more}
+                onChange={(e) => setMore(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" variant="ghost" disabled={busy || !more.trim()}>
+                Refine
+              </Button>
+            </form>
+          )}
         </>
       )}
       {proposal.kind === "question" && (

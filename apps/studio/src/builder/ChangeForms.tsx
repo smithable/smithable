@@ -19,6 +19,7 @@ import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Input, Label, Select } from "../ui";
+import { CustomCode, customFile } from "./custom-code";
 
 /**
  * Applies an operation; `confirm` accepts a loss of data the user has already seen, and `file`
@@ -877,10 +878,7 @@ function AddCustomAction({ run, initial }: FormProps) {
           className={box}
         />
       </Label>
-      <p className="text-xs text-quiet">
-        What it does is code: it starts as a stub in src/custom/actions/, for a developer or an
-        agent to write.
-      </p>
+      <CustomCode files={customFile("addAction", { action: identifier(action) || "yourAction" })} />
       <Submit label="Add action" disabled={!action} />
     </Form>
   );
