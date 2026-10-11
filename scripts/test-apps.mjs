@@ -1487,6 +1487,11 @@ async function statusFlow(base) {
     // Keys for the API, on the team page: made with a name and a role, shown once, revoked.
     await open(page, `${base}/team`);
     const keys = page.locator('[data-kit="keys"]');
+    // The preview says a key reaches the app from outside only once it is published.
+    await keys
+      .locator('[data-part="preview-note"]')
+      .getByText("once it is published")
+      .waitFor({ timeout: 10000 });
     await keys.getByLabel("What it is for").fill("Uptime monitor");
     await keys.getByRole("button", { name: "Make a key" }).click();
     const shown = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });

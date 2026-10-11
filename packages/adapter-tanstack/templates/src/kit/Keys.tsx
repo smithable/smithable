@@ -164,6 +164,12 @@ export function Keys({
       <div>
         <h2 className="text-lg font-semibold">{w.keys}</h2>
         <p className="text-sm text-muted-foreground">{w.keysLead}</p>
+        {/* The preview runs on this computer: nothing outside it can call the app yet. */}
+        {import.meta.env.DEV && (
+          <p data-part="preview-note" className="mt-2 text-sm text-muted-foreground">
+            {w.keysInPreview}
+          </p>
+        )}
       </div>
       <form
         className="flex flex-wrap items-end gap-3"
