@@ -1,0 +1,125 @@
+[
+  {
+    "starter": "booking",
+    "tag": "Code",
+    "lines": [
+      "models:",
+      "  Session:",
+      "    fields:",
+      "      classType: ClassType!",
+      "      instructor: Instructor!",
+      "      startsAt: datetime!",
+      "      capacity: int! = 12",
+      "pages:",
+      "  schedule:",
+      "    calendar: { model: Session, duration: classType.durationMinutes }"
+    ],
+    "caption": "Stillwater Yoga: the week's classes",
+    "picture": "booking.webp"
+  },
+  {
+    "starter": "invoicing",
+    "tag": "No code",
+    "lines": [
+      "Invoices have:",
+      "- a number (required, unique)",
+      "- a client (a client, required)",
+      "- issued on (a date, required, today by default)",
+      "- due on (a date, required, the issued on plus 30 days by default)",
+      "- status (draft, sent, paid or overdue, draft by default)",
+      "- a contract (a document)",
+      "Each invoice lists its invoice lines.",
+      "The total is calculated as the total amount of its lines.",
+      "Rule: A sent or paid invoice can no longer be edited, only credited."
+    ],
+    "caption": "Invoicely: a freelancer's invoices",
+    "picture": "invoicing.webp"
+  },
+  {
+    "starter": "status",
+    "tag": "Code",
+    "lines": [
+      "models:",
+      "  Component:",
+      "    fields:",
+      "      name: string!",
+      "      status: operational | degraded | down | maintenance",
+      "      description: text",
+      "pages:",
+      "  home:",
+      "    landing:",
+      "      services: { records: Component }"
+    ],
+    "caption": "Northwind Status: is it working?",
+    "picture": "status.webp"
+  },
+  {
+    "starter": "crm",
+    "tag": "No code",
+    "lines": [
+      "Customers have:",
+      "- a name (required)",
+      "- an email (unique)",
+      "- a phone",
+      "- a segment (small business, enterprise or government, small business by default)",
+      "- a credit limit (an amount)",
+      "- notes",
+      "Each customer can have an account manager (a user).",
+      "Each customer lists its orders."
+    ],
+    "caption": "Acme CRM: customers and their orders",
+    "picture": "crm.webp"
+  },
+  {
+    "starter": "marketplace",
+    "tag": "Code",
+    "lines": [
+      "models:",
+      "  Item:",
+      "    fields:",
+      "      title: string!",
+      "      photos: pictures!",
+      "      price: money",
+      "      category: furniture | bikes | electronics | sports | kids | other",
+      "pages:",
+      "  catalog:",
+      "    crud: Item"
+    ],
+    "caption": "Torget: second-hand things nearby",
+    "picture": "marketplace.webp"
+  },
+  {
+    "starter": "api",
+    "tag": "No code",
+    "lines": [
+      "Tasks have:",
+      "- a title (required)",
+      "- a project (a project, required)",
+      "- status (todo, doing or done, todo by default)",
+      "- a due date",
+      "- details",
+      "Each task can have an assignee (a user).",
+      "- assistant (The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes): adds tasks and notes; changes everyone's tasks and notes"
+    ],
+    "caption": "Team Tasks: what an assistant keeps for a team",
+    "picture": "api.webp"
+  },
+  {
+    "starter": "records",
+    "tag": "Code",
+    "lines": [
+      "models:",
+      "  Item:",
+      "    fields:",
+      "      name: string!",
+      "      kind: general | favorite | archived",
+      "      addedOn: date! = TODAY()",
+      "pages:",
+      "  items:",
+      "    crud: Item",
+      "    search: [name, summary]"
+    ],
+    "caption": "Our Collection: a collection, shown",
+    "picture": "records.webp"
+  }
+]
