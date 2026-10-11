@@ -236,7 +236,7 @@ function analyseCustom(files: SourceFile[]): CustomFile[] {
       isTest,
       exports: all(/export\s+(?:async\s+)?(?:function|const|let|class|type|interface)\s+(\w+)/g),
       imports: [
-        ...text.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+["']([^"']+)["']/g),
+        ...text.matchAll(/import(?:\s+type)?\s+\{([^}]*)\}\s+from\s+["']([^"']+)["']/g),
       ].map((m) => ({
         path: resolveImport(path, m[2] as string),
         names: (m[1] as string)
@@ -245,8 +245,9 @@ function analyseCustom(files: SourceFile[]): CustomFile[] {
             (n) =>
               n
                 .trim()
-                .replace(/^type\s+/, "")
-                .split(/\s+as\s+/)[0] as string,
+                .replace(/\s+/g, " ")
+                .replace(/^type /, "")
+                .split(" as ")[0] as string,
           )
           .filter(Boolean),
       })),
