@@ -555,6 +555,30 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     return f?.type.kind === "relation" && !everyone(modelNamed(ir, f.type.model));
   });
   const refs = references(model);
+  // A related record's title only for who may read that record (its read rule, ownership, the
+  // trash, review holds): each reference the viewer may not read is shown as nothing.
+  const shownRefsMethod = () => `
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(${refs.length ? "viewer" : "_viewer"}: Viewer | null, rows: R[]): R[] {
+    return ${refs.reduce((rows, f) => {
+      const target = modelNamed(ir, f.type.model);
+      const table = tableRef(target);
+      const readable =
+        target === model ? `${self}.readable(viewer)` : `${names(target, t).data}.readable(viewer)`;
+      return `hideRefs(${rows}, "${f.name}", (ids, c = ${readable}) => (c ? db.select({ id: ${table}.id }).from(${table}).where(and(inArray(${table}.id, ids), c)).all().map((r) => r.id) : ids))`;
+    }, "rows")};
+  },
+`;
+  const shownOne = (v: string) => {
+    const nested = lists(model)
+      .filter((f) => withReferences(modelNamed(ir, f.type.model), model.name).length)
+      .map(
+        (f) =>
+          `, ${f.name}: ${names(modelNamed(ir, f.type.model), t).data}.shownRefs(viewer, ${v}.${f.name})`,
+      )
+      .join("");
+    return `${self}.shownRefs(viewer, [${nested ? `{ ...${v}${nested} }` : v}])[0]`;
+  };
   for (const ref of refs)
     if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
   const withClause = (entries: string[], indent: string) =>
@@ -913,21 +937,23 @@ ${roots
    * latest first, with when and by whom, kept for thirty days.
    */
   async trash(viewer: Viewer | null) {
-    const rows = (
+    const rows = ${self}.shownRefs(
+      viewer,
       await db.query.${n.tableKey}.findMany({
         where: ${trashedRows},${withClause(listWith, "        ")}
         orderBy: (t) => [desc(t.deletedAt)],
         limit: ${TRASH_SHOWN},
-      })
+      }),
     )${allowed};${named}${groupShown}
     ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""} }))`, "return ")}
   },
 
   /** A ${n.label.toLowerCase()} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
   async trashed(viewer: Viewer | null, id: number) {
-    const row = await db.query.${n.tableKey}.findFirst({
+    const fetched = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${trashedRows}),${withClause(getWith, "      ")}
     });
+    const row = fetched && ${shownOne("fetched")};
     if (!row || !allows(${n.access}.delete, viewer, ${ownerOf})) return null;
     const rows = [row];${named.replace(/\n {4}/g, "\n    ")}
     return {
@@ -1244,12 +1270,12 @@ const MONEY: string[] = ${JSON.stringify([...numeric, ...computedNumbers].filter
 const COMPUTED: string[] = ${JSON.stringify(computedNumbers.map((f) => f.name))};
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(${titled.length ? "by" : "_by"}: string, ${titled.length ? "ids" : "_ids"}: number[]): Map<unknown, string> {
+function titlesOf(${titled.length ? "viewer" : "_viewer"}: Viewer | null, ${titled.length ? "by" : "_by"}: string, ${titled.length ? "ids" : "_ids"}: number[]): Map<unknown, string> {
   switch (${titled.length ? "by" : "_by"}) {${titled
     .map(
       ({ target, f, title }) => `
     case "${f.name}":
-      return new Map(db.select({ id: ${tableRef(target)}.id, title: ${tableRef(target)}.${title} }).from(${tableRef(target)}).where(inArray(${tableRef(target)}.id, ids)).all().map((r) => [r.id, String(r.title)]));`,
+      return new Map(db.select({ id: ${tableRef(target)}.id, title: ${tableRef(target)}.${title} }).from(${tableRef(target)}).where(and(inArray(${tableRef(target)}.id, ids), ${target === model ? self : names(target, t).data}.readable(viewer))).all().map((r) => [r.id, String(r.title)]));`,
     )
     .join("")}
     default:
@@ -1302,7 +1328,23 @@ const TRASH_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
 `
     : ""
-}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}
+}${
+  refs.length
+    ? `/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
+`
+    : ""
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${shownRefsMethod()}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {${
     model.trash || held.length
@@ -1400,10 +1442,10 @@ ${
   /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
   async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
       where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
-    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
   },
 ${
@@ -1418,12 +1460,12 @@ ${
     const condition = and(${self}.readable(viewer), where);
     const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
       where: condition,${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return { rows: ", ", total, page: at, size }")}
   },
 `
@@ -1443,12 +1485,12 @@ ${
     const condition = ${self}.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
-    const ${ownedAuto ? "found" : "rows"} = await db.query.${n.tableKey}.findMany({
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
       where: condition,${withClause(listWith, "      ")}
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return { items: ", ", total }")}
   },
 
@@ -1534,7 +1576,7 @@ ${
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -1628,9 +1670,10 @@ ${
 `
     : ""
 }  async get(viewer: Viewer | null, id: number) {
-    const ${ownedAuto || ownedLists.length ? "found" : "row"} = await db.query.${n.tableKey}.findFirst({
+    const fetched = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
-    });${
+    });
+    const ${ownedAuto || ownedLists.length ? "found" : "row"} = fetched && ${shownOne("fetched")};${
       !ownedLists.length
         ? ownedAuto
           ? "\n    const row = found && shownTo(viewer, found);"
