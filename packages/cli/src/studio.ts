@@ -277,6 +277,33 @@ export function refusal(
  * server as the preview (the Local runtime) and serves the Studio app with a small API:
  * the project, operations, undo, the last change's diff, and events.
  */
+/** The most a request to Studio may carry: a change with a picture it brings (base64) fits. */
+export const BODY_MAX = 20_000_000;
+
+export class TooLarge extends Error {
+  constructor() {
+    super(`The request is larger than ${BODY_MAX / 1_000_000} MB.`);
+  }
+}
+
+/** A request's JSON body, refused past `max` bytes: by its stated length before anything is read, and while it is read. */
+export async function readJson(
+  chunks: AsyncIterable<Buffer | string>,
+  length: string | undefined,
+  max = BODY_MAX,
+): Promise<Record<string, unknown>> {
+  if (Number(length ?? 0) > max) throw new TooLarge();
+  const parts: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of chunks) {
+    const part = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    size += part.length;
+    if (size > max) throw new TooLarge();
+    parts.push(part);
+  }
+  return JSON.parse(Buffer.concat(parts).toString("utf8") || "{}") as Record<string, unknown>;
+}
+
 export async function studio(
   dir: string,
   io: Io,
@@ -647,11 +674,7 @@ export async function studio(
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(data));
     };
-    const body = async () => {
-      let text = "";
-      for await (const chunk of req) text += chunk;
-      return JSON.parse(text || "{}") as Record<string, unknown>;
-    };
+    const body = () => readJson(req, req.headers["content-length"]);
     try {
       const refused = refusal(
         req.headers,
@@ -945,8 +968,14 @@ export async function studio(
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
       res.end(readFileSync(file));
     } catch (error) {
+      // A body too large was not read to its end: the connection closes, so no unread bytes meet the next request.
+      if (error instanceof TooLarge) res.setHeader("Connection", "close");
       if (res.headersSent) res.end();
-      else json({ ok: false, output: error instanceof Error ? error.message : String(error) }, 500);
+      else
+        json(
+          { ok: false, output: error instanceof Error ? error.message : String(error) },
+          error instanceof TooLarge ? 413 : 500,
+        );
     }
   });
   server.listen(port, options.host ?? "127.0.0.1");
