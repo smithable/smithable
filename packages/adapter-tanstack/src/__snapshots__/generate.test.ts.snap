@@ -4331,6 +4331,11 @@ export const noteData = {
     return hideRefs(rows, "project", (ids, c = projectData.readable(viewer)) => (c ? db.select({ id: schema.projects.id }).from(schema.projects).where(and(inArray(schema.projects.id, ids), c)).all().map((r) => r.id) : ids));
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return !!db.select({ id: schema.notes.id }).from(schema.notes).where(sql\`\${schema.notes.attachment} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /** A condition for the notes the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(noteAccess.read, viewer);
@@ -5855,7 +5860,7 @@ import { noteAccess, noteData } from "./note.server";
 
 export interface UploadField {
   kind: "picture" | "file";
-  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown>; uses(file: string): boolean };
   access: ModelAccess;
   /** The field's key in a record. */
   key: string;
@@ -7539,6 +7544,7 @@ import {
   BadPicture,
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
+  roomFor,
   saveFile,
   savePicture,
   scanned,
@@ -7571,6 +7577,8 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           const { field, row, value } = await target(viewer, params.id, params.field);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
+          // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
+          if (!roomFor(Number(request.headers.get("content-length") ?? 0))) throw new BadInput("There is no room left for files in this app.");
           const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
           let stored: unknown;
           try {
@@ -8923,7 +8931,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "c1a602b1 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "d8c15d34 generated",
+  "src/generated/note.server.ts": "84986407 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
@@ -8932,7 +8940,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.schema.ts": "a8acfc07 generated",
   "src/generated/task.server.ts": "d6f8fdec generated",
   "src/generated/task.ts": "fcfbf1ec generated",
-  "src/generated/uploads.ts": "38cfdcd9 generated",
+  "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
@@ -8973,15 +8981,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
   "src/kit/params.ts": "8833a84a kit",
-  "src/kit/receipts.server.ts": "8f71dcf1 kit",
+  "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "544f2e38 kit",
+  "src/kit/uploads.ts": "efede7b4 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -9002,7 +9010,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "55644ad7 generated",
   "src/routes/admin/tasks/new.tsx": "15a327c2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "1d8d29ee generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "5588edd2 generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
@@ -9014,7 +9022,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
-  "src/routes/files/$model.$field.ts": "542d9c57 kit",
+  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -12369,6 +12377,11 @@ export const instructorData = {
     return rows;
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /** A condition for the instructors the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(instructorAccess.read, viewer);
@@ -13540,6 +13553,11 @@ export const postData = {
     return rows;
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /** A condition for the posts the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(postAccess.read, viewer);
@@ -14657,7 +14675,7 @@ import { postAccess, postData } from "./post.server";
 
 export interface UploadField {
   kind: "picture" | "file";
-  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown>; uses(file: string): boolean };
   access: ModelAccess;
   /** The field's key in a record. */
   key: string;
@@ -18957,7 +18975,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "46f86d58 generated",
+  "src/generated/instructor.server.ts": "524a1a22 generated",
   "src/generated/instructor.ts": "c90d3dae generated",
   "src/generated/message.schema.ts": "818a120f generated",
   "src/generated/message.server.ts": "41f267fc generated",
@@ -18965,14 +18983,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "f3820313 generated",
+  "src/generated/post.server.ts": "177e0fbc generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
   "src/generated/session.server.ts": "ab98dbf2 generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
-  "src/generated/uploads.ts": "f3d3a0ce generated",
+  "src/generated/uploads.ts": "11494e99 generated",
   "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -19019,15 +19037,15 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/outgoing.server.ts": "75559553 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
-  "src/kit/receipts.server.ts": "8f71dcf1 kit",
+  "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "544f2e38 kit",
+  "src/kit/uploads.ts": "efede7b4 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -19061,7 +19079,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/$id.tsx": "f85dffb1 generated",
   "src/routes/class-types/index.tsx": "1989a832 generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
-  "src/routes/files/$model.$field.ts": "542d9c57 kit",
+  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -24551,7 +24569,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -27861,6 +27879,11 @@ export const invoiceData = {
     return hideRefs(rows, "client", (ids, c = clientData.readable(viewer)) => (c ? db.select({ id: schema.clients.id }).from(schema.clients).where(and(inArray(schema.clients.id, ids), c)).all().map((r) => r.id) : ids));
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return !!db.select({ id: schema.invoices.id }).from(schema.invoices).where(sql\`\${schema.invoices.contract} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /** A condition for the invoices the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceAccess.read, viewer);
@@ -29094,7 +29117,7 @@ import { invoiceAccess, invoiceData } from "./invoice.server";
 
 export interface UploadField {
   kind: "picture" | "file";
-  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown>; uses(file: string): boolean };
   access: ModelAccess;
   /** The field's key in a record. */
   key: string;
@@ -31208,12 +31231,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "813c2573 generated",
+  "src/generated/invoice.server.ts": "755f78a8 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
-  "src/generated/uploads.ts": "29095437 generated",
+  "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -31258,15 +31281,15 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/outgoing.server.ts": "75559553 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
-  "src/kit/receipts.server.ts": "8f71dcf1 kit",
+  "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "544f2e38 kit",
+  "src/kit/uploads.ts": "efede7b4 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -31278,7 +31301,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/$id.tsx": "281919c4 generated",
   "src/routes/clients/index.tsx": "ce28521d generated",
   "src/routes/clients/new.tsx": "4bcda80c generated",
-  "src/routes/files/$model.$field.ts": "542d9c57 kit",
+  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -32637,6 +32660,11 @@ export const itemData = {
     return rows;
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
     // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).
@@ -33431,7 +33459,7 @@ import { itemAccess, itemData } from "./item.server";
 
 export interface UploadField {
   kind: "picture" | "file";
-  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown>; uses(file: string): boolean };
   access: ModelAccess;
   /** The field's key in a record. */
   key: string;
@@ -35386,13 +35414,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "d237a654 generated",
+  "src/generated/item.server.ts": "e06c9b4c generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "c244f170 generated",
   "src/generated/review.server.ts": "05473a16 generated",
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/site.ts": "b9832c55 generated",
-  "src/generated/uploads.ts": "2ea504cf generated",
+  "src/generated/uploads.ts": "ca55296a generated",
   "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -35433,16 +35461,16 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
   "src/kit/params.ts": "8833a84a kit",
-  "src/kit/receipts.server.ts": "8f71dcf1 kit",
+  "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "544f2e38 kit",
+  "src/kit/uploads.ts": "efede7b4 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
@@ -35452,7 +35480,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/$id.tsx": "bb7b3190 generated",
   "src/routes/__root.tsx": "7371ad6d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/files/$model.$field.ts": "542d9c57 kit",
+  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -38328,7 +38356,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -48417,7 +48445,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "9271ebd1 kit",
+  "src/kit/words.ts": "b5801934 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",

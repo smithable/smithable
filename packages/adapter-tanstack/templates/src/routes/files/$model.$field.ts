@@ -13,6 +13,7 @@ import {
   BadPicture,
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
+  roomFor,
   saveFile,
   savePicture,
   scanned,
@@ -38,6 +39,8 @@ export const Route = createFileRoute("/files/$model/$field")({
         try {
           writeAllowed(viewer, request.headers);
           const length = Number(request.headers.get("content-length") ?? 0);
+          // The app's storage is full (UPLOADS_MAX_BYTES): told before anything is read.
+          if (!roomFor(length)) return new Response(w.storageFull, { status: 507 });
           if (entry.kind === "file") {
             if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
             const bytes = new Uint8Array(await request.arrayBuffer());
