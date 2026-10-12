@@ -17,6 +17,7 @@ const kit = (await import(path)) as {
     send?: unknown,
   ): Promise<number>;
   proxied(target: URL, env: Record<string, string | undefined>): boolean;
+  proxyRefusal(error: unknown): number | undefined;
 };
 
 const reached: string[] = [];
@@ -116,4 +117,18 @@ test("behind an egress proxy the call goes through it (fetch), never a socket of
   } finally {
     process.env = before;
   }
+});
+
+test("the egress proxy's refusal is read from the error fetch throws", () => {
+  // As Node's fetch throws it when the proxy will not open the tunnel.
+  const thrown = (code: number) =>
+    Object.assign(new TypeError("fetch failed"), {
+      cause: Object.assign(new Error("Request was cancelled."), {
+        cause: new Error(`Proxy response (${code}) !== 200 when HTTP Tunneling`),
+      }),
+    });
+  expect(kit.proxyRefusal(thrown(403))).toBe(403);
+  expect(kit.proxyRefusal(thrown(429))).toBe(429);
+  expect(kit.proxyRefusal(new Error("connect ECONNREFUSED"))).toBeUndefined();
+  expect(kit.proxyRefusal(undefined)).toBeUndefined();
 });
