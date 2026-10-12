@@ -1,5 +1,7 @@
 # Regions: EU and global
 
+Status: proposal, not decided, apart from the decisions in its last section (Johan, 2026-10-07).
+
 Johan, 2026-10-05, from testing smithable.ai: the start page should not say "an EU-hosted AI model" to a global audience; those texts belong on smithable.eu; from there "we should probably have a region picker", clear about what each choice means; "should we let people switch region later? We are currently planning for two regions, EU and global."
 
 This note says what a region is, what each would promise, how one is chosen and changed, and what to build when. It ends with the decisions, taken by Johan on 2026-10-07.
