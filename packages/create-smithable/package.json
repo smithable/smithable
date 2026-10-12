@@ -16,7 +16,8 @@
   "files": [
     "bin.js",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "README.md"
   ],
   "scripts": {
     "prepack": "node ../../scripts/prepack.mjs"

@@ -18,6 +18,10 @@ None.
 
 - New apps get Ask on for everyone who signs in: the starters and the blank a first draft starts from have `assistant: { for: signed-in }` in `smithable.auth.yml`. An app without the block is unchanged.
 
+### The packages
+
+- Each package has a README, so its page on npm says what it is and links to smithable.ai, the documentation and the repository. The READMEs appear on npm with this release; 0.1.0's pages stay empty until then.
+
 ## 0.1.0 (2026-10-11)
 
 The first public release. Spec version `0.1`, API `v1`.

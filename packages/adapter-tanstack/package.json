@@ -21,7 +21,8 @@
     "!dist/**/*.test.*",
     "LICENSE",
     "NOTICE",
-    "KIT-LICENSE"
+    "KIT-LICENSE",
+    "README.md"
   ],
   "dependencies": {
     "@smithable/core": "workspace:*"
