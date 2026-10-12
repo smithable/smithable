@@ -7,8 +7,21 @@ import { defineConfig } from "vite";
 // proxy keeps this page's host instead of putting Studio's there, as the short form would.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // The main chunk is 730 kB today. Vite warns over 500 kB for sites on the open web; Studio is
-  // served locally. Splitting off Code mode, to go back to the default, is backlog A 64.
-  build: { chunkSizeWarningLimit: 800 },
+  // Code mode and the tour load when first opened (App.tsx); React, YAML and Smithable's engine
+  // are chunks of their own, each cached apart from Studio's own code (backlog A 64), so every
+  // chunk stays under Vite's default warning.
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: "yaml", test: /node_modules[\\/]yaml[\\/]/ },
+            { name: "engine", test: /packages[\\/](core|index)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   server: { proxy: { "/api": { target: "http://localhost:4321", changeOrigin: false } } },
 });
