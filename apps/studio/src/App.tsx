@@ -1,12 +1,11 @@
 import { humanize } from "@smithable/core";
 import { describeChange } from "@smithable/index";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Builder } from "./builder/Builder";
 import { useSpec } from "./engine";
-import { Guide } from "./GuideTour";
 import { doneKey, guideOff, TOURS } from "./guide";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
@@ -14,8 +13,12 @@ import { isPreviewMessage, type Place, shared, touched } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { Preview } from "./shared";
-import { Studio } from "./studio/Studio";
 import { Button, cx, useMedia } from "./ui";
+
+// Code mode (its editor, CodeMirror and the operation forms) and the tour load when first
+// opened, so No code starts without them (the main chunk under Vite's 500 kB, backlog A 64).
+const Studio = lazy(() => import("./studio/Studio").then((m) => ({ default: m.Studio })));
+const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
 
 type Mode = "builder" | "studio";
 
@@ -503,17 +506,19 @@ export function App() {
       {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
       {guiding && !project.making && (
         // Made again for the other mode's tour, which finds that mode's places.
-        <Guide
-          key={mode}
-          app={project.name}
-          stops={TOURS[mode]}
-          onEnd={() => {
-            setGuiding(false);
-            view(false);
-          }}
-          onCode={() => switchMode("studio")}
-          onStop={guideStop}
-        />
+        <Suspense fallback={null}>
+          <Guide
+            key={mode}
+            app={project.name}
+            stops={TOURS[mode]}
+            onEnd={() => {
+              setGuiding(false);
+              view(false);
+            }}
+            onCode={() => switchMode("studio")}
+            onStop={guideStop}
+          />
+        </Suspense>
       )}
       {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
           never moves in the page, so switching modes keeps its page. Wide windows show it on
@@ -537,20 +542,22 @@ export function App() {
                 undo={() => void undo()}
               />
             ) : (
-              <Studio
-                project={project}
-                spec={spec}
-                run={run}
-                logs={logs}
-                onCustomize={customize}
-                place={place.studio}
-                onPlace={studioPlace}
-                previewHidden={Boolean(place.previewHidden)}
-                onLook={() => {
-                  builderPlace({ tab: "look" });
-                  switchMode("builder");
-                }}
-              />
+              <Suspense fallback={<p className="p-3 text-sm text-quiet">Opening Code mode…</p>}>
+                <Studio
+                  project={project}
+                  spec={spec}
+                  run={run}
+                  logs={logs}
+                  onCustomize={customize}
+                  place={place.studio}
+                  onPlace={studioPlace}
+                  previewHidden={Boolean(place.previewHidden)}
+                  onLook={() => {
+                    builderPlace({ tab: "look" });
+                    switchMode("builder");
+                  }}
+                />
+              </Suspense>
             )}
           </div>
           <div
