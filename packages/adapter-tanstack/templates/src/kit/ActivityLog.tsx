@@ -33,6 +33,8 @@ export interface ActivityFilters {
   action?: string;
   from?: string;
   to?: string;
+  /** An outgoing call's target: the lines of its deliveries. */
+  target?: string;
 }
 
 export function ActivityLog({
@@ -41,6 +43,7 @@ export function ActivityLog({
   people,
   models,
   actions,
+  targets,
   app,
   onFilter,
   onForget,
@@ -53,6 +56,8 @@ export function ActivityLog({
   people?: { id: string; name: string }[];
   models?: { name: string; label: string }[];
   actions?: string[];
+  /** The targets the app's outgoing calls go to: a filter for each one's deliveries. */
+  targets?: string[];
   onFilter?: (next: ActivityFilters) => void;
   onForget?: (target: Forgotten) => Promise<unknown>;
   onResend?: (again: { mail: number } | { call: number }) => Promise<unknown>;
@@ -109,6 +114,23 @@ export function ActivityLog({
               ))}
             </select>
           </label>
+          {targets?.length ? (
+            <label className="grid gap-1 text-sm">
+              {w.sentTo}
+              <select
+                className={select}
+                value={filters.target ?? ""}
+                onChange={(e) => set("target", e.target.value)}
+              >
+                <option value="">{w.all}</option>
+                {targets.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="grid gap-1 text-sm">
             {w.from}
             <input
@@ -129,6 +151,7 @@ export function ActivityLog({
           </label>
         </div>
       )}
+      {filters?.target ? <TargetSummary target={filters.target} lines={lines} app={app} /> : null}
       {lines.length === 0 ? (
         <p className="text-muted-foreground">{w.nothingMatches}</p>
       ) : (
@@ -193,5 +216,31 @@ export function ActivityLog({
         </ol>
       )}
     </div>
+  );
+}
+
+/** Above a target's deliveries: whether they work, at a glance (its last call: when, and the answer). */
+function TargetSummary({
+  target,
+  lines,
+  app,
+}: {
+  target: string;
+  lines: ActivityLine[];
+  app: AppUi;
+}) {
+  const last = lines.find((l) => l.action === "called" || l.action === "call not made");
+  return (
+    <p data-part="target-summary" className="text-sm">
+      <span className="font-semibold">{w.callsTo(target)}</span>{" "}
+      {last
+        ? w.lastCall(
+            formatValue({ name: "at", kind: "datetime", label: "", required: false }, last.at, app),
+            last.action === "called"
+              ? w.answered(String(last.details?.status ?? ""))
+              : w.callNotMade,
+          )
+        : w.noCallsYet}
+    </p>
   );
 }
