@@ -2,7 +2,9 @@
 // checked. The name is looked up once for the connection itself and every address it gives is
 // checked, so no second lookup can answer with the app's own machine or its neighbours (a name
 // whose answers change between a check and the call). TLS still checks the certificate against
-// the name, and the Host header is the name.
+// the name, and the Host header is the name. Behind an egress proxy (HTTPS_PROXY, as the hosted
+// service starts every app) the call goes through the proxy instead: it checks the destination and
+// resolves the name inside its own connection, and nothing else can leave the app.
 import { lookup as dnsLookup, type LookupAddress, type LookupAllOptions } from "node:dns";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -39,14 +41,51 @@ export function guardedLookup(
   };
 }
 
-/** Posts the body to the address, connected only through `lookup`; resolves to the answer's status. A redirect is an answer, not followed. */
-export function post(
+/** Whether an egress proxy carries calls to this address: HTTPS_PROXY or HTTP_PROXY set, and NO_PROXY not naming its host. */
+export function proxied(
+  target: URL,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  const proxy =
+    target.protocol === "https:"
+      ? (env.HTTPS_PROXY ?? env.https_proxy)
+      : (env.HTTP_PROXY ?? env.http_proxy);
+  if (!proxy) return false;
+  const host = target.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  return !(env.NO_PROXY ?? env.no_proxy ?? "")
+    .split(",")
+    .map((n) =>
+      n
+        .trim()
+        .toLowerCase()
+        .replace(/^\*?\./, ""),
+    )
+    .some((n) => n === "*" || host === n || host.endsWith(`.${n}`));
+}
+
+/**
+ * Posts the body to the address; resolves to the answer's status. A redirect is an answer, not
+ * followed. Without a proxy the connection goes only through `lookup`, to a checked address;
+ * behind one, through it (`fetch` with NODE_USE_ENV_PROXY), which checks the address itself.
+ */
+export async function post(
   url: string,
   headers: Record<string, string>,
   body: string,
   lookup: LookupFunction = guardedLookup(import.meta.env.DEV ? () => false : privateAddress),
+  viaProxy: typeof fetch = fetch,
 ): Promise<number> {
   const target = new URL(url);
+  if (proxied(target)) {
+    const answer = await viaProxy(url, {
+      method: "POST",
+      headers,
+      body,
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    return answer.status;
+  }
   const send = target.protocol === "https:" ? httpsRequest : httpRequest;
   return new Promise((resolve, reject) => {
     const request = send(
