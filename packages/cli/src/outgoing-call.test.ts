@@ -14,7 +14,9 @@ const kit = (await import(path)) as {
     headers: Record<string, string>,
     body: string,
     lookup?: unknown,
+    send?: unknown,
   ): Promise<number>;
+  proxied(target: URL, env: Record<string, string | undefined>): boolean;
 };
 
 const reached: string[] = [];
@@ -80,4 +82,38 @@ test("a name with any private address among its answers is refused, IPv6 too, an
     kit.post(`http://hook.example:${port}/in`, {}, "{}", kit.guardedLookup(isPrivate, six.resolve)),
   ).rejects.toThrow(/::1/);
   expect(reached).toEqual([]);
+});
+
+test("behind an egress proxy the call goes through it (fetch), never a socket of the kit's own; NO_PROXY is kept", async () => {
+  reached.length = 0;
+  const env = {
+    HTTPS_PROXY: "http://app:secret@172.30.0.2:3128",
+    HTTP_PROXY: "http://app:secret@172.30.0.2:3128",
+    NO_PROXY: "localhost,127.0.0.1,.internal.example",
+  };
+  expect(kit.proxied(new URL("https://hooks.example.com/in"), env)).toBe(true);
+  expect(kit.proxied(new URL("http://localhost:3000/in"), env)).toBe(false);
+  expect(kit.proxied(new URL("https://api.internal.example/in"), env)).toBe(false);
+  expect(kit.proxied(new URL("https://hooks.example.com/in"), {})).toBe(false);
+  const sent: { url: string; init: RequestInit }[] = [];
+  const fakeFetch = async (url: string, init: RequestInit) => {
+    sent.push({ url, init });
+    return new Response(null, { status: 202 });
+  };
+  const before = { ...process.env };
+  Object.assign(process.env, env);
+  try {
+    // The app may resolve no outside name at all: a lookup that always fails changes nothing.
+    const failing = (_n: string, _o: unknown, callback: (e: Error, a: unknown[]) => void) =>
+      callback(new Error("no DNS in here"), []);
+    const lookup = kit.guardedLookup(isPrivate, failing);
+    expect(
+      await kit.post(`http://hook.example:${port}/in`, { "X-Event": "e" }, "{}", lookup, fakeFetch),
+    ).toBe(202);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.init).toMatchObject({ method: "POST", redirect: "manual", body: "{}" });
+    expect(reached).toEqual([]);
+  } finally {
+    process.env = before;
+  }
 });

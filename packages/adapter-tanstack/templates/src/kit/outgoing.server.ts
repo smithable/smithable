@@ -11,7 +11,7 @@ import { db } from "#/db";
 import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
-import { post } from "./call.server";
+import { post, proxied } from "./call.server";
 import { log } from "./log.server";
 import { mailConfigured, sendMail } from "./mail";
 import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
@@ -142,7 +142,9 @@ export async function refusedAddress(url: string): Promise<string | undefined> {
     return "it is not http or https";
   const own = process.env.BETTER_AUTH_URL;
   if (own && URL.canParse(own) && new URL(own).host === address.host) return "it is the app itself";
-  if (import.meta.env.DEV) return undefined;
+  // Behind an egress proxy the proxy checks the destination (and the app may not resolve names
+  // itself); development may call the machine itself.
+  if (import.meta.env.DEV || proxied(address)) return undefined;
   const host = address.hostname.replace(/^\[|\]$/g, "");
   const found = await lookup(host, { all: true }).catch(() => []);
   if (found.length === 0) return "it does not resolve";
