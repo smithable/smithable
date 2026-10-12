@@ -22,33 +22,58 @@ import type { Io } from "./io.js";
  */
 export type Level = "fast" | "normal" | "release";
 
-interface Tool {
+export interface Tool {
   name: string;
   what: string;
   binary: string;
   image: string;
+  /** The command the image runs before the arguments, when it has no entrypoint of its own. */
+  command?: string[];
+  /** The exit statuses of a scan that ran to its end: anything else means it could not check. */
+  done: number[];
 }
 
-const TOOLS = {
+export const TOOLS = {
   osv: {
     name: "OSV-Scanner",
     what: "Dependencies",
     binary: "osv-scanner",
     image: "ghcr.io/google/osv-scanner:v2.6.0",
+    // 1: vulnerabilities found.
+    done: [0, 1],
   },
   gitleaks: {
     name: "Gitleaks",
     what: "Secrets",
     binary: "gitleaks",
     image: "ghcr.io/gitleaks/gitleaks:v8.30.1",
+    // Run with --exit-code 0: leaks are read from the report.
+    done: [0],
   },
-  semgrep: { name: "Semgrep", what: "Code", binary: "semgrep", image: "semgrep/semgrep:1.178.0" },
-  trivy: { name: "Trivy", what: "Container image", binary: "trivy", image: "aquasec/trivy:0.74.0" },
+  semgrep: {
+    name: "Semgrep",
+    what: "Code",
+    binary: "semgrep",
+    image: "semgrep/semgrep:1.178.0",
+    command: ["semgrep"],
+    // 1: findings (only with --error); 2 and up: the scan failed.
+    done: [0, 1],
+  },
+  trivy: {
+    name: "Trivy",
+    what: "Container image",
+    binary: "trivy",
+    image: "aquasec/trivy:0.74.0",
+    done: [0],
+  },
   zap: {
     name: "OWASP ZAP",
     what: "Running app",
     binary: "zap-baseline.py",
     image: "ghcr.io/zaproxy/zaproxy:2.16.1",
+    command: ["zap-baseline.py"],
+    // 1: failing alerts, 2: warnings; 3: the scan failed.
+    done: [0, 1, 2],
   },
 } satisfies Record<string, Tool>;
 
@@ -59,6 +84,8 @@ export interface Result {
   ok: boolean;
   /** One line per finding, or why the check could not run. */
   findings: string[];
+  /** False when the check could not run to its end: no findings then means nothing, and it fails. */
+  checked?: false;
   /** Said at every run though nothing fails for it: an advisory accepted, with why. */
   notes?: string[];
 }
@@ -75,28 +102,83 @@ function runTool(
   dir: string,
   args: (src: string) => string[],
   docker: string[] = [],
-): { status: number | null; stdout: string; by: string } | undefined {
-  if (has(tool.binary)) {
-    const r = spawnSync(tool.binary, args(dir), { cwd: dir, encoding: "utf8", maxBuffer: 1 << 28 });
-    return { status: r.status, stdout: r.stdout, by: `${tool.name} (installed)` };
-  }
-  if (!has("docker")) return undefined;
-  const r = spawnSync(
-    "docker",
-    ["run", "--rm", "-v", `${resolve(dir)}:/src`, ...docker, tool.image, ...args("/src")],
-    { encoding: "utf8", maxBuffer: 1 << 28 },
-  );
+): Ran | undefined {
+  const installed = has(tool.binary);
+  if (!installed && !has("docker")) return undefined;
+  const [command, ...rest] = commandLine(tool, installed, dir, args, docker);
+  const r = spawnSync(command as string, rest, { cwd: dir, encoding: "utf8", maxBuffer: 1 << 28 });
   return {
     status: r.status,
     stdout: r.stdout,
-    by: `${tool.name} (image ${tool.image.split(":")[1]})`,
+    stderr: r.stderr ?? "",
+    by: installed ? `${tool.name} (installed)` : `${tool.name} (image ${tool.image.split(":")[1]})`,
   };
+}
+
+/** The command that runs a tool: the installed one as it is, or its image with the project at /src. */
+export function commandLine(
+  tool: Tool,
+  installed: boolean,
+  dir: string,
+  args: (src: string) => string[],
+  docker: string[] = [],
+): string[] {
+  return installed
+    ? [tool.binary, ...args(dir)]
+    : [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        `${resolve(dir)}:/src`,
+        ...docker,
+        tool.image,
+        ...(tool.command ?? []),
+        ...args("/src"),
+      ];
+}
+
+/** How a tool ran: its exit status, its output and what it said on the side. */
+export interface Ran {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  by: string;
+}
+
+/** A check that could not run to its end: why, with the tool's last words. */
+function notChecked(tool: Tool, ran: Ran, why: string): Result {
+  const said = ran.stderr.trim().split("\n").filter(Boolean).slice(-3);
+  return { what: tool.what, by: ran.by, ok: false, checked: false, findings: [why, ...said] };
+}
+
+/** Whether the tool ran to its end: an exit status it gives for a finished scan. */
+const finished = (tool: Tool, ran: Ran) =>
+  ran.status !== null && tool.done.includes(ran.status)
+    ? undefined
+    : notChecked(
+        tool,
+        ran,
+        `${tool.name} stopped with exit status ${ran.status ?? "none"}, so this was not checked.`,
+      );
+
+/** A report file written by this run only: an old one is removed first, and read and removed after. */
+export function freshReport(
+  path: string,
+  run: () => Ran | undefined,
+): { ran?: Ran; text?: string } {
+  rmSync(path, { force: true });
+  const ran = run();
+  const text = existsSync(path) ? readFileSync(path, "utf8") : undefined;
+  rmSync(path, { force: true });
+  return { ran, text };
 }
 
 const notRun = (tool: Tool): Result => ({
   what: tool.what,
   by: tool.name,
   ok: false,
+  checked: false,
   findings: [`${tool.name} is not installed and Docker is not available, so this was not checked.`],
 });
 
@@ -119,6 +201,13 @@ function dependencies(dir: string): Result {
     "json",
   ]);
   if (!r) return notRun(TOOLS.osv);
+  return readOsv(r);
+}
+
+/** OSV-Scanner's answer: the vulnerabilities, or that it could not check. */
+export function readOsv(r: Ran): Result {
+  const stopped = finished(TOOLS.osv, r);
+  if (stopped) return stopped;
   const report = parse<{
     results?: {
       packages?: {
@@ -127,8 +216,9 @@ function dependencies(dir: string): Result {
       }[];
     }[];
   }>(r.stdout);
-  if (!report) return { what: TOOLS.osv.what, by: r.by, ok: false, findings: ["The scan failed."] };
-  const findings = (report.results ?? []).flatMap((result) =>
+  if (!report?.results)
+    return notChecked(TOOLS.osv, r, "OSV-Scanner gave no report, so this was not checked.");
+  const findings = report.results.flatMap((result) =>
     (result.packages ?? []).flatMap((p) =>
       (p.vulnerabilities ?? []).map(
         (v) => `${p.package.name}@${p.package.version}: ${v.id}${v.summary ? ` ${v.summary}` : ""}`,
@@ -209,7 +299,13 @@ export async function published(
         (line) => `Accepted, since ${accepted[a.id]}: ${line.split(";")[0]}`,
       ),
     );
-  return { ...result, ok: findings.length === 0, findings, notes };
+  return {
+    ...result,
+    ok: findings.length === 0,
+    findings,
+    notes,
+    ...(lists.unread.length ? { checked: false as const } : {}),
+  };
 }
 
 /** Where scan reports go while they are read: ignored by Git, since they can quote secrets. */
@@ -220,25 +316,33 @@ function secrets(dir: string): Result {
   // The report goes to a file: the tool's log lines share its output. It holds the secrets it
   // found, so it lives in the ignored data folder, and only until it is read.
   mkdirSync(join(dir, REPORTS), { recursive: true });
-  const r = runTool(TOOLS.gitleaks, dir, (src) => [
-    "git",
-    src,
-    "--no-banner",
-    "--report-format",
-    "json",
-    "--report-path",
-    `${src}/${REPORTS}/gitleaks.json`,
-    "--exit-code",
-    "0",
-  ]);
-  if (!r) return notRun(TOOLS.gitleaks);
-  const path = join(dir, REPORTS, "gitleaks.json");
-  const leaks = existsSync(path)
-    ? parse<{ File: string; StartLine: number; RuleID: string }[]>(readFileSync(path, "utf8"))
-    : undefined;
-  rmSync(path, { force: true });
-  if (!leaks)
-    return { what: TOOLS.gitleaks.what, by: r.by, ok: false, findings: ["The scan failed."] };
+  const { ran, text } = freshReport(join(dir, REPORTS, "gitleaks.json"), () =>
+    runTool(TOOLS.gitleaks, dir, (src) => [
+      "git",
+      src,
+      "--no-banner",
+      "--report-format",
+      "json",
+      "--report-path",
+      `${src}/${REPORTS}/gitleaks.json`,
+      "--exit-code",
+      "0",
+    ]),
+  );
+  if (!ran) return notRun(TOOLS.gitleaks);
+  return readGitleaks(ran, text);
+}
+
+/** Gitleaks's report (written to a file, read once): the leaks, or that it could not check. */
+export function readGitleaks(r: Ran, text: string | undefined): Result {
+  const stopped = finished(TOOLS.gitleaks, r);
+  if (stopped) return stopped;
+  const leaks =
+    text === undefined
+      ? undefined
+      : parse<{ File: string; StartLine: number; RuleID: string }[]>(text);
+  if (!Array.isArray(leaks))
+    return notChecked(TOOLS.gitleaks, r, "Gitleaks wrote no report, so this was not checked.");
   const findings = leaks.map((l) => `${l.File}:${l.StartLine}  ${l.RuleID}`);
   return { what: TOOLS.gitleaks.what, by: r.by, ok: findings.length === 0, findings };
 }
@@ -246,7 +350,6 @@ function secrets(dir: string): Result {
 /** Risky code patterns in the app's source, generated and custom alike. */
 function code(dir: string): Result {
   const r = runTool(TOOLS.semgrep, dir, (src) => [
-    "semgrep",
     "scan",
     "--config",
     "p/typescript",
@@ -263,16 +366,42 @@ function code(dir: string): Result {
     `${src}/src`,
   ]);
   if (!r) return notRun(TOOLS.semgrep);
+  return readSemgrep(r);
+}
+
+/**
+ * Semgrep's answer: the findings, or that it could not check. An error it reports (a rule set
+ * not fetched, a configuration it could not read) means the scan is not whole, whatever its exit
+ * status; a file it could only partly read is a warning, said beside the result.
+ */
+export function readSemgrep(r: Ran): Result {
+  const stopped = finished(TOOLS.semgrep, r);
+  if (stopped) return stopped;
   const report = parse<{
     results?: { path: string; start: { line: number }; check_id: string }[];
-    errors?: unknown[];
+    errors?: { level?: string; message?: string; type?: unknown }[];
   }>(r.stdout);
-  if (!report)
-    return { what: TOOLS.semgrep.what, by: r.by, ok: false, findings: ["The scan failed."] };
-  const findings = (report.results ?? []).map(
+  if (!report?.results)
+    return notChecked(TOOLS.semgrep, r, "Semgrep gave no report, so this was not checked.");
+  const errors = report.errors ?? [];
+  const serious = errors.filter((e) => e?.level !== "warn");
+  if (serious.length)
+    return notChecked(
+      TOOLS.semgrep,
+      r,
+      `Semgrep could not scan everything (${String(serious[0]?.message ?? serious[0]?.type ?? "an error").split("\n")[0]}), so this was not checked.`,
+    );
+  const findings = report.results.map(
     (f) => `${f.path.replace(/^\/src\//, "")}:${f.start.line}  ${f.check_id.split(".").at(-1)}`,
   );
-  return { what: TOOLS.semgrep.what, by: r.by, ok: findings.length === 0, findings };
+  const warnings = errors.map((e) => `Partly read: ${String(e.message ?? "").split("\n")[0]}`);
+  return {
+    what: TOOLS.semgrep.what,
+    by: r.by,
+    ok: findings.length === 0,
+    findings,
+    ...(warnings.length ? { notes: warnings } : {}),
+  };
 }
 
 /** High and critical vulnerabilities in the built image. */
@@ -289,14 +418,21 @@ function image(dir: string, name: string): Result {
     ],
   );
   if (!r) return notRun(TOOLS.trivy);
+  return readTrivy(r);
+}
+
+/** Trivy's answer: the vulnerabilities, or that it could not check. */
+export function readTrivy(r: Ran): Result {
+  const stopped = finished(TOOLS.trivy, r);
+  if (stopped) return stopped;
   const report = parse<{
     Results?: {
       Target: string;
       Vulnerabilities?: { VulnerabilityID: string; PkgName: string; Severity: string }[];
     }[];
   }>(r.stdout);
-  if (!report)
-    return { what: TOOLS.trivy.what, by: r.by, ok: false, findings: ["The scan failed."] };
+  if (!report || typeof report !== "object" || Array.isArray(report))
+    return notChecked(TOOLS.trivy, r, "Trivy gave no report, so this was not checked.");
   const findings = (report.Results ?? []).flatMap((t) =>
     (t.Vulnerabilities ?? []).map(
       (v) => `${v.Severity} ${v.VulnerabilityID} in ${v.PkgName} (${t.Target})`,
@@ -310,28 +446,38 @@ function running(dir: string, url: string): Result {
   // ZAP writes only into a folder of its own, as this user rather than root.
   const work = join(dir, REPORTS, "zap");
   mkdirSync(work, { recursive: true });
-  const r = runTool(TOOLS.zap, dir, () => ["zap-baseline.py", "-t", url, "-J", "zap.json", "-I"], [
-    "--network",
-    "host",
-    "-v",
-    `${resolve(work)}:/zap/wrk:rw`,
-    "--user",
-    String(process.getuid?.() ?? 1000),
-  ]);
-  if (!r) return notRun(TOOLS.zap);
-  const path = join(work, "zap.json");
-  const report = existsSync(path)
-    ? parse<{
-        site?: {
-          alerts?: { name: string; riskdesc: string; riskcode: string; pluginid: string }[];
-        }[];
-      }>(readFileSync(path, "utf8"))
-    : undefined;
+  const { ran, text } = freshReport(join(work, "zap.json"), () =>
+    runTool(TOOLS.zap, dir, () => ["-t", url, "-J", "zap.json", "-I"], [
+      "--network",
+      "host",
+      "-v",
+      `${resolve(work)}:/zap/wrk:rw`,
+      "--user",
+      String(process.getuid?.() ?? 1000),
+    ]),
+  );
   rmSync(work, { recursive: true, force: true });
-  if (!report) return { what: TOOLS.zap.what, by: r.by, ok: false, findings: ["The scan failed."] };
+  if (!ran) return notRun(TOOLS.zap);
+  return readZap(ran, text);
+}
+
+/** ZAP's report: alerts of low risk and above, or that it could not check. */
+export function readZap(r: Ran, text: string | undefined): Result {
+  const stopped = finished(TOOLS.zap, r);
+  if (stopped) return stopped;
+  const report =
+    text === undefined
+      ? undefined
+      : parse<{
+          site?: {
+            alerts?: { name: string; riskdesc: string; riskcode: string; pluginid: string }[];
+          }[];
+        }>(text);
+  if (!report?.site)
+    return notChecked(TOOLS.zap, r, "ZAP wrote no report, so this was not checked.");
   // Informational alerts are not findings; low and above are. "ZAP is Out of Date" (10116)
   // is about the scanner, pinned on purpose, not about the app.
-  const findings = (report.site ?? []).flatMap((s) =>
+  const findings = report.site.flatMap((s) =>
     (s.alerts ?? [])
       .filter((a) => Number(a.riskcode) >= 1 && a.pluginid !== "10116")
       .map((a) => `${a.riskdesc}: ${a.name}`),
@@ -391,16 +537,17 @@ export function report(io: Io, level: Level, results: Result[]): number {
   io.out(`Security check (${level}):\n`);
   for (const r of results) {
     io.out(
-      `  ${r.ok ? "✓" : "✗"} ${r.what} (${r.by})${r.ok ? "" : `: ${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}`}\n`,
+      `  ${r.ok ? "✓" : "✗"} ${r.what} (${r.by})${r.ok ? "" : r.checked === false ? ": could not check" : `: ${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}`}\n`,
     );
     for (const f of r.findings.slice(0, 20)) io.out(`      ${f}\n`);
     if (r.findings.length > 20) io.out(`      … and ${r.findings.length - 20} more\n`);
     for (const note of r.notes ?? []) io.out(`      ${note}\n`);
   }
   const failed = results.filter((r) => !r.ok).length;
+  const unchecked = results.filter((r) => r.checked === false).length;
   io.out(
     failed
-      ? `\n${failed} check${failed === 1 ? "" : "s"} failed. Findings are never suppressed: fix them, or record an exception in the tool's own ignore file, visible in the project.\n`
+      ? `\n${failed} check${failed === 1 ? "" : "s"} failed${unchecked ? `, ${unchecked} of them because ${unchecked === 1 ? "it" : "they"} could not check: a check that did not run is never a pass` : ""}. Findings are never suppressed: fix them, or record an exception in the tool's own ignore file, visible in the project.\n`
       : "\nAll checks passed.\n",
   );
   return failed ? 1 : 0;
