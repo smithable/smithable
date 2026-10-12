@@ -270,6 +270,22 @@ export const auditLog = sqliteTable(
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
 );
 
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    model: text().notNull(),
+    field: text().notNull(),
+    /** Who uploaded it; nothing for a visitor. */
+    uploader: text(),
+    receipt: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
+);
+
 export const apiKey = sqliteTable("api_key", {
   id: integer().primaryKey({ autoIncrement: true }),
   name: text().notNull(),
@@ -4212,7 +4228,7 @@ import { w } from "#/kit/words";
 export const noteSchema = createInsertSchema(schema.notes, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   body: (s) => s.max(10000, w.atMostCharacters(10000)),
-  attachment: z.object({ file: z.string().regex(/^note\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() }).nullish(),
+  attachment: z.object({ file: z.string().regex(/^note\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type NoteValues = z.output<typeof noteSchema>;
@@ -4231,6 +4247,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deleteFile } from "#/kit/uploads";
+import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
 import type { NoteValues } from "./note";
@@ -4280,6 +4297,14 @@ function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
 const BY: string[] = ["project"];
 
+
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: NoteValues, before?: Record<string, unknown>): NoteValues {
+  return {
+    ...values,
+    ...("attachment" in values ? { attachment: acceptFiles(viewer, "note", "attachment", values.attachment, before?.attachment) } : {}),
+  };
+}
 
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: NoteValues): void {
@@ -4520,6 +4545,7 @@ export const noteData = {
 
   async create(viewer: Viewer | null, values: NoteValues) {
     check(noteAccess.create, viewer);
+    values = checkFiles(viewer, values);
     checkReferences(viewer, values);
     let row: typeof schema.notes.$inferSelect;
     try {
@@ -4544,6 +4570,7 @@ export const noteData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(noteAccess.write, viewer, row.ownerId);
+    values = checkFiles(viewer, values, db.select({ attachment: schema.notes.attachment }).from(schema.notes).where(eq(schema.notes.id, id)).get());
     checkReferences(viewer, values);
     let changed: typeof schema.notes.$inferSelect;
     const updated = values;
@@ -7506,6 +7533,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { createFileRoute } from "@tanstack/react-router";
 import { noteData } from "#/generated/note.server";
 import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
+import { receiptFor } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -7558,7 +7586,8 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
             if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
             throw error;
           }
-          await noteData.update(viewer, row.id, { [field.key]: field.many ? [...list, stored] : stored } as never);
+          const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, "note", params.field, (stored as { file: string }).file) };
+          await noteData.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
           return stored;
         }),
     },
@@ -8790,6 +8819,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/model.ts",
   "kit: src/kit/origin.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -8877,7 +8907,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "aa3bd8ec generated",
+  "src/db/schema.ts": "b75b1ab6 generated",
   "src/db/seed.ts": "224df43d generated",
   "src/generated/access.test.ts": "130041c9 generated",
   "src/generated/actions/complete.server.ts": "2fc92460 generated",
@@ -8892,8 +8922,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "803e4661 generated",
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "c1a602b1 generated",
-  "src/generated/note.schema.ts": "e9f46249 generated",
-  "src/generated/note.server.ts": "901a9097 generated",
+  "src/generated/note.schema.ts": "232f14f7 generated",
+  "src/generated/note.server.ts": "d8c15d34 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
@@ -8943,6 +8973,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
   "src/kit/params.ts": "8833a84a kit",
+  "src/kit/receipts.server.ts": "e2679501 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -8950,7 +8981,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "544f2e38 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -8971,7 +9002,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "55644ad7 generated",
   "src/routes/admin/tasks/new.tsx": "15a327c2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "497e29a6 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "1d8d29ee generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
@@ -8983,7 +9014,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
-  "src/routes/files/$model.$field.ts": "48cd51aa kit",
+  "src/routes/files/$model.$field.ts": "542d9c57 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -9256,6 +9287,22 @@ export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);
+
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    model: text().notNull(),
+    field: text().notNull(),
+    /** Who uploaded it; nothing for a visitor. */
+    uploader: text(),
+    receipt: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
 );
 
 export const outgoingMail = sqliteTable(
@@ -9925,9 +9972,11 @@ describe("Booking", () => {
     const viewer = signedIn("admin");
     const place = db.insert(schema.sessions).values({ ...{ ...sessionValues(viewer.id), capacity: 1 }, ownerId: viewer.id }).returning().get();
     for (let i = 0; i < 1; i++)
-      await bookingData.create(signedIn("admin"), { ...bookingValues(viewer.id), sessionId: place.id });
-    await expect(bookingData.create(signedIn("admin"), { ...bookingValues(viewer.id), sessionId: place.id })).rejects.toThrow("full");
-    await expect(sessionData.update(signedIn("admin"), place.id, { ...{ ...sessionValues(viewer.id), capacity: 1 }, capacity: 0 })).rejects.toThrow("booked:1");
+      await (async (booker) => bookingData.create(booker, { ...bookingValues(viewer.id), sessionId: place.id }))(signedIn("admin"));
+    const last = signedIn("admin");
+    await expect(bookingData.create(last, { ...bookingValues(viewer.id), sessionId: place.id })).rejects.toThrow("full");
+    const admin = signedIn("admin");
+    await expect(sessionData.update(admin, place.id, { ...{ ...sessionValues(viewer.id), capacity: 1 }, capacity: 0 })).rejects.toThrow("booked:1");
   });
 });
 
@@ -12218,7 +12267,7 @@ import { w } from "#/kit/words";
 export const instructorSchema = createInsertSchema(schema.instructors, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(50000, w.atMostCharacters(50000)),
-  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InstructorValues = z.output<typeof instructorSchema>;
@@ -12237,6 +12286,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
+import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { InstructorValues } from "./instructor";
 
@@ -12303,6 +12353,14 @@ function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unkn
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
 const BY: string[] = [];
 
+
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: InstructorValues, before?: Record<string, unknown>): InstructorValues {
+  return {
+    ...values,
+    ...("portrait" in values ? { portrait: acceptFiles(viewer, "instructor", "portrait", values.portrait, before?.portrait) } : {}),
+  };
+}
 
 export const instructorData = {
   shownTo,
@@ -12541,6 +12599,7 @@ export const instructorData = {
 
   async create(viewer: Viewer | null, values: InstructorValues) {
     check(instructorAccess.create, viewer);
+    values = checkFiles(viewer, values);
     let row: typeof schema.instructors.$inferSelect;
     try {
       row = db.transaction((tx) => {
@@ -12564,6 +12623,7 @@ export const instructorData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(instructorAccess.write, viewer, row.ownerId);
+    values = checkFiles(viewer, values, db.select({ portrait: schema.instructors.portrait }).from(schema.instructors).where(eq(schema.instructors.id, id)).get());
     let changed: typeof schema.instructors.$inferSelect;
     const updated = values;
     try {
@@ -13393,7 +13453,7 @@ export const postSchema = createInsertSchema(schema.posts, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() }).nullish(),
+  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
   body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
   publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -13414,6 +13474,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
+import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { PostValues } from "./post";
 
@@ -13463,6 +13524,14 @@ function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unkn
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
 const BY: string[] = ["publishedOn","status"];
 
+
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: PostValues, before?: Record<string, unknown>): PostValues {
+  return {
+    ...values,
+    ...("cover" in values ? { cover: acceptFiles(viewer, "post", "cover", values.cover, before?.cover) } : {}),
+  };
+}
 
 export const postData = {
   shownTo,
@@ -13702,6 +13771,7 @@ export const postData = {
 
   async create(viewer: Viewer | null, values: PostValues) {
     check(postAccess.create, viewer);
+    values = checkFiles(viewer, values);
     let row: typeof schema.posts.$inferSelect;
     try {
       row = db.transaction((tx) => {
@@ -13725,6 +13795,7 @@ export const postData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(postAccess.write, viewer, row.ownerId);
+    values = checkFiles(viewer, values, db.select({ cover: schema.posts.cover }).from(schema.posts).where(eq(schema.posts.id, id)).get());
     let changed: typeof schema.posts.$inferSelect;
     const updated = values;
     try {
@@ -18764,6 +18835,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/outgoing.server.ts",
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -18867,9 +18939,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "20f0416a generated",
+  "src/db/schema.ts": "e5cf3c32 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "6ae9bd4d generated",
+  "src/generated/access.test.ts": "a083f5f9 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "61149aa8 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
@@ -18883,16 +18955,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.schema.ts": "51e47ea4 generated",
-  "src/generated/instructor.server.ts": "70e6f0a1 generated",
+  "src/generated/instructor.schema.ts": "7e4a7f16 generated",
+  "src/generated/instructor.server.ts": "46f86d58 generated",
   "src/generated/instructor.ts": "c90d3dae generated",
   "src/generated/message.schema.ts": "818a120f generated",
   "src/generated/message.server.ts": "41f267fc generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
-  "src/generated/post.schema.ts": "44105e42 generated",
-  "src/generated/post.server.ts": "486b16b2 generated",
+  "src/generated/post.schema.ts": "4e81ce94 generated",
+  "src/generated/post.server.ts": "f3820313 generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
@@ -18945,6 +19017,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/outgoing.server.ts": "42be7ec6 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
+  "src/kit/receipts.server.ts": "e2679501 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -18952,7 +19025,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "544f2e38 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -18986,7 +19059,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/$id.tsx": "f85dffb1 generated",
   "src/routes/class-types/index.tsx": "1989a832 generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
-  "src/routes/files/$model.$field.ts": "48cd51aa kit",
+  "src/routes/files/$model.$field.ts": "542d9c57 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -24476,7 +24549,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -24764,6 +24837,22 @@ export const auditLog = sqliteTable(
     details: text({ mode: "json" }).$type<Record<string, unknown>>(),
   },
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
+);
+
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    model: text().notNull(),
+    field: text().notNull(),
+    /** Who uploaded it; nothing for a visitor. */
+    uploader: text(),
+    receipt: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
 );
 
 export const outgoingMail = sqliteTable(
@@ -27642,7 +27731,7 @@ export const invoiceSchema = createInsertSchema(schema.invoices, {
   number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
-  contract: z.object({ file: z.string().regex(/^invoice\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() }).nullish(),
+  contract: z.object({ file: z.string().regex(/^invoice\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 
 export type InvoiceValues = z.output<typeof invoiceSchema>;
@@ -27662,6 +27751,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deleteFile } from "#/kit/uploads";
+import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceLineData } from "./invoice-line.server";
 import { clientData } from "./client.server";
@@ -27735,6 +27825,14 @@ function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
 const BY: string[] = ["client","issuedOn","dueOn","status"];
 
+
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: InvoiceValues, before?: Record<string, unknown>): InvoiceValues {
+  return {
+    ...values,
+    ...("contract" in values ? { contract: acceptFiles(viewer, "invoice", "contract", values.contract, before?.contract) } : {}),
+  };
+}
 
 /** Checks that the viewer may read the records the values refer to. */
 function checkReferences(viewer: Viewer | null, values: InvoiceValues): void {
@@ -28003,6 +28101,7 @@ export const invoiceData = {
 
   async create(viewer: Viewer | null, values: InvoiceValues) {
     check(invoiceAccess.create, viewer);
+    values = checkFiles(viewer, values);
     checkReferences(viewer, values);
     let row: typeof schema.invoices.$inferSelect;
     try {
@@ -28028,6 +28127,7 @@ export const invoiceData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(invoiceAccess.write, viewer, row.ownerId);
+    values = checkFiles(viewer, values, db.select({ contract: schema.invoices.contract }).from(schema.invoices).where(eq(schema.invoices.id, id)).get());
     checkReferences(viewer, values);
     let changed: typeof schema.invoices.$inferSelect;
     const updated = values;
@@ -31007,6 +31107,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/outgoing.server.ts",
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -31080,7 +31181,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "3a51e1e4 generated",
+  "src/db/schema.ts": "3ca942ae generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d2fd305f generated",
   "src/generated/actions/mark-paid.server.ts": "ed9d8fa4 generated",
@@ -31103,8 +31204,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.server.ts": "2d43a0d3 generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.schema.ts": "f1876df3 generated",
-  "src/generated/invoice.server.ts": "b9c06bc9 generated",
+  "src/generated/invoice.schema.ts": "675ec149 generated",
+  "src/generated/invoice.server.ts": "813c2573 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
@@ -31153,6 +31254,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/outgoing.server.ts": "42be7ec6 kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
+  "src/kit/receipts.server.ts": "e2679501 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -31160,7 +31262,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "544f2e38 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -31172,7 +31274,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/$id.tsx": "281919c4 generated",
   "src/routes/clients/index.tsx": "ce28521d generated",
   "src/routes/clients/new.tsx": "4bcda80c generated",
-  "src/routes/files/$model.$field.ts": "48cd51aa kit",
+  "src/routes/files/$model.$field.ts": "542d9c57 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -31477,6 +31579,22 @@ export const fileReviews = sqliteTable(
   ],
 );
 
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    model: text().notNull(),
+    field: text().notNull(),
+    /** Who uploaded it; nothing for a visitor. */
+    uploader: text(),
+    receipt: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
+);
+
 export const items = sqliteTable("items", {
   id: integer().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
@@ -31548,6 +31666,7 @@ import { auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
 import { forgetInLog, pruneAudit } from "#/kit/audit.server";
+import { receiptFor } from "#/kit/receipts.server";
 import { itemData } from "./item.server";
 
 let counter = 0;
@@ -31563,6 +31682,11 @@ function signedIn(role: string): Viewer {
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
+
+/** A test file's receipt, as its upload gives one to \`by\`; none for a record put in directly. */
+function receipt(by: string | null | undefined, model: string, field: string, file: string) {
+  return by === undefined ? {} : { receipt: receiptFor(by, model, field, file) };
+}
 
 /** Whether the action is allowed; any other failure fails the test. */
 async function can(action: () => unknown): Promise<boolean> {
@@ -31591,9 +31715,9 @@ async function reads(
   return listed && (await data.get(viewer as never, id)) !== null;
 }
 
-function itemValues(_owner: string | null) {
+function itemValues(_owner: string | null, by?: string | null) {
   const n = next();
-  return { title: \`Item title \${n}\`, photos: [{ file: \`item/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }].slice(), description: \`Item description \${n}\`, price: null, category: "furniture", condition: "likeNew", place: null, available: null } as const;
+  return { title: \`Item title \${n}\`, photos: [{ file: \`item/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3, ...receipt(by, "item", "photos", \`item/\${String(n).padStart(24, "0")}.webp\`) }].slice(), description: \`Item description \${n}\`, price: null, category: "furniture", condition: "likeNew", place: null, available: null } as const;
 }
 
 function insertItem(owner: string | null, values: Record<string, unknown> = {}) {
@@ -31612,9 +31736,9 @@ describe("Item", () => {
     expect({
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
-      create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
-      changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
+      create: await can(() => itemData.create(viewer, itemValues(viewer.id, viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id, viewer.id))),
+      changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id, viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
     }).toEqual({
@@ -31635,9 +31759,9 @@ describe("Item", () => {
     expect({
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: await reads(itemData, viewer, own.id),
-      create: await can(() => itemData.create(viewer, itemValues(viewer.id))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
-      changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id))),
+      create: await can(() => itemData.create(viewer, itemValues(viewer.id, viewer.id))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id, viewer.id))),
+      changeOwn: await can(() => itemData.update(viewer, own.id, itemValues(viewer.id, viewer.id))),
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: await can(() => itemData.remove(viewer, own.id)),
     }).toEqual({
@@ -31657,8 +31781,8 @@ describe("Item", () => {
     expect({
       readOthers: await reads(itemData, viewer, others.id),
       readOwn: false,
-      create: await can(() => itemData.create(viewer, itemValues(null))),
-      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id))),
+      create: await can(() => itemData.create(viewer, itemValues(null, null))),
+      changeOthers: await can(() => itemData.update(viewer, others.id, itemValues(stranger.id, null))),
       changeOwn: false,
       deleteOthers: await can(() => itemData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -31677,8 +31801,8 @@ describe("Item", () => {
 describe("the audit log", () => {
   test("names who created, changed and deleted a record, and what changed", async () => {
     const viewer = signedIn("admin");
-    const made = await itemData.create(viewer, itemValues(viewer.id));
-    await itemData.update(viewer, made.id, itemValues(viewer.id));
+    const made = await itemData.create(viewer, itemValues(viewer.id, viewer.id));
+    await itemData.update(viewer, made.id, itemValues(viewer.id, viewer.id));
     await itemData.remove(viewer, made.id);
     const lines = db
       .select()
@@ -32377,7 +32501,7 @@ import { w } from "#/kit/words";
 /** What a item's form sends, checked. */
 export const itemSchema = createInsertSchema(schema.items, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
-  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() })).max(10),
+  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(10),
   description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -32398,6 +32522,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
+import { acceptFiles } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
 import type { ItemValues } from "./item";
@@ -32492,6 +32617,14 @@ function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unkn
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
 const BY: string[] = ["category","condition","available"];
 
+
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: ItemValues, before?: Record<string, unknown>): ItemValues {
+  return {
+    ...values,
+    ...("photos" in values ? { photos: acceptFiles(viewer, "item", "photos", values.photos, before?.photos) } : {}),
+  };
+}
 
 export const itemData = {
   shownTo,
@@ -32793,6 +32926,7 @@ export const itemData = {
 
   async create(viewer: Viewer | null, values: ItemValues) {
     check(itemAccess.create, viewer);
+    values = checkFiles(viewer, values);
     let row: typeof schema.items.$inferSelect;
     try {
       row = db.transaction((tx) => {
@@ -32817,6 +32951,7 @@ export const itemData = {
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(itemAccess.write, viewer, row.ownerId);
+    values = checkFiles(viewer, values, db.select({ photos: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get());
     let changed: typeof schema.items.$inferSelect;
     const updated = values;
     try {
@@ -35165,6 +35300,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/model.ts",
   "kit: src/kit/origin.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/review-mail.server.ts",
   "kit: src/kit/search.ts",
@@ -35238,15 +35374,15 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "01850e3d generated",
+  "src/db/schema.ts": "4331fa73 generated",
   "src/db/seed.ts": "c3d62db3 generated",
-  "src/generated/access.test.ts": "f569310a generated",
+  "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/ask.server.ts": "ffceeeb7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.schema.ts": "52305580 generated",
-  "src/generated/item.server.ts": "e1800763 generated",
+  "src/generated/item.schema.ts": "703c1c02 generated",
+  "src/generated/item.server.ts": "d237a654 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "c244f170 generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -35293,6 +35429,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/model.ts": "282bb28a kit",
   "src/kit/origin.ts": "5facf7a7 kit",
   "src/kit/params.ts": "8833a84a kit",
+  "src/kit/receipts.server.ts": "e2679501 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -35301,7 +35438,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "544f2e38 kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
@@ -35311,7 +35448,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/$id.tsx": "bb7b3190 generated",
   "src/routes/__root.tsx": "7371ad6d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/files/$model.$field.ts": "48cd51aa kit",
+  "src/routes/files/$model.$field.ts": "542d9c57 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -38187,7 +38324,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -48276,7 +48413,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "93ea9844 kit",
-  "src/kit/words.ts": "8e792768 kit",
+  "src/kit/words.ts": "9271ebd1 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",

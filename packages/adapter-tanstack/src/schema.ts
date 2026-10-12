@@ -6,6 +6,7 @@ import {
   humanize,
   isPicture,
   isPictures,
+  isUpload,
   kebab,
   type ModelIR,
   type SpecIR,
@@ -171,7 +172,7 @@ export const ${n.table}Favorites = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -206,6 +207,27 @@ const AUDIT_TABLE = `export const auditLog = sqliteTable(
  * reviewed field. Pending until a reviewer decides; a file with no row (sample data, files from
  * before review was turned on, a reviewer's own) is not held. Kept thirty days after the decision.
  */
+/**
+ * Files stored for a record that is not saved yet (docs/design/attachments.md §6): who uploaded
+ * each one, for which field, and the receipt its upload gave. A record takes a new file only with
+ * its receipt (src/kit/receipts.server.ts).
+ */
+const UPLOADS_TABLE = `export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The stored file's name under uploads/ (src/kit/uploads.ts). */
+    file: text().notNull(),
+    model: text().notNull(),
+    field: text().notNull(),
+    /** Who uploaded it; nothing for a visitor. */
+    uploader: text(),
+    receipt: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
+);`;
+
 const FILE_REVIEW_TABLE = `export const fileReviews = sqliteTable(
   "file_reviews",
   {

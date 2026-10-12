@@ -566,6 +566,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       {
         files: [
           "src/kit/uploads.ts",
+          "src/kit/receipts.server.ts",
           "src/kit/PictureInput.tsx",
           "src/kit/FileInput.tsx",
           "src/routes/files/$model.$field.ts",
