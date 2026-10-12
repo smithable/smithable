@@ -618,6 +618,7 @@ async function callReceiver() {
         body,
         event: req.headers["x-event"],
         signed: req.headers["x-signature-256"] === signed,
+        key: req.headers["idempotency-key"],
       });
       res.writeHead(204).end();
     });
@@ -669,6 +670,9 @@ async function callFlow(dir, base, receiver) {
     const call = receiver.calls.at(-1);
     if (!call) throw new Error("no call arrived");
     if (!call.signed) throw new Error("the signature does not match the secret");
+    // A repeat can be told apart: the call carries a key of its own, the same on every try.
+    if (!/^\d+-\d+$/.test(call.key ?? ""))
+      throw new Error(`the call has no Idempotency-Key (${call.key})`);
     const sent = JSON.parse(call.body);
     if (
       call.event !== "incidentResolved" ||
