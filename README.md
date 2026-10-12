@@ -65,7 +65,7 @@ The seven starters, with pictures: [docs.smithable.ai/starters](https://docs.smi
 | `packages/index` | The implementation index, the context builder for AI, the plain-language summary |
 | `packages/ai` | Model providers, the AI policy, requests to operations |
 | `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
-| `packages/create-smithable` | `npm create smithable`, which starts an app with `smithable new` (published when the packages reach npm) |
+| `packages/create-smithable` | `npm create smithable`, which starts an app with `smithable new` (on npm, like the other packages) |
 | `apps/studio` | The editor, No code and Code modes (Builder and Studio in the code), one web app served by `smithable studio` |
 | `examples/` | The starters: a CRM, a booking site, an invoicing app, a marketplace (Torget), records (things and what we know about them), and a status page |
 | `docs/` | The pages of [docs.smithable.ai](https://docs.smithable.ai) (`docs/site/`), [vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
