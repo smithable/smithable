@@ -249,6 +249,7 @@ export const w = {
   searchAction: "Search",
   selectAll: "Select all",
   send: "Send",
+  sentTo: "Sent to",
   sendAgain: "Send again",
   sendInvitation: "Send invitation",
   sendMeACode: "Send me a code",
