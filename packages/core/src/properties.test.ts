@@ -73,8 +73,11 @@ const anyText = fc.oneof(
   fc.string({ maxLength: 200 }),
   fc.jsonValue({ maxDepth: 4 }).map((v) => stringify(v)),
 );
-// More with FC_RUNS=3000 to hunt; a gate's hundred or two keep the suite quick.
-const runs = { numRuns: Number(import.meta.env.FC_RUNS ?? 150) };
+// More with FC_RUNS=3000 to hunt, FC_SEED for other cases; a gate tries the same few hundred.
+const runs = {
+  numRuns: Number(import.meta.env.FC_RUNS ?? 150),
+  seed: Number(import.meta.env.FC_SEED ?? 1),
+};
 
 describe.each(examples)("%s", (example) => {
   const spec = fileOf(example, "") as string;
@@ -126,6 +129,10 @@ test("any text or YAML as any file: a reason, never a crash", () => {
       validateContext({ path: "smithable.context.yml", text });
     }),
     // Found by this test: an alias with no anchor crashed the context file's validator.
-    { numRuns: Number(import.meta.env.FC_RUNS ?? 300), examples: [["*!"], ["a: *x"]] },
+    {
+      numRuns: Number(import.meta.env.FC_RUNS ?? 300),
+      seed: Number(import.meta.env.FC_SEED ?? 1),
+      examples: [["*!"], ["a: *x"]],
+    },
   );
 });
