@@ -293,3 +293,10 @@ test("the app's time zone is offered from the IANA names", () => {
   const found = at("smithable: 0.1\napp:\n  name: Shop\n  timezone: Europe/Mari‸");
   expect(found.labels).toEqual(["Europe/Mariehamn"]);
 });
+
+test("a field line with a long run of spaces is read quickly (CodeQL #49)", () => {
+  const long = `smithable: 0.1\napp: { name: Shop }\nmodels:\n  Order:\n    fields:\n      status: "${" ".repeat(100_000)}x\n      note: text\npages:\n  ‸`;
+  const started = Date.now();
+  at(long);
+  expect(Date.now() - started).toBeLessThan(100);
+});
