@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
-  name: Open Sky Yoga
+  name: Lotus Flow Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: EUR
-  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -14,7 +12,7 @@ models:
   Instructor:
     fields:
       name: string!
-      bio: markdown
+      bio: text
       portrait: picture
   Session:
     fields:
@@ -32,19 +30,26 @@ models:
     capacity:
       per: session
       max: session.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
   sessions:
     crud: Session
-  class-types:
-    crud: ClassType
-  instructors:
-    crud: Instructor
-  my-bookings:
-    crud: Booking
   schedule:
     calendar:
       model: Session
       starts: startsAt
+  class-types:
+    crud: ClassType
+  teachers:
+    crud: Instructor
+  my-bookings:
+    crud: Booking
+  messages:
+    crud: Message
   home:
     route: /
     landing:
@@ -58,6 +63,19 @@ pages:
       faq:
       callToAction:
         button: schedule
+      contact:
+        form: Message
   privacy:
     route: /privacy
     legal: privacy
+  admin:
+    data: all
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner

@@ -22,3 +22,7 @@ admins: [johan@smithable.ai]           # become admin when they first sign in
 # signing in. Never add models that contain personal or business data.
 public:
   pages: []                        # an internal tool: nothing is public
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

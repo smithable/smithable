@@ -1,21 +1,18 @@
 smithableUx: 0.1
-tones:
-  Job.status:
-    open: success
-  Application.status:
-    shortlisted: warning
-    rejected: danger
-    hired: success
 pages:
+  jobs:
+    table:
+      columns: [title, employer, location, jobType, deadline, open]
   home:
     sections:
       hero:
         layout: centered
-  jobs:
-    icon: briefcase
-  myApplications:
-    icon: file
-  applications:
-    icon: clipboard
+tones:
+  Application.status:
+    accepted: success
+    reviewing: warning
+    declined: danger
 theme:
-  preset: navy
+  preset: corporate
+  brand:
+    primary: "#b91c1c"

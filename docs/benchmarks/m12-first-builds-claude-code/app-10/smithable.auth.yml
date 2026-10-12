@@ -6,10 +6,11 @@ defaultAccess: shared
 roles:
   admin: all
   member:
-    description: A family member who adds and cooks recipes and keeps the shopping list.
+    description: A family member who adds and edits recipes and shopping lists.
     pages: all
     create: all
     write: all
-    delete: [ShoppingItem, Ingredient]
+assistant:
+  for: signed-in
 defaultRole: member
 admins: [johan@smithable.ai]
