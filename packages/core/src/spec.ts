@@ -152,7 +152,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /** Anchors, aliases and tags make specs hard to read and unsafe to edit with operations. */
-function rejectYamlFeatures(ctx: ParseContext, doc: ReturnType<typeof parseDocument>): void {
+export function rejectYamlFeatures(ctx: ParseContext, doc: ReturnType<typeof parseDocument>): void {
   visit(doc, {
     Alias(_, node) {
       ctx.error(
