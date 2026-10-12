@@ -315,6 +315,20 @@ describe("other wordings", () => {
     expect(ops("Customers no longer need notes")).toEqual([
       { op: "removeField", args: { model: "Customer", field: "notes" } },
     ]);
+    // A kind of record named alone is the model (or its records), not the field that points to
+    // it (A 105, found by the property tests); saying "field" makes it the field.
+    const withOrders = applies(
+      ops(
+        "Add orders: each order has a number, belongs to a customer and has a total amount.",
+      ) as PhraseOperation[],
+    );
+    const spec = validateSpec({ path: "smithable.yml", text: withOrders }, { roles: ROLES }).ir;
+    if (!spec) throw new Error("invalid");
+    for (const request of ["Delete Customer", "Remove the customers", "remove orders"])
+      expect(matchRequest(spec, request, ROLES), request).toBeUndefined();
+    expect(matchRequest(spec, "Remove the customer field from orders", ROLES)?.operations).toEqual([
+      { op: "removeField", args: { model: "Order", field: "customer" } },
+    ]);
   });
 
   test("access wordings", () => {
