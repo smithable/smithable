@@ -18,6 +18,16 @@ None.
 
 - New apps get Ask on for everyone who signs in: the starters and the blank a first draft starts from have `assistant: { for: signed-in }` in `smithable.auth.yml`. An app without the block is unchanged.
 
+### Security
+
+- A record's links to related records show their titles only to people who may read those records (#553).
+- A record takes a new picture or document only with the receipt its upload gave to the same person for that field (#559).
+- `smithable security`: a check that cannot run to its end now fails as "could not check" instead of passing (#554).
+- Outgoing calls to other services (the targets under `outgoing`) connect only to an address that was checked (#555).
+- Request limits: the app's limit on changes per address keeps a bounded number of addresses, and Studio refuses request bodies over 20 MB (#556).
+
+Apps you host yourself get these only when regenerated with this version; apps on smithable.ai get them with the next release.
+
 ### The packages
 
 - Each package has a README, so its page on npm says what it is and links to smithable.ai, the documentation and the repository. The READMEs appear on npm with this release; 0.1.0's pages stay empty until then.
