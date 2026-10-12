@@ -1126,6 +1126,11 @@ try {
       await page.locator("label", { hasText: /^Code$/ }).click();
       await openPreview("/customers");
       await page.getByRole("button", { name: "Select" }).click();
+      // The page in the frame is in select mode before anything is clicked: a click before it is
+      // the app's own (a new frame after Go hears of select mode only once it has loaded).
+      const selecting = () =>
+        preview.locator("html[data-sm-selecting]").waitFor({ state: "attached", timeout: 60000 });
+      await selecting();
       const editorText = async (file) => {
         await page.getByLabel(file).waitFor({ timeout: 10000 });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== file)
@@ -1143,6 +1148,7 @@ try {
       if (await subtitle.evaluate((e) => e.isContentEditable))
         throw new Error("the text became editable in Code mode");
       await openPreview("/customers/new");
+      await selecting();
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
