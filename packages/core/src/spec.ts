@@ -6,6 +6,7 @@ import { applyPlugins, type SpecPlugin } from "./plugin.js";
 import type { SpecSection } from "./section.js";
 import { actionsSection } from "./sections/actions.js";
 import { appSection } from "./sections/app.js";
+import { incomingSection } from "./sections/incoming.js";
 import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
 import { outgoingSection } from "./sections/outgoing.js";
@@ -22,6 +23,7 @@ export const SECTIONS: readonly SpecSection[] = [
   modelsSection,
   actionsSection,
   outgoingSection,
+  incomingSection,
   queriesSection,
   pagesSection,
   navigationSection,

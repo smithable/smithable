@@ -11,6 +11,8 @@ export interface SpecIR {
   actions: ActionIR[];
   /** Mails and calls the app makes when something happens to a record (integrations.md §4). */
   outgoing: OutgoingIR[];
+  /** Addresses other services call, each making a record or handing the call to code (integrations.md §3). */
+  incoming: IncomingIR[];
   queries: QueryIR[];
   pages: PageIR[];
   navigation: MenuIR[];
@@ -364,6 +366,29 @@ export interface ActionAddIR {
  * Something happens to a record and the app tells someone: a mail, or (later) a signed call to a
  * named target whose address is a setting. docs/design/integrations.md §4.
  */
+export interface IncomingIR {
+  name: string;
+  /** One record of this model per call, with `set`'s values; absent when `custom`. */
+  create?: string;
+  set: IncomingValueIR[];
+  /** The call is handed to src/custom/incoming/<name>.ts after it is verified. */
+  custom: boolean;
+  /** "sha256": a signature of the body made with the secret; else the secret itself is sent. */
+  signed?: "sha256";
+  /** The header the secret or the signature comes in. */
+  header?: string;
+  /** A template of the call's own id ("{event.id}"): a call seen in the last day is not acted on again. */
+  id?: string;
+  /** The role the call acts as (its record goes through that role's create rule). */
+  as: string;
+}
+
+/** A value an incoming call sets: a literal, a formula, or a text with {path} placeholders from its JSON. */
+export type IncomingValueIR =
+  | { field: string; value: FieldValue }
+  | { field: string; formula: Expr; text: string }
+  | { field: string; template: string };
+
 export interface OutgoingIR {
   name: string;
   /** A record of `model` created, changed or deleted; or the standard action `action` (on `model`) ran. */

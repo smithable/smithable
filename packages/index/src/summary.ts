@@ -7,6 +7,7 @@ import {
   type FieldIR,
   type GrantNames,
   humanize,
+  incomingText,
   type LandingSection,
   type ModelIR,
   outgoingText,
@@ -336,6 +337,20 @@ export function summarize(
           return model ? one(model) : humanize(name).toLowerCase();
         }),
         ...(subject ? [`The mail's subject is “${subject}”.`] : []),
+      ],
+    });
+  }
+
+  // What other services may call, and what a call does.
+  for (const incoming of ir.incoming) {
+    sections.push({
+      concept: `incoming:${incoming.name}`,
+      title: humanize(incoming.name),
+      sentences: [
+        incomingText(incoming, (name) => {
+          const model = modelNamed(name);
+          return model ? one(model) : humanize(name).toLowerCase();
+        }),
       ],
     });
   }
