@@ -17,6 +17,9 @@ None.
 ### The engine
 
 - New apps get Ask on for everyone who signs in: the starters and the blank a first draft starts from have `assistant: { for: signed-in }` in `smithable.auth.yml`. An app without the block is unchanged.
+- Outgoing calls to other services carry an `Idempotency-Key` header, the same on every try, so a receiver can tell a repeat. Behind the hosted service's egress proxy, a call to an address not yet connected says to connect it on the project's Connections page, and its retries go on (#568).
+- Activity can be filtered to one outgoing target ("Sent to"): its deliveries under "Calls to <target>", with Send again for a call given up (#569).
+- A new docs page, "Tell people and other systems", on outgoing mail and signed calls to other services (#570).
 
 ### Security
 
