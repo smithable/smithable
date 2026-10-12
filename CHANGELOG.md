@@ -25,7 +25,7 @@ None.
 - `smithable security`: a check that cannot run to its end now fails as "could not check" instead of passing (#554).
 - Outgoing calls to other services (the targets under `outgoing`) connect only to an address that was checked; behind an egress proxy (as on smithable.ai), calls go through it (#555).
 - Request limits: the app's limit on changes per address keeps a bounded number of addresses, and Studio refuses request bodies over 20 MB (#556).
-- Files uploaded but never saved on a record are removed a day later, and an app's stored files can be capped with `UPLOADS_MAX_BYTES` (smithable.ai sets it per app) (#563).
+- Files uploaded but never saved on a record are removed a day later, and an app's stored files can be capped with the `UPLOADS_MAX_BYTES` setting (#563).
 
 Apps you host yourself get these only when regenerated with this version; apps on smithable.ai get them with the next release.
 
