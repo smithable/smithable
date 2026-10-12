@@ -578,6 +578,7 @@ export function App() {
               version={version}
               updating={updating || busy}
               selecting={selecting}
+              inCode={mode === "studio"}
               onSelecting={setSelecting}
               onHide={narrow ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
               highlight={highlight}

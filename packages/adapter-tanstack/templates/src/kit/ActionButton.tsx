@@ -10,10 +10,13 @@ import { w } from "./words";
 
 export function ActionButton({
   label,
+  concept,
   onRun,
   ask,
 }: {
   label: string;
+  /** The action in the app description ("action:identified"), for the preview editor: development only. */
+  concept?: string;
   /** Runs the action, with the asked values when it asks for any. */
   onRun: (values?: Record<string, unknown>) => Promise<unknown>;
   /** What the action asks for: the dialog's fields, their schema, and the record they start from. */
@@ -33,7 +36,11 @@ export function ActionButton({
     setBusy(false);
   };
   return (
-    <span data-kit="action-button" className="inline-flex flex-col items-end gap-1">
+    <span
+      data-kit="action-button"
+      {...(import.meta.env.DEV && concept ? { "data-sm-concept": concept } : {})}
+      className="inline-flex flex-col items-end gap-1"
+    >
       <Button
         type="button"
         variant="outline"
