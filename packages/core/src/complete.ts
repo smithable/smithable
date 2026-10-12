@@ -182,13 +182,15 @@ const schemaAt = (path: string[], file: EditedFile = "smithable.yml"): Node[] =>
 /** The app's own names, as far as the text's indentation tells them. */
 /** The values of a choice written as "draft | sent | paid" (quoted or not, "!" and a default allowed). */
 function choiceValues(text: string): string[] | undefined {
-  const bare = text
-    .trim()
+  // Trimmed before the quotes go, and cut at the first "=" by position: no pattern scans a run of
+  // spaces, which made a long line slow (CodeQL #49).
+  let bare = text
     .replace(/#.*$/, "")
-    .replace(/^["']|["']\s*$/g, "")
-    .replace(/\s*=.*$/, "")
-    .replace(/!\s*$/, "")
-    .trim();
+    .trim()
+    .replace(/^["']|["']$/g, "");
+  const equals = bare.indexOf("=");
+  if (equals >= 0) bare = bare.slice(0, equals);
+  bare = bare.trim().replace(/!$/, "").trim();
   if (!bare.includes("|")) return undefined;
   return bare
     .split("|")
