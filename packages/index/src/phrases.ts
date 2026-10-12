@@ -572,8 +572,13 @@ const RULES: Rule[] = [
           text,
         );
       if (!m?.groups) return undefined;
-      const found = m.groups.subject
-        ? subjectField(m.groups.subject, scope)
+      // "delete Customer", "remove bookings": a kind of record (or its records), not the field that
+      // points to it; a model reads it. "remove the customer field" is the field.
+      const subject = m.groups.subject;
+      if (subject && !/ field$/.test(subject) && modelFor(scope.ir, dropArticles(subject)))
+        return null;
+      const found = subject
+        ? subjectField(subject, scope)
         : (() => {
             const model = modelFor(scope.ir, m.groups?.model ?? "");
             const field = model && fieldFor(model, m.groups?.field ?? "");
