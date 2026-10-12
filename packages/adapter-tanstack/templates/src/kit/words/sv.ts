@@ -98,6 +98,7 @@ export const w = {
   fieldsMarked: "Fält märkta med",
   fileKinds: "Välj en PDF, ett dokument, ett kalkylark, en text eller en bild.",
   fileNotAdded: "Filen kunde inte läggas till.",
+  fileNotUploaded: "Filen laddades inte upp här, eller för länge sedan: välj den igen.",
   fileTooLarge: "Filen är för stor (högst 10 MB).",
   footer: "Sidfot",
   forgetInLog: "Glöm i loggen",

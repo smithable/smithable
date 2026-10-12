@@ -579,6 +579,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       .join("");
     return `${self}.shownRefs(viewer, [${nested ? `{ ...${v}${nested} }` : v}])[0]`;
   };
+  const uploadFields = model.fields.filter(isUpload);
   for (const ref of refs)
     if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
   const withClause = (entries: string[], indent: string) =>
@@ -1131,7 +1132,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1308,6 +1309,18 @@ ${
   if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
   return personOf(viewer);
 }`
+}
+`
+    : ""
+}${
+  uploadFields.length
+    ? `
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles(viewer: Viewer | null, values: ${n.values}, before?: Record<string, unknown>): ${n.values} {
+  return {
+    ...values,
+${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}
+  };
 }
 `
     : ""
@@ -1719,7 +1732,7 @@ ${
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
-}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let row: typeof ${n.table}.$inferSelect;
+}${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let row: typeof ${n.table}.$inferSelect;
     try {
       ${
         capacity
@@ -1747,7 +1760,7 @@ ${
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
-${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
+${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
     try {
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
@@ -2039,16 +2052,16 @@ export function refinement(field: FieldIR, visitors = false, folder = ""): strin
       return bounds(100) ? `(s) => s${bounds(100)}` : undefined;
     case "picture":
       // What src/kit/uploads.ts returned, plus the description a person wrote.
-      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() })${optional}`;
+      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })${optional}`;
     case "pictures":
       // Several of them, at most the field's maximum.
-      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() })).max(${field.max ?? PICTURES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(${field.max ?? PICTURES_MAX})${optional}`;
     case "file":
       // What src/kit/uploads.ts returned for a document. Its type is shown, never served: the
       // file is sent with the type of its extension (fileHeaders).
-      return `z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })${optional}`;
+      return `z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() })${optional}`;
     case "files":
-      return `z.array(z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative() })).max(${FILES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("[a-z0-9]{2,4}")}, name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() })).max(${FILES_MAX})${optional}`;
     default:
       return undefined;
   }
