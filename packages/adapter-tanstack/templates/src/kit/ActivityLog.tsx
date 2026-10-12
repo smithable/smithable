@@ -151,6 +151,7 @@ export function ActivityLog({
           </label>
         </div>
       )}
+      {filters?.target ? <TargetSummary target={filters.target} lines={lines} app={app} /> : null}
       {lines.length === 0 ? (
         <p className="text-muted-foreground">{w.nothingMatches}</p>
       ) : (
@@ -215,5 +216,31 @@ export function ActivityLog({
         </ol>
       )}
     </div>
+  );
+}
+
+/** Above a target's deliveries: whether they work, at a glance (its last call: when, and the answer). */
+function TargetSummary({
+  target,
+  lines,
+  app,
+}: {
+  target: string;
+  lines: ActivityLine[];
+  app: AppUi;
+}) {
+  const last = lines.find((l) => l.action === "called" || l.action === "call not made");
+  return (
+    <p data-part="target-summary" className="text-sm">
+      <span className="font-semibold">{w.callsTo(target)}</span>{" "}
+      {last
+        ? w.lastCall(
+            formatValue({ name: "at", kind: "datetime", label: "", required: false }, last.at, app),
+            last.action === "called"
+              ? w.answered(String(last.details?.status ?? ""))
+              : w.callNotMade,
+          )
+        : w.noCallsYet}
+    </p>
   );
 }
