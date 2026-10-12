@@ -1,18 +1,14 @@
 smithableUx: 0.1
 pages:
+  ingredients:
+    table:
+      columns: [name, category, quantityInStock, unit, reorderLevel, needsReorder, supplier]
+      sort: name
+    icon: package
   suppliers:
     table:
       columns: [name, contactName, email, phone]
-    icon: truck
-  ingredients:
-    table:
-      columns: [name, category, inStock, unit, reorderLevel, stockStatus, supplier]
       sort: name
-    icon: package
+    icon: truck
 theme:
   preset: craft
-tones:
-  Ingredient.stockStatus:
-    ok: success
-    low: warning
-    out: danger

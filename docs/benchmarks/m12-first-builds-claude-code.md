@@ -1,21 +1,21 @@
-# M12 first builds: claude-code (2026-10-11)
+# M12 first builds: claude-code (2026-10-12)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 427,208 tokens (401,870 in, 25,338 out), €0.0000 + $1.0024 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to twice). Totals: 12 / 12 created, 12 type-check, 410,102 tokens (383,630 in, 26,472 out), €0.0000 + $1.0194 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 31,439 | 1,957 | $0.2906 | 0 | 1 | 34 s |
-| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 11 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 63,516 | 4,036 | $0.1357 | 0 | 2 | 46 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 30,420 | 2,556 | $0.0679 | 0 | 1 | 37 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 61,355 | 2,519 | $0.0880 | 0 | 2 | 34 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 30,420 | 2,753 | $0.0718 | 0 | 1 | 36 s |
-| A football club's site: teams, players, matches and results. | records | yes | yes | 30,204 | 2,225 | $0.0595 | 0 | 1 | 32 s |
-| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 31,434 | 1,735 | $0.0596 | 0 | 1 | 31 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 30,211 | 1,125 | $0.0376 | 0 | 1 | 24 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 30,210 | 1,373 | $0.0425 | 0 | 1 | 28 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 31,328 | 2,796 | $0.0799 | 0 | 1 | 37 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 31,333 | 2,263 | $0.0693 | 0 | 1 | 33 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 32,487 | 2,203 | $0.3039 | 0 | 1 | 31 s |
+| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 10 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 65,938 | 4,596 | $0.1505 | 0 | 2 | 47 s |
+| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 31,468 | 2,227 | $0.0618 | 0 | 1 | 31 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 31,262 | 1,737 | $0.0504 | 0 | 1 | 26 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 31,469 | 2,483 | $0.0670 | 0 | 1 | 33 s |
+| A football club's site: teams, players, matches and results. | records | yes | yes | 31,250 | 2,077 | $0.0571 | 0 | 1 | 28 s |
+| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 32,483 | 2,271 | $0.0708 | 0 | 1 | 33 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | records | yes | yes | 31,259 | 2,025 | $0.0561 | 0 | 1 | 27 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 31,257 | 1,552 | $0.0467 | 0 | 1 | 25 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 32,376 | 2,579 | $0.0761 | 0 | 1 | 31 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 32,381 | 2,722 | $0.0790 | 0 | 1 | 31 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code/](m12-first-builds-claude-code/), one folder per description (app-1 …).
 
@@ -26,16 +26,16 @@ Each created app's four spec files are in [m12-first-builds-claude-code/](m12-fi
 
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | booking | 3 | 4 / 6 (has 4) | 7 / 11 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, schedule, privacy; read ClassType, Instructor, Session; create none | 1 (operator-unknown) | none |  | none | 3 / 4 | mentions visitors; landing page |
+| 1 | booking | 3 | 5 / 6 (has 5) | 8 / 11 (has 9) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, schedule, privacy; read ClassType, Instructor, Session; create Message | 2 (no-timezone, operator-unknown) | none |  | none | 3 / 5 | mentions visitors; landing page |
 | 2 | ? (words: crm) | 0 | 0 / 0 (has 6) | 0 / 0 (has 5) | 0 / 0 (has 1) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none |  | none | 0 / 6 | no mention; no landing page |
-| 3 | invoicing | 3 | 3 / 4 (has 4) | 5 / 7 (has 7) | 2 / 2 (has 2) | private; admin, member (member) | none | pages home, privacy; read none; create none | 1 (operator-unknown) | none |  | none | 3 / 4 | no mention; landing page |
-| 4 | marketplace (words: records) | 3 | 0 / 1 (has 2) | 3 / 5 (has 7) | 0 / 0 (has 1) | private; admin, member (member) | none | pages home, tools, privacy; read Tool; create none | 1 (operator-unknown) | none |  | none | 0 / 2 | no mention; landing page |
-| 5 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
-| 6 | marketplace | 3 | 0 / 1 (has 2) | 1 / 5 (has 6) | 0 / 0 (has 4) | private; admin, staff, member (member) | none | pages home, jobs, privacy; read Job; create none | 1 (operator-unknown) | none |  | none | 0 / 2 | no mention; landing page |
+| 3 | invoicing | 3 | 4 / 4 (has 5) | 6 / 7 (has 8) | 2 / 2 (has 3) | private; admin, member (member) | none | pages home, privacy; read none; create none | 1 (operator-unknown) | none |  | none | 3 / 5 | no mention; landing page |
+| 4 | marketplace (words: records) | 3 | 0 / 1 (has 2) | 2 / 5 (has 6) | 0 / 0 (has 1) | private; admin, member (member) | none | pages home, tools, privacy; read Tool; create none | 1 (operator-unknown) | none |  | none | 0 / 2 | no mention; landing page |
+| 5 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
+| 6 | marketplace | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 4) | private; admin, member, staff (member) | none | pages home, jobs, privacy; read Job; create none | 3 (write-without-read, operator-unknown) | none |  | none | 0 / 2 | no mention; landing page |
 | 7 | records | 3 | 0 / 1 (has 3) | 1 / 2 (has 5) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, matches, teams, players, privacy; read Team, Player, Match; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | mentions visitors; landing page |
-| 8 | booking (words: records) | 3 | 0 / 6 (has 3) | 4 / 11 (has 7) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, schedule, speakers, privacy; read Talk, Speaker; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | no mention; landing page |
-| 9 | records (words: invoicing) | 3 | 0 / 1 (has 1) | 0 / 2 (has 2) | 0 / 0 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 1 | no mention; no landing page |
-| 10 | records | 3 | 0 / 1 (has 3) | 0 / 2 (has 3) | 0 / 0 (has 1) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 3 | no mention; no landing page |
+| 8 | booking (words: records) | 3 | 0 / 6 (has 3) | 3 / 11 (has 7) | 0 / 0 (has 1) | private; admin, member (member) | none | pages home, program, privacy; read Talk, Speaker; create none | 2 (no-timezone, operator-unknown) | none |  | none | 0 / 3 | no mention; landing page |
+| 9 | records (words: invoicing) | 3 | 0 / 1 (has 1) | 0 / 2 (has 3) | 0 / 0 (has 4) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 1 | no mention; no landing page |
+| 10 | records | 3 | 0 / 1 (has 4) | 0 / 2 (has 3) | 0 / 0 (has 2) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 4 | no mention; no landing page |
 | 11 | status | 2 | 4 / 4 (has 4) | 7 / 8 (has 8) | 3 / 3 (has 3) | shared; admin, staff (staff) | none | pages home, privacy; read Component, Incident, IncidentUpdate, Maintenance; create none | 1 (operator-unknown) | none |  | none | 4 / 4 | no mention; landing page |
 | 12 | status | 2 | 3 / 4 (has 3) | 6 / 8 (has 7) | 3 / 3 (has 3) | shared; admin, staff (staff) | none | pages home, privacy; read Component, Incident, IncidentUpdate; create none | 1 (operator-unknown) | none |  | none | 3 / 3 | mentions visitors; landing page |
 
@@ -47,35 +47,37 @@ Each created app's four spec files are in [m12-first-builds-claude-code/](m12-fi
 ### 1. A booking site for a yoga studio, with classes, teachers and online booking.
 
 ```text
-Open Sky Yoga
+Lotus Flow Yoga
   Class schedule, teachers and online booking for a yoga studio.
 
 Pages
-  - Home (a landing page: hero, class types, instructors, faq, call to action and footer)
+  - Home (a landing page: hero, classes, teachers, faq, call to action, contact and footer)
   - Sessions (lists sessions; only for admins)
-  - Class types (lists class types; only for admins; visitors see class types on the Home page)
-  - Instructors (lists instructors; only for admins; visitors see instructors on the Home page)
-  - My bookings (lists bookings)
   - Schedule (a calendar of sessions by week or month)
+  - Classes (lists classes; only for admins; visitors see classes on the Home page)
+  - Teachers (lists teachers; only for admins; visitors see teachers on the Home page)
+  - My bookings (lists bookings)
+  - Messages (lists messages; only for admins)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Admin (every kind of record, to find, open, change and delete; only for admins)
 
-Class types
-  Class types have:
+Classes
+  Classes have:
   - a name (required)
   - a summary
   - a level (all levels, beginner or advanced, all levels by default)
   - duration minutes (a whole number, required, 60 by default)
 
-Instructors
-  Instructors have:
+Teachers
+  Teachers have:
   - a name (required)
-  - a bio (formatted text)
+  - a bio
   - a portrait (picture)
 
 Sessions
   Sessions have:
-  - a class type (a class type, required)
-  - an instructor (an instructor, required)
+  - class (a class, required)
+  - a teacher (a teacher, required)
   - starts at (a date and time, required)
   - a capacity (a whole number, required, 12 by default)
   Each session lists its bookings.
@@ -86,24 +88,39 @@ Bookings
   - a session (a session, required, unique)
   At most the session's capacity bookings per session.
 
+Messages
+  Messages have:
+  - a name (required)
+  - an email (required)
+  - a message (required)
+
+Booking made
+  When a booking is added: mails its owner.
+
+Booking cancelled
+  When a booking is deleted: mails its owner.
+
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
-  - admin (Studio staff. Manage the schedule, classes and teachers): everything
-  - member (A student who books classes): opens the my bookings page and the schedule page; adds bookings
+  - admin: everything
+  - member (A student who books classes): opens the my bookings page; adds bookings
   New users get the member role.
-  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors and reading sessions.
+  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors, reading sessions and adding messages.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 126 files (126 changed, 0 removed).
+Generated 158 files (158 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-1. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-1. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-1
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-1
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-1/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-1/smithable.yml:43:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+    hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
+/tmp/smithable-bench-m12-dz7Tr7/app-1/smithable.content.yml:16:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 2. A CRM for a small sales team: companies, contacts, deals and follow-ups.
@@ -124,11 +141,11 @@ Added contacts with a name and notes: say what else they hold.
 Added deals with a name and notes: say what else they hold.
 Added follow-ups with a name and notes: say what else they hold.
 The starter let only acme.example addresses sign in (a sample domain no one has); that limit is gone.
-Generated 127 files (126 changed, 0 removed).
+Generated 135 files (134 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-2. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-2. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-2
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-2
   smithable studio
 
 or only run the app with smithable run.
@@ -137,17 +154,26 @@ or only run the app with smithable run.
 ### 3. Invoicing for freelancers, with clients, invoices and payments.
 
 ```text
-Billfold
-  Invoicing for freelancers: keep track of clients, invoices and the payments that come in.
+Paydesk
+  Simple invoicing for freelancers: keep your clients, send invoices and record the payments you receive.
 
 Pages
   - Home (a landing page: hero, features, faq, call to action and footer)
+  - Overview (a dashboard: received, outstanding, overdue, invoiced and latest)
   - Clients (lists clients; search by name or email)
-  - Invoice lines (lists invoice lines)
-  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
-  - Invoices (lists invoices; filter by client or status; “Mark sent”; “Mark paid”)
   - Payments (lists payments; filter by invoice, method or paid on)
-  - Overview (a dashboard: outstanding, overdue, received and latest)
+  - Invoice lines (lists invoice lines)
+  - Settings (lists business profiles)
+  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Invoices (lists invoices; filter by client or status; “Mark sent”; “Mark paid”; “Mark overdue”)
+
+Business profiles
+  Business profiles have:
+  - a business name (required)
+  - a VAT number
+  - an IBAN
+  - payment term days (a whole number, required, 30 by default)
+  - an invoice footer
 
 Clients
   Clients have:
@@ -165,6 +191,15 @@ Invoice lines
   - an invoice (an invoice, required)
   The amount is calculated as the quantity times the unit price.
 
+Payments
+  Payments have:
+  - paid on (a date, required, today by default)
+  - an amount (an amount, required)
+  - a method (bank transfer, card, cash or other, bank transfer by default)
+  - a reference
+  - a note
+  - an invoice (an invoice, required)
+
 Invoices
   Invoices have:
   - a number (required, unique)
@@ -178,21 +213,17 @@ Invoices
   The paid amount is calculated as the total amount of its payments.
   The balance is calculated as the total minus the paid amount.
 
-Payments
-  Payments have:
-  - an invoice (an invoice, required)
-  - an amount (an amount, required)
-  - paid on (a date, required, today by default)
-  - a method (bank transfer, card, cash or other, bank transfer by default)
-  - a reference
-
 Mark sent
   For an invoice that is draft; sets status to sent.
   The invoice went to the client.
 
 Mark paid
   For an invoice that is sent or overdue; sets status to paid; asks for the payment's amount and the payment's method; adds a payment (paid on today).
-  The client paid the invoice; the payment is recorded.
+  The client paid the invoice; the payment is recorded with it.
+
+Mark overdue
+  For an invoice that is sent; sets status to overdue.
+  The due date passed without payment.
 
 Invoice sent
   When “Mark sent” runs on a invoice: mails client's email.
@@ -205,103 +236,89 @@ Sign-in and access
   - member: opens every page; adds every kind of record
   New users get the member role.
   Open to anyone without signing in: the home page and the privacy page.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 128 files (128 changed, 0 removed).
+Generated 144 files (144 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-3. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-3. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-3
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-3
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
-
-/tmp/smithable-bench-m12-sZAZw7/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132
-		return this.stmt.run(...params);
-		                 ^
-SqliteError: FOREIGN KEY constraint failed
-    at PreparedQuery.run (/tmp/smithable-bench-m12-sZAZw7/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-sZAZw7/app-3/node_modules/.pnpm/drizzle-orm@0.45.3_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.6/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-sZAZw7/app-3/src/db/seed.ts:59:6)
-    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
-    at async node:internal/modules/esm/loader:647:26
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
-  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'
-}
-
-Node.js v24.21.0
-Could not add sample data; the app works without it.
+/tmp/smithable-bench-m12-dz7Tr7/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 4. A tool library where neighbors lend each other tools.
 
 ```text
 Toolshare
-  Neighbors lend each other tools instead of each buying their own.
+  Neighbors lend each other tools instead of everyone buying their own.
 
 Pages
-  - Tools (lists tools; search by title, description or place; filter by category, condition or available; sort by title or date added; records can be saved as favorites; contact the owner by mail)
+  - Tools (lists tools; search by name, description or place; filter by category, condition or available; sort by name or date added; records can be saved as favorites; contact the owner by mail)
   - My tools (lists tools; only the viewer's own records)
-  - Loans (lists loans; filter by status or due on; “Mark returned”)
-  - Saved (lists tools; only the viewer's saved records)
-  - Home (a landing page: hero, features, tools where available is yes and footer)
-  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Loans (lists loans; filter by status or tool; “Mark returned”)
   - Review (the pictures and files waiting for review, to approve or reject; only for admins)
+  - Home (a landing page: hero, tools and footer)
+  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
 
 Tools
   Tools have:
-  - a title (required)
+  - a name (required)
   - photos (pictures, required)
   - a description (required)
-  - a category (power tools, hand tools, garden, ladders, cleaning, kitchen, camping or other, power tools by default)
+  - a category (power tools, hand tools, garden, ladders, cleaning, camping or other, power tools by default)
   - a condition (like new, good or worn, like new by default)
   - a place
-  - an available (yes or no, true by default)
-  Photos of tools are reviewed before others see them; a tool waits until its photos is.
+  - available (yes or no, true by default)
+  Photos of tools are reviewed before others see them; a tool waits until its photos are.
 
 Loans
   Loans have:
   - a tool (a tool, required)
+  - a borrower (required)
+  - a borrower contact
   - lent on (a date, required)
   - due on (a date)
   - status (out or returned, out by default)
   - returned on (a date)
   - notes
-  Each loan can have a borrower (a user).
 
 Mark returned
   For a loan that is out; sets status to returned and returned on to today.
-  Record that a lent tool has come back.
+  Record that the borrowed tool came back.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
   - admin: everything
-  - member (Lends out their tools and borrows from neighbors): opens every page; adds every kind of record
+  - member (Lends tools to neighbors and borrows theirs): opens the home page, the tools page, the my tools page and the loans page; adds tools and loans
   New users get the member role.
   Open to anyone without signing in: the home page, the tools page, the privacy page and reading tools.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 126 files (126 changed, 0 removed).
+Generated 130 files (130 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-4
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-4/smithable.content.yml:6:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
 
 ```text
 Bakery Stock
-  Keep track of the bakery's ingredients, their suppliers and how much is in stock.
+  Keeps track of the bakery's ingredients, their suppliers and how much is in stock.
 
 Pages
+  - Ingredients (lists ingredients; search by name or notes; sort by name, quantity in stock or last counted on)
   - Suppliers (lists suppliers; search by name, contact name or email)
-  - Ingredients (lists ingredients; search by name or notes; filter by category, stock status or supplier; “Mark low”; “Restock”)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Suppliers
@@ -316,37 +333,31 @@ Suppliers
 
 Ingredients
   Ingredients have:
-  - a name (required)
-  - a category (flour, sugar, dairy, eggs, fats, leavening, flavoring, fruit and nuts, packaging or other, flour by default)
-  - a supplier (a supplier)
+  - a name (required, unique)
+  - a category (flour, sugar, dairy, eggs, fats, yeast, flavorings, fruit and nuts, packaging or other, flour by default)
   - a unit (kg, g, l, ml or pieces, kg by default)
-  - an in stock (a number, required, 0 by default)
-  - a reorder level (a number)
-  - stock status (ok, low or out, ok by default)
-  - a last counted (a date, today by default)
+  - a supplier (a supplier)
+  - a quantity in stock (a number, required, 0 by default)
+  - a reorder level (a number, 0 by default)
+  - a cost per unit (an amount)
+  - last counted on (a date, today by default)
   - notes
-
-Mark low
-  For an ingredient that is ok; sets stock status to low.
-  Flag an ingredient as running low so it gets reordered.
-
-Restock
-  For an ingredient that is low or out; sets stock status to ok and last counted to today; asks for the in stock.
-  Record a delivery: enter the new amount in stock and mark it as ok.
+  The needs reorder is calculated as the quantity in stock is at most the reorder level.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - member: opens every page; adds every kind of record
+  - member (Works in the bakery and keeps the ingredients, suppliers and stock levels up to date): opens every page; adds every kind of record; changes everyone's ingredients and suppliers
   New users get the member role.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 108 files (108 changed, 0 removed).
+Generated 112 files (112 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-5. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-5. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-5
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-5
   smithable studio
 
 or only run the app with smithable run.
@@ -355,14 +366,13 @@ or only run the app with smithable run.
 ### 6. A job board for a local union, with job posts and applications.
 
 ```text
-Union Jobs
-  A job board where the local union posts jobs and members apply for them.
+Union Job Board
+  Job posts for members of the local union, and the applications they send.
 
 Pages
-  - Jobs (lists jobs; search by title, employer, description or location; filter by trade, type, status or closes on; sort by closes on or date added; records can be saved as favorites; “Close job”)
-  - My applications (lists applications; only the viewer's own records)
-  - Applications (lists applications; search by full name or member number; filter by job or status; only for staff users and admins)
-  - Home (a landing page: hero, jobs where status is open and footer)
+  - Home (a landing page: hero, jobs where open is yes and footer)
+  - Jobs (lists jobs; search by title, employer, description, location or trade; filter by job type, open or deadline; sort by deadline or date added; records can be saved as favorites; “Close job”)
+  - Applications (lists applications; filter by job or status; “Start review”; “Accept”; “Decline”)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
@@ -372,79 +382,82 @@ Jobs
   - an employer (required)
   - a description (required)
   - a location
-  - a trade (construction, electrical, plumbing, transport, healthcare, education, manufacturing or other, construction by default)
-  - a type (full time, part time, temporary or apprenticeship, full time by default)
+  - a trade
+  - a job type (full time, part time, temporary or apprenticeship, full time by default)
   - a pay
-  - closes on (a date)
-  - status (open or closed, open by default)
-  Each job lists its applications.
+  - a deadline (a date)
+  - open (yes or no, true by default)
 
 Applications
   Applications have:
-  - a job (a job, required)
+  - a job (a job, required, unique)
   - a full name (required)
+  - an email (required)
   - a phone
-  - a member number
-  - a message
-  - a resume (a document)
-  - status (received, shortlisted, rejected or hired, received by default)
+  - a cover letter
+  - status (submitted, reviewing, accepted or declined, submitted by default)
 
 Close job
-  For a job that is open; sets status to closed.
-  Close a job post so no more applications come in.
+  For a job that is open; sets open to no.
+  Close a job post so it no longer takes applications.
 
-Shortlist
-  For an application that is received; sets status to shortlisted.
-  Move an application to the shortlist.
+Start review
+  For an application that is submitted; sets status to reviewing.
+  Mark an application as being reviewed.
 
-Reject
-  For an application that is received or shortlisted; sets status to rejected.
-  Turn down an application.
+Accept
+  For an application that is submitted or reviewing; sets status to accepted.
+  Accept an application.
 
-Hire
-  For an application that is shortlisted; sets status to hired.
-  Mark the applicant as hired.
+Decline
+  For an application that is submitted or reviewing; sets status to declined.
+  Decline an application.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
   - admin: everything
-  - staff (Union staff who post jobs and handle applications): opens every page; sees everyone's jobs and applications; adds jobs; changes everyone's jobs and applications; deletes everyone's jobs
-  - member (Union members who browse jobs and apply): opens the home page, the jobs page and the my applications page; sees everyone's jobs; adds applications
+  - member (A union member who browses jobs and applies): opens the jobs page and the applications page; adds applications
+  - staff (Union staff who post jobs and handle applications): opens every page; sees everyone's applications; adds every kind of record; changes everyone's jobs and applications; deletes everyone's jobs
   New users get the member role.
-  Open to anyone without signing in: the home page, the jobs page, the privacy page and reading jobs where status is open.
+  Open to anyone without signing in: the home page, the jobs page, the privacy page and reading jobs where open is yes.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 126 files (126 changed, 0 removed).
+Generated 124 files (124 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-6. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-6. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-6
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-6
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-6/smithable.auth.yml:16:5  warning  staff may change others' Job it cannot read: with private access a role reads only its own records unless granted "read".
+    hint: Grant staff "read" on them too, or drop the "write".
+/tmp/smithable-bench-m12-dz7Tr7/app-6/smithable.auth.yml:17:5  warning  staff may delete others' Job it cannot read: with private access a role reads only its own records unless granted "read".
+    hint: Grant staff "read" on them too, or drop the "delete".
+/tmp/smithable-bench-m12-dz7Tr7/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
 
 ```text
-Club Pitch
-  A football club's site with its teams, players, fixtures and results.
+Riverside FC
+  The club's site with its teams, players, fixtures and results.
 
 Pages
   - Home (a landing page: hero, matches where status is scheduled, matches where status is played, teams and footer)
   - Matches (lists matches; search by opponent or competition; filter by team, status or venue; “Record result”; “Postpone”)
-  - Teams (lists teams; search by name or coach)
+  - Teams (lists teams)
   - Players (lists players; search by name; filter by team or position)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
 
 Teams
   Teams have:
   - a name (required)
-  - an age group (senior, youth or junior, senior by default)
+  - an age group (senior, youth, junior or veterans, senior by default)
   - a coach
-  - a description
+  - about
   Each team lists its players.
   Each team lists its matches.
 
@@ -452,8 +465,8 @@ Players
   Players have:
   - a name (required)
   - a team (a team, required)
-  - a position (goalkeeper, defender, midfielder or forward, goalkeeper by default)
   - a shirt number (a whole number)
+  - a position (goalkeeper, defender, midfielder or forward, goalkeeper by default)
   - a bio
 
 Matches
@@ -463,14 +476,14 @@ Matches
   - a kickoff (a date and time, required)
   - a venue (home or away, home by default)
   - a competition
-  - status (scheduled, played or postponed, scheduled by default)
-  - a goals for (a whole number)
-  - a goals against (a whole number)
+  - status (scheduled, played, postponed or canceled, scheduled by default)
+  - an our score (a whole number)
+  - a their score (a whole number)
   - a report
 
 Record result
-  For a match that is scheduled or postponed; sets status to played; asks for the goals for and the goals against.
-  Enter the final score of a match and mark it played.
+  For a match that is scheduled or postponed; sets status to played; asks for the our score and the their score.
+  Enter the final score of a match that has been played.
 
 Postpone
   For a match that is scheduled; sets status to postponed.
@@ -481,33 +494,34 @@ Sign-in and access
   Everyone sees, changes and deletes only their own records.
   Roles:
   - admin: everything
-  - member (Follows the club; only administrators add and change teams, players and matches): opens every page
+  - member (Follows the club; only administrators add teams, players and matches): opens every page
   New users get the member role.
   Open to anyone without signing in: the home page, the matches page, the teams page, the players page, the privacy page, reading teams, reading players and reading matches.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 113 files (113 changed, 0 removed).
+Generated 121 files (121 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-7. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-7. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-7
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-7
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
 
 ```text
-Conference Hub
-  Programme, speakers and talk registration for a conference.
+Confluence Conference
+  Programme, speakers and attendee registration for a conference.
 
 Pages
-  - Home (a landing page: hero, speakers, talks, faq, call to action and footer)
-  - Schedule (a calendar of talks by week or month)
-  - Talks (lists talks; only for admins; visitors see talks on the Home page)
-  - Speakers (lists speakers)
-  - My registrations (lists registrations)
+  - Home (a landing page: hero, speakers, faq, call to action and footer)
+  - My registration (lists registrations; “Cancel registration”)
+  - Program (a calendar of talks by week or month)
+  - Talks (lists talks; only for admins)
+  - Speakers (lists speakers; only for admins; visitors see speakers on the Home page)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
   - Admin (every kind of record, to find, open, change and delete; only for admins)
 
@@ -521,86 +535,103 @@ Speakers
 Talks
   Talks have:
   - a title (required)
-  - a summary
+  - an abstract
   - a speaker (a speaker, required)
   - starts at (a date and time, required)
-  - duration minutes (a whole number, required, 45 by default)
+  - duration minutes (a whole number, required, 30 by default)
   - a room
-  - a level (beginner, intermediate or advanced, beginner by default)
-  - a capacity (a whole number, required, 100 by default)
-  Each talk lists its registrations.
-  The places left is calculated as the capacity minus the number of its registrations.
+  - a level (introductory, intermediate or advanced, introductory by default)
 
 Registrations
   Registrations have:
-  - a talk (a talk, required, unique)
-  At most the talk's capacity registrations per talk.
+  - a name (required)
+  - an email (required)
+  - a company
+  - a ticket type (full conference, single day or student, full conference by default)
+  - dietary needs
+  - status (confirmed or cancelled, confirmed by default)
+
+Cancel registration
+  For a registration that is confirmed; sets status to cancelled.
+  Cancel a registration for the conference.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
   - admin: everything
-  - member (An attendee who registers for talks): opens the my registrations page; adds registrations
+  - member (An attendee who registers for the conference): opens the my registration page; adds registrations
   New users get the member role.
-  Open to anyone without signing in: the home page, the schedule page, the speakers page, the privacy page, reading talks and reading speakers.
+  Open to anyone without signing in: the home page, the program page, the privacy page, reading talks and reading speakers.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 131 files (131 changed, 0 removed).
+Generated 139 files (139 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-8. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-8. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-8
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-8
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-8/smithable.yml:34:15  warning  Page "program" is a calendar, but the app has no time zone: records are placed in UTC.
+    hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
+/tmp/smithable-bench-m12-dz7Tr7/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
 
 ```text
 IT Help Desk
-  A help desk where the IT team tracks tickets, their priorities and who handles them.
+  A help desk where the IT team tracks tickets, their priority and who handles them.
 
 Pages
-  - Tickets (lists tickets; search by title, description or requester; “Take”; “Resolve”; “Reopen”)
+  - Tickets (lists tickets; search by title, description, requester or requester email; sort by priority, status or date added; “Take ticket”; “Resolve”; “Close”; “Reopen”)
+  - Overview (a dashboard: open tickets, urgent tickets and latest tickets)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Tickets
   Tickets have:
   - a title (required)
   - a description
-  - a requester
   - a priority (normal, low, high or urgent, normal by default)
-  - status (open, in progress, waiting or resolved, open by default)
+  - status (open, in progress, resolved or closed, open by default)
+  - a category (other, hardware, software, network or access, other by default)
+  - a requester
+  - a requester email
+  - a resolution
   - resolved at (a date and time)
   Each ticket can have an assignee (a user).
 
-Take
-  For a ticket that is open or waiting; sets assignee to whoever presses it and status to in progress.
-  Take the ticket and start working on it.
+Take ticket
+  For a ticket that is open or in progress; sets assignee to whoever presses it and status to in progress.
+  Make yourself the one who handles the ticket.
 
 Resolve
-  For a ticket that is open, in progress or waiting; sets status to resolved and resolved at to now.
-  Mark the ticket as resolved.
+  For a ticket that is open or in progress; sets status to resolved and resolved at to now; asks for the resolution.
+  Mark the ticket resolved and note how.
+
+Close
+  For a ticket that is resolved; sets status to closed.
+  Close a resolved ticket.
 
 Reopen
-  For a ticket that is resolved; sets status to open; asks for the resolved at.
-  Reopen a resolved ticket.
+  For a ticket that is resolved or closed; sets status to open.
+  Open the ticket again when the problem comes back.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - member: opens every page; adds every kind of record; changes everyone's tickets
+  - member (Works on the team's tickets): opens every page; adds every kind of record; changes everyone's tickets
   New users get the member role.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 102 files (102 changed, 0 removed).
+Generated 117 files (117 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-9. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-9. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-9
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-9
   smithable studio
 
 or only run the app with smithable run.
@@ -610,23 +641,23 @@ or only run the app with smithable run.
 
 ```text
 Family Kitchen
-  A family's shared recipe collection, with each recipe's ingredients and a shopping list.
+  The family's recipes with their ingredients, and the shopping lists for cooking them.
 
 Pages
-  - Recipes (lists recipes; search by name, summary or kind; filter by kind or favorite)
-  - Shopping (lists shopping list; filter by status or recipe; “Mark bought”)
+  - Recipes (lists recipes; search by name, summary or category; filter by category or favorite)
+  - Shopping lists (lists shopping lists; filter by status; “Finish list”)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Recipes
   Recipes have:
   - a name (required)
   - a summary
-  - a kind (main, starter, dessert, baking, drink or other, main by default)
+  - a category (main, starter, dessert, baking, breakfast or drink, main by default)
   - servings (a whole number, 4 by default)
-  - minutes (a whole number)
+  - prep minutes (a whole number)
   - instructions
   - a link (a web address)
-  - a favorite (yes or no)
+  - favorite (yes or no)
   Each recipe lists its ingredients.
 
 Ingredients
@@ -635,29 +666,42 @@ Ingredients
   - a name (required)
   - a quantity
 
-Shopping list
-  Shopping list have:
+Shopping lists
+  Shopping lists have:
+  - a name (required)
+  - a for date
+  - status (open or done, open by default)
+  Each shopping list lists its shopping items.
+
+Shopping items
+  Shopping items have:
+  - a list (a shopping list, required)
   - a name (required)
   - a quantity
-  - a recipe (a recipe)
-  - status (needed or bought, needed by default)
+  - bought (yes or no)
 
 Mark bought
-  For a shopping item that is needed; sets status to bought.
+  For a shopping item that is not bought; sets bought to yes.
+  Tick an item off the shopping list once it is in the basket.
+
+Finish list
+  For a shopping list that is open; sets status to done.
+  Mark a shopping list as done after the shopping trip.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - member (A family member who adds and cooks recipes and keeps the shopping list): opens every page; adds every kind of record; changes everyone's records; deletes everyone's shopping items and ingredients
+  - member (A family member who adds and edits recipes and shopping lists): opens every page; adds every kind of record; changes everyone's records
   New users get the member role.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 108 files (108 changed, 0 removed).
+Generated 121 files (121 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-10. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-10. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-10
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-10
   smithable studio
 
 or only run the app with smithable run.
@@ -667,7 +711,7 @@ or only run the app with smithable run.
 
 ```text
 API Status
-  Is our API working? Live status, incidents and planned maintenance.
+  Is our API working? Its current state, incidents and planned maintenance, live.
 
 Pages
   - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)
@@ -676,8 +720,8 @@ Pages
   - Updates (lists incident updates)
   - Maintenance (lists maintenances)
   - Components (lists components; only for admins; visitors see components on the Home page)
-  - Team (who has access: invite people, change roles, remove users; only for admins)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Components
   Components have:
@@ -732,16 +776,17 @@ Sign-in and access
   New users get the staff role.
   Open to anyone without signing in: the home page, the privacy page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
   Other programs can read and change components and incidents with a key, and run resolve. AI assistants can use it too.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 146 files (146 changed, 0 removed).
+Generated 151 files (151 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-11. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-11. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-11
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-11
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
@@ -752,11 +797,11 @@ Shop Status
 
 Pages
   - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved and footer)
+  - Overview (a dashboard: open, per month and latest)
   - Incidents (lists incidents; “Identified”; “Monitoring”; “Resolve”)
   - Updates (lists incident updates)
   - Components (lists components; only for admins; visitors see components on the Home page)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
-  - Overview (a dashboard: open, per month and latest)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Components
@@ -793,25 +838,25 @@ Monitoring
 
 Resolve
   For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).
-  The outage is over, with an update saying so.
+  The incident is over, with an update saying so.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - staff (Writes outages and their updates): opens the overview page, the incidents page and the updates page; adds every kind of record; changes everyone's records
+  - staff (Writes incidents and their updates): opens the overview page, the incidents page and the updates page; adds every kind of record; changes everyone's records
   New users get the staff role.
   Open to anyone without signing in: the home page, the privacy page, reading components, reading incidents where status is investigating or identified or monitoring or resolved and reading incident updates.
-  Other programs can read and change components and incidents with a key, and run resolve.
+  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 136 files (136 changed, 0 removed).
+Generated 129 files (129 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-sZAZw7/app-12. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-dz7Tr7/app-12. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-sZAZw7/app-12
+  cd /tmp/smithable-bench-m12-dz7Tr7/app-12
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-sZAZw7/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-dz7Tr7/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```

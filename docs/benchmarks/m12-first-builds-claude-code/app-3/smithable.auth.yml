@@ -5,6 +5,8 @@ defaultAccess: private
 roles:
   admin: all
   member: { pages: all, create: all }
+assistant:
+  for: signed-in
 public:
   pages: [home, privacy]
 admins: [johan@smithable.ai]
