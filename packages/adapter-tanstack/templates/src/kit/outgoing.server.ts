@@ -11,6 +11,7 @@ import { db } from "#/db";
 import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
+import { post, proxied } from "./call.server";
 import { log } from "./log.server";
 import { mailConfigured, sendMail } from "./mail";
 import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
@@ -141,7 +142,9 @@ export async function refusedAddress(url: string): Promise<string | undefined> {
     return "it is not http or https";
   const own = process.env.BETTER_AUTH_URL;
   if (own && URL.canParse(own) && new URL(own).host === address.host) return "it is the app itself";
-  if (import.meta.env.DEV) return undefined;
+  // Behind an egress proxy the proxy checks the destination (and the app may not resolve names
+  // itself); development may call the machine itself.
+  if (import.meta.env.DEV || proxied(address)) return undefined;
   const host = address.hostname.replace(/^\[|\]$/g, "");
   const found = await lookup(host, { all: true }).catch(() => []);
   if (found.length === 0) return "it does not resolve";
@@ -268,20 +271,17 @@ async function sendCalls(now: number): Promise<number> {
     try {
       const refused = await refusedAddress(url);
       if (refused) throw new Error(`The address of ${call.target} is refused: ${refused}.`);
-      const answer = await fetch(url, {
-        method: "POST",
-        headers: {
+      // Connected only to an address the guard checked, looked up for this try (call.server.ts).
+      status = await post(
+        url,
+        {
           "Content-Type": "application/json",
           "X-Event": call.entry,
           "X-Signature-256": `sha256=${createHmac("sha256", secret).update(call.body).digest("hex")}`,
         },
-        body: call.body,
-        // A redirect is an answer, not a new address to call past the guard.
-        redirect: "manual",
-        signal: AbortSignal.timeout(10_000),
-      });
-      status = answer.status;
-      if (!answer.ok) throw new Error(`${call.target} answered ${answer.status}.`);
+        call.body,
+      );
+      if (status < 200 || status >= 300) throw new Error(`${call.target} answered ${status}.`);
       db.transaction((tx) => {
         tx.update(outgoingCall)
           .set({ sentAt: new Date(), tries: call.tries + 1, status })
