@@ -651,12 +651,23 @@ try {
   await step(
     "a page title is changed in place in the preview: smithable.content.yml follows",
     async () => {
-      await openPreview("/customers");
+      // The preview reloads a few seconds after the column change before: a click that lands in
+      // the frame being replaced edits nothing, so the title must be editable before typing.
+      const title = preview.locator('[data-sm-text="pages.customers.title"]');
       await page.getByRole("button", { name: "Select" }).click();
-      await preview
-        .locator("html[data-sm-selecting]")
-        .waitFor({ state: "attached", timeout: 60000 });
-      await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
+      for (let attempt = 1; ; attempt++) {
+        await openPreview("/customers");
+        await preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 });
+        await title.click({ timeout: 60000 });
+        try {
+          await title.and(preview.locator("[contenteditable=true]")).waitFor({ timeout: 5000 });
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+        }
+      }
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
       await last.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
