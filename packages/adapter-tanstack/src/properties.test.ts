@@ -134,6 +134,16 @@ function argsFor(
   return args;
 }
 
+/**
+ * The runs, and a fixed seed, so a gate always tries the same cases: FC_SEED (with FC_PATH, as a
+ * failure prints them) tries others or one again, FC_RUNS more of them.
+ */
+const fcOptions = (runs: number) => ({
+  numRuns: Number(import.meta.env.FC_RUNS ?? runs),
+  seed: Number(import.meta.env.FC_SEED ?? 1),
+  ...(import.meta.env.FC_PATH ? { path: import.meta.env.FC_PATH } : {}),
+});
+
 const steps = fc.array(fc.array(fc.nat(), { minLength: 24, maxLength: 24 }), {
   minLength: 1,
   maxLength: 6,
@@ -172,11 +182,25 @@ describe.each(examples)("%s", (example) => {
         if (files !== start) expect(generate(files)).toEqual(generate(files));
       }),
       // More with FC_RUNS=400 to hunt; a gate's few dozen keep the suite quick.
-      { numRuns: Number(import.meta.env.FC_RUNS ?? 40) },
+      fcOptions(40),
     );
     // Some sequences change something, or the property tests nothing.
     expect(applied).toBeGreaterThan(0);
     // Nothing an operation did reached the files it started from.
     expect(generate(start)).toEqual(before);
   }, 60_000);
+});
+
+test("a hero shortcut to the review page gets its shield icon (found by this test, 2026-10-12)", () => {
+  const files: ProjectFiles = {
+    spec: fileOf("marketplace", "") as string,
+    auth: fileOf("marketplace", "auth") as string,
+  };
+  const result = applyOperation(files, "setShortcuts", {
+    page: "home",
+    pages: ["review"],
+  } as never);
+  if (!result.ok) throw new Error(result.message);
+  const made = generate({ ...files, ...result.files });
+  expect(made.some((f) => f.content.includes('label: "Review", icon: Shield }'))).toBe(true);
 });
