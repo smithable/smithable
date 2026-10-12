@@ -163,3 +163,25 @@ test("a request's body is refused past its limit, before it is read in full", as
   await expect(readJson(endless(), undefined, 10_000)).rejects.toBeInstanceOf(TooLarge);
   expect(read).toBeLessThanOrEqual(11);
 });
+
+test("the dev server's last word about a replaced app's modules is not the new app's log", async () => {
+  const { oldAppEcho } = await import("./studio.js");
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "echo-"));
+  mkdirSync(join(dir, "src", "generated"), { recursive: true });
+  writeFileSync(join(dir, "src", "generated", "session.ts"), "");
+  const line = (file: string) =>
+    `11:14:00 PM [vite] (ssr) Failed to load url /src/generated/${file}?tss-serverfn-split (resolved id: /x). Does the file exist?`;
+  const now = 1_000_000;
+  // Just after a replacement, about a module that is gone: dropped.
+  expect(oldAppEcho(line("item.ts"), dir, now - 2000, now)).toBe(true);
+  // About a module the app has: kept, it is this app's own trouble.
+  expect(oldAppEcho(line("session.ts"), dir, now - 2000, now)).toBe(false);
+  // Long after, or with no replacement: kept.
+  expect(oldAppEcho(line("item.ts"), dir, now - 60_000, now)).toBe(false);
+  expect(oldAppEcho(line("item.ts"), dir, 0, now)).toBe(false);
+  // Any other line: kept.
+  expect(oldAppEcho("[vite] page reload src/routes/index.tsx", dir, now - 2000, now)).toBe(false);
+});

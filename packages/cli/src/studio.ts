@@ -304,6 +304,22 @@ export async function readJson(
   return JSON.parse(Buffer.concat(parts).toString("utf8") || "{}") as Record<string, unknown>;
 }
 
+/**
+ * A dev server line about a module the project no longer has, within ten seconds of the app being
+ * replaced: the old app's route tree asked for it while the files were exchanged ("Failed to load
+ * url /src/generated/item.ts"), so it is about the app that was there, not this one.
+ */
+export function oldAppEcho(
+  line: string,
+  dir: string,
+  replacedAt: number,
+  now = Date.now(),
+): boolean {
+  if (!replacedAt || now - replacedAt > 10_000) return false;
+  const path = /Failed to load url (\/src\/[^\s?]+)/.exec(line)?.[1];
+  return path !== undefined && !existsSync(join(dir, path));
+}
+
 export async function studio(
   dir: string,
   io: Io,
@@ -342,8 +358,12 @@ export async function studio(
     for (const client of clients)
       client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
+  // When the app was last replaced: the dev server's last word about the old app's modules comes
+  // just after, and is not about the app that is here now.
+  let replacedAt = 0;
   const log = (text: string) => {
     for (const line of text.split("\n").filter((l) => l.trim())) {
+      if (oldAppEcho(line, dir, replacedAt)) continue;
       logs.push(line);
       if (logs.length > 500) logs.shift();
       send("log", line);
@@ -602,6 +622,7 @@ export async function studio(
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.
     logs.length = 0;
+    if (result.ok) replacedAt = Date.now();
     if (making)
       making = result.ok
         ? undefined
