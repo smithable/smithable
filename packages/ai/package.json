@@ -20,7 +20,8 @@
     "dist",
     "!dist/**/*.test.*",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "README.md"
   ],
   "dependencies": {
     "@smithable/core": "workspace:*",

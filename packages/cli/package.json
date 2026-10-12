@@ -24,7 +24,8 @@
     "!dist/**/*.test.*",
     "LICENSE",
     "NOTICE",
-    "studio"
+    "studio",
+    "README.md"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.1",

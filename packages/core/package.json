@@ -22,7 +22,8 @@
     "!dist/**/*.test.*",
     "schema",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "README.md"
   ],
   "dependencies": {
     "yaml": "^2.9.1"
