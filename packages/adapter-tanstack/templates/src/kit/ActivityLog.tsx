@@ -56,7 +56,7 @@ export function ActivityLog({
   people?: { id: string; name: string }[];
   models?: { name: string; label: string }[];
   actions?: string[];
-  /** The targets outgoing calls go to (smithable.yml outgoing): a filter for each one's deliveries. */
+  /** The targets the app's outgoing calls go to: a filter for each one's deliveries. */
   targets?: string[];
   onFilter?: (next: ActivityFilters) => void;
   onForget?: (target: Forgotten) => Promise<unknown>;
