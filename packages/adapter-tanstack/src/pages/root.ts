@@ -36,7 +36,9 @@ export const pageAccess = ${literal(entries)} satisfies Record<string, Rule>;
 }
 
 /** The lucide-react component for each navigation icon. */
-export const LUCIDE: Record<Icon, string> = {
+// "shield" is the icon core gives the review and team pages without it being among the icons
+// a ux file may choose: it needs its Lucide name too, or a page that shows it gets none.
+export const LUCIDE: Record<Icon | "shield", string> = {
   users: "Users",
   user: "User",
   file: "FileText",
@@ -57,6 +59,7 @@ export const LUCIDE: Record<Icon, string> = {
   tag: "Tag",
   truck: "Truck",
   list: "List",
+  shield: "Shield",
 };
 
 export function rootRoute(

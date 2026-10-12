@@ -33641,7 +33641,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { createRootRoute, HeadContent, Scripts, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Package,  } from "lucide-react";
+import { Package, Shield } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -33683,7 +33683,7 @@ const menus: MenuUi[] = [
       {
         to: "/review",
         label: "Review",
-        icon: undefined,
+        icon: Shield,
         access: pageAccess["review"],
       },
     ],
@@ -35309,7 +35309,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "bb7b3190 generated",
-  "src/routes/__root.tsx": "6fe7755b generated",
+  "src/routes/__root.tsx": "7371ad6d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "48cd51aa kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
