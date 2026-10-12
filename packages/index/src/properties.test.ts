@@ -68,7 +68,10 @@ describe.each(examples)("%s", (example) => {
           files = { ...files, ...result.files };
         }
       }),
-      { numRuns: Number(import.meta.env.FC_RUNS ?? 300) },
+      {
+        numRuns: Number(import.meta.env.FC_RUNS ?? 300),
+        seed: Number(import.meta.env.FC_SEED ?? 1),
+      },
     );
   }, 60_000);
 });

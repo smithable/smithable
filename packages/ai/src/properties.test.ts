@@ -24,6 +24,6 @@ test("a description is read or not, never a crash", () => {
       for (const list of [reading.things, reading.maybe, reading.fields, reading.leftover])
         expect(Array.isArray(list)).toBe(true);
     }),
-    { numRuns: Number(import.meta.env.FC_RUNS ?? 500) },
+    { numRuns: Number(import.meta.env.FC_RUNS ?? 500), seed: Number(import.meta.env.FC_SEED ?? 1) },
   );
 });
