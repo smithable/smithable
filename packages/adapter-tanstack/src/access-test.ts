@@ -4,6 +4,7 @@ import {
   camel,
   conditionText,
   type FieldIR,
+  isUpload,
   kebab,
   type ModelAllowed,
   type ModelIR,
@@ -75,15 +76,15 @@ function testValue(field: FieldIR, model: ModelIR): string {
       return `\`https://example.com/\${n}\``;
     case "file":
       // A stored document's record: the file need not exist for the access rules.
-      return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4 }`;
+      return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`) }`;
     case "picture":
       // A stored picture's record: the file need not exist for the access rules.
-      return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }`;
+      return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`) }`;
     case "pictures":
       // Several, at least one when required: one stored picture's record (a mutable list, as the column takes).
-      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3 }].slice()`;
+      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`) }].slice()`;
     case "files":
-      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4 }].slice()`;
+      return `[{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`) }].slice()`;
     default:
       return `\`${model.name} ${field.name} \${n}\``;
   }
@@ -93,6 +94,12 @@ function testValue(field: FieldIR, model: ModelIR): string {
  * A Vitest file that proves the effective access for every model and role, through the
  * same data functions the app uses, against the test database.
  */
+/** A model whose test values carry a stored file (a required picture or document): sent through a data function, it comes with its sender's receipt. */
+const sendsFiles = (model: ModelIR) =>
+  model.fields.some(
+    (f) => isUpload(f) && !f.formula && (f.required || f.unique) && f.name !== model.ownedBy,
+  );
+
 export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
   const signedIn = auth.signIn !== "none";
   const roles: (string | null)[] = [...(signedIn ? auth.roles.map((r) => r.name) : []), null];
@@ -117,7 +124,7 @@ export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
     const usesOwner = entries.some((e) => /\bowner\b/.test(e));
     const usesN = entries.some((e) => /\bn\b/.test(e));
     const ownerColumn = signedIn && !model.ownedBy ? ", ownerId: owner" : "";
-    return `function ${camel(model.name)}Values(${usesOwner ? "owner" : "_owner"}: string | null) {
+    return `function ${camel(model.name)}Values(${usesOwner ? "owner" : "_owner"}: string | null${sendsFiles(model) ? ", by?: string | null" : ""}) {
 ${usesN ? "  const n = next();\n" : ""}  return { ${entries.join(", ")} } as const;
 }
 
@@ -146,6 +153,7 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
       const viewer = role === null ? "null" : `signedIn(${JSON.stringify(role)})`;
       const title = role === null ? "a visitor who has not signed in" : role;
       const own = role !== null;
+      const by = sendsFiles(model) ? `, ${role === null ? "null" : "viewer.id"}` : "";
       // Changing a stranger's record keeps it the stranger's: with the owner in a field
       // (ownedBy), setting it to the viewer would make "delete others" a delete of their own.
       return `  test(${JSON.stringify(title)}, async () => {
@@ -154,9 +162,9 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
 ${own ? `    const own = insert${model.name}(viewer.id${fits});\n` : ""}    expect({
       readOthers: await reads(${data}, viewer, others.id),
       readOwn: ${own ? `await reads(${data}, viewer, own.id)` : "false"},
-      create: await can(() => ${data}.create(viewer, ${values}(${own ? "viewer.id" : "null"}))),
-      changeOthers: await can(() => ${data}.update(viewer, others.id, ${values}(${signedIn ? "stranger.id" : "null"}))),
-      changeOwn: ${own ? `await can(() => ${data}.update(viewer, own.id, ${values}(viewer.id)))` : "false"},
+      create: await can(() => ${data}.create(viewer, ${values}(${own ? "viewer.id" : "null"}${by}))),
+      changeOthers: await can(() => ${data}.update(viewer, others.id, ${values}(${signedIn ? "stranger.id" : "null"}${by}))),
+      changeOwn: ${own ? `await can(() => ${data}.update(viewer, own.id, ${values}(viewer.id${by})))` : "false"},
       deleteOthers: await can(() => ${data}.remove(viewer, others.id)),
       deleteOwn: ${own ? `await can(() => ${data}.remove(viewer, own.id))` : "false"},
     }).toEqual({
@@ -300,11 +308,13 @@ ${Object.entries(expected(access, role))
     const viewer = signedIn(${JSON.stringify(reader)});
     const place = db.insert(schema.${camel(plural(target?.name ?? ""))}).values({ ...${fill}${signedIn && !target?.ownedBy ? ", ownerId: viewer.id" : ""} }).returning().get();
     for (let i = 0; i < ${max}; i++)
-      await ${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id });
-    await expect(${data}.create(signedIn(${JSON.stringify(reader)}), { ...${values}(viewer.id), ${per.name}Id: place.id })).rejects.toThrow("full");${
+      await (async (booker) => ${data}.create(booker, { ...${values}(viewer.id${sendsFiles(model) ? ", booker.id" : ""}), ${per.name}Id: place.id }))(signedIn(${JSON.stringify(reader)}));
+    const last = signedIn(${JSON.stringify(reader)});
+    await expect(${data}.create(last, { ...${values}(viewer.id${sendsFiles(model) ? ", last.id" : ""}), ${per.name}Id: place.id })).rejects.toThrow("full");${
       maxField
         ? `
-    await expect(${camel(target?.name ?? "")}Data.update(signedIn("admin"), place.id, { ...${fill}, ${maxField}: 0 })).rejects.toThrow("booked:${max}");`
+    const admin = signedIn("admin");
+    await expect(${camel(target?.name ?? "")}Data.update(admin, place.id, { ...${target && sendsFiles(target) ? `${camel(target.name)}Values(viewer.id, admin.id)` : fill}, ${maxField}: 0 })).rejects.toThrow("booked:${max}");`
         : ""
     }
   });`);
@@ -420,8 +430,8 @@ ${tests.join("\n\n")}
     describes.push(`describe("the audit log", () => {
   test("names who created, changed and deleted a record, and what changed", async () => {
     const viewer = signedIn(${JSON.stringify(role)});
-    const made = await ${data}.create(viewer, ${values}(viewer.id));
-    await ${data}.update(viewer, made.id, ${values}(viewer.id));
+    const made = await ${data}.create(viewer, ${values}(viewer.id${sendsFiles(model) ? ", viewer.id" : ""}));
+    await ${data}.update(viewer, made.id, ${values}(viewer.id${sendsFiles(model) ? ", viewer.id" : ""}));
     await ${data}.remove(viewer, made.id);
     const lines = db
       .select()
@@ -478,7 +488,7 @@ ${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length || upda
 import { db } from "#/db";
 ${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
-${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${imports.join("\n")}
+${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${ir.models.some(sendsFiles) ? 'import { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
 
 let counter = 0;
 const next = () => ++counter;
@@ -498,7 +508,16 @@ const stranger = signedIn(${JSON.stringify(auth.defaultRole)});
 `
     : ""
 }
-/** Whether the action is allowed; any other failure fails the test. */
+${
+  ir.models.some(sendsFiles)
+    ? `/** A test file's receipt, as its upload gives one to \`by\`; none for a record put in directly. */
+function receipt(by: string | null | undefined, model: string, field: string, file: string) {
+  return by === undefined ? {} : { receipt: receiptFor(by, model, field, file) };
+}
+
+`
+    : ""
+}/** Whether the action is allowed; any other failure fails the test. */
 async function can(action: () => unknown): Promise<boolean> {
   try {
     await action();

@@ -37,7 +37,7 @@ test("a picture field: a JSON column, the form's own control, and the files rout
     'input: bindPicture("instructor", "portrait")',
   );
   expect(file("src/generated/instructor.schema.ts")).toContain(
-    "portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional() }).nullish()",
+    "portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish()",
   );
   expect(file("src/generated/uploads.ts")).toContain(
     '"instructor": {\n    "portrait": { kind: "picture", data: instructorData, access: instructorAccess, key: "portrait" },',

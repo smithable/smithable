@@ -98,6 +98,7 @@ export const w = {
   fieldsMarked: "Fields marked",
   fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
   fileNotAdded: "The file could not be added.",
+  fileNotUploaded: "This file was not uploaded here, or too long ago: choose it again.",
   fileTooLarge: "The file is too large (at most 10 MB).",
   footer: "Footer",
   forgetInLog: "Forget in the log",
