@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { createServer, request } from "node:http";
 import { createRequire } from "node:module";
+import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -126,13 +127,13 @@ export function killTree(pid, signal = "SIGTERM") {
 }
 
 /** Starts `pnpm start` (production) or the Vite dev server; returns a stop function. */
-async function serve(dir, port, mode) {
+async function serve(dir, port, mode, env = {}) {
   // A fixed port: Vite would otherwise move to another one while the old server is stopping.
   const args =
     mode === "dev" ? ["exec", "vite", "dev", "--port", String(port), "--strictPort"] : ["start"];
   const server = spawn("pnpm", args, {
     cwd: dir,
-    env: { ...process.env, PORT: String(port), ...authEnv(port) },
+    env: { ...process.env, PORT: String(port), ...authEnv(port), ...env },
   });
   let output = "";
   server.stdout.on("data", (d) => (output += d));
@@ -624,9 +625,47 @@ async function callReceiver() {
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  process.env.OUTGOING_STATUSFEED_URL = `http://127.0.0.1:${server.address().port}/hook`;
+  const port = server.address().port;
+  // A stand-in for the hosted service's egress proxy: the app calls the receiver by a name only the
+  // proxy knows, through a CONNECT tunnel with the credential, and anything else is refused.
+  const tunnels = [];
+  const proxy = createServer((req, res) => res.writeHead(403).end());
+  proxy.on("connect", (req, socket) => {
+    tunnels.push({ to: req.url, credential: req.headers["proxy-authorization"] });
+    if (
+      req.url !== `receiver.test:${port}` ||
+      req.headers["proxy-authorization"] !== `Basic ${btoa("app:egress")}`
+    ) {
+      socket.end("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
+      return;
+    }
+    const upstream = connect(port, "127.0.0.1", () => {
+      socket.write("HTTP/1.1 200 Connection established\r\n\r\n");
+      upstream.pipe(socket);
+      socket.pipe(upstream);
+    });
+    upstream.on("error", () => socket.destroy());
+    socket.on("error", () => upstream.destroy());
+  });
+  await new Promise((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  const egress = `http://app:egress@127.0.0.1:${proxy.address().port}`;
+  process.env.OUTGOING_STATUSFEED_URL = `http://receiver.test:${port}/hook`;
   process.env.OUTGOING_STATUSFEED_SECRET = secret;
-  return { calls, close: () => server.close() };
+  return {
+    calls,
+    tunnels,
+    // Only for the status app's server: what a hosted app is started with.
+    env: {
+      HTTP_PROXY: egress,
+      HTTPS_PROXY: egress,
+      NO_PROXY: "localhost,127.0.0.1",
+      NODE_USE_ENV_PROXY: "1",
+    },
+    close: () => {
+      server.close();
+      proxy.close();
+    },
+  };
 }
 
 /**
@@ -673,6 +712,16 @@ async function callFlow(dir, base, receiver) {
     // A repeat can be told apart: the call carries a key of its own, the same on every try.
     if (!/^\d+-\d+$/.test(call.key ?? ""))
       throw new Error(`the call has no Idempotency-Key (${call.key})`);
+    // As a hosted app does: through the egress proxy, with its credential, by a name the app never
+    // looked up itself.
+    if (
+      !receiver.tunnels.some(
+        (t) => t.to.startsWith("receiver.test:") && t.credential === `Basic ${btoa("app:egress")}`,
+      )
+    )
+      throw new Error(
+        `the call did not go through the egress proxy: ${JSON.stringify(receiver.tunnels)}`,
+      );
     const sent = JSON.parse(call.body);
     if (
       call.event !== "incidentResolved" ||
@@ -711,7 +760,7 @@ async function callFlow(dir, base, receiver) {
     if ((await delivered.filter({ hasText: /changed|created/ }).count()) > 0)
       throw new Error("the target's deliveries show other lines");
     console.log(
-      "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line, and Activity for the target shows its deliveries only",
+      "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line, and Activity for the target shows its deliveries only; it went through a stand-in egress proxy with its credential",
     );
   } catch (error) {
     console.log(
@@ -5624,7 +5673,7 @@ test("the session cookie's name and attributes", async () => {
         },
       );
     const receiver = example === "status" ? await callReceiver() : undefined;
-    stop = await serve(dir, port + 100, "dev");
+    stop = await serve(dir, port + 100, "dev", receiver?.env);
     try {
       const base = `http://localhost:${port + 100}`;
       await asyncStep(
