@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
-  name: Conference Hub
-  description: Programme, speakers and talk registration for a conference.
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: Confluence Conference
+  description: Programme, speakers and attendee registration for a conference.
 models:
   Speaker:
     fields:
@@ -14,32 +12,30 @@ models:
   Talk:
     fields:
       title: string!
-      summary: text
+      abstract: text
       speaker: Speaker!
       startsAt: datetime!
-      durationMinutes: int! = 45
+      durationMinutes: int! = 30
       room: string
-      level: beginner | intermediate | advanced
-      capacity: int! = 100
-      registrations: Registration[]
-      placesLeft:
-        type: int
-        formula: capacity - COUNT(registrations)
+      level: introductory | intermediate | advanced
   Registration:
     fields:
-      talk: Talk! unique
-    capacity:
-      per: talk
-      max: talk.capacity
+      name: string!
+      email: email!
+      company: string
+      ticketType: fullConference | singleDay | student
+      dietaryNeeds: text
+      status: confirmed | cancelled
 pages:
-  schedule:
+  my-registration:
+    crud: Registration
+    actions: [cancelRegistration]
+  program:
     calendar: Talk
   talks:
     crud: Talk
   speakers:
     crud: Speaker
-  my-registrations:
-    crud: Registration
   home:
     route: /
     landing:
@@ -47,13 +43,19 @@ pages:
       footer:
       speakerCards:
         records: Speaker
-      talkCards:
-        records: Talk
       faq:
       callToAction:
-        button: schedule
+        button: my-registration
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
+actions:
+  cancelRegistration:
+    on: Registration
+    when:
+      status: confirmed
+    set:
+      status: cancelled
+    intent: Cancel a registration for the conference.

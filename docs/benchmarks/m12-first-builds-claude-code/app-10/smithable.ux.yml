@@ -3,11 +3,14 @@ pages:
   recipes:
     table:
       sort: name
+      view: cards
     icon: book
-  shopping:
+  shoppingLists:
     icon: cart
 tones:
-  ShoppingItem.status:
-    bought: success
+  ShoppingList.status:
+    done: success
 theme:
   preset: craft
+  brand:
+    primary: "#c2410c"

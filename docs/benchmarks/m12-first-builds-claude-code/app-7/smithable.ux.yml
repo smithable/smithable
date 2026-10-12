@@ -2,22 +2,21 @@ smithableUx: 0.1
 pages:
   matches:
     table:
-      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
+      columns: [kickoff, team, opponent, venue, status, ourScore, theirScore]
       sort: -kickoff
-    icon: calendar
   players:
     table:
       columns: [shirtNumber, name, position, team]
       sort: shirtNumber
-    icon: user
-  teams:
-    table:
-      view: cards
-    icon: users
+  home:
+    sections:
+      hero:
+        layout: split
 tones:
   Match.status:
     played: success
     postponed: warning
+    canceled: danger
 theme:
   preset: modern
   brand:

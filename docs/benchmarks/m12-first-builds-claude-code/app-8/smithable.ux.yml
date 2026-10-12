@@ -1,4 +1,13 @@
 smithableUx: 0.1
+tones:
+  Registration.status:
+    confirmed: success
+    cancelled: danger
+pages:
+  talks:
+    table:
+      columns: [title, speaker, startsAt, room]
+      sort: startsAt
 theme:
   preset: modern
   brand:

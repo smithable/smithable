@@ -1,9 +1,16 @@
 smithable: 0.1
 app:
-  name: Billfold
-  description: "Invoicing for freelancers: keep track of clients, invoices and the payments that come in."
+  name: Paydesk
+  description: "Simple invoicing for freelancers: keep your clients, send invoices and record the payments you receive."
   currency: EUR
 models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -19,6 +26,14 @@ models:
       amount:
         type: money
         formula: quantity * unitPrice
+      invoice: Invoice!
+  Payment:
+    fields:
+      paidOn: date! = TODAY()
+      amount: money!
+      method: bankTransfer | card | cash | other
+      reference: string
+      note: text
       invoice: Invoice!
   Invoice:
     fields:
@@ -38,19 +53,36 @@ models:
       balance:
         type: money
         formula: total - paidAmount
-  Payment:
-    fields:
-      invoice: Invoice!
-      amount: money!
-      paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
-      reference: string
 pages:
+  overview:
+    dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+      latest:
+        list: Invoice
+        limit: 5
   clients:
     crud: Client
     search: [name, email]
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
   invoice-lines:
     crud: InvoiceLine
+  settings:
+    crud: BusinessProfile
   home:
     route: /
     landing:
@@ -66,26 +98,7 @@ pages:
   invoices:
     crud: Invoice
     filters: [client, status]
-    actions: [markSent, markPaid]
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
-  overview:
-    dashboard:
-      outstanding:
-        sum: Invoice.balance
-        where:
-          status: sent
-      overdue:
-        sum: Invoice.balance
-        where:
-          status: overdue
-      received:
-        sum: Payment.amount
-        by: paidOn
-      latest:
-        list: Invoice
-        limit: 5
+    actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
     on: Invoice
@@ -102,10 +115,17 @@ actions:
       status: paid
     add:
       Payment:
-        amount:
         paidOn: TODAY()
+        amount:
         method:
-    intent: The client paid the invoice; the payment is recorded.
+    intent: The client paid the invoice; the payment is recorded with it.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The due date passed without payment.
 outgoing:
   invoiceSent:
     when: markSent
