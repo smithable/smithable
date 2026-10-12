@@ -264,9 +264,11 @@ export function activityRoute(
     title: titleField(model),
   }));
   const mails = outgoingOf(ir).length > 0;
+  // The targets outgoing calls go to: Activity filtered to one is its deliveries (integrations.md §4.1).
+  const targets = [...new Set(outgoingOf(ir).flatMap((o) => (o.to === "mail" ? [] : [o.to])))];
   return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt${targets.length ? ", sql" : ""} } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "#/db";
 import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
@@ -288,7 +290,7 @@ const filters = (s: Search) => optional({
   record: count(s.record),
   action: text(s.action),
   from: text(s.from),
-  to: text(s.to),
+  to: text(s.to),${targets.length ? "\n  target: text(s.target)," : ""}
 });
 
 /** Each model's label, for the filter and the lines. */
@@ -311,7 +313,7 @@ const getActivity = createServerFn()
           data.record ? eq(auditLog.recordId, data.record) : undefined,
           data.action ? eq(auditLog.action, data.action) : undefined,
           data.from ? gte(auditLog.at, new Date(data.from)) : undefined,
-          data.to ? lt(auditLog.at, new Date(new Date(data.to).getTime() + day)) : undefined,
+          data.to ? lt(auditLog.at, new Date(new Date(data.to).getTime() + day)) : undefined,${targets.length ? "\n          // A target's deliveries: the lines whose details name it.\n          data.target ? sql`json_extract(${auditLog.details}, '$.target') = ${data.target}` : undefined," : ""}
         ),
       )
       .orderBy(desc(auditLog.id))
@@ -425,7 +427,7 @@ function ActivityPage() {
         filters={search}
         people={people}
         models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
-        actions={actions}
+        actions={actions}${targets.length ? `\n        targets={${JSON.stringify(targets)}}` : ""}
         app={app}
         onFilter={(next) => navigate({ to: ${JSON.stringify(route)}, search: next, replace: true, resetScroll: false })}
         onForget={async (target) => {

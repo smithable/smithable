@@ -695,8 +695,23 @@ async function callFlow(dir, base, receiver) {
       )
     )
       throw new Error("no Activity line for the call");
+    // A target's deliveries: Activity filtered to it has the call's line and none of the rest.
+    await open(page, `${base}/team/activity?target=statusFeed`);
+    if ((await page.getByLabel("Sent to").inputValue()) !== "statusFeed")
+      throw new Error("Activity has no filter for the target");
+    // Whether deliveries work, at a glance: the last call's answer.
+    const summary = page.locator('[data-part="target-summary"]');
+    if (
+      !/Calls to statusFeed/.test(await summary.innerText()) ||
+      !/answered 204/.test(await summary.innerText())
+    )
+      throw new Error(`the summary says ${await summary.innerText()}`);
+    const delivered = page.locator('[data-kit="activity-log"] [data-part="line"]');
+    await delivered.filter({ hasText: "called" }).first().waitFor({ timeout: 10000 });
+    if ((await delivered.filter({ hasText: /changed|created/ }).count()) > 0)
+      throw new Error("the target's deliveries show other lines");
     console.log(
-      "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line",
+      "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line, and Activity for the target shows its deliveries only",
     );
   } catch (error) {
     console.log(
