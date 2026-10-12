@@ -64,6 +64,8 @@ export function acceptFiles<V>(
     return kept;
   };
   return (
-    Array.isArray(value) ? value.map((v) => accepted(v as Sent)) : accepted(value as Sent)
+    Array.isArray(value)
+      ? value.map((v) => accepted(v as Sent))
+      : accepted(value as unknown as Sent)
   ) as V;
 }
