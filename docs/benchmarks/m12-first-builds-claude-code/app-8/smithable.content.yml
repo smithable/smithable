@@ -2,16 +2,12 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Two days of talks worth your time
-      subtitle: Browse the programme, meet the speakers and save your seat at the talks you want to hear.
-      button: See the programme
+      title: Two days of talks worth travelling for
+      subtitle: Browse the programme, meet the speakers and register for your place.
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    callToAction:
-      title: Seats are limited
-      button: Register for talks
 logo:
   src: images/logo.webp
   alt: A ticket

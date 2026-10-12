@@ -1,10 +1,17 @@
 smithableUx: 0.1
+pages:
+  tickets:
+    table:
+      below:
+        title: requester
+    form:
+      sections: [{ name: ticket, fields: [title, description, category, priority] }, { name: requester, fields: [requester, requesterEmail] }, { name: handling, fields: [status, assignee, resolution, resolvedAt] }]
 tones:
   Ticket.priority:
     high: warning
     urgent: danger
   Ticket.status:
+    inProgress: warning
     resolved: success
-    waiting: warning
 theme:
   preset: corporate

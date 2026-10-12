@@ -5,5 +5,12 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all, write: [Ticket] }
+  member:
+    description: Works on the team's tickets.
+    pages: all
+    create: all
+    write: [Ticket]
+assistant:
+  for: signed-in
+defaultRole: member
 admins: [johan@smithable.ai]

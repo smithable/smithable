@@ -2,16 +2,16 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Invoices sent, payments tracked
-      subtitle: Billfold keeps your clients, invoices and incoming payments in one place, so you always know who owes you what.
-      button: Sign in
+      title: Invoicing that gets you paid
+      subtitle: Keep your clients, send clean invoices and track every payment, all in one place made for freelancers.
+      button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
-      title: Get paid on time
-      button: Start invoicing
+      title: Send your first invoice today
+      button: Get started
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

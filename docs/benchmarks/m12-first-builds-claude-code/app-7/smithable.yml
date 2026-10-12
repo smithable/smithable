@@ -1,23 +1,23 @@
 smithable: 0.1
 app:
-  name: Club Pitch
-  description: A football club's site with its teams, players, fixtures and results.
-  timezone: Europe/Mariehamn
+  name: Riverside FC
+  description: The club's site with its teams, players, fixtures and results.
+  timezone: Europe/London
 models:
   Team:
     fields:
       name: string!
-      ageGroup: senior | youth | junior
+      ageGroup: senior | youth | junior | veterans
       coach: string
-      description: text
+      about: text
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
-      position: goalkeeper | defender | midfielder | forward
       shirtNumber: int
+      position: goalkeeper | defender | midfielder | forward
       bio: text
   Match:
     fields:
@@ -26,9 +26,9 @@ models:
       kickoff: datetime!
       venue: home | away
       competition: string
-      status: scheduled | played | postponed
-      goalsFor: int
-      goalsAgainst: int
+      status: scheduled | played | postponed | canceled
+      ourScore: int
+      theirScore: int
       report: text
 pages:
   matches:
@@ -38,7 +38,6 @@ pages:
     actions: [recordResult, postpone]
   teams:
     crud: Team
-    search: [name, coach]
   players:
     crud: Player
     filters: [team, position]
@@ -47,8 +46,7 @@ pages:
     route: /
     landing:
       hero:
-      footer:
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
@@ -56,8 +54,9 @@ pages:
         records: Match
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
+      footer:
   privacy:
     route: /privacy
     legal: privacy
@@ -68,9 +67,9 @@ actions:
       status: [scheduled, postponed]
     set:
       status: played
-      goalsFor:
-      goalsAgainst:
-    intent: Enter the final score of a match and mark it played.
+      ourScore:
+      theirScore:
+    intent: Enter the final score of a match that has been played.
   postpone:
     on: Match
     when:
@@ -78,4 +77,3 @@ actions:
     set:
       status: postponed
     intent: Mark a scheduled match as postponed.
-navigation: [matches, teams, players]

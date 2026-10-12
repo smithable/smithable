@@ -5,9 +5,11 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Lends out their tools and borrows from neighbors.
-    pages: all
-    create: all
+    description: Lends tools to neighbors and borrows theirs.
+    pages: [home, tools, myTools, loans]
+    create: [Tool, Loan]
+assistant:
+  for: signed-in
 public:
   pages: [home, tools, privacy]
   read: [Tool]
