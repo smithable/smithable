@@ -4268,10 +4268,10 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "project":
-      return new Map(db.select({ id: schema.projects.id, title: schema.projects.name }).from(schema.projects).where(inArray(schema.projects.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.projects.id, title: schema.projects.name }).from(schema.projects).where(and(inArray(schema.projects.id, ids), projectData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -4287,8 +4287,25 @@ function checkReferences(viewer: Viewer | null, values: NoteValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const noteData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "project", (ids, c = projectData.readable(viewer)) => (c ? db.select({ id: schema.projects.id }).from(schema.projects).where(and(inArray(schema.projects.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the notes the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(noteAccess.read, viewer);
@@ -4308,12 +4325,12 @@ export const noteData = {
   /** The notes the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(noteAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.notes.findMany({
+    const found = noteData.shownRefs(viewer, await db.query.notes.findMany({
       where: and(noteData.readable(viewer), where),
       with: { project: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -4330,13 +4347,13 @@ export const noteData = {
     const condition = noteData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.notes).where(condition).get()?.n ?? 0;
-    const found = await db.query.notes.findMany({
+    const found = noteData.shownRefs(viewer, await db.query.notes.findMany({
       where: condition,
       with: { project: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -4423,7 +4440,7 @@ export const noteData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -4492,10 +4509,11 @@ export const noteData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.notes.findFirst({
+    const fetched = await db.query.notes.findFirst({
       where: and(eq(schema.notes.id, id), noteData.readable(viewer)),
       with: { project: { columns: { id: true, name: true } } },
     });
+    const found = fetched && noteData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -4808,7 +4826,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -4821,6 +4839,11 @@ const BY: string[] = [];
 
 export const projectData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the projects the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(projectAccess.read, viewer);
@@ -4840,11 +4863,11 @@ export const projectData = {
   /** The projects the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(projectAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.projects.findMany({
+    const found = projectData.shownRefs(viewer, await db.query.projects.findMany({
       where: and(projectData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -4861,12 +4884,12 @@ export const projectData = {
     const condition = projectData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.projects).where(condition).get()?.n ?? 0;
-    const found = await db.query.projects.findMany({
+    const found = projectData.shownRefs(viewer, await db.query.projects.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -4953,7 +4976,7 @@ export const projectData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -5022,10 +5045,11 @@ export const projectData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.projects.findFirst({
+    const fetched = await db.query.projects.findFirst({
       where: and(eq(schema.projects.id, id), projectData.readable(viewer)),
       with: { tasks: { where: taskData.readable(viewer), with: { assignee: { columns: { id: true, name: true } } } }, notes: { where: noteData.readable(viewer) } },
     });
+    const found = fetched && projectData.shownRefs(viewer, [{ ...fetched, tasks: taskData.shownRefs(viewer, fetched.tasks) }])[0];
     const row = found && { ...shownTo(viewer, found), tasks: found.tasks.map((r) => taskData.shownTo(viewer, r)), notes: found.notes.map((r) => noteData.shownTo(viewer, r)) };
     return row ? row : null;
   },
@@ -5319,10 +5343,10 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "project":
-      return new Map(db.select({ id: schema.projects.id, title: schema.projects.name }).from(schema.projects).where(inArray(schema.projects.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.projects.id, title: schema.projects.name }).from(schema.projects).where(and(inArray(schema.projects.id, ids), projectData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -5338,8 +5362,25 @@ function checkReferences(viewer: Viewer | null, values: TaskValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const taskData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "project", (ids, c = projectData.readable(viewer)) => (c ? db.select({ id: schema.projects.id }).from(schema.projects).where(and(inArray(schema.projects.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the tasks the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(taskAccess.read, viewer);
@@ -5359,12 +5400,12 @@ export const taskData = {
   /** The tasks the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(taskAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.tasks.findMany({
+    const found = taskData.shownRefs(viewer, await db.query.tasks.findMany({
       where: and(taskData.readable(viewer), where),
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -5381,13 +5422,13 @@ export const taskData = {
     const condition = taskData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.tasks).where(condition).get()?.n ?? 0;
-    const found = await db.query.tasks.findMany({
+    const found = taskData.shownRefs(viewer, await db.query.tasks.findMany({
       where: condition,
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -5474,7 +5515,7 @@ export const taskData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -5543,10 +5584,11 @@ export const taskData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.tasks.findFirst({
+    const fetched = await db.query.tasks.findFirst({
       where: and(eq(schema.tasks.id, id), taskData.readable(viewer)),
       with: { project: { columns: { id: true, name: true } }, assignee: { columns: { id: true, name: true } } },
     });
+    const found = fetched && taskData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -8851,14 +8893,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "c1a602b1 generated",
   "src/generated/note.schema.ts": "e9f46249 generated",
-  "src/generated/note.server.ts": "bbd92009 generated",
+  "src/generated/note.server.ts": "901a9097 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "1a818acf generated",
+  "src/generated/project.server.ts": "3a6601dd generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "99564abb generated",
+  "src/generated/task.server.ts": "d6f8fdec generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "38cfdcd9 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
@@ -10905,7 +10947,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -10922,8 +10964,25 @@ function checkReferences(viewer: Viewer | null, values: BookingValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const bookingData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the bookings the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(bookingAccess.read, viewer);
@@ -10943,12 +11002,12 @@ export const bookingData = {
   /** The bookings the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(bookingAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.bookings.findMany({
+    const found = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: and(bookingData.readable(viewer), where),
       with: { session: { columns: { id: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -10962,13 +11021,13 @@ export const bookingData = {
     const condition = and(bookingData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.bookings).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.bookings.findMany({
+    const found = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: condition,
       with: { session: { columns: { id: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -10985,13 +11044,13 @@ export const bookingData = {
     const condition = bookingData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.bookings).where(condition).get()?.n ?? 0;
-    const found = await db.query.bookings.findMany({
+    const found = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: condition,
       with: { session: { columns: { id: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -11078,7 +11137,7 @@ export const bookingData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -11147,10 +11206,11 @@ export const bookingData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.bookings.findFirst({
+    const fetched = await db.query.bookings.findFirst({
       where: and(eq(schema.bookings.id, id), bookingData.readable(viewer)),
       with: { session: { columns: { id: true } } },
     });
+    const found = fetched && bookingData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -11458,7 +11518,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -11471,6 +11531,11 @@ const BY: string[] = ["level"];
 
 export const classTypeData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the class types the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(classTypeAccess.read, viewer);
@@ -11490,11 +11555,11 @@ export const classTypeData = {
   /** The class types the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(classTypeAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.classTypes.findMany({
+    const found = classTypeData.shownRefs(viewer, await db.query.classTypes.findMany({
       where: and(classTypeData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -11508,12 +11573,12 @@ export const classTypeData = {
     const condition = and(classTypeData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.classTypes).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.classTypes.findMany({
+    const found = classTypeData.shownRefs(viewer, await db.query.classTypes.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -11530,12 +11595,12 @@ export const classTypeData = {
     const condition = classTypeData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.classTypes).where(condition).get()?.n ?? 0;
-    const found = await db.query.classTypes.findMany({
+    const found = classTypeData.shownRefs(viewer, await db.query.classTypes.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -11622,7 +11687,7 @@ export const classTypeData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -11691,9 +11756,10 @@ export const classTypeData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.classTypes.findFirst({
+    const fetched = await db.query.classTypes.findFirst({
       where: and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)),
     });
+    const found = fetched && classTypeData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -12227,7 +12293,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -12240,6 +12306,11 @@ const BY: string[] = [];
 
 export const instructorData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the instructors the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(instructorAccess.read, viewer);
@@ -12259,11 +12330,11 @@ export const instructorData = {
   /** The instructors the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(instructorAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.instructors.findMany({
+    const found = instructorData.shownRefs(viewer, await db.query.instructors.findMany({
       where: and(instructorData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -12277,12 +12348,12 @@ export const instructorData = {
     const condition = and(instructorData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.instructors).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.instructors.findMany({
+    const found = instructorData.shownRefs(viewer, await db.query.instructors.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -12299,12 +12370,12 @@ export const instructorData = {
     const condition = instructorData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.instructors).where(condition).get()?.n ?? 0;
-    const found = await db.query.instructors.findMany({
+    const found = instructorData.shownRefs(viewer, await db.query.instructors.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -12391,7 +12462,7 @@ export const instructorData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -12460,9 +12531,10 @@ export const instructorData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.instructors.findFirst({
+    const fetched = await db.query.instructors.findFirst({
       where: and(eq(schema.instructors.id, id), instructorData.readable(viewer)),
     });
+    const found = fetched && instructorData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -12766,7 +12838,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -12779,6 +12851,11 @@ const BY: string[] = [];
 
 export const messageData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the messages the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(messageAccess.read, viewer);
@@ -12798,11 +12875,11 @@ export const messageData = {
   /** The messages the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(messageAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.messages.findMany({
+    const found = messageData.shownRefs(viewer, await db.query.messages.findMany({
       where: and(messageData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -12816,12 +12893,12 @@ export const messageData = {
     const condition = and(messageData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.messages).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.messages.findMany({
+    const found = messageData.shownRefs(viewer, await db.query.messages.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -12838,12 +12915,12 @@ export const messageData = {
     const condition = messageData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.messages).where(condition).get()?.n ?? 0;
-    const found = await db.query.messages.findMany({
+    const found = messageData.shownRefs(viewer, await db.query.messages.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -12930,7 +13007,7 @@ export const messageData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -12999,9 +13076,10 @@ export const messageData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.messages.findFirst({
+    const fetched = await db.query.messages.findFirst({
       where: and(eq(schema.messages.id, id), messageData.readable(viewer)),
     });
+    const found = fetched && messageData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -13375,7 +13453,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -13388,6 +13466,11 @@ const BY: string[] = ["publishedOn","status"];
 
 export const postData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the posts the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(postAccess.read, viewer);
@@ -13408,11 +13491,11 @@ export const postData = {
   /** The posts the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(postAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.posts.findMany({
+    const found = postData.shownRefs(viewer, await db.query.posts.findMany({
       where: and(postData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -13426,12 +13509,12 @@ export const postData = {
     const condition = and(postData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.posts).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.posts.findMany({
+    const found = postData.shownRefs(viewer, await db.query.posts.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -13448,12 +13531,12 @@ export const postData = {
     const condition = postData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.posts).where(condition).get()?.n ?? 0;
-    const found = await db.query.posts.findMany({
+    const found = postData.shownRefs(viewer, await db.query.posts.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -13540,7 +13623,7 @@ export const postData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -13609,9 +13692,10 @@ export const postData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.posts.findFirst({
+    const fetched = await db.query.posts.findFirst({
       where: and(eq(schema.posts.id, id), postData.readable(viewer)),
     });
+    const found = fetched && postData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -13955,12 +14039,12 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = ["placesLeft"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "classType":
-      return new Map(db.select({ id: schema.classTypes.id, title: schema.classTypes.name }).from(schema.classTypes).where(inArray(schema.classTypes.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.classTypes.id, title: schema.classTypes.name }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), classTypeData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     case "instructor":
-      return new Map(db.select({ id: schema.instructors.id, title: schema.instructors.name }).from(schema.instructors).where(inArray(schema.instructors.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.instructors.id, title: schema.instructors.name }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), instructorData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -13978,8 +14062,25 @@ function checkReferences(viewer: Viewer | null, values: SessionValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const sessionData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(hideRefs(rows, "classType", (ids, c = classTypeData.readable(viewer)) => (c ? db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), c)).all().map((r) => r.id) : ids)), "instructor", (ids, c = instructorData.readable(viewer)) => (c ? db.select({ id: schema.instructors.id }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the sessions the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(sessionAccess.read, viewer);
@@ -13999,12 +14100,12 @@ export const sessionData = {
   /** The sessions the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
   async list(viewer: Viewer | null, where?: SQL, limit?: number) {
     if (readScope(sessionAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.sessions.findMany({
+    const found = sessionData.shownRefs(viewer, await db.query.sessions.findMany({
       where: and(sessionData.readable(viewer), where),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: true },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return rows.map((row) => {
@@ -14022,13 +14123,13 @@ export const sessionData = {
     const condition = and(sessionData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.sessions).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.sessions.findMany({
+    const found = sessionData.shownRefs(viewer, await db.query.sessions.findMany({
       where: condition,
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: true },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return { rows: rows.map((row) => {
@@ -14049,13 +14150,13 @@ export const sessionData = {
     const condition = sessionData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.sessions).where(condition).get()?.n ?? 0;
-    const found = await db.query.sessions.findMany({
+    const found = sessionData.shownRefs(viewer, await db.query.sessions.findMany({
       where: condition,
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: true },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return { items: rows.map((row) => {
@@ -14146,7 +14247,7 @@ export const sessionData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -14204,10 +14305,11 @@ export const sessionData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.sessions.findFirst({
+    const fetched = await db.query.sessions.findFirst({
       where: and(eq(schema.sessions.id, id), sessionData.readable(viewer)),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer) } },
     });
+    const found = fetched && sessionData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...shownTo(viewer, found), bookings: found.bookings.map((r) => bookingData.shownTo(viewer, r)) };
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
@@ -18771,10 +18873,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "61149aa8 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "863c81db generated",
+  "src/generated/booking.server.ts": "bf7e5ab7 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "9c1b9459 generated",
+  "src/generated/class-type.server.ts": "31e39adc generated",
   "src/generated/class-type.ts": "71358bc1 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -18782,19 +18884,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "51e47ea4 generated",
-  "src/generated/instructor.server.ts": "9e9293fa generated",
+  "src/generated/instructor.server.ts": "70e6f0a1 generated",
   "src/generated/instructor.ts": "c90d3dae generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "521c5e0b generated",
+  "src/generated/message.server.ts": "41f267fc generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "44105e42 generated",
-  "src/generated/post.server.ts": "6eaefa5d generated",
+  "src/generated/post.server.ts": "486b16b2 generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "8e0ed58f generated",
+  "src/generated/session.server.ts": "ab98dbf2 generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
@@ -20366,7 +20468,7 @@ const MONEY: string[] = ["creditLimit"];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -20390,6 +20492,11 @@ function ownerFor(viewer: Viewer | null, given: string | null | undefined): stri
 const TRASH_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
 export const customerData = {
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the customers the viewer may read. */
   readable(viewer: Viewer | null) {
     // What is in the trash is gone to every reader (docs/design/trash.md).
@@ -20415,11 +20522,11 @@ export const customerData = {
   /** The customers the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(customerAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const rows = await db.query.customers.findMany({
+    const rows = customerData.shownRefs(viewer, await db.query.customers.findMany({
       where: and(customerData.readable(viewer), where),
       with: { accountManager: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     return rows;
   },
 
@@ -20432,13 +20539,13 @@ export const customerData = {
     const condition = and(customerData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.customers).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const rows = await db.query.customers.findMany({
+    const rows = customerData.shownRefs(viewer, await db.query.customers.findMany({
       where: condition,
       with: { accountManager: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     return { rows: rows, total, page: at, size };
   },
 
@@ -20454,13 +20561,13 @@ export const customerData = {
     const condition = customerData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.customers).where(condition).get()?.n ?? 0;
-    const rows = await db.query.customers.findMany({
+    const rows = customerData.shownRefs(viewer, await db.query.customers.findMany({
       where: condition,
       with: { accountManager: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     return { items: rows, total };
   },
 
@@ -20546,7 +20653,7 @@ export const customerData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -20609,10 +20716,11 @@ export const customerData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.customers.findFirst({
+    const fetched = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), customerData.readable(viewer)),
       with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
     });
+    const found = fetched && customerData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...found, orders: found.orders.map((r) => orderData.shownTo(viewer, r)) };
     return row ? row : null;
   },
@@ -20728,13 +20836,14 @@ export const customerData = {
    * latest first, with when and by whom, kept for thirty days.
    */
   async trash(viewer: Viewer | null) {
-    const rows = (
+    const rows = customerData.shownRefs(
+      viewer,
       await db.query.customers.findMany({
         where: and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer)),
         with: { accountManager: { columns: { id: true, name: true } } },
         orderBy: (t) => [desc(t.deletedAt)],
         limit: 1000,
-      })
+      }),
     ).filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
     const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
     const people = new Map(
@@ -20749,10 +20858,11 @@ export const customerData = {
 
   /** A customer in the trash, as its page shows it read-only, with when and by whom; else nothing. */
   async trashed(viewer: Viewer | null, id: number) {
-    const row = await db.query.customers.findFirst({
+    const fetched = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))),
       with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
     });
+    const row = fetched && customerData.shownRefs(viewer, [fetched])[0];
     if (!row || !allows(customerAccess.delete, viewer, row.accountManagerId)) return null;
     const rows = [row];
     const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
@@ -21240,10 +21350,10 @@ const MONEY: string[] = ["total","shippingCost"];
 const COMPUTED: string[] = ["shippingCost"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "customer":
-      return new Map(db.select({ id: schema.customers.id, title: schema.customers.name }).from(schema.customers).where(inArray(schema.customers.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.customers.id, title: schema.customers.name }).from(schema.customers).where(and(inArray(schema.customers.id, ids), customerData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -21262,8 +21372,25 @@ function checkReferences(viewer: Viewer | null, values: OrderValues): void {
 /** How long a record stays in the trash, and the most a trash view shows. */
 const TRASH_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const orderData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "customer", (ids, c = customerData.readable(viewer)) => (c ? db.select({ id: schema.customers.id }).from(schema.customers).where(and(inArray(schema.customers.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the orders the viewer may read. */
   readable(viewer: Viewer | null) {
     // What is in the trash is gone to every reader (docs/design/trash.md).
@@ -21289,11 +21416,11 @@ export const orderData = {
   /** The orders the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(orderAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.orders.findMany({
+    const found = orderData.shownRefs(viewer, await db.query.orders.findMany({
       where: and(orderData.readable(viewer), where),
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withOrderFormulas);
   },
@@ -21307,13 +21434,13 @@ export const orderData = {
     const condition = and(orderData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.orders).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.orders.findMany({
+    const found = orderData.shownRefs(viewer, await db.query.orders.findMany({
       where: condition,
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows.map(withOrderFormulas), total, page: at, size };
   },
@@ -21330,13 +21457,13 @@ export const orderData = {
     const condition = orderData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.orders).where(condition).get()?.n ?? 0;
-    const found = await db.query.orders.findMany({
+    const found = orderData.shownRefs(viewer, await db.query.orders.findMany({
       where: condition,
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows.map(withOrderFormulas), total };
   },
@@ -21423,7 +21550,7 @@ export const orderData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -21486,10 +21613,11 @@ export const orderData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.orders.findFirst({
+    const fetched = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), orderData.readable(viewer)),
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
     });
+    const found = fetched && orderData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? withOrderFormulas(row) : null;
   },
@@ -21595,13 +21723,14 @@ export const orderData = {
    * latest first, with when and by whom, kept for thirty days.
    */
   async trash(viewer: Viewer | null) {
-    const rows = (
+    const rows = orderData.shownRefs(
+      viewer,
       await db.query.orders.findMany({
         where: and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer)),
         with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
         orderBy: (t) => [desc(t.deletedAt)],
         limit: 1000,
-      })
+      }),
     ).filter((row) => allows(orderAccess.delete, viewer, row.ownerId));
     const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
     const people = new Map(
@@ -21615,10 +21744,11 @@ export const orderData = {
 
   /** A order in the trash, as its page shows it read-only, with when and by whom; else nothing. */
   async trashed(viewer: Viewer | null, id: number) {
-    const row = await db.query.orders.findFirst({
+    const fetched = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), and(isNotNull(schema.orders.deletedAt), orderData.scoped(viewer))),
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
     });
+    const row = fetched && orderData.shownRefs(viewer, [fetched])[0];
     if (!row || !allows(orderAccess.delete, viewer, row.ownerId)) return null;
     const rows = [row];
     const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
@@ -24292,13 +24422,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "deac0d54 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "581cbf27 generated",
+  "src/generated/customer.server.ts": "f68118fb generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "3a0162e1 generated",
+  "src/generated/order.server.ts": "f69c4482 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
@@ -26377,7 +26507,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -26390,6 +26520,11 @@ const BY: string[] = [];
 
 export const businessProfileData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the business profiles the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(businessProfileAccess.read, viewer);
@@ -26409,10 +26544,10 @@ export const businessProfileData = {
   /** The business profiles the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(businessProfileAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.businessProfiles.findMany({
+    const found = businessProfileData.shownRefs(viewer, await db.query.businessProfiles.findMany({
       where: and(businessProfileData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -26429,12 +26564,12 @@ export const businessProfileData = {
     const condition = businessProfileData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.businessProfiles).where(condition).get()?.n ?? 0;
-    const found = await db.query.businessProfiles.findMany({
+    const found = businessProfileData.shownRefs(viewer, await db.query.businessProfiles.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -26521,7 +26656,7 @@ export const businessProfileData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -26584,9 +26719,10 @@ export const businessProfileData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.businessProfiles.findFirst({
+    const fetched = await db.query.businessProfiles.findFirst({
       where: and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)),
     });
+    const found = fetched && businessProfileData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -26888,7 +27024,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -26901,6 +27037,11 @@ const BY: string[] = [];
 
 export const clientData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the clients the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(clientAccess.read, viewer);
@@ -26920,10 +27061,10 @@ export const clientData = {
   /** The clients the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(clientAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.clients.findMany({
+    const found = clientData.shownRefs(viewer, await db.query.clients.findMany({
       where: and(clientData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -26937,12 +27078,12 @@ export const clientData = {
     const condition = and(clientData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.clients).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.clients.findMany({
+    const found = clientData.shownRefs(viewer, await db.query.clients.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -26959,12 +27100,12 @@ export const clientData = {
     const condition = clientData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.clients).where(condition).get()?.n ?? 0;
-    const found = await db.query.clients.findMany({
+    const found = clientData.shownRefs(viewer, await db.query.clients.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -27051,7 +27192,7 @@ export const clientData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -27114,10 +27255,11 @@ export const clientData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.clients.findFirst({
+    const fetched = await db.query.clients.findFirst({
       where: and(eq(schema.clients.id, id), clientData.readable(viewer)),
       with: { invoices: { where: invoiceData.readable(viewer) } },
     });
+    const found = fetched && clientData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...shownTo(viewer, found), invoices: found.invoices.map((r) => invoiceData.shownTo(viewer, r)) };
     return row ? row : null;
   },
@@ -27581,10 +27723,10 @@ const MONEY: string[] = ["total"];
 const COMPUTED: string[] = ["total"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "client":
-      return new Map(db.select({ id: schema.clients.id, title: schema.clients.name }).from(schema.clients).where(inArray(schema.clients.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.clients.id, title: schema.clients.name }).from(schema.clients).where(and(inArray(schema.clients.id, ids), clientData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -27600,8 +27742,25 @@ function checkReferences(viewer: Viewer | null, values: InvoiceValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const invoiceData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "client", (ids, c = clientData.readable(viewer)) => (c ? db.select({ id: schema.clients.id }).from(schema.clients).where(and(inArray(schema.clients.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the invoices the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceAccess.read, viewer);
@@ -27621,11 +27780,11 @@ export const invoiceData = {
   /** The invoices the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(invoiceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.invoices.findMany({
+    const found = invoiceData.shownRefs(viewer, await db.query.invoices.findMany({
       where: and(invoiceData.readable(viewer), where),
       with: { client: { columns: { id: true, name: true } }, lines: true },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return rows.map((row) => {
@@ -27643,13 +27802,13 @@ export const invoiceData = {
     const condition = and(invoiceData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.invoices).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.invoices.findMany({
+    const found = invoiceData.shownRefs(viewer, await db.query.invoices.findMany({
       where: condition,
       with: { client: { columns: { id: true, name: true } }, lines: true },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return { rows: rows.map((row) => {
@@ -27670,13 +27829,13 @@ export const invoiceData = {
     const condition = invoiceData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.invoices).where(condition).get()?.n ?? 0;
-    const found = await db.query.invoices.findMany({
+    const found = invoiceData.shownRefs(viewer, await db.query.invoices.findMany({
       where: condition,
       with: { client: { columns: { id: true, name: true } }, lines: true },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
     return { items: rows.map((row) => {
@@ -27767,7 +27926,7 @@ export const invoiceData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -27830,10 +27989,11 @@ export const invoiceData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.invoices.findFirst({
+    const fetched = await db.query.invoices.findFirst({
       where: and(eq(schema.invoices.id, id), invoiceData.readable(viewer)),
       with: { client: { columns: { id: true, name: true } }, lines: { where: invoiceLineData.readable(viewer) } },
     });
+    const found = fetched && invoiceData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...shownTo(viewer, found), lines: found.lines.map((r) => invoiceLineData.shownTo(viewer, r)) };
     if (!row) return null;
     // Totals count every related record, as in lists; the related records shown are the viewer's.
@@ -28231,10 +28391,10 @@ const MONEY: string[] = ["unitPrice","amount"];
 const COMPUTED: string[] = ["amount"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "invoice":
-      return new Map(db.select({ id: schema.invoices.id, title: schema.invoices.number }).from(schema.invoices).where(inArray(schema.invoices.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.invoices.id, title: schema.invoices.number }).from(schema.invoices).where(and(inArray(schema.invoices.id, ids), invoiceData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -28250,8 +28410,25 @@ function checkReferences(viewer: Viewer | null, values: InvoiceLineValues): void
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const invoiceLineData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "invoice", (ids, c = invoiceData.readable(viewer)) => (c ? db.select({ id: schema.invoices.id }).from(schema.invoices).where(and(inArray(schema.invoices.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the invoice lines the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceLineAccess.read, viewer);
@@ -28271,11 +28448,11 @@ export const invoiceLineData = {
   /** The invoice lines the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(invoiceLineAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.invoiceLines.findMany({
+    const found = invoiceLineData.shownRefs(viewer, await db.query.invoiceLines.findMany({
       where: and(invoiceLineData.readable(viewer), where),
       with: { invoice: { columns: { id: true, number: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withInvoiceLineFormulas);
   },
@@ -28289,13 +28466,13 @@ export const invoiceLineData = {
     const condition = and(invoiceLineData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.invoiceLines).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.invoiceLines.findMany({
+    const found = invoiceLineData.shownRefs(viewer, await db.query.invoiceLines.findMany({
       where: condition,
       with: { invoice: { columns: { id: true, number: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows.map(withInvoiceLineFormulas), total, page: at, size };
   },
@@ -28312,13 +28489,13 @@ export const invoiceLineData = {
     const condition = invoiceLineData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.invoiceLines).where(condition).get()?.n ?? 0;
-    const found = await db.query.invoiceLines.findMany({
+    const found = invoiceLineData.shownRefs(viewer, await db.query.invoiceLines.findMany({
       where: condition,
       with: { invoice: { columns: { id: true, number: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows.map(withInvoiceLineFormulas), total };
   },
@@ -28405,7 +28582,7 @@ export const invoiceLineData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -28468,10 +28645,11 @@ export const invoiceLineData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.invoiceLines.findFirst({
+    const fetched = await db.query.invoiceLines.findFirst({
       where: and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer)),
       with: { invoice: { columns: { id: true, number: true } } },
     });
+    const found = fetched && invoiceLineData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? withInvoiceLineFormulas(row) : null;
   },
@@ -30912,21 +31090,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "6225fe12 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "1605fe10 generated",
+  "src/generated/business-profile.server.ts": "9d3273f8 generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "4cd09443 generated",
+  "src/generated/client.server.ts": "be38eab8 generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "920f235f generated",
+  "src/generated/invoice-line.server.ts": "2d43a0d3 generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "f1876df3 generated",
-  "src/generated/invoice.server.ts": "4687dd89 generated",
+  "src/generated/invoice.server.ts": "b9c06bc9 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
@@ -32304,7 +32482,7 @@ const MONEY: string[] = ["price"];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -32317,6 +32495,11 @@ const BY: string[] = ["category","condition","available"];
 
 export const itemData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
     // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).
@@ -32395,10 +32578,10 @@ export const itemData = {
   /** The items the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
   async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: and(itemData.readable(viewer), where),
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -32412,12 +32595,12 @@ export const itemData = {
     const condition = and(itemData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.items).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -32434,12 +32617,12 @@ export const itemData = {
     const condition = itemData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.items).where(condition).get()?.n ?? 0;
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -32526,7 +32709,7 @@ export const itemData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -32589,9 +32772,10 @@ export const itemData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.items.findFirst({
+    const fetched = await db.query.items.findFirst({
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
     });
+    const found = fetched && itemData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -35062,7 +35246,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "52305580 generated",
-  "src/generated/item.server.ts": "9b5858ca generated",
+  "src/generated/item.server.ts": "e1800763 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "c244f170 generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -36357,7 +36541,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -36370,6 +36554,11 @@ const BY: string[] = ["kind","addedOn"];
 
 export const itemData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the items the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(itemAccess.read, viewer);
@@ -36389,10 +36578,10 @@ export const itemData = {
   /** The items the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: and(itemData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withItemFormulas);
   },
@@ -36406,12 +36595,12 @@ export const itemData = {
     const condition = and(itemData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.items).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows.map(withItemFormulas), total, page: at, size };
   },
@@ -36428,12 +36617,12 @@ export const itemData = {
     const condition = itemData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.items).where(condition).get()?.n ?? 0;
-    const found = await db.query.items.findMany({
+    const found = itemData.shownRefs(viewer, await db.query.items.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows.map(withItemFormulas), total };
   },
@@ -36520,7 +36709,7 @@ export const itemData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -36583,9 +36772,10 @@ export const itemData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.items.findFirst({
+    const fetched = await db.query.items.findFirst({
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
     });
+    const found = fetched && itemData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? withItemFormulas(row) : null;
   },
@@ -37953,7 +38143,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "b4c2bc2d generated",
+  "src/generated/item.server.ts": "828ea50a generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -41238,7 +41428,7 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(_by: string, _ids: number[]): Map<unknown, string> {
+function titlesOf(_viewer: Viewer | null, _by: string, _ids: number[]): Map<unknown, string> {
   switch (_by) {
     default:
       return new Map();
@@ -41251,6 +41441,11 @@ const BY: string[] = ["status"];
 
 export const componentData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
+    return rows;
+  },
+
   /** A condition for the components the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(componentAccess.read, viewer);
@@ -41270,10 +41465,10 @@ export const componentData = {
   /** The components the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(componentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.components.findMany({
+    const found = componentData.shownRefs(viewer, await db.query.components.findMany({
       where: and(componentData.readable(viewer), where),
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -41287,12 +41482,12 @@ export const componentData = {
     const condition = and(componentData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.components).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.components.findMany({
+    const found = componentData.shownRefs(viewer, await db.query.components.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -41309,12 +41504,12 @@ export const componentData = {
     const condition = componentData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.components).where(condition).get()?.n ?? 0;
-    const found = await db.query.components.findMany({
+    const found = componentData.shownRefs(viewer, await db.query.components.findMany({
       where: condition,
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -41401,7 +41596,7 @@ export const componentData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -41464,10 +41659,11 @@ export const componentData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.components.findFirst({
+    const fetched = await db.query.components.findFirst({
       where: and(eq(schema.components.id, id), componentData.readable(viewer)),
       with: { incidents: { where: incidentData.readable(viewer) } },
     });
+    const found = fetched && componentData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...shownTo(viewer, found), incidents: found.incidents.map((r) => incidentData.shownTo(viewer, r)) };
     return row ? row : null;
   },
@@ -41904,10 +42100,10 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "component":
-      return new Map(db.select({ id: schema.components.id, title: schema.components.name }).from(schema.components).where(inArray(schema.components.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.components.id, title: schema.components.name }).from(schema.components).where(and(inArray(schema.components.id, ids), componentData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -41923,8 +42119,25 @@ function checkReferences(viewer: Viewer | null, values: IncidentValues): void {
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const incidentData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "component", (ids, c = componentData.readable(viewer)) => (c ? db.select({ id: schema.components.id }).from(schema.components).where(and(inArray(schema.components.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the incidents the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentAccess.read, viewer);
@@ -41945,11 +42158,11 @@ export const incidentData = {
   /** The incidents the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.incidents.findMany({
+    const found = incidentData.shownRefs(viewer, await db.query.incidents.findMany({
       where: and(incidentData.readable(viewer), where),
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -41963,13 +42176,13 @@ export const incidentData = {
     const condition = and(incidentData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.incidents).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.incidents.findMany({
+    const found = incidentData.shownRefs(viewer, await db.query.incidents.findMany({
       where: condition,
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -41986,13 +42199,13 @@ export const incidentData = {
     const condition = incidentData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.incidents).where(condition).get()?.n ?? 0;
-    const found = await db.query.incidents.findMany({
+    const found = incidentData.shownRefs(viewer, await db.query.incidents.findMany({
       where: condition,
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -42079,7 +42292,7 @@ export const incidentData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -42142,10 +42355,11 @@ export const incidentData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.incidents.findFirst({
+    const fetched = await db.query.incidents.findFirst({
       where: and(eq(schema.incidents.id, id), incidentData.readable(viewer)),
       with: { component: { columns: { id: true, name: true } }, updates: { where: incidentUpdateData.readable(viewer) } },
     });
+    const found = fetched && incidentData.shownRefs(viewer, [fetched])[0];
     const row = found && { ...shownTo(viewer, found), updates: found.updates.map((r) => incidentUpdateData.shownTo(viewer, r)) };
     return row ? row : null;
   },
@@ -42481,10 +42695,10 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "incident":
-      return new Map(db.select({ id: schema.incidents.id, title: schema.incidents.title }).from(schema.incidents).where(inArray(schema.incidents.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.incidents.id, title: schema.incidents.title }).from(schema.incidents).where(and(inArray(schema.incidents.id, ids), incidentData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -42500,8 +42714,25 @@ function checkReferences(viewer: Viewer | null, values: IncidentUpdateValues): v
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const incidentUpdateData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "incident", (ids, c = incidentData.readable(viewer)) => (c ? db.select({ id: schema.incidents.id }).from(schema.incidents).where(and(inArray(schema.incidents.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the incident updates the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentUpdateAccess.read, viewer);
@@ -42521,11 +42752,11 @@ export const incidentUpdateData = {
   /** The incident updates the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(incidentUpdateAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.incidentUpdates.findMany({
+    const found = incidentUpdateData.shownRefs(viewer, await db.query.incidentUpdates.findMany({
       where: and(incidentUpdateData.readable(viewer), where),
       with: { incident: { columns: { id: true, title: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -42539,13 +42770,13 @@ export const incidentUpdateData = {
     const condition = and(incidentUpdateData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.incidentUpdates).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.incidentUpdates.findMany({
+    const found = incidentUpdateData.shownRefs(viewer, await db.query.incidentUpdates.findMany({
       where: condition,
       with: { incident: { columns: { id: true, title: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -42562,13 +42793,13 @@ export const incidentUpdateData = {
     const condition = incidentUpdateData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.incidentUpdates).where(condition).get()?.n ?? 0;
-    const found = await db.query.incidentUpdates.findMany({
+    const found = incidentUpdateData.shownRefs(viewer, await db.query.incidentUpdates.findMany({
       where: condition,
       with: { incident: { columns: { id: true, title: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -42655,7 +42886,7 @@ export const incidentUpdateData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -42707,10 +42938,11 @@ export const incidentUpdateData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.incidentUpdates.findFirst({
+    const fetched = await db.query.incidentUpdates.findFirst({
       where: and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer)),
       with: { incident: { columns: { id: true, title: true } } },
     });
+    const found = fetched && incidentUpdateData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -43151,10 +43383,10 @@ const MONEY: string[] = [];
 const COMPUTED: string[] = [];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
-function titlesOf(by: string, ids: number[]): Map<unknown, string> {
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
   switch (by) {
     case "component":
-      return new Map(db.select({ id: schema.components.id, title: schema.components.name }).from(schema.components).where(inArray(schema.components.id, ids)).all().map((r) => [r.id, String(r.title)]));
+      return new Map(db.select({ id: schema.components.id, title: schema.components.name }).from(schema.components).where(and(inArray(schema.components.id, ids), componentData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
     default:
       return new Map();
   }
@@ -43170,8 +43402,25 @@ function checkReferences(viewer: Viewer | null, values: MaintenanceValues): void
     throw new AccessDenied(viewer !== null);
 }
 
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
 export const maintenanceData = {
   shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "component", (ids, c = componentData.readable(viewer)) => (c ? db.select({ id: schema.components.id }).from(schema.components).where(and(inArray(schema.components.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
   /** A condition for the maintenances the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(maintenanceAccess.read, viewer);
@@ -43191,11 +43440,11 @@ export const maintenanceData = {
   /** The maintenances the viewer may read; \`where\` narrows them, e.g. to a search. */
   async list(viewer: Viewer | null, where?: SQL) {
     if (readScope(maintenanceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const found = await db.query.maintenances.findMany({
+    const found = maintenanceData.shownRefs(viewer, await db.query.maintenances.findMany({
       where: and(maintenanceData.readable(viewer), where),
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
@@ -43209,13 +43458,13 @@ export const maintenanceData = {
     const condition = and(maintenanceData.readable(viewer), where);
     const total = db.select({ n: count() }).from(schema.maintenances).where(condition).get()?.n ?? 0;
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = await db.query.maintenances.findMany({
+    const found = maintenanceData.shownRefs(viewer, await db.query.maintenances.findMany({
       where: condition,
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
@@ -43232,13 +43481,13 @@ export const maintenanceData = {
     const condition = maintenanceData.fitting(viewer, options.where, options.search);
     const order = sortOf(SORTABLE, options.sort);
     const total = db.select({ n: count() }).from(schema.maintenances).where(condition).get()?.n ?? 0;
-    const found = await db.query.maintenances.findMany({
+    const found = maintenanceData.shownRefs(viewer, await db.query.maintenances.findMany({
       where: condition,
       with: { component: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
-    });
+    }));
     const rows = found.map((row) => shownTo(viewer, row));
     return { items: rows, total };
   },
@@ -43325,7 +43574,7 @@ export const maintenanceData = {
     // A reference's groups carry the referenced record's title beside its id.
     const named = (rows: { value: unknown; number: number | null }[]) => {
       if (split.kind !== "reference") return rows;
-      const titles = titlesOf(by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
       return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
     };
     if (COMPUTED.includes(field)) {
@@ -43388,10 +43637,11 @@ export const maintenanceData = {
   },
 
   async get(viewer: Viewer | null, id: number) {
-    const found = await db.query.maintenances.findFirst({
+    const fetched = await db.query.maintenances.findFirst({
       where: and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer)),
       with: { component: { columns: { id: true, name: true } } },
     });
+    const found = fetched && maintenanceData.shownRefs(viewer, [fetched])[0];
     const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
@@ -47957,20 +48207,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "421fe6bb generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "4665205d generated",
+  "src/generated/component.server.ts": "3888aa08 generated",
   "src/generated/component.ts": "d63a4c5b generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "1a1cb21b generated",
+  "src/generated/incident-update.server.ts": "0057ed0f generated",
   "src/generated/incident-update.ts": "83130019 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "26ba2650 generated",
+  "src/generated/incident.server.ts": "c3188dea generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "e4077bc7 generated",
+  "src/generated/maintenance.server.ts": "4dfc4cfd generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "8a9bce72 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
