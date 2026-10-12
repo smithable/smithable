@@ -99,6 +99,7 @@ export const w = {
   fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
   fileNotAdded: "The file could not be added.",
   fileNotUploaded: "This file was not uploaded here, or too long ago: choose it again.",
+  storageFull: "There is no room left for files in this app. Ask its owner.",
   fileTooLarge: "The file is too large (at most 10 MB).",
   footer: "Footer",
   forgetInLog: "Forget in the log",

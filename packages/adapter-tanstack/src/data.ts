@@ -1357,7 +1357,11 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 
 `
     : ""
-}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${shownRefsMethod()}
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${shownRefsMethod()}${
+    pictures.length
+      ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
+      : ""
+  }
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {${
     model.trash || held.length

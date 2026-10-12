@@ -57,4 +57,6 @@ A stored file is named by its content (a hash), and a file is as private as the 
 - **There is no reuse of a file another record has**, even one the person may read: nothing needs it. A copy (actions.md §8) reads the original on the server, and sample data is put in directly.
 - **Storing and permission are separate.** Two uploads of the same bytes are still one file in storage. Each upload gets its own receipt, and that receipt is what grants putting the file on a record.
 
-The generated access tests send their files with their sender's receipt, so every app's tests use the same rule. Files that were uploaded and never saved are the next step: a daily sweep of `uploads` older than a day, deleting the file when no record has it.
+The generated access tests send their files with their sender's receipt, so every app's tests use the same rule. Files uploaded and never saved go too. Every hour the server drops receipts more than a day old, and deletes the file when no record of its model has it.
+
+The app's storage can be bounded: `UPLOADS_MAX_BYTES`, when set (the hosted service sets it by plan), is the most all stored files together may take. An upload past it is refused before it is read, with words that send the person to the app's owner. Unset means no limit.
