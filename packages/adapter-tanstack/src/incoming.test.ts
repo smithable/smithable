@@ -15,6 +15,8 @@ app: { name: Status }
 models:
   Incident:
     fields: { title: string!, status: investigating | resolved, detectedAt: datetime!, minutes: int }
+  Request:
+    fields: { title: string!, email: email!, body: text, attachments: files }
 pages:
   incidents: { crud: Incident }
 incoming:
@@ -25,6 +27,10 @@ incoming:
   paymentReceived:
     custom: true
     signed: sha256
+  support:
+    mail: true
+    create: Request
+    fields: { from: email, subject: title, body: body, attachments: attachments }
 `,
 }).ir as SpecIR;
 const auth = validateAuth(
@@ -58,4 +64,17 @@ test("a custom, signed call: an HMAC of the body, and a stub of the project's ow
   const stub = file("src/custom/incoming/payment-received.ts");
   expect(stub?.zone).toBe("custom");
   expect(stub?.content).toContain("export async function handle(body: unknown, caller: Viewer)");
+});
+
+test("a mail becomes a record: sender, subject and text to their fields, attachments saved as uploads", () => {
+  const route = file("src/routes/incoming/support.ts")?.content ?? "";
+  expect(route).toContain("email: address(mail.from),");
+  expect(route).toContain("title: text(mail.subject),");
+  expect(route).toContain("body: bodyOf(mail),");
+  expect(route).toContain("attachments: files,");
+  expect(route).toContain('files.push(saveFile("request", bytes, text(name) || "attachment"));');
+  expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES)");
+  expect(route).toContain("await scanned(bytes);");
+  // No templates and no id: no path helpers to leave unused.
+  expect(route).not.toContain("const fill");
 });
