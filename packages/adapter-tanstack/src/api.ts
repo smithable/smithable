@@ -613,6 +613,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
+import { receiptFor } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -665,7 +666,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
             if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
             throw error;
           }
-          await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, stored] : stored } as never);
+          const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, (stored as { file: string }).file) };
+          await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
           return stored;
         }),
     },

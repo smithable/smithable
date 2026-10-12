@@ -7,6 +7,7 @@ import { UPLOADS } from "#/generated/uploads";
 import { allows } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
+import { receiptFor } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -42,13 +43,23 @@ export const Route = createFileRoute("/files/$model/$field")({
             const bytes = new Uint8Array(await request.arrayBuffer());
             await scanned(bytes);
             const name = decodeURIComponent(request.headers.get("x-file-name") ?? "");
-            return Response.json(saveFile(params.model, bytes, name));
+            const stored = saveFile(params.model, bytes, name);
+            // The receipt that lets this person put it on a record of this field.
+            return Response.json({
+              ...stored,
+              receipt: receiptFor(viewer?.id ?? null, params.model, params.field, stored.file),
+            });
           }
           if (length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
           const bytes = new Uint8Array(await request.arrayBuffer());
           await scanned(bytes);
           const { file, width, height } = savePicture(params.model, bytes, "");
-          return Response.json({ file, width, height });
+          return Response.json({
+            file,
+            width,
+            height,
+            receipt: receiptFor(viewer?.id ?? null, params.model, params.field, file),
+          });
         } catch (error) {
           const known =
             error instanceof BadPicture ||
