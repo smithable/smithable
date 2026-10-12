@@ -1120,6 +1120,40 @@ try {
       await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
     },
   );
+  await step(
+    "Select in Code mode: a text opens its line in the content file, a field its lines in smithable.yml",
+    async () => {
+      await page.locator("label", { hasText: /^Code$/ }).click();
+      await openPreview("/customers");
+      await page.getByRole("button", { name: "Select" }).click();
+      const editorText = async (file) => {
+        await page.getByLabel(file).waitFor({ timeout: 10000 });
+        if ((await page.getByLabel("File", { exact: true }).inputValue()) !== file)
+          throw new Error(`another file is open than ${file}`);
+        return page
+          .getByLabel(file)
+          .evaluate((e) => e.value.slice(e.selectionStart, e.selectionEnd));
+      };
+      const subtitle = preview.locator('[data-sm-text="pages.customers.subtitle"]');
+      await subtitle.click({ timeout: 60000 });
+      const text = await editorText("smithable.content.yml");
+      if (text !== "Keep every relationship in view.")
+        throw new Error(`the content file shows "${text}", not the subtitle`);
+      // Not changed in place, as it is in No code.
+      if (await subtitle.evaluate((e) => e.isContentEditable))
+        throw new Error("the text became editable in Code mode");
+      await openPreview("/customers/new");
+      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      const field = await editorText("smithable.yml");
+      if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
+      await page
+        .getByRole("navigation", { name: "Concepts" })
+        .locator('[aria-current="true"]', { hasText: /^email/ })
+        .waitFor({ timeout: 10000 });
+      await page.getByRole("button", { name: "Select" }).click();
+      await page.locator("label", { hasText: /^No code$/ }).click();
+    },
+  );
   // The log's last line before the undo: the next step reads only what came after it, since a
   // start before the undo (a page reloaded without its stylesheet) can still be in the log.
   let beforeUndo;

@@ -22,6 +22,7 @@ export function Preview({
   version,
   updating,
   selecting,
+  inCode,
   onSelecting,
   onHide,
   highlight,
@@ -33,6 +34,9 @@ export function Preview({
   updating?: boolean;
   /** Select mode: clicking in the preview selects a part of the spec instead of using the app. */
   selecting?: boolean;
+  /** Code mode: a text clicked in select mode goes to its line in the content file instead of
+   * being changed in place. */
+  inCode?: boolean;
   onSelecting?: (on: boolean) => void;
   /** Hides the preview's column, for more room (wide windows). */
   onHide?: () => void;
@@ -178,7 +182,7 @@ export function Preview({
   useEffect(() => {
     const send = () =>
       frame.current?.contentWindow?.postMessage(
-        { type: "smithable:select-mode", on: Boolean(selecting) },
+        { type: "smithable:select-mode", on: Boolean(selecting), code: Boolean(inCode) },
         previewTarget(),
       );
     send();
@@ -187,7 +191,7 @@ export function Preview({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [selecting]);
+  }, [selecting, inCode]);
   // What the last change touched, flashed in the page (motion.md 9a): at once, for a change the
   // page shows without reloading (a text edited in place), and again to each page that says it
   // is ready until one answers that it has flashed it. A change may reload the page more than

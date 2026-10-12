@@ -18798,7 +18798,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "f3d3a0ce generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -18823,7 +18823,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Reserve.tsx": "9f0c730c kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -24305,7 +24305,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "432e3193 generated",
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -24320,7 +24320,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Trash.tsx": "26ea3332 kit",
@@ -29784,6 +29784,7 @@ function InvoicePage() {
             {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) && (
               <ActionButton
                 label="Mark sent"
+                concept="action:markSent"
                 onRun={async () => {
                   await markSent({ data: row.id });
                   await router.invalidate();
@@ -29793,6 +29794,7 @@ function InvoicePage() {
             {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) && (
               <ActionButton
                 label="Mark paid"
+                concept="action:markPaid"
                 onRun={async () => {
                   await markPaid({ data: row.id });
                   await router.invalidate();
@@ -29964,11 +29966,13 @@ function InvoicesPage() {
           actions={[
             {
               label: "Mark sent",
+              concept: "action:markSent",
               applies: chosen.filter((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row)).length,
               run: () => markSentMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Mark paid",
+              concept: "action:markPaid",
               applies: chosen.filter((row) => allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row)).length,
               run: () => markPaidMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
@@ -29995,6 +29999,7 @@ function InvoicesPage() {
             {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) && (
               <ActionButton
                 label="Mark sent"
+                concept="action:markSent"
                 onRun={async () => {
                   await markSent({ data: row.id });
                   await router.invalidate();
@@ -30004,6 +30009,7 @@ function InvoicesPage() {
             {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) && (
               <ActionButton
                 label="Mark paid"
+                concept="action:markPaid"
                 onRun={async () => {
                   await markPaid({ data: row.id });
                   await router.invalidate();
@@ -30926,7 +30932,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/pages.ts": "1b40062a generated",
   "src/generated/site.ts": "08ea7d3a generated",
   "src/generated/uploads.ts": "29095437 generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -30947,7 +30953,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -30996,8 +31002,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoice-lines/$id.tsx": "e6f9721e generated",
   "src/routes/invoice-lines/index.tsx": "915d0808 generated",
   "src/routes/invoice-lines/new.tsx": "f02e0160 generated",
-  "src/routes/invoices/$id.tsx": "e966a2d8 generated",
-  "src/routes/invoices/index.tsx": "8922d18a generated",
+  "src/routes/invoices/$id.tsx": "80ea166c generated",
+  "src/routes/invoices/index.tsx": "197946a6 generated",
   "src/routes/invoices/new.tsx": "3c460685 generated",
   "src/routes/overview/index.tsx": "f5f7c5a7 generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -35063,7 +35069,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/site.ts": "b9832c55 generated",
   "src/generated/uploads.ts": "2ea504cf generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -35084,7 +35090,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Review.tsx": "5f595873 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -37951,7 +37957,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -37967,7 +37973,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -46032,6 +46038,7 @@ function IncidentPage() {
             {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) && (
               <ActionButton
                 label="Identified"
+                concept="action:identified"
                 onRun={async () => {
                   await identified({ data: row.id });
                   await router.invalidate();
@@ -46041,6 +46048,7 @@ function IncidentPage() {
             {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) && (
               <ActionButton
                 label="Monitoring"
+                concept="action:monitoring"
                 onRun={async () => {
                   await monitoring({ data: row.id });
                   await router.invalidate();
@@ -46050,6 +46058,7 @@ function IncidentPage() {
             {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) && (
               <ActionButton
                 label="Resolve"
+                concept="action:resolve"
                 onRun={async () => {
                   await resolve({ data: row.id });
                   await router.invalidate();
@@ -46188,16 +46197,19 @@ function IncidentsPage() {
           actions={[
             {
               label: "Identified",
+              concept: "action:identified",
               applies: chosen.filter((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row)).length,
               run: () => identifiedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Monitoring",
+              concept: "action:monitoring",
               applies: chosen.filter((row) => allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row)).length,
               run: () => monitoringMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Resolve",
+              concept: "action:resolve",
               applies: chosen.filter((row) => allows(resolveAccess, viewer, row.ownerId) && resolveFits(row)).length,
               run: () => resolveMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
@@ -46224,6 +46236,7 @@ function IncidentsPage() {
             {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) && (
               <ActionButton
                 label="Identified"
+                concept="action:identified"
                 onRun={async () => {
                   await identified({ data: row.id });
                   await router.invalidate();
@@ -46233,6 +46246,7 @@ function IncidentsPage() {
             {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) && (
               <ActionButton
                 label="Monitoring"
+                concept="action:monitoring"
                 onRun={async () => {
                   await monitoring({ data: row.id });
                   await router.invalidate();
@@ -46242,6 +46256,7 @@ function IncidentsPage() {
             {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) && (
               <ActionButton
                 label="Resolve"
+                concept="action:resolve"
                 onRun={async () => {
                   await resolve({ data: row.id });
                   await router.invalidate();
@@ -47962,7 +47977,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "d37db4cf generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
-  "src/kit/ActionButton.tsx": "373feaa3 kit",
+  "src/kit/ActionButton.tsx": "c6fd52d8 kit",
   "src/kit/ActivityLog.tsx": "eaa709b0 kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
@@ -47983,7 +47998,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "dc45cd74 kit",
+  "src/kit/SelectionBar.tsx": "cb22fe64 kit",
   "src/kit/SignIn.tsx": "17900588 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
@@ -48034,8 +48049,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "973b9b6e generated",
-  "src/routes/incidents/$id.tsx": "c730d86f generated",
-  "src/routes/incidents/index.tsx": "ac48dcc7 generated",
+  "src/routes/incidents/$id.tsx": "ada7ea6b generated",
+  "src/routes/incidents/index.tsx": "5e7fbabe generated",
   "src/routes/incidents/new.tsx": "ca089b54 generated",
   "src/routes/index.tsx": "dca8d976 generated",
   "src/routes/maintenance/$id.tsx": "2c670e92 generated",
