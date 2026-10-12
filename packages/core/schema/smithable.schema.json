@@ -696,6 +696,54 @@
         }
       }
     },
+    "incoming": {
+      "type": "object",
+      "description": "Addresses other services call (/incoming/<name>, each with its own secret): one record per call, or the call handed to code.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "create": {
+            "type": "string",
+            "description": "The model a call adds a record of."
+          },
+          "set": {
+            "type": "object",
+            "description": "The record's values: a literal, a formula (NOW()), or a text with {path} from the call's JSON (\"{check.name} is down\").",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          },
+          "custom": {
+            "const": true,
+            "description": "Hand the verified call to src/custom/incoming/<name>.ts."
+          },
+          "signed": {
+            "const": "sha256",
+            "description": "A sha256 signature of the body, made with the secret."
+          },
+          "header": {
+            "type": "string",
+            "description": "The header the secret or signature comes in."
+          },
+          "id": {
+            "type": "string",
+            "description": "The call's own id, e.g. \"{event.id}\": a repeat is not acted on."
+          },
+          "as": {
+            "type": "string",
+            "description": "The role the call acts as (admin when not said)."
+          }
+        }
+      }
+    },
     "queries": {
       "type": "object",
       "description": "Records chosen or ordered by code in src/custom/queries/.",
