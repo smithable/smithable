@@ -2,7 +2,8 @@
 // assistant tools at /mcp, with a key, by a model. Per model: right or wrong, model calls per
 // question, tokens in and out, cost and time, and how big the tools are.
 //   node scripts/bench-ask.mjs <model>… [--starter crm,status] [--label today] [--voice friendly]
-//   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API); ask before running.
+//   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API), or the hosted
+//   assistant's cascade, cascade:mistral-small-latest>eu.anthropic.…; ask before running.
 // Each starter is made, offers everything to programs and assistants (setApi all), gets an admin
 // key, and is served; questions that change records each start from the starter's records again.
 // --voice sets Ask's voice (setAssistantVoice) and gives the model the generated kit's line for it,
@@ -35,7 +36,8 @@ const voice = option("--voice");
 const only = option("--only")?.split(",").map(Number);
 // --score: the stored answers judged again (after the judging changed), without asking anything.
 const rescore = args.includes("--score");
-if (!models.length && !rescore) throw new Error("Name the models: eu.anthropic.… or mistral-….");
+if (!models.length && !rescore)
+  throw new Error("Name the models: eu.anthropic.…, mistral-… or cascade:<cheap>><better>.");
 const PORT = 6470;
 const MAX_CALLS = 8;
 
@@ -190,6 +192,100 @@ function mistral(model) {
   };
 }
 
+/**
+ * The hosted assistant's cascade (smithable-cloud service/src/gateway.ts, backlog B 35), named
+ * `cascade:<cheap>><better>`: a question starts on the cheap model and goes on to the better one
+ * when the cheap one is seen failing: two tool calls refused, a fourth model call (the kit's last
+ * round), or an answer that gives up, which is asked again of the better model. Once there, the
+ * question stays there. The conversation is kept in the cheap model's (OpenAI) shape and turned
+ * into Converse's for Claude. Each turn says what it cost, at its own model's price, and why it moved.
+ */
+function cascade(cheap, better) {
+  const GIVE_UP =
+    /\b(I (cannot|can't|can not|am unable|'m unable|don't have (access|the ability))|unable to (find|answer|help|access)|jag kan (inte|tyvärr inte))\b/i;
+  const callCheap = mistral(cheap);
+  const callBetter = bedrock(better);
+  const onBetter = new WeakSet();
+  const cost = (model, t) => {
+    const [pin, pout] = price(model);
+    return (t.tokensIn * pin + t.tokensOut * pout) / 1e6;
+  };
+  const converse = (messages) => {
+    const out = [];
+    for (const m of messages) {
+      if (m.role === "user") out.push({ role: "user", content: [{ text: m.content }] });
+      else if (m.role === "assistant")
+        out.push({
+          role: "assistant",
+          content: [
+            ...(m.content ? [{ text: m.content }] : []),
+            ...(m.tool_calls ?? []).map((c) => ({
+              toolUse: {
+                toolUseId: c.id,
+                name: c.function.name,
+                input: JSON.parse(c.function.arguments || "{}"),
+              },
+            })),
+          ],
+        });
+      else {
+        const result = {
+          toolResult: { toolUseId: m.tool_call_id, content: [{ text: m.content }] },
+        };
+        const last = out.at(-1);
+        if (last?.role === "user" && last.content[0]?.toolResult) last.content.push(result);
+        else out.push({ role: "user", content: [result] });
+      }
+    }
+    return out;
+  };
+  const askBetter = async (system, messages, tools) => {
+    const turn = await callBetter(system, converse(messages), tools);
+    return {
+      ...turn,
+      message: {
+        role: "assistant",
+        content: turn.text,
+        ...(turn.calls.length
+          ? {
+              tool_calls: turn.calls.map((c) => ({
+                id: c.id,
+                type: "function",
+                function: { name: c.name, arguments: JSON.stringify(c.input ?? {}) },
+              })),
+            }
+          : {}),
+      },
+      cost: cost(better, turn),
+    };
+  };
+  return async (system, messages, tools) => {
+    if (onBetter.has(messages)) return askBetter(system, messages, tools);
+    const rounds = messages.filter((m) => m.role === "assistant" && m.tool_calls?.length).length;
+    const why = (messages.refused ?? 0) >= 2 ? "refused" : rounds >= 3 ? "rounds" : undefined;
+    if (why) {
+      onBetter.add(messages);
+      return { ...(await askBetter(system, messages, tools)), moved: why };
+    }
+    const turn = { ...(await callCheap(system, messages, tools)) };
+    turn.cost = cost(cheap, turn);
+    const words = turn.text.trim();
+    const toolsAnswered = messages.some((m) => m.role === "tool");
+    if (!turn.calls.length && (words ? GIVE_UP.test(words) : !toolsAnswered)) {
+      onBetter.add(messages);
+      const again = await askBetter(system, messages, tools);
+      return {
+        ...again,
+        tokensIn: turn.tokensIn + again.tokensIn,
+        tokensOut: turn.tokensOut + again.tokensOut,
+        cost: turn.cost + again.cost,
+        moved: "gave up",
+      };
+    }
+    return turn;
+  };
+}
+
 /** The tool results as the model's next message. */
 function results(model, done) {
   return model.startsWith("eu.anthropic.")
@@ -218,15 +314,29 @@ async function ask(model, call, tools, system, question) {
   let tokensIn = 0;
   let tokensOut = 0;
   let resultTokens = 0;
+  let cost;
+  let moved;
   const trace = [];
   while (calls < MAX_CALLS) {
     calls++;
     const turn = await call(system, messages, tools.list);
     tokensIn += turn.tokensIn;
     tokensOut += turn.tokensOut;
+    if (turn.cost !== undefined) cost = (cost ?? 0) + turn.cost;
+    moved ??= turn.moved;
     messages.push(turn.message);
     if (!turn.calls.length)
-      return { text: turn.text, calls, toolCalls, tokensIn, tokensOut, resultTokens, trace };
+      return {
+        text: turn.text,
+        calls,
+        toolCalls,
+        tokensIn,
+        tokensOut,
+        resultTokens,
+        trace,
+        cost,
+        moved,
+      };
     const done = [];
     for (const c of turn.calls) {
       toolCalls++;
@@ -244,8 +354,21 @@ async function ask(model, call, tools, system, question) {
       }
     }
     messages.push(...results(model, done));
+    // For the cascade: the tool calls the app refused so far.
+    messages.refused = (messages.refused ?? 0) + done.filter((d) => d.error).length;
   }
-  return { text: "", calls, toolCalls, tokensIn, tokensOut, resultTokens, trace, gaveUp: true };
+  return {
+    text: "",
+    calls,
+    toolCalls,
+    tokensIn,
+    tokensOut,
+    resultTokens,
+    trace,
+    gaveUp: true,
+    cost,
+    moved,
+  };
 }
 
 // ── The apps ────────────────────────────────────────────────────────────────
@@ -412,8 +535,10 @@ for (const starter of rescore ? [] : starters) {
       ? bedrock(model)
       : model.startsWith("mistral-")
         ? mistral(model)
-        : null;
-    if (!call) throw new Error(`${model}: eu.anthropic.… or mistral-….`);
+        : model.startsWith("cascade:")
+          ? cascade(...model.slice("cascade:".length).split(">"))
+          : null;
+    if (!call) throw new Error(`${model}: eu.anthropic.…, mistral-… or cascade:<cheap>><better>.`);
     for (const [i, question] of QUESTIONS[starter].entries()) {
       if ((only && !only.includes(i + 1)) || done(model, starter, i + 1)) continue;
       if (question.skip) {
@@ -477,7 +602,8 @@ for (const starter of rescore ? [] : starters) {
           tokensOut: r.tokensOut,
           resultTokens: r.resultTokens,
           trace: r.trace,
-          cost: (r.tokensIn * pin + r.tokensOut * pout) / 1e6,
+          cost: r.cost ?? (r.tokensIn * pin + r.tokensOut * pout) / 1e6,
+          moved: r.moved,
           seconds: (Date.now() - started) / 1000,
           note: r.error,
         };
@@ -558,7 +684,16 @@ Correctness is judged on the answer's facts against the records (a count, a name
 | Model | Right | Wrong | Of them, stated as fact | Of them, a count or sum the model worked out | Right when every tool call was valid | Gave up or failed | Model calls per question | Reads in one or two calls | Tokens in / out per question | Tool results per question (tokens) | Cost per question | Time |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 ${totals.join("\n")}
-
+${models
+  .filter((m) => m.startsWith("cascade:"))
+  .map((m) => {
+    const rows = results_.filter((r) => r.model === m && r.outcome !== "skipped");
+    const up = rows.filter((r) => r.moved);
+    const by = (w) => up.filter((r) => r.moved === w).length;
+    const right = (rs) => rs.filter((r) => r.outcome === "right").length;
+    return `\n**${m}** moved ${up.length} of ${rows.length} questions to the better model (${by("refused")} after two refused tool calls, ${by("rounds")} at the fourth call, ${by("gave up")} after an answer that gave up); ${right(up)} of them were then right. Of the ${rows.length - up.length} that stayed on the cheap model, ${right(rows.filter((r) => !r.moved))} were right.\n`;
+  })
+  .join("")}
 The tools each starter offers (\`tools/list\`, about four characters a token):
 
 | Starter | Tools | Their size (tokens) | The app's summary (tokens) |
