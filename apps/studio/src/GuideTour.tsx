@@ -79,10 +79,22 @@ export function Guide({
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the tour starts
   useEffect(() => {
     before.current = document.activeElement;
-    const found = present(tour);
-    if (found.length === 0) return end();
-    setStops(found);
-    if (!dialog.current?.open) dialog.current?.showModal();
+    // A mode's places may still be loading (Code mode comes in its own chunk, App.tsx): looked
+    // for again for a moment before the tour goes on without the ones that are not there.
+    let tries = 0;
+    const look = () => {
+      const found = present(tour);
+      if (found.length < tour.length && tries++ < 30) {
+        timer = setTimeout(look, 100);
+        return;
+      }
+      if (found.length === 0) return end();
+      setStops(found);
+      if (!dialog.current?.open) dialog.current?.showModal();
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    look();
+    return () => clearTimeout(timer);
   }, []);
 
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
