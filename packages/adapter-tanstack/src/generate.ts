@@ -149,7 +149,7 @@ ${models.map((m) => `import { ${names(m, t).access}, ${names(m, t).data} } from 
 
 export interface UploadField {
   kind: "picture" | "file";
-  data: { get(viewer: Viewer | null, id: number): Promise<unknown> };
+  data: { get(viewer: Viewer | null, id: number): Promise<unknown>; uses(file: string): boolean };
   access: ModelAccess;
   /** The field's key in a record. */
   key: string;

@@ -8,7 +8,9 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -163,6 +165,35 @@ export function fileKind(
   const kind = ext ? KINDS[ext] : undefined;
   const text = Buffer.from(bytes).toString("latin1");
   return ext && kind?.is(bytes, text) ? { ext, type: kind.type } : undefined;
+}
+
+/** All stored pictures and documents together, in bytes: counted at most once a minute. */
+let counted: { bytes: number; at: number } | undefined;
+function storedBytes(): number {
+  if (counted && Date.now() - counted.at < 60_000) return counted.bytes;
+  let bytes = 0;
+  const walk = (dir: string) => {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true }))
+      if (entry.isDirectory()) walk(join(dir, entry.name));
+      else bytes += statSync(join(dir, entry.name)).size;
+  };
+  walk(uploadsDir());
+  counted = { bytes, at: Date.now() };
+  return bytes;
+}
+
+/**
+ * Whether `bytes` more fit the app's storage: UPLOADS_MAX_BYTES, when set (the hosted service sets
+ * it by plan), is the most all stored files together may take; unset, there is no limit. Counted
+ * before anything is stored.
+ */
+export function roomFor(bytes: number): boolean {
+  const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
+  if (!max) return true;
+  if (storedBytes() + bytes > max) return false;
+  if (counted) counted.bytes += bytes;
+  return true;
 }
 
 /** Stores a document sent by a browser under `model/`, and returns what the record keeps of it. */
