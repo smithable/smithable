@@ -1,6 +1,6 @@
 # Making the repository public (checklist)
 
-Status: 2026-09-30, Fable. The mechanical part of M16's "open-source preparation" is in the same pull request as this document; what remains is listed with who does it. The repository goes public together with the hosted beta (ROADMAP M16), but nothing here depends on the beta's exit test, so it can be done first.
+Status: proposal, not decided. Written 2026-09-30 by Fable. The mechanical part of M16's "open-source preparation" is in the same pull request as this document; what remains is listed with who does it. The repository goes public together with the hosted beta (ROADMAP M16), but nothing here depends on the beta's exit test, so it can be done first.
 
 ## Done in this pull request
 
@@ -30,7 +30,7 @@ What is left before the repository goes public, and before the public beta, by w
 | Live example sites | Done: the showcase apps with demo sign-in and hourly resets, linked from the docs | done |
 | The legal texts' `[verify]` marks | `smithable-cloud/docs/legal/README.md`, "What the code still must do" | B, with Johan |
 | A real mailbox (above) | | Johan |
-| Pricing and levels | A proposal: [pricing.md](pricing.md) | Johan |
+| Pricing and levels | Undecided; the working proposal is private | Johan |
 | The provider layer for EU-only apps | Step 1 in work; the Scaleway stack at the hosting launch ([provider-layer.md](../../../smithable-cloud/docs/design/provider-layer.md) in the cloud repository) | B |
 | The outside security test before the public release | Johan's yes of 2026-10-04; the brief waits for his decision on how | Johan |
 
