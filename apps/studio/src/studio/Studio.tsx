@@ -13,13 +13,14 @@ import {
 } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { isMap, isScalar, isSeq, type Node, parseDocument } from "yaml";
 import { lastChange, type Project } from "../api";
 import { ArgumentField, type ArgValues, argumentProblem, argumentsOf } from "../arguments";
 import { Ask } from "../builder/Ask";
 import type { Run } from "../builder/ChangeForms";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
-import type { Place } from "../preview";
+import { isPreviewMessage, type Place } from "../preview";
 import { Properties } from "../properties";
 import { Trace } from "../shared";
 import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
@@ -28,6 +29,8 @@ import { Button, cx, Label, Panel, Select, Tabs, useMedia } from "../ui";
 const SpecText = lazy(() => import("./SpecText"));
 
 type Tab = "spec" | "operation" | "changes" | "logs";
+/** A place to show in the editor: a concept's lines in a file, asked at a time. */
+type Jump = { concept: string; file: EditableFile; at: number };
 
 const STATUS: Record<string, string> = {
   "not-implemented": "Not implemented",
@@ -77,7 +80,29 @@ export function Studio({
     onPlace({ concept });
   };
   // "Show in smithable.yml": the editor selects the concept's lines.
-  const [jump, setJump] = useState<{ concept: string; at: number }>();
+  const [jump, setJump] = useState<Jump>();
+  const conceptsRef = useRef(project.concepts);
+  conceptsRef.current = project.concepts;
+  // Select in the preview (A 71): a text opens its line in the content file; a field, a record's
+  // form or table, or an action's button picks its concept and shows its lines in smithable.yml.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "select") return;
+      const { concept } = e.data;
+      setTabState("spec");
+      if (concept.startsWith("text:")) {
+        setJump({ concept, file: "smithable.content.yml", at: Date.now() });
+        return;
+      }
+      if (conceptsRef.current.some((c) => c.concept === concept)) {
+        setSelectedState(concept);
+        onPlace({ tab: "spec", concept });
+      }
+      setJump({ concept, file: "smithable.yml", at: Date.now() });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [onPlace]);
   const concept = project.concepts.find((c) => c.concept === selected);
   // On a phone: which panel of the row is shown, and a bar to go to another (as Builder has).
   const strip = useRef<HTMLDivElement>(null);
@@ -170,7 +195,7 @@ export function Studio({
                     onCustomize={onCustomize}
                     onShow={() => {
                       setTab("spec");
-                      setJump({ concept: concept.concept, at: Date.now() });
+                      setJump({ concept: concept.concept, file: "smithable.yml", at: Date.now() });
                     }}
                   />
                 </>
@@ -404,7 +429,7 @@ function SpecEditor({
   project: Project;
   plugins: Spec["plugins"];
   run: Run;
-  jump?: { concept: string; at: number };
+  jump?: Jump;
   /** The file open, kept in Code mode's place (App.tsx), so a mode switch comes back to it. */
   file: EditableFile;
   onFile: (file: EditableFile) => void;
@@ -464,12 +489,16 @@ function SpecEditor({
   // changes).
   // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
   useEffect(() => {
-    if (jump) setFile("smithable.yml");
+    if (jump) setFile(jump.file);
   }, [jump]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
   const select = useMemo(() => {
-    const spec = drafts["smithable.yml"] ?? project.files.spec ?? "";
-    const range = jump && specRange(spec, jump.concept);
+    if (!jump) return undefined;
+    const text =
+      drafts[jump.file] ?? project.files[EDITABLE_FILES[jump.file]] ?? emptyFile(jump.file) ?? "";
+    const range = jump.concept.startsWith("text:")
+      ? contentRange(text, jump.concept.slice(5))
+      : specRange(text, jump.concept);
     return range && jump ? { from: range[0], to: range[1], at: jump.at } : undefined;
   }, [jump]);
   const { diagnostics, roles } = useMemo(
@@ -600,7 +629,7 @@ function SpecEditor({
           value={text}
           onChange={setText}
           problems={diagnostics.filter((d) => d.file === file)}
-          select={select}
+          select={jump?.file === file ? select : undefined}
           kept={`smithable:editor:${project.name}:${file}`}
           assist
           ask={ask}
@@ -824,6 +853,29 @@ function OperationForm({ run, spec }: { run: Run; spec: Spec }) {
  * Where a concept is declared in smithable.yml, as character offsets: a model, page, action or
  * query's name line under its section, or a field's line inside its model.
  */
+/**
+ * Where a text is kept in smithable.content.yml, by its dot-separated place
+ * ("pages.home.hero.title"): its value, or the nearest key on the way to it when the text is
+ * not written there (a wording derived from names), so the line to add it under is shown.
+ */
+export function contentRange(text: string, path: string): [number, number] | undefined {
+  let node: Node | null | undefined = parseDocument(text).contents;
+  let found: [number, number] | undefined;
+  for (const part of path.split(".")) {
+    if (isMap(node)) {
+      const pair = node.items.find((p) => isScalar(p.key) && String(p.key.value) === part);
+      if (!pair) break;
+      const key = pair.key as Node;
+      if (key.range) found = [key.range[0], key.range[1]];
+      node = pair.value as Node | null;
+    } else if (isSeq(node)) {
+      node = node.items[Number(part)] as Node | undefined;
+    } else break;
+    if (node?.range && isScalar(node)) found = [node.range[0], node.range[1]];
+  }
+  return found;
+}
+
 export function specRange(text: string, concept: string): [number, number] | undefined {
   const [kind = "", rest = ""] = concept.split(":");
   const [name = "", field] = rest.split(".");

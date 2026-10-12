@@ -673,7 +673,8 @@ export function actionButton(
     ? `await navigate({ to: ${JSON.stringify(join(route, "$id"))}, params: { id: String(copy) } });`
     : "await router.invalidate();";
   return `<ActionButton
-                label=${attr(t.action(action))}${
+                label=${attr(t.action(action))}
+                concept="action:${action.name}"${
                   asks
                     ? `
                 ask={{ ui: ${action.name}AskUi, schema: ${action.name}Asks, initial: ${row}, app }}`

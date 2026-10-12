@@ -7,6 +7,8 @@
 const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
   let selecting = false;
+  // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
+  let code = false;
   let hovered = null;
   let dragged = null;
   const style = document.createElement("style");
@@ -88,6 +90,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     studio = event.origin;
     report();
     selecting = Boolean(event.data.on);
+    code = Boolean(event.data.code);
     // Visible to people (a cursor) and to tests: the page is in select mode.
     document.documentElement.toggleAttribute("data-sm-selecting", selecting);
     clear("data-sm-hover");
@@ -112,6 +115,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!text || text.isContentEditable) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    if (code) {
+      clear("data-sm-selected");
+      text.setAttribute("data-sm-selected", "");
+      post({ type: "select", concept: "text:" + text.dataset.smText, part: null, page: null, columns: null });
+      return;
+    }
     const before = text.textContent;
     text.contentEditable = "true";
     text.focus();
