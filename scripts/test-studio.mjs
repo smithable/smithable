@@ -651,12 +651,23 @@ try {
   await step(
     "a page title is changed in place in the preview: smithable.content.yml follows",
     async () => {
-      await openPreview("/customers");
+      // The preview reloads a few seconds after the column change before: a click that lands in
+      // the frame being replaced edits nothing, so the title must be editable before typing.
+      const title = preview.locator('[data-sm-text="pages.customers.title"]');
       await page.getByRole("button", { name: "Select" }).click();
-      await preview
-        .locator("html[data-sm-selecting]")
-        .waitFor({ state: "attached", timeout: 60000 });
-      await preview.locator('[data-sm-text="pages.customers.title"]').click({ timeout: 60000 });
+      for (let attempt = 1; ; attempt++) {
+        await openPreview("/customers");
+        await preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 });
+        await title.click({ timeout: 60000 });
+        try {
+          await title.and(preview.locator("[contenteditable=true]")).waitFor({ timeout: 5000 });
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+        }
+      }
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
       await last.getByText("Changed a text to “Clients”").first().waitFor({ timeout: 60000 });
@@ -1126,6 +1137,11 @@ try {
       await page.locator("label", { hasText: /^Code$/ }).click();
       await openPreview("/customers");
       await page.getByRole("button", { name: "Select" }).click();
+      // The page in the frame is in select mode before anything is clicked: a click before it is
+      // the app's own (a new frame after Go hears of select mode only once it has loaded).
+      const selecting = () =>
+        preview.locator("html[data-sm-selecting]").waitFor({ state: "attached", timeout: 60000 });
+      await selecting();
       const editorText = async (file) => {
         await page.getByLabel(file).waitFor({ timeout: 10000 });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== file)
@@ -1143,6 +1159,7 @@ try {
       if (await subtitle.evaluate((e) => e.isContentEditable))
         throw new Error("the text became editable in Code mode");
       await openPreview("/customers/new");
+      await selecting();
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
