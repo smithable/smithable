@@ -11,7 +11,7 @@ import { db } from "#/db";
 import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
-import { post, proxied } from "./call.server";
+import { post, proxied, proxyRefusal } from "./call.server";
 import { log } from "./log.server";
 import { mailConfigured, sendMail } from "./mail";
 import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
@@ -277,6 +277,8 @@ async function sendCalls(now: number): Promise<number> {
         {
           "Content-Type": "application/json",
           "X-Event": call.entry,
+          // The same on every try of this call, so a receiver that got it once can tell a repeat.
+          "Idempotency-Key": `${call.id}-${call.createdAt.getTime()}`,
           "X-Signature-256": `sha256=${createHmac("sha256", secret).update(call.body).digest("hex")}`,
         },
         call.body,
@@ -296,14 +298,28 @@ async function sendCalls(now: number): Promise<number> {
       done++;
     } catch (error) {
       const tries = call.tries + 1;
-      const why = error instanceof Error ? error.message : String(error);
+      // The hosted service's egress proxy (a hosted app): 407 is a credential from before the app
+      // started again and 429 the day's calls used up, both tried again soon; 403 is an address not
+      // connected yet, which waits for the owner.
+      const refused = proxyRefusal(error);
+      const why =
+        refused === 403
+          ? `The hosted service does not let the app call ${call.target}: connect its address on the project's Connections page.`
+          : refused === 429
+            ? "The app's calls for today are used up; tried again in ten minutes."
+            : refused === 407
+              ? "The app had started again; tried again in a minute."
+              : error instanceof Error
+                ? error.message
+                : String(error);
+      const pause = refused === 407 ? MINUTE : refused === 429 ? 10 * MINUTE : pauseAfter(tries);
       const late = now - call.createdAt.getTime() >= DAY;
       db.transaction((tx) => {
         tx.update(outgoingCall)
           .set(
             late
               ? { tries, status, error: why, failedAt: new Date() }
-              : { tries, status, error: why, nextAt: new Date(now + pauseAfter(tries)) },
+              : { tries, status, error: why, nextAt: new Date(now + pause) },
           )
           .where(eq(outgoingCall.id, call.id))
           .run();
