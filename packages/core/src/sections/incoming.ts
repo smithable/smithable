@@ -117,8 +117,8 @@ function readIncoming(
 ): IncomingIR | undefined {
   const where = `incoming "${name}"`;
   const known = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["create", "set", "custom", "signed", "header", "id", "as"],
-    later: ["run", "find", "mail"],
+    allowed: ["create", "set", "custom", "signed", "header", "id", "as", "mail", "fields"],
+    later: ["run", "find"],
   });
   const byKey = new Map<string, Entry>(known.map((e) => [e.key, e]));
   const text = (key: string) => {
@@ -183,6 +183,29 @@ function readIncoming(
       `"id" of ${where} is one {path} in the call's JSON, like "{event.id}".`,
     );
   const as = text("as") ?? "admin";
+  // A mail that becomes a record: which field each part of the mail goes to.
+  const mailEntry = byKey.get("mail");
+  const isMail =
+    mailEntry !== undefined && isScalar(mailEntry.value) && mailEntry.value.value === true;
+  if (mailEntry && !isMail)
+    ctx.error(mailEntry.value, "invalid-incoming", `"mail" of ${where} is true or left out.`);
+  let mail: IncomingIR["mail"];
+  const fieldsEntry = byKey.get("fields");
+  if (isMail) {
+    const model = models.find((m) => m.name === create);
+    if (!model)
+      ctx.error(
+        mailEntry?.value ?? keyNode,
+        "invalid-incoming",
+        `A mail ${where} needs "create: <Model>": the record each mail becomes.`,
+      );
+    else mail = readMailFields(ctx, fieldsEntry?.value ?? null, model, set, where);
+  } else if (fieldsEntry)
+    ctx.error(
+      fieldsEntry.value,
+      "invalid-incoming",
+      `"fields" of ${where} is for a mail ("mail: true").`,
+    );
   return {
     name,
     ...(create !== undefined ? { create } : {}),
@@ -192,7 +215,70 @@ function readIncoming(
     ...(header ? { header } : {}),
     ...(id ? { id } : {}),
     as,
+    ...(mail ? { mail } : {}),
   };
+}
+
+/** What kinds of field each part of a mail may go to. */
+const MAIL_PARTS: Record<string, string[]> = {
+  from: ["email", "string"],
+  subject: ["string", "text"],
+  body: ["text", "markdown", "string"],
+  attachments: ["files", "file"],
+};
+
+function readMailFields(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  model: ModelIR,
+  set: IncomingValueIR[],
+  where: string,
+): NonNullable<IncomingIR["mail"]> {
+  const mail: NonNullable<IncomingIR["mail"]> = {};
+  if (node === null) {
+    ctx.error(
+      null,
+      "invalid-incoming",
+      `A mail ${where} needs "fields": which field the sender, subject, body and attachments go to.`,
+    );
+    return mail;
+  }
+  for (const { key, keyNode, value } of mapEntries(ctx, node, `"fields" of ${where}`) ?? []) {
+    const kinds = MAIL_PARTS[key];
+    if (!kinds) {
+      ctx.error(
+        keyNode,
+        "invalid-incoming",
+        `"${key}" is no part of a mail: from, subject, body or attachments.`,
+      );
+      continue;
+    }
+    const name = isScalar(value) && typeof value.value === "string" ? value.value : undefined;
+    const field = model.fields.find((f) => f.name === name);
+    if (!field) {
+      ctx.error(value, "unknown-field", `${where}: ${model.name} has no field named "${name}".`);
+      continue;
+    }
+    const kind = field.type.kind === "scalar" ? field.type.name : field.type.kind;
+    if (!kinds.includes(kind)) {
+      ctx.error(
+        value,
+        "invalid-incoming",
+        `${where}: a mail's ${key} goes to a ${kinds.join(" or ")} field, and ${field.name} is a ${kind}.`,
+      );
+      continue;
+    }
+    if (set.some((v) => v.field === field.name)) {
+      ctx.error(
+        value,
+        "invalid-incoming",
+        `${where}: ${field.name} is in "set" too; give it one way.`,
+      );
+      continue;
+    }
+    mail[key as keyof typeof mail] = field.name;
+  }
+  return mail;
 }
 
 /** The values a set takes from the command line: field=value. */
@@ -213,6 +299,8 @@ const addIncoming: Operation<{
   custom?: boolean;
   signed?: boolean;
   as?: string;
+  mail?: boolean;
+  fields?: string[];
 }> = {
   name: "addIncoming",
   summary:
@@ -241,15 +329,27 @@ const addIncoming: Operation<{
         { ref: "role", label: "Acts as" },
         { description: "The role the call acts as (admin when not said)." },
       ),
+      mail: {
+        type: "boolean",
+        description: "The call is a mail that becomes a record (with --create and --fields).",
+      },
+      fields: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "For a mail: part=field pairs, e.g. from=email subject=title body=body attachments=files.",
+      },
     },
   },
   positional: ["name"],
-  describe: ({ name, create, custom }) =>
+  describe: ({ name, create, custom, mail }) =>
     custom
       ? `Add incoming call ${name} (handled by code)`
-      : `Add incoming call ${name} (adds ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()} per call)`,
+      : mail
+        ? `Add incoming mail ${name} (each mail becomes ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()})`
+        : `Add incoming call ${name} (adds ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()} per call)`,
   destructive: () => false,
-  apply({ spec }, { name, create, set, custom, signed, as }, ir) {
+  apply({ spec }, { name, create, set, custom, signed, as, mail, fields }, ir) {
     if (!FIELD_NAME_PATTERN.test(name)) throw new OperationError(nameRule("incoming", name));
     if (ir.incoming.some((i) => i.name === name))
       throw new OperationError(`There is an incoming call named "${name}" already.`);
@@ -257,8 +357,15 @@ const addIncoming: Operation<{
       throw new OperationError("Say --create <Model> or --custom, one of them.");
     if (create && !ir.models.some((m) => m.name === create))
       throw new OperationError(`There is no model named "${create}".`);
+    if (mail && !create)
+      throw new OperationError("A mail needs --create <Model>: the record each mail becomes.");
+    const values = setArgs(set);
     const value: Record<string, YamlValue> = {
-      ...(create ? { create, set: setArgs(set) } : { custom: true }),
+      ...(mail ? { mail: true } : {}),
+      ...(create
+        ? { create, ...(Object.keys(values).length || !mail ? { set: values } : {}) }
+        : { custom: true }),
+      ...(mail ? { fields: setArgs(fields) } : {}),
       ...(signed ? { signed: "sha256" } : {}),
       ...(as && as !== "admin" ? { as } : {}),
     };
@@ -293,12 +400,12 @@ const removeIncoming: Operation<{ name: string }> = {
  * model's name in the app's words comes from the caller.
  */
 export function incomingText(incoming: IncomingIR, one: (model: string) => string): string {
+  const thing = one(incoming.create ?? "");
   const what = incoming.custom
     ? "its code decides what happens"
-    : (() => {
-        const thing = one(incoming.create ?? "");
-        return `adds ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}`;
-      })();
+    : incoming.mail
+      ? `a mail becomes ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}${incoming.mail.attachments ? ", its attachments with it" : ""}`
+      : `adds ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}`;
   return `When ${humanize(incoming.name).toLowerCase()} is called: ${what}, as ${incoming.as}${incoming.signed ? "; the call is signed" : ""}.`;
 }
 
@@ -338,6 +445,24 @@ export const incomingSection: SpecSection<"incoming"> = {
           description: 'The call\'s own id, e.g. "{event.id}": a repeat is not acted on.',
         },
         as: { type: "string", description: "The role the call acts as (admin when not said)." },
+        mail: {
+          const: true,
+          description: "The call's body is a mail (from, to, subject, text, html, attachments).",
+        },
+        fields: {
+          type: "object",
+          description: "For a mail: the fields its parts go to.",
+          additionalProperties: false,
+          properties: {
+            from: { type: "string", description: "An email field for the sender." },
+            subject: { type: "string", description: "A text field for the subject." },
+            body: { type: "string", description: "A text or markdown field for the mail's text." },
+            attachments: {
+              type: "string",
+              description: "A file or files field for its attachments.",
+            },
+          },
+        },
       },
     },
   },

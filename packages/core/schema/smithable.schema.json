@@ -740,6 +740,33 @@
           "as": {
             "type": "string",
             "description": "The role the call acts as (admin when not said)."
+          },
+          "mail": {
+            "const": true,
+            "description": "The call's body is a mail (from, to, subject, text, html, attachments)."
+          },
+          "fields": {
+            "type": "object",
+            "description": "For a mail: the fields its parts go to.",
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "An email field for the sender."
+              },
+              "subject": {
+                "type": "string",
+                "description": "A text field for the subject."
+              },
+              "body": {
+                "type": "string",
+                "description": "A text or markdown field for the mail's text."
+              },
+              "attachments": {
+                "type": "string",
+                "description": "A file or files field for its attachments."
+              }
+            }
           }
         }
       }
