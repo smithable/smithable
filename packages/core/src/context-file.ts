@@ -5,6 +5,7 @@ import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { checkJson } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
+import { rejectYamlFeatures } from "./spec.js";
 
 const strings: JsonSchema = { type: "array", items: { type: "string" } };
 
@@ -85,6 +86,9 @@ export function validateContext(file: { path: string; text: string }): Diagnosti
   for (const error of doc.errors)
     ctx.errorAtOffset(error.pos[0], "yaml-syntax", error.message.split("\n")[0] ?? "");
   if (doc.errors.length) return ctx.diagnostics;
+  // An alias would make the file unreadable as data (one with no anchor throws): refused, as in the spec.
+  rejectYamlFeatures(ctx, doc);
+  if (ctx.diagnostics.length) return ctx.diagnostics;
   const keys = isMap(doc.contents) ? doc.contents.items : [];
   for (const problem of checkJson(CONTEXT_SCHEMA, doc.toJSON() ?? {}, "")) {
     const key = /^"?([^".[]+)/.exec(problem.replace(/^Unknown key /, ""))?.[1];
