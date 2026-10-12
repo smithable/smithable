@@ -243,6 +243,7 @@ export const w = {
   searchAction: "Sök",
   selectAll: "Välj alla",
   send: "Skicka",
+  sentTo: "Skickat till",
   sendAgain: "Skicka igen",
   sendInvitation: "Skicka inbjudan",
   sendMeACode: "Skicka mig en kod",
