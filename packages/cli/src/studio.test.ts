@@ -142,3 +142,24 @@ test("an edit of the same file right after the editor's last grows that change; 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("a request's body is refused past its limit, before it is read in full", async () => {
+  const { readJson, TooLarge } = await import("./studio.js");
+  async function* parts(...chunks: string[]) {
+    for (const c of chunks) yield Buffer.from(c);
+  }
+  expect(await readJson(parts('{"a":', "1}"), "6")).toEqual({ a: 1 });
+  expect(await readJson(parts(), undefined)).toEqual({});
+  // Its stated length alone is enough to refuse it.
+  await expect(readJson(parts("{}"), "21000000")).rejects.toBeInstanceOf(TooLarge);
+  // Without one, it stops once too much has come.
+  let read = 0;
+  async function* endless() {
+    for (;;) {
+      read++;
+      yield Buffer.alloc(1000, 32);
+    }
+  }
+  await expect(readJson(endless(), undefined, 10_000)).rejects.toBeInstanceOf(TooLarge);
+  expect(read).toBeLessThanOrEqual(11);
+});

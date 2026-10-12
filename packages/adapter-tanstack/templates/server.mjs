@@ -16,13 +16,42 @@ const HEADERS = {
   "Cross-Origin-Embedder-Policy": "require-corp",
 };
 
+const TRUST_PROXY = process.env.TRUST_PROXY === "1";
+
+/**
+ * A limit per address of `burst` changes, then one a second, for at most `size` addresses: one
+ * idle long enough to be full again is forgotten first, then the one seen longest ago, so many
+ * addresses cannot make the list grow without end.
+ */
+function rateLimiter(burst, size) {
+  const buckets = new Map();
+  return (address, now = Date.now() / 1000) => {
+    const bucket = buckets.get(address) ?? { tokens: burst, at: now };
+    bucket.tokens = Math.min(burst, bucket.tokens + (now - bucket.at));
+    bucket.at = now;
+    // The latest seen last, so the oldest are first in line to go.
+    buckets.delete(address);
+    buckets.set(address, bucket);
+    if (buckets.size > size) {
+      // Never the address being counted.
+      for (const [key, b] of buckets)
+        if (key !== address && b.tokens + (now - b.at) >= burst) buckets.delete(key);
+      for (const key of buckets.keys()) {
+        if (buckets.size <= size) break;
+        if (key !== address) buckets.delete(key);
+      }
+    }
+    if (bucket.tokens < 1) return false;
+    bucket.tokens -= 1;
+    return true;
+  };
+}
 /**
  * Changes (anything but GET and HEAD) per address: a burst of 60, then one a second. Enough
  * for anyone using the app, and a brake on a script filling a public form.
  */
-const BURST = 60;
-const TRUST_PROXY = process.env.TRUST_PROXY === "1";
-const buckets = new Map();
+const limited = rateLimiter(60, 10_000);
+
 function allowed(request) {
   if (request.method === "GET" || request.method === "HEAD") return true;
   // Only behind a proxy that says who the visitor is (TRUST_PROXY=1, e.g. the hosted service)
@@ -30,17 +59,7 @@ function allowed(request) {
   // else could send a new address with every request.
   const forwarded =
     TRUST_PROXY && request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  const address = forwarded || request.ip || "";
-  const now = Date.now() / 1000;
-  const bucket = buckets.get(address) ?? { tokens: BURST, at: now };
-  bucket.tokens = Math.min(BURST, bucket.tokens + (now - bucket.at));
-  bucket.at = now;
-  buckets.set(address, bucket);
-  if (buckets.size > 10_000)
-    for (const [key, b] of buckets) if (b.tokens >= BURST) buckets.delete(key);
-  if (bucket.tokens < 1) return false;
-  bucket.tokens -= 1;
-  return true;
+  return limited(forwarded || request.ip || "");
 }
 
 /**
