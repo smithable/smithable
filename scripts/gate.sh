@@ -25,6 +25,21 @@ set -u
 # copy that is replaced while gates run from it (it happened, and six gates died of a syntax
 # error) cannot change under them. Replace a copy with mv all the same, never by writing over it.
 {
+# Night hours, 23:30–07:00 in Stockholm (Johan, 2026-10-12: a quieter machine at night): a gate
+# started then runs itself again, once, on at most four cores at the lowest priority (systemd-run,
+# else nice). The runner's own service (SESSION=ci) is capped by its timer instead. GATE_CLOCK
+# (HHMM) stands for the time, for a test.
+if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ]; then
+  now=$((10#${GATE_CLOCK:-$(TZ=Europe/Stockholm date +%H%M)}))
+  if [ "$now" -ge 2330 ] || [ "$now" -lt 700 ]; then
+    export GATE_NIGHT_CAPPED=1
+    echo "gate.sh: night hours (23:30–07:00 Stockholm): this gate runs capped, on four cores at low priority."
+    if command -v systemd-run >/dev/null 2>&1 && systemd-run --user --scope --quiet true >/dev/null 2>&1; then
+      exec systemd-run --user --scope --quiet -p CPUQuota=400% -p CPUWeight=10 nice -n 19 "$0" "$@"
+    fi
+    exec nice -n 19 "$0" "$@"
+  fi
+fi
 home=${GATE_HOME:-$HOME/repos}
 lock=$home/.gate-lock
 queue=$home/.gate-queue
