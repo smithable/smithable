@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import fc from "fast-check";
 import { chromium } from "playwright";
 import { validateSpec } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
@@ -2217,6 +2218,176 @@ async function apiSecurityChecks(base, key) {
       // The incidents are all still there.
       const still = await (await call("/api/v1/incidents")).json();
       if (!still.total) throw new Error("the incidents are gone");
+    },
+  );
+  // Property-based (backlog A 63): random bodies, addresses and calls, as a careless or hostile
+  // program sends them. Each is answered (a refusal is fine, and so is being held to the write
+  // limit), never a server error, and no answer shows the app's insides. Last of the checks,
+  // since the bodies spend the key's writes.
+  await check(
+    "random bodies, queries and calls: a refusal or an answer, never a crash",
+    async () => {
+      // FC_RUNS sets the runs of each, to hunt locally; the gate's few dozen keep it quick.
+      const runs = (n) => ({ numRuns: Number(process.env.FC_RUNS ?? n) });
+      const inside = /at \w+ \(|node_modules|\.ts:\d+|\bstack\b/;
+      const answered = async (what, answer) => {
+        const text = await answer.text();
+        if (answer.status >= 500)
+          throw new Error(`${what} gave ${answer.status}: ${text.slice(0, 120)}`);
+        if (inside.test(text))
+          throw new Error(`${what} showed the app's insides: ${text.slice(0, 160)}`);
+      };
+      const odd = fc.oneof(
+        fc.jsonValue({ maxDepth: 3 }),
+        fc.constantFrom(
+          "",
+          " ",
+          "null",
+          "-1",
+          "1e999",
+          "NaN",
+          "{}",
+          "[]",
+          "' OR 1=1 --",
+          "\u0000",
+          "../../etc/passwd",
+          "x".repeat(5000),
+        ),
+      );
+      const incident = fc.dictionary(
+        fc.constantFrom(
+          "title",
+          "status",
+          "detectedAt",
+          "component",
+          "componentId",
+          "updates",
+          "id",
+          "__proto__",
+          "x",
+        ),
+        odd,
+        { maxKeys: 6 },
+      );
+      const body = fc.oneof(
+        incident.map((v) => JSON.stringify(v)),
+        odd.map((v) => JSON.stringify(v)),
+        fc.string({ maxLength: 200 }),
+      );
+      await fc.assert(
+        fc.asyncProperty(body, async (b) => {
+          await answered(
+            `POST ${b.slice(0, 40)}`,
+            await call("/api/v1/incidents", { method: "POST", body: b }),
+          );
+        }),
+        runs(40),
+      );
+      const id = fc.oneof(
+        fc.nat({ max: 20 }).map(String),
+        fc.constantFrom("0", "-1", "1.5", "abc", "%00", "..", "9".repeat(40)),
+      );
+      await fc.assert(
+        fc.asyncProperty(id, body, async (i, b) => {
+          const path = `/api/v1/incidents/${encodeURIComponent(i)}`;
+          await answered(
+            `PATCH ${i} ${b.slice(0, 30)}`,
+            await call(path, { method: "PATCH", body: b }),
+          );
+        }),
+        runs(25),
+      );
+      const query = fc.array(
+        fc.tuple(
+          fc.constantFrom(
+            "status",
+            "title",
+            "sort",
+            "page",
+            "limit",
+            "search",
+            "sum",
+            "detectedAt",
+            "title.contains",
+            "status[]",
+            "componentId",
+            "x",
+          ),
+          fc.oneof(
+            fc.string({ maxLength: 30 }),
+            fc.constantFrom(
+              "-title",
+              "title,-status",
+              "999999999999",
+              "-1",
+              "0",
+              "investigating | resolved",
+              "%",
+              "*",
+            ),
+          ),
+        ),
+        { maxLength: 5 },
+      );
+      await fc.assert(
+        fc.asyncProperty(query, async (q) => {
+          const params = new URLSearchParams(q).toString();
+          await answered(`GET ?${params.slice(0, 60)}`, await call(`/api/v1/incidents?${params}`));
+          await answered(
+            `GET csv ?${params.slice(0, 60)}`,
+            await call(`/api/v1/incidents.csv?${params}`),
+          );
+        }),
+        runs(40),
+      );
+      const rpcCall = fc.record(
+        {
+          jsonrpc: fc.constantFrom("2.0", "1.0", 2),
+          id: fc.oneof(fc.nat(), fc.string({ maxLength: 5 }), fc.constant(null)),
+          method: fc.constantFrom(
+            "initialize",
+            "ping",
+            "tools/list",
+            "tools/call",
+            "resources/list",
+            "x",
+          ),
+          params: fc.oneof(
+            fc.record({
+              name: fc.constantFrom(
+                "find",
+                "count",
+                "describe",
+                "get",
+                "add",
+                "change",
+                "act",
+                "x",
+              ),
+              arguments: fc.oneof(
+                fc.dictionary(
+                  fc.constantFrom("kind", "where", "id", "values", "action", "limit", "sort"),
+                  odd,
+                  { maxKeys: 4 },
+                ),
+                odd,
+              ),
+            }),
+            odd,
+          ),
+        },
+        { requiredKeys: ["method"] },
+      );
+      await fc.assert(
+        fc.asyncProperty(rpcCall, async (r) => {
+          const text = JSON.stringify(r);
+          await answered(
+            `/mcp ${text.slice(0, 60)}`,
+            await call("/mcp", { method: "POST", body: text }),
+          );
+        }),
+        runs(60),
+      );
     },
   );
 }
