@@ -108,3 +108,19 @@ export async function post(
     request.end(body);
   });
 }
+
+/**
+ * The egress proxy's refusal of a call, from the error fetch throws when the proxy will not open
+ * the tunnel ("Proxy response (403) !== 200 when HTTP Tunneling"): its status, or nothing.
+ */
+export function proxyRefusal(error: unknown): number | undefined {
+  let e: unknown = error;
+  for (let depth = 0; e && depth < 5; depth++) {
+    const found = /Proxy response \((\d{3})\)/.exec(
+      String((e as { message?: unknown }).message ?? ""),
+    );
+    if (found) return Number(found[1]);
+    e = (e as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
