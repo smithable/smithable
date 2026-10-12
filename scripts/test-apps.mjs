@@ -699,6 +699,13 @@ async function callFlow(dir, base, receiver) {
     await open(page, `${base}/team/activity?target=statusFeed`);
     if ((await page.getByLabel("Sent to").inputValue()) !== "statusFeed")
       throw new Error("Activity has no filter for the target");
+    // Whether deliveries work, at a glance: the last call's answer.
+    const summary = page.locator('[data-part="target-summary"]');
+    if (
+      !/Calls to statusFeed/.test(await summary.innerText()) ||
+      !/answered 204/.test(await summary.innerText())
+    )
+      throw new Error(`the summary says ${await summary.innerText()}`);
     const delivered = page.locator('[data-kit="activity-log"] [data-part="line"]');
     await delivered.filter({ hasText: "called" }).first().waitFor({ timeout: 10000 });
     if ((await delivered.filter({ hasText: /changed|created/ }).count()) > 0)
