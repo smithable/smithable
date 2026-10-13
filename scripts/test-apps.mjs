@@ -651,6 +651,8 @@ async function callReceiver() {
   const egress = `http://app:egress@127.0.0.1:${proxy.address().port}`;
   process.env.OUTGOING_STATUSFEED_URL = `http://receiver.test:${port}/hook`;
   process.env.OUTGOING_STATUSFEED_SECRET = secret;
+  // And the secret of the incoming call incomingFlow adds (integrations.md §3).
+  process.env.INCOMING_MONITORDOWN_SECRET = "incoming-secret";
   return {
     calls,
     tunnels,
@@ -666,6 +668,72 @@ async function callReceiver() {
       proxy.close();
     },
   };
+}
+
+/**
+ * An incoming call (integrations.md §3): a monitor posts to /incoming/monitorDown with the
+ * secret and an incident is added from its JSON; a wrong secret is refused; the same call again
+ * (its Idempotency-Key) adds nothing.
+ */
+async function incomingFlow(dir, base) {
+  try {
+    const added = smithable(
+      dir,
+      "op",
+      "addIncoming",
+      "monitorDown",
+      "--create",
+      "Incident",
+      "--set",
+      "title={check.name} is not responding",
+      "--set",
+      "status=investigating",
+      "--set",
+      "detectedAt=NOW()",
+      "--as",
+      "staff",
+    );
+    if (added.code !== 0) throw new Error(added.out);
+    const call = (secret, key) =>
+      fetch(`${base}/incoming/monitorDown`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${secret}`,
+          ...(key ? { "idempotency-key": key } : {}),
+        },
+        body: JSON.stringify({ check: { name: "Checkout API" } }),
+      });
+    // The dev server finds the new route a moment after the change.
+    let answer;
+    for (let i = 0; i < 60; i++) {
+      answer = await call("incoming-secret", "call-1");
+      if (answer.status !== 404) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (answer.status !== 201)
+      throw new Error(`the call answers ${answer.status}: ${await answer.text()}`);
+    const { id } = await answer.json();
+    const [row] = query(dir, `select title, status from incidents where id = ${Number(id)}`);
+    if (row?.title !== "Checkout API is not responding" || row?.status !== "investigating")
+      throw new Error(`the incident: ${JSON.stringify(row)}`);
+    if ((await call("wrong", "call-2")).status !== 401) throw new Error("a wrong secret was taken");
+    const again = await call("incoming-secret", "call-1");
+    if (again.status !== 200) throw new Error(`a repeat answers ${again.status}`);
+    const [{ n }] = query(
+      dir,
+      "select count(*) as n from incidents where title = 'Checkout API is not responding'",
+    );
+    if (n !== 1) throw new Error(`a repeat added an incident (${n})`);
+    console.log(
+      "  ✓ incoming call: a monitor's call with the secret adds an incident from its JSON; a wrong secret is refused; the same call again adds nothing",
+    );
+  } catch (error) {
+    console.log(`  ✗ incoming call: ${error.message.split("\n")[0]}`);
+    failures.push("incoming call");
+  } finally {
+    smithable(dir, "op", "removeIncoming", "monitorDown");
+  }
 }
 
 /**
@@ -5716,6 +5784,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);
+      if (receiver) await incomingFlow(dir, base);
       if (example === "api") await apiFlow(base);
       if (example === "api") await apiTrashFlow(base);
       if (example === "api") await askPanelFlow(dir, base);
@@ -5732,6 +5801,7 @@ test("the session cookie's name and attributes", async () => {
       receiver?.close();
       delete process.env.OUTGOING_STATUSFEED_URL;
       delete process.env.OUTGOING_STATUSFEED_SECRET;
+      delete process.env.INCOMING_MONITORDOWN_SECRET;
     }
     // The CRM's later steps work on its customers page as the starter has it.
     if (example === "crm")

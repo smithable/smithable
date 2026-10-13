@@ -52,6 +52,8 @@ export function namesFor(
     }
     case "outgoing":
       return ir.outgoing.map((o) => [o.name, humanize(o.name)]);
+    case "incoming":
+      return ir.incoming.map((i) => [i.name, humanize(i.name)]);
     case "section": {
       const page = ir.pages.find((p) => p.id === one(ref.page));
       return page?.pattern.kind === "landing"

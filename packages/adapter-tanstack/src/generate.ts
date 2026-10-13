@@ -33,6 +33,7 @@ import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { outgoingModule, outgoingOf } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
@@ -642,6 +643,17 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
             ],
       ),
+  },
+  {
+    key: "incoming",
+    // An address other services call; a custom one gets a stub to implement, once.
+    files: ({ ir, t }) =>
+      ir.incoming.flatMap((incoming) => [
+        generated(`src/routes/incoming/${incoming.name}.ts`, incomingRoute(incoming, ir, t)),
+        ...(incoming.custom
+          ? [custom(`src/custom/incoming/${kebab(incoming.name)}.ts`, incomingStub(incoming))]
+          : []),
+      ]),
   },
   {
     key: "queries",
