@@ -54,4 +54,4 @@ A first build from a Swedish description sets `language: sv` before the model an
 2. **`language` in the content file** (core): the key, its check against the kit's languages, the `pluralLabel` warning, the spec reference and the schema, `setLanguage` as an operation (a form in the Look tab is A's).
 3. **Swedish**: `sv.ts`, the booking starter's Swedish copy as a test app (`examples/booking-sv`? no: a test-apps variant that sets the language and the labels from a small file, so the starter itself stays English), the no-English check.
 4. **First builds**: a Swedish description makes `setLanguage sv` the draft's first operation; the reader leaves `en`. Done 2026-10-06.
-5. Later, each its own change: a second language when someone asks; several languages per app.
+5. Later, each its own change: a second language when someone asks; several languages per app: [languages.md](languages.md) (2026-10-13).
