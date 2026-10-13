@@ -20,6 +20,7 @@ None.
 - Outgoing calls to other services carry an `Idempotency-Key` header, the same on every try, so a receiver can tell a repeat. Behind the hosted service's egress proxy, a call to an address not yet connected says to connect it on the project's Connections page, and its retries go on (#568).
 - Activity can be filtered to one outgoing target ("Sent to"): its deliveries under "Calls to <target>", with Send again for a call given up (#569).
 - A new docs page, "Tell people and other systems", on outgoing mail and signed calls to other services (#570).
+- Mail and calls into an app: a new `incoming` section in `smithable.yml` gives an app addresses (`/incoming/<name>`) that other services call, each adding a record from the call's JSON as a chosen role, or handing it to the app's own code; the caller's secret is the setting `INCOMING_<NAME>_SECRET`, and a repeat (by `Idempotency-Key`) is not acted on twice (#541). With `mail: true`, each mail passed on becomes a record, its attachments kept and reviewed as uploads are (#543). The section is new, so existing apps are unchanged. The docs page "Mail and calls into your app" says how.
 
 ### Security
 
