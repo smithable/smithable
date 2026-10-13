@@ -3,9 +3,10 @@
 // sheet makes it), serves its preview with the editor's runtime and the lab on the next port,
 // and opens the lab. The lab computes a theme's CSS in the browser and posts it to its frames
 // (preview-editor.ts), so nothing is regenerated while a theme is made. Save writes the theme
-// through addTheme into the project, or as themes/<name>.yml into the current folder.
+// through addTheme into the project (--project, or the current folder when it is one), or as
+// themes/<name>.yml into a current folder that is no project, never over a file there.
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, extname, join, normalize, resolve } from "node:path";
@@ -91,7 +92,12 @@ export async function themeLab(
     io.err("The theme lab is not built: run `pnpm build` in the Smithable repository.\n");
     return 1;
   }
-  const project = options.project && resolve(options.project);
+  // The project a theme is saved into: the one named, or the current folder when it is one.
+  const project = options.project
+    ? resolve(options.project)
+    : existsSync(join(process.cwd(), "smithable.yml"))
+      ? process.cwd()
+      : undefined;
   if (project && !loadSpec(project, io).ir) return 1;
   // The app shown: one given (tests reuse theirs), or the sheet app made now.
   const app = options.app ? resolve(options.app) : await sheetApp(io);
@@ -115,7 +121,11 @@ export async function themeLab(
     { cwd: app, env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" } },
   );
   child.stderr?.on("data", (d) => io.err(String(d)));
-  const stop = () => child.kill();
+  // The sheet app made for this run goes with it.
+  const stop = () => {
+    child.kill();
+    if (!options.app) rmSync(join(app, ".."), { recursive: true, force: true });
+  };
   process.on("exit", stop);
   // The lab opens once the app answers (its first page compiles on the first request).
   for (let waited = 0; ; waited += 500) {
@@ -177,6 +187,10 @@ export async function themeLab(
           code === 0 ? { saved: `themes/${name}.yml` } : { error: said.join("") },
         );
       }
+      if (existsSync(join(target, "themes", `${name}.yml`)))
+        return json(409, {
+          error: `There is already themes/${name}.yml here: give it another name.`,
+        });
       mkdirSync(join(target, "themes"), { recursive: true });
       writeFileSync(join(target, "themes", `${name}.yml`), text);
       return json(200, { saved: join(target, "themes", `${name}.yml`) });

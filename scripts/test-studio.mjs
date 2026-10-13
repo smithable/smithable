@@ -2391,7 +2391,16 @@ if (!failed) {
         // The frames open once the app has signed the lab in; the landing page in light first.
         const frame = labPage.frameLocator('[data-frame="Landing-light"]');
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 });
-        await labPage.getByLabel("Headings", { exact: true }).selectOption("Fraunces");
+        // Signed in (no sign-in form in the list), and the record frame shows a record.
+        const list = labPage.frameLocator('[data-frame="List-light"]');
+        await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        if (await list.getByText(/^Sign in to /).count())
+          throw new Error("the lab's frames are not signed in");
+        const record = labPage.frameLocator('[data-frame="Record-light"]');
+        await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        if (await record.getByText("does not exist, or you cannot see it").count())
+          throw new Error("the record frame shows no record");
+        await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
         const sheet = frame.locator("style#sm-theme");
         for (
           let i = 0;

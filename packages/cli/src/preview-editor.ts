@@ -105,6 +105,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     document.head.append(sheet);
     // A frame shown in one mode (the theme lab's light and dark frames): every rule for the dark
     // color scheme then always applies, or never, whatever the visitor's own setting.
+    // A rule that pairs the scheme with another condition (a width) loses that condition: the
+    // kit has none.
     if (event.data.mode === "light" || event.data.mode === "dark") {
       scheme = event.data.mode;
       applyScheme();

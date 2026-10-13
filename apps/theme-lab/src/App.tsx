@@ -139,7 +139,8 @@ export function App() {
           </select>
         </label>
         <label>
-          Name <input value={name} onChange={(e) => set(["name"], e.target.value)} />
+          Name{" "}
+          <input aria-label="Name" value={name} onChange={(e) => set(["name"], e.target.value)} />
         </label>
         <label>
           <input
@@ -245,7 +246,7 @@ function Controls({
   const choice = (label: string, path: string[], value: string, values: readonly string[]) => (
     <label key={path.join(".")}>
       {label}
-      <select value={value} onChange={(e) => set(path, e.target.value)}>
+      <select aria-label={label} value={value} onChange={(e) => set(path, e.target.value)}>
         {values.map((v) => (
           <option key={v}>{v}</option>
         ))}
@@ -267,6 +268,15 @@ function Controls({
     (theme.style.headingFont ?? theme.font) as keyof typeof FONT_WEIGHTS
   ] ?? [100, 900];
   const inRange = (w: number) => w >= lightest && w <= heaviest;
+  // A new font for the headings: a weight it lacks moves to the nearest it has.
+  const font = (which: "body" | "heading", name: string | undefined) => {
+    set(["fonts", which], name);
+    const heading = which === "heading" ? (name ?? theme.font) : (theme.style.headingFont ?? name);
+    const [low, high] = FONT_WEIGHTS[heading as keyof typeof FONT_WEIGHTS] ?? [100, 900];
+    const weight = theme.style.headings.weight;
+    if (weight < low || weight > high)
+      set(["headings", "weight"], Math.min(Math.max(weight, low), Math.min(high, 800)));
+  };
   const shadow = Object.entries(SHADOWS).find(([, css]) => css === theme.shadow)?.[0] ?? "none";
   return (
     <>
@@ -279,12 +289,24 @@ function Controls({
       </fieldset>
       <fieldset>
         <legend>Fonts</legend>
-        {choice("Body", ["fonts", "body"], theme.font, FONTS)}
+        <label>
+          Body
+          <select
+            aria-label="Body font"
+            value={theme.font}
+            onChange={(e) => font("body", e.target.value)}
+          >
+            {FONTS.map((f) => (
+              <option key={f}>{f}</option>
+            ))}
+          </select>
+        </label>
         <label>
           Headings
           <select
+            aria-label="Heading font"
             value={theme.style.headingFont ?? ""}
-            onChange={(e) => set(["fonts", "heading"], e.target.value || undefined)}
+            onChange={(e) => font("heading", e.target.value || undefined)}
           >
             <option value="">the body font</option>
             {FONTS.map((f) => (
@@ -300,6 +322,7 @@ function Controls({
             <label>
               weight
               <select
+                aria-label="Heading weight"
                 value={theme.style.headings.weight}
                 onChange={(e) => set(["headings", "weight"], Number(e.target.value))}
               >
