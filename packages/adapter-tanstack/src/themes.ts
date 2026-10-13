@@ -188,6 +188,8 @@ ${block(tokens(from, theme, "light"), "  ")}
   --motion-slow: ${motion.slow};
   --motion-ease: ${motion.ease};
   --motion-distance: ${motion.distance};
+  --landing-motion: ${from.theme.motion === "lively" ? "kit-rise" : "none"};
+  --hero-motion: ${from.theme.motion === "lively" ? "kit-settle" : "none"};
 ${block(styleVariables(theme, font), "  ")}
 ${HOVER.light}
 }`,
@@ -224,6 +226,8 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 

@@ -8543,6 +8543,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -8580,6 +8582,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -9049,8 +9053,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "9b327b8e generated",
   "src/routes/team/index.tsx": "59b3387f generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -18532,6 +18536,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -18569,6 +18575,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -19037,7 +19045,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "c4de281d kit",
+  "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
@@ -19137,8 +19145,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "785d6529 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -24190,6 +24198,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -24227,6 +24237,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -24643,8 +24655,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "184b5fba generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -30849,6 +30861,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -30886,6 +30900,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -31314,7 +31330,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "c4de281d kit",
+  "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -31383,8 +31399,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "59eccf55 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -35113,6 +35129,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -35150,6 +35168,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -35514,7 +35534,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "c4de281d kit",
+  "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -35579,8 +35599,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "33f3da1c generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -38076,6 +38096,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -38113,6 +38135,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -38422,7 +38446,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "c4de281d kit",
+  "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -38470,8 +38494,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -48043,6 +48067,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --landing-motion: none;
+  --hero-motion: none;
   --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -48080,6 +48106,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     --motion-fast: 0ms;
     --motion-slow: 0ms;
     --motion-distance: 0px;
+    --landing-motion: none;
+    --hero-motion: none;
   }
 }
 
@@ -48521,7 +48549,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "a0e6091b kit",
-  "src/kit/Landing.tsx": "c4de281d kit",
+  "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
@@ -48598,8 +48626,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "40f4b24a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "8334a849 kit",
-  "src/theme.css": "eed7ee20 generated",
+  "src/styles.css": "19116c27 kit",
+  "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

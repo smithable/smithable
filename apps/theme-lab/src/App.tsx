@@ -26,6 +26,15 @@ interface Start {
   target: string;
 }
 
+/** What each motion setting moves, beside its control; "Show the motion" plays it. */
+const MOTION_NOTES = {
+  none: "Nothing moves: notices, rows, dialogs and pages appear at once.",
+  subtle:
+    "Notices, new rows and dialogs ease in, under a fifth of a second; the landing page stays still.",
+  lively:
+    "As subtle with a little bounce, and the landing page's sections rise into view as they scroll in; the hero's picture settles once.",
+};
+
 const SIZES = {
   desktop: { width: 1280, height: 820, scale: 0.42 },
   phone: { width: 390, height: 780, scale: 0.6 },
@@ -67,6 +76,9 @@ export function App() {
 
   // Every frame gets the CSS when it changes, and a frame that (re)loads gets it when it is ready.
   const frames = useRef(new Set<HTMLIFrameElement>());
+  // "Show the motion" reloads the landing frames, which then scroll through once.
+  const [replay, setReplay] = useState(0);
+  const touring = useRef(false);
   const origin = start && new URL(start.preview).origin;
   useEffect(() => {
     if (!css || !origin) return;
@@ -87,6 +99,8 @@ export function App() {
         if (frame?.dataset.signIn !== undefined)
           from.postMessage({ type: "smithable:dev-sign-in", role: "admin" }, origin);
         if (css) from.postMessage({ type: "smithable:theme-css", css, mode }, origin);
+        if (touring.current && frame?.dataset.frame?.startsWith("Landing"))
+          from.postMessage({ type: "smithable:motion-tour" }, origin);
         // Asked for its place, the page says where it is (and from then on, each move).
         from.postMessage({ type: "smithable:select-mode", on: false }, origin);
       }
@@ -161,6 +175,16 @@ export function App() {
           <input type="checkbox" checked={grey} onChange={(e) => setGrey(e.target.checked)} />{" "}
           Greyscale
         </label>
+        <button
+          type="button"
+          disabled={!signedIn}
+          onClick={() => {
+            touring.current = true;
+            setReplay((n) => n + 1);
+          }}
+        >
+          Show the motion
+        </button>
         <button type="button" disabled={!theme || errors.length > 0} onClick={save}>
           Save{start && (start.project ? " to the project" : ` to ${start.target}/themes`)}
         </button>
@@ -186,7 +210,10 @@ export function App() {
             signedIn &&
             start.frames.flatMap((f) =>
               (["light", "dark"] as const).map((mode) => (
-                <figure key={`${f.path}-${mode}`} style={{ width: width * scale }}>
+                <figure
+                  key={`${f.path}-${mode}-${f.label === "Landing" ? replay : 0}`}
+                  style={{ width: width * scale }}
+                >
                   <figcaption>
                     {f.label}, {mode}
                   </figcaption>
@@ -358,6 +385,9 @@ function Controls({
         {choice("shadow", ["shadow"], shadow, Object.keys(SHADOWS))}
         {choice("density", ["density"], theme.density, ["comfortable", "compact"])}
         {choice("motion", ["motion"], theme.motion, ["none", "subtle", "lively"])}
+        <p className="hint" data-motion-note>
+          {MOTION_NOTES[theme.motion]}
+        </p>
         <label>
           chroma
           <input

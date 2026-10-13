@@ -13,8 +13,11 @@ function page() {
   const listeners: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
   const parent = { postMessage() {} };
+  const scrolled: number[] = [];
   const window = {
     parent,
+    innerHeight: 800,
+    scrollTo: (_x: number, y: number) => scrolled.push(y),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "message" && listeners.push(listener),
   };
@@ -31,7 +34,7 @@ function page() {
     querySelectorAll: (selector: string) => (selector === "[data-dev-role]" ? buttons : []),
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
-    documentElement: { toggleAttribute() {} },
+    documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
     readyState: "loading",
   };
   const noop = () => 0;
@@ -66,6 +69,7 @@ function page() {
     head,
     darkRule,
     clicked,
+    scrolled,
   };
 }
 
@@ -106,4 +110,12 @@ test("the lab signs in through the development sign-in's button for the role it 
   expect(clicked).toEqual([]);
   send({ type: "smithable:dev-sign-in", role: "admin" });
   expect(clicked).toEqual(["admin"]);
+});
+
+test("asked by the lab, the page starts scrolling through, so its motion plays", () => {
+  const { send, scrolled } = page();
+  send({ type: "smithable:motion-tour" }, "https://example.com");
+  expect(scrolled).toEqual([]);
+  send({ type: "smithable:motion-tour" });
+  expect(scrolled).toHaveLength(1);
 });

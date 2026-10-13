@@ -71,3 +71,12 @@ test("the theme's motion is a few variables, all 0 for a visitor who asks for le
     /@media \(prefers-reduced-motion: reduce\) \{\s*:root \{\s*--motion-fast: 0ms;\s*--motion-slow: 0ms;\s*--motion-distance: 0px;/,
   );
 });
+
+test("only lively motion moves a landing page: its sections rise into view and the hero settles", () => {
+  const css = (motion: "none" | "subtle" | "lively") =>
+    themeCss({ ...emptyUx(), theme: { ...emptyUx().theme, motion } });
+  expect(css("lively")).toContain("--landing-motion: kit-rise;");
+  expect(css("lively")).toContain("--hero-motion: kit-settle;");
+  expect(css("subtle")).toContain("--landing-motion: none;");
+  expect(css("lively")).toMatch(/prefers-reduced-motion: reduce[^}]*--landing-motion: none;/);
+});

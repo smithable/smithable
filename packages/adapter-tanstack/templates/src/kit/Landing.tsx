@@ -399,6 +399,7 @@ export function Hero({
     return (
       <section
         {...sectionHooks(texts)}
+        data-hero=""
         className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}
       >
         {text}
@@ -413,7 +414,7 @@ export function Hero({
   if (layout === "cover")
     return (
       <>
-        <section {...sectionHooks(texts)} className="relative isolate overflow-hidden">
+        <section {...sectionHooks(texts)} data-hero="" className="relative isolate overflow-hidden">
           <img
             src={image.src}
             alt={image.alt}
@@ -455,7 +456,7 @@ export function Hero({
   // Over the picture: a dark veil keeps the text readable on any picture.
   if (layout === "centered")
     return framed(
-      <section {...sectionHooks(texts)} className="relative isolate overflow-hidden">
+      <section {...sectionHooks(texts)} data-hero="" className="relative isolate overflow-hidden">
         <img
           src={image.src}
           alt={image.alt}
@@ -481,6 +482,7 @@ export function Hero({
   return framed(
     <section
       {...sectionHooks(texts)}
+      data-hero=""
       className={cn(
         "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",
         shortcutList && "pb-20 sm:pb-28",
