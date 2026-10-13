@@ -50,6 +50,8 @@ describe("parseFieldShorthand", () => {
 
   test.each([
     ["strng", "unknown-type", 'Did you mean "string"?'],
+    ["file[]", "unknown-type", 'Did you mean "files"?'],
+    ["picture[]", "unknown-type", 'Did you mean "pictures"?'],
     ["", "invalid-field", undefined],
     ["string required", "invalid-field", undefined],
     ["string uniqe", "invalid-field", 'Did you mean "unique"?'],
