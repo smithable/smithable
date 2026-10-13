@@ -46,9 +46,14 @@ test("a theme's style is one variable per field; the presets read as before by t
   expect(root(css("playful"), "card-border")).toBe("0");
   expect(root(css("playful"), "button-radius")).toBe("9999px");
   expect(root(css("corporate"), "table-numbers")).toBe("tabular-nums");
+  // A serif face falls back to a serif.
+  expect(root(css("restaurant"), "font-heading")).toMatch(
+    /^"Fraunces Variable", ui-serif,.* serif$/,
+  );
   // Street food: capitals tracked wide, its heading font imported beside the body's.
   const street = css("street-food");
   expect(root(street, "heading-case")).toBe("uppercase");
+  expect(root(street, "section-gap")).toBe("1.5rem");
   expect(root(street, "heading-tracking")).toBe("0.05em");
   expect(root(street, "font-heading")).toContain("Archivo Narrow Variable");
   expect(street).toContain('@import "@fontsource-variable/archivo-narrow";');

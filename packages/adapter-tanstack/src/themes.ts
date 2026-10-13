@@ -122,11 +122,16 @@ const DIVIDER = {
 };
 const BUTTON_RADIUS = { rounded: "calc(var(--radius) - 2px)", pill: "9999px", square: "0" };
 
+/** A font and what stands in for it before it loads: a serif face falls back to a serif. */
+const SERIFS = ["Fraunces", "Source Serif 4"];
+const fontStack = (font: string) =>
+  SERIFS.includes(font)
+    ? `"${font} Variable", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`
+    : `"${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+
 function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string> {
   const { style } = theme;
   const s = style.surfaces;
-  const fontStack = (font: string) =>
-    `"${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
   return {
     "font-heading": fontStack(style.headingFont ?? bodyFont),
     "heading-weight": String(style.headings.weight),
@@ -140,6 +145,7 @@ function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string
     // A page's sections: open, or each in a box of the card's color.
     "section-background": s.sections === "boxed" ? "var(--card)" : "transparent",
     "section-border": s.sections === "boxed" ? "1px" : "0",
+    "section-gap": s.sections === "boxed" ? "1.5rem" : "0",
     divider: DIVIDER[s.dividers],
     "button-radius": BUTTON_RADIUS[style.buttons.shape],
     "button-weight": style.buttons.weight === "bold" ? "700" : "600",
@@ -173,7 +179,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
       light: `${selector} {
 ${block(tokens(from, theme, "light"), "  ")}
   --radius: ${theme.radius};
-  --font-body: "${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: ${fontStack(font)};
   --control-height: ${density.control};
   --row-height: ${density.row};
   --cell-padding: ${density.cell};

@@ -354,7 +354,7 @@ export function PageHeader({
       <div className="min-w-0">
         <h1
           data-part="title"
-          className="break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
+          className="break-words text-[28px] leading-9 font-bold [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
           {...(page ? textMarker(`pages.${page}.title`) : {})}
         >
           {title}

@@ -286,12 +286,12 @@ export function Section({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
-      className="mx-auto max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
+      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
     >
       {title && (
         <h2
           id={`${id}-title`}
-          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[calc(2rem*var(--heading-scale))]"
+          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
           {...mark(texts, "title")}
         >
           {title}
@@ -377,7 +377,7 @@ export function Hero({
   const text = (
     <div>
       <h1
-        className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
+        className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
         {...mark(texts, "title")}
       >
         {title}
@@ -949,11 +949,11 @@ export function CallToAction({
   return (
     <section
       {...sectionHooks(texts)}
-      className="mx-auto max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
+      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
     >
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
         <h2
-          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[calc(2rem*var(--heading-scale))]"
+          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
           {...mark(texts, "title")}
         >
           {title}

@@ -259,7 +259,7 @@ fonts:
 radius: 0px
 shadow: none
 headings:
-  weight: 800
+  weight: 700
   tracking: wide
   scale: large
   case: upper

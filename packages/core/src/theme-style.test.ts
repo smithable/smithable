@@ -86,7 +86,7 @@ test("the theme lab's three styles (§6) read with their fields, and none has an
   });
   expect(theme("street-food")?.style).toMatchObject({
     headingFont: "Archivo Narrow",
-    headings: { weight: 800, tracking: "wide", case: "upper" },
+    headings: { weight: 700, tracking: "wide", case: "upper" },
     surfaces: { sections: "boxed", dividers: "strong" },
   });
   expect(theme("cafe")?.style).toMatchObject({
