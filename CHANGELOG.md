@@ -8,7 +8,7 @@ One section per release of the `smithable` packages. Each section has a **Breaki
 
 The entries are filled in from the merged pull requests at each release.
 
-## 0.1.1 (2026-10-12)
+## 0.1.1 (2026-10-13)
 
 ### Breaking
 
