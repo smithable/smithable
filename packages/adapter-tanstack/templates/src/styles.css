@@ -105,9 +105,21 @@
   ::view-transition-new(root) {
     animation-duration: var(--motion-slow);
   }
-  /* A preset may set tables' numbers in even columns (corporate does). */
+  /* The theme's style layer (themes.ts): the headings' font (their case only on the landing page's
+     and the frame's titles, never on a record's name), the tables' numbers and rows. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading, inherit);
+  }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);
+  }
+  [data-kit="model-table"] tbody tr {
+    border-color: var(--row-divider, var(--border));
+  }
+  [data-kit="model-table"] tbody tr:nth-child(even) {
+    background-color: var(--row-stripe, transparent);
   }
 }
 

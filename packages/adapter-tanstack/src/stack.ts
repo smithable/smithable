@@ -27,11 +27,18 @@ export const STACK_PROFILE = {
   },
   /** For Markdown fields (MIT). In every app, like the fonts: see packageJson in generate.ts. */
   markdown: { "react-markdown": "10.1.0" },
-  /** Self-hosted fonts (OFL): every app has the three, and imports the one its theme uses. */
+  /**
+   * Self-hosted fonts, every one under the SIL Open Font License 1.1 (OFL-1.1): every app has
+   * the seven, and imports the ones its theme uses (body and headings).
+   */
   fonts: {
-    "@fontsource-variable/inter": "5.3.0",
-    "@fontsource-variable/nunito-sans": "5.3.0",
-    "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/inter": "5.3.0", // OFL-1.1, Rasmus Andersson
+    "@fontsource-variable/nunito-sans": "5.3.0", // OFL-1.1, Vernon Adams, Jacques Le Bailly
+    "@fontsource-variable/source-sans-3": "5.3.1", // OFL-1.1, Adobe
+    "@fontsource-variable/source-serif-4": "5.3.1", // OFL-1.1, Adobe
+    "@fontsource-variable/fraunces": "5.3.0", // OFL-1.1, Undercase Type
+    "@fontsource-variable/archivo-narrow": "5.3.0", // OFL-1.1, Omnibus-Type
+    "@fontsource-variable/dm-sans": "5.3.0", // OFL-1.1, Colophon Foundry
   },
   /**
    * Security fixes for dependencies of dependencies, kept in the project's pnpm-workspace.yaml

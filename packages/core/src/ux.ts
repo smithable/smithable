@@ -202,7 +202,7 @@ export function pageIcon(ux: UxIR, page: PageIR): Icon {
   const model = manages() ?? "";
   return ICON_WORDS.find(([words]) => words.test(model))?.[1] ?? "list";
 }
-/** The built-in themes' names: the design delivery's four, then the theme library's nine. */
+/** The built-in themes' names: the design delivery's four, then the theme library's nine and the theme lab's three. */
 export const THEME_PRESETS = [
   "modern",
   "minimal",
@@ -217,6 +217,9 @@ export const THEME_PRESETS = [
   "pastel",
   "midnight",
   "craft",
+  "restaurant",
+  "street-food",
+  "cafe",
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 

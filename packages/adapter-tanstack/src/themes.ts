@@ -40,6 +40,10 @@ export const FONT_PACKAGES: Record<string, string> = {
   Inter: "@fontsource-variable/inter",
   "Nunito Sans": "@fontsource-variable/nunito-sans",
   "Source Sans 3": "@fontsource-variable/source-sans-3",
+  "Source Serif 4": "@fontsource-variable/source-serif-4",
+  Fraunces: "@fontsource-variable/fraunces",
+  "Archivo Narrow": "@fontsource-variable/archivo-narrow",
+  "DM Sans": "@fontsource-variable/dm-sans",
 };
 
 /** The theme the ux file names, among the built-ins and the project's own. */
@@ -89,64 +93,76 @@ const themedPages = (ux: UxIR) =>
     .filter(([, p]) => p.theme && Object.keys(p.theme).length)
     .map(([id]) => id);
 
-/** Every font the app shows: the app's, and its landing pages' own. */
+/** Every font the app shows: the app's and its landing pages' own, body and headings. */
 export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] {
   return [
-    ...new Set([
-      themeFont(ux, themes),
-      ...themedPages(ux).map((id) => themeFont(pageUx(ux, id), themes)),
-    ]),
+    ...new Set(
+      [ux, ...themedPages(ux).map((id) => pageUx(ux, id))].flatMap((u) => [
+        themeFont(u, themes),
+        themeOf(u, themes).style.headingFont ?? themeFont(u, themes),
+      ]),
+    ),
   ];
 }
 
 /**
- * The rest of each built-in preset's shape, beside its font, radius and shadow, so the four read
- * as four at a glance: headings, card borders, buttons and table numbers. A project's own theme
- * has the modern shape.
+ * A theme's style layer (docs/design/theme-lab.md §2) as CSS variables the kit reads, one field
+ * at a time; no component knows a theme's name. The defaults are the modern shape, so every
+ * theme renders as before, with two small differences Fable accepted (2026-10-13): corporate's
+ * headings, tracked 0 before, are "normal" now (-0.01em, below what anyone sees), and minimal's
+ * card edge is var(--border) where it was var(--muted).
  */
-interface Shape {
-  weight: number;
-  tracking: string;
-  border: string;
-  borderColor: string;
-  button: string;
-  numbers: string;
-}
-const ROUNDED = "calc(var(--radius) - 2px)";
-const SHAPES: Record<string, Shape> = {
-  modern: {
-    weight: 700,
-    tracking: "-0.02em",
-    border: "1px",
-    borderColor: "var(--border)",
-    button: ROUNDED,
-    numbers: "normal",
-  },
-  minimal: {
-    weight: 600,
-    tracking: "-0.01em",
-    border: "1px",
-    borderColor: "var(--muted)",
-    button: ROUNDED,
-    numbers: "normal",
-  },
-  playful: {
-    weight: 800,
-    tracking: "-0.01em",
-    border: "0",
-    borderColor: "transparent",
-    button: "9999px",
-    numbers: "normal",
-  },
-  corporate: {
-    weight: 600,
-    tracking: "0",
-    border: "1px",
-    borderColor: "var(--border)",
-    button: ROUNDED,
-    numbers: "tabular-nums",
-  },
+const TRACKING = { tight: "-0.02em", normal: "-0.01em", wide: "0.05em" };
+/** The size of a page title and a section title against today's (regular). */
+const SCALE = { small: "0.875", regular: "1", large: "1.2" };
+const DIVIDER = {
+  light: "var(--border)",
+  strong: "color-mix(in oklch, var(--foreground) 35%, transparent)",
+  none: "transparent",
 };
+const BUTTON_RADIUS = { rounded: "calc(var(--radius) - 2px)", pill: "9999px", square: "0" };
+
+/** A font and what stands in for it before it loads: a serif face falls back to a serif. */
+const SERIFS = ["Fraunces", "Source Serif 4"];
+const fontStack = (font: string) =>
+  SERIFS.includes(font)
+    ? `"${font} Variable", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`
+    : `"${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+
+function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string> {
+  const { style } = theme;
+  const s = style.surfaces;
+  return {
+    "font-heading": fontStack(style.headingFont ?? bodyFont),
+    "heading-weight": String(style.headings.weight),
+    "heading-tracking": TRACKING[style.headings.tracking],
+    "heading-scale": SCALE[style.headings.scale],
+    "heading-case": style.headings.case === "upper" ? "uppercase" : "none",
+    // A card: a border (bordered), the theme's shadow alone (raised), or neither (flat).
+    "card-shadow": s.cards === "flat" ? "none" : theme.shadow,
+    "card-border": s.cards === "bordered" ? "1px" : "0",
+    "card-border-color": s.cards === "bordered" ? "var(--border)" : "transparent",
+    // A page's sections: open, or each in a box of the card's color.
+    "section-background": s.sections === "boxed" ? "var(--card)" : "transparent",
+    "section-border": s.sections === "boxed" ? "1px" : "0",
+    "section-gap": s.sections === "boxed" ? "1.5rem" : "0",
+    divider: DIVIDER[s.dividers],
+    "button-radius": BUTTON_RADIUS[style.buttons.shape],
+    "button-weight": style.buttons.weight === "bold" ? "700" : "600",
+    // "theme" leaves each picture its own rounding (initial: the kit's fallback applies).
+    "picture-radius":
+      style.pictures.corners === "square"
+        ? "0"
+        : style.pictures.corners === "round"
+          ? "9999px"
+          : "initial",
+    "picture-frame": style.pictures.frame === "border" ? "1px" : "0",
+    "table-numbers": style.tables.numbers === "tabular" ? "tabular-nums" : "normal",
+    // Rows: a line between them (lined), every other one shaded (zebra), or neither (plain).
+    "row-divider": style.tables.rows === "lined" ? "var(--divider)" : "transparent",
+    "row-stripe": style.tables.rows === "zebra" ? "var(--muted)" : "transparent",
+  };
+}
 
 export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
   const block = (values: Record<string, string>, indent: string) =>
@@ -159,13 +175,11 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     const font = themeFont(from, themes);
     const density = DENSITY[from.theme.density];
     const motion = MOTION[from.theme.motion];
-    const shape = SHAPES[theme.name] ?? (SHAPES.modern as Shape);
     return {
       light: `${selector} {
 ${block(tokens(from, theme, "light"), "  ")}
   --radius: ${theme.radius};
-  --card-shadow: ${theme.shadow};
-  --font-body: "${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: ${fontStack(font)};
   --control-height: ${density.control};
   --row-height: ${density.row};
   --cell-padding: ${density.cell};
@@ -174,12 +188,7 @@ ${block(tokens(from, theme, "light"), "  ")}
   --motion-slow: ${motion.slow};
   --motion-ease: ${motion.ease};
   --motion-distance: ${motion.distance};
-  --heading-weight: ${shape.weight};
-  --heading-tracking: ${shape.tracking};
-  --card-border: ${shape.border};
-  --card-border-color: ${shape.borderColor};
-  --button-radius: ${shape.button};
-  --table-numbers: ${shape.numbers};
+${block(styleVariables(theme, font), "  ")}
 ${HOVER.light}
 }`,
       dark: `  ${selector} {
@@ -195,9 +204,7 @@ ${HOVER.dark}
     id,
     ...scope(`[data-page="${id}"]`, pageUx(ux, id)),
   }));
-  // A font a theme names before its package is pinned (theme-lab.md step 2) falls back to the system's.
   return `${HEADER}${themeFonts(ux, themes)
-    .filter((font) => font in FONT_PACKAGES)
     .map((font) => `@import "${FONT_PACKAGES[font]}";`)
     .join("\n")}
 

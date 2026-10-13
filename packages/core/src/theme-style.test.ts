@@ -74,10 +74,30 @@ test("the four presets carry their shapes as data", () => {
     tables: { numbers: "tabular" },
   });
   // The library's nine have the default shape, as before.
-  for (const t of BUILT_IN_THEMES.filter(
-    (t) => !["modern", "minimal", "playful", "corporate"].includes(t.name),
-  ))
-    expect(t.style, t.name).toEqual(DEFAULT_STYLE);
+  for (const t of BUILT_IN_THEMES.slice(4, 13)) expect(t.style, t.name).toEqual(DEFAULT_STYLE);
+});
+
+test("the theme lab's three styles (§6) read with their fields, and none has an avoid", () => {
+  const theme = (name: string) => BUILT_IN_THEMES.find((t) => t.name === name);
+  expect(theme("restaurant")?.style).toMatchObject({
+    headingFont: "Fraunces",
+    headings: { weight: 600, scale: "large" },
+    surfaces: { cards: "flat" },
+  });
+  expect(theme("street-food")?.style).toMatchObject({
+    headingFont: "Archivo Narrow",
+    headings: { weight: 700, tracking: "wide", case: "upper" },
+    surfaces: { sections: "boxed", dividers: "strong" },
+  });
+  expect(theme("cafe")?.style).toMatchObject({
+    surfaces: { cards: "raised", dividers: "none" },
+    buttons: { shape: "pill" },
+  });
+  for (const name of ["restaurant", "street-food", "cafe"])
+    expect(
+      themeFit(theme(name) as never).filter((f) => f.verdict === "avoid"),
+      name,
+    ).toEqual([]);
 });
 
 test("the fit lines: fine, a note or avoid, each with its sentence", () => {

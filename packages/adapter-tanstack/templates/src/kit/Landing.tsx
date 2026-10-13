@@ -286,12 +286,12 @@ export function Section({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
-      className="mx-auto max-w-6xl px-5 py-12"
+      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
     >
       {title && (
         <h2
           id={`${id}-title`}
-          className="text-2xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[2rem]"
+          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
           {...mark(texts, "title")}
         >
           {title}
@@ -377,7 +377,7 @@ export function Hero({
   const text = (
     <div>
       <h1
-        className="max-w-3xl text-4xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-5xl lg:text-6xl"
+        className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
         {...mark(texts, "title")}
       >
         {title}
@@ -498,7 +498,7 @@ export function Hero({
           height={800}
           fetchPriority="high"
           className={cn(
-            "aspect-[3/2] w-full rounded-xl object-cover",
+            "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
             imageSide === "right" && "lg:order-2",
           )}
         />
@@ -684,7 +684,10 @@ export function RecordCards({
               key={card.key}
               className={cn("relative flex items-start gap-4 py-4", card.href && "hover:bg-hover")}
             >
-              {picture(card, "aspect-[3/2] w-28 shrink-0 rounded-md object-cover sm:w-40")}
+              {picture(
+                card,
+                "aspect-[3/2] w-28 shrink-0 rounded-[var(--picture-radius,var(--radius-md))] border-(length:--picture-frame) object-cover sm:w-40",
+              )}
               <div className="flex flex-1 flex-col gap-1">
                 <h3 className="text-lg font-semibold">{heading(card)}</h3>
                 {details(card)}
@@ -697,7 +700,10 @@ export function RecordCards({
           {cards.map((card) => (
             <li key={card.key} className="relative">
               <figure className="space-y-2">
-                {picture(card, "aspect-square w-full rounded-lg object-cover")}
+                {picture(
+                  card,
+                  "aspect-square w-full rounded-[var(--picture-radius,var(--radius-lg))] border-(length:--picture-frame) object-cover",
+                )}
                 <figcaption className="font-semibold">{heading(card)}</figcaption>
               </figure>
             </li>
@@ -941,10 +947,13 @@ export function CallToAction({
   texts?: string;
 }) {
   return (
-    <section {...sectionHooks(texts)} className="mx-auto max-w-6xl px-5 py-12">
+    <section
+      {...sectionHooks(texts)}
+      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
+    >
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
         <h2
-          className="text-2xl leading-tight font-(--heading-weight) tracking-(--heading-tracking) sm:text-[2rem]"
+          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
           {...mark(texts, "title")}
         >
           {title}
