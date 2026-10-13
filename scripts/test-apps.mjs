@@ -38,6 +38,8 @@ const examples = process.argv.slice(2).length
       .map((e) => e.name);
 
 const failures = [];
+// The secret of the mail address incomingMailFlow adds on the booking site (integrations.md §3).
+process.env.INCOMING_SUPPORT_SECRET = "support-secret";
 /** Apps under test; removed when everything passes, kept for inspection otherwise. */
 const dirs = [];
 // Apps kept by failed runs, once a day old: each failure keeps its app to look at, and they add up.
@@ -668,6 +670,65 @@ async function callReceiver() {
       proxy.close();
     },
   };
+}
+
+/**
+ * A mail that becomes a record (an incoming call with mail: true): the host passes a mail on and
+ * the booking site's messages get it, sender, subject and text in their fields.
+ */
+async function incomingMailFlow(dir, base) {
+  try {
+    const added = smithable(
+      dir,
+      "op",
+      "addIncoming",
+      "support",
+      "--mail",
+      "--create",
+      "Message",
+      "--fields",
+      "from=email",
+      "--fields",
+      "subject=name",
+      "--fields",
+      "body=message",
+    );
+    if (added.code !== 0) throw new Error(added.out);
+    let answer;
+    for (let i = 0; i < 60; i++) {
+      answer = await fetch(`${base}/incoming/support`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer support-secret" },
+        body: JSON.stringify({
+          from: "Ada Lovelace <ada@example.org>",
+          to: "hello@studio.example",
+          subject: "A question about Tuesdays",
+          text: "Is there a class on Tuesday evenings?",
+          attachments: [],
+        }),
+      });
+      if (answer.status !== 404) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (answer.status !== 201)
+      throw new Error(`the mail answers ${answer.status}: ${await answer.text()}`);
+    const { id } = await answer.json();
+    const [row] = query(dir, `select name, email, message from messages where id = ${Number(id)}`);
+    if (
+      row?.email !== "ada@example.org" ||
+      row?.name !== "A question about Tuesdays" ||
+      row?.message !== "Is there a class on Tuesday evenings?"
+    )
+      throw new Error(`the message: ${JSON.stringify(row)}`);
+    console.log(
+      "  ✓ incoming mail: a mail passed on becomes a message, its sender's address, subject and text in their fields",
+    );
+  } catch (error) {
+    console.log(`  ✗ incoming mail: ${error.message.split("\n")[0]}`);
+    failures.push("incoming mail");
+  } finally {
+    smithable(dir, "op", "removeIncoming", "support");
+  }
 }
 
 /**
@@ -5778,6 +5839,7 @@ test("the session cookie's name and attributes", async () => {
         await calculatorFlow(base);
         await pictureFlow(dir, base);
         await picturesFlow(dir, base);
+        await incomingMailFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);
