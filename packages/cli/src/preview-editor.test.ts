@@ -3,6 +3,13 @@ import { RUNTIME } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page() {
+  // One rule for the dark color scheme, as the app's styles have; and the development sign-in's buttons.
+  const darkRule = { media: { mediaText: "(prefers-color-scheme: dark)" } };
+  const clicked: string[] = [];
+  const buttons = ["admin", "member"].map((role) => ({
+    dataset: { devRole: role },
+    click: () => clicked.push(role),
+  }));
   const listeners: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
   const parent = { postMessage() {} };
@@ -21,7 +28,9 @@ function page() {
     createElement: () => ({ id: "", textContent: "" }),
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
     addEventListener() {},
-    querySelectorAll: () => [],
+    querySelectorAll: (selector: string) => (selector === "[data-dev-role]" ? buttons : []),
+    styleSheets: [{ cssRules: [darkRule] }],
+    body: { dataset: { hydrated: "true" } },
     documentElement: { toggleAttribute() {} },
     readyState: "loading",
   };
@@ -34,6 +43,7 @@ function page() {
     "setInterval",
     "setTimeout",
     "clearInterval",
+    "MutationObserver",
     RUNTIME,
   )(
     window,
@@ -43,11 +53,20 @@ function page() {
     noop,
     noop,
     noop,
+    class {
+      observe() {}
+    },
   );
   const send = (data: unknown, origin = "http://localhost:5173", source: unknown = parent) => {
     for (const listener of listeners) listener({ data, origin, source });
   };
-  return { send, theme: () => document.getElementById("sm-theme")?.textContent, head };
+  return {
+    send,
+    theme: () => document.getElementById("sm-theme")?.textContent,
+    head,
+    darkRule,
+    clicked,
+  };
 }
 
 test("a theme's CSS from the lab replaces the app's until reload, its fonts at Vite's paths", () => {
@@ -71,4 +90,20 @@ test("only from the page the preview is in, on this machine", () => {
   send({ type: "smithable:theme-css", css: "a{}" }, "http://localhost:5173", {});
   send({ type: "smithable:theme-css", css: 42 });
   expect(theme()).toBeUndefined();
+});
+
+test("a frame in one mode: the app's dark rules always apply, or never", () => {
+  const { send, darkRule } = page();
+  send({ type: "smithable:theme-css", css: "a{}", mode: "dark" });
+  expect(darkRule.media.mediaText).toBe("all");
+  send({ type: "smithable:theme-css", css: "a{}", mode: "light" });
+  expect(darkRule.media.mediaText).toBe("not all");
+});
+
+test("the lab signs in through the development sign-in's button for the role it asks", () => {
+  const { send, clicked } = page();
+  send({ type: "smithable:dev-sign-in", role: "admin" }, "https://example.com");
+  expect(clicked).toEqual([]);
+  send({ type: "smithable:dev-sign-in", role: "admin" });
+  expect(clicked).toEqual(["admin"]);
 });

@@ -1,0 +1,109 @@
+/* The lab's own look: plain and grey, so the frames are what one sees. */
+:root {
+  color-scheme: light;
+  font:
+    14px / 1.4 system-ui,
+    sans-serif;
+  color: #1d1d1f;
+  background: #e8e8ea;
+}
+body {
+  margin: 0;
+}
+.lab {
+  display: grid;
+  grid-template: "head head" auto "side main" 1fr / 260px 1fr;
+  height: 100vh;
+}
+header {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+}
+aside {
+  grid-area: side;
+  overflow: auto;
+  padding: 8px 12px;
+  background: #f6f6f7;
+  border-right: 1px solid #ccc;
+}
+fieldset {
+  border: 0;
+  border-top: 1px solid #ccc;
+  margin: 0 0 8px;
+  padding: 6px 0 0;
+}
+legend {
+  font-weight: 600;
+}
+aside label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0;
+}
+aside input:not([type="color"]),
+aside select {
+  width: 130px;
+}
+main {
+  grid-area: main;
+  overflow: auto;
+  padding: 16px;
+}
+.frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.frames.grey iframe {
+  filter: grayscale(1);
+}
+figure {
+  margin: 0;
+}
+figcaption {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+iframe {
+  border: 0;
+  background: #fff;
+  box-shadow: 0 1px 4px #0003;
+}
+.notes p {
+  margin: 4px 0;
+  padding-left: 8px;
+  border-left: 4px solid #2b8a3e;
+}
+.notes .note {
+  border-color: #e67700;
+}
+.notes .avoid {
+  border-color: #c92a2a;
+}
+.file {
+  display: block;
+  margin-top: 16px;
+  font-weight: 600;
+}
+.file textarea {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  margin-top: 4px;
+  font:
+    13px / 1.4 ui-monospace,
+    monospace;
+}
+@media (max-width: 800px) {
+  .lab {
+    grid-template: "head" auto "main" 1fr "side" auto / 1fr;
+    height: auto;
+  }
+}

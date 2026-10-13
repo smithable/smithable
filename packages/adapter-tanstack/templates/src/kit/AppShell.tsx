@@ -324,11 +324,17 @@ export function Loading() {
   );
 }
 
-/** Shown instead of a page that failed, e.g. "You are not allowed to do this." */
+/** Shown instead of a page that failed, e.g. "You are not allowed to do this." A sentence, so never
+ *  in the theme's capitals. */
 export function ErrorNotice({ title, message }: { title: string; message?: string }) {
   return (
     <div className="max-w-xl">
-      <PageHeader title={title} />
+      <h1
+        data-part="title"
+        className="mb-6 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
+      >
+        {title}
+      </h1>
       {message && <p className="text-muted-foreground">{message}</p>}
     </div>
   );

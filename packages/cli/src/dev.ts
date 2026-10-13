@@ -33,7 +33,7 @@ async function waitThenOpen(io: Io): Promise<void> {
   }
 }
 
-function openBrowser(url: string): void {
+export function openBrowser(url: string): void {
   const wsl =
     process.platform === "linux" &&
     readFileSync("/proc/version", "utf8").toLowerCase().includes("microsoft");

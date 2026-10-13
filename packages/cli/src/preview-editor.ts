@@ -103,7 +103,50 @@ if (typeof window !== "undefined" && window.parent !== window) {
     );
     // Last in the head, so its variables win over the app's theme.css.
     document.head.append(sheet);
+    // A frame shown in one mode (the theme lab's light and dark frames): every rule for the dark
+    // color scheme then always applies, or never, whatever the visitor's own setting.
+    if (event.data.mode === "light" || event.data.mode === "dark") {
+      scheme = event.data.mode;
+      applyScheme();
+    }
   });
+  let scheme = "";
+  const applyScheme = () => {
+    const walk = (rules) => {
+      for (const rule of rules) {
+        if (rule.media) {
+          if (rule.smScheme === undefined && rule.media.mediaText.includes("prefers-color-scheme: dark"))
+            rule.smScheme = rule.media.mediaText;
+          if (rule.smScheme !== undefined)
+            rule.media.mediaText = scheme === "dark" ? "all" : "not all";
+        }
+        if (rule.cssRules) walk(rule.cssRules);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try {
+        walk(sheet.cssRules);
+      } catch {}
+    }
+  };
+  // The theme lab signs itself in through the app's development sign-in (a button for each
+  // role, there only in development): asked from the page this preview is in on this machine,
+  // the sign-in page clicks the role's button once it is ready.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
+    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    const started = Date.now();
+    const tryClick = () => {
+      const buttons = [...document.querySelectorAll("[data-dev-role]")];
+      const button =
+        buttons.find((b) => b.dataset.devRole === event.data.role) ?? buttons[0];
+      if (document.body.dataset.hydrated === "true" && button) button.click();
+      else if (Date.now() - started < 20000) setTimeout(tryClick, 200);
+    };
+    tryClick();
+  });
+  // Sheets the page adds later (a route's own styles) follow the same mode.
+  new MutationObserver(() => scheme && applyScheme()).observe(document.head, { childList: true });
 
   window.addEventListener("message", (event) => {
     // Only the page this preview is in: Studio.

@@ -188,6 +188,7 @@ export function SignIn({
           {devRoles.map((role) => (
             <Button
               key={role}
+              data-dev-role={role}
               variant="outline"
               className="w-full"
               disabled={busy}

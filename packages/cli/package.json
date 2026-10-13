@@ -25,6 +25,7 @@
     "LICENSE",
     "NOTICE",
     "studio",
+    "theme-lab",
     "README.md"
   ],
   "dependencies": {
