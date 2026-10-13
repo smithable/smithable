@@ -147,6 +147,21 @@ if (typeof window !== "undefined" && window.parent !== window) {
     };
     tryClick();
   });
+  // The theme lab shows a theme's motion: the page scrolls slowly to its end and back, so what
+  // moves as it comes into view moves (same parent-and-machine rule).
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
+    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    const end = document.documentElement.scrollHeight - window.innerHeight;
+    const started = Date.now();
+    const step = () => {
+      const done = Math.min((Date.now() - started) / 5000, 1);
+      window.scrollTo(0, end * done);
+      if (done < 1) setTimeout(step, 16);
+      else setTimeout(() => window.scrollTo(0, 0), 1500);
+    };
+    step();
+  });
   // Sheets the page adds later (a route's own styles) follow the same mode.
   new MutationObserver(() => scheme && applyScheme()).observe(document.head, { childList: true });
 

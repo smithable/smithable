@@ -3413,11 +3413,11 @@ async function visualChecks(dir, base) {
       await page.emulateMedia({ reducedMotion });
       await open(page, `${base}${paths[0]}`);
       const motion = await page.evaluate(() =>
-        ["--motion-fast", "--motion-slow", "--motion-distance"].map((v) =>
+        ["--motion-fast", "--motion-slow", "--motion-distance", "--landing-motion"].map((v) =>
           getComputedStyle(document.documentElement).getPropertyValue(v).trim(),
         ),
       );
-      const still = motion.every((v) => /^0(ms|px)$/.test(v));
+      const still = motion.every((v) => /^(0(ms|px)|none)$/.test(v));
       if (reducedMotion === "reduce" && !still)
         problems.push(`reduce motion: still moves (${motion.join(", ")})`);
       if (reducedMotion === "no-preference" && (still || motion.some((v) => !v)))

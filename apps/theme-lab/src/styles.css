@@ -107,3 +107,9 @@ iframe {
     height: auto;
   }
 }
+
+.hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #555;
+}

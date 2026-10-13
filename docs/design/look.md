@@ -144,7 +144,7 @@ font: Nunito Sans                 # one of the hosted fonts (Inter, Nunito Sans,
 radius: 12px
 shadow: soft                      # none | soft | raised
 density: comfortable              # the default for apps that do not say
-motion: subtle                    # none | subtle | lively: dialogs, the menu, notices, new rows, page changes (never over 0.2 s; "reduce motion" always wins)
+motion: subtle                    # none | subtle | lively: dialogs, the menu, notices, new rows, page changes (never over 0.2 s); lively also lets landing sections rise into view and the hero settle. "Reduce motion" always wins
 light:
   primary: "#2f6b3a"
   background: "#f6f8f4"

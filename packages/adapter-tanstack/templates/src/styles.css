@@ -101,6 +101,23 @@
   [data-kit="model-table"] tbody tr {
     animation: kit-ease-in var(--motion-fast) var(--motion-ease) both;
   }
+  /* Lively motion only (--landing-motion is none otherwise, and under "reduce motion"): a
+     landing page's sections rise into place as they scroll into view, and the hero's picture
+     settles once. Browsers without scroll-driven animations show the sections as they are, and
+     so does anything not scrolled to (a whole-page picture, printing). */
+  @supports (animation-timeline: view()) {
+    [data-kit="landing"] [data-kit="section"]:not([data-hero]) {
+      animation-name: var(--landing-motion);
+      animation-timing-function: linear;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+  [data-hero] img {
+    animation-name: var(--hero-motion);
+    animation-duration: 500ms;
+    animation-timing-function: var(--motion-ease);
+  }
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: var(--motion-slow);
@@ -120,6 +137,19 @@
   }
   [data-kit="model-table"] tbody tr:nth-child(even) {
     background-color: var(--row-stripe, transparent);
+  }
+}
+
+@keyframes kit-rise {
+  from {
+    opacity: 0;
+    translate: 0 2rem;
+  }
+}
+
+@keyframes kit-settle {
+  from {
+    scale: 1.04;
   }
 }
 
