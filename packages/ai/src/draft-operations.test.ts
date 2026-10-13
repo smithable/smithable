@@ -41,6 +41,12 @@ test("field shorthand slips are mended", () => {
   expect(repairFieldShorthand("boolean")).toBe("bool");
   expect(repairFieldShorthand("integer! = 12")).toBe("int! = 12");
   expect(repairFieldShorthand("Customer!")).toBe("Customer!");
+  // The list types, written like lists of records or with other names.
+  expect(repairFieldShorthand("file[]")).toBe("files");
+  expect(repairFieldShorthand("picture[]!")).toBe("pictures!");
+  expect(repairFieldShorthand("attachments")).toBe("files");
+  expect(repairFieldShorthand("image!")).toBe("picture!");
+  expect(repairFieldShorthand("photo | video")).toBe("photo | video");
 });
 
 test("a draft starts with the starter's access default and sees the starter as its example", async () => {

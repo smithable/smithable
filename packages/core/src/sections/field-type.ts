@@ -114,10 +114,13 @@ function parseTypeName(name: string): Result<FieldType> {
     };
   }
   if (name === "") return fail("invalid-field", "The field type is missing.");
+  // "file[]" and "picture[]" read like lists of related records; the list types are files and pictures.
+  const list = /^(file|picture)\[\]$/.exec(name);
   return fail(
     "unknown-type",
     `Unknown field type "${name}".`,
-    didYouMean(name, SCALAR_TYPES) ??
+    (list ? `Did you mean "${list[1]}s"?` : undefined) ??
+      didYouMean(name, SCALAR_TYPES) ??
       `Available types: ${SCALAR_TYPES.join(", ")}. Choices are written like "a | b | c".`,
   );
 }
