@@ -125,6 +125,12 @@ async function shoot(browser, starter, change) {
       await page.getByLabel("Preview address").fill(change.route);
       await page.getByRole("button", { name: "Go", exact: true }).click();
       await page.waitForTimeout(6000);
+      // The page's end, where an added field goes on the form, in both pictures.
+      await frame
+        .contentFrame()
+        .locator("body")
+        .evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(500);
       const png = await frame.screenshot({ animations: "disabled" });
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.waitForTimeout(1000);
@@ -140,7 +146,7 @@ async function shoot(browser, starter, change) {
     const proposal = page.getByRole("region", { name: "Proposal" });
     await proposal.waitFor({ timeout: 60000 });
     const said = await proposal.innerText();
-    if (!/0 tokens/.test(said))
+    if (!/No AI needed/.test(said))
       throw new Error(`${starter}: the rules did not read "${change.sentence}":\n${said}`);
     await page.waitForTimeout(500);
     await save("prompt", await clip([ask, proposal]));
@@ -174,6 +180,12 @@ async function shoot(browser, starter, change) {
     await line.scrollIntoViewIfNeeded();
     await line.click();
     await page.keyboard.press("Home");
+    await page
+      .locator(".cm-scroller")
+      .first()
+      .evaluate((e) => {
+        e.scrollLeft = 0;
+      });
     await page.waitForTimeout(500);
     const lb = await line.boundingBox();
     const eb = await page.locator(".cm-editor").first().boundingBox();
@@ -228,7 +240,9 @@ try {
         .filter((s) => deck[s])
         .map((s) => [s, deck[s]]),
     );
-    writeFileSync(deckFile, `${JSON.stringify(ordered, null, 2)}\n`);
+    // One short line in an array stays on one line, as the formatter writes it.
+    const json = JSON.stringify(ordered, null, 2).replace(/\[\n\s+("[^"\n]*")\n\s+\]/g, "[$1]");
+    writeFileSync(deckFile, `${json}\n`);
   }
 } finally {
   await browser.close();

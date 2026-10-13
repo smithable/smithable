@@ -30,7 +30,7 @@ not code. Three rules for choosing, from C's mock-up (2026-10-13): the result mu
 the record's **form** (a field added by code never adds a list column, and the three cards must
 not differ in what they did); the change must not exist in the starter already (the CRM has a
 phone, so a website); and the sentence should be one the wording rules read without a model
-("Customers need a website"), so the prompt card shows "0 tokens" and the picture is the same
+("Customers need a website"), so the prompt card shows "No AI needed" and the picture is the same
 on every run. A sentence no rule reads stops the script (Studio runs it with no model set up);
 choose another wording rather than a model, whose words would differ between runs.
 
