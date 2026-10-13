@@ -91,12 +91,15 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "theme",
-    usage: "theme --from <url>",
+    usage: "theme --from <url> | theme lab",
     text: [
       "A theme from a site: its colors, corners and font, read in a browser (needs Playwright),",
-      "made readable and added as themes/<name>.yml; --name names it, --use makes it the app's",
+      "made readable and added as themes/<name>.yml; --name names it, --use makes it the app's.",
+      "theme lab: make a theme on a real app's pages in the browser, light and dark, desktop and",
+      "phone; Save adds it through addTheme to --project, or to the current folder when it is a",
+      "project; elsewhere it writes themes/<name>.yml, never over a file there; --port (4330)",
     ],
-    options: ["from", "name", "use"],
+    options: ["from", "name", "use", "project", "port"],
   },
   {
     name: "themes",

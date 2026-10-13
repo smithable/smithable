@@ -27,6 +27,7 @@ import { type Level, security, updateSecurity } from "./security.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
 import { themeFrom } from "./theme-from.js";
+import { themeLab } from "./theme-lab.js";
 import { themes } from "./themes.js";
 import { undo } from "./undo.js";
 import { upgrade } from "./upgrade.js";
@@ -118,6 +119,11 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
   if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
+  if (command === "theme" && args[0] === "lab")
+    return themeLab(io, Number(values.port ?? 4330), {
+      ...(values.project ? { project: values.project } : {}),
+      ...(values.app ? { app: values.app } : {}),
+    });
   if (command === "theme") {
     if (!values.from) {
       io.err("theme needs a site to read, like: smithable theme --from https://example.com\n");
@@ -307,6 +313,9 @@ const CONFIG = {
     json: { type: "boolean" },
     implementation: { type: "boolean" },
     port: { type: "string" },
+    project: { type: "string" },
+    /** The app the theme lab shows instead of making its own (the tests' app). */
+    app: { type: "string" },
     host: { type: "string" },
     "preview-url": { type: "string" },
     insecure: { type: "boolean" },

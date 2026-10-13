@@ -2362,6 +2362,71 @@ try {
   } catch {}
   await model.close();
 }
+// The theme lab (docs/design/theme-lab.md §3) on this app, once Studio is gone: a field changes
+// the CSS in its frames without a regeneration, and Save adds the theme to the project.
+if (!failed) {
+  const labBrowser = await chromium.launch();
+  const labUrl = `http://localhost:${port + 2}`;
+  const lab = spawn(
+    "node",
+    [cli, "theme", "lab", "--app", dir, "--project", dir, "--port", String(port + 2)],
+    { env: { ...process.env, SMITHABLE_NO_OPEN: "1" }, detached: true, stdio: "ignore" },
+  );
+  const labPage = await labBrowser.newPage({ viewport: { width: 1600, height: 1000 } });
+  try {
+    await step(
+      "the theme lab: a field changes its frames' CSS, and Save adds the theme",
+      async () => {
+        for (let i = 0; i < 120; i++) {
+          if (
+            await fetch(`${labUrl}/api/start`).then(
+              (r) => r.ok,
+              () => false,
+            )
+          )
+            break;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        await labPage.goto(labUrl);
+        // The frames open once the app has signed the lab in; the landing page in light first.
+        const frame = labPage.frameLocator('[data-frame="Landing-light"]');
+        await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 });
+        // Signed in (no sign-in form in the list), and the record frame shows a record.
+        const list = labPage.frameLocator('[data-frame="List-light"]');
+        await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        if (await list.getByText(/^Sign in to /).count())
+          throw new Error("the lab's frames are not signed in");
+        const record = labPage.frameLocator('[data-frame="Record-light"]');
+        await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        if (await record.getByText("does not exist, or you cannot see it").count())
+          throw new Error("the record frame shows no record");
+        await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
+        const sheet = frame.locator("style#sm-theme");
+        for (
+          let i = 0;
+          i < 40 && !(await sheet.textContent().catch(() => ""))?.includes("Fraunces");
+          i++
+        )
+          await new Promise((r) => setTimeout(r, 250));
+        if (!(await sheet.textContent())?.includes('--font-heading: "Fraunces Variable"'))
+          throw new Error("the frame did not get the heading font");
+        await labPage.getByLabel("Name", { exact: true }).fill("lab-test");
+        await labPage.getByRole("button", { name: /^Save/ }).click();
+        await labPage.getByRole("status").getByText("Saved").waitFor();
+        const saved = readFileSync(join(dir, "themes/lab-test.yml"), "utf8");
+        if (!saved.includes("heading: Fraunces"))
+          throw new Error(`saved without the font:\n${saved}`);
+      },
+    );
+  } catch {
+    // Reported above.
+  } finally {
+    await labBrowser.close();
+    try {
+      process.kill(-lab.pid);
+    } catch {}
+  }
+}
 if (failed) {
   console.log(`\nFailed. The app is kept in ${dir}`);
   process.exit(1);
