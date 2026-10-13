@@ -15,6 +15,18 @@ export const FONTS = [
   "DM Sans",
 ] as const;
 
+/** Each font's weights, lightest and heaviest (its variable axis): a heading weight outside them is
+ *  clamped by the browser, so a theme that asks for it is refused. */
+export const FONT_WEIGHTS: Record<(typeof FONTS)[number], readonly [number, number]> = {
+  Inter: [100, 900],
+  "Nunito Sans": [200, 1000],
+  "Source Sans 3": [200, 900],
+  "Source Serif 4": [200, 900],
+  Fraunces: [100, 900],
+  "Archivo Narrow": [400, 700],
+  "DM Sans": [100, 1000],
+};
+
 /** Faces made for large type: fine for a page title, a note at a small scale (theme-fit.ts). */
 export const DISPLAY_FONTS: readonly string[] = ["Fraunces", "Archivo Narrow"];
 
@@ -156,6 +168,16 @@ export function readStyle(
       else target[e.key] = value;
     }
   }
+  // A weight the headings' font does not have would be clamped: the file would say what no one sees.
+  const heading = style.headingFont ?? body ?? "Inter";
+  const [lightest, heaviest] = FONT_WEIGHTS[heading as (typeof FONTS)[number]] ?? [100, 900];
+  const weight = style.headings.weight;
+  if (weight < lightest || weight > heaviest)
+    ctx.error(
+      (byKey.get("headings")?.value ?? byKey.get("fonts")?.value ?? null) as never,
+      "invalid-value",
+      `${heading} goes from ${lightest} to ${heaviest}: "headings.weight" ${weight} is outside it.`,
+    );
   // Capitals set tight run together: refused, as unreadable.
   if (style.headings.case === "upper" && style.headings.tracking === "tight")
     ctx.error(

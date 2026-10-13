@@ -45,6 +45,13 @@ test("fonts from the list only, values from their sets, and no tight capitals", 
   expect(codes("fonts: { heading: Comic Sans }\n")).toContain("invalid-value");
   expect(codes("font: Inter\nfonts: { body: DM Sans }\n")).toContain("invalid-value");
   expect(codes("headings: { weight: 650 }\n")).toContain("invalid-value");
+  // A weight the heading font lacks: Archivo Narrow goes from 400 to 700.
+  expect(codes("fonts: { heading: Archivo Narrow }\nheadings: { weight: 800 }\n")).toContain(
+    "invalid-value",
+  );
+  expect(codes("fonts: { heading: Archivo Narrow }\nheadings: { weight: 700 }\n")).not.toContain(
+    "invalid-value",
+  );
   expect(codes("surfaces: { cards: glass }\n")).toContain("invalid-value");
   expect(codes("buttons: { colour: red }\n")).toContain("unknown-key");
   expect(codes("headings: { case: upper, tracking: tight }\n")).toContain("invalid-value");
