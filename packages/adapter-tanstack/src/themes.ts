@@ -195,7 +195,9 @@ ${HOVER.dark}
     id,
     ...scope(`[data-page="${id}"]`, pageUx(ux, id)),
   }));
+  // A font a theme names before its package is pinned (theme-lab.md step 2) falls back to the system's.
   return `${HEADER}${themeFonts(ux, themes)
+    .filter((font) => font in FONT_PACKAGES)
     .map((font) => `@import "${FONT_PACKAGES[font]}";`)
     .join("\n")}
 

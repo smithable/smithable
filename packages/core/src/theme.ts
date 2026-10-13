@@ -9,9 +9,9 @@ import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
 import { THEME_LIBRARY } from "./theme-library.js";
 import { PRESET_TOKENS } from "./theme-presets.js";
+import { DEFAULT_STYLE, FONTS, readStyle, type ThemeStyle } from "./theme-style.js";
 
-/** Open-license fonts the generated apps can host themselves. */
-export const FONTS = ["Inter", "Nunito Sans", "Source Sans 3"] as const;
+export { FONTS } from "./theme-style.js";
 
 export type Mode = "light" | "dark";
 
@@ -62,6 +62,8 @@ export interface ThemeIR {
   motion: "none" | "subtle" | "lively";
   /** The most chroma a brand color keeps on this theme (quiet themes stay quiet). */
   chroma: number;
+  /** Headings, surfaces, buttons, pictures and tables (theme-style.ts). */
+  style: ThemeStyle;
   light: Tokens;
   dark: Tokens;
 }
@@ -89,6 +91,7 @@ const FOUNDATIONS: Record<
     chroma: number;
     density: ThemeIR["density"];
     motion: ThemeIR["motion"];
+    style: ThemeStyle;
   }
 > = {
   modern: {
@@ -98,6 +101,7 @@ const FOUNDATIONS: Record<
     chroma: 0.22,
     density: "comfortable",
     motion: "subtle",
+    style: DEFAULT_STYLE,
   },
   minimal: {
     font: "Inter",
@@ -106,6 +110,10 @@ const FOUNDATIONS: Record<
     chroma: 0.08,
     density: "comfortable",
     motion: "subtle",
+    style: {
+      ...DEFAULT_STYLE,
+      headings: { ...DEFAULT_STYLE.headings, weight: 600, tracking: "normal" },
+    },
   },
   playful: {
     font: "Nunito Sans",
@@ -114,6 +122,12 @@ const FOUNDATIONS: Record<
     chroma: 0.22,
     density: "comfortable",
     motion: "lively",
+    style: {
+      ...DEFAULT_STYLE,
+      headings: { ...DEFAULT_STYLE.headings, weight: 800, tracking: "normal" },
+      surfaces: { ...DEFAULT_STYLE.surfaces, cards: "raised" },
+      buttons: { ...DEFAULT_STYLE.buttons, shape: "pill" },
+    },
   },
   corporate: {
     font: "Source Sans 3",
@@ -122,6 +136,11 @@ const FOUNDATIONS: Record<
     chroma: 0.16,
     density: "compact",
     motion: "subtle",
+    style: {
+      ...DEFAULT_STYLE,
+      headings: { ...DEFAULT_STYLE.headings, weight: 600, tracking: "normal" },
+      tables: { ...DEFAULT_STYLE.tables, numbers: "tabular" },
+    },
   },
 };
 
@@ -160,6 +179,12 @@ export function parseTheme(file: { path: string; text: string }): {
       "smithableTheme",
       "name",
       "font",
+      "fonts",
+      "headings",
+      "surfaces",
+      "buttons",
+      "pictures",
+      "tables",
       "radius",
       "shadow",
       "density",
@@ -184,13 +209,15 @@ export function parseTheme(file: { path: string; text: string }): {
       "invalid-value",
       `A theme's name is kebab-case, like "forest" or "warm-sand".`,
     );
-  const font = optional("font") ?? "Inter";
-  if (!(FONTS as readonly string[]).includes(font))
+  const named = optional("font");
+  if (named !== undefined && !(FONTS as readonly string[]).includes(named))
     ctx.error(
       byKey.get("font")?.value ?? root,
       "invalid-value",
       `"font" must be one of ${FONTS.join(", ")}: fonts the app hosts itself.`,
     );
+  const { body, style } = readStyle(ctx, byKey as never, named);
+  const font = body ?? "Inter";
   const radius = optional("radius") ?? "12px";
   if (!/^\d+(?:\.\d+)?(?:px|rem)$/.test(radius))
     ctx.error(
@@ -282,6 +309,7 @@ export function parseTheme(file: { path: string; text: string }): {
       density: density as ThemeIR["density"],
       motion: motion as ThemeIR["motion"],
       chroma,
+      style,
       light: modes.light as Tokens,
       dark: modes.dark as Tokens,
     },
