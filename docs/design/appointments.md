@@ -55,6 +55,7 @@ models:
       duration: service.minutes
       while: { status: [requested, confirmed] }
       cancelUntil: 12h                         # the customer's Cancel is offered until then
+      cancelTo: cancelled                      # optional: the value the customer's Cancel sets
 ```
 
 - **`schedule`** on a model says its records are people (or rooms, or chairs) whose time is
@@ -66,8 +67,12 @@ models:
 - **`occupies`** on a model says each of its records takes `resource`'s time from `starts` for
   `duration` (minutes, on the record or one reference away: the same grammar as the calendar's
   `duration`), while `while` holds (the capacity's `where` grammar). `cancelUntil` is how long
-  before the start the customer may cancel their own (`12h`, `2d`; without it, until the
-  start). The status values are the owner's: `while` names which ones take the time. The
+  before the start the customer may cancel their own; without it, until the start. Its grammar
+  is a whole number and a unit: `30m` (minutes), `12h` (hours) or `2d` (days). This is the one
+  place the spec writes a duration as text. `cancelTo` is the value the customer's Cancel sets.
+  It is optional when exactly one value of the status is outside `while`, and then defaults to
+  that value. When several are outside `while` (`cancelled` and `noShow`, say) and none is
+  named, validation refuses it. The status values are the owner's: `while` names which ones take the time. The
   window is the occupying construct's, read by the customer's Cancel action; an action's `when`
   stays choices only.
 - Validation: `resource` a required single reference to a model with a `schedule`, `starts` a
@@ -75,7 +80,7 @@ models:
   well-formed ranges, `away` a model with a reference to the scheduled model and two
   date-and-time fields. One `occupies` per model.
 - Operations: `setSchedule <Model> --hours … --breaks … --gap … --away <Model>` (none removes)
-  and `setOccupies <Model> <resource> <starts> <duration> [--while …] [--cancel-until …]`; tier-0
+  and `setOccupies <Model> <resource> <starts> <duration> [--while …] [--cancel-until …] [--cancel-to …]`; tier-0
   phrases "barbers have opening hours 9 to 17 on weekdays" and "an appointment takes its
   barber's time". The summary: "Barbers are booked by their time: weekdays 09:00–17:00,
   Saturdays 10:00–14:00, a break 12:00–12:30, 10 minutes between appointments." and "An
@@ -112,8 +117,8 @@ models:
   `Conflict("taken")` with the next free times in the answer. The scheduled model's update
   refuses hours that would leave existing appointments outside them, naming how many.
 - **The customer's Cancel:** a standard action the generator adds when `cancelUntil` is set:
-  offered to the record's owner until `starts - cancelUntil`, setting the status to the first
-  value `while` does not name (`cancelled`).
+  offered to the record's owner until `starts - cancelUntil`, setting the status to `cancelTo`
+  (Fable, 2026-10-13: explicit, not inferred).
 
 ## 5. ARCHITECTURE §2.4
 
@@ -155,10 +160,13 @@ time, the visit becomes an `occupies` record of the carpenter's schedule.
 ## 8. Steps (when the support portal is done)
 
 1. Core: `schedule` and `occupies` (schemas, validation, the IR), `setSchedule` and
-   `setOccupies`, the summary's sentences, the spec reference. Units: the validation, the
-   operations, the free-time arithmetic as a pure function (hours, breaks, away, gap, overlap,
-   summer time).
-2. Adapter: the data function's check, the free-times server function, the customer's Cancel
+   `setOccupies`, the summary's sentences, the spec reference. Units: the validation (`cancelTo`
+   and `cancelUntil` included), the operations, and the free-time arithmetic as a pure function
+   (hours, breaks, away, gap, overlap). A free-times test across a summer-time change catches
+   the zoned.ts edge (Fable).
+2. Adapter: "anyone" books the first free resource deterministically, the first in the spec,
+   so two bookings at once cannot both land on the same person after a retry (Fable). Then the
+   data function's check, the free-times server function, the customer's Cancel
    action, the form's slot picker (`Slots.tsx`), the calendar's day view by resource; the
    generated access test fills a time and sees the next booking refused.
 3. A starter (a barber, beside the class-booking one), shown to one local owner before more,
