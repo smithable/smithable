@@ -15,7 +15,7 @@ that a prompt, a form and the file are the same thing, and that the app follows 
 
 | Starter | The change | Where it shows |
 |---|---|---|
-| crm | add a phone to customers | the customers list gains a column |
+| crm | add a website to customers | the new-customer form gains the field |
 | booking | add a room to sessions | the schedule's cards name the room |
 | invoicing | add a due date to invoices | the invoices list gains a column |
 | marketplace | add a condition to items | the catalogue's filters gain one |
@@ -24,7 +24,14 @@ that a prompt, a form and the file are the same thing, and that the app follows 
 | api | add a priority to tasks | the tasks list gains a column |
 
 Each is one `addField` or `addRecord`-sized change with a visible result; the data file names
-them, so a better one later is a line, not code.
+them, so a better one later is a line, not code. Three rules for choosing, from C's mock-up
+(2026-10-13): the result must be the same whichever way made the change, so for a field it is
+the record's **form** (a field added by code never adds a list column, and the three cards must
+not differ in what they did); the change must not exist in the starter already (the CRM has a
+phone, so a website); and the sentence should be one the wording rules read without a model
+("Customers need a website"), so the prompt card shows "0 tokens" and the picture is the same
+on every run. Where no rule reads the sentence, the script's stand-in model answers from the
+operation in the data file; never a real model, whose words would differ between runs.
 
 ## 2. The cards
 
