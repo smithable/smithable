@@ -22,7 +22,9 @@ const DENSITY = {
 
 /**
  * Durations, easing and travel per motion setting, for the kit's dialogs, drawer, notices, rows
- * and page changes: nothing longer than a fifth of a second.
+ * and page changes: nothing longer than a fifth of a second, since the person waits on them.
+ * Lively alone adds a landing page's entrance (--landing-motion, --hero-motion), up to half a
+ * second, since nobody waits on it.
  */
 const MOTION = {
   none: { fast: "0ms", slow: "0ms", ease: "linear", distance: "0px" },
