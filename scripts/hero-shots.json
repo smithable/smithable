@@ -1,0 +1,66 @@
+{
+  "crm": {
+    "sentence": "Customers need a website",
+    "model": "Customer",
+    "name": "Website",
+    "holds": "Web address",
+    "line": "website: url",
+    "route": "/customers/new",
+    "result": "the new-customer form gains a Website field"
+  },
+  "booking": {
+    "sentence": "Sessions need a room",
+    "model": "Session",
+    "name": "Room",
+    "holds": "Text",
+    "line": "room: string",
+    "route": "/sessions/new",
+    "result": "the new-session form gains a Room field"
+  },
+  "invoicing": {
+    "sentence": "Invoices need a reference",
+    "model": "Invoice",
+    "name": "Reference",
+    "holds": "Text",
+    "line": "reference: string",
+    "route": "/invoices/new",
+    "result": "the new-invoice form gains a Reference field"
+  },
+  "marketplace": {
+    "sentence": "Items need a brand",
+    "model": "Item",
+    "name": "Brand",
+    "holds": "Text",
+    "line": "brand: string",
+    "route": "/my-items/new",
+    "result": "the new-item form gains a Brand field"
+  },
+  "status": {
+    "sentence": "Incidents need a monitoring date and time",
+    "model": "Incident",
+    "name": "Monitoring at",
+    "holds": "Date and time",
+    "line": "monitoringAt: datetime",
+    "route": "/incidents/new",
+    "result": "the new-incident form gains a Monitoring at field"
+  },
+  "records": {
+    "sentence": "Items need a tag",
+    "model": "Item",
+    "name": "Tag",
+    "holds": "Text",
+    "line": "tag: string",
+    "route": "/items/new",
+    "result": "the new-item form gains a Tag field"
+  },
+  "api": {
+    "sentence": "Tasks need a priority",
+    "model": "Task",
+    "name": "Priority",
+    "holds": "One of a list…",
+    "values": "low, normal, high",
+    "line": "priority: low | normal | high",
+    "route": "/admin/tasks/new",
+    "result": "the new-task form gains a Priority field"
+  }
+}

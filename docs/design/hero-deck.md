@@ -13,25 +13,26 @@ One change, three roads, one result. For a starter the deck shows the same chang
 three ways Smithable offers, and the app before and after it. The viewer learns in a few seconds
 that a prompt, a form and the file are the same thing, and that the app follows at once.
 
-| Starter | The change | Where it shows |
-|---|---|---|
-| crm | add a website to customers | the new-customer form gains the field |
-| booking | add a room to sessions | the schedule's cards name the room |
-| invoicing | add a due date to invoices | the invoices list gains a column |
-| marketplace | add a condition to items | the catalogue's filters gain one |
-| status | add a component "API" | the status page lists it |
-| records | add a tag to items | the list gains a column |
-| api | add a priority to tasks | the tasks list gains a column |
+| Starter | The sentence (read by the wording rules) | The new field | Where it shows |
+|---|---|---|---|
+| crm | Customers need a website | `website: url` on Customer | the new-customer form |
+| booking | Sessions need a room | `room: string` on Session | the new-session form |
+| invoicing | Invoices need a reference | `reference: string` on Invoice | the new-invoice form |
+| marketplace | Items need a brand | `brand: string` on Item | the new-item form (My items) |
+| status | Incidents need a monitoring date and time | `monitoringAt: datetime` on Incident | the new-incident form |
+| records | Items need a tag | `tag: string` on Item | the new-item form |
+| api | Tasks need a priority | `priority: low \| normal \| high` on Task | the new-task form |
 
-Each is one `addField` or `addRecord`-sized change with a visible result; the data file names
-them, so a better one later is a line, not code. Three rules for choosing, from C's mock-up
-(2026-10-13): the result must be the same whichever way made the change, so for a field it is
+Each is one `addField` (Johan, 2026-10-13: the result is the record's form for all seven; the
+invoicing starter has a due date and the marketplace a condition already, so a reference and a
+brand); the data file (`scripts/hero-shots.json`) names them, so a better one later is a line,
+not code. Three rules for choosing, from C's mock-up (2026-10-13): the result must be the same whichever way made the change, so for a field it is
 the record's **form** (a field added by code never adds a list column, and the three cards must
 not differ in what they did); the change must not exist in the starter already (the CRM has a
 phone, so a website); and the sentence should be one the wording rules read without a model
 ("Customers need a website"), so the prompt card shows "0 tokens" and the picture is the same
-on every run. Where no rule reads the sentence, the script's stand-in model answers from the
-operation in the data file; never a real model, whose words would differ between runs.
+on every run. A sentence no rule reads stops the script (Studio runs it with no model set up);
+choose another wording rather than a model, whose words would differ between runs.
 
 ## 2. The cards
 
@@ -39,7 +40,7 @@ Each card is a real screenshot of Studio at 1280×800, cropped to the part that 
 saved at 2× as WebP, light scheme (the hero sits on the start page's own ground):
 
 - **Edit by prompt:** the Changes tab's prompt box with the sentence typed ("Customers need a
-  phone number") and the proposal shown under it, before Apply (A 96 shows every proposal
+  website") and the proposal shown under it, before Apply (A 96 shows every proposal
   first).
 - **Edit without code:** the Change form for a field, filled in (the kind of record, the name,
   the type), before the button.
@@ -59,7 +60,12 @@ the same page and scroll, so the difference is the one thing that moved.
 - Phone: the deck above the result, cards slightly fanned; the fade the same.
 - `prefers-reduced-motion`: the front card is "Edit by prompt", the result is "after", nothing
   moves; a click still switches, without transitions.
-- Alt texts from the data file ("The prompt box with 'Customers need a phone number'").
+- Alt texts from the data file ("Studio's prompt box with 'Customers need a website' and the
+  change it proposes").
+- Between the deck and the result, in every view (light, dark, phone): an arrow from the front
+  card's frame to the result, for now a plain dark triangle (Johan, 2026-10-13: no badge-like
+  arrow in a corner; the final form is open). It is one piece of CSS on the page, never part of
+  a screenshot, so it can change without a rerun.
 - Each starter page (`/starters/<name>`, B 42) renders the deck with its own starter; the start
   page cycles the starters too, one deck at a time, so a visitor sees several apps.
 
