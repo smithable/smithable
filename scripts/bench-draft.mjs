@@ -1,4 +1,4 @@
-// Drafting a first app two ways, on the M12 descriptions plus one from a tester, with the model
+// Drafting a first app two ways, on the M12 descriptions plus one more, with the model
 // set up in the environment (docs/ai.md): whole files adapted from the closest starter (today),
 // and a batch of operations from an empty app (docs/design/first-build.md, 2.7). Records whether
 // each draft is a valid app, what it contains, tokens, cost and time, into
@@ -95,7 +95,7 @@ const summary = modes.map((mode) => {
 });
 const report = `# First drafts, files against operations: ${model} (${new Date().toISOString().slice(0, 10)})
 
-${DESCRIPTIONS.length} descriptions (the M12 ten and a tester's), each drafted as whole files adapted from the closest starter and as a batch of operations from an empty app (docs/design/first-build.md, 2.7). Valid means the draft is an app Smithable accepts.
+${DESCRIPTIONS.length} descriptions (the M12 ten and one more), each drafted as whole files adapted from the closest starter and as a batch of operations from an empty app (docs/design/first-build.md, 2.7). Valid means the draft is an app Smithable accepts.
 
 ${summary.map((s) => `- ${s}`).join("\n")}
 

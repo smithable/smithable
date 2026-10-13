@@ -22,7 +22,6 @@ Sonnet's two misses in that run were tool gaps, and #280 closed them (690a510): 
 
 One check was corrected after both runs: "Post an update on the card payments incident … status resolved" wanted exactly one new update, but the status starter's resolve adds one of its own, so a model that posted the update and then resolved was marked wrong. It now wants at least this update; the rows were judged again from their tool traces (Sonnet's in both seven-tools runs, Haiku's in the baseline, became right).
 
-Spend: $3.31 for this run, $3.38 for the first.
 
 The tools each starter offers (`tools/list`, about four characters a token):
 

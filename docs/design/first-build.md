@@ -1,6 +1,6 @@
 # The first build, second version: questions first, a better starting point, no silent fallback (design and plan)
 
-Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" came out as the plain CRM. What happened (from the workspace's log): the demo guest's €0.05 allowance could not cover the reserved cost of one draft, the gateway answered 402 before any model call, `smithable new --describe` fell back to the CRM starter, and Studio said nothing. The two bugs are with Opus already (the allowance and the silent fallback). This is the rest: what the first build should do so that a short description becomes the right app.
+Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" came out as the plain CRM. What happened (from the workspace's log): the demo guest's allowance could not cover one draft, so no model was called, `smithable new --describe` fell back to the CRM starter, and Studio said nothing. The two bugs are with Opus already (the allowance and the silent fallback). This is the rest: what the first build should do so that a short description becomes the right app.
 
 ## 1. What people get
 
@@ -41,7 +41,7 @@ Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" cam
 
 ### 2.6 Cost and the demo
 
-A clarify call is a few hundred tokens with the small model; the draft is as today. The demo allowance rises to cover one first build and a few changes (Opus's fix); the gateway reserves the draft at a realistic maximum rather than the model's hard cap.
+A clarify call is a few hundred tokens with the small model; the draft is as today.
 
 ### 2.7 To evaluate: the draft as operations rather than files
 
@@ -60,7 +60,7 @@ Decided 2026-10-02 (Johan): a site someone already has, or one like the site the
 
 ### 2.9 Before any model: a starter's own description, and small edits of it
 
-Johan, 2026-10-05, after the first numbers on reading descriptions without a model. A first build on Claude Sonnet costs about €0.13; if one curious visitor in a thousand ends up paying for hosting, about €0.06 a visitor is what there is to spend. So a visitor's first app should usually cost nothing.
+Johan, 2026-10-05, after the first numbers on reading descriptions without a model. A visitor's first app should usually cost nothing.
 
 - **Each starter has a description** that says what it is in plain words: the kind of app, what it keeps, who signs in, what anyone sees. The start page shows it in the box (a starter's button fills the box instead of building at once), so people see which words make which app.
 - **Built unchanged, it is the starter:** no model, at once.

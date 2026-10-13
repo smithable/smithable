@@ -163,7 +163,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - Hand edits are first-class: users may edit `smithable.yml` directly, and Smithable validates and recompiles on save.
 - Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
 - Splitting the manifest across several files for large apps is an open question (§15).
-- **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral. See [research/wasp.md](research/wasp.md) for the lessons from a predecessor that went the other way.
+- **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral.
 - **The in-string grammar stays small and familiar.** It covers:
   - field shorthand: `string!`, `email unique`, `draft | sent | paid`, `Customer!`, `Order[]`,
   - field-path templates: `"{classType.name}"`,
@@ -818,7 +818,7 @@ migrate spec format → update smithable.lock → regenerate generated + kit zon
 | **`smithable.ux.yml` vocabulary** | Start minimal (density, column order/visibility, field order, groups) and grow only via §2.4 |
 | **Manifest size.** One file or many for large apps? | One file until it hurts, then allow `models/*.yml` includes |
 | **Existing project import / compatibility levels** | Deferred. Revisit after the public release |
-| **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates; EU trademark for the name. Legal review before publication |
+| **License** | Apache-2.0 for engine, tools and spec; 0BSD for app kit and templates |
 | **Preview vs production SQLite** | WebAssembly driver in the preview, native SQLite in production. Verify that behaviour matches (M8) |
 | **Hosted project storage** | Projects saved server-side as Git repositories, synced from the browser. Decide in M8 |
 | **Other kinds of apps** (desktop, iOS, CLI tools, pipelines…), possibly community-made types in a Git repository stating their grammar, meaning, operations, generators and stack | A different platform for the same app is a new adapter with mostly the same spec (§5); a different kind of thing is a bundle of plugins plus an adapter (§5.1). Community types would be pinned by commit and hash, and their generators (pure functions) sandboxed. Web apps stay the one product until the launch; the order is the public plugin API, a second adapter, then types |

@@ -1,6 +1,6 @@
 # M7 report: benchmark results and product decisions (2026-09-27)
 
-Measurements: [m7.md](m7.md) (seven tasks, in order, on a CRM with customers only). Evidence about users of prompt-to-code builders comes from desk research ([report](../research/app-builders/report.md), [sources](../research/app-builders/evidence-register.md)); interviews move to usability tests with the Builder (M9). The prompt-to-code builder setup ([protocol](m7-prompt-to-code.md)) has not been run yet.
+Measurements: [m7.md](m7.md) (seven tasks, in order, on a CRM with customers only). The prompt-to-code builder setup ([protocol](m7-prompt-to-code.md)) has not been run yet.
 
 ## Results
 
@@ -18,26 +18,6 @@ No setup caused a regression: every earlier task still worked after every later 
 2. **A strong agent gets every task right, but the project drifts.** Plain Claude Code completed all seven tasks with correct results, and even updated smithable.yml, but its code was never what the spec generates. The next Smithable change runs into hand-edited files. Its own summary said: "I couldn't find the Smithable tool in this project, so I wrote the generated files by hand."
 3. **One uncovered task costs more with MCP, and blocks later operations.** Search has no operation. B tried the tools, then edited the generated customers route by hand ($0.58, 29 turns, more than A's $0.40). The next task, reordering the menu, then failed: regeneration refused to overwrite the hand-edited route. B stopped and explained why, which is correct but unhelpful. **The missing piece is not search itself but a supported place for custom page code**, so an agent (or a developer) can go beyond the spec without touching generated files.
 4. **Smithable alone (no model) does six of seven tasks in 2 seconds each**, at no cost. The gap is the same: search.
-
-## What users say (desk research)
-
-A selected sample of 15 public threads and reviews from people using Lovable, Bolt, v0, Replit and Base44, and five EU-facing discussions (2025–2026). It shows which problems recur, not how common they are; complaints are overrepresented.
-
-| Pain | Sources | What Smithable has, or decides now |
-|---|---|---|
-| Fixes fail or break what worked; paid repair loops | 12 / 15 | Operations are deterministic and tested; the benchmark saw no regressions in any setup. Every change is undoable |
-| Unpredictable metered cost of changes, including the repairs | 10 / 15 | Operations cost nothing; the change trace shows every change's cost. **Decided:** an AI change that fails its checks is rolled back and does not count against the allowance |
-| Database, backend and permissions get hard; one user could not roll back the database | 5 / 15 | Migrations that keep data, undo that includes the development database, access rules in the spec with generated tests (M3, M5) |
-| Leaving means reconstructing the app | 4 / 15 | Normal code and `smithable detach` (M4) |
-| Large projects lose context | 2 / 15 | The spec and the index give AI a small slice (M6) |
-| EU: data location blocks client deals | 4 / 5 EU | EU hosting by default. **Decided:** on every plan, including the free tier |
-| EU: regional hosting priced beyond small projects | 3 / 5 EU | Same decision; no premium for data location |
-| EU: uncertainty about AI training and retention | 2 / 5 EU | EU AI providers with zero retention and no training on project data, stated per provider |
-| Agencies: maintaining delivered apps (staging, backups) and handing them to clients | adjacent | **Decided:** staging environments and transferring a project to the client's account in the hosted beta (M15) |
-
-Two more findings: a hosting bill went from under $12 a month to $480 in 36 hours with no cap, so **hosted apps get spending caps on by default**. And users praise how fast an idea becomes a working prototype, polished first screens, that non-programmers can build real software, infrastructure in one place, and assistance that explains what it changed; the Builder (M9, M10) must match these, not only fix the pains.
-
-Among the benchmark's tasks, search has the clearest direct demand, which supports putting it in the spec (M7.5); nobody was found asking to reorder navigation.
 
 ## Product decisions
 

@@ -107,7 +107,7 @@ Measure: tokens or credits, wall time, files touched, test success, regressions,
 
 Before this milestone, interview 10–15 target users (non-developers who have used prompt-to-code builders, and developers or agencies), so the benchmark measures what they care about.
 
-**Done (2026-09-27)** with desk research instead of interviews ([report](research/app-builders/report.md)); the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
+**Done (2026-09-27)**; the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
 
 **Exit:**
 - A written report, and product decisions updated from the results.
@@ -133,7 +133,6 @@ Removes the biggest technical risk of the browser-first product before building 
 
 - Run the engine and the generated CRM's dev server inside a WebContainer, with a WebAssembly SQLite driver in the preview.
 - Verify that the preview and native SQLite behave the same for the generated queries and migrations.
-- Contact StackBlitz about WebContainer licensing and pricing.
 - Decide how hosted projects are stored (server-side Git repositories synced from the browser is the leaning).
 
 **Exit:**
@@ -230,7 +229,7 @@ Removes the biggest technical risk of the browser-first product before building 
 - Remote MCP endpoint.
 - A public demo that needs no sign-up, showing the change trace, with a limited number of sandboxes.
 
-**Progress:** step 1 (2026-09-27): the infrastructure, in `smithable-cloud` with OpenTofu on AWS Stockholm: one host with Docker and Caddy serving HTTPS, an S3 bucket, daily snapshots, and a $50 monthly budget alarm. Until a domain is registered it runs at an sslip.io name.
+**Progress:** step 1 (2026-09-27): the infrastructure, in `smithable-cloud` with OpenTofu on AWS Stockholm: one host with Docker and Caddy serving HTTPS, an S3 bucket, daily snapshots. Until a domain is registered it runs at an sslip.io name.
 
 Step 2 (2026-09-27): the service in `smithable-cloud`: invite sign-in, a project list, one gVisor-sandboxed workspace per project running `smithable studio` (which gained `--host` and `--preview-url`), and a proxy with per-address sessions. On AWS an invited tester goes from the invite to a new CRM's Studio in about 30 s and its preview in about 40 s, signs in to the preview and applies an operation. Known rough edge: the first preview load of a new project can hit Vite's one-time dependency reload.
 
@@ -282,7 +281,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Pricing and plans with included allowances, and the hosting provider (EU-owned or AWS), one stack. Pricing is undecided: no prices or plans are set yet.
 - The open-source repository goes public together with the hosted beta.
 
-**Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO; [design/legal-decisions.md](design/legal-decisions.md)), with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps. The beta terms, privacy notice and DPA are drafts awaiting the decisions in `smithable-cloud/docs/legal/README.md` and a lawyer's review; the trademark is not filed; the release process and pricing are not started. The checklist for the flip is [design/public-release.md](design/public-release.md).
+**Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO), with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps.
 
 **Progress (2026-10-02):**
 - The five look fixes are built: a `cover` hero with shortcuts (#79), pictures on cards with a placeholder (#81), the site's header menu and footer columns (#83), scale and rhythm with each preset's own shape (#85), and public pages in the site's frame (#86).

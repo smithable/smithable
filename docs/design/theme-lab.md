@@ -2,7 +2,7 @@
 
 Johan, 2026-10-13: "the next thing I want is the theme builder": a tool apart from Studio, with
 more options than the Look tab, where a theme is made on real pages and one sees which looks it
-carries. Astra's point behind it (2026-10-11): our themes vary colours, corners, shadows,
+carries. An outside review's point behind it (2026-10-11): our themes vary colours, corners, shadows,
 density and one font, never typography or composition, so they look alike. This note designs
 the two halves together: the **style layer**, the fields a theme gains so two themes can look
 like two designs; and the **lab**, the page that edits a theme on the kit's real pages. Backlog
@@ -58,7 +58,7 @@ dark: { primary: "#9fcbb8", background: "#171a18", foreground: "#ebe7df" }
 
 - **Fonts** are packages the stack profile pins (`@fontsource-variable/*`), added to the list
   with their licence line as the three were; a theme names fonts, never files. Seven cover the
-  families Astra named: a geometric sans, a humanist sans, a workhorse sans, a book serif, a
+  families the review named: a geometric sans, a humanist sans, a workhorse sans, a book serif, a
   display serif with character, a condensed face, a rounded sans.
 - **Each new field maps to one CSS variable** the kit already reads or gains
   (`--font-heading`, `--heading-weight`, `--heading-tracking`, `--heading-scale`,
@@ -105,7 +105,7 @@ it), in two modes:
 
 Each frame in light and dark side by side, at desktop width and at phone width (a toggle), so
 one judges the theme where people meet it. A "greyscale" toggle takes the colour out: if the
-two themes still read as different, the style layer did its work (Astra's test).
+two themes still read as different, the style layer did its work (the review's test).
 
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
@@ -138,7 +138,7 @@ once. The theme sheet script keeps working and gains the three styles.
 ## 6. Three styles to start from
 
 Built as theme files, judged in the lab on the booking starter's pages (the service business
-closest to Astra's restaurant), then shown to Johan:
+closest to the review's restaurant), then shown to Johan:
 
 | Style | Fonts | Headings | Surfaces | Colours |
 |---|---|---|---|---|

@@ -27,12 +27,6 @@ So the engine itself is fully browser-ready, as designed (ARCHITECTURE rule: eng
 
 An app without sign-in works, which is how the timings above were measured.
 
-## Licensing
-
-"Licensing is required for production usage of the API in a commercial, for-profit setting. Prototypes or POCs do not require a commercial license." Pricing is not public; StackBlitz asks for a meeting through [webcontainers.io/enterprise](https://webcontainers.io/enterprise). The spike is within the free prototype use. Asking about pricing only matters once #1169 is fixed; a message for then:
-
-> We are building Smithable, an open-source app builder (EU-hosted) whose hosted Builder would run each user's app preview in a WebContainer. The generated apps use TanStack Start and Better Auth, which need AsyncLocalStorage across await (webcontainer-core#1169). Is a fix planned, and what would a production license cost for a product with [expected number] monthly active builders?
-
 ## Decision
 
 Following the roadmap's rule ("if it isn't viable, the Remote VM runtime is chosen instead"):

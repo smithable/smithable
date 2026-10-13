@@ -1,6 +1,6 @@
 # CI: what runs where
 
-Two kinds of run, by cost. GitHub's runners are billed by the minute (the Team plan includes 3000 a month; October 2026 used 8000 in six days, most of it the example apps and Studio on `full-ci` pull requests and the twice-daily check of main, and the cloud release waiting on a runner). The self-hosted runner is Johan's dev machine, which already runs these checks for every engine change through `scripts/gate.sh`; its minutes are free.
+Two kinds of run, by cost. GitHub's runners are billed by the minute. The self-hosted runner is Johan's dev machine, which already runs these checks for every engine change through `scripts/gate.sh`; its minutes are free.
 
 | Run | Where | What |
 |---|---|---|
