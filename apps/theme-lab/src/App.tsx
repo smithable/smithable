@@ -79,6 +79,7 @@ export function App() {
   // "Show the motion" reloads the landing frames, which then scroll through once.
   const [replay, setReplay] = useState(0);
   const touring = useRef(false);
+  const toured = useRef(new Set<string>());
   const origin = start && new URL(start.preview).origin;
   useEffect(() => {
     if (!css || !origin) return;
@@ -99,8 +100,12 @@ export function App() {
         if (frame?.dataset.signIn !== undefined)
           from.postMessage({ type: "smithable:dev-sign-in", role: "admin" }, origin);
         if (css) from.postMessage({ type: "smithable:theme-css", css, mode }, origin);
-        if (touring.current && frame?.dataset.frame?.startsWith("Landing"))
+        if (touring.current && frame?.dataset.frame?.startsWith("Landing")) {
           from.postMessage({ type: "smithable:motion-tour" }, origin);
+          // Once per click: a later reload of the frame (a save, Vite's own) does not tour again.
+          toured.current.add(frame.dataset.frame);
+          if (toured.current.size === 2) touring.current = false;
+        }
         // Asked for its place, the page says where it is (and from then on, each move).
         from.postMessage({ type: "smithable:select-mode", on: false }, origin);
       }
@@ -180,6 +185,7 @@ export function App() {
           disabled={!signedIn}
           onClick={() => {
             touring.current = true;
+            toured.current.clear();
             setReplay((n) => n + 1);
           }}
         >
