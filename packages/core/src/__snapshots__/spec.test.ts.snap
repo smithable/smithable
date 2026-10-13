@@ -45,6 +45,7 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
     "timezone": "Europe/Stockholm",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -246,6 +247,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "description": "A kind of class the studio offers, such as Vinyasa, Yin, Hatha or Foundations.",
@@ -889,6 +891,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "description": "A company we have a commercial relationship with.",
@@ -1255,6 +1258,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     "name": "Invoicely",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "description": "The freelancer's own business details, printed on their invoices.",
@@ -1756,6 +1760,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
     "name": "Torget",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -1964,6 +1969,7 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "description": "One thing in the collection.",
@@ -2227,6 +2233,7 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -2697,6 +2704,7 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
     "name": "Actions",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -2751,6 +2759,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "description": "One field of each kind.",
@@ -2947,6 +2956,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
     "name": "Formulas",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -3232,6 +3242,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
     "name": "Torget",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -3465,6 +3476,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
     "name": "Menus",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -3549,6 +3561,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
     "name": "Minimal",
   },
   "extensions": {},
+  "incoming": [],
   "models": [],
   "navigation": [
     {
@@ -3570,6 +3583,7 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
     "name": "Page patterns",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -3772,6 +3786,7 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
     "name": "Relations",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [
@@ -4084,6 +4099,7 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
     "name": "Standard actions",
   },
   "extensions": {},
+  "incoming": [],
   "models": [
     {
       "fields": [

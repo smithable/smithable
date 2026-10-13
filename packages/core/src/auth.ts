@@ -951,6 +951,30 @@ function checkAgainstSpec(
         );
     }
   }
+  // An incoming call acts as its role (integrations.md §3): the role must exist, and a record it
+  // adds goes through that role's create rule.
+  for (const i of ir.incoming) {
+    if (!auth.roles.some((r) => r.name === i.as)) {
+      ctx.error(
+        accessAt,
+        "unknown-role",
+        `Incoming call "${i.name}" acts as "${i.as}", which is no role in smithable.auth.yml.`,
+        didYouMean(
+          i.as,
+          auth.roles.map((r) => r.name),
+        ),
+      );
+      continue;
+    }
+    const model = i.create ? ir.models.find((m) => m.name === i.create) : undefined;
+    if (model && !modelAccess(model, auth).create.roles.includes(i.as))
+      ctx.warning(
+        accessAt,
+        "incoming-cannot-create",
+        `Incoming call "${i.name}" acts as ${i.as}, who may not add ${model.name} records: every call would be refused.`,
+        `Grant ${i.as} create on ${model.name}, or let the call act as another role.`,
+      );
+  }
   // Outgoing mail (integrations.md §4.1b) meets the access rules here. An address typed by a
   // visitor is not sent to: the app would mail whoever a stranger names. A role that may not
   // read the record would be told what it holds.
