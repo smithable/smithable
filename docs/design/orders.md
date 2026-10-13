@@ -216,7 +216,48 @@ later, and the first testers will say whether a prepaid order or a counter payme
 want. `smithable validate`'s `card-data` warning already tells a maker who adds a card field to
 use a service instead.
 
-## 7. Out of scope
+## 7. Orders without an account: misuse, and what holds it down
+
+Johan's question (2026-10-13): are bots and prank orders a real risk, and is there anything
+reasonable short of forcing sign-in? The answer in three parts.
+
+**What a fake order costs.** Staff accept an order before anything is cooked (§1): a prank or a
+bot costs a look and a phone call, never food. That is how takeaway sites that take guest
+orders work, and the cases they fear are volume (a hundred orders in a minute) and a kitchen
+that starts cooking before reading. The design keeps both out: the limits below, and no order
+is cooked unaccepted.
+
+**What the page does by itself, nothing to switch on:**
+
+- the public write limit by address (§3 item 5), and one more: the same phone number may place
+  three orders an hour, the fourth is refused in words;
+- a honeypot field and a minimum time between the page opening and the order being sent (a
+  bot fills every field at once), refused silently as a bad request; no third-party CAPTCHA,
+  which would need consent and keeps real customers out;
+- an order at most fifty lines and a quantity at most ninety-nine, the hours, and a total the
+  owner may cap (`max: 300` on the page: a larger order says to call);
+- Decline with a reason; a number declined twice as a prank is refused on its next order for
+  a day, said in words ("Call us to order"), the owner's Activity shows it.
+
+**What the owner switches on when it is needed, in the spec:**
+
+- `confirm: email` on the order page: the order is placed only after the customer enters the
+  code mailed to them. This is the sign-in's own code (no password, no account to make), so
+  "force login" and "confirm by email" are the same step with a different title, and it costs
+  nothing to build: the customer then owns the order and has My orders. It keeps out bots and
+  most pranks, not a kid with their own email.
+- `confirm: phone`: the same with a text message; needs a sender of texts, which the app does
+  not have yet (a setting of the hosted service when it does). This is what a restaurant
+  wants, since the phone is what they call; later.
+- `pay: true` (§6): a paid order is a real order, and prepayment is what the large takeaway
+  services rely on. The owner may require it (`when: { status: new, paid: true }` on Accept).
+
+**The starter's default:** no confirmation, Accept as the gate, the automatic limits on. The
+summary sentence says so ("anyone may order; staff accept each order"), and the Who can tab
+shows `confirm` and `pay` as the two switches when pranks appear. A first build from "a
+takeaway where customers order online" gets the same default and the same sentence.
+
+## 8. Out of scope
 
 - **Delivery** (an address, a fee by distance, a driver): pickup only; a delivery address is an
   `ask` field a maker adds, the fee a later key.
@@ -229,7 +270,7 @@ use a service instead.
 - **Accounts for customers:** none; a signed-in customer owns their orders and gets a My orders
   page by `mine: true` on a crud page, already built.
 
-## 8. The starter
+## 9. The starter
 
 `examples/kiosk`: a harbour food truck with a dozen dishes in four sections and pictures from the
 library, a week of stops, twenty sample orders across the statuses, the staff role, the
@@ -240,14 +281,14 @@ dish is refused by the server when sent anyway. Two bench descriptions from its 
 Swedish copy exercises `language: sv` on the words the page adds (the bar, "Sold out", "Closed,
 opens …"), which go in `words/en.ts` and `sv.ts` like every kit word.
 
-## 9. Steps (after the support portal, A, with C for samples and pictures)
+## 10. Steps (after the support portal, A, with C for samples and pictures)
 
 1. `sequence: true` on an `int!` field: core (validation, the summary, the schema, the spec
    reference), the generator (set in the create path, never a form field), one test.
 2. The `order` page kind as an internal plugin: schema, `addOrderPage`, validation (§3's
    checks), the summary sentence, the spec reference and the schema; the hours grammar shared
    with appointments.
-3. The generator: the create path (§3 items 1–3 and 5), `OrderPage.tsx`, the words in both
+3. The generator: the create path (§3 items 1–3 and 5, §7's limits and `confirm: email`), `OrderPage.tsx`, the words in both
    languages, the content and ux keys.
 4. The starter, its samples, pictures and test-apps flow; the phone-editing pass written down as
    findings (starters.md §1.2); the Starters page entry.
