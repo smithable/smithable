@@ -381,6 +381,11 @@ export interface IncomingIR {
   id?: string;
   /** The role the call acts as (its record goes through that role's create rule). */
   as: string;
+  /**
+   * A mail that becomes a record (backlog Fable 29): the call's body is the fixed mail payload,
+   * and these name the fields its sender, subject, text and attachments go to.
+   */
+  mail?: { from?: string; subject?: string; body?: string; attachments?: string };
 }
 
 /** A value an incoming call sets: a literal, a formula, or a text with {path} placeholders from its JSON. */

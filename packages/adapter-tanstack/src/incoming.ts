@@ -75,7 +75,24 @@ export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): strin
     const field = model?.fields.find((f) => f.name === v.field);
     return field?.type.kind === "scalar" && ["int", "decimal", "money"].includes(field.type.name);
   });
-  const lines = incoming.set.map((v) => value(v));
+  // A mail's parts go to the fields "fields" names; attachments are saved as uploads are.
+  const mailFields = incoming.mail ?? {};
+  const attachmentsField = mailFields.attachments
+    ? model?.fields.find((f) => f.name === mailFields.attachments)
+    : undefined;
+  const mailLines = incoming.mail
+    ? [
+        ...(mailFields.from ? [`${mailFields.from}: address(mail.from),`] : []),
+        ...(mailFields.subject ? [`${mailFields.subject}: text(mail.subject),`] : []),
+        ...(mailFields.body ? [`${mailFields.body}: bodyOf(mail),`] : []),
+        ...(attachmentsField
+          ? [
+              `${attachmentsField.name}: ${attachmentsField.type.kind === "scalar" && attachmentsField.type.name === "files" ? "files" : "(files[0] ?? null)"},`,
+            ]
+          : []),
+      ]
+    : [];
+  const lines = [...incoming.set.map((v) => value(v)), ...mailLines];
   const usesFill = incoming.id !== undefined || incoming.set.some((v) => "template" in v);
   // A formula on the record reads fields of an empty one: only when one does.
   const readsRow = lines.some((l) => /\brow\b/.test(l));
@@ -93,7 +110,7 @@ ${
     ? `import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${n.schema} } from "#/generated/${kebab(model.name)}.schema";`
     : `import { handle } from "#/custom/incoming/${kebab(incoming.name)}";`
-}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}
+}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${attachmentsField ? '\nimport { BadFile, FILE_MAX_BYTES, saveFile, scanned } from "#/kit/uploads";' : ""}
 
 const NAME = ${JSON.stringify(incoming.name)};
 const DAY = 86_400_000;
@@ -117,6 +134,26 @@ const at = (body: unknown, path: string): string => {
 };
 const fill = (template: string, body: unknown) =>
   template.replace(/\\{([^{}]+)\\}/g, (_, path: string) => at(body, path.trim()));`
+    : ""
+}${
+  incoming.mail
+    ? `
+/** The mail a host passes on: from, to, subject, text, html, attachments ({ name, type, data }). */
+type Mail = { from?: unknown; to?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown };
+const text = (v: unknown) => (typeof v === "string" ? v : "");${
+        mailFields.from
+          ? `
+/** "Ada <ada@example.com>" → ada@example.com. */
+const address = (v: unknown) => (/<([^<>]+)>/.exec(text(v))?.[1] ?? text(v)).trim();`
+          : ""
+      }${
+        mailFields.body
+          ? `
+/** The mail's text, or its HTML without the tags when it has no text. */
+const bodyOf = (mail: Mail) =>
+  text(mail.text) || text(mail.html).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();`
+          : ""
+      }`
     : ""
 }${
   usesNumbers
@@ -162,7 +199,32 @@ export const Route = createFileRoute("/incoming/${incoming.name}")({
         };
 ${
   n
-    ? `        ${readsRow ? "const row = {} as Record<string, unknown>;\n        " : ""}const parsed = ${n.schema}.safeParse({
+    ? `        ${readsRow ? "const row = {} as Record<string, unknown>;\n        " : ""}${
+        incoming.mail
+          ? `const mail = body as Mail;
+${
+  attachmentsField
+    ? `        // Each attachment checked and kept as an upload is; one too large refuses the mail.
+        const files = [];
+        for (const one of Array.isArray(mail.attachments) ? mail.attachments : []) {
+          const { name, data } = one as { name?: unknown; data?: unknown };
+          const bytes = Buffer.from(text(data), "base64");
+          if (bytes.byteLength === 0) continue;
+          if (bytes.byteLength > FILE_MAX_BYTES)
+            return answer(413, { error: \`\${text(name) || "An attachment"} is over \${FILE_MAX_BYTES / 1_000_000} MB.\` });
+          try {
+            await scanned(bytes);
+            files.push(saveFile(${JSON.stringify(kebab(model?.name ?? ""))}, bytes, text(name) || "attachment"));
+          } catch (error) {
+            if (error instanceof BadFile) return answer(422, { error: error.message });
+            throw error;
+          }
+        }
+`
+    : ""
+}        `
+          : ""
+      }const parsed = ${n.schema}.safeParse({
 ${lines.map((l) => `          ${l}`).join("\n")}
         });
         if (!parsed.success)

@@ -96,3 +96,48 @@ test("addIncoming and removeIncoming write the entry; the role must exist and ma
     validateAuth({ path: "smithable.auth.yml", text: auth }, ir).diagnostics.map((d) => d.code),
   ).toContain("unknown-role");
 });
+
+test("a mail becomes a record: its parts go to fields of the right kind, none also in set", () => {
+  const mail = `  support:
+    mail: true
+    create: Incident
+    set: { status: investigating, detectedAt: NOW() }
+    fields: { subject: title, body: summary }
+`;
+  const { ir, diagnostics } = read(mail);
+  expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(ir?.incoming[0]?.mail).toEqual({ subject: "title", body: "summary" });
+  expect(incomingText(ir?.incoming[0] as never, (m) => m.toLowerCase())).toBe(
+    "When support is called: a mail becomes an incident, as admin.",
+  );
+  expect(codes("  x: { mail: true, custom: true }\n")).toContain("invalid-incoming");
+  expect(codes("  x: { mail: true, create: Incident, fields: { sender: title } }\n")).toContain(
+    "invalid-incoming",
+  );
+  expect(
+    codes("  x: { mail: true, create: Incident, fields: { attachments: title } }\n"),
+  ).toContain("invalid-incoming");
+  expect(
+    codes("  x: { mail: true, create: Incident, set: { title: x }, fields: { subject: title } }\n"),
+  ).toContain("invalid-incoming");
+  expect(codes("  x: { create: Incident, fields: { subject: title } }\n")).toContain(
+    "invalid-incoming",
+  );
+});
+
+test("addIncoming writes a mail entry with its fields", () => {
+  const added = applyOperation({ spec, auth }, "addIncoming", {
+    name: "support",
+    mail: true,
+    create: "Incident",
+    set: ["status=investigating", "detectedAt=NOW()"],
+    fields: ["subject=title", "body=summary"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.files.spec).toMatch(
+    /support:\n {4}mail: true\n {4}create: Incident\n {4}set:\n(.*\n){2} {4}fields:\n {6}subject: title\n {6}body: summary/,
+  );
+  expect(applyOperation({ spec, auth }, "addIncoming", { name: "x", mail: true })).toMatchObject({
+    ok: false,
+  });
+});
