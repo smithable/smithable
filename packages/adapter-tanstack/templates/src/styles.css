@@ -105,9 +105,21 @@
   ::view-transition-new(root) {
     animation-duration: var(--motion-slow);
   }
-  /* A preset may set tables' numbers in even columns (corporate does). */
+  /* The theme's style layer (themes.ts): the headings' font and case, the tables' numbers and rows. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading, inherit);
+    text-transform: var(--heading-case, none);
+  }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);
+  }
+  [data-kit="model-table"] tbody tr {
+    border-color: var(--row-divider, var(--border));
+  }
+  [data-kit="model-table"] tbody tr:nth-child(even) {
+    background-color: var(--row-stripe, transparent);
   }
 }
 

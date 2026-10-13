@@ -104,9 +104,13 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -8530,7 +8534,6 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -8540,12 +8543,24 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -8901,14 +8916,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "6c385d35 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "e6499ecf generated",
+  "package.json": "bebf180a generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -9033,8 +9048,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "9b327b8e generated",
   "src/routes/team/index.tsx": "59b3387f generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -9141,9 +9156,13 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -18503,7 +18522,6 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -18513,12 +18531,24 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -18944,14 +18974,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "c949523d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "8bb9ac47 generated",
+  "package.json": "ca2c2352 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -19005,7 +19035,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "6b887c75 kit",
+  "src/kit/Landing.tsx": "fc44b694 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
@@ -19105,8 +19135,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "785d6529 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -19219,9 +19249,13 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -24145,7 +24179,6 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -24155,12 +24188,24 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -24491,14 +24536,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "fb4f1863 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "b4c14ec6 generated",
+  "package.json": "768d3bad generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -24595,8 +24640,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "184b5fba generated",
   "src/routes/team/trash.tsx": "490a41ed generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -24703,9 +24748,13 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -30788,7 +30837,6 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -30798,12 +30846,24 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -31193,14 +31253,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "72d2f14e generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "bc81c06b generated",
+  "package.json": "5489e5ee generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -31250,7 +31310,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "6b887c75 kit",
+  "src/kit/Landing.tsx": "fc44b694 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -31319,8 +31379,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "59eccf55 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -31427,9 +31487,13 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -35036,7 +35100,6 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -35046,12 +35109,24 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -35392,14 +35467,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "ea84412d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "8dfe8c0e generated",
+  "package.json": "13b8ed25 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -35434,7 +35509,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "827f8bde kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "6b887c75 kit",
+  "src/kit/Landing.tsx": "fc44b694 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -35499,8 +35574,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "33f3da1c generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -35607,9 +35682,13 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -37983,7 +38062,6 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -37993,12 +38071,24 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -38289,14 +38379,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "f19f8273 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "17e34790 generated",
+  "package.json": "4a4dda4b generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -38326,7 +38416,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
-  "src/kit/Landing.tsx": "6b887c75 kit",
+  "src/kit/Landing.tsx": "fc44b694 kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
   "src/kit/ModelTable.tsx": "6571f40b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -38374,8 +38464,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -38488,9 +38578,13 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fontsource-variable/archivo-narrow": "5.3.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
+    "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-router": "1.170.42",
     "@tanstack/react-start": "1.168.61",
@@ -47934,7 +48028,6 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --control-height: 2.75rem;
   --row-height: 4rem;
@@ -47944,12 +48037,24 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --motion-slow: 180ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-distance: 6px;
+  --font-heading: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
+  --heading-scale: 1;
+  --heading-case: none;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
+  --section-background: transparent;
+  --section-border: 0;
+  --divider: var(--border);
   --button-radius: calc(var(--radius) - 2px);
+  --button-weight: 600;
+  --picture-radius: initial;
+  --picture-frame: 0;
   --table-numbers: normal;
+  --row-divider: var(--divider);
+  --row-stripe: transparent;
   --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
@@ -48348,14 +48453,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "80efd3a6 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "4f42a7bb generated",
+  "package.json": "1deeca1e generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
   "server.mjs": "421393ea kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
-  "src/components/ui/button.tsx": "df54fc27 kit",
+  "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "e771faee kit",
   "src/components/ui/table.tsx": "69a01130 kit",
@@ -48409,7 +48514,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "a0e6091b kit",
-  "src/kit/Landing.tsx": "6b887c75 kit",
+  "src/kit/Landing.tsx": "fc44b694 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
@@ -48486,8 +48591,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "40f4b24a generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "96d86081 kit",
-  "src/theme.css": "20ab3225 generated",
+  "src/styles.css": "c8eb01ad kit",
+  "src/theme.css": "47d8302b generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
