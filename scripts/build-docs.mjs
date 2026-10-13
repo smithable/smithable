@@ -31,6 +31,7 @@ const PAGES = [
   { src: "docs/site/api.md", out: "api.html", nav: "The API" },
   { src: "docs/site/assistants.md", out: "assistants.html", nav: "Programs and assistants" },
   { src: "docs/site/outgoing.md", out: "outgoing.html", nav: "Mail and calls out" },
+  { src: "docs/site/incoming.md", out: "incoming.html", nav: "Mail and calls in" },
   { src: "docs/site/language.md", out: "language.html", nav: "Another language" },
   { src: "docs/site/self-host.md", out: "self-host.html", nav: "Self-hosting" },
   { src: "docs/site/google-sign-in.md", out: "google-sign-in.html", nav: "Sign in with Google" },
