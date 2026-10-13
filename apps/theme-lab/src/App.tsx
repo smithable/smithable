@@ -53,7 +53,14 @@ export function App() {
   const css = useMemo(
     () =>
       theme
-        ? themeCss({ ...emptyUx(), theme: { ...emptyUx().theme, preset: theme.name } }, [theme])
+        ? // The theme's own density and motion, as a ux file that names only the theme gets them.
+          themeCss(
+            {
+              ...emptyUx(),
+              theme: { preset: theme.name, density: theme.density, motion: theme.motion },
+            },
+            [theme],
+          )
         : undefined,
     [theme],
   );

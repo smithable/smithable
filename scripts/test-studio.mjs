@@ -2410,7 +2410,7 @@ if (!failed) {
           await new Promise((r) => setTimeout(r, 250));
         if (!(await sheet.textContent())?.includes('--font-heading: "Fraunces Variable"'))
           throw new Error("the frame did not get the heading font");
-        await labPage.getByLabel("Name").fill("lab-test");
+        await labPage.getByLabel("Name", { exact: true }).fill("lab-test");
         await labPage.getByRole("button", { name: /^Save/ }).click();
         await labPage.getByRole("status").getByText("Saved").waitFor();
         const saved = readFileSync(join(dir, "themes/lab-test.yml"), "utf8");
