@@ -4,7 +4,7 @@
 // and lets table columns be dragged. The app's own builds never include it.
 
 /** The runtime, run in the preview page inside Studio's iframe. */
-const RUNTIME = `
+export const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
   let selecting = false;
   // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
@@ -82,6 +82,27 @@ if (typeof window !== "undefined" && window.parent !== window) {
     // A page that never shows it (the field is on another page) stops watching after a minute;
     // a regeneration under load can take longer than a few seconds to reach the page.
     setTimeout(() => observer.disconnect(), 60000);
+  });
+
+  // A theme tried on without a regeneration (docs/design/theme-lab.md §3): the theme lab or
+  // Studio sends the CSS themeCss writes, and it replaces the app's own until the page reloads.
+  // Only from the page this preview is in, and only from this machine. The fonts' bare imports
+  // become the paths Vite serves them at (every app has all seven).
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
+    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    if (typeof event.data.css !== "string") return;
+    let sheet = document.getElementById("sm-theme");
+    if (!sheet) {
+      sheet = document.createElement("style");
+      sheet.id = "sm-theme";
+    }
+    sheet.textContent = event.data.css.replace(
+      /@import "(@fontsource-variable\\/[a-z0-9-]+)";/g,
+      '@import "/node_modules/$1/index.css";',
+    );
+    // Last in the head, so its variables win over the app's theme.css.
+    document.head.append(sheet);
   });
 
   window.addEventListener("message", (event) => {
