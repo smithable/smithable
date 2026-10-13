@@ -1,0 +1,171 @@
+{
+  "crm": {
+    "sentence": "Customers need a website",
+    "form": {
+      "Kind of record": "Customer",
+      "Name": "Website",
+      "Holds": "Web address"
+    },
+    "lines": ["website: url"],
+    "route": "/customers/new",
+    "files": {
+      "prompt": "crm/prompt.webp",
+      "nocode": "crm/nocode.webp",
+      "code": "crm/code.webp",
+      "before": "crm/before.webp",
+      "after": "crm/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Customers need a website\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Website, Web address",
+      "code": "smithable.yml in Studio's editor with the new line \"website: url\"",
+      "before": "The app's /customers/new page before the change",
+      "after": "The app's /customers/new page after the change: the new-customer form gains a Website field"
+    }
+  },
+  "booking": {
+    "sentence": "Sessions need a room",
+    "form": {
+      "Kind of record": "Session",
+      "Name": "Room",
+      "Holds": "Text"
+    },
+    "lines": ["room: string"],
+    "route": "/sessions/new",
+    "files": {
+      "prompt": "booking/prompt.webp",
+      "nocode": "booking/nocode.webp",
+      "code": "booking/code.webp",
+      "before": "booking/before.webp",
+      "after": "booking/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Sessions need a room\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Room, Text",
+      "code": "smithable.yml in Studio's editor with the new line \"room: string\"",
+      "before": "The app's /sessions/new page before the change",
+      "after": "The app's /sessions/new page after the change: the new-session form gains a Room field"
+    }
+  },
+  "invoicing": {
+    "sentence": "Invoices need a reference",
+    "form": {
+      "Kind of record": "Invoice",
+      "Name": "Reference",
+      "Holds": "Text"
+    },
+    "lines": ["reference: string"],
+    "route": "/invoices/new",
+    "files": {
+      "prompt": "invoicing/prompt.webp",
+      "nocode": "invoicing/nocode.webp",
+      "code": "invoicing/code.webp",
+      "before": "invoicing/before.webp",
+      "after": "invoicing/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Invoices need a reference\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Reference, Text",
+      "code": "smithable.yml in Studio's editor with the new line \"reference: string\"",
+      "before": "The app's /invoices/new page before the change",
+      "after": "The app's /invoices/new page after the change: the new-invoice form gains a Reference field"
+    }
+  },
+  "marketplace": {
+    "sentence": "Items need a brand",
+    "form": {
+      "Kind of record": "Item",
+      "Name": "Brand",
+      "Holds": "Text"
+    },
+    "lines": ["brand: string"],
+    "route": "/my-items/new",
+    "files": {
+      "prompt": "marketplace/prompt.webp",
+      "nocode": "marketplace/nocode.webp",
+      "code": "marketplace/code.webp",
+      "before": "marketplace/before.webp",
+      "after": "marketplace/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Items need a brand\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Brand, Text",
+      "code": "smithable.yml in Studio's editor with the new line \"brand: string\"",
+      "before": "The app's /my-items/new page before the change",
+      "after": "The app's /my-items/new page after the change: the new-item form gains a Brand field"
+    }
+  },
+  "status": {
+    "sentence": "Incidents need a monitoring date and time",
+    "form": {
+      "Kind of record": "Incident",
+      "Name": "Monitoring at",
+      "Holds": "Date and time"
+    },
+    "lines": ["monitoringAt: datetime"],
+    "route": "/incidents/new",
+    "files": {
+      "prompt": "status/prompt.webp",
+      "nocode": "status/nocode.webp",
+      "code": "status/code.webp",
+      "before": "status/before.webp",
+      "after": "status/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Incidents need a monitoring date and time\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Monitoring at, Date and time",
+      "code": "smithable.yml in Studio's editor with the new line \"monitoringAt: datetime\"",
+      "before": "The app's /incidents/new page before the change",
+      "after": "The app's /incidents/new page after the change: the new-incident form gains a Monitoring at field"
+    }
+  },
+  "records": {
+    "sentence": "Items need a tag",
+    "form": {
+      "Kind of record": "Item",
+      "Name": "Tag",
+      "Holds": "Text"
+    },
+    "lines": ["tag: string"],
+    "route": "/items/new",
+    "files": {
+      "prompt": "records/prompt.webp",
+      "nocode": "records/nocode.webp",
+      "code": "records/code.webp",
+      "before": "records/before.webp",
+      "after": "records/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Items need a tag\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Tag, Text",
+      "code": "smithable.yml in Studio's editor with the new line \"tag: string\"",
+      "before": "The app's /items/new page before the change",
+      "after": "The app's /items/new page after the change: the new-item form gains a Tag field"
+    }
+  },
+  "api": {
+    "sentence": "Tasks need a priority",
+    "form": {
+      "Kind of record": "Task",
+      "Name": "Priority",
+      "Holds": "One of a list…",
+      "Values": "low, normal, high"
+    },
+    "lines": ["priority: low | normal | high"],
+    "route": "/admin/tasks/new",
+    "files": {
+      "prompt": "api/prompt.webp",
+      "nocode": "api/nocode.webp",
+      "code": "api/code.webp",
+      "before": "api/before.webp",
+      "after": "api/after.webp"
+    },
+    "alt": {
+      "prompt": "Studio's prompt box with \"Tasks need a priority\" and the change it proposes",
+      "nocode": "Studio's form for adding a field, filled in: Priority, One of a list…",
+      "code": "smithable.yml in Studio's editor with the new line \"priority: low | normal | high\"",
+      "before": "The app's /admin/tasks/new page before the change",
+      "after": "The app's /admin/tasks/new page after the change: the new-task form gains a Priority field"
+    }
+  }
+}
