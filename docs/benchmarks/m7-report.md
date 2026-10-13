@@ -1,6 +1,6 @@
 # M7 report: benchmark results and product decisions (2026-09-27)
 
-Measurements: [m7.md](m7.md) (seven tasks, in order, on a CRM with customers only).  The prompt-to-code builder setup ([protocol](m7-prompt-to-code.md)) has not been run yet.
+Measurements: [m7.md](m7.md) (seven tasks, in order, on a CRM with customers only). The prompt-to-code builder setup ([protocol](m7-prompt-to-code.md)) has not been run yet.
 
 ## Results
 
@@ -18,26 +18,6 @@ No setup caused a regression: every earlier task still worked after every later 
 2. **A strong agent gets every task right, but the project drifts.** Plain Claude Code completed all seven tasks with correct results, and even updated smithable.yml, but its code was never what the spec generates. The next Smithable change runs into hand-edited files. Its own summary said: "I couldn't find the Smithable tool in this project, so I wrote the generated files by hand."
 3. **One uncovered task costs more with MCP, and blocks later operations.** Search has no operation. B tried the tools, then edited the generated customers route by hand ($0.58, 29 turns, more than A's $0.40). The next task, reordering the menu, then failed: regeneration refused to overwrite the hand-edited route. B stopped and explained why, which is correct but unhelpful. **The missing piece is not search itself but a supported place for custom page code**, so an agent (or a developer) can go beyond the spec without touching generated files.
 4. **Smithable alone (no model) does six of seven tasks in 2 seconds each**, at no cost. The gap is the same: search.
-
-
-
-
-
-
-|---|---|---|
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## Product decisions
 

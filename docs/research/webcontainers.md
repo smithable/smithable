@@ -27,12 +27,6 @@ So the engine itself is fully browser-ready, as designed (ARCHITECTURE rule: eng
 
 An app without sign-in works, which is how the timings above were measured.
 
-## Licensing
-
-
-
-
-
 ## Decision
 
 Following the roadmap's rule ("if it isn't viable, the Remote VM runtime is chosen instead"):

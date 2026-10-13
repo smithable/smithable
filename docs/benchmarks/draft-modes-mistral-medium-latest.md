@@ -1,6 +1,6 @@
 # First drafts, files against operations: mistral-medium-latest (2026-09-30)
 
-11 descriptions , each drafted as whole files adapted from the closest starter and as a batch of operations from an empty app (docs/design/first-build.md, 2.7). Valid means the draft is an app Smithable accepts.
+11 descriptions (the M12 ten and one more), each drafted as whole files adapted from the closest starter and as a batch of operations from an empty app (docs/design/first-build.md, 2.7). Valid means the draft is an app Smithable accepts.
 
 - files: 11 / 11 valid, 118,006 tokens, €0.074, 94 s
 - operations: 11 / 11 valid, 58,008 tokens, €0.035, 55 s

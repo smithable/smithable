@@ -107,7 +107,7 @@ Measure: tokens or credits, wall time, files touched, test success, regressions,
 
 Before this milestone, interview 10–15 target users (non-developers who have used prompt-to-code builders, and developers or agencies), so the benchmark measures what they care about.
 
-**Done (2026-09-27)** ; the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
+**Done (2026-09-27)**; the interviews move to M9 as usability tests. Results and decisions: [benchmarks/m7-report.md](benchmarks/m7-report.md). The prompt-to-code builder setup has a [manual protocol](benchmarks/m7-prompt-to-code.md) and has not been run.
 
 **Exit:**
 - A written report, and product decisions updated from the results.
@@ -133,7 +133,6 @@ Removes the biggest technical risk of the browser-first product before building 
 
 - Run the engine and the generated CRM's dev server inside a WebContainer, with a WebAssembly SQLite driver in the preview.
 - Verify that the preview and native SQLite behave the same for the generated queries and migrations.
-
 - Decide how hosted projects are stored (server-side Git repositories synced from the browser is the leaning).
 
 **Exit:**
@@ -282,7 +281,7 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Pricing and plans with included allowances, and the hosting provider (EU-owned or AWS), one stack. Pricing is undecided: no prices or plans are set yet.
 - The open-source repository goes public together with the hosted beta.
 
-**Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO, with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps.  
+**Progress (2026-10-01):** the licences are settled (engine Apache-2.0, app kit and templates 0BSD, DCO), with `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the templates and public CI in place, and notices generated into apps.
 
 **Progress (2026-10-02):**
 - The five look fixes are built: a `cover` hero with shortcuts (#79), pictures on cards with a placeholder (#81), the site's header menu and footer columns (#83), scale and rhythm with each preset's own shape (#85), and public pages in the site's frame (#86).
