@@ -42,9 +42,13 @@
               "enum": [
                 "Inter",
                 "Nunito Sans",
-                "Source Sans 3"
+                "Source Sans 3",
+                "Source Serif 4",
+                "Fraunces",
+                "Archivo Narrow",
+                "DM Sans"
               ],
-              "description": "The font: Inter, Nunito Sans, Source Sans 3."
+              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans."
             }
           }
         },
