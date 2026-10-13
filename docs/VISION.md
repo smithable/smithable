@@ -39,7 +39,7 @@ We will not launch as "an app builder for everyone". The first customers are the
 
 Everything early (templates, page patterns, marketing, the benchmark and user interviews) is judged by whether it serves these two groups. We broaden only once they are well served.
 
-Public evidence supports both (): in 15 threads and reviews from prompt-to-code users, 12 describe fixes that fail or break what worked, and 10 describe unpredictable costs of changes, including paid repairs. In five EU-facing discussions, four say that where data is hosted blocks client deals, and three that regional hosting is priced beyond small projects.
+Public evidence supports both: in 15 threads and reviews from prompt-to-code users, 12 describe fixes that fail or break what worked, and 10 describe unpredictable costs of changes, including paid repairs. In five EU-facing discussions, four say that where data is hosted blocks client deals, and three that regional hosting is priced beyond small projects.
 
 ## Why Smithable instead of prompt-to-code builders
 

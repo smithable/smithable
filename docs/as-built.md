@@ -64,4 +64,4 @@ What a review of the stack and one local test of a generated app found, and what
 
 ## CI minutes, 2026-10-05
 
-GitHub Actions stopped starting jobs: . Since then a pull request of plain documents alone starts no run and is merged by `scripts/merge-green.sh` itself after a scan for secrets; a push to main starts no run; and a pull request is not run again for being behind main. Main's full check, twice a day, is where two changes that only clash together now show.
+GitHub Actions stopped starting jobs: its minutes had run out. Since then a pull request of plain documents alone starts no run and is merged by `scripts/merge-green.sh` itself after a scan for secrets; a push to main starts no run; and a pull request is not run again for being behind main. Main's full check, twice a day, is where two changes that only clash together now show.

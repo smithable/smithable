@@ -1,7 +1,6 @@
 # Appointments: one person's time (design)
 
-Status: 2026-10-11, proposed by Opus (backlog A 101, from an outside review, which Johan
-called excellent). The booking starter books **places on a session**: a class at 09:00 with
+Status: 2026-10-11, proposed by Opus (backlog A 101, from an outside review). The booking starter books **places on a session**: a class at 09:00 with
 twelve places (`booking.md`). A barber, a physiotherapist or a clinic books **one person's
 time**: a service of 30 minutes at the first free moment that person has, never two at once.
 This note designs that with two spec constructs and the parts already built. The build waits

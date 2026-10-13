@@ -1,6 +1,6 @@
 # CI: what runs where
 
-Two kinds of run, by cost. GitHub's runners are billed by the minute . The self-hosted runner is Johan's dev machine, which already runs these checks for every engine change through `scripts/gate.sh`; its minutes are free.
+Two kinds of run, by cost. GitHub's runners are billed by the minute. The self-hosted runner is Johan's dev machine, which already runs these checks for every engine change through `scripts/gate.sh`; its minutes are free.
 
 | Run | Where | What |
 |---|---|---|

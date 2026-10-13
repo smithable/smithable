@@ -1,6 +1,6 @@
 # The privacy page, written from the app
 
-Design, 2026-10-06 (Fable, ; Johan's go the same day). Built with the design: `legal: privacy`.
+Design, 2026-10-06 (Fable; Johan's go the same day). Built with the design: `legal: privacy`.
 
 ## 1. What it is
 
