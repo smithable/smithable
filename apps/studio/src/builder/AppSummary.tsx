@@ -98,8 +98,36 @@ export function AppSummary({
       </div>
     );
   };
+  // Advice the app is fine without (docs/design/advice.md), each with its one-click way.
+  const notes = (spec.diagnostics ?? []).filter((d) => d.severity === "note");
   return (
     <div data-guide="summary" className="space-y-5 p-4">
+      {notes.length > 0 && (
+        <section
+          aria-label="Worth considering"
+          className="space-y-2 rounded-md border border-line p-3"
+        >
+          <h2 className="text-xs font-semibold tracking-wide text-quiet uppercase">
+            Worth considering
+          </h2>
+          <ul className="space-y-1.5 text-sm">
+            {notes.map((d) => (
+              <li key={`${d.line}:${d.column}:${d.code}`} className="flex items-baseline gap-2">
+                <span className="flex-1">{d.message}</span>
+                {d.fix && (
+                  <Button
+                    variant="ghost"
+                    className="h-6 shrink-0 border border-line text-xs"
+                    onClick={() => d.fix && void run(d.fix.op, d.fix.args)}
+                  >
+                    Apply
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {sections.map((s, i) => (
         <section key={s.concept} aria-label={s.title}>
           {kind(sections[i - 1]?.concept ?? "") !== kind(s.concept) && heading(kind(s.concept))}
