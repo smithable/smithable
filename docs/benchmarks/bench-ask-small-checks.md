@@ -15,6 +15,7 @@ kit does: one retry with the reason, then the second marked, then the answer sho
 | The check as first merged (#621) | 116 / 134 | 15 | 3 | $0.0006 | [small-after-checks-621](bench-ask-small-after-checks-621.md) |
 | The check with its fixes (#625) | 121 / 134 | 11 | 2 | $0.0006 | [small-after-checks](bench-ask-small-after-checks.md) |
 | Strict: Small, then Medium | 122 / 134 | 11 | 1 | $0.0016 | [small-after-gateway](bench-ask-small-after-gateway.md) |
+| The tools' quiet zeros (#630), with the check | 124 / 134 | 8 | 2 | $0.0006 | [small-after-zeros](bench-ask-small-after-zeros.md) |
 
 The "before" and "with its fixes" rows count crm 14 ("Which customers have never ordered
 anything?") as right: their answer, "All customers have placed at least one order", was judged
@@ -40,3 +41,11 @@ What the check did:
 The differences between runs that the check had no part in (a question right in one run and
 wrong in the next, with no answer sent back) are the model's own variation at temperature 0,
 about three questions either way.
+
+**The quiet zeros (#630, §6)** made two of their three questions right in this run: records 6 (a
+range on a text field is refused, so the model searched for links instead) and invoicing 24 (the
+invoice number written as 2026006 got the nearest value, 2026-006). Invoicing 19 is still wrong,
+now for an honest reason: the model asked for the viewer's own invoices only and said the tool's
+"None of your own; 3 in all." instead of a total of zero. The check now shows a right answer as not
+confirmed once: status 5's 21 minutes, which the model worked out from two times, as the check
+means it to.
