@@ -127,6 +127,7 @@ export const pagesSection: SpecSection<"pages"> = {
         continue;
       }
       ctx.define("page", id);
+      ctx.mark(`page:${id}`, keyNode);
       const page = readPage(ctx, id, keyNode, value, parsed);
       if (!page) continue;
       // The page's own route and any its pattern takes besides (a data page's model lists).

@@ -1,4 +1,5 @@
 import { isScalar, LineCounter, type ParsedNode, parseDocument, visit } from "yaml";
+import { advise } from "./advice.js";
 import { checkKeys, mapEntries, ParseContext } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
@@ -121,10 +122,9 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   ctx.checkReferences(options.roles ? [] : ["role"]);
 
   if (hasErrors(ctx.diagnostics)) return done();
-  return {
-    ir: { specVersion: SPEC_VERSION, ...parsed, extensions } as SpecIR,
-    diagnostics: sortDiagnostics(ctx.diagnostics),
-  };
+  const ir = { specVersion: SPEC_VERSION, ...parsed, extensions } as SpecIR;
+  advise(ctx, ir);
+  return { ir, diagnostics: sortDiagnostics(ctx.diagnostics) };
 }
 
 function reportVersion(ctx: ParseContext, at: ParsedNode | null, found: string): void {

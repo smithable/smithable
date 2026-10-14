@@ -210,7 +210,8 @@ export default function SpecText({
         editor.state,
         problems.map((p) => ({
           ...problemRange(text, p),
-          severity: p.severity === "error" ? "error" : "warning",
+          severity:
+            p.severity === "error" ? "error" : p.severity === "warning" ? "warning" : "info",
           message: p.hint ? `${p.message}\n${p.hint}` : p.message,
         })),
       ),

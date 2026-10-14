@@ -277,6 +277,7 @@ function readModel(
   relationNodes: RelationNodes,
 ): ModelIR {
   const model: ModelIR = { name, fields: [] };
+  ctx.mark(`model:${name}`, keyNode);
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {

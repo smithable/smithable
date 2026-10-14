@@ -54,9 +54,11 @@ export function loadSpec(
     io.err(`No spec found at ${path}.\n`);
     return { path };
   }
+  // Problems only: a note (advice the app is fine without, docs/design/advice.md) is printed by
+  // `smithable validate` alone, from `found`, never by every command that loads the spec.
   const print = (diagnostics: Diagnostic[]) => {
     found?.push(...diagnostics);
-    for (const d of diagnostics) io.err(`${formatDiagnostic(d)}\n`);
+    for (const d of diagnostics) if (d.severity !== "note") io.err(`${formatDiagnostic(d)}\n`);
   };
   const failed = (file: string, diagnostics: Diagnostic[]) => {
     const errors = diagnostics.filter((d) => d.severity === "error").length;
@@ -193,11 +195,18 @@ export function validate(
     io.out(`${JSON.stringify({ valid: Boolean(ir), diagnostics: found }, null, 2)}\n`);
     return ir ? 0 : 1;
   }
-  const { ir, path } = loadSpec(target, io, extraPlugins);
+  const found: Diagnostic[] = [];
+  const { ir, path } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
   );
+  // Advice, after the verdict: what the app would gain, each with the operation that does it.
+  const notes = found.filter((d) => d.severity === "note");
+  if (notes.length) {
+    io.out(`\n${count(notes.length, "note")}, advice the app is fine without:\n`);
+    for (const d of notes) io.out(`${formatDiagnostic(d)}\n`);
+  }
   return 0;
 }
 
