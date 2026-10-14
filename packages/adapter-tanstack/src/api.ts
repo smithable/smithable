@@ -23,7 +23,7 @@ import {
   storesFiles,
   type Voice,
 } from "@smithable/core";
-import { actionNames, askedFields } from "./actions.js";
+import { actionNames, askedFields, askedKeys } from "./actions.js";
 import {
   dataKey,
   HEADER,
@@ -250,7 +250,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
                   "application/json": {
                     schema: {
                       type: "object",
-                      description: `What the action asks for: ${askedFields(action)
+                      description: `What the action asks for: ${askedKeys(action, ir)
                         .map((x) => x.key)
                         .join(", ")}`,
                     },

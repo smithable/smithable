@@ -146,7 +146,21 @@ export interface FieldIR extends SemanticText {
   formula?: Expr;
   /** A default computed when a record is created, e.g. TODAY(). */
   defaultFormula?: Expr;
+  /** A reference to User whose default is who makes the record (`default: ME()`). */
+  defaultMe?: true;
   examples?: FieldExample[];
+  /**
+   * `by: app`: the form never shows it; its value comes from its default, an action, an
+   * incoming entry, an import or custom code (record-rules.md §1).
+   */
+  byApp?: true;
+  /**
+   * `locked`: read-only while the record fits the condition (as it is before the change), and
+   * after it is made for `true`; an action's `set` may still change it (record-rules.md §2).
+   */
+  locked?: true | Condition;
+  /** `required: <condition>`: must have a value while the record fits it (record-rules.md §3). */
+  requiredWhen?: Condition;
 }
 
 export interface PageIR extends SemanticText {
@@ -336,6 +350,11 @@ export interface StandardActionIR extends ActionBase {
   when?: Condition;
   /** The new values, in the order written: a literal, a formula on the record as it was, or asked for. */
   set: ActionValueIR[];
+  /**
+   * Fields the change makes required (record-rules.md §3), asked in its dialog with the record's
+   * value filled in.
+   */
+  asksRequired?: string[];
   /** Related records created with the change, one per model (docs/design/actions.md §7). */
   add?: ActionAddIR[];
   /**

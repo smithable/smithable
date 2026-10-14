@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ModelForm } from "./ModelForm";
-import type { AppUi, ModelUi } from "./model";
+import type { AppUi, ModelUi, Options } from "./model";
 import { w } from "./words";
 
 export function ActionButton({
@@ -23,11 +23,33 @@ export function ActionButton({
   /** Runs the action, with the asked values when it asks for any. */
   onRun: (values?: Record<string, unknown>) => Promise<unknown>;
   /** What the action asks for: the dialog's fields, their schema, and the record they start from. */
-  ask?: { ui: ModelUi; schema: z.ZodType; initial: Record<string, unknown>; app: AppUi };
+  ask?: {
+    ui: ModelUi;
+    schema: z.ZodType;
+    initial: Record<string, unknown>;
+    app: AppUi;
+    /** The choices of the references it asks for, loaded when the dialog opens. */
+    loadOptions?: () => Promise<Options>;
+  };
 }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
   const dialog = useRef<HTMLDialogElement>(null);
+  const [options, setOptions] = useState<Options>();
+  const open = async () => {
+    if (ask?.loadOptions && !options) {
+      setBusy(true);
+      try {
+        setOptions(await ask.loadOptions());
+      } catch (error) {
+        setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
+    dialog.current?.showModal();
+  };
   const run = async () => {
     setBusy(true);
     setFailure(undefined);
@@ -49,7 +71,7 @@ export function ActionButton({
         variant="outline"
         title={help}
         disabled={busy}
-        onClick={() => (ask ? dialog.current?.showModal() : run())}
+        onClick={() => (ask ? void open() : run())}
       >
         {label}
       </Button>
@@ -74,6 +96,7 @@ export function ActionButton({
               app={ask.app}
               schema={ask.schema}
               initial={ask.initial}
+              {...(options ? { options } : {})}
               submitLabel={label}
               onSubmit={async (values) => {
                 // A refusal stays in the form, which shows it; done, the dialog closes.

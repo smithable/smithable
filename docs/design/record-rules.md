@@ -137,7 +137,7 @@ pages:
 
 | Part | New or reused |
 |---|---|
-| `by`, `locked`, `required` conditions on a field; `when` on computed fields; `LAST`/`FIRST` | core: the field's long form (`readLongField`), the condition reader (`condition.ts`) given computed fields, the formula library, validation, the schema, the spec reference, `changeField --locked … --required … --by app` |
+| `by`, `locked`, `required` conditions on a field; `when` on computed fields; `LAST`/`FIRST` | core: the field's long form (`readLongField`), the condition reader (`condition.ts`) given computed fields, the formula library, validation, the schema, the spec reference, `setFieldRules <model> <field> --locked … --once --required … --by app` (an operation of its own: changeField's type is positional and drives its destructive check, and rules change no data) |
 | An asked reference in `set` | core: the action reader lifts the refusal for an asked reference; the adapter's action dialog uses the field's own control |
 | The form: hidden, read-only, conditionally required fields; the server's refusals | the kit's `ModelForm` and the generated server functions, one check in each |
 | A person as a filter | core: `filters` validation; the adapter's filter row and query (`me`, `none`, an id) |
@@ -159,7 +159,7 @@ pages:
 ## 9. Steps (A; one pull request each; core diffs to Fable)
 
 1. `by: app`, `locked` and `required` as conditions in core, validation, the schema, the spec
-   reference, `changeField`'s options; the kit's form and the server checks; a test-apps flow
+   reference, `setFieldRules`; the kit's form and the server checks; a test-apps flow
    on a starter (a locked field refused, a conditional requirement asked in an action's dialog).
 2. The asked reference in `set` (§4) and the dialog's control.
 3. `LAST`/`FIRST` and `when` on computed fields (§5).

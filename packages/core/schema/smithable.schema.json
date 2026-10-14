@@ -283,8 +283,56 @@
                       "description": "What the field holds: a type (string, money, date, …), another model (Customer, or Order[] for all that refer here), or choices (\"draft | sent | paid\")."
                     },
                     "required": {
-                      "type": "boolean",
-                      "description": "A record cannot be saved without it."
+                      "type": [
+                        "boolean",
+                        "object"
+                      ],
+                      "description": "A record cannot be saved without it; or a condition, e.g. { status: [inProgress, closed] }: required while the record fits it.",
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": [
+                              "string",
+                              "boolean"
+                            ]
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "by": {
+                      "enum": [
+                        "app"
+                      ],
+                      "description": "app: the form never shows it; its default (a value, or ME()), an action, an incoming entry or code fills it."
+                    },
+                    "locked": {
+                      "type": [
+                        "boolean",
+                        "object"
+                      ],
+                      "description": "true: set when the record is made, never changed after; or a condition, e.g. { status: closed }: read-only while the record fits it. An action's set may still change it.",
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": [
+                              "string",
+                              "boolean"
+                            ]
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        ]
+                      }
                     },
                     "unique": {
                       "type": "boolean",
@@ -296,7 +344,7 @@
                         "number",
                         "boolean"
                       ],
-                      "description": "For choices, \"none\" means no default."
+                      "description": "For choices, \"none\" means no default. ME() on a field that refers to User: who makes the record."
                     },
                     "min": {
                       "type": "number",

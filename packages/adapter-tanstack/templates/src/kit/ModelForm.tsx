@@ -13,6 +13,7 @@ import {
   type AppUi,
   editorMarker,
   type FieldUi,
+  fits,
   type ModelUi,
   type Options,
   textMarker,
@@ -66,7 +67,12 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     readOnly,
     fixed,
   } = props;
-  const ui = presented(props.ui, props);
+  const all = presented(props.ui, props);
+  // A field the app fills is never in the form, only on the record's page (record-rules.md §1).
+  const ui =
+    readOnly || !all.fields.some((f) => f.byApp)
+      ? all
+      : { ...all, fields: all.fields.filter((f) => !f.byApp) };
   const [inputs, setInputs] = useState(() =>
     initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
   );
@@ -84,6 +90,16 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const formId = useId();
   const recordName = initial?.[ui.titleField];
 
+  // A field locked on the record as it is (record-rules.md §2): shown, not changed.
+  const locked = (field: FieldUi) =>
+    typeof initial?.id === "number" &&
+    field.locked !== undefined &&
+    (field.locked === true || fits(field.locked, initial));
+  // Required while the values fit the field's condition (record-rules.md §3).
+  const requiredNow = (field: FieldUi, values: Record<string, unknown>) =>
+    field.required ||
+    (field.requiredWhen !== undefined && fits(field.requiredWhen, { ...initial, ...values }));
+
   /** What is wrong with the values, by field, in words a non-developer understands. */
   function problems(values: Record<string, unknown>) {
     const result = schema.safeParse(values);
@@ -94,14 +110,24 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         if (field && !messages[field.name])
           messages[field.name] = friendly(field, issue, values[field.name]);
       }
-    return { result, messages };
+    for (const field of ui.fields) {
+      const value = values[field.name];
+      if (
+        !messages[field.name] &&
+        field.requiredWhen &&
+        requiredNow(field, values) &&
+        (value === null || value === undefined || value === "")
+      )
+        messages[field.name] = w.requiredNow(field.label);
+    }
+    return { result, messages, ok: result.success && Object.keys(messages).length === 0 };
   }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const { result, messages } = problems(storedValues(ui, inputs, app.timeZone));
+    const { result, messages, ok } = problems(storedValues(ui, inputs, app.timeZone));
     setErrors(messages);
-    if (result.success) await run(() => onSubmit(result.data));
+    if (ok && result.success) await run(() => onSubmit(result.data));
   }
 
   /**
@@ -185,7 +211,9 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
               {field.label}
             </span>
-            {field.required && <span className="text-destructive"> *</span>}
+            {requiredNow(field, storedValues(ui, inputs, app.timeZone)) && (
+              <span className="text-destructive"> *</span>
+            )}
           </Label>
         )}
         {field.computed ? (
@@ -197,7 +225,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             {formatValue(field, computed[field.name], app)}
             <span className="sr-only">{w.calculated}</span>
           </p>
-        ) : fixed?.includes(field.name) ? (
+        ) : fixed?.includes(field.name) || locked(field) ? (
           // Shown with its value, as an input that cannot be changed.
           <fieldset disabled className="contents">
             {input}
@@ -295,7 +323,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           if (field && !box?.contains(to) && !to?.closest("[data-part=actions]")) check(field);
         }}
       >
-        {!readOnly && ui.fields.some((f) => f.required && !f.computed) && (
+        {!readOnly && ui.fields.some((f) => (f.required || f.requiredWhen) && !f.computed) && (
           <p className="text-sm text-muted-foreground">
             {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}
           </p>

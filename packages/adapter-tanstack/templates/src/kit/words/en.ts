@@ -370,6 +370,9 @@ export const w = {
   /** Under a table that is one page of a longer list: "1–50 of 1,234". */
   range: (from: string, to: string, total: string) => `${from}–${to} of ${total}`,
   removeFilter: (label: string) => `Remove the ${label.toLowerCase()} filter`,
+  // A field's rules on the record (record-rules.md): a lock, a requirement while a condition holds.
+  cannotChangeNow: (label: string) => `${label} cannot be changed now.`,
+  requiredNow: (label: string) => `${label} is required now.`,
   removePicture: (n: number) => `Remove picture ${n}`,
   removeWho: (name: string) => `Remove ${name}?`,
   revokeKey: (name: string) => `Revoke "${name}"? Programs using it stop working at once.`,

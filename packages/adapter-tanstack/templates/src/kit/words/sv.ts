@@ -351,6 +351,8 @@ export const w = {
     `${left} av ${max} ${max === 1 ? "plats" : "platser"} kvar`,
   range: (from: string, to: string, total: string) => `${from}–${to} av ${total}`,
   removeFilter: (label: string) => `Ta bort filtret ${label.toLowerCase()}`,
+  cannotChangeNow: (label: string) => `${label} kan inte ändras nu.`,
+  requiredNow: (label: string) => `${label} måste fyllas i nu.`,
   removePicture: (n: number) => `Ta bort bild ${n}`,
   removeWho: (name: string) => `Ta bort ${name}?`,
   revokeKey: (name: string) =>

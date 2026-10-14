@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ActionButton } from "./ActionButton";
-import type { AppUi, ModelUi } from "./model";
+import type { AppUi, ModelUi, Options } from "./model";
 import { Overflow } from "./Overflow";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
 import { w } from "./words";
@@ -18,7 +18,7 @@ export interface SelectionAction {
   /** How many of the chosen records it fits and the viewer may run it on. */
   applies: number;
   /** What it asks for, once, for all of them. */
-  ask?: { ui: ModelUi; schema: z.ZodType };
+  ask?: { ui: ModelUi; schema: z.ZodType; loadOptions?: () => Promise<Options> };
   run: (values?: Record<string, unknown>) => Promise<{ changed: number; skipped: number }>;
 }
 

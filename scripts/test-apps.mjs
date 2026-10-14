@@ -1212,6 +1212,76 @@ async function filtersFlow(base) {
 }
 
 /**
+ * Rules on a record (record-rules.md §1–4), on the CRM's orders as the ops step left them: the
+ * form leaves out what the app fills, the ship action asks for the tracking code the change makes
+ * required, the shipped order's total cannot be changed, and an action asks for a person.
+ */
+async function rulesFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/orders/new`);
+    if ((await page.getByLabel("Handled by").count()) !== 0)
+      throw new Error("the form shows a field the app fills");
+    await page.getByRole("textbox", { name: "Number *" }).fill("ORD-3001");
+    await chooseRecord(page, "Customer *", "Nordic Timber Oy");
+    await page.getByLabel("Status").selectOption({ label: "Placed" });
+    await page.getByRole("textbox", { name: "Total *" }).fill("50");
+    await page.getByRole("button", { name: "Create order" }).click();
+    await page.waitForURL(`${base}/orders`);
+    const row = page.locator("tr", { hasText: "ORD-3001" });
+    // Shipping makes the tracking code required: the action asks for it, marked so.
+    await row.getByRole("button", { name: "Ship" }).click();
+    const dialog = page.getByRole("dialog", { name: "Ship" });
+    await dialog.getByText("Tracking code").waitFor({ timeout: 10000 });
+    if (
+      (
+        await dialog.locator('[data-part="label"]', { hasText: "Tracking code" }).textContent()
+      )?.includes("*") !== true
+    )
+      throw new Error("the tracking code is not marked required");
+    await dialog.getByRole("button", { name: "Ship" }).click();
+    await dialog.locator('[data-part="error"]').first().waitFor({ timeout: 5000 });
+    await dialog.getByRole("textbox", { name: /Tracking code/ }).fill("TRK-1");
+    await dialog.getByRole("button", { name: "Ship" }).click();
+    await row.getByText("Shipped").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: the form leaves out a field the app fills; an action asks for the field its change makes required, and refuses it empty",
+    );
+    // The shipped order's total is locked; who made the order is on its page.
+    await row.getByRole("button", { name: "ORD-3001" }).click();
+    await page
+      .getByText("TRK-1")
+      .or(page.getByRole("textbox", { name: /Tracking code/ }))
+      .first()
+      .waitFor({ timeout: 10000 });
+    if (!(await page.getByRole("textbox", { name: /^Total/ }).isDisabled()))
+      throw new Error("the shipped order's total can be changed");
+    // An action that asks for a person offers the people to choose from.
+    await open(page, `${base}/orders`);
+    await page
+      .locator("tr", { hasText: "ORD-3001" })
+      .getByRole("button", { name: "Assign packer" })
+      .click();
+    const assign = page.getByRole("dialog", { name: "Assign packer" });
+    await chooseRecord(assign, "Packed by", "Dev admin");
+    await assign.getByRole("button", { name: "Assign packer" }).click();
+    await assign.waitFor({ state: "hidden", timeout: 10000 });
+    console.log(
+      "  ✓ browser: a locked field cannot be changed once its condition holds; an action asks for a person from the people who may be chosen",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("rules flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Favorites (marketplace.md §2.3): the admin saves a customer with its heart; the Saved view
  * lists only it, the record page shows it saved, another person's Saved view stays empty, and
  * unsaving on the record page empties the admin's.
@@ -5188,6 +5258,38 @@ for (const [index, example] of examples.entries()) {
         join(dir, "src/custom/styles.css"),
         '\n[data-page="customers"] [data-kit="model-table"] [data-part="header"] th { letter-spacing: 3px; }\n',
       );
+    // Rules on a record (record-rules.md): an order's total locked once shipped, a tracking code
+    // required then (the ship action asks for it), who handled it filled by the app, and an
+    // action asking for a person.
+    if (example === "crm")
+      step(
+        "op setFieldRules and addAction give orders a locked total, a tracking code required when shipped, a field the app fills and an asked person, and the app type-checks",
+        () => {
+          for (const args of [
+            ["addField", "Order", "trackingCode", "string"],
+            ["setFieldRules", "Order", "trackingCode", "--required", "status=shipped"],
+            ["setFieldRules", "Order", "total", "--locked", "status=shipped | canceled"],
+            ["addField", "Order", "handledBy", "User = ME()"],
+            ["setFieldRules", "Order", "handledBy", "--by", "app"],
+            ["addField", "Order", "packedBy", "User"],
+            [
+              "addAction",
+              "ship",
+              "--on",
+              "Order",
+              "--when",
+              "status=placed",
+              "--set",
+              "status=shipped",
+            ],
+            ["addAction", "assignPacker", "--on", "Order", "--set", "packedBy="],
+          ]) {
+            const result = smithable(dir, "op", ...args);
+            if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
+          }
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
     if (example === "crm")
       step(
@@ -5858,6 +5960,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "crm") {
         await browserFlow(dir, base);
         await filtersFlow(base);
+        await rulesFlow(base);
         await pagingFlow(dir, base);
         await favoritesFlow(base);
         await contactFlow(dir, base);

@@ -15,7 +15,7 @@ import {
   type StandardActionIR,
   type UxIR,
 } from "@smithable/core";
-import { askedFields } from "../actions.js";
+import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
@@ -361,6 +361,7 @@ export function detailRoute(
       `${action.name}Access`,
       `${action.name}Fits`,
       ...(askedFields(action).length ? [`${action.name}AskUi`, `${action.name}Asks`] : []),
+      ...(askOptions(action, ir, t) ? [actionNames(action).askOptions] : []),
     ]);
   const contact =
     page.contact && auth && hasSignIn(auth) && !within
@@ -423,7 +424,7 @@ export function detailRoute(
     ...offered.map(
       (a) =>
         `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row) && (
-              ${actionButton(a, "row", page.route, t)}
+              ${actionButton(a, "row", page.route, t, ir)}
             )}`,
     ),
     ...(favorite
@@ -671,6 +672,7 @@ export function actionButton(
   row: string,
   route: string,
   t: Texts,
+  ir: SpecIR,
 ): string {
   const asks = askedFields(action).length > 0;
   // A copy opens the new record, to be looked over; a change shows this one as it is now.
@@ -683,7 +685,7 @@ export function actionButton(
                 concept="action:${action.name}"${
                   asks
                     ? `
-                ask={{ ui: ${action.name}AskUi, schema: ${action.name}Asks, initial: ${row}, app }}`
+                ask={{ ui: ${action.name}AskUi, schema: ${action.name}Asks, initial: ${row}, app${askOptions(action, ir, t) ? `, loadOptions: ${actionNames(action).askOptions}` : ""} }}`
                     : ""
                 }
                 onRun={async (${asks ? "values" : ""}) => {

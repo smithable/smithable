@@ -3,6 +3,7 @@
 // with named values, never a record's contents. Custom code logs the same way:
 //   log.warn("Payment provider slow", { ms: 5200 })
 import { AccessDenied, Conflict } from "./access";
+import { BadInput } from "./refusal";
 import { traceId, traceWhoNow } from "./trace.server";
 import { w } from "./words";
 
@@ -41,8 +42,10 @@ export const log = {
  * reference, which finds the log line.
  */
 export function refusal(error: unknown): Error {
-  // A refusal the app made itself (an owner that must be someone, a place that is full) as it is.
-  if (error instanceof AccessDenied || error instanceof Conflict) return error;
+  // A refusal the app made itself (an owner that must be someone, a place that is full, a locked
+  // field) as it is.
+  if (error instanceof AccessDenied || error instanceof Conflict || error instanceof BadInput)
+    return error;
   const message = error instanceof Error ? error.message : "";
   // With several columns (unique per owner), the last one is the field.
   const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
