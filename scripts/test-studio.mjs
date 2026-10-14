@@ -2317,7 +2317,11 @@ try {
           await watcher.getByRole("button", { name: "Make it once the app is there" }).click();
           await watcher.getByRole("button", { name: "Take back: not this one" }).click();
           await watcher.getByText("Waiting: not this one").waitFor({ state: "detached" });
+          // Several suggestions may be chosen together.
           await form.getByRole("button").first().click();
+          await form.getByRole("button").nth(1).click();
+          if ((await form.locator("button[aria-pressed=true]").count()) !== 2)
+            throw new Error("two suggestions cannot be chosen together");
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 });
           // The request that waited is proposed once the app is there (the Changes tab opens

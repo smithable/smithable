@@ -45,6 +45,7 @@ export function AppSummary({
   run,
   onAdd,
   onWho,
+  onLook,
 }: {
   app: string;
   sections: SummarySection[];
@@ -54,6 +55,8 @@ export function AppSummary({
   onAdd: (prefill: Prefill) => void;
   /** Opens the Who can tab with a column marked: a role's name, or "anyone". */
   onWho: (column: string) => void;
+  /** Opens the Look tab, where a list's columns and a form's fields are set. */
+  onLook: () => void;
 }) {
   const [wording, setWording] = useState(() => loadWording(app));
   const [updated, setUpdated] = useState<string[]>([]);
@@ -112,6 +115,7 @@ export function AppSummary({
             onOpen={(concept) => setOpen((o) => (o === concept ? undefined : concept))}
             onAdd={onAdd}
             onWho={onWho}
+            onLook={onLook}
             onWording={(text) =>
               setWording((w) => {
                 const { [s.concept]: _, ...rest } = w;
@@ -166,6 +170,7 @@ function Part({
   onOpen,
   onAdd,
   onWho,
+  onLook,
   onWording,
 }: {
   section: SummarySection;
@@ -178,6 +183,7 @@ function Part({
   onOpen: (concept: string) => void;
   onAdd: (prefill: Prefill) => void;
   onWho: (column: string) => void;
+  onLook: () => void;
   onWording: (text: string | undefined) => void;
 }) {
   const generated = section.sentences.join("\n");
@@ -196,7 +202,7 @@ function Part({
   const properties = (concept: string) =>
     open === concept && (
       <div className="my-2 rounded-md border border-line bg-surface">
-        <Properties key={concept} concept={concept} spec={spec} run={run} />
+        <Properties key={concept} concept={concept} spec={spec} run={run} onLook={onLook} />
       </div>
     );
 
@@ -241,7 +247,7 @@ function Part({
           />
           <p className="text-xs text-quiet">
             Only the wording, for you: it changes nothing in the app. To change the app, click a
-            part or describe the change below.
+            part above, or describe the change in the Changes tab.
           </p>
           <div className="flex gap-2">
             <Button

@@ -227,6 +227,7 @@ export function Builder({
                   setMarked(column);
                   setTab("who");
                 }}
+                onLook={() => setTab("look")}
               />
             ) : (
               // The prompt first, the forms folded, then every change with the rest of the room.
@@ -259,6 +260,11 @@ export function Builder({
                   />
                 </details>
                 <div className="min-h-0 flex-1 overflow-auto">
+                  {project.trace.length > 0 && (
+                    <h2 className="px-3 pt-3 text-xs font-semibold tracking-wide text-quiet uppercase">
+                      Previous changes
+                    </h2>
+                  )}
                   <Trace entries={project.trace} words={words} plugins={spec.plugins} />
                 </div>
               </div>

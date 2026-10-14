@@ -55,6 +55,25 @@ export function describeChange(
       return line && `${w.pluralLabel(model)}: added ${line}`;
     }
     case "changeField": {
+      // The same values in another order changes only the default, the first: said so, or
+      // the change reads as nothing.
+      const field = model?.fields.find((f) => f.name === str("field"));
+      const before = field?.type;
+      const after = parseFieldShorthand(str("type"));
+      if (
+        model &&
+        field &&
+        before?.kind === "choice" &&
+        after.ok &&
+        after.value.type.kind === "choice" &&
+        after.value.defaultText === undefined &&
+        before.values.length === after.value.type.values.length &&
+        before.values.every((v) => (after.value.type as { values: string[] }).values.includes(v)) &&
+        before.values[0] !== after.value.type.values[0]
+      ) {
+        const label = (v: string) => w.choice(model, field, v);
+        return `${w.pluralLabel(model)}: ${label(after.value.type.values[0] as string)} is now the ${fieldText(model, str("field"))}'s default (it was ${label(before.values[0] as string)})`;
+      }
       const line = model && item(model, str("field"), str("type"));
       return line && `${w.pluralLabel(model)}: now ${line}`;
     }

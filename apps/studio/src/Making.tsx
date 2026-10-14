@@ -168,56 +168,74 @@ export function Making({
 
 /**
  * What the description leaves open, asked before the draft: each question with its suggested
- * answers and a free one, and a way to skip it; one call sends them all and the draft starts.
+ * answers, any of which may be chosen together, and words of one's own beside them; a question
+ * left empty is skipped. One call sends them all and the draft starts.
  */
 function Questions({ questions }: { questions: NonNullable<MakingState["questions"]> }) {
-  const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
+  // Per question: the suggestions chosen, and what was typed, kept apart so typing a
+  // suggestion's words never empties the box.
+  const [chosen, setChosen] = useState<string[][]>(() => questions.map(() => []));
+  const [own, setOwn] = useState<string[]>(() => questions.map(() => ""));
   const [busy, setBusy] = useState(false);
   const send = async (given: string[]) => {
     setBusy(true);
     await api.answerMaking(given).catch(() => undefined);
     setBusy(false);
   };
-  const set = (i: number, value: string) =>
-    setAnswers((all) => all.map((a, j) => (j === i ? value : a)));
+  const toggle = (i: number, option: string) =>
+    setChosen((all) =>
+      all.map((c, j) =>
+        j !== i ? c : c.includes(option) ? c.filter((o) => o !== option) : [...c, option],
+      ),
+    );
+  const answer = (i: number) =>
+    [...(chosen[i] ?? []), (own[i] ?? "").trim()].filter(Boolean).join(", ");
   return (
     <form
       aria-label="Questions"
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
-        void send(answers.map((a) => a.trim()));
+        void send(questions.map((_, i) => answer(i)));
       }}
     >
+      <p className="text-xs text-quiet">
+        Choose as many answers as fit, add your own words, or leave a question empty to skip it.
+      </p>
       {questions.map((q, i) => (
         <fieldset key={q.question} className="space-y-2">
           <legend className="text-sm font-medium">{q.question}</legend>
           <div className="flex flex-wrap gap-2">
-            {q.options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={answers[i] === option}
-                onClick={() => set(i, answers[i] === option ? "" : option)}
-                className={
-                  answers[i] === option
-                    ? "rounded-full border border-accent bg-accent-soft px-3 py-1 text-sm text-accent"
-                    : "rounded-full border border-line-strong px-3 py-1 text-sm text-fg-soft hover:border-accent"
-                }
-              >
-                {option}
-              </button>
-            ))}
+            {q.options.map((option) => {
+              const on = chosen[i]?.includes(option) ?? false;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(i, option)}
+                  className={
+                    on
+                      ? "rounded-full border border-accent bg-accent-soft px-3 py-1 text-sm text-accent"
+                      : "rounded-full border border-line-strong px-3 py-1 text-sm text-fg-soft hover:border-accent"
+                  }
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
           <Input
             aria-label={`Your own answer: ${q.question}`}
             placeholder="Or in your own words"
-            value={q.options.includes(answers[i] ?? "") ? "" : (answers[i] ?? "")}
-            onChange={(e) => set(i, e.target.value)}
+            value={own[i] ?? ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setOwn((all) => all.map((a, j) => (j === i ? value : a)));
+            }}
           />
         </fieldset>
       ))}
-      <p className="text-xs text-quiet">Leave a question empty to skip it.</p>
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>
           Make it
