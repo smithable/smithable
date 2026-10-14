@@ -33,20 +33,30 @@ const deck = (() => {
   }
 })();
 
-/** The browser's own WebP encoder, as starter-shots.mjs does it. */
-async function webp(browser, png) {
+/** The three cards' common size at 2×, so they read as a deck: 560×420. */
+const CARD = { width: 1120, height: 840 };
+
+/** The browser's own WebP encoder, as starter-shots.mjs does it. With `frame`, the picture is
+ * fitted whole into that size, centred on white, Studio's own background. */
+async function webp(browser, png, frame) {
   const page = await browser.newPage();
-  const data = await page.evaluate(async (b64) => {
-    const img = new Image();
-    img.src = `data:image/png;base64,${b64}`;
-    await img.decode();
-    const canvas = Object.assign(document.createElement("canvas"), {
-      width: img.width,
-      height: img.height,
-    });
-    canvas.getContext("2d").drawImage(img, 0, 0);
-    return canvas.toDataURL("image/webp", 0.85).split(",")[1];
-  }, png.toString("base64"));
+  const data = await page.evaluate(
+    async ([b64, frame]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const { width, height } = frame ?? img;
+      const canvas = Object.assign(document.createElement("canvas"), { width, height });
+      const g = canvas.getContext("2d");
+      g.fillStyle = "#fff";
+      g.fillRect(0, 0, width, height);
+      const k = Math.min(1, width / img.width, height / img.height);
+      const [w, h] = [img.width * k, img.height * k];
+      g.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
+      return canvas.toDataURL("image/webp", 0.85).split(",")[1];
+    },
+    [png.toString("base64"), frame],
+  );
   await page.close();
   return Buffer.from(data, "base64");
 }
@@ -89,9 +99,9 @@ async function startStudio(dir) {
 async function shoot(browser, starter, change) {
   const files = join(out, starter);
   mkdirSync(files, { recursive: true });
-  const save = async (name, png) => {
+  const save = async (name, png, frame) => {
     const file = join(files, `${name}.webp`);
-    writeFileSync(file, await webp(browser, png));
+    writeFileSync(file, await webp(browser, png, frame));
     copyFileSync(file, join(opts.copy, `${starter}-${name}.webp`));
     console.log(file);
   };
@@ -110,7 +120,7 @@ async function shoot(browser, starter, change) {
     const clip = async (locators, over, pad = 12, top = 40) => {
       const boxes = [];
       for (const l of locators) boxes.push(await l.boundingBox());
-      const floor = over ? await over.boundingBox().then((b) => b.y + b.height + 4) : 0;
+      const floor = over ? await over.boundingBox().then((b) => b.y + b.height + 8) : 0;
       const x = Math.max(0, Math.min(...boxes.map((b) => b.x)) - pad);
       const y = Math.max(floor, Math.min(...boxes.map((b) => b.y)) - top);
       const r = Math.max(...boxes.map((b) => b.x + b.width)) + pad;
@@ -166,14 +176,15 @@ async function shoot(browser, starter, change) {
       "prompt",
       await clip(
         [page.locator('form[data-guide="change"]'), proposal],
-        page.getByRole("tab", { name: "Changes" }),
+        page.getByRole("tablist").filter({ has: page.getByRole("tab", { name: "Changes" }) }),
       ),
+      CARD,
     );
     const discard = proposal.getByRole("button", { name: /Discard/ });
     if (await discard.isVisible().catch(() => false)) await discard.click();
 
     // Edit without code: the field form, filled in, before its button, in a window tall enough
-    // for the whole form.
+    // for the whole form; the card is the form itself, from the kind of record to the button.
     await page.setViewportSize({ width: 1280, height: 1100 });
     const forms = page.locator("details", { hasText: "Change by form" });
     if ((await forms.getAttribute("open")) === null) await forms.locator("summary").click();
@@ -183,7 +194,10 @@ async function shoot(browser, starter, change) {
     await page.getByLabel("Holds").selectOption({ label: change.holds });
     if (change.values) await page.getByLabel("Values").fill(change.values);
     await page.waitForTimeout(500);
-    await save("nocode", await clip([forms], undefined, 8, 8));
+    const fields = forms
+      .locator("form")
+      .filter({ has: page.getByRole("button", { name: "Add field" }) });
+    await save("nocode", await clip([fields], undefined, 8, 8), CARD);
 
     // Edit by code: the line in smithable.yml, saved by itself (this applies the change, once).
     await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
@@ -197,12 +211,12 @@ async function shoot(browser, starter, change) {
       withLine(text, change.model, change.line),
     );
     await page.getByText("Saved", { exact: true }).waitFor({ timeout: 90000 });
-    // Under 1024 pixels Studio gives the editor the window's width, so the spec's long lines fit.
-    await page.setViewportSize({ width: 1000, height: 800 });
+    // Under 1024 pixels Studio gives the editor the window's width and room for enough lines.
+    await page.setViewportSize({ width: 1000, height: 1100 });
     await page.waitForTimeout(1000);
     const yml = page.locator(".cm-editor", { has: page.getByLabel("smithable.yml") });
     const line = yml.locator(".cm-line", { hasText: change.line }).first();
-    await line.scrollIntoViewIfNeeded();
+    await line.evaluate((e) => e.scrollIntoView({ block: "center" }));
     await line.click();
     await page.keyboard.press("Home");
     await yml
@@ -213,38 +227,33 @@ async function shoot(browser, starter, change) {
       });
     await page.evaluate(() => document.activeElement?.blur());
     await page.waitForTimeout(500);
-    // Whole lines down to the new one, as wide as the longest of them: no word cut at an edge.
+    // The card's size of the editor at its own text size, whole lines with the new one near the
+    // end; a long line runs off the card's right edge, as in an editor.
     const eb = await yml.boundingBox();
     const rows = await yml.locator(".cm-line").evaluateAll((ls) =>
       ls.map((l) => {
-        const r = document.createRange();
-        r.selectNodeContents(l);
         const b = l.getBoundingClientRect();
-        return {
-          text: l.textContent,
-          top: b.top,
-          bottom: b.bottom,
-          right: r.getBoundingClientRect().right,
-        };
+        return { text: l.textContent, top: b.top, bottom: b.bottom };
       }),
     );
     const here = rows.findIndex((r) => r.text.trim() === change.line);
-    const shown = rows
-      .slice(Math.max(0, here - 8), here + 1)
-      .filter((r) => r.top >= eb.y && r.bottom <= eb.y + eb.height);
-    const right = Math.max(...shown.map((r) => r.right)) + 24;
-    if (right > eb.x + eb.width) throw new Error(`${starter}: a line is wider than the editor`);
-    const top = shown[0].top;
+    const visible = (r) => r && r.top >= eb.y && r.bottom <= eb.y + eb.height;
+    const fits = (a, b) => rows[b].bottom - rows[a].top <= CARD.height / 2;
+    let first = here;
+    let last = here;
+    while (last < here + 3 && visible(rows[last + 1]) && fits(first, last + 1)) last++;
+    while (visible(rows[first - 1]) && fits(first - 1, last)) first--;
     await save(
       "code",
       await page.screenshot({
         clip: {
           x: eb.x,
-          y: top,
-          width: Math.max(480, right - eb.x),
-          height: shown.at(-1).bottom - top,
+          y: rows[first].top,
+          width: CARD.width / 2,
+          height: rows[last].bottom - rows[first].top,
         },
       }),
+      CARD,
     );
 
     // The result after: the same page.
