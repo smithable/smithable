@@ -118,12 +118,49 @@ const ux: Companion = {
     const m = effect.model;
     const from = effect.kind === "rename-field" ? effect.from : effect.field;
     const to = effect.kind === "rename-field" ? effect.to : undefined;
+    // A thread finds its message as the model's first long text: the last one cannot go while a
+    // page shows the model as a thread (docs/design/conversation.md).
+    if (effect.kind === "remove-field") {
+      const model = ir.models.find((x) => x.name === m);
+      const long = (name: string) =>
+        model?.fields.some(
+          (f) =>
+            f.name === name &&
+            f.type.kind === "scalar" &&
+            (f.type.name === "text" || f.type.name === "markdown"),
+        );
+      const others = model?.fields.filter((f) => f.name !== from && long(f.name)) ?? [];
+      if (long(from) && !others.length)
+        for (const page of ir.pages) {
+          const shown = editor.has(["pages", page.id, "record", "lists"])
+            ? (editor.get(["pages", page.id, "record", "lists"]) as Record<string, string>)
+            : {};
+          const owner = ir.models.find((x) => x.name === pageModel(page));
+          const list = Object.entries(shown).find(
+            ([name, look]) =>
+              look === "thread" &&
+              owner?.fields.some(
+                (f) => f.name === name && f.type.kind === "relation" && f.type.model === m,
+              ),
+          );
+          if (list)
+            return {
+              refusal: `${m}.${from} is the message of the thread on the ${page.id} page; show the list as a table first.`,
+            };
+        }
+    }
     const tones = ["tones", `${m}.${from}`];
     if (editor.has(tones)) {
       if (to) editor.renameKey(tones, `${m}.${to}`);
       else editor.removeAndPrune(tones, 0);
     }
     for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
+      // A list shown as a thread follows its field, and goes with it.
+      const listed = ["pages", page.id, "record", "lists", from];
+      if (editor.has(listed)) {
+        if (to) editor.renameKey(listed, to);
+        else editor.removeAndPrune(listed, 0);
+      }
       // A second line under a column: the pair goes with either field, and follows a rename.
       const below = ["pages", page.id, "table", "below"];
       const pairs = editor.has(below) ? (editor.get(below) as Record<string, string>) : {};

@@ -13,6 +13,7 @@ import {
   pascal,
   type SpecIR,
   type StandardActionIR,
+  USER_MODEL,
   type UxIR,
 } from "@smithable/core";
 import { actionNames, askedFields, askOptions } from "../actions.js";
@@ -45,6 +46,7 @@ import {
   references,
   standardActions,
   type Texts,
+  threadLists,
   titleField,
   trashedLists,
   type Within,
@@ -310,6 +312,48 @@ function addressFrom(title: unknown): string {
 }`;
 }
 
+/**
+ * What a thread reads from the related model, by rule (conversation.md §2): the first long text
+ * is the message, the first person (else email) the writer, the first two-valued choice the side
+ * (its first value ours), files and pictures the attachments, other choices badges. `replies`:
+ * whether the reply box can fill every required field (defaults, the app, the reference back).
+ */
+function threadOf(target: ModelIR, owner: ModelIR) {
+  const kind = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
+  const text = target.fields.find((f) => ["text", "markdown"].includes(kind(f)));
+  if (!text) return undefined;
+  const person = target.fields.find(
+    (f) => f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many,
+  );
+  const writer = person ?? target.fields.find((f) => kind(f) === "email");
+  const side = target.fields.find((f) => f.type.kind === "choice" && f.type.values.length === 2);
+  const files = target.fields.filter((f) =>
+    ["file", "files", "picture", "pictures"].includes(kind(f)),
+  );
+  const badges = target.fields.filter((f) => f.type.kind === "choice" && f !== side);
+  const replies = target.fields.every(
+    (f) =>
+      f === text ||
+      !f.required ||
+      f.formula ||
+      f.default !== undefined ||
+      f.defaultMe ||
+      f.defaultFormula ||
+      (f.type.kind === "relation" && f.type.model === owner.name && !f.type.many) ||
+      files.includes(f),
+  );
+  return {
+    text: dataKey(text),
+    ...(writer ? { writer: dataKey(writer) } : {}),
+    ...(side?.type.kind === "choice"
+      ? { side: { field: side.name, ours: side.type.values[0] as string } }
+      : {}),
+    files: files.map(dataKey),
+    badges: badges.map(dataKey),
+    replies,
+  };
+}
+
 export function detailRoute(
   page: PageIR,
   model: ModelIR,
@@ -367,12 +411,22 @@ export function detailRoute(
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
       : undefined;
-  const adds = within ? [] : addable(model, ir);
-  if (adds.length)
+  const adds = within ? [] : addable(model, ir, threadLists(model, ir, ux));
+  // A list shown as a conversation (docs/design/conversation.md), read by rule.
+  const threadFor = (field: FieldIR) =>
+    !within && field.type.kind === "relation" && ux.pages[page.id]?.lists?.[field.name] === "thread"
+      ? threadOf(modelNamed(ir, field.type.model), model)
+      : undefined;
+  // An Add button to the related model's own form, where one is written: a table's, or a
+  // thread's whose reply box cannot fill every required field.
+  const links = adds.some((a) => a.route && !threadFor(a.list)?.replies);
+  if (links)
     imports.set("#/components/ui/button", [
       ...(imports.get("#/components/ui/button") ?? []),
       "buttonVariants",
     ]);
+  let tables = false;
+  let threads = false;
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -393,13 +447,45 @@ export function detailRoute(
     // "Add line" on an invoice, for whoever may create one: the new form with this record filled
     // in. Without it, the list says only that there are none.
     const add = adds.find((a) => a.list === field);
-    const button = add
+    // A list shown as a thread may have no page of its own to add on: then no Add button.
+    const button = add?.route
       ? `canAdd?.${field.name} && (
               <Link to=${attr(join(add.route, "new"))} search={{ ${add.ref.name}: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne(${JSON.stringify(tn.label.toLowerCase())})}
               </Link>
             )`
       : "";
+    // A conversation (docs/design/conversation.md): read from the related model by rule, with a
+    // reply box when the box can fill every required field.
+    const thread = threadFor(field);
+    if (thread) {
+      threads = true;
+      const ref = add?.ref;
+      if (thread.replies && ref)
+        imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.create]);
+      const reply =
+        thread.replies && ref
+          ? `canAdd?.${field.name} ? async (text) => {
+              await ${tn.create}({ data: { ${thread.text}: text, ${dataKey(ref)}: row.id } as never });
+              await router.invalidate();
+            } : undefined`
+          : "undefined";
+      return `      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">${label}</h2>
+          ${add?.route && !thread.replies ? button : ""}
+        </div>
+        <Thread
+          ui={${tn.ui}}
+          app={app}
+          rows={row.${field.name}}
+          text="${thread.text}"${thread.writer ? `\n          writer="${thread.writer}"` : ""}${thread.side ? `\n          side={${literal(thread.side)}}` : ""}${thread.files.length ? `\n          files={${literal(thread.files)}}` : ""}${thread.badges.length ? `\n          badges={${literal(thread.badges)}}` : ""}
+          empty={w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}
+          reply={${reply}}
+        />
+      </section>`;
+    }
+    tables = true;
     return `      <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">${label}</h2>
@@ -414,8 +500,9 @@ export function detailRoute(
         />
       </section>`;
   });
+  if (threads) imports.set("#/kit/Thread", ["Thread"]);
   // A copy opens the new record instead of reloading this one: it needs no router.
-  const router = favorite || trash || offered.some((a) => !a.copy);
+  const router = favorite || trash || threads || offered.some((a) => !a.copy);
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
@@ -431,7 +518,7 @@ export function detailRoute(
       ? [`<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />`]
       : []),
   ];
-  return `${HEADER}import { createFileRoute, ${adds.length ? "Link, " : ""}notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
+  return `${HEADER}import { createFileRoute, ${links ? "Link, " : ""}notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
 ${
   // The contact block imports some of the same: each name once.
   history
@@ -450,7 +537,7 @@ ${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
-${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${sections.length || favorite ? `import { ${[...(sections.length ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
+${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${tables || favorite ? `import { ${[...(tables ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
 ${contact ? contact.fn : ""}${
   history
     ? `/** The record's lines in the audit log, newest first: administrators only, nobody else. */

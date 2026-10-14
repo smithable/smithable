@@ -55,6 +55,7 @@ import {
   storedFields,
   type Texts,
   tableRef,
+  threadLists,
   titleField,
   userFields,
 } from "./shared.js";
@@ -212,7 +213,7 @@ export const ${n.options} = createServerFn().handler(async () =>
   // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
   const perModel = capacity && relationTarget(model, capacity.per, ir);
-  const adds = addable(model, ir);
+  const adds = addable(model, ir, threadLists(model, ir, ux));
   const perData = perModel && names(perModel, t).data;
   const reservation =
     capacity && perModel
