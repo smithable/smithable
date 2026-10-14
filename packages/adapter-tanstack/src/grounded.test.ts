@@ -100,3 +100,36 @@ test("an answer no result bears out is sent back with why", () => {
     "without a tool's result",
   );
 });
+
+test("C's bench cases: codes, phone numbers, numbers inside a text, and a note said back", () => {
+  // A code is never read as an amount, nor a part of it.
+  expect(numbersIn("Invoices 2026-003 and 2026-001")).toEqual([]);
+  expect(numbersIn("Call +46 8 555 012 34 before 5")).toEqual([5]);
+  // A number quoted from a text field is known.
+  expect(
+    ungrounded(
+      "The frame is 56 cm.",
+      "",
+      [step("read", { title: "Bike", description: "Steel frame, 56 cm" })],
+      kinds,
+    ),
+  ).toBeUndefined();
+  expect(
+    ungrounded(
+      "Their phone is +46 8 555 012 34.",
+      "",
+      [step("read", { phone: "+46 8 555 012 34" })],
+      kinds,
+    ),
+  ).toBeUndefined();
+  // Saying back the tool's note is no ungrounded "none".
+  const note =
+    'Nothing has every word of "mobile app" in title. The nearest titles: Website, Payments.';
+  expect(
+    ungrounded(`${note}`, "", [step("find", { rows: [], total: 0, note })], kinds),
+  ).toBeUndefined();
+  // A made-up count is still caught.
+  expect(
+    ungrounded("There are 14 sessions.", "", [step("measure", { total: 13 })], kinds),
+  ).toContain("The number 14");
+});

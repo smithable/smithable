@@ -23,7 +23,9 @@ export function ungrounded(
     return "You said a change was made, but none was: call add, change or run to propose it.";
   if (w.noneWords.test(text)) {
     const note = results.map(noteOf).find(Boolean);
-    if (note) return `You answered "none", but the tool said: ${note} Answer with that.`;
+    // Saying what the tool's note says is grounded; a "none" beside it is not.
+    if (note && !text.includes(note.slice(0, 30)))
+      return `You answered "none", but the tool said: ${note} Answer with that.`;
     if (!results.some(empty))
       return 'You answered "none", but no tool returned an empty result: look it up with find or measure.';
   }
@@ -61,7 +63,9 @@ function noteOf(result: Json): string | undefined {
 /** Every number a result holds, with each list's length and each column's sum. */
 function numbersOf(result: Json): number[] {
   if (typeof result === "number") return [result];
-  if (typeof result === "string") return /^-?\d+(\.\d+)?$/.test(result) ? [Number(result)] : [];
+  // A text's numbers too ("Steel frame, 56 cm"): a number the model quotes from any field is known.
+  if (typeof result === "string")
+    return /^-?\d+(\.\d+)?$/.test(result) ? [Number(result)] : numbersIn(result);
   if (!result || typeof result !== "object") return [];
   const values = Array.isArray(result) ? result : Object.values(result);
   const found = values.flatMap(numbersOf);
@@ -88,11 +92,14 @@ export function numbersIn(text: string): number[] {
   const plain = text
     .replace(/\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+Z?)?/g, " ")
     .replace(/\b\d{1,2}:\d{2}\b/g, " ")
-    .replace(/^\s*\d+[.)]\s/gm, " ");
+    .replace(/^\s*\d+[.)]\s/gm, " ")
+    // A phone number with its country code ("+46 8 555 012 34") is one thing, not amounts.
+    .replace(/\+\d[\d\s().-]{5,}\d/g, " ");
   const found: number[] = [];
-  // A number joined to letters or a hyphen is part of a code (A-1, INV2026): a title, not an amount.
+  // A number joined to letters or a hyphen is part of a code (A-1, INV2026, 2026-003): a title,
+  // not an amount; never part of one either ("202" of "2026-003").
   for (const raw of plain.match(
-    /(?<![\p{L}\d_-])(?:\d{1,3}(?:[\u00a0\u202f ,.]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?![\p{L}_-])/gu,
+    /(?<![\p{L}\d_+-])(?:\d{1,3}(?:[\u00a0\u202f ,.]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?![\p{L}\d_-])/gu,
   ) ?? []) {
     const n = amount(raw.replace(/[\u00a0\u202f ]/g, ""));
     if (n === undefined || (Number.isInteger(n) && n >= 1900 && n <= 2100)) continue;
