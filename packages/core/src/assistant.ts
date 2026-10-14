@@ -114,6 +114,10 @@ function fieldWord(field: FieldIR): string {
   return `${name}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }
 
+/** The one rule the summary gives every caller's model. */
+export const ANSWER_RULE =
+  'Answer with what a tool returned; a number, a name or "none" you did not get from a tool is not an answer.';
+
 /**
  * The tools and the summary for one caller. `scope: "api"` (the default) is what programs from
  * outside may reach: the `api` block's models and actions, and for a visitor what `public`
@@ -370,6 +374,8 @@ export function assistantOffer(
         ...lines,
         ...actionLine,
         `* required. You act as ${who}.`,
+        // An answer stands on what the tools said (docs/design/ask-checks.md §2).
+        ANSWER_RULE,
       ].join("\n")
     : `${ir.app.name}: nothing is offered to ${who}.`;
   return { summary, tools, kinds, actions: actions.map((a) => a.name) };

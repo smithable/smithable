@@ -102,6 +102,7 @@ Task (tasks): title*, project* -> Project, status* (todo | doing | done), dueDat
 Note (notes): title*, project* -> Project, body. Title: title.
 Actions: complete (Task, when status is todo or doing), reopen (Task, when status is done).
 * required. You act as someone with the role assistant.
+Answer with what a tool returned; a number, a name or "none" you did not get from a tool is not an answer.
 ```
 
 Then ask it as you would ask a person. "What is still to do on the office move, and when is it due?"
@@ -126,6 +127,8 @@ It found the project, its open tasks and the note that belongs to it. "Add a tas
 > | Website relaunch | 1 |
 > | Autumn newsletter | 1 |
 > | Office move | 1 |
+
+The tools leave little to guess. A question that names something the app does not have (a status no task has, a project by a name nothing has, a search nothing fits) gets none with a note of what there is instead, the nearest names first; `measure` split by a field says when the top is shared, so one is not given as the winner; `read` gives a record with its lists, twenty of each (a project with its tasks); and a change answers with the record as it is now.
 
 Each answer took Claude Code four or five steps and 9 to 12 cents of its own model, paid by whoever runs the assistant; the app's part is the same as a plain call. Each call is in the app's access log under the key, and every change it makes is in the activity log like anyone's (Admin → Activity).
 
