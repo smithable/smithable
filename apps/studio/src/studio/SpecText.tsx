@@ -2,7 +2,7 @@
 // search, the validator's problems shown in the text where they are, and what can be written at
 // the cursor and what a word means, from the spec's schema and the app's own names (core's
 // complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
-import { completionStatus, startCompletion } from "@codemirror/autocomplete";
+import { acceptCompletion, completionStatus, startCompletion } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -118,9 +118,10 @@ export default function SpecText({
         doc: value,
         extensions: [
           basicSetup,
-          // Tab indents and Shift+Tab outdents, as in any code editor; Escape then Tab leaves the
+          // Tab takes the chosen suggestion when the list is open, as Enter does; otherwise Tab
+          // indents and Shift+Tab outdents, as in any code editor. Escape then Tab leaves the
           // editor for the next control (CodeMirror's own way out, for the keyboard).
-          keymap.of([indentWithTab]),
+          keymap.of([{ key: "Tab", run: acceptCompletion }, indentWithTab]),
           yaml(),
           lintGutter(),
           // Studio's colours follow the system's light or dark setting, as it changes.

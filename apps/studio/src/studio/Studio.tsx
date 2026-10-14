@@ -506,6 +506,19 @@ function SpecEditor({
     [project.files, file, text, plugins, project.ownThemes],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  // The problems shown: a new one once typing pauses, so a line half written is not called
+  // wrong; one put right goes at once.
+  const [shown, setShown] = useState(diagnostics);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: compared with what is shown, not rerun by it
+  useEffect(() => {
+    const before = new Set(shown.map(problemKey));
+    if (diagnostics.every((d) => before.has(problemKey(d)))) {
+      setShown(diagnostics);
+      return;
+    }
+    const t = setTimeout(() => setShown(diagnostics), 800);
+    return () => clearTimeout(t);
+  }, [diagnostics]);
   // An edit saves itself after a pause (docs/design/studio-changes.md §4): when it is valid and
   // removes no field (one that does keeps the Save button, which asks first). Going on in the
   // same file grows the same change while it is still the newest; another file, another change
@@ -565,7 +578,7 @@ function SpecEditor({
           ? "Not saved: fix the problems first"
           : removes
             ? "Not saved: it removes a field, so Save asks first"
-            : "Edited";
+            : "Edited: it saves itself when you pause";
   // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
   // which has no Ctrl-Space.
   const [ask, setAsk] = useState(0);
@@ -628,7 +641,7 @@ function SpecEditor({
           label={file}
           value={text}
           onChange={setText}
-          problems={diagnostics.filter((d) => d.file === file)}
+          problems={shown.filter((d) => d.file === file)}
           select={jump?.file === file ? select : undefined}
           kept={`smithable:editor:${project.name}:${file}`}
           assist
@@ -651,25 +664,34 @@ function SpecEditor({
           </Button>
         </p>
       )}
-      <div
-        data-guide="problems"
-        className="flex items-center justify-between gap-3 border-t border-line p-2"
-      >
-        <ul aria-label="Problems" aria-live="polite" className="min-w-0 space-y-0.5 text-xs">
-          {diagnostics.length === 0 ? (
+      {/* The problems under the editor, a few lines high and scrolling, so they never push the
+          editor out of sight; the buttons on their own line, so a narrow column does not
+          squeeze the list to a word a line. */}
+      <div data-guide="problems" className="space-y-2 border-t border-line p-2">
+        <ul
+          aria-label="Problems"
+          aria-live="polite"
+          className="max-h-24 space-y-0.5 overflow-y-auto text-xs"
+        >
+          {shown.length === 0 ? (
             <li className="text-green-700">No problems.</li>
           ) : (
-            diagnostics.slice(0, 5).map((d) => (
-              <li
-                key={`${d.file}:${d.line}:${d.column}:${d.code}`}
-                className={d.severity === "error" ? "text-red-700" : "text-amber-700"}
-              >
-                {d.file === file ? "Line" : `${d.file} line`} {d.line}: {d.message}
-              </li>
-            ))
+            // Keyed by the message too: the YAML parser gives two problems with one place and
+            // code, and alike keys left rows behind beside "No problems." (one said twice is
+            // shown once).
+            [...new Map(shown.map((d) => [problemKey(d), d])).entries()]
+              .slice(0, 20)
+              .map(([key, d]) => (
+                <li
+                  key={key}
+                  className={d.severity === "error" ? "text-red-700" : "text-amber-700"}
+                >
+                  {d.file === file ? "Line" : `${d.file} line`} {d.line}: {d.message}
+                </li>
+              ))
           )}
         </ul>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {/* A mistaken edit, or one that cannot be saved, is dropped for the file as saved. */}
           <Button
             variant="ghost"
@@ -694,6 +716,10 @@ function SpecEditor({
     </div>
   );
 }
+
+/** A problem's place and words: two alike are one. */
+const problemKey = (d: { file: string; line: number; column: number; message: string }) =>
+  `${d.file}:${d.line}:${d.column}:${d.message}`;
 
 /** Where a file's unsaved edit is kept for the session: its text and the file as it was. */
 const draftKey = (app: string, file: EditableFile) => `smithable:draft:${app}:${file}`;
