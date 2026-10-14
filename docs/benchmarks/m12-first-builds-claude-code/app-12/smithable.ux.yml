@@ -9,9 +9,5 @@ tones:
     identified: warning
     monitoring: warning
     resolved: success
-pages:
-  incidents:
-    table:
-      sort: -detectedAt
 theme:
   preset: modern

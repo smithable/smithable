@@ -1,14 +1,15 @@
 smithable: 0.1
 app:
-  name: Toolshare
-  description: Neighbors lend each other tools instead of everyone buying their own.
+  name: Shed Share
+  description: Neighbors lend each other tools instead of buying their own.
+  currency: EUR
 models:
   Tool:
     fields:
       name: string!
       photos: pictures!
       description: text!
-      category: powerTools | handTools | garden | ladders | cleaning | camping | other
+      category: garden | power | hand | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -16,11 +17,9 @@ models:
   Loan:
     fields:
       tool: Tool!
-      borrower: string!
-      borrowerContact: string
-      lentOn: date!
-      dueOn: date
-      status: out | returned
+      startDate: date!
+      dueDate: date
+      status: borrowed | returned
       returnedOn: date
       notes: text
 pages:
@@ -35,9 +34,12 @@ pages:
   myTools:
     crud: Tool
     mine: true
-  loans:
+  saved:
+    crud: Tool
+    favorites: only
+  myLoans:
     crud: Loan
-    filters: [status, tool]
+    mine: true
     actions: [markReturned]
   review:
     review: all
@@ -47,6 +49,8 @@ pages:
       hero:
       latest:
         records: Tool
+        where:
+          available: true
       footer:
   privacy:
     route: /privacy
@@ -55,9 +59,9 @@ actions:
   markReturned:
     on: Loan
     when:
-      status: out
+      status: borrowed
     set:
       status: returned
       returnedOn: TODAY()
-    intent: Record that the borrowed tool came back.
-navigation: [tools, myTools, loans, review]
+    intent: Record that the borrowed tool has been brought back.
+navigation: [tools, myTools, myLoans, saved, review]

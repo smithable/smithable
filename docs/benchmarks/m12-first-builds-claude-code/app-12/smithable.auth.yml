@@ -7,7 +7,7 @@ roles:
   admin: all
   staff:
     description: Writes incidents and their updates.
-    pages: [overview, incidents, updates]
+    pages: [incidents, updates]
     create: all
     write: all
 assistant:
@@ -16,4 +16,8 @@ public:
   pages: [home, privacy]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate]
 defaultRole: staff
+api:
+  models: [Component, Incident]
+  actions: [resolve]
+  assistants: true
 admins: [johan@smithable.ai]

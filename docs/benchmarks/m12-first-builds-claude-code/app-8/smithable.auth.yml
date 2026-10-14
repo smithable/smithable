@@ -5,13 +5,13 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: An attendee who registers for the conference.
-    pages: [my-registration]
+    description: An attendee who registers for talks.
+    pages: [my-registrations]
     create: [Registration]
 assistant:
   for: signed-in
 public:
-  pages: [home, program, privacy]
+  pages: [home, schedule, speakers, privacy]
   read: [Talk, Speaker]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -2,15 +2,13 @@ smithableUx: 0.1
 pages:
   recipes:
     table:
-      sort: name
       view: cards
-    icon: book
   shoppingLists:
-    icon: cart
+    table:
+      columns: [name, shopOn, status]
+      sort: -shopOn
 tones:
   ShoppingList.status:
     done: success
 theme:
-  preset: craft
-  brand:
-    primary: "#c2410c"
+  preset: cafe

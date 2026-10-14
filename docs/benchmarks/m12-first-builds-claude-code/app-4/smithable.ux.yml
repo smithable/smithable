@@ -3,13 +3,13 @@ pages:
   tools:
     table:
       view: cards
-  loans:
+  myLoans:
     table:
-      columns: [tool, borrower, lentOn, dueOn, status]
-      sort: -lentOn
+      columns: [tool, startDate, dueDate, status]
+      sort: -startDate
 tones:
   Loan.status:
-    out: warning
+    borrowed: warning
     returned: success
 theme:
   preset: woodland
