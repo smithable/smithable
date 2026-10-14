@@ -9469,6 +9469,14 @@ export const messages = sqliteTable("messages", {
     .$onUpdate(() => new Date()),
 });
 
+export const classTypesRelations = relations(classTypes, ({ many }) => ({
+  sessions: many(sessions),
+}));
+
+export const instructorsRelations = relations(instructors, ({ many }) => ({
+  sessions: many(sessions),
+}));
+
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   classType: one(classTypes, { fields: [sessions.classTypeId], references: [classTypes.id] }),
   instructor: one(instructors, { fields: [sessions.instructorId], references: [instructors.id] }),
@@ -9783,6 +9791,14 @@ describe("ClassType", () => {
       deleteOwn: false,
     });
   });
+
+  test("a visitor reading the classtype is not told who added its sessions", async () => {
+    const parent = insertClassType(stranger.id);
+    insertSession(stranger.id, { classTypeId: parent.id });
+    const related = (await classTypeData.get(null, parent.id))?.sessions ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    for (const row of related) expect(row.ownerId).toBeNull();
+  });
 });
 
 describe("Instructor", () => {
@@ -9852,6 +9868,14 @@ describe("Instructor", () => {
       deleteOthers: false,
       deleteOwn: false,
     });
+  });
+
+  test("a visitor reading the instructor is not told who added its sessions", async () => {
+    const parent = insertInstructor(stranger.id);
+    insertSession(stranger.id, { instructorId: parent.id });
+    const related = (await instructorData.get(null, parent.id))?.sessions ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    for (const row of related) expect(row.ownerId).toBeNull();
   });
 });
 
@@ -11542,6 +11566,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
+import { sessionData } from "./session.server";
 import type { ClassTypeValues } from "./class-type";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -11839,9 +11864,10 @@ export const classTypeData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.classTypes.findFirst({
       where: and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)),
+      with: { sessions: { where: sessionData.readable(viewer), with: { instructor: { columns: { id: true, name: true } } } } },
     });
-    const found = fetched && classTypeData.shownRefs(viewer, [fetched])[0];
-    const row = found && shownTo(viewer, found);
+    const found = fetched && classTypeData.shownRefs(viewer, [{ ...fetched, sessions: sessionData.shownRefs(viewer, fetched.sessions) }])[0];
+    const row = found && { ...shownTo(viewer, found), sessions: found.sessions.map((r) => sessionData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -11977,6 +12003,7 @@ import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 import { classTypeAccess, classTypeData } from "./class-type.server";
+import { sessionAccess } from "./session.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { classTypeSchema } from "./class-type.schema";
@@ -12058,6 +12085,8 @@ export const getClassType = createServerFn()
       row,
       canWrite: allows(classTypeAccess.write, viewer, row.ownerId),
       canDelete: allows(classTypeAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { sessions: allows(sessionAccess.create, viewer) },
     };
   });
 
@@ -12320,6 +12349,7 @@ import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/wher
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
+import { sessionData } from "./session.server";
 import type { InstructorValues } from "./instructor";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -12628,9 +12658,10 @@ export const instructorData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.instructors.findFirst({
       where: and(eq(schema.instructors.id, id), instructorData.readable(viewer)),
+      with: { sessions: { where: sessionData.readable(viewer), with: { classType: { columns: { id: true, name: true } } } } },
     });
-    const found = fetched && instructorData.shownRefs(viewer, [fetched])[0];
-    const row = found && shownTo(viewer, found);
+    const found = fetched && instructorData.shownRefs(viewer, [{ ...fetched, sessions: sessionData.shownRefs(viewer, fetched.sessions) }])[0];
+    const row = found && { ...shownTo(viewer, found), sessions: found.sessions.map((r) => sessionData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -12773,6 +12804,7 @@ import type { RecordUi } from "#/kit/model";
 import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";
 import { bindPicture } from "#/kit/PictureInput";
 import { instructorAccess, instructorData } from "./instructor.server";
+import { sessionAccess } from "./session.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { instructorSchema } from "./instructor.schema";
@@ -12842,6 +12874,8 @@ export const getInstructor = createServerFn()
       row,
       canWrite: allows(instructorAccess.write, viewer, row.ownerId),
       canDelete: allows(instructorAccess.delete, viewer, row.ownerId),
+      // Who may add to its related lists from here ("Add line" on an invoice).
+      canAdd: { sessions: allows(sessionAccess.create, viewer) },
     };
   });
 
@@ -15509,10 +15543,12 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { classTypeUi, deleteClassType, getClassType, updateClassType } from "#/generated/class-type";
 import { classTypeSchema } from "#/generated/class-type.schema";
+import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/class-types/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -15554,7 +15590,20 @@ function ClassTypePage() {
             : undefined
         }
       />
-
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Sessions</h2>
+          
+        </div>
+        <ModelTable
+          ui={sessionUi}
+          app={app}
+          rows={row.sessions}
+          hide={["classTypeId"]}
+          onOpen={(item) => navigate({ to: "/admin/sessions/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("sessions")}
+        />
+      </section>
     </>
   );
 }
@@ -15768,10 +15817,12 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteInstructor, getInstructor, instructorUi, updateInstructor } from "#/generated/instructor";
 import { instructorSchema } from "#/generated/instructor.schema";
+import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/instructors/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
@@ -15813,7 +15864,20 @@ function InstructorPage() {
             : undefined
         }
       />
-
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Sessions</h2>
+          
+        </div>
+        <ModelTable
+          ui={sessionUi}
+          app={app}
+          rows={row.sessions}
+          hide={["instructorId"]}
+          onOpen={(item) => navigate({ to: "/admin/sessions/$id", params: { id: String(item.id) } })}
+          emptyMessage={w.noneYet("sessions")}
+        />
+      </section>
     </>
   );
 }
@@ -16464,12 +16528,12 @@ import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { instantOf } from "#/kit/zoned";
-import { optional, type Search, text } from "#/kit/params";
+import { count, optional, type Search, text } from "#/kit/params";
 
 export const Route = createFileRoute("/admin/sessions/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Admin · Stillwater Yoga"}] }),
-  validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40) }),
+  validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40), classType: count(s.classType), instructor: count(s.instructor) }),
   loader: async () => ({ options: { classTypeId: await classTypeOptions(), instructorId: await instructorOptions() } }),
   component: NewSessionPage,
 });
@@ -16478,7 +16542,7 @@ function NewSessionPage() {
   const { options } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/admin/sessions" });
+  const back = () => search.classType ? navigate({ to: "/class-types/$id", params: { id: String(search.classType) } }) : search.instructor ? navigate({ to: "/instructors/$id", params: { id: String(search.instructor) } }) : navigate({ to: "/admin/sessions" });
   return (
     <>
       <PageHeader title={w.newOne("session")} />
@@ -16486,7 +16550,8 @@ function NewSessionPage() {
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
-        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}) }}
+        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}), ...(search.classType ? { classTypeId: search.classType } : {}), ...(search.instructor ? { instructorId: search.instructor } : {}) }}
+        fixed={[...(search.classType ? ["classTypeId"] : []), ...(search.instructor ? ["instructorId"] : [])]}
         options={options}
         submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
@@ -16711,7 +16776,7 @@ function ArticlesPage() {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/class-types/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -16720,12 +16785,15 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { classTypeUi, deleteClassType, getClassType, updateClassType } from "#/generated/class-type";
 import { classTypeSchema } from "#/generated/class-type.schema";
+import { buttonVariants } from "#/components/ui/button";
+import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
+import { ModelTable } from "#/kit/ModelTable";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
 const getHistory = createServerFn()
@@ -16763,7 +16831,7 @@ export const Route = createFileRoute("/class-types/$id")({
 });
 
 function ClassTypePage() {
-  const { row, canWrite, canDelete, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/class-types" });
   return (
@@ -16791,7 +16859,29 @@ function ClassTypePage() {
             : undefined
         }
       />
-
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Sessions</h2>
+          {row.sessions.length > 0 && canAdd?.sessions && (
+              <Link to="/sessions/new" search={{ classType: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("session")}
+              </Link>
+            )}
+        </div>
+        <ModelTable
+          ui={sessionUi}
+          app={app}
+          rows={row.sessions}
+          hide={["classTypeId"]}
+          onOpen={(item) => navigate({ to: "/sessions/$id", params: { id: String(item.id) } })}
+          emptyAction={canAdd?.sessions && (
+              <Link to="/sessions/new" search={{ classType: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("session")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.sessions ? undefined : w.noneYet("sessions")}
+        />
+      </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
@@ -16810,9 +16900,11 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { classTypeAccess, classTypeData } from "#/generated/class-type.server";
+import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
@@ -16822,26 +16914,39 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Filters } from "#/kit/Filters";
 
-/** A page of the class types the viewer may read. */
-const listClassTypes = createServerFn()
+/** The class types matching the search and the filters, among those the viewer may read. */
+const searchClassTypes = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await classTypeData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(classTypeAccess.create, viewer) };
+    const where = and(
+      undefined,
+      data.f?.level ? inArray(schema.classTypes.level, data.f?.level.split(",").filter((v) => ["beginner", "allLevels", "advanced"].includes(v)) as ("beginner" | "allLevels" | "advanced")[]) : undefined,
+    );
+    return {
+      ...(await classTypeData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(classTypeAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/class-types/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["class-types"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Class types · Stillwater Yoga"}] }),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listClassTypes({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), level: text(s.level), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchClassTypes({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: ClassTypesPage,
 });
 
 function ClassTypesPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/class-types/" });
   const router = useRouter();
@@ -16860,6 +16965,22 @@ function ClassTypesPage() {
         page="class-types"
         title="Class types"
         actions={newButton}
+      />
+      <Filters
+        filters={[
+  {
+    name: "level",
+    label: "Level",
+    kind: "chips",
+    options: [
+      { value: "beginner", label: "Beginner" },
+      { value: "allLevels", label: "All levels" },
+      { value: "advanced", label: "Advanced" },
+    ],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/class-types", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -16882,9 +17003,10 @@ function ClassTypesPage() {
         page="class-types"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/class-types", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listClassTypes({ data: { all: true } })).rows}
+        exportRows={async () => (await searchClassTypes({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No class types match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/class-types/$id", params: { id: String(row.id) } })}
       />
@@ -17032,7 +17154,7 @@ function HomePage() {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/instructors/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -17041,12 +17163,15 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { deleteInstructor, getInstructor, instructorUi, updateInstructor } from "#/generated/instructor";
 import { instructorSchema } from "#/generated/instructor.schema";
+import { buttonVariants } from "#/components/ui/button";
+import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
+import { ModelTable } from "#/kit/ModelTable";
 
 /** The record's lines in the audit log, newest first: administrators only, nobody else. */
 const getHistory = createServerFn()
@@ -17084,7 +17209,7 @@ export const Route = createFileRoute("/instructors/$id")({
 });
 
 function InstructorPage() {
-  const { row, canWrite, canDelete, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, canAdd, history } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/instructors" });
   return (
@@ -17112,7 +17237,29 @@ function InstructorPage() {
             : undefined
         }
       />
-
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Sessions</h2>
+          {row.sessions.length > 0 && canAdd?.sessions && (
+              <Link to="/sessions/new" search={{ instructor: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("session")}
+              </Link>
+            )}
+        </div>
+        <ModelTable
+          ui={sessionUi}
+          app={app}
+          rows={row.sessions}
+          hide={["instructorId"]}
+          onOpen={(item) => navigate({ to: "/sessions/$id", params: { id: String(item.id) } })}
+          emptyAction={canAdd?.sessions && (
+              <Link to="/sessions/new" search={{ instructor: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("session")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.sessions ? undefined : w.noneYet("sessions")}
+        />
+      </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
@@ -17822,9 +17969,11 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { postAccess, postData } from "#/generated/post.server";
+import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
@@ -17834,27 +17983,40 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Filters } from "#/kit/Filters";
 import { BookOpen } from "lucide-react";
 
-/** A page of the posts the viewer may read. */
-const listPosts = createServerFn()
+/** The posts matching the search and the filters, among those the viewer may read. */
+const searchPosts = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await postData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(postAccess.create, viewer) };
+    const where = and(
+      undefined,
+      data.f?.status ? inArray(schema.posts.status, data.f?.status.split(",").filter((v) => ["draft", "published"].includes(v)) as ("draft" | "published")[]) : undefined,
+    );
+    return {
+      ...(await postData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(postAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/posts/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["posts"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Posts · Stillwater Yoga"}] }),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listPosts({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), status: text(s.status), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchPosts({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: PostsPage,
 });
 
 function PostsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/posts/" });
   const router = useRouter();
@@ -17873,6 +18035,18 @@ function PostsPage() {
         page="posts"
         title="Posts"
         actions={newButton}
+      />
+      <Filters
+        filters={[
+  {
+    name: "status",
+    label: "Status",
+    kind: "chips",
+    options: [{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/posts", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -17895,10 +18069,11 @@ function PostsPage() {
         page="posts"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/posts", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listPosts({ data: { all: true } })).rows}
+        exportRows={async () => (await searchPosts({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         icon={BookOpen}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No posts match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/posts/$id", params: { id: String(row.id) } })}
       />
@@ -18323,12 +18498,12 @@ import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { instantOf } from "#/kit/zoned";
-import { optional, type Search, text } from "#/kit/params";
+import { count, optional, type Search, text } from "#/kit/params";
 
 export const Route = createFileRoute("/sessions/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Sessions · Stillwater Yoga"}] }),
-  validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40) }),
+  validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40), classType: count(s.classType), instructor: count(s.instructor) }),
   loader: async () => ({ options: { classTypeId: await classTypeOptions(), instructorId: await instructorOptions() } }),
   component: NewSessionPage,
 });
@@ -18337,7 +18512,7 @@ function NewSessionPage() {
   const { options } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/sessions" });
+  const back = () => search.classType ? navigate({ to: "/class-types/$id", params: { id: String(search.classType) } }) : search.instructor ? navigate({ to: "/instructors/$id", params: { id: String(search.instructor) } }) : navigate({ to: "/sessions" });
   return (
     <>
       <PageHeader title={w.newOne("session")} />
@@ -18345,7 +18520,8 @@ function NewSessionPage() {
         ui={sessionUi}
         app={app}
         schema={sessionSchema}
-        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}) }}
+        preset={{ ...(search.startsAt ? { startsAt: instantOf(search.startsAt, app.timeZone) } : {}), ...(search.classType ? { classTypeId: search.classType } : {}), ...(search.instructor ? { instructorId: search.instructor } : {}) }}
+        fixed={[...(search.classType ? ["classTypeId"] : []), ...(search.instructor ? ["instructorId"] : [])]}
         options={options}
         submitLabel={w.createOne("session")}
         onSubmit={async (values) => {
@@ -18861,6 +19037,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
+  "kit: src/kit/Filters.tsx",
   "kit: src/kit/Inspector.tsx",
   "kit: src/kit/Landing.tsx",
   "kit: src/kit/LegalPage.tsx",
@@ -18884,6 +19061,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/call.server.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
+  "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -18998,25 +19176,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "e5cf3c32 generated",
+  "src/db/schema.ts": "e4c23aec generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "a083f5f9 generated",
+  "src/generated/access.test.ts": "efcd0c43 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "61149aa8 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
   "src/generated/booking.server.ts": "bf7e5ab7 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "31e39adc generated",
-  "src/generated/class-type.ts": "71358bc1 generated",
+  "src/generated/class-type.server.ts": "91f1f756 generated",
+  "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "524a1a22 generated",
-  "src/generated/instructor.ts": "c90d3dae generated",
+  "src/generated/instructor.server.ts": "b65e4f67 generated",
+  "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
   "src/generated/message.server.ts": "41f267fc generated",
   "src/generated/message.ts": "933e4ada generated",
@@ -19044,6 +19222,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
+  "src/kit/Filters.tsx": "8dc4bed6 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
@@ -19067,6 +19246,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
@@ -19097,11 +19277,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/bookings/$id.tsx": "06d4ddfd generated",
   "src/routes/admin/bookings/index.tsx": "4ac07a9d generated",
   "src/routes/admin/bookings/new.tsx": "788212c8 generated",
-  "src/routes/admin/class-types/$id.tsx": "637dd4d6 generated",
+  "src/routes/admin/class-types/$id.tsx": "89c6dde7 generated",
   "src/routes/admin/class-types/index.tsx": "ca92a2f2 generated",
   "src/routes/admin/class-types/new.tsx": "4e81dbe1 generated",
   "src/routes/admin/index.tsx": "63b091f7 generated",
-  "src/routes/admin/instructors/$id.tsx": "377020a1 generated",
+  "src/routes/admin/instructors/$id.tsx": "af5c4ca1 generated",
   "src/routes/admin/instructors/index.tsx": "fc87eb00 generated",
   "src/routes/admin/instructors/new.tsx": "d5aff10f generated",
   "src/routes/admin/messages/$id.tsx": "edf5cb21 generated",
@@ -19112,19 +19292,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/new.tsx": "65198788 generated",
   "src/routes/admin/sessions/$id.tsx": "96712101 generated",
   "src/routes/admin/sessions/index.tsx": "d432c3ef generated",
-  "src/routes/admin/sessions/new.tsx": "5322413d generated",
+  "src/routes/admin/sessions/new.tsx": "99819ffa generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "16febad1 generated",
   "src/routes/blog/index.tsx": "9003aeaf generated",
-  "src/routes/class-types/$id.tsx": "f85dffb1 generated",
-  "src/routes/class-types/index.tsx": "1989a832 generated",
+  "src/routes/class-types/$id.tsx": "f611e916 generated",
+  "src/routes/class-types/index.tsx": "f2f51d55 generated",
   "src/routes/class-types/new.tsx": "a71084fa generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c582d914 generated",
-  "src/routes/instructors/$id.tsx": "068bceb2 generated",
+  "src/routes/instructors/$id.tsx": "d03aea3a generated",
   "src/routes/instructors/index.tsx": "5f7c421e generated",
   "src/routes/instructors/new.tsx": "2215504d generated",
   "src/routes/messages/$id.tsx": "2fd95eea generated",
@@ -19134,14 +19314,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/my-bookings/index.tsx": "8919ce02 generated",
   "src/routes/my-bookings/new.tsx": "c3d668d7 generated",
   "src/routes/posts/$id.tsx": "f0f401d5 generated",
-  "src/routes/posts/index.tsx": "f82b1057 generated",
+  "src/routes/posts/index.tsx": "a1218440 generated",
   "src/routes/posts/new.tsx": "1c031198 generated",
   "src/routes/privacy/index.tsx": "69fada0f generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "728a780d generated",
   "src/routes/sessions/$id.tsx": "96fa8ecb generated",
   "src/routes/sessions/index.tsx": "ce4e4028 generated",
-  "src/routes/sessions/new.tsx": "954f9cb1 generated",
+  "src/routes/sessions/new.tsx": "1c3bd2fa generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "b45a0afb kit",
@@ -23483,7 +23663,7 @@ import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
 import * as schema from "#/db/schema";
 import { orderAccess, orderData } from "#/generated/order.server";
-import { or, inArray } from "drizzle-orm";
+import { or, inArray, and } from "drizzle-orm";
 import { contains } from "#/kit/search";
 import { customerData } from "#/generated/customer.server";
 import { currentViewer } from "#/lib/viewer.server";
@@ -23499,24 +23679,31 @@ import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
+import { Filters } from "#/kit/Filters";
 
-/** The orders matching the search, among those the viewer may read. */
+/** The orders matching the search and the filters, among those the viewer may read. */
 const searchOrders = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    const where = data.q ? or(contains([schema.orders.number], data.q), inArray(schema.orders.customerId, customerData.titled(viewer, data.q))) : undefined;
-    return { ...(await orderData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(orderAccess.create, viewer) };
+    const where = and(
+      data.q ? or(contains([schema.orders.number], data.q), inArray(schema.orders.customerId, customerData.titled(viewer, data.q))) : undefined,
+      data.f?.status ? inArray(schema.orders.status, data.f?.status.split(",").filter((v) => ["draft", "placed", "shipped", "canceled"].includes(v)) as ("draft" | "placed" | "shipped" | "canceled")[]) : undefined,
+    );
+    return {
+      ...(await orderData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(orderAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/orders/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Orders · Acme CRM"}] }),
-  validateSearch: (s: Search) => optional({ q: text(s.q), page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ q: search.q, page: search.page }),
-  loader: ({ deps }) => searchOrders({ data: { q: deps.q, page: deps.page } }),
-  // While a search loads, the page stays (and the box keeps its focus and text), never the
-  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), status: text(s.status), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchOrders({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
   pendingMs: Number.POSITIVE_INFINITY,
   gcTime: 0,
   component: OrdersPage,
@@ -23524,7 +23711,7 @@ export const Route = createFileRoute("/orders/")({
 
 function OrdersPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
-  const { q } = Route.useSearch();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/orders/" });
   const router = useRouter();
@@ -23547,7 +23734,24 @@ function OrdersPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by number or customer"
-        onSearch={(text) => navigate({ to: "/orders", search: { q: text || undefined }, replace: true, resetScroll: false })}
+        onSearch={(text) => navigate({ to: "/orders", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
+      <Filters
+        filters={[
+  {
+    name: "status",
+    label: "Status",
+    kind: "chips",
+    options: [
+      { value: "draft", label: "Draft" },
+      { value: "placed", label: "Placed" },
+      { value: "shipped", label: "Shipped" },
+      { value: "canceled", label: "Canceled" },
+    ],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/orders", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -23578,10 +23782,10 @@ function OrdersPage() {
         page="orders"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchOrders({ data: { q, all: true } })).rows}
+        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
-        emptyMessage={q ? \`No orders match “\${q}”.\` : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No orders match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/orders/$id", params: { id: String(row.id) } })}
       />
@@ -24471,6 +24675,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
+  "kit: src/kit/Filters.tsx",
   "kit: src/kit/Inspector.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
@@ -24489,6 +24694,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
+  "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -24597,6 +24803,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/Filters.tsx": "8dc4bed6 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/ModelForm.tsx": "f19faf4c kit",
   "src/kit/ModelTable.tsx": "94b61759 kit",
@@ -24615,6 +24822,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
@@ -24646,7 +24854,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "c596748a generated",
-  "src/routes/orders/index.tsx": "a11a106a generated",
+  "src/routes/orders/index.tsx": "f7fdff0c generated",
   "src/routes/orders/new.tsx": "330bd071 generated",
   "src/routes/orders/trash.tsx": "90152332 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -37767,6 +37975,7 @@ import { createServerFn } from "@tanstack/react-start";
 import * as schema from "#/db/schema";
 import { itemAccess, itemData } from "#/generated/item.server";
 import { contains } from "#/kit/search";
+import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
@@ -37779,24 +37988,31 @@ import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
+import { Filters } from "#/kit/Filters";
 
-/** The items matching the search, among those the viewer may read. */
+/** The items matching the search and the filters, among those the viewer may read. */
 const searchItems = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    const where = data.q ? contains([schema.items.name, schema.items.summary], data.q) : undefined;
-    return { ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(itemAccess.create, viewer) };
+    const where = and(
+      data.q ? contains([schema.items.name, schema.items.summary], data.q) : undefined,
+      data.f?.kind ? inArray(schema.items.kind, data.f?.kind.split(",").filter((v) => ["general", "favorite", "archived"].includes(v)) as ("general" | "favorite" | "archived")[]) : undefined,
+    );
+    return {
+      ...(await itemData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(itemAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/items/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["items"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Items · Our Collection"}] }),
-  validateSearch: (s: Search) => optional({ q: text(s.q), page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ q: search.q, page: search.page }),
-  loader: ({ deps }) => searchItems({ data: { q: deps.q, page: deps.page } }),
-  // While a search loads, the page stays (and the box keeps its focus and text), never the
-  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), kind: text(s.kind), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchItems({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
   pendingMs: Number.POSITIVE_INFINITY,
   gcTime: 0,
   component: ItemsPage,
@@ -37804,7 +38020,7 @@ export const Route = createFileRoute("/items/")({
 
 function ItemsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
-  const { q } = Route.useSearch();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/items/" });
   const router = useRouter();
@@ -37827,7 +38043,23 @@ function ItemsPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or summary"
-        onSearch={(text) => navigate({ to: "/items", search: { q: text || undefined }, replace: true, resetScroll: false })}
+        onSearch={(text) => navigate({ to: "/items", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
+      <Filters
+        filters={[
+  {
+    name: "kind",
+    label: "Kind",
+    kind: "chips",
+    options: [
+      { value: "general", label: "General" },
+      { value: "favorite", label: "Favorite" },
+      { value: "archived", label: "Archived" },
+    ],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/items", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -37850,10 +38082,10 @@ function ItemsPage() {
         page="items"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/items", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, all: true } })).rows}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
-        emptyMessage={q ? \`No items match “\${q}”.\` : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No items match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/items/$id", params: { id: String(row.id) } })}
       />
@@ -38339,6 +38571,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
+  "kit: src/kit/Filters.tsx",
   "kit: src/kit/Inspector.tsx",
   "kit: src/kit/Landing.tsx",
   "kit: src/kit/ModelForm.tsx",
@@ -38356,6 +38589,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
+  "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -38446,6 +38680,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/Filters.tsx": "8dc4bed6 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "f19faf4c kit",
@@ -38463,6 +38698,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
@@ -38489,7 +38725,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "1586d9ed generated",
   "src/routes/items/$id.tsx": "2201c947 generated",
-  "src/routes/items/index.tsx": "3fcf1851 generated",
+  "src/routes/items/index.tsx": "a6cdc93b generated",
   "src/routes/items/new.tsx": "b2461bfe generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
@@ -38853,6 +39089,7 @@ export const maintenances = sqliteTable("maintenances", {
 
 export const componentsRelations = relations(components, ({ many }) => ({
   incidents: many(incidents),
+  maintenances: many(maintenances),
 }));
 
 export const incidentsRelations = relations(incidents, ({ one, many }) => ({
@@ -39123,6 +39360,14 @@ describe("Component", () => {
     const parent = insertComponent(stranger.id);
     insertIncident(stranger.id, { componentId: parent.id, status: "investigating" });
     const related = (await componentData.get(null, parent.id))?.incidents ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    for (const row of related) expect(row.ownerId).toBeNull();
+  });
+
+  test("a visitor reading the component is not told who added its maintenances", async () => {
+    const parent = insertComponent(stranger.id);
+    insertMaintenance(stranger.id, { componentId: parent.id });
+    const related = (await componentData.get(null, parent.id))?.maintenances ?? [];
     expect(related.length).toBeGreaterThan(0);
     for (const row of related) expect(row.ownerId).toBeNull();
   });
@@ -41687,6 +41932,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
+import { maintenanceData } from "./maintenance.server";
 import type { ComponentValues } from "./component";
 
 /** Who may read, create, change and delete components. */
@@ -41955,10 +42201,10 @@ export const componentData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.components.findFirst({
       where: and(eq(schema.components.id, id), componentData.readable(viewer)),
-      with: { incidents: { where: incidentData.readable(viewer) } },
+      with: { incidents: { where: incidentData.readable(viewer) }, maintenances: { where: maintenanceData.readable(viewer) } },
     });
     const found = fetched && componentData.shownRefs(viewer, [fetched])[0];
-    const row = found && { ...shownTo(viewer, found), incidents: found.incidents.map((r) => incidentData.shownTo(viewer, r)) };
+    const row = found && { ...shownTo(viewer, found), incidents: found.incidents.map((r) => incidentData.shownTo(viewer, r)), maintenances: found.maintenances.map((r) => maintenanceData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -42091,6 +42337,7 @@ import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 import { componentAccess, componentData } from "./component.server";
 import { incidentAccess } from "./incident.server";
+import { maintenanceAccess } from "./maintenance.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { componentSchema } from "./component.schema";
@@ -42166,7 +42413,7 @@ export const getComponent = createServerFn()
       canWrite: allows(componentAccess.write, viewer, row.ownerId),
       canDelete: allows(componentAccess.delete, viewer, row.ownerId),
       // Who may add to its related lists from here ("Add line" on an invoice).
-      canAdd: { incidents: allows(incidentAccess.create, viewer) },
+      canAdd: { incidents: allows(incidentAccess.create, viewer), maintenances: allows(maintenanceAccess.create, viewer) },
     };
   });
 
@@ -46069,6 +46316,7 @@ import { componentUi, deleteComponent, getComponent, updateComponent } from "#/g
 import { componentSchema } from "#/generated/component.schema";
 import { buttonVariants } from "#/components/ui/button";
 import { incidentUi } from "#/generated/incident";
+import { maintenanceUi } from "#/generated/maintenance";
 import { guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -46165,6 +46413,29 @@ function ComponentPage() {
               </Link>
             )}
           emptyMessage={canAdd?.incidents ? undefined : w.noneYet("incidents")}
+        />
+      </section>
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Maintenances</h2>
+          {row.maintenances.length > 0 && canAdd?.maintenances && (
+              <Link to="/maintenance/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("maintenance")}
+              </Link>
+            )}
+        </div>
+        <ModelTable
+          ui={maintenanceUi}
+          app={app}
+          rows={row.maintenances}
+          hide={["componentId"]}
+          onOpen={(item) => navigate({ to: "/maintenance/$id", params: { id: String(item.id) } })}
+          emptyAction={canAdd?.maintenances && (
+              <Link to="/maintenance/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("maintenance")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.maintenances ? undefined : w.noneYet("maintenances")}
         />
       </section>
       {history && history.length > 0 && (
@@ -46688,9 +46959,11 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { incidentAccess, incidentData } from "#/generated/incident.server";
+import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { identified, identifiedAccess, identifiedFits, identifiedMany } from "#/generated/actions/identified";
 import { monitoring, monitoringAccess, monitoringFits, monitoringMany } from "#/generated/actions/monitoring";
@@ -46705,26 +46978,39 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Filters } from "#/kit/Filters";
 
-/** A page of the incidents the viewer may read. */
-const listIncidents = createServerFn()
+/** The incidents matching the search and the filters, among those the viewer may read. */
+const searchIncidents = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await incidentData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(incidentAccess.create, viewer) };
+    const where = and(
+      undefined,
+      data.f?.status ? inArray(schema.incidents.status, data.f?.status.split(",").filter((v) => ["investigating", "identified", "monitoring", "resolved"].includes(v)) as ("investigating" | "identified" | "monitoring" | "resolved")[]) : undefined,
+    );
+    return {
+      ...(await incidentData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(incidentAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/incidents/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["incidents"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Incidents · Northwind Status"}] }),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listIncidents({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), status: text(s.status), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchIncidents({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: IncidentsPage,
 });
 
 function IncidentsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/incidents/" });
   const router = useRouter();
@@ -46743,6 +47029,23 @@ function IncidentsPage() {
         page="incidents"
         title="Incidents"
         actions={newButton}
+      />
+      <Filters
+        filters={[
+  {
+    name: "status",
+    label: "Status",
+    kind: "chips",
+    options: [
+      { value: "investigating", label: "Investigating" },
+      { value: "identified", label: "Identified" },
+      { value: "monitoring", label: "Monitoring" },
+      { value: "resolved", label: "Resolved" },
+    ],
+  },
+]}
+        values={values}
+        onChange={(next) => navigate({ to: "/incidents", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -46784,7 +47087,7 @@ function IncidentsPage() {
         page="incidents"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/incidents", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listIncidents({ data: { all: true } })).rows}
+        exportRows={async () => (await searchIncidents({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -46821,6 +47124,7 @@ function IncidentsPage() {
             )}
           </Overflow>
         )}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No incidents match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/incidents/$id", params: { id: String(row.id) } })}
       />
@@ -47182,18 +47486,21 @@ import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
+import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/maintenance/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["maintenance"], context.viewer, location.href),
   head: () => ({ meta: [{"title":"Maintenance · Northwind Status"}] }),
+  validateSearch: (s: Search) => optional({ component: count(s.component) }),
   loader: async () => ({ options: { componentId: await componentOptions() } }),
   component: NewMaintenancePage,
 });
 
 function NewMaintenancePage() {
   const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => navigate({ to: "/maintenance" });
+  const back = () => search.component ? navigate({ to: "/components/$id", params: { id: String(search.component) } }) : navigate({ to: "/maintenance" });
   return (
     <>
       <PageHeader title={w.newOne("maintenance")} />
@@ -47201,6 +47508,8 @@ function NewMaintenancePage() {
         ui={maintenanceUi}
         app={app}
         schema={maintenanceSchema}
+        preset={{ ...(search.component ? { componentId: search.component } : {}) }}
+        fixed={[...(search.component ? ["componentId"] : [])]}
         options={options}
         submitLabel={w.createOne("maintenance")}
         onSubmit={async (values) => {
@@ -48402,6 +48711,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/Dashboard.tsx",
   "kit: src/kit/FieldInput.tsx",
+  "kit: src/kit/Filters.tsx",
   "kit: src/kit/Inspector.tsx",
   "kit: src/kit/Keys.tsx",
   "kit: src/kit/Landing.tsx",
@@ -48425,6 +48735,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
+  "kit: src/kit/filter.ts",
   "kit: src/kit/format.ts",
   "kit: src/kit/formula.ts",
   "kit: src/kit/limit.ts",
@@ -48518,9 +48829,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/custom/sections/Uptime.tsx": "b8180e0a custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "b3c07d9b generated",
+  "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "d35ee30f generated",
+  "src/generated/access.test.ts": "2df13645 generated",
   "src/generated/actions/identified.server.ts": "ab98f807 generated",
   "src/generated/actions/identified.ts": "267f914e generated",
   "src/generated/actions/monitoring.server.ts": "30e18d35 generated",
@@ -48531,8 +48842,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "0a18aeac generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "3888aa08 generated",
-  "src/generated/component.ts": "d63a4c5b generated",
+  "src/generated/component.server.ts": "2ac5ec96 generated",
+  "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
@@ -48562,6 +48873,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/Filters.tsx": "8dc4bed6 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "a0e6091b kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
@@ -48585,6 +48897,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/filter.ts": "171b02f3 kit",
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
@@ -48617,19 +48930,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "2f482f52 generated",
+  "src/routes/components/$id.tsx": "32341ba4 generated",
   "src/routes/components/index.tsx": "eca9df20 generated",
   "src/routes/components/new.tsx": "2462d80d generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "973b9b6e generated",
   "src/routes/incidents/$id.tsx": "ada7ea6b generated",
-  "src/routes/incidents/index.tsx": "5e7fbabe generated",
+  "src/routes/incidents/index.tsx": "18a4fec1 generated",
   "src/routes/incidents/new.tsx": "ca089b54 generated",
   "src/routes/index.tsx": "dca8d976 generated",
   "src/routes/maintenance/$id.tsx": "2c670e92 generated",
   "src/routes/maintenance/index.tsx": "f4bebedb generated",
-  "src/routes/maintenance/new.tsx": "2579f179 generated",
+  "src/routes/maintenance/new.tsx": "991c15ac generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "d77fe1dc generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",

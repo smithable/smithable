@@ -294,6 +294,16 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           },
           "unique": false,
         },
+        {
+          "name": "sessions",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Session",
+          },
+          "unique": false,
+        },
       ],
       "name": "ClassType",
     },
@@ -323,6 +333,16 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "type": {
             "kind": "scalar",
             "name": "picture",
+          },
+          "unique": false,
+        },
+        {
+          "name": "sessions",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Session",
           },
           "unique": false,
         },
@@ -759,6 +779,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/sessions",
     },
     {
+      "filters": [
+        "level",
+      ],
       "id": "class-types",
       "pattern": {
         "kind": "crud",
@@ -805,6 +828,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/privacy",
     },
     {
+      "filters": [
+        "status",
+      ],
       "id": "posts",
       "pattern": {
         "kind": "crud",
@@ -1187,6 +1213,9 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
     },
     {
+      "filters": [
+        "status",
+      ],
       "id": "orders",
       "pattern": {
         "kind": "crud",
@@ -2067,6 +2096,9 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
       "route": "/",
     },
     {
+      "filters": [
+        "kind",
+      ],
       "id": "items",
       "pattern": {
         "kind": "crud",
@@ -2277,6 +2309,16 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
             "kind": "relation",
             "many": true,
             "model": "Incident",
+          },
+          "unique": false,
+        },
+        {
+          "name": "maintenances",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Maintenance",
           },
           "unique": false,
         },
@@ -2545,6 +2587,9 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "identified",
         "monitoring",
         "resolve",
+      ],
+      "filters": [
+        "status",
       ],
       "id": "incidents",
       "pattern": {

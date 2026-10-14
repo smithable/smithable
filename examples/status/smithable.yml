@@ -15,6 +15,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]       # planned work on it, on its page
   Incident:
     fields:
       title: string!
@@ -77,6 +78,7 @@ pages:
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
+    filters: [status]
   updates: { crud: IncidentUpdate }
   components: { crud: Component }
   maintenance: { crud: Maintenance }
