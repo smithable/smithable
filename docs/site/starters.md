@@ -1,6 +1,6 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with operations or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width.
+A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with operations or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Each starter also has a page of its own on smithable.ai; all seven are at [smithable.ai/starters](https://smithable.ai/starters).
 
 ## CRM
 
@@ -15,7 +15,7 @@ For a sales team that keeps track of customers and their orders. It shows record
 smithable new my-crm --starter crm
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/crm](https://smithable.ai/starters/crm).
 
 ## Booking
 
@@ -30,7 +30,7 @@ For a studio, a teacher or anyone who sells places in classes or sessions. Still
 smithable new my-studio --starter booking
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/booking](https://smithable.ai/starters/booking).
 
 ## Invoicing
 
@@ -45,7 +45,7 @@ For a freelancer who sends invoices. Each user sees only their own clients and i
 smithable new my-invoices --starter invoicing
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/invoicing](https://smithable.ai/starters/invoicing).
 
 ## Marketplace
 
@@ -60,7 +60,7 @@ For a place where people sell or give away things to each other. Torget's start 
 smithable new my-market --starter marketplace
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/marketplace](https://smithable.ai/starters/marketplace).
 
 ## Status page
 
@@ -75,7 +75,7 @@ For a team that tells its users how its services are doing. Northwind Status sho
 smithable new my-status --starter status
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/status](https://smithable.ai/starters/status).
 
 ## A collection
 
@@ -90,7 +90,7 @@ The smallest starter: one kind of record and a public page that lists them. A go
 smithable new my-collection --starter records
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/records](https://smithable.ai/starters/records).
 
 ## An API
 
@@ -105,4 +105,4 @@ An app for programs and AI assistants, with no pages of its own: projects, tasks
 smithable new my-tasks --starter api
 ```
 
-See it live: coming soon.
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/api](https://smithable.ai/starters/api).
