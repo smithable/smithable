@@ -979,6 +979,13 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
+  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
+  const where = args.where as Record<string, unknown> | undefined;
+  if (where && (where.mine === true || where.mine === "true")) {
+    const { mine: _mine, ...rest } = where;
+    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
+    if (all) return \`None of your own; \${all} in all.\`;
+  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);

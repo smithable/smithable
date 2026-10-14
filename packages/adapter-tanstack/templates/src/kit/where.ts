@@ -89,6 +89,19 @@ export function whereOf(
       throw new BadInput(
         `There is no field "${name}" to filter by. Fields: ${Object.keys(fields).join(", ")}.`,
       );
+    // A range on a field that is no number or date finds nothing, quietly: refused, saying what
+    // the field is (ask-checks.md §6).
+    if (
+      v &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      !["number", "money", "date", "instant"].includes(field.kind)
+    )
+      throw new BadInput(
+        field.kind === "text"
+          ? `"${name}" is a text, not a number or a date: it takes no range. Use search for words in it, or read the field.`
+          : `"${name}" is ${field.kind === "bool" ? "yes or no" : field.kind === "choice" ? `one of ${field.values.join(", ")}` : "a record, by its id or its title"}, not a number or a date: it takes no range.`,
+      );
     if (field.kind === "choice") {
       const values = list(v).map(String);
       const wrong = values.find((x) => !field.values.includes(x));

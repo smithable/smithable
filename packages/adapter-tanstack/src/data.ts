@@ -1802,7 +1802,7 @@ ${
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || typeof v !== "string") continue;
+      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(${n.table})
@@ -1810,8 +1810,9 @@ ${
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
-        return \`No ${n.label.toLowerCase()} has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+      const asked = String(v);
+      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
+        return \`No ${n.label.toLowerCase()} has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
     }
     return undefined;
   },

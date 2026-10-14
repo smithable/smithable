@@ -5745,7 +5745,7 @@ test("what an action asks for is checked when it is proposed", async () => {
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
       step(
-        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real, answers none with why and what there is, says a shared top, reads a record with its list, and refuses to add up a computed field over more than 10,000 records; undo takes them back",
+        "models named Row and Value, with a data page and the API on every model, type-check; the tools' measure sums, averages, names the largest's record and sums per value and per reference (by title) for real, answers none with why and what there is (a range on a text refused, none of your own counted), says a shared top, reads a record with its list, and refuses to add up a computed field over more than 10,000 records; undo takes them back",
         () => {
           const ops = [
             ["addModel", "Row", "label=string!", "amount=money"],
@@ -5807,6 +5807,11 @@ test("measure sums, averages and sums per value", async () => {
   expect(await callTool(key, "find", { kind: "Row", where: { label: "zz" } })).toMatchObject({ total: 0, note: expect.stringContaining('No row has "zz" in label; the nearest: ') });
   expect(await callTool(key, "find", { kind: "Row", search: "bee" })).toMatchObject({ total: 0, note: expect.stringContaining("The nearest labels: ") });
   expect(await callTool(key, "measure", { kind: "Row", by: "group" })).toMatchObject({ note: expect.stringContaining("share the top, with 2 each") });
+  // No zero answered quietly (ask-checks.md §6): a range on a text is refused, a number no text
+  // holds gets the nearest values, and none of the viewer's own says how many there are.
+  await expect(callTool(key, "find", { kind: "Row", where: { label: { from: 1, to: 9999 } } })).rejects.toThrow("takes no range");
+  expect(await callTool(key, "find", { kind: "Row", where: { label: 2026006 } })).toMatchObject({ total: 0, note: expect.stringContaining('No row has "2026006" in label; the nearest: ') });
+  expect(await callTool(key, "find", { kind: "Row", where: { mine: true } })).toMatchObject({ total: 0, note: expect.stringMatching(/^None of your own; \\d+ in all\\.$/) });
   expect(await callTool(key, "read", { kind: "Value", id: groups.North })).toMatchObject({ name: "North", rows: { total: 2, rows: [{ label: expect.any(String) }, { label: expect.any(String) }] } });
   // A computed field is added up over at most 10,000 records in one call; more are refused
   // with how to narrow them, and a narrower call still works.
