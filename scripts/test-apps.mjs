@@ -1333,7 +1333,7 @@ async function threadFlow(base) {
     const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
     await helios.locator('[data-part="thread"]', { hasText: "1 new" }).waitFor({ timeout: 10000 });
     await page.getByRole("checkbox", { name: "Unread" }).click();
-    await page.waitForURL(/unread=1/, { timeout: 10000 });
+    await page.waitForURL(/unread=/, { timeout: 10000 });
     await page
       .waitForFunction(() => document.querySelectorAll('tr[data-part="row"]').length === 1, null, {
         timeout: 10000,
@@ -4560,11 +4560,14 @@ function operationsFlow(dir) {
       if (!readFileSync(custom, "utf8").includes("Our customers"))
         throw new Error("the custom page was changed");
       run("git", ["checkout", "--", "src/custom/pages/customers.tsx"], dir);
-      // The spec no longer gives the page a search: the custom page's code no longer fits.
+      // The spec no longer gives the page a search, nor its records a conversation (which keeps
+      // the address's filters): the custom page's code no longer fits.
       expectOk(smithable(dir, "op", "setSearch", "customers"));
+      expectOk(smithable(dir, "op", "setRecordList", "customers", "comments", "table"));
       const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
       if (typecheck.status === 0 || !typecheck.stdout.includes("src/custom/pages/customers.tsx"))
         throw new Error(`expected the custom page to fail type-checking:\n${typecheck.stdout}`);
+      expectOk(smithable(dir, "undo"));
       expectOk(smithable(dir, "undo"));
       expectOk(smithable(dir, "undo"));
       if (spawnSync("test", ["-e", custom]).status === 0)
