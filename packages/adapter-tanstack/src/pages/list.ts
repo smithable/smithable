@@ -189,6 +189,13 @@ function filterCode(
     options,
     modules,
     sorts,
+    // A table's sortable columns, by the field's name: their key in the address.
+    headers: Object.fromEntries(
+      (page.sortable ?? []).flatMap((name) => {
+        const field = model.fields.find((f) => f.name === name);
+        return field ? [[name, dataKey(field)]] : [];
+      }),
+    ) as Record<string, string>,
     names: (page.filters ?? []).filter((name) => !(ownOnly && name === "owner")),
     columns: (page.sortable ?? []).map((name) => {
       const field = model.fields.find((f) => f.name === name);
@@ -663,7 +670,11 @@ ${
           return filtering?.sorts.length && ordered !== "rows"
             ? `sort ? rows : ${ordered}`
             : ordered;
-        })()}}${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
+        })()}}${
+          filtering && Object.keys(filtering.headers).length
+            ? `\n        sorting={{ keys: ${literal(filtering.headers)}, value: sort, onChange: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}`
+            : ""
+        }${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (

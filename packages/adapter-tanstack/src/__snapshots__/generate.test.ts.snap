@@ -8976,7 +8976,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Keys.tsx": "a0e6091b kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -19050,7 +19050,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -24599,7 +24599,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "136de911 kit",
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -31332,7 +31332,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -34221,6 +34221,7 @@ function CatalogPage() {
         app={app}
         exportRows={async () => (await searchItems({ data: { q, sort, view, f: values, all: true } })).rows}
         rows={rows}
+        sorting={{ keys: { price: "price" }, value: sort, onChange: (next) => navigate({ to: "/", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         icon={Package}
         saved={{ ids: saved, onToggle: toggleSaved }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -35536,7 +35537,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -35584,7 +35585,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "09118de2 generated",
+  "src/routes/index.tsx": "30b3714e generated",
   "src/routes/my-items/$id.tsx": "0bf039ab generated",
   "src/routes/my-items/index.tsx": "93e89fb5 generated",
   "src/routes/my-items/new.tsx": "cc85bb39 generated",
@@ -38448,7 +38449,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "454bb3bf kit",
   "src/kit/Landing.tsx": "564f7eeb kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -48553,7 +48554,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
   "src/kit/ModelForm.tsx": "8db93c4c kit",
-  "src/kit/ModelTable.tsx": "62662fff kit",
+  "src/kit/ModelTable.tsx": "94b61759 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
