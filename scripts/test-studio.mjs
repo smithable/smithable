@@ -737,6 +737,22 @@ try {
         .getByRole("button", { name: /Forest/ })
         .getByText("themes/forest.yml", { exact: false })
         .waitFor();
+      // The edge between Builder and the preview gives the preview more room, and back.
+      const edge = page.getByRole("separator", { name: "Preview width" });
+      const width = Number(await edge.getAttribute("aria-valuenow"));
+      const frameWidth = async () =>
+        (await page.locator("[data-guide-view]").boundingBox())?.width ?? 0;
+      const narrower = await frameWidth();
+      await edge.focus();
+      await page.keyboard.press("ArrowLeft");
+      await page.keyboard.press("ArrowLeft");
+      if (
+        Number(await edge.getAttribute("aria-valuenow")) !== width + 4 ||
+        (await frameWidth()) <= narrower
+      )
+        throw new Error("the preview's edge does not widen it");
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowRight");
       // The theme swaps a font package, so the app's server restarts: the preview keeps the last
       // page on screen meanwhile (never an empty panel) and says Updating… from the start.
       await page.locator('iframe[title="App preview"]').waitFor();
