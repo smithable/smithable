@@ -231,6 +231,13 @@ export const w = {
   previousPicture: "Previous picture",
   privacy: "Privacy",
   proposedNote: "Shown to the person to confirm; nothing is changed yet.",
+  /** Ask's answer checks (ask-checks.md §3): a claim that a change was made, or that there is none. */
+  doneWords:
+    /\b(?:I(?:'ve| have)? (?:added|changed|renamed|updated|marked|created|deleted|removed|saved|moved)|(?:has|have) been (?:added|changed|renamed|updated|marked|created|deleted|removed|saved|moved))\b|^done\b/im,
+  noneWords:
+    /\b(?:none|nothing|no such|not any|zero|there (?:are|is|were|was) no)\b|(?:^|[.!?]\s+)no \p{L}+(?: \p{L}+)?s\b|\bno \p{L}+(?: \p{L}+)? (?:found|matches|match)\b/imu,
+  notConfirmed:
+    "This answer could not be confirmed from the app's records: check it against the results below.",
   readAloud: "Read aloud",
   records: "Records",
   remove: "Remove",

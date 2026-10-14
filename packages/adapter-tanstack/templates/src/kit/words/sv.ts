@@ -224,6 +224,10 @@ export const w = {
   previousPicture: "Föregående bild",
   privacy: "Integritet",
   proposedNote: "Visas för personen att bekräfta; inget är ändrat ännu.",
+  doneWords:
+    /(?<!\p{L})(?:jag har (?:lagt till|ändrat|bytt namn på|uppdaterat|markerat|skapat|tagit bort|sparat|flyttat)|har (?:lagts till|ändrats|uppdaterats|markerats|skapats|tagits bort|sparats|flyttats))(?!\p{L})|^klart(?!\p{L})/imu,
+  noneWords: /(?<!\p{L})(?:inga|inget|ingenting|noll|inte några|det finns ingen)(?!\p{L})/imu,
+  notConfirmed: "Svaret kunde inte bekräftas mot appens poster: jämför med resultaten nedan.",
   readAloud: "Läs upp",
   records: "Poster",
   remove: "Ta bort",

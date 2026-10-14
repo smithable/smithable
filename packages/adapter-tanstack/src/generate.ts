@@ -545,7 +545,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       {
         // The administrator's inspector on the data page (docs/design/assistant.md §4): the
         // wording rules (§5), the answering loop and the panel.
-        files: ["src/kit/ask.ts", "src/kit/assistant.server.ts", "src/kit/Inspector.tsx"],
+        files: [
+          "src/kit/ask.ts",
+          "src/kit/assistant.server.ts",
+          "src/kit/grounded.ts",
+          "src/kit/Inspector.tsx",
+        ],
         used: ({ ir, auth }) =>
           Boolean(auth.assistant) ||
           (hasInspector({ ir, auth }) && ir.pages.some((p) => p.pattern.kind === "data")),
