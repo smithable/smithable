@@ -506,6 +506,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => hasSignIn(auth) && ir.pages.some((p) => p.contact),
       },
       {
+        // A list on a record page shown as a conversation (docs/design/conversation.md).
+        files: ["src/kit/Thread.tsx"],
+        used: ({ ux }) =>
+          Object.values(ux.pages).some((p) => Object.values(p.lists ?? {}).includes("thread")),
+      },
+      {
         files: ["src/kit/Reserve.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
       },

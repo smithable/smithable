@@ -244,6 +244,7 @@ export const w = {
   search: "Sök…",
   searchAction: "Sök",
   selectAll: "Välj alla",
+  reply: "Svara",
   send: "Skicka",
   callsTo: (target: string) => `Anrop till ${target}`,
   lastCall: (when: string, answer: string) => `senast ${when}, ${answer}.`,

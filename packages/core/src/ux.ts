@@ -8,8 +8,8 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { FieldIR, PageIR, SpecIR } from "./ir.js";
-import { capitalize } from "./naming.js";
+import type { FieldIR, ModelIR, PageIR, SpecIR } from "./ir.js";
+import { capitalize, humanize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 import { FONTS, type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
@@ -70,6 +70,11 @@ export interface PageUx {
   formColumns?: 1 | 2;
   /** How a field is entered, when not the default for its kind (docs/design/look.md §1.1). */
   control?: Record<string, Control>;
+  /**
+   * How the record page shows a list of related records, by its field: a table (the default) or
+   * a conversation with a reply box (docs/design/conversation.md).
+   */
+  lists?: Record<string, "thread" | "table">;
 }
 
 /** The ways a field can be entered, chosen by name in the ux file. */
@@ -235,6 +240,90 @@ export function emptyUx(): UxIR {
   };
 }
 
+/**
+ * `record.lists` of a page (docs/design/conversation.md): each a list field of the page's model,
+ * shown as a table or a thread. A thread reads its text from the listed model's first long text
+ * field, so a model without one cannot be a thread; a required field the reply box cannot fill
+ * (no default, not filled by the app, not the reference back) is warned about.
+ */
+function readRecordLists(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  ir: SpecIR,
+  model: ModelIR | undefined,
+  where: string,
+): Record<string, "thread" | "table"> {
+  const lists: Record<string, "thread" | "table"> = {};
+  for (const option of checkKeys(
+    ctx,
+    mapEntries(ctx, node, `the record of ${where}`) ?? [],
+    `the record of ${where}`,
+    {
+      allowed: ["lists"],
+    },
+  )) {
+    for (const pair of mapEntries(ctx, option.value, `"lists" of ${where}`) ?? []) {
+      const field = model?.fields.find((f) => f.name === pair.key);
+      const look = readString(ctx, pair.value, `"${pair.key}" in "lists"`);
+      if (!field || field.type.kind !== "relation" || !field.type.many) {
+        ctx.error(
+          pair.keyNode,
+          "unknown-field",
+          `${model?.name ?? where} has no list named "${pair.key}".`,
+          didYouMean(
+            pair.key,
+            (model?.fields ?? [])
+              .filter((f) => f.type.kind === "relation" && f.type.many)
+              .map((f) => f.name),
+          ),
+        );
+        continue;
+      }
+      if (look !== "thread" && look !== "table") {
+        if (look !== undefined)
+          ctx.error(pair.value, "invalid-value", `"${pair.key}" in "lists" is thread or table.`);
+        continue;
+      }
+      const target = ir.models.find((m) => m.name === (field.type as { model: string }).model);
+      if (look === "thread" && target) {
+        const long = (f: FieldIR) =>
+          f.type.kind === "scalar" && (f.type.name === "text" || f.type.name === "markdown");
+        const text = target.fields.find(long);
+        if (!text) {
+          ctx.error(
+            pair.value,
+            "invalid-value",
+            `${target.name} cannot be a thread: it has no long text field (text or markdown) to show as the message.`,
+          );
+          continue;
+        }
+        // What the reply box cannot fill: it asks for the text and the attachments, fixes the
+        // reference back, and leaves the rest to defaults and the app.
+        for (const f of target.fields) {
+          const filled =
+            f === text ||
+            !f.required ||
+            f.formula ||
+            f.default !== undefined ||
+            f.defaultMe ||
+            f.defaultFormula ||
+            (f.type.kind === "relation" && f.type.model === model?.name && !f.type.many) ||
+            (f.type.kind === "scalar" &&
+              ["file", "files", "picture", "pictures"].includes(f.type.name));
+          if (!filled)
+            ctx.warning(
+              pair.value,
+              "thread-needs-form",
+              `${target.name}.${f.name} is required and the reply box does not ask for it: give it a default, or \`by: app\`, or the thread shows Add ${humanize(target.name).toLowerCase()} instead.`,
+            );
+        }
+      }
+      lists[pair.key] = look;
+    }
+  }
+  return lists;
+}
+
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
 export function validateUx(
   file: { path: string; text: string },
@@ -391,7 +480,7 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form", "sections", "theme"],
+          allowed: ["icon", "table", "form", "record", "sections", "theme"],
           later: ["detail", "calendar"],
         })) {
           if (part.key === "sections") {
@@ -411,6 +500,10 @@ export function validateUx(
               result.theme = {};
               readTheme(ctx, part.value, `the theme of ${where}`, themes, result.theme);
             }
+            continue;
+          }
+          if (part.key === "record") {
+            result.lists = readRecordLists(ctx, part.value, ir, model, where);
             continue;
           }
           if (part.key === "icon") {

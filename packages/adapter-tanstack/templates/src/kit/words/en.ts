@@ -251,6 +251,8 @@ export const w = {
   search: "Search…",
   searchAction: "Search",
   selectAll: "Select all",
+  /** The reply box of a conversation (docs/design/conversation.md). */
+  reply: "Reply",
   send: "Send",
   callsTo: (target: string) => `Calls to ${target}`,
   lastCall: (when: string, answer: string) => `last ${when}, ${answer}.`,

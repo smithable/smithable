@@ -141,6 +141,39 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
   },
 };
 
+const setRecordList: Operation<{ page: string; field: string; look: "thread" | "table" }> = {
+  name: "setRecordList",
+  summary:
+    "Show a list of related records on a page's record as a thread (a conversation with a reply box) or a table (the default).",
+  schema: {
+    type: "object",
+    required: ["page", "field", "look"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: refTo({ ref: "field", page: "page", label: "List" }),
+      look: { enum: ["thread", "table"], description: "thread or table." },
+    },
+  },
+  positional: ["page", "field", "look"],
+  describe: ({ page, field, look }) =>
+    look === "thread"
+      ? `Show ${field} on the ${page} page's records as a conversation`
+      : `Show ${field} on the ${page} page's records as a table`,
+  destructive: () => false,
+  apply(editors, { page, field, look }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    // A table is the default: setting it takes the key away, and an empty record block with it.
+    put(
+      editors.ux,
+      ["pages", page, "record", "lists", field],
+      look === "thread" ? look : undefined,
+    );
+    return [];
+  },
+};
+
 const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
   name: "setFieldOrder",
   summary: "Order the fields of a page's form; fields not listed follow (none: the spec's order).",
@@ -553,6 +586,7 @@ export const uxOperations: AnyOperation[] = [
   setTheme,
   setSectionLook,
   setColumns,
+  setRecordList,
   setFieldOrder,
   setTone,
   setIcon,

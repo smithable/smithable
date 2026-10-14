@@ -133,6 +133,23 @@
               }
             }
           },
+          "record": {
+            "type": "object",
+            "description": "The record page: how its lists of related records are shown.",
+            "additionalProperties": false,
+            "properties": {
+              "lists": {
+                "type": "object",
+                "description": "By list field: table (the default) or thread, a conversation with a reply box, e.g. { messages: thread }.",
+                "additionalProperties": {
+                  "enum": [
+                    "thread",
+                    "table"
+                  ]
+                }
+              }
+            }
+          },
           "form": {
             "type": "object",
             "description": "The page's form: the fields' order, sections, columns and controls.",

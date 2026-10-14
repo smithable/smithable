@@ -268,15 +268,27 @@ export function parentRefs(model: ModelIR, ir: SpecIR) {
  * The related lists of a record's page that offer "Add <child>": the child has a page of its
  * own, and its new form fills in the reference back to the record (parentRefs).
  */
-export function addable(model: ModelIR, ir: SpecIR) {
+export function addable(model: ModelIR, ir: SpecIR, threads: string[] = []) {
   return lists(model).flatMap((list) => {
     const target = modelNamed(ir, list.type.model);
     const route = ir.pages.find(
       (p) => p.pattern.kind === "crud" && pageModel(p) === target.name,
     )?.route;
     const ref = parentRefs(target, ir).find((p) => p.field.type.model === model.name)?.field;
-    return route && ref ? [{ list, target, ref, route }] : [];
+    // A thread adds by its reply box, with no page of the related model needed.
+    return (route || threads.includes(list.name)) && ref ? [{ list, target, ref, route }] : [];
   });
+}
+
+/** A model's lists that one of its pages shows as a conversation (docs/design/conversation.md). */
+export function threadLists(model: ModelIR, ir: SpecIR, ux: UxIR): string[] {
+  return lists(model)
+    .map((f) => f.name)
+    .filter((name) =>
+      ir.pages.some(
+        (p) => pageModel(p) === model.name && ux.pages[p.id]?.lists?.[name] === "thread",
+      ),
+    );
 }
 
 /**

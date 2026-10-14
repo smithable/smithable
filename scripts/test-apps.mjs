@@ -1304,6 +1304,39 @@ async function rulesFlow(base) {
 }
 
 /**
+ * A conversation (conversation.md §1), on the CRM's customers as the ops step left them: a
+ * customer's comments show as a thread, and one sent from the reply box shows in place.
+ */
+async function threadFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers`);
+    await page.getByRole("button", { name: "Helios Energy" }).first().click();
+    const thread = page.locator('[data-kit="thread"]');
+    await thread.getByText("No comments yet").waitFor({ timeout: 10000 });
+    await thread.getByRole("textbox", { name: "Reply" }).fill("Called them about the renewal.");
+    await thread.getByRole("button", { name: "Send" }).click();
+    await thread
+      .locator('[data-part="message"]', { hasText: "Called them about the renewal." })
+      .waitFor({ timeout: 10000 });
+    if ((await thread.getByRole("textbox", { name: "Reply" }).inputValue()) !== "")
+      throw new Error("the reply box keeps what was sent");
+    console.log(
+      "  ✓ browser: a list shown as a conversation; a comment sent from the reply box shows in place, with no page of its own",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("thread flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Favorites (marketplace.md §2.3): the admin saves a customer with its heart; the Saved view
  * lists only it, the record page shows it saved, another person's Saved view stays empty, and
  * unsaving on the record page empties the admin's.
@@ -1398,7 +1431,8 @@ async function contactFlow(dir, base) {
     await open(page, address);
     const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
     await page.getByRole("textbox", { name: "Message" }).fill("Is the spring order still on?");
-    await page.getByRole("button", { name: "Send" }).click();
+    // The contact form's Send (a thread's reply box on the page has one too).
+    await page.locator('[data-kit="contact-owner"]').getByRole("button", { name: "Send" }).click();
     await page
       .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
       .waitFor({ timeout: 10000 });
@@ -5334,6 +5368,25 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // A conversation (conversation.md): a customer's comments as a thread on its page, added from
+    // the reply box, with no page of their own.
+    if (example === "crm")
+      step(
+        "op addModel and setRecordList show a customer's comments as a conversation, and the app type-checks",
+        () => {
+          for (const args of [
+            ["addModel", "Comment", "body=text!", "customer=Customer!"],
+            // In the trash with its customer, as the orders are.
+            ["setTrash", "Comment", "true"],
+            ["addField", "Customer", "comments", "Comment[]"],
+            ["setRecordList", "customers", "comments", "thread"],
+          ]) {
+            const result = smithable(dir, "op", ...args);
+            if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
+          }
+          run("pnpm", ["typecheck"], dir);
+        },
+      );
     // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
     if (example === "crm")
       step(
@@ -6004,6 +6057,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "crm") {
         await browserFlow(dir, base);
         await filtersFlow(base);
+        await threadFlow(base);
         await rulesFlow(base);
         await pagingFlow(dir, base);
         await favoritesFlow(base);
