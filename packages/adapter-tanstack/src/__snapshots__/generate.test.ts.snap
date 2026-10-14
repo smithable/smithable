@@ -2286,6 +2286,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { projectData } from "./project.server";
@@ -2417,7 +2418,7 @@ export function noteFromApi(body: unknown, current?: Record<string, unknown>) {
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role admin.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -2571,7 +2572,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role member.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -2725,7 +2726,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "assistant": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role assistant.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\n* required. You act as someone with the role assistant.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -2888,9 +2889,9 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Project: { data: projectData, toApi: projectToApi, fromApi: projectFromApi, title: "name", refs: {}, searched: ["name","description"], label: "project", named: (viewer: Viewer | null, text: string) => projectData.named(viewer, text) },
-  Task: { data: taskData, toApi: taskToApi, fromApi: taskFromApi, title: "title", refs: {"project":"name","assignee":"name"}, searched: ["title","details"], label: "task", named: (viewer: Viewer | null, text: string) => taskData.named(viewer, text) },
-  Note: { data: noteData, toApi: noteToApi, fromApi: noteFromApi, title: "title", refs: {"project":"name"}, searched: ["title","body"], label: "note", named: (viewer: Viewer | null, text: string) => noteData.named(viewer, text) },
+  Project: { data: projectData, toApi: projectToApi, fromApi: projectFromApi, title: "name", refs: {}, searched: ["name","description"], lists: {"tasks":{"kind":"Task","ref":"project"},"notes":{"kind":"Note","ref":"project"}} as Record<string, { kind: string; ref: string }>, label: "project", named: (viewer: Viewer | null, text: string) => projectData.named(viewer, text) },
+  Task: { data: taskData, toApi: taskToApi, fromApi: taskFromApi, title: "title", refs: {"project":"name","assignee":"name"}, searched: ["title","details"], lists: {} as Record<string, { kind: string; ref: string }>, label: "task", named: (viewer: Viewer | null, text: string) => taskData.named(viewer, text) },
+  Note: { data: noteData, toApi: noteToApi, fromApi: noteFromApi, title: "title", refs: {"project":"name"}, searched: ["title","body"], lists: {} as Record<string, { kind: string; ref: string }>, label: "note", named: (viewer: Viewer | null, text: string) => noteData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -2943,6 +2944,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
   return viewer;
 };
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -2950,44 +2974,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -3322,6 +3366,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // describes them for each caller; every call goes through the data functions, as the API's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 import { noteFromApi, noteToApi, projectFromApi, projectToApi, taskFromApi, taskToApi } from "./api.server";
 import { projectData } from "./project.server";
@@ -3337,7 +3382,7 @@ import { runReopen } from "./actions/reopen.server";
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role admin.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -3581,7 +3626,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role member.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -3825,7 +3870,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "assistant": {
-    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role assistant.",
+    "summary": "Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.\\nProject (projects): name*, description. Title: name.\\nTask (tasks): title*, project* -> Project, status* (todo | doing | done), dueDate (date), assignee -> User, details. Title: title.\\nNote (notes): title*, project* -> Project, body, attachment (document). Title: title.\\nActions: complete (Task, when status is todo or doing), reopen (Task, when status is done).\\n* required. You act as someone with the role assistant.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -4082,9 +4127,9 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Project: { data: projectData, toApi: projectToApi, fromApi: projectFromApi, title: "name", refs: {}, searched: ["name","description"], label: "project", named: (viewer: Viewer | null, text: string) => projectData.named(viewer, text) },
-  Task: { data: taskData, toApi: taskToApi, fromApi: taskFromApi, title: "title", refs: {"project":"name","assignee":"name"}, searched: ["title","details"], label: "task", named: (viewer: Viewer | null, text: string) => taskData.named(viewer, text) },
-  Note: { data: noteData, toApi: noteToApi, fromApi: noteFromApi, title: "title", refs: {"project":"name"}, searched: ["title","body"], label: "note", named: (viewer: Viewer | null, text: string) => noteData.named(viewer, text) },
+  Project: { data: projectData, toApi: projectToApi, fromApi: projectFromApi, title: "name", refs: {}, searched: ["name","description"], lists: {"tasks":{"kind":"Task","ref":"project"},"notes":{"kind":"Note","ref":"project"}} as Record<string, { kind: string; ref: string }>, label: "project", named: (viewer: Viewer | null, text: string) => projectData.named(viewer, text) },
+  Task: { data: taskData, toApi: taskToApi, fromApi: taskFromApi, title: "title", refs: {"project":"name","assignee":"name"}, searched: ["title","details"], lists: {} as Record<string, { kind: string; ref: string }>, label: "task", named: (viewer: Viewer | null, text: string) => taskData.named(viewer, text) },
+  Note: { data: noteData, toApi: noteToApi, fromApi: noteFromApi, title: "title", refs: {"project":"name"}, searched: ["title","body"], lists: {} as Record<string, { kind: string; ref: string }>, label: "note", named: (viewer: Viewer | null, text: string) => noteData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -4137,6 +4182,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
   return viewer;
 };
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -4144,44 +4212,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -4249,7 +4337,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -4526,11 +4614,41 @@ export const noteData = {
       .map((row) => ({ id: row.id, title: String(row.title) }));
   },
 
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.notes.title })
+      .from(schema.notes)
+      .where(noteData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.notes)
+        .where(and(noteData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No note has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       noteData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.notes.ownerId, viewer.id) : undefined, viewer?.id, {project: (text: string) => projectData.named(viewer, text)}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.notes.ownerId, viewer.id) : undefined, viewer?.id, {project: { find: (text: string) => projectData.named(viewer, text), titles: () => projectData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.notes.title, schema.notes.body], word)),
     );
@@ -4803,7 +4921,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { taskData } from "./task.server";
 import { noteData } from "./note.server";
@@ -5062,6 +5180,36 @@ export const projectData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.projects.name })
+      .from(schema.projects)
+      .where(projectData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.projects)
+        .where(and(projectData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No project has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -5338,7 +5486,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
 import type { TaskValues } from "./task";
@@ -5603,11 +5751,41 @@ export const taskData = {
       .map((row) => ({ id: row.id, title: String(row.title) }));
   },
 
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.tasks.title })
+      .from(schema.tasks)
+      .where(taskData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.tasks)
+        .where(and(taskData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No task has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       taskData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.tasks.ownerId, viewer.id) : undefined, viewer?.id, {project: (text: string) => projectData.named(viewer, text)}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.tasks.ownerId, viewer.id) : undefined, viewer?.id, {project: { find: (text: string) => projectData.named(viewer, text), titles: () => projectData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.tasks.title, schema.tasks.details], word)),
     );
@@ -8944,21 +9122,21 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "12e879b4 generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "56c276be generated",
+  "src/generated/ask.server.ts": "d2ff5ef3 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "803e4661 generated",
   "src/generated/keys.test.ts": "05e27e83 generated",
-  "src/generated/mcp.server.ts": "c1a602b1 generated",
+  "src/generated/mcp.server.ts": "c86dce9a generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "84986407 generated",
+  "src/generated/note.server.ts": "0364de08 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "3a6601dd generated",
+  "src/generated/project.server.ts": "5b4805a7 generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "d6f8fdec generated",
+  "src/generated/task.server.ts": "781709c9 generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
@@ -9008,7 +9186,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -10254,6 +10432,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { classTypeData } from "./class-type.server";
@@ -10489,7 +10668,7 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role admin.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -10658,7 +10837,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -10836,12 +11015,12 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  ClassType: { data: classTypeData, toApi: classTypeToApi, fromApi: classTypeFromApi, title: "name", refs: {}, searched: ["name","summary"], label: "class type", named: (viewer: Viewer | null, text: string) => classTypeData.named(viewer, text) },
-  Instructor: { data: instructorData, toApi: instructorToApi, fromApi: instructorFromApi, title: "name", refs: {}, searched: ["name","bio"], label: "instructor", named: (viewer: Viewer | null, text: string) => instructorData.named(viewer, text) },
-  Session: { data: sessionData, toApi: sessionToApi, fromApi: sessionFromApi, title: "id", refs: {"classType":"name","instructor":"name"}, searched: [], label: "session", named: undefined },
-  Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "id", refs: {"session":"id"}, searched: [], label: "booking", named: undefined },
-  Post: { data: postData, toApi: postToApi, fromApi: postFromApi, title: "title", refs: {}, searched: ["title","address","summary","body"], label: "post", named: (viewer: Viewer | null, text: string) => postData.named(viewer, text) },
-  Message: { data: messageData, toApi: messageToApi, fromApi: messageFromApi, title: "name", refs: {}, searched: ["name","email","message"], label: "message", named: (viewer: Viewer | null, text: string) => messageData.named(viewer, text) },
+  ClassType: { data: classTypeData, toApi: classTypeToApi, fromApi: classTypeFromApi, title: "name", refs: {}, searched: ["name","summary"], lists: {"sessions":{"kind":"Session","ref":"classType"}} as Record<string, { kind: string; ref: string }>, label: "class type", named: (viewer: Viewer | null, text: string) => classTypeData.named(viewer, text) },
+  Instructor: { data: instructorData, toApi: instructorToApi, fromApi: instructorFromApi, title: "name", refs: {}, searched: ["name","bio"], lists: {"sessions":{"kind":"Session","ref":"instructor"}} as Record<string, { kind: string; ref: string }>, label: "instructor", named: (viewer: Viewer | null, text: string) => instructorData.named(viewer, text) },
+  Session: { data: sessionData, toApi: sessionToApi, fromApi: sessionFromApi, title: "id", refs: {"classType":"name","instructor":"name"}, searched: [], lists: {"bookings":{"kind":"Booking","ref":"session"}} as Record<string, { kind: string; ref: string }>, label: "session", named: undefined },
+  Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "id", refs: {"session":"id"}, searched: [], lists: {} as Record<string, { kind: string; ref: string }>, label: "booking", named: undefined },
+  Post: { data: postData, toApi: postToApi, fromApi: postFromApi, title: "title", refs: {}, searched: ["title","address","summary","body"], lists: {} as Record<string, { kind: string; ref: string }>, label: "post", named: (viewer: Viewer | null, text: string) => postData.named(viewer, text) },
+  Message: { data: messageData, toApi: messageToApi, fromApi: messageFromApi, title: "name", refs: {}, searched: ["name","email","message"], lists: {} as Record<string, { kind: string; ref: string }>, label: "message", named: (viewer: Viewer | null, text: string) => messageData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -10888,6 +11067,29 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -10895,44 +11097,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -11016,7 +11238,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import type { BookingValues } from "./booking";
@@ -11281,6 +11503,25 @@ export const bookingData = {
     if (rows.length > 10000)
       throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.bookings)
+        .where(and(bookingData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No booking has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -11564,7 +11805,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import type { ClassTypeValues } from "./class-type";
@@ -11843,6 +12084,36 @@ export const classTypeData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.classTypes.name })
+      .from(schema.classTypes)
+      .where(classTypeData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.classTypes)
+        .where(and(classTypeData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No class type has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -12345,7 +12616,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -12637,6 +12908,36 @@ export const instructorData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.instructors.name })
+      .from(schema.instructors)
+      .where(instructorData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.instructors)
+        .where(and(instructorData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No instructor has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -12932,7 +13233,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import type { MessageValues } from "./message";
 
@@ -13188,6 +13489,36 @@ export const messageData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.messages.name })
+      .from(schema.messages)
+      .where(messageData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.messages)
+        .where(and(messageData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No message has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -13543,7 +13874,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -13818,6 +14149,36 @@ export const postData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.posts.title })
+      .from(schema.posts)
+      .where(postData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.posts)
+        .where(and(postData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No post has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -14124,7 +14485,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { bookingData } from "./booking.server";
 import { classTypeData } from "./class-type.server";
@@ -14433,6 +14794,25 @@ export const sessionData = {
     if (rows.length > 10000)
       throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => withSessionFormulas(row as never) as Record<string, unknown>);
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.sessions)
+        .where(and(sessionData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No session has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -19180,12 +19560,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "efcd0c43 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "61149aa8 generated",
+  "src/generated/ask.server.ts": "e31a6d8d generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "bf7e5ab7 generated",
+  "src/generated/booking.server.ts": "c0f83084 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "91f1f756 generated",
+  "src/generated/class-type.server.ts": "4caf0160 generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19193,19 +19573,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "b65e4f67 generated",
+  "src/generated/instructor.server.ts": "649ee86b generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "41f267fc generated",
+  "src/generated/message.server.ts": "98805c18 generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "177e0fbc generated",
+  "src/generated/post.server.ts": "f7371ad6 generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "ab98dbf2 generated",
+  "src/generated/session.server.ts": "cc11302e generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19264,7 +19644,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -20067,6 +20447,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { customerData } from "./customer.server";
@@ -20195,7 +20576,7 @@ export function orderFromApi(body: unknown, current?: Record<string, unknown>) {
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role admin.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -20344,7 +20725,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "sales": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role sales.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -20502,8 +20883,8 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Customer: { data: customerData, toApi: customerToApi, fromApi: customerFromApi, title: "name", refs: {"accountManager":"name"}, searched: ["name","email","phone","notes"], label: "customer", named: (viewer: Viewer | null, text: string) => customerData.named(viewer, text) },
-  Order: { data: orderData, toApi: orderToApi, fromApi: orderFromApi, title: "number", refs: {"customer":"name"}, searched: ["number"], label: "order", named: (viewer: Viewer | null, text: string) => orderData.named(viewer, text) },
+  Customer: { data: customerData, toApi: customerToApi, fromApi: customerFromApi, title: "name", refs: {"accountManager":"name"}, searched: ["name","email","phone","notes"], lists: {"orders":{"kind":"Order","ref":"customer"}} as Record<string, { kind: string; ref: string }>, label: "customer", named: (viewer: Viewer | null, text: string) => customerData.named(viewer, text) },
+  Order: { data: orderData, toApi: orderToApi, fromApi: orderFromApi, title: "number", refs: {"customer":"name"}, searched: ["number"], lists: {} as Record<string, { kind: string; ref: string }>, label: "order", named: (viewer: Viewer | null, text: string) => orderData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -20550,6 +20931,29 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -20567,44 +20971,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       }
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -20728,7 +21152,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import type { CustomerValues } from "./customer";
@@ -21020,6 +21444,36 @@ export const customerData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.customers.name })
+      .from(schema.customers)
+      .where(customerData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.customers)
+        .where(and(customerData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No customer has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -21608,7 +22062,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
 import type { OrderValues } from "./order";
@@ -21917,6 +22371,36 @@ export const orderData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every number the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.orders.number })
+      .from(schema.orders)
+      .where(orderData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.orders)
+        .where(and(orderData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No order has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -24778,16 +25262,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "deac0d54 generated",
+  "src/generated/ask.server.ts": "608141c4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "df5629d6 generated",
+  "src/generated/customer.server.ts": "4d30c3d2 generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "f69c4482 generated",
+  "src/generated/order.server.ts": "76dbc202 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
@@ -24836,7 +25320,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -26138,6 +26622,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { businessProfileData } from "./business-profile.server";
@@ -26325,7 +26810,7 @@ export function invoiceLineFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role admin.",
+    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -26484,7 +26969,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role member.",
+    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -26652,10 +27137,10 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  BusinessProfile: { data: businessProfileData, toApi: businessProfileToApi, fromApi: businessProfileFromApi, title: "businessName", refs: {}, searched: ["businessName","vatNumber","iban","invoiceFooter"], label: "business profile", named: (viewer: Viewer | null, text: string) => businessProfileData.named(viewer, text) },
-  Client: { data: clientData, toApi: clientToApi, fromApi: clientFromApi, title: "name", refs: {}, searched: ["name","email","address","vatNumber"], label: "client", named: (viewer: Viewer | null, text: string) => clientData.named(viewer, text) },
-  Invoice: { data: invoiceData, toApi: invoiceToApi, fromApi: invoiceFromApi, title: "number", refs: {"client":"name"}, searched: ["number"], label: "invoice", named: (viewer: Viewer | null, text: string) => invoiceData.named(viewer, text) },
-  InvoiceLine: { data: invoiceLineData, toApi: invoiceLineToApi, fromApi: invoiceLineFromApi, title: "description", refs: {"invoice":"number"}, searched: ["description"], label: "invoice line", named: (viewer: Viewer | null, text: string) => invoiceLineData.named(viewer, text) },
+  BusinessProfile: { data: businessProfileData, toApi: businessProfileToApi, fromApi: businessProfileFromApi, title: "businessName", refs: {}, searched: ["businessName","vatNumber","iban","invoiceFooter"], lists: {} as Record<string, { kind: string; ref: string }>, label: "business profile", named: (viewer: Viewer | null, text: string) => businessProfileData.named(viewer, text) },
+  Client: { data: clientData, toApi: clientToApi, fromApi: clientFromApi, title: "name", refs: {}, searched: ["name","email","address","vatNumber"], lists: {"invoices":{"kind":"Invoice","ref":"client"}} as Record<string, { kind: string; ref: string }>, label: "client", named: (viewer: Viewer | null, text: string) => clientData.named(viewer, text) },
+  Invoice: { data: invoiceData, toApi: invoiceToApi, fromApi: invoiceFromApi, title: "number", refs: {"client":"name"}, searched: ["number"], lists: {"lines":{"kind":"InvoiceLine","ref":"invoice"}} as Record<string, { kind: string; ref: string }>, label: "invoice", named: (viewer: Viewer | null, text: string) => invoiceData.named(viewer, text) },
+  InvoiceLine: { data: invoiceLineData, toApi: invoiceLineToApi, fromApi: invoiceLineFromApi, title: "description", refs: {"invoice":"number"}, searched: ["description"], lists: {} as Record<string, { kind: string; ref: string }>, label: "invoice line", named: (viewer: Viewer | null, text: string) => invoiceLineData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -26708,6 +27193,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
   return viewer;
 };
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -26715,44 +27223,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -26849,7 +27377,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import type { BusinessProfileValues } from "./business-profile";
 
@@ -27087,6 +27615,36 @@ export const businessProfileData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every businessName the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.businessProfiles.businessName })
+      .from(schema.businessProfiles)
+      .where(businessProfileData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.businessProfiles)
+        .where(and(businessProfileData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No business profile has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -27345,7 +27903,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import type { ClientValues } from "./client";
@@ -27623,6 +28181,36 @@ export const clientData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.clients.name })
+      .from(schema.clients)
+      .where(clientData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.clients)
+        .where(and(clientData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No client has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -28041,7 +28629,7 @@ import { refusal } from "#/kit/log.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -28371,6 +28959,36 @@ export const invoiceData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every number the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.invoices.number })
+      .from(schema.invoices)
+      .where(invoiceData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.invoices)
+        .where(and(invoiceData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No invoice has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -28748,7 +29366,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import type { InvoiceLineValues } from "./invoice-line";
@@ -29029,6 +29647,36 @@ export const invoiceLineData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every description the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.invoiceLines.description })
+      .from(schema.invoiceLines)
+      .where(invoiceLineData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.invoiceLines)
+        .where(and(invoiceLineData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No invoice line has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -31503,23 +32151,23 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "a9fd039c generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "6225fe12 generated",
+  "src/generated/ask.server.ts": "aa41508f generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "9d3273f8 generated",
+  "src/generated/business-profile.server.ts": "ddf529ac generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "be38eab8 generated",
+  "src/generated/client.server.ts": "0a4344bc generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "2d43a0d3 generated",
+  "src/generated/invoice-line.server.ts": "06a2db4b generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "755f78a8 generated",
+  "src/generated/invoice.server.ts": "b4a85928 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
@@ -31576,7 +32224,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -32186,6 +32834,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { itemData } from "./item.server";
@@ -32259,7 +32908,7 @@ export function itemFromApi(body: unknown, current?: Record<string, unknown>) {
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Torget: Buy and sell second-hand things in your neighborhood.\\nItem (items): title*, photos* (picture), description*, price (money), category* (furniture | bikes | electronics | sports | kids | other), condition* (likeNew | good | worn), place, available (yes/no). Title: title.\\n* required. You act as someone with the role admin.",
+    "summary": "Torget: Buy and sell second-hand things in your neighborhood.\\nItem (items): title*, photos* (picture), description*, price (money), category* (furniture | bikes | electronics | sports | kids | other), condition* (likeNew | good | worn), place, available (yes/no). Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -32403,7 +33052,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Torget: Buy and sell second-hand things in your neighborhood.\\nItem (items): title*, photos* (picture), description*, price (money), category* (furniture | bikes | electronics | sports | kids | other), condition* (likeNew | good | worn), place, available (yes/no). Title: title.\\n* required. You act as someone with the role member.",
+    "summary": "Torget: Buy and sell second-hand things in your neighborhood.\\nItem (items): title*, photos* (picture), description*, price (money), category* (furniture | bikes | electronics | sports | kids | other), condition* (likeNew | good | worn), place, available (yes/no). Title: title.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -32556,7 +33205,7 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Item: { data: itemData, toApi: itemToApi, fromApi: itemFromApi, title: "title", refs: {}, searched: ["title","description","place"], label: "item", named: (viewer: Viewer | null, text: string) => itemData.named(viewer, text) },
+  Item: { data: itemData, toApi: itemToApi, fromApi: itemFromApi, title: "title", refs: {}, searched: ["title","description","place"], lists: {} as Record<string, { kind: string; ref: string }>, label: "item", named: (viewer: Viewer | null, text: string) => itemData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -32603,6 +33252,29 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -32610,44 +33282,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -32839,7 +33531,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
@@ -33216,6 +33908,36 @@ export const itemData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.items.title })
+      .from(schema.items)
+      .where(itemData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.items)
+        .where(and(itemData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No item has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -35719,11 +36441,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "ffceeeb7 generated",
+  "src/generated/ask.server.ts": "aac696a4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "e06c9b4c generated",
+  "src/generated/item.server.ts": "1d8a7f28 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "c244f170 generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -35778,7 +36500,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -36320,6 +37042,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { itemData } from "./item.server";
@@ -36380,7 +37103,7 @@ export function itemFromApi(body: unknown, current?: Record<string, unknown>) {
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Our Collection: A place to keep and show a collection of items.\\nItem (items): name*, summary, kind* (general | favorite | archived), link (url), addedOn* (date). Title: name.\\n* required. You act as someone with the role admin.",
+    "summary": "Our Collection: A place to keep and show a collection of items.\\nItem (items): name*, summary, kind* (general | favorite | archived), link (url), addedOn* (date). Title: name.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -36524,7 +37247,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Our Collection: A place to keep and show a collection of items.\\nItem (items): name*, summary, kind* (general | favorite | archived), link (url), addedOn* (date). Title: name.\\n* required. You act as someone with the role member.",
+    "summary": "Our Collection: A place to keep and show a collection of items.\\nItem (items): name*, summary, kind* (general | favorite | archived), link (url), addedOn* (date). Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -36677,7 +37400,7 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Item: { data: itemData, toApi: itemToApi, fromApi: itemFromApi, title: "name", refs: {}, searched: ["name","summary","link"], label: "item", named: (viewer: Viewer | null, text: string) => itemData.named(viewer, text) },
+  Item: { data: itemData, toApi: itemToApi, fromApi: itemFromApi, title: "name", refs: {}, searched: ["name","summary","link"], lists: {} as Record<string, { kind: string; ref: string }>, label: "item", named: (viewer: Viewer | null, text: string) => itemData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -36724,6 +37447,29 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -36731,44 +37477,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -36983,7 +37749,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import type { ItemValues } from "./item";
 import { withItemFormulas } from "./item.formulas";
@@ -37241,6 +38007,36 @@ export const itemData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.items.name })
+      .from(schema.items)
+      .where(itemData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.items)
+        .where(and(itemData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No item has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -38662,12 +39458,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "6338c554 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "6808a52d generated",
+  "src/generated/ask.server.ts": "68b45bac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "828ea50a generated",
+  "src/generated/item.server.ts": "62665c4e generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -38712,7 +39508,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
@@ -41217,6 +42013,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskKind } from "#/kit/ask";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 
 import { componentData } from "./component.server";
@@ -41403,7 +42200,7 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -41562,7 +42359,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -41730,10 +42527,10 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Component: { data: componentData, toApi: componentToApi, fromApi: componentFromApi, title: "name", refs: {}, searched: ["name","description"], label: "component", named: (viewer: Viewer | null, text: string) => componentData.named(viewer, text) },
-  Incident: { data: incidentData, toApi: incidentToApi, fromApi: incidentFromApi, title: "title", refs: {"component":"name"}, searched: ["title","summary"], label: "incident", named: (viewer: Viewer | null, text: string) => incidentData.named(viewer, text) },
-  IncidentUpdate: { data: incidentUpdateData, toApi: incidentUpdateToApi, fromApi: incidentUpdateFromApi, title: "message", refs: {"incident":"title"}, searched: ["message"], label: "incident update", named: (viewer: Viewer | null, text: string) => incidentUpdateData.named(viewer, text) },
-  Maintenance: { data: maintenanceData, toApi: maintenanceToApi, fromApi: maintenanceFromApi, title: "title", refs: {"component":"name"}, searched: ["title","description"], label: "maintenance", named: (viewer: Viewer | null, text: string) => maintenanceData.named(viewer, text) },
+  Component: { data: componentData, toApi: componentToApi, fromApi: componentFromApi, title: "name", refs: {}, searched: ["name","description"], lists: {"incidents":{"kind":"Incident","ref":"component"},"maintenances":{"kind":"Maintenance","ref":"component"}} as Record<string, { kind: string; ref: string }>, label: "component", named: (viewer: Viewer | null, text: string) => componentData.named(viewer, text) },
+  Incident: { data: incidentData, toApi: incidentToApi, fromApi: incidentFromApi, title: "title", refs: {"component":"name"}, searched: ["title","summary"], lists: {"updates":{"kind":"IncidentUpdate","ref":"incident"}} as Record<string, { kind: string; ref: string }>, label: "incident", named: (viewer: Viewer | null, text: string) => incidentData.named(viewer, text) },
+  IncidentUpdate: { data: incidentUpdateData, toApi: incidentUpdateToApi, fromApi: incidentUpdateFromApi, title: "message", refs: {"incident":"title"}, searched: ["message"], lists: {} as Record<string, { kind: string; ref: string }>, label: "incident update", named: (viewer: Viewer | null, text: string) => incidentUpdateData.named(viewer, text) },
+  Maintenance: { data: maintenanceData, toApi: maintenanceToApi, fromApi: maintenanceFromApi, title: "title", refs: {"component":"name"}, searched: ["title","description"], lists: {} as Record<string, { kind: string; ref: string }>, label: "maintenance", named: (viewer: Viewer | null, text: string) => maintenanceData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -41786,6 +42583,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
   return viewer;
 };
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -41793,44 +42613,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -41929,7 +42769,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import { maintenanceData } from "./maintenance.server";
@@ -42186,6 +43026,36 @@ export const componentData = {
       .limit(6)
       .all()
       .map((row) => ({ id: row.id, title: String(row.title) }));
+  },
+
+  /** Every name the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.components.name })
+      .from(schema.components)
+      .where(componentData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.components)
+        .where(and(componentData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No component has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -42574,7 +43444,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
 import { componentData } from "./component.server";
@@ -42885,11 +43755,41 @@ export const incidentData = {
       .map((row) => ({ id: row.id, title: String(row.title) }));
   },
 
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.incidents.title })
+      .from(schema.incidents)
+      .where(incidentData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.incidents)
+        .where(and(incidentData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No incident has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       incidentData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.incidents.ownerId, viewer.id) : undefined, viewer?.id, {component: (text: string) => componentData.named(viewer, text)}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.incidents.ownerId, viewer.id) : undefined, viewer?.id, {component: { find: (text: string) => componentData.named(viewer, text), titles: () => componentData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.incidents.title, schema.incidents.summary], word)),
     );
@@ -43198,7 +44098,7 @@ import { refusal } from "#/kit/log.server";
 import { titleOf } from "#/kit/format";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import type { IncidentUpdateValues } from "./incident-update";
@@ -43480,11 +44380,41 @@ export const incidentUpdateData = {
       .map((row) => ({ id: row.id, title: titleOf(row.title) }));
   },
 
+  /** Every message the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.incidentUpdates.message })
+      .from(schema.incidentUpdates)
+      .where(incidentUpdateData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => titleOf(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.incidentUpdates)
+        .where(and(incidentUpdateData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No incident update has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       incidentUpdateData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.incidentUpdates.ownerId, viewer.id) : undefined, viewer?.id, {incident: (text: string) => incidentData.named(viewer, text)}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.incidentUpdates.ownerId, viewer.id) : undefined, viewer?.id, {incident: { find: (text: string) => incidentData.named(viewer, text), titles: () => incidentData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.incidentUpdates.message], word)),
     );
@@ -43896,7 +44826,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
-import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
 import type { MaintenanceValues } from "./maintenance";
@@ -44179,11 +45109,41 @@ export const maintenanceData = {
       .map((row) => ({ id: row.id, title: String(row.title) }));
   },
 
+  /** Every title the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.maintenances.title })
+      .from(schema.maintenances)
+      .where(maintenanceData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => String(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.maintenances)
+        .where(and(maintenanceData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No maintenance has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       maintenanceData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.maintenances.ownerId, viewer.id) : undefined, viewer?.id, {component: (text: string) => componentData.named(viewer, text)}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.maintenances.ownerId, viewer.id) : undefined, viewer?.id, {component: { find: (text: string) => componentData.named(viewer, text), titles: () => componentData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.maintenances.title, schema.maintenances.description], word)),
     );
@@ -44419,6 +45379,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // describes them for each caller; every call goes through the data functions, as the API's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
 import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
 import { componentFromApi, componentToApi, incidentFromApi, incidentToApi } from "./api.server";
 import { componentData } from "./component.server";
@@ -44432,7 +45393,7 @@ import { runResolve } from "./actions/resolve.server";
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role admin.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -44668,7 +45629,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role staff.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -44904,7 +45865,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "visitor": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\n* required. You act as a visitor, without a key.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -45062,8 +46023,8 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Component: { data: componentData, toApi: componentToApi, fromApi: componentFromApi, title: "name", refs: {}, searched: ["name","description"], label: "component", named: (viewer: Viewer | null, text: string) => componentData.named(viewer, text) },
-  Incident: { data: incidentData, toApi: incidentToApi, fromApi: incidentFromApi, title: "title", refs: {"component":"name"}, searched: ["title","summary"], label: "incident", named: (viewer: Viewer | null, text: string) => incidentData.named(viewer, text) },
+  Component: { data: componentData, toApi: componentToApi, fromApi: componentFromApi, title: "name", refs: {}, searched: ["name","description"], lists: {"incidents":{"kind":"Incident","ref":"component"}} as Record<string, { kind: string; ref: string }>, label: "component", named: (viewer: Viewer | null, text: string) => componentData.named(viewer, text) },
+  Incident: { data: incidentData, toApi: incidentToApi, fromApi: incidentFromApi, title: "title", refs: {"component":"name"}, searched: ["title","summary"], lists: {} as Record<string, { kind: string; ref: string }>, label: "incident", named: (viewer: Viewer | null, text: string) => incidentData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -45116,6 +46077,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
   return viewer;
 };
 
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -45123,44 +46107,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const kind = kindOf(args);
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);
@@ -48840,24 +49844,24 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "a587d798 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "0a18aeac generated",
+  "src/generated/ask.server.ts": "22ea7d1c generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "2ac5ec96 generated",
+  "src/generated/component.server.ts": "39e875c0 generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "96048417 generated",
+  "src/generated/incident-update.server.ts": "74d6b845 generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "c3188dea generated",
+  "src/generated/incident.server.ts": "9d78d60b generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "4dfc4cfd generated",
+  "src/generated/maintenance.server.ts": "bc7ef8a6 generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
-  "src/generated/mcp.server.ts": "8a9bce72 generated",
+  "src/generated/mcp.server.ts": "1c1f0b07 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "d37db4cf generated",
@@ -48912,7 +49916,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "93ea9844 kit",
+  "src/kit/where.ts": "5d18d643 kit",
   "src/kit/words.ts": "f52d8f43 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
