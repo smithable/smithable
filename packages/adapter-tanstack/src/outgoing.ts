@@ -25,6 +25,7 @@ import {
   ownerKey,
   relatedTitle,
   SCHEMA_IMPORT,
+  shownTitle,
   type Texts,
 } from "./shared.js";
 
@@ -116,7 +117,7 @@ export function outgoingModule(
     const title = titleField(model);
     const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === model.name);
     return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) ? "tx" : "_tx"}, r) => ({
-    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#${r.id}" : `\${String(r.${title} ?? r.id)}`}\`,
+    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#${r.id}" : `\${${shownTitle(model, `r.${title} ?? r.id`)}}`}\`,
     fields: [
 ${lines.join("\n")}
     ],${page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
@@ -162,7 +163,7 @@ ${apiFields(model)
   const trashOne = body.includes(".deletedAt)");
   return `${HEADER}${ones || users ? `import { ${trashOne ? "and, " : ""}eq${trashOne ? ", isNull" : ""}${users ? ", type SQL" : ""} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") ? 'import { formatValue } from "#/kit/format";\n' : ""}import { counts } from "#/kit/outgoing";
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}import { counts } from "#/kit/outgoing";
 import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;

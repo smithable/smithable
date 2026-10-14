@@ -336,6 +336,20 @@ export function indent(text: string, spaces: number): string {
   return text.split("\n").join(`\n${" ".repeat(spaces)}`);
 }
 
+/**
+ * Whether a model is named by a long text (it has no short one: a message, by its words): its
+ * title is then shown cut to its first line by the kit's titleOf, the API keeping the whole value.
+ */
+export function longTitle(model: ModelIR): boolean {
+  const f = model.fields.find((x) => x.name === titleField(model));
+  return f?.type.kind === "scalar" && (f.type.name === "text" || f.type.name === "markdown");
+}
+
+/** A record's title as generated code shows it: a long one cut by the kit's titleOf. */
+export function shownTitle(model: ModelIR, expr: string): string {
+  return longTitle(model) ? `titleOf(${expr})` : `String(${expr})`;
+}
+
 /** The field that names a related record; users are named by their name. */
 export function relatedTitle(ir: SpecIR, model: string): string {
   return model === USER_MODEL ? "name" : titleField(modelNamed(ir, model));
