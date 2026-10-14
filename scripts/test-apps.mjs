@@ -1185,8 +1185,13 @@ async function filtersFlow(base) {
     await page.waitForURL((url) => !url.searchParams.has("sort"));
     await header.click();
     await page.waitForURL(/sort=creditLimit(&|$)/);
-    if ((await page.locator("th[aria-sort=ascending]").count()) !== 1)
-      throw new Error("the sorted column does not say it is ascending");
+    // The address changes first; the header follows when the list's data arrives.
+    await page
+      .locator("th[aria-sort=ascending]", { hasText: "Credit limit" })
+      .waitFor({ timeout: 10000 })
+      .catch(() => {
+        throw new Error("the sorted column does not say it is ascending");
+      });
     await header.click();
     await page.waitForURL(/sort=-creditLimit/);
     console.log(
