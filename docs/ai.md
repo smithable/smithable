@@ -75,7 +75,14 @@ export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-4-5, through 
 
 Without them, Ask answers by its rules alone and says when a question needs a model.
 
-On smithable.ai, apps' assistants use Claude Haiku 4.5, run in the EU. When it is not available, Mistral Medium answers. A host set to EU-only uses Mistral Small instead, and a question moves to Haiku when Small gets stuck: after two refused tool calls, or when it has no answer by its fourth call. Choosing EU-only for a single project is not available yet.
+On smithable.ai, which model answers depends on the project's level, which its owner sets on the app's page under "Where your data and AI may go". At every level the data is stored and hosted in the EU.
+
+| Level | Ask's model | The app's connections |
+|---|---|---|
+| **Normal** (a new project starts here) | Claude Haiku 4.5, run in the EU; Mistral Medium when Haiku is unavailable | services served from an endpoint in the EU |
+| **Strict** | Mistral Small, moving to Mistral Medium when it gets stuck | only services run by EU companies; people sign in with an email code only (no Google or Facebook) |
+
+Relaxed, for organizations outside the EU, comes later. Projects made before the levels existed stay on Mistral until their owner picks a level.
 
 Measured on 134 questions and changes across six starters ([bench-ask](benchmarks/bench-ask-seven-tools.md), [cascade](benchmarks/bench-ask-cascade.md)), with each answer checked against the records:
 
@@ -83,10 +90,10 @@ Measured on 134 questions and changes across six starters ([bench-ask](benchmark
 |---|---|---|---|
 | Claude Haiku 4.5 | 131 / 134 (98 %) | $0.0061 | 5.9 s |
 | Mistral Small | 119 / 134 (89 %) | $0.0006 | 2.9 s |
-| Mistral Small, moving to Haiku when stuck | 120 / 134 (90 %) | $0.0010 | 3.8 s |
+| Mistral Small, moving to Haiku when stuck (measured before Strict moved to Medium) | 120 / 134 (90 %) | $0.0010 | 3.8 s |
 | Claude Sonnet 4.6 | 134 / 134 (100 %) | $0.0179 | 6.3 s |
 
-Almost every wrong answer was stated as fact rather than as doubt, so a cheaper model's misses are not easy to spot: that is why Haiku is the default.
+Almost every wrong answer was stated as fact rather than as doubt, so a cheaper model's misses are not easy to spot: that is why Normal uses Haiku.
 
 ## Teaching Smithable a section
 
