@@ -519,6 +519,9 @@ function SpecEditor({
     const t = setTimeout(() => setShown(diagnostics), 800);
     return () => clearTimeout(t);
   }, [diagnostics]);
+  // Problems first; then notes, advice the app is fine without (docs/design/advice.md).
+  const problems = shown.filter((d) => d.severity !== "note");
+  const notes = shown.filter((d) => d.severity === "note");
   // An edit saves itself after a pause (docs/design/studio-changes.md §4): when it is valid and
   // removes no field (one that does keeps the Save button, which asks first). Going on in the
   // same file grows the same change while it is still the newest; another file, another change
@@ -666,20 +669,21 @@ function SpecEditor({
       )}
       {/* The problems under the editor, a few lines high and scrolling, so they never push the
           editor out of sight; the buttons on their own line, so a narrow column does not
-          squeeze the list to a word a line. */}
+          squeeze the list to a word a line. Problems first; then notes, advice the app is fine
+          without (docs/design/advice.md). */}
       <div data-guide="problems" className="space-y-2 border-t border-line p-2">
         <ul
           aria-label="Problems"
           aria-live="polite"
           className="max-h-24 space-y-0.5 overflow-y-auto text-xs"
         >
-          {shown.length === 0 ? (
+          {problems.length === 0 ? (
             <li className="text-green-700">No problems.</li>
           ) : (
             // Keyed by the message too: the YAML parser gives two problems with one place and
             // code, and alike keys left rows behind beside "No problems." (one said twice is
             // shown once).
-            [...new Map(shown.map((d) => [problemKey(d), d])).entries()]
+            [...new Map(problems.map((d) => [problemKey(d), d])).entries()]
               .slice(0, 20)
               .map(([key, d]) => (
                 <li
@@ -690,6 +694,11 @@ function SpecEditor({
                 </li>
               ))
           )}
+          {notes.slice(0, 3).map((d) => (
+            <li key={`${d.file}:${d.line}:${d.column}:${d.code}`} className="text-sky-700">
+              Worth considering, {d.file === file ? "line" : `${d.file} line`} {d.line}: {d.message}
+            </li>
+          ))}
         </ul>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* A mistaken edit, or one that cannot be saved, is dropped for the file as saved. */}
