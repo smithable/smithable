@@ -109,18 +109,42 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
       content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
-  const language = ctx.options.content?.language ?? "en";
-  const words = TEMPLATES[`${WORDS_DIR}${language}.ts`];
-  if (!words) throw new Error(`The kit has no words for the language "${language}".`);
-  // Another language's file is checked against English in the kit (`satisfies Words`); the app
-  // has no English beside it, so it stands on its own there.
-  const own = words
-    .replace(/^import type \{ Words \} from "\.\/en";\n\n?/m, "")
-    .replace(/\} satisfies Words;\n$/, "};\n\nexport type Words = typeof w;\n");
-  files.push({ path: WORDS_FILE, content: own, zone: "kit" });
+  files.push(...wordsFiles([ctx.options.content?.language ?? "en"]));
   for (const generator of SECTION_GENERATORS)
     files.push(...generator.files(ctx).map((f) => ({ ...f, content: wordsIfUsed(f.content) })));
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+/**
+ * The kit's words in the app's languages (docs/design/languages.md §4), the first the app's
+ * own: a file per language, and src/kit/words.ts choosing among them at run time.
+ */
+function wordsFiles(languages: string[]): GeneratedFile[] {
+  const [main = "en"] = languages;
+  const files = languages.map((language): GeneratedFile => {
+    const words = TEMPLATES[`${WORDS_DIR}${language}.ts`];
+    if (!words) throw new Error(`The kit has no words for the language "${language}".`);
+    // Another language's file is checked against English (`satisfies Words`); without English
+    // beside it in the app, it stands on its own.
+    const own = languages.includes("en")
+      ? words
+      : words
+          .replace(/^import type \{ Words \} from "\.\/en";\n\n?/m, "")
+          .replace(/\} satisfies Words;\n$/, "};\n");
+    return { path: `${WORDS_DIR}${language}.ts`, content: own, zone: "kit" };
+  });
+  const chooser = (TEMPLATES[WORDS_FILE] as string)
+    .replace(
+      'import { w as en } from "./words/en";',
+      languages.map((l) => `import { w as ${l} } from "./words/${l}";`).join("\n"),
+    )
+    .replace("export type Words = typeof en;", `export type Words = typeof ${main};`)
+    .replace(
+      "const BY: Record<string, Words> = { en };",
+      `const BY: Record<string, Words> = { ${languages.join(", ")} };`,
+    )
+    .replace('const MAIN = "en";', `const MAIN = ${JSON.stringify(main)};`);
+  return [...files, { path: WORDS_FILE, content: chooser, zone: "kit" }];
 }
 
 /** Whether a model has a Markdown field (an action's input is a plain text box). */

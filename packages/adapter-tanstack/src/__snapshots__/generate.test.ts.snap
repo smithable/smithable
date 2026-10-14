@@ -2960,13 +2960,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -4205,13 +4198,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -4644,7 +4630,7 @@ export const noteData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.notes)
@@ -4652,9 +4638,8 @@ export const noteData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No note has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No note has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -5213,7 +5198,7 @@ export const projectData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.projects)
@@ -5221,9 +5206,8 @@ export const projectData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No project has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No project has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -5783,7 +5767,7 @@ export const taskData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.tasks)
@@ -5791,9 +5775,8 @@ export const taskData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No task has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No task has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -9052,6 +9035,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/uploads.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -9140,21 +9124,21 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "12e879b4 generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "66806000 generated",
+  "src/generated/ask.server.ts": "d2ff5ef3 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "803e4661 generated",
   "src/generated/keys.test.ts": "05e27e83 generated",
-  "src/generated/mcp.server.ts": "dfd0f953 generated",
+  "src/generated/mcp.server.ts": "c86dce9a generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "91339c5f generated",
+  "src/generated/note.server.ts": "0364de08 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "4b852c85 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "73201590 generated",
+  "src/generated/project.server.ts": "5b4805a7 generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "967f0e98 generated",
+  "src/generated/task.server.ts": "781709c9 generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "1354a6fb generated",
@@ -9205,8 +9189,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "664a681e generated",
@@ -11107,13 +11092,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -11541,7 +11519,7 @@ export const bookingData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.bookings)
@@ -11549,9 +11527,8 @@ export const bookingData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No booking has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No booking has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -12134,7 +12111,7 @@ export const classTypeData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.classTypes)
@@ -12142,9 +12119,8 @@ export const classTypeData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No class type has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No class type has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -12959,7 +12935,7 @@ export const instructorData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.instructors)
@@ -12967,9 +12943,8 @@ export const instructorData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No instructor has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No instructor has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -13541,7 +13516,7 @@ export const messageData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.messages)
@@ -13549,9 +13524,8 @@ export const messageData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No message has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No message has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -14202,7 +14176,7 @@ export const postData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.posts)
@@ -14210,9 +14184,8 @@ export const postData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No post has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No post has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -14837,7 +14810,7 @@ export const sessionData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.sessions)
@@ -14845,9 +14818,8 @@ export const sessionData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No session has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No session has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -19499,6 +19471,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/uploads.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -19598,12 +19571,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "efcd0c43 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "e3a1c4d4 generated",
+  "src/generated/ask.server.ts": "e31a6d8d generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "8fbccc7f generated",
+  "src/generated/booking.server.ts": "c0f83084 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "7bbb7115 generated",
+  "src/generated/class-type.server.ts": "4caf0160 generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19611,19 +19584,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "0621d46a generated",
+  "src/generated/instructor.server.ts": "649ee86b generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "600a4ca7 generated",
+  "src/generated/message.server.ts": "98805c18 generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "d5eaf0d1 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "e012eabf generated",
+  "src/generated/post.server.ts": "f7371ad6 generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "bfca51db generated",
+  "src/generated/session.server.ts": "cc11302e generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "eb007da3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19683,8 +19656,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "7d773757 generated",
@@ -20986,13 +20960,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -21508,7 +21475,7 @@ export const customerData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.customers)
@@ -21516,9 +21483,8 @@ export const customerData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No customer has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No customer has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -22436,7 +22402,7 @@ export const orderData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.orders)
@@ -22444,9 +22410,8 @@ export const orderData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No order has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No order has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -25243,6 +25208,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -25311,16 +25277,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "7ccd52dd generated",
+  "src/generated/ask.server.ts": "608141c4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "0c6951c5 generated",
+  "src/generated/customer.server.ts": "4d30c3d2 generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "1fd8435b generated",
+  "src/generated/order.server.ts": "76dbc202 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "1660cc3e generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
@@ -25370,8 +25336,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a97aa30 generated",
@@ -27264,13 +27231,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -27695,7 +27655,7 @@ export const businessProfileData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.businessProfiles)
@@ -27703,9 +27663,8 @@ export const businessProfileData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No business profile has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No business profile has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -28262,7 +28221,7 @@ export const clientData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.clients)
@@ -28270,9 +28229,8 @@ export const clientData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No client has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No client has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -29041,7 +28999,7 @@ export const invoiceData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.invoices)
@@ -29049,9 +29007,8 @@ export const invoiceData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No invoice has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No invoice has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -29730,7 +29687,7 @@ export const invoiceLineData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.invoiceLines)
@@ -29738,9 +29695,8 @@ export const invoiceLineData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No invoice line has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No invoice line has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -32145,6 +32101,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/uploads.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -32218,23 +32175,23 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "a9fd039c generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "820dcc60 generated",
+  "src/generated/ask.server.ts": "aa41508f generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "f64e76c9 generated",
+  "src/generated/business-profile.server.ts": "ddf529ac generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "b46c956f generated",
+  "src/generated/client.server.ts": "0a4344bc generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "76d7d490 generated",
+  "src/generated/invoice-line.server.ts": "06a2db4b generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "2dd816b7 generated",
+  "src/generated/invoice.server.ts": "b4a85928 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "1b40062a generated",
@@ -32292,8 +32249,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "ce952519 generated",
@@ -33336,13 +33294,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -34001,7 +33952,7 @@ export const itemData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.items)
@@ -34009,9 +33960,8 @@ export const itemData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No item has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No item has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -36450,6 +36400,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/uploads.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -36518,11 +36469,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "4bdcf1cf generated",
+  "src/generated/ask.server.ts": "aac696a4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "1648b931 generated",
+  "src/generated/item.server.ts": "1d8a7f28 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "c244f170 generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -36578,8 +36529,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e64f877 generated",
@@ -37541,13 +37493,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -38110,7 +38055,7 @@ export const itemData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.items)
@@ -38118,9 +38063,8 @@ export const itemData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No item has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No item has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -39488,6 +39432,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -39545,12 +39490,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "6338c554 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "5d5197b7 generated",
+  "src/generated/ask.server.ts": "68b45bac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "66be9d1b generated",
+  "src/generated/item.server.ts": "62665c4e generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "433b620e generated",
   "src/generated/site.ts": "28332aa4 generated",
@@ -39596,8 +39541,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abf81fbe generated",
@@ -42687,13 +42633,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -43139,7 +43078,7 @@ export const componentData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.components)
@@ -43147,9 +43086,8 @@ export const componentData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No component has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No component has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -43867,7 +43805,7 @@ export const incidentData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.incidents)
@@ -43875,9 +43813,8 @@ export const incidentData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No incident has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No incident has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -44493,7 +44430,7 @@ export const incidentUpdateData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.incidentUpdates)
@@ -44501,9 +44438,8 @@ export const incidentUpdateData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No incident update has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No incident update has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -45223,7 +45159,7 @@ export const maintenanceData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      if (field?.kind !== "text" || typeof v !== "string") continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.maintenances)
@@ -45231,9 +45167,8 @@ export const maintenanceData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      const asked = String(v);
-      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No maintenance has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No maintenance has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -46192,13 +46127,6 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
-  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
-  const where = args.where as Record<string, unknown> | undefined;
-  if (where && (where.mine === true || where.mine === "true")) {
-    const { mine: _mine, ...rest } = where;
-    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
-    if (all) return \`None of your own; \${all} in all.\`;
-  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -49863,6 +49791,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
+  "kit: src/kit/words/en.ts",
   "kit: src/kit/zoned.ts",
   "kit: src/lib/auth-client.ts",
   "generated: src/lib/auth.ts",
@@ -49951,24 +49880,24 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "a587d798 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "283ef7a7 generated",
+  "src/generated/ask.server.ts": "22ea7d1c generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "db7ebc1f generated",
+  "src/generated/component.server.ts": "39e875c0 generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "7498c4b0 generated",
+  "src/generated/incident-update.server.ts": "74d6b845 generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "5a1574c8 generated",
+  "src/generated/incident.server.ts": "9d78d60b generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "65a8b8d9 generated",
+  "src/generated/maintenance.server.ts": "bc7ef8a6 generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
-  "src/generated/mcp.server.ts": "17555166 generated",
+  "src/generated/mcp.server.ts": "1c1f0b07 generated",
   "src/generated/pages.ts": "f655ddb0 generated",
   "src/generated/site.ts": "1515661c generated",
   "src/generated/users.server.ts": "d37db4cf generated",
@@ -50024,8 +49953,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
-  "src/kit/words.ts": "d453b5c8 kit",
+  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/words.ts": "7536a331 kit",
+  "src/kit/words/en.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "70248e44 generated",
