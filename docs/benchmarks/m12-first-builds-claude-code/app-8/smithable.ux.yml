@@ -1,14 +1,10 @@
 smithableUx: 0.1
-tones:
-  Registration.status:
-    confirmed: success
-    cancelled: danger
 pages:
   talks:
     table:
-      columns: [title, speaker, startsAt, room]
       sort: startsAt
+  speakers:
+    table:
+      view: cards
 theme:
-  preset: modern
-  brand:
-    primary: "#4f46e5"
+  preset: corporate

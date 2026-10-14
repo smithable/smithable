@@ -2,17 +2,13 @@ smithableUx: 0.1
 pages:
   jobs:
     table:
-      columns: [title, employer, location, jobType, deadline, open]
-  home:
-    sections:
-      hero:
-        layout: centered
+      columns: [title, employer, location, type, deadline, status]
 tones:
+  Job.status:
+    open: success
   Application.status:
-    accepted: success
-    reviewing: warning
-    declined: danger
+    shortlisted: warning
+    rejected: danger
+    hired: success
 theme:
   preset: corporate
-  brand:
-    primary: "#b91c1c"

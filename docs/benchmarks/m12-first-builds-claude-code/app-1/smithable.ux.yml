@@ -1,3 +1,11 @@
 smithableUx: 0.1
 theme:
-  preset: woodland
+  preset: pastel
+  motion: subtle
+  brand:
+    primary: "#7c6a9e"
+    font: Nunito Sans
+tones:
+  ClassType.level:
+    beginner: success
+    advanced: warning

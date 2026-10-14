@@ -3,14 +3,14 @@ pages:
   home:
     hero:
       title: Borrow the tool, skip the store
-      subtitle: "Drills, ladders, hedge trimmers: your neighbors already own them. Find what you need nearby and lend what sits in your shed."
+      subtitle: "Drills, ladders, hedge trimmers: your neighbors already own them. Find what you need nearby and lend out what sits in your shed."
       button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
     latest:
-      title: Recently added tools
+      title: Available near you
 logo:
   src: images/logo.webp
   alt: A toolbox

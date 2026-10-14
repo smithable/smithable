@@ -2,8 +2,8 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Work for union members, posted by your local
-      subtitle: Browse open jobs from union employers, then sign in to apply in a few minutes.
+      title: Union jobs, close to home
+      subtitle: Browse open positions posted by the union and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp

@@ -2,16 +2,22 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Invoicing that gets you paid
-      subtitle: Keep your clients, send clean invoices and track every payment, all in one place made for freelancers.
+      title: Get paid for your work, without the paperwork
+      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still due.
       button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
-      title: Send your first invoice today
-      button: Get started
+      title: Send your next invoice in minutes
+      button: Sign in
+models:
+  Payment:
+    fields:
+      method:
+        values:
+          bankTransfer: Bank transfer
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

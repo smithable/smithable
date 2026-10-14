@@ -6,13 +6,12 @@ roles:
   admin: all
   member:
     description: A student who books classes.
-    pages: [my-bookings]
+    pages: [my-bookings, schedule]
     create: [Booking]
 assistant:
   for: signed-in
 public:
   pages: [home, schedule, privacy]
   read: [ClassType, Instructor, Session]
-  create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

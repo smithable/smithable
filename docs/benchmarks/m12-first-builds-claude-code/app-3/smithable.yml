@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Paydesk
-  description: "Simple invoicing for freelancers: keep your clients, send invoices and record the payments you receive."
+  name: Billable
+  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
   currency: EUR
 models:
   BusinessProfile:
@@ -18,23 +18,6 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
-  InvoiceLine:
-    fields:
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
-      invoice: Invoice!
-  Payment:
-    fields:
-      paidOn: date! = TODAY()
-      amount: money!
-      method: bankTransfer | card | cash | other
-      reference: string
-      note: text
-      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -42,23 +25,37 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
+      contract: file
       lines: InvoiceLine[]
-      payments: Payment[]
       total:
         type: money
         formula: SUM(lines.amount)
-      paidAmount:
+      payments: Payment[]
+      paid:
         type: money
         formula: SUM(payments.amount)
-      balance:
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
         type: money
-        formula: total - paidAmount
+        formula: quantity * unitPrice
+  Payment:
+    fields:
+      invoice: Invoice!
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      note: string
 pages:
   overview:
     dashboard:
-      received:
-        sum: Payment.amount
-        by: paidOn
+      latest:
+        list: Invoice
+        limit: 5
       outstanding:
         sum: Invoice.total
         where:
@@ -67,18 +64,16 @@ pages:
         sum: Invoice.total
         where:
           status: overdue
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
-      latest:
-        list: Invoice
-        limit: 5
+      received:
+        sum: Payment.amount
+        by: paidOn
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markOverdue, markPaid]
   clients:
     crud: Client
     search: [name, email]
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
   invoice-lines:
     crud: InvoiceLine
   settings:
@@ -95,10 +90,9 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markPaid, markOverdue]
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
 actions:
   markSent:
     on: Invoice
@@ -107,6 +101,13 @@ actions:
     set:
       status: sent
     intent: The invoice went to the client.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The due date passed without payment.
   markPaid:
     on: Invoice
     when:
@@ -115,19 +116,7 @@ actions:
       status: paid
     add:
       Payment:
-        paidOn: TODAY()
         amount:
+        paidOn: TODAY()
         method:
     intent: The client paid the invoice; the payment is recorded with it.
-  markOverdue:
-    on: Invoice
-    when:
-      status: sent
-    set:
-      status: overdue
-    intent: The due date passed without payment.
-outgoing:
-  invoiceSent:
-    when: markSent
-    to: mail
-    recipient: client.email

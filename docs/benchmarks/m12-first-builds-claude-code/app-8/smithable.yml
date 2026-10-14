@@ -1,7 +1,9 @@
 smithable: 0.1
 app:
-  name: Confluence Conference
-  description: Programme, speakers and attendee registration for a conference.
+  name: Conference Registration
+  description: Browse the conference programme and speakers, and register for the talks you want to attend.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
@@ -12,50 +14,46 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: text
+      summary: text
       speaker: Speaker!
       startsAt: datetime!
-      durationMinutes: int! = 30
+      durationMinutes: int! = 45
       room: string
-      level: introductory | intermediate | advanced
+      capacity: int! = 100
+      registrations: Registration[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(registrations)
   Registration:
     fields:
-      name: string!
-      email: email!
-      company: string
-      ticketType: fullConference | singleDay | student
-      dietaryNeeds: text
-      status: confirmed | cancelled
+      talk: Talk! unique
+    capacity:
+      per: talk
+      max: talk.capacity
 pages:
-  my-registration:
-    crud: Registration
-    actions: [cancelRegistration]
-  program:
+  schedule:
     calendar: Talk
   talks:
     crud: Talk
+    search: [title, room]
+    filters: [speaker, startsAt]
   speakers:
     crud: Speaker
+  my-registrations:
+    crud: Registration
   home:
     route: /
     landing:
       hero:
+        shortcuts: [schedule, speakers]
       footer:
-      speakerCards:
+      lineup:
         records: Speaker
       faq:
       callToAction:
-        button: my-registration
+        button: schedule
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
-actions:
-  cancelRegistration:
-    on: Registration
-    when:
-      status: confirmed
-    set:
-      status: cancelled
-    intent: Cancel a registration for the conference.

@@ -2,72 +2,50 @@ smithable: 0.1
 app:
   name: IT Help Desk
   description: A help desk where the IT team tracks tickets, their priority and who handles them.
-  timezone: Europe/Mariehamn
+  timezone: Europe/Stockholm
 models:
   Ticket:
     fields:
       title: string!
       description: text
       priority: normal | low | high | urgent
-      status: open | inProgress | resolved | closed
-      category: other | hardware | software | network | access
+      status: open | inProgress | waiting | resolved
+      category: other | hardware | software | network | account
       requester: string
       requesterEmail: email
       assignee: User
-      resolution: text
       resolvedAt: datetime
+      attachments: files
 pages:
   tickets:
     crud: Ticket
-    search: [title, description, requester, requesterEmail]
+    search: [title, description, requester]
     sortable: [priority, status, createdAt]
-    actions: [takeTicket, resolve, close, reopen]
-  overview:
-    dashboard:
-      openTickets:
-        count: Ticket
-        where:
-          status: [open, inProgress]
-      urgentTickets:
-        count: Ticket
-        where:
-          priority: urgent
-          status: [open, inProgress]
-      latestTickets:
-        list: Ticket
-        limit: 10
+    actions: [take, resolve, reopen]
   team:
     users: manage
 actions:
-  takeTicket:
+  take:
     on: Ticket
     when:
-      status: [open, inProgress]
+      status: [open, waiting]
     set:
       assignee: ME()
       status: inProgress
-    intent: Make yourself the one who handles the ticket.
+    intent: Take the ticket and start working on it.
   resolve:
     on: Ticket
     when:
-      status: [open, inProgress]
+      status: [open, inProgress, waiting]
     set:
       status: resolved
       resolvedAt: NOW()
-      resolution:
-    intent: Mark the ticket resolved and note how.
-  close:
+    intent: Mark the ticket as resolved.
+  reopen:
     on: Ticket
     when:
       status: resolved
     set:
-      status: closed
-    intent: Close a resolved ticket.
-  reopen:
-    on: Ticket
-    when:
-      status: [resolved, closed]
-    set:
       status: open
-    intent: Open the ticket again when the problem comes back.
-navigation: [tickets, overview, team]
+      resolvedAt:
+    intent: Open a resolved ticket again.
