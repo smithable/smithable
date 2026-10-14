@@ -1183,6 +1183,10 @@ async function filtersFlow(base) {
     const header = page.getByRole("button", { name: "Credit limit", exact: true });
     await header.click();
     await page.waitForURL((url) => !url.searchParams.has("sort"));
+    // Each click goes by the order the header shows, so the next waits for it.
+    await page
+      .locator("th[aria-sort=none]", { hasText: "Credit limit" })
+      .waitFor({ timeout: 10000 });
     await header.click();
     await page.waitForURL(/sort=creditLimit(&|$)/);
     // The address changes first; the header follows when the list's data arrives.
