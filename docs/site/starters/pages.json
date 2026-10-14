@@ -1,0 +1,65 @@
+{
+  "crm": {
+    "title": "Build a CRM for your sales team, and own it",
+    "description": "A CRM for a small sales team: customers, orders and who owns each one. Change it in your own words, by form or in code; the app follows at once.",
+    "sentences": [
+      "Lightweight CRM for a small B2B sales team.",
+      "Each customer lists its orders.",
+      "Deleted customers stay in the trash for thirty days, where they can be restored."
+    ]
+  },
+  "booking": {
+    "title": "Build a class booking site for your studio",
+    "description": "A booking site for a yoga studio or any class: a public schedule, places that run out, bookings by mail, a blog. Change it by prompt, form or code.",
+    "sentences": [
+      "Class schedule and online booking for a small yoga studio.",
+      "The places left is calculated as the capacity minus the number of its bookings.",
+      "Everyone sees, changes and deletes only their own records."
+    ]
+  },
+  "invoicing": {
+    "title": "Build invoicing for freelancers, your own way",
+    "description": "Invoicing for freelancers: clients, invoices with their lines and totals, sent and paid. Change it in your own words, by form or in code.",
+    "sentences": [
+      "Simple invoicing for freelancers.",
+      "Each user manages their own clients and invoices.",
+      "The total is calculated as the total amount of its lines."
+    ]
+  },
+  "marketplace": {
+    "title": "Build a neighborhood marketplace for second-hand",
+    "description": "A marketplace where neighbors sell second-hand things: a public catalog with photos, prices and filters. Change it by prompt, form or code.",
+    "sentences": [
+      "Buy and sell second-hand things in your neighborhood.",
+      "Photos of items are reviewed before others see them; an item waits until its photos are.",
+      "Open to anyone without signing in: the home page, the catalog page and reading items."
+    ]
+  },
+  "status": {
+    "title": "Build a public status page for your services",
+    "description": "A status page: services and their state, incidents with a timeline of updates, planned maintenance. Change it by prompt, form or code.",
+    "sentences": [
+      "Is it working? The state of our services, live.",
+      "Each component lists its incidents.",
+      "Each incident lists its updates."
+    ]
+  },
+  "records": {
+    "title": "Build a site for your collection, public to browse",
+    "description": "Keep a collection of books, plants or wine with pictures, on a public site visitors browse. The smallest starter; change it by prompt, form or code.",
+    "sentences": [
+      "A place to keep and show a collection of items.",
+      "Open to anyone without signing in: the home page, the items page and reading items.",
+      "Everyone sees, changes and deletes only their own records."
+    ]
+  },
+  "api": {
+    "title": "Build a backend for your AI assistant's tasks",
+    "description": "A backend with an API and tools for AI assistants: projects, tasks and notes a team's assistant keeps, private by key. Change it by prompt, form or code.",
+    "sentences": [
+      "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.",
+      "Each project lists its tasks.",
+      "Each task can have an assignee (a user)."
+    ]
+  }
+}
