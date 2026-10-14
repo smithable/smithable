@@ -29,6 +29,8 @@ export class ParseContext {
   private readonly symbols = new Map<SymbolKind, Set<string>>();
   private readonly references: Reference[] = [];
   private readonly marks = new Map<string, At>();
+  /** A language file's texts may be empty: not translated yet (docs/design/languages.md §2). */
+  emptyTexts = false;
 
   constructor(
     readonly file: string,
@@ -189,8 +191,14 @@ export function checkKeys(ctx: ParseContext, entries: Entry[], where: string, ru
 }
 
 export function readString(ctx: ParseContext, node: At, what: string): string | undefined {
-  if (isScalar(node) && typeof node.value === "string" && node.value.trim() !== "")
+  if (
+    isScalar(node) &&
+    typeof node.value === "string" &&
+    (node.value.trim() !== "" || ctx.emptyTexts)
+  )
     return node.value;
+  // A key left with nothing after it, in a language file: not translated yet.
+  if (ctx.emptyTexts && isScalar(node) && node.value === null) return "";
   ctx.error(node, "expected-text", `${what} must be a non-empty text.`);
   return undefined;
 }

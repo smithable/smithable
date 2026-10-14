@@ -1,5 +1,6 @@
 import { validateAuth } from "./auth.js";
 import { COMPANIONS } from "./companion.js";
+import { type Language, validateContent } from "./content.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
 import {
@@ -9,6 +10,7 @@ import {
   type OperationArgs,
   OperationError,
   type ThemeFiles,
+  type TranslationFiles,
 } from "./operation.js";
 import { checkJson, type SpecPlugin } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
@@ -45,7 +47,12 @@ export interface ProjectFiles {
   plugins?: SpecPlugin[];
   /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */
   themes?: ThemeIR[];
+  /** Its language files' texts, smithable.content.<language>.yml, by language. */
+  translations?: Record<string, string>;
 }
+
+/** A language's file in a project. */
+export const translationPath = (language: string) => `smithable.content.${language}.yml`;
 
 export type OperationResult =
   | {
@@ -53,6 +60,8 @@ export type OperationResult =
       files: ProjectFiles;
       /** Files the operation adds besides the five (themes/<name>.yml), for the host to write. */
       added: { path: string; text: string }[];
+      /** Files the operation takes away (a language's file), for the host to delete. */
+      removed: string[];
       description: string;
       destructive: boolean;
       effects: Effect[];
@@ -128,9 +137,26 @@ export function applyOperation(
     names: themeNames(files.themes),
     add: (theme, text) => void added.push({ theme, text }),
   };
+  // The language files: those the project has, those added, those taken away.
+  const translated = new Map(
+    Object.entries(files.translations ?? {}).map(([l, text]) => [l, new YamlEditor(text)]),
+  );
+  const removedLanguages = new Set<string>();
+  const translations: TranslationFiles = {
+    get: (language) => translated.get(language),
+    add: (language, text) => {
+      translated.set(language, new YamlEditor(text));
+      removedLanguages.delete(language);
+    },
+    remove: (language) => {
+      translated.delete(language);
+      removedLanguages.add(language);
+    },
+  };
   const editors = {
     spec: new YamlEditor(files.spec),
     themes,
+    translations,
     ...Object.fromEntries(
       COMPANIONS.flatMap((c) => {
         const text = start(c.key, c.empty);
@@ -158,6 +184,9 @@ export function applyOperation(
         const followed = editor && c.follow?.(editor, effect, before.ir);
         if (followed && "refusal" in followed) return fail(followed.refusal);
         if (followed) notes.push(followed.note);
+        // A language file has the content file's keys: what moves there moves in each.
+        if (c.key === "content")
+          for (const language of translated.values()) c.follow?.(language, effect, before.ir);
       }
     }
   } catch (error) {
@@ -186,10 +215,33 @@ export function applyOperation(
     if (hasErrors(problems)) return fail(`${name} would make ${c.file} invalid.`, problems);
     written[c.key] = editor.text;
   }
+  // Each language file against the content file as it is now: the same keys, texts only.
+  const contentNow = validateContent(
+    { path: "smithable.content.yml", text: editors.content?.text ?? "" },
+    after.ir,
+  ).content;
+  const translationsNow: Record<string, string> = {};
+  for (const [language, editor] of translated) {
+    if (contentNow) {
+      const problems = validateContent(
+        { path: translationPath(language), text: editor.text },
+        after.ir,
+        { of: contentNow, language: language as Language },
+      ).diagnostics;
+      if (hasErrors(problems))
+        return fail(`${name} would make ${translationPath(language)} invalid.`, problems);
+    }
+    translationsNow[language] = editor.text;
+  }
   return {
     ok: true,
-    files: { spec: editors.spec.text, ...written },
+    files: {
+      spec: editors.spec.text,
+      ...written,
+      ...(translated.size ? { translations: translationsNow } : {}),
+    },
     added: added.map((a) => ({ path: `themes/${a.theme.name}.yml`, text: a.text })),
+    removed: [...removedLanguages].map(translationPath),
     description: [op.describe(args, before.ir), ...notes].join("; "),
     destructive: op.destructive(args, before.ir, after.ir),
     effects,

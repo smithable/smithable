@@ -52179,6 +52179,13 @@ const noted = (result: unknown): result is { none: string } =>
 async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
   const text = kind.data.whyNone(viewer, args.where);
   if (text) return text;
+  // None of the viewer's own: say how many there are without "mine" (ask-checks.md §6).
+  const where = args.where as Record<string, unknown> | undefined;
+  if (where && (where.mine === true || where.mine === "true")) {
+    const { mine: _mine, ...rest } = where;
+    const all = await kind.data.measure(viewer, "count", { where: rest, search: typeof args.search === "string" ? args.search : undefined });
+    if (all) return \`None of your own; \${all} in all.\`;
+  }
   if (typeof args.search !== "string") return undefined;
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
@@ -52757,7 +52764,7 @@ export const messageData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || typeof v !== "string") continue;
+      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.messages)
@@ -52765,8 +52772,9 @@ export const messageData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
-        return \`No message has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+      const asked = String(v);
+      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
+        return \`No message has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -53545,7 +53553,7 @@ export const supportCaseData = {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
       const field = FILTERABLE[name];
-      if (field?.kind !== "text" || typeof v !== "string") continue;
+      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
         .from(schema.supportCases)
@@ -53553,8 +53561,9 @@ export const supportCaseData = {
         .limit(2000)
         .all()
         .map((row) => String(row.v));
-      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
-        return \`No support case has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+      const asked = String(v);
+      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
+        return \`No support case has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -56142,16 +56151,16 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.server.ts": "a483a615 generated",
   "src/generated/actions/start-work.ts": "915fde76 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "1f7a559b generated",
+  "src/generated/ask.server.ts": "461125ee generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "a7421b4c generated",
+  "src/generated/message.server.ts": "3ac35cdb generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "09e44a22 generated",
   "src/generated/support-case.schema.ts": "380912eb generated",
-  "src/generated/support-case.server.ts": "7011d3af generated",
+  "src/generated/support-case.server.ts": "76b62a22 generated",
   "src/generated/support-case.ts": "29922f74 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "ab4d173d generated",
@@ -56206,7 +56215,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "5d18d643 kit",
+  "src/kit/where.ts": "0c8a1ed7 kit",
   "src/kit/words.ts": "d453b5c8 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",

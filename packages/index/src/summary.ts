@@ -87,8 +87,21 @@ export function summarize(
   );
 
   const sections: SummarySection[] = [];
-  if (ir.app.description) {
-    sections.push({ concept: "app", title: ir.app.name, sentences: [ir.app.description] });
+  // The app's languages (docs/design/languages.md §2): its own, and the others people choose.
+  const named = (code: string) =>
+    new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  const languages = content.languages?.length
+    ? `The app is in ${named(content.language)}, and in ${list(content.languages.map(named))} for those who choose ${content.languages.length > 1 ? "them" : "it"}.`
+    : undefined;
+  if (ir.app.description || languages) {
+    sections.push({
+      concept: "app",
+      title: ir.app.name,
+      sentences: [
+        ...(ir.app.description ? [ir.app.description] : []),
+        ...(languages ? [languages] : []),
+      ],
+    });
   }
 
   // The pages first: they are the app as people see it.

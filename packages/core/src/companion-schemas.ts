@@ -494,6 +494,13 @@ export const CONTENT_SCHEMA: JsonSchema = {
       enum: [...LANGUAGES],
       description: `The language of everything a person reads in the app (the app's own words follow it): ${LANGUAGES.join(", ")}; en is the default.`,
     },
+    languages: {
+      type: "array",
+      items: { enum: [...LANGUAGES] },
+      uniqueItems: true,
+      description:
+        "The other languages the app is offered in, each with its file smithable.content.<language>.yml of the same texts (docs/design/languages.md).",
+    },
     logo: {
       type: "object",
       description:
