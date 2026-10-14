@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, type LineCounter, type ParsedNode, type Scalar } from "yaml";
-import type { Diagnostic, Severity } from "./diagnostics.js";
+import type { Diagnostic, Fix, Severity } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
 
 /** A key in a YAML mapping together with its value. */
@@ -41,6 +41,13 @@ export class ParseContext {
 
   warning(at: At, code: string, message: string, hint?: string): void {
     this.report("warning", at, code, message, hint);
+  }
+
+  /** Advice, with the operation that does it (docs/design/advice.md): the app is fine without. */
+  note(at: At, code: string, message: string, fix: Fix, hint?: string): void {
+    this.report("note", at, code, message, hint);
+    const last = this.diagnostics[this.diagnostics.length - 1];
+    if (last) last.fix = fix;
   }
 
   /** Reports at a character offset, for YAML syntax errors that have no node. */

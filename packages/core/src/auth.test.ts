@@ -40,7 +40,7 @@ describe("the examples", () => {
       examples[`../../../examples/${name}/smithable.yml`] as string,
       examples[`../../../examples/${name}/smithable.auth.yml`] as string,
     );
-    expect(diagnostics).toEqual([]);
+    expect(diagnostics.filter((d) => d.severity !== "note")).toEqual([]);
     // A starter's administrator and domains are samples on domains nobody has: `smithable new` replaces them.
     expect(
       auth.diagnostics.filter((d) => d.code !== "example-admin" && d.code !== "example-domain"),

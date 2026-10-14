@@ -79,8 +79,8 @@ export {
   validateContext,
 } from "./context-file.js";
 export { type DiffTable, dataDiffSql, restoreOrder } from "./data-diff.js";
-export type { Diagnostic, Severity } from "./diagnostics.js";
-export { formatDiagnostic, hasErrors } from "./diagnostics.js";
+export type { Diagnostic, Fix, Severity } from "./diagnostics.js";
+export { fixCommand, formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
 export { EditError, YamlEditor } from "./edit.js";
 export type { Expr } from "./formula.js";

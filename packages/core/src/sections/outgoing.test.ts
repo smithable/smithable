@@ -57,7 +57,7 @@ test("outgoing reads an event or an action, a condition, and every kind of recip
     when: Booking created
     to: statusFeed
 `);
-  expect(result.diagnostics).toEqual([]);
+  expect(result.diagnostics.filter((d) => d.severity !== "note")).toEqual([]);
   expect(result.ir?.outgoing).toEqual([
     {
       name: "made",

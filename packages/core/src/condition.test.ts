@@ -38,7 +38,11 @@ test("a records section shows only the records its where fits", () => {
   expect(home?.pattern.kind === "landing" && home.pattern.sections[1]?.where).toEqual({
     status: ["investigating", "identified", "monitoring"],
   });
-  expect(read("open: { records: Incident, where: { major: true } }").diagnostics).toEqual([]);
+  expect(
+    read("open: { records: Incident, where: { major: true } }").diagnostics.filter(
+      (d) => d.severity !== "note",
+    ),
+  ).toEqual([]);
   expect(codes("open: { records: Incident, where: { status: paused } }")).toEqual([
     "unknown-value",
   ]);
