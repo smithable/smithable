@@ -78,6 +78,58 @@ that appears; the "after" is taller by that field.
 - Each starter page (`/starters/<name>`, B 42) renders the deck with its own starter; the start
   page cycles the starters too, one deck at a time, so a visitor sees several apps.
 
+The look Johan approved (2026-10-14, the seven mock-ups): the cards show their pictures whole
+(no cover crop, so no word is cut), the badge is a straight double-edged stamp in sentence case,
+and the arrow is a triangle at the deck's edge. The markup and CSS of the mock-up, for the page
+to take over (the tokens are the page's own; the mock-up's values in the comments):
+
+```html
+<div class="deck">
+  <div class="card c3"><span class="badge">Edit by code</span><div class="shot"><img src="crm/code.webp" alt="…"></div></div>
+  <div class="card c2"><span class="badge">Edit without code</span><div class="shot"><img src="crm/nocode.webp" alt="…"></div></div>
+  <div class="card c1"><span class="badge">Edit by prompt</span><div class="shot"><img src="crm/prompt.webp" alt="…"></div></div>
+  <span class="arrow"></span>
+</div>
+<div class="result"><img src="crm/after.webp" alt="…"></div>
+```
+
+```css
+/* --card #fff / #1a1d27, --line #e3e6ef / #2b2f3d, --muted #5c6178 / #9aa0b5,
+   --accent #3b5bdb / #748ffc, --arrow #111 / #f2f3f7 (light / dark) */
+.stage { display: grid; grid-template-columns: 1fr 1.1fr; gap: 48px; align-items: center; }
+.deck { position: relative; height: 420px; }
+.card { position: absolute; width: 86%; background: var(--card); border: 1px solid var(--line);
+  border-radius: 18px; padding: 10px; }
+.card .shot { overflow: hidden; border-radius: 10px; }
+.card .shot img { display: block; width: 100%; height: auto; } /* whole pictures: no word cut */
+.c3 { left: 14%; top: 0; transform: rotate(4deg); z-index: 1; }
+.c2 { left: 7%; top: 18px; transform: rotate(2deg); z-index: 2; }
+.c1 { left: 0; top: 40px; z-index: 3;
+  box-shadow: 0 24px 60px rgba(30,30,80,.28), 0 4px 12px rgba(30,30,80,.12); }
+/* The badge: a straight double-edged stamp (Johan, 2026-10-14), front card in the accent. */
+.badge { position: absolute; top: -15px; left: 18px; padding: 3px 11px; white-space: nowrap;
+  font-size: 13px; font-weight: 700; letter-spacing: .01em;
+  color: var(--muted); background: var(--card); border: 3px double var(--muted); border-radius: 6px; }
+.c1 .badge { color: var(--accent); border-color: var(--accent); }
+/* The arrow: a plain triangle at the deck's edge, pointing at the result. */
+.arrow { position: absolute; width: 0; height: 0; border: 16px solid transparent; }
+.deck > .arrow { right: -38px; top: calc(50% + 4px); border-left: 22px solid var(--arrow);
+  border-right: 0; z-index: 4; }
+.result { border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+  box-shadow: 0 16px 48px rgba(30,30,80,.18); }
+.result img { display: block; width: 100%; }
+
+@media (max-width: 640px) { /* phone: the deck above the result, the arrow pointing down */
+  .stage { grid-template-columns: 1fr; gap: 44px; }
+  .deck { height: 300px; }
+  .deck > .arrow { right: auto; top: auto; left: calc(50% - 16px); bottom: -36px;
+    border: 16px solid transparent; border-top: 22px solid var(--arrow); border-bottom: 0; }
+}
+```
+
+The class that puts a card in front (`c1`) moves with the cycle; the badge keeps its own words.
+The three card pictures are one size (560×420, 1120×840 at 2×), so the fan stays even.
+
 ## 4. The script: `scripts/hero-shots.mjs`
 
 Like `starter-shots.mjs`: makes each starter in a temporary folder, serves Studio on a port of
@@ -122,6 +174,7 @@ if Johan keeps it.
 
 1. C: `scripts/hero-shots.json` and `scripts/hero-shots.mjs`, the seven starters' pictures and
    `deck.json`; a static mock-up of the CRM deck in Pictures/claude for Johan's look first.
+   (Done: #589, #592, #594; Johan approved the seven decks on 2026-10-14.)
 2. B: the deck on the start page and on each starter page from `deck.json`; the cycle, the
    click, reduced motion, the phone layout.
 3. CLAUDE.md's script list gains the one line; the pictures' licence line as the starters'.
