@@ -121,7 +121,15 @@ export function Shown({
 }) {
   return (
     <>
-      {answer.text && <p className="text-sm">{answer.text}</p>}
+      {answer.text && (
+        // Not confirmed by the results: never shown as a fact (ask-checks.md §3).
+        <p
+          data-unconfirmed={answer.unconfirmed || undefined}
+          className={answer.unconfirmed ? "text-sm text-muted-foreground italic" : "text-sm"}
+        >
+          {answer.text}
+        </p>
+      )}
       {answer.steps.map((step, i) =>
         step.proposal && step.card && confirm ? (
           <Proposal key={`${i}-${step.tool}`} step={step} confirm={confirm} />

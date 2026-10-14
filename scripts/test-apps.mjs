@@ -5660,7 +5660,7 @@ test("measure sums, averages and sums per value", async () => {
     // allowance (402) is said in the host's words.
     if (example === "api")
       step(
-        "the inspector's model loop: tools run as the role and their results go back, tokens add up, a change is only proposed, a kind not offered is refused, a 402 is said",
+        "the inspector's model loop: tools run as the role and their results go back, tokens add up, a change is only proposed, a kind not offered is refused, an answer no result bears out is sent back, marked, then shown as not confirmed, a 402 is said",
         () => {
           const check = join(dir, "src/inspector-check.test.ts");
           writeFileSync(
@@ -5678,11 +5678,11 @@ const toolCall = (id: string, name: string, args: unknown) => ({ id, type: "func
 
 test("the model's tool loop", async () => {
   const replies: unknown[] = [];
-  const sent: { body: Record<string, any>; person: string }[] = [];
+  const sent: { body: Record<string, any>; person: string; mark?: string }[] = [];
   const model = { url: "http://model.test", key: "k", model: "m", person: "admin-1" };
   const fake = (async (_url: string, init: RequestInit) => {
     const headers = init.headers as Record<string, string>;
-    sent.push({ body: JSON.parse(String(init.body)), person: headers["x-assistant-person"] });
+    sent.push({ body: JSON.parse(String(init.body)), person: headers["x-assistant-person"], mark: headers["x-assistant-ask"] });
     return new Response(JSON.stringify(replies.shift()));
   }) as unknown as typeof fetch;
   const ask = (question: string) => answer(question, { offer: offerFor(viewer), kinds: [], call, model, fetch: fake });
@@ -5724,6 +5724,27 @@ test("the model's tool loop", async () => {
   );
   const refused = await ask("list the users");
   expect(refused.steps[0].error).toContain('"kind" is one of');
+
+  // An answer no tool result bears out (ask-checks.md §3): sent back once with why, then once
+  // marked for the host's better model, then shown as not confirmed; a grounded retry ends it.
+  const at = sent.length;
+  replies.push(
+    { choices: [{ message: { content: "Done, I renamed it." } }] },
+    { choices: [{ message: { content: "I have renamed it." } }] },
+    { choices: [{ message: { content: "I have renamed it." } }] },
+  );
+  const claimed = await ask("rename the office move project to Moving day");
+  expect(claimed).toMatchObject({ unconfirmed: true, note: expect.stringContaining("could not be confirmed") });
+  expect(sent.slice(at).map((s) => s.mark)).toEqual([undefined, undefined, "ungrounded"]);
+  expect(sent[at + 1].body.messages.at(-1)).toMatchObject({ role: "system", content: expect.stringContaining("change was made") });
+  replies.push(
+    { choices: [{ message: { content: "There are 999 tasks." } }] },
+    { choices: [{ message: { tool_calls: [toolCall("9", "measure", { kind: "Task" })] } }] },
+    { choices: [{ message: { content: \`There are \${await tasks()} tasks.\` } }] },
+  );
+  const counted2 = await ask("how many tasks are there");
+  expect(counted2.unconfirmed).toBeUndefined();
+  expect(counted2.text).toBe(\`There are \${await tasks()} tasks.\`);
 
   // The host's allowance used up: said in its words, and the rules still answer.
   const spent = await answer("anything", {

@@ -3,6 +3,7 @@
 // calls the same tools an outside assistant gets. The app runs every call itself and shows what
 // came back; a call that would change something is only proposed, never run here.
 import { type AskKind, readQuestion } from "./ask";
+import { ungrounded } from "./grounded";
 import { type Offer, offered } from "./tools";
 import { w } from "./words";
 
@@ -37,6 +38,8 @@ export interface Answer {
   text?: string;
   /** Why there is no (full) answer, in the app's or the host's words. */
   note?: string;
+  /** The model's words did not stand on the tools' results, even after it tried again. */
+  unconfirmed?: boolean;
   tokens?: { in: number; out: number };
   ms: number;
 }
@@ -148,7 +151,10 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     { role: "user", content: question },
   ];
   const tokens = { in: 0, out: 0 };
-  for (let round = 0; round < ROUNDS; round++) {
+  // An answer not grounded in the results (ask-checks.md §3): once again with why, then once
+  // marked for the host, which may give it to a better model; then shown as not confirmed.
+  let checks = 0;
+  for (let round = 0; round < ROUNDS + checks; round++) {
     let response: Response;
     try {
       response = await fetchModel(`${model.url}/chat/completions`, {
@@ -157,6 +163,7 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
           "content-type": "application/json",
           authorization: `Bearer ${model.key}`,
           "x-assistant-person": model.person,
+          ...(checks > 1 ? { "x-assistant-ask": "ungrounded" } : {}),
         },
         body: JSON.stringify({ model: model.model, messages, tools }),
         signal: AbortSignal.timeout(MODEL_WAIT),
@@ -185,7 +192,15 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     const message = body.choices?.[0]?.message ?? {};
     const calls = message.tool_calls ?? [];
     const text = message.content?.trim() || undefined;
-    if (!calls.length) return done({ source: "ai", text, tokens });
+    if (!calls.length) {
+      const why = text ? ungrounded(text, question, steps, parts.kinds) : undefined;
+      if (!why) return done({ source: "ai", text, tokens });
+      if (checks === 2)
+        return done({ source: "ai", text, tokens, note: w.notConfirmed, unconfirmed: true });
+      checks++;
+      messages.push({ role: "assistant", content: text ?? null }, { role: "system", content: why });
+      continue;
+    }
     messages.push({ role: "assistant", content: message.content ?? null, tool_calls: calls });
     let proposed = false;
     for (const c of calls) {
