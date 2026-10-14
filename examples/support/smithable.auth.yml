@@ -1,0 +1,24 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false                # only agents invited from the team page
+
+defaultAccess: shared              # every agent sees and answers every case
+
+roles:
+  admin: all
+  agent:
+    description: Answers the cases, takes them and passes them on.
+    pages: [cases]
+    create: all
+    write: all
+    actions: all
+
+defaultRole: agent
+admins: [support@harbour.example]
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

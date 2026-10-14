@@ -3,7 +3,15 @@
 // is left over. What is still unknown and matters becomes a question, never a guess: rather a
 // question than a mistake. This file imports nothing, so scripts/bench-read.mjs runs it as it is.
 
-export type Kind = "booking" | "crm" | "invoicing" | "marketplace" | "status" | "records" | "api";
+export type Kind =
+  | "booking"
+  | "crm"
+  | "invoicing"
+  | "marketplace"
+  | "status"
+  | "records"
+  | "api"
+  | "support";
 
 export interface Question {
   about: "kind" | "audience" | "visitors";
@@ -76,6 +84,8 @@ cue("status", 1, "down service");
 cue("records", 3, "collection catalogue catalog log register archive inventory");
 cue("records", 2, "sighting museum recipe list record");
 cue("api", 3, "backend assistant chatbot bot");
+cue("support", 3, "support helpdesk help-desk ticket case");
+cue("support", 2, "request mail email inbox agent reply");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business
@@ -108,6 +118,7 @@ const THING = set(`customer client contact company lead deal follow-up invoice p
   product ingredient supplier job application team player match talk speaker attendee ticket
   recipe incident outage maintenance update component album artist object fuel visit guest
   sighting species plot shoot project task note order member event habit check-in streak
+  case request message reply
   household colleague neighbor translator freelancer schedule blog catalog catalogue line
   picture contact-form`);
 // What a record holds.

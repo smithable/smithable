@@ -163,7 +163,7 @@ ${
     ? `import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${n.schema} } from "#/generated/${kebab(model.name)}.schema";`
     : `import { handle } from "#/custom/incoming/${kebab(incoming.name)}";`
-}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, FILE_MAX_BYTES, saveFile, scanned } from "#/kit/uploads";' : ""}
+}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, FILE_MAX_BYTES, saveFile, scanned, type StoredFile } from "#/kit/uploads";' : ""}
 
 const NAME = ${JSON.stringify(incoming.name)};
 const DAY = 86_400_000;
@@ -210,8 +210,8 @@ const bodyOf = (mail: Mail) =>
         saves
           ? `
 /** Each attachment checked and kept as an upload is; one too large or refused is the answer instead. */
-async function saved(mail: Mail, model: string): Promise<string[] | Response> {
-  const files: string[] = [];
+async function saved(mail: Mail, model: string): Promise<StoredFile[] | Response> {
+  const files: StoredFile[] = [];
   for (const one of Array.isArray(mail.attachments) ? mail.attachments : []) {
     const { name, data } = one as { name?: unknown; data?: unknown };
     const bytes = Buffer.from(text(data), "base64");

@@ -1,0 +1,16 @@
+# What people read. Derived from names when not given here.
+smithableContent: 0.1
+logo: { src: images/logo.webp, alt: A speech bubble, generated: true }
+
+models:
+  SupportCase: { label: Case }
+
+pages:
+  cases:
+    title: Cases
+    subtitle: Every request, who has it and where it stands.
+
+outgoing:
+  caseReceived:
+    subject: We got your request
+    text: Thank you for writing. Your request has a number now; an answer to this mail reaches the same case.

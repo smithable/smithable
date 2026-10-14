@@ -676,6 +676,114 @@ async function callReceiver() {
 }
 
 /**
+ * The support starter (mail-threads.md §7 step 4, conversation.md): a mail to the support address
+ * becomes a case and is acknowledged with its number; an agent answers from the case's
+ * conversation and the customer gets the answer alone, in the case's thread; the customer's
+ * reply to it joins the case as a message.
+ */
+async function supportFlow(dir, base) {
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const read = (file) => readFileSync(join(outbox, file), "utf8");
+  const header = (raw, name) =>
+    new RegExp(`^${name}: (.*(?:\\n[ \\t].*)*)`, "im")
+      .exec(raw.split("\n\n")[0] ?? "")?.[1]
+      ?.replace(/\s+/g, " ")
+      .trim() ?? "";
+  const to = async (address, before) => {
+    for (let i = 0; i < 100; i++) {
+      const found = mails()
+        .slice(before)
+        .map(read)
+        .find((m) => header(m, "To") === address);
+      if (found) return found;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error(`no mail to ${address}`);
+  };
+  const post = async (mail) => {
+    for (let i = 0; i < 60; i++) {
+      const answer = await fetch(`${base}/incoming/support`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer support-secret" },
+        body: JSON.stringify({
+          to: "help@harbour.example",
+          attachments: [],
+          inReplyTo: "",
+          references: [],
+          autoSubmitted: "",
+          ...mail,
+        }),
+      });
+      if (answer.status !== 404) return answer;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    throw new Error("the route never came");
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    let before = mails().length;
+    const made = await post({
+      from: "Lena Berg <lena@archipelago.example>",
+      subject: "Wifi down in the meeting room",
+      text: "Since this morning nobody gets on the wifi in the big meeting room.",
+      messageId: "<lena-1@archipelago.example>",
+    });
+    if (made.status !== 201)
+      throw new Error(`the mail answers ${made.status}: ${await made.text()}`);
+    const { id } = await made.json();
+    const ack = await to("lena@archipelago.example", before);
+    if (!header(ack, "Subject").endsWith(`#${id}]`))
+      throw new Error(`the acknowledgement: ${header(ack, "Subject")}`);
+    // An agent answers from the case's conversation.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/cases/${id}`);
+    const thread = page.locator('[data-kit="thread"]');
+    await thread
+      .getByRole("textbox", { name: "Reply" })
+      .fill("We are restarting the access point now.");
+    before = mails().length;
+    await thread.getByRole("button", { name: "Send" }).click();
+    await thread
+      .locator('[data-part="message"]', { hasText: "restarting the access point" })
+      .waitFor({ timeout: 10000 });
+    const answer = await to("lena@archipelago.example", before);
+    if (!header(answer, "Subject").endsWith(`#${id}]`))
+      throw new Error(`the answer's subject: ${header(answer, "Subject")}`);
+    if (
+      answer.split("\n\n").slice(1).join("\n\n").trim() !==
+      "We are restarting the access point now."
+    )
+      throw new Error("the answer is not the reply alone");
+    // The customer answers it.
+    const replied = await post({
+      from: "lena@archipelago.example",
+      subject: `Re: ${header(answer, "Subject")}`,
+      text: "It works again, thank you!",
+      messageId: "<lena-2@archipelago.example>",
+      inReplyTo: header(answer, "Message-ID"),
+    });
+    if ((await replied.json()).thread !== id)
+      throw new Error("the customer's reply did not join the case");
+    await page.reload();
+    await thread
+      .locator('[data-part="message"]', { hasText: "It works again" })
+      .waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ support: a mail becomes a case and is acknowledged with its number; an agent's reply from the conversation reaches the customer alone, in the thread; the customer's answer joins the case",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ support: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("support flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Mail threads (mail-threads.md §7.2) on the booking site's messages: a mail makes a message and
  * its acknowledgement carries the tag and the thread's headers and is kept in mail_threads; a mail
  * answering it by its headers becomes a reply on that message and sets what "then" says; one with
@@ -6316,6 +6424,7 @@ test("the session cookie's name and attributes", async () => {
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);
+      if (example === "support") await supportFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);

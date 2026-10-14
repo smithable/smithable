@@ -1,0 +1,87 @@
+smithable: 0.1
+app:
+  name: Harbour Support
+  description: Mail from customers, answered by the team.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  SupportCase:
+    fields:
+      subject: string!
+      customerEmail: { type: email!, locked: true }   # who wrote in; fixed once the case exists
+      status: open | inProgress | closed | reopened
+      priority: { type: int!, min: 1, max: 5, default: 3 }
+      assignee: { type: User, required: { status: [inProgress, closed] } }
+      body: text                                      # the first mail's text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      sender: agent | customer                        # the reply box writes as an agent
+      agent: { type: User, by: app, default: ME() }   # who answered, filled by the app
+      fromEmail: email                                # the customer's address on a mail that came in
+      attachments: files
+      supportCase: SupportCase!
+
+pages:
+  cases:
+    crud: SupportCase
+    search: [subject, customerEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
+  team:
+    users: manage
+
+navigation: [cases, team]
+
+actions:
+  assignToMe:
+    on: SupportCase
+    set: { assignee: ME() }
+    intent: "Take the case: you become its assignee."
+  assignTo:
+    on: SupportCase
+    set: { assignee: }
+    intent: Give the case to an agent, chosen from the team.
+  startWork:
+    on: SupportCase
+    when: { status: [open, reopened] }
+    set: { status: inProgress }
+    intent: "Someone is working on the case now; it needs an assignee."
+  close:
+    on: SupportCase
+    when: { status: [open, inProgress, reopened] }
+    set: { status: closed }
+    intent: The customer has their answer.
+  reopen:
+    on: SupportCase
+    when: { status: closed }
+    set: { status: reopened }
+    intent: The case needs more work after all.
+
+# Mail to the support address becomes a case; an answer to one of its mails joins the case as a
+# message (docs/design/mail-threads.md). The address and its secret are settings of the app.
+incoming:
+  support:
+    mail: true
+    create: SupportCase
+    fields: { from: customerEmail, subject: subject, body: body, attachments: attachments }
+    set: { status: open }
+    reply:
+      create: Message
+      fields: { from: fromEmail, body: content, attachments: attachments }
+      set: { sender: customer }
+
+outgoing:
+  caseReceived:
+    when: SupportCase created
+    to: mail
+    recipient: customerEmail
+  replySent:
+    when: Message created
+    where: { sender: agent }
+    to: mail
+    recipient: supportCase.customerEmail
