@@ -270,7 +270,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   });
   // The page the preview is on, for Studio's address bar: after every navigation, including
   // the app's own (the router uses the History API) and Back.
-  const report = () => post({ type: "navigated", path: location.pathname + location.search });
+  const report = () => {
+    settle();
+    post({ type: "navigated", path: location.pathname + location.search });
+  };
   for (const name of ["pushState", "replaceState"]) {
     const original = history[name];
     history[name] = function (...args) {
@@ -282,20 +285,36 @@ if (typeof window !== "undefined" && window.parent !== window) {
   window.addEventListener("popstate", report);
   // The owner opens the preview signed in as an administrator: the first time it shows the
   // sign-in page, once its buttons work, the development "Sign in as admin" is pressed. Once a
-  // browser session, so after signing out the sign-in page stays to try another role.
+  // browser session, so after signing out the sign-in page stays to try another role. The press
+  // counts once a page other than the sign-in page is shown after it: a reload in between (the
+  // dev server optimizing its dependencies, a restart) finds it pending and presses again.
+  const SIGNED_IN = "smithable:signed-in";
+  const mark = () => {
+    try {
+      return sessionStorage.getItem(SIGNED_IN);
+    } catch {
+      return "1";
+    }
+  };
+  function settle() {
+    if (location.pathname === "/sign-in" || mark() !== "pending") return;
+    try {
+      sessionStorage.setItem(SIGNED_IN, "1");
+    } catch {}
+  }
+  settle();
   const signIn = setInterval(() => {
     if (location.pathname !== "/sign-in") return clearInterval(signIn);
     if (document.body.dataset.hydrated !== "true") return;
     clearInterval(signIn);
+    if (mark() === "1") return;
     try {
-      if (sessionStorage.getItem("smithable:signed-in")) return;
-      sessionStorage.setItem("smithable:signed-in", "1");
+      sessionStorage.setItem(SIGNED_IN, "pending");
     } catch {
       return;
     }
     [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Sign in as admin")?.click();
   }, 100);
-  setTimeout(() => clearInterval(signIn), 30000);
   // A page whose stylesheet did not come (the theme's variables are missing once it has loaded)
   // says so: the dev server can keep failing it until it starts again (Studio review finding 3).
   const styled = () => {
