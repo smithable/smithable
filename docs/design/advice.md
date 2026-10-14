@@ -41,7 +41,7 @@ when that reads badly).
   `page:<id>`) so a note sits on the thing it is about.
 - The rules run in `validateSpec` after the sections, only when there are no errors: an invalid
   spec gets no advice, since the advice would be about a spec that is not there.
-- Studio shows a note in its own colour (sky) and the editor marks it as information, never as a
+- Studio lists notes under the problems as "Worth considering", in their own colour (sky), and the editor marks them as information, never as a
   warning; Apply runs the fix through the same path as any operation (A).
 - The starters carry notes today (filters on the CRM's orders and customers, lists back on the
   booking app's class types and instructors, on the status app's components). Whether a starter

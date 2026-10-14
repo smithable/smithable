@@ -694,12 +694,20 @@ function SpecEditor({
                 </li>
               ))
           )}
-          {notes.slice(0, 3).map((d) => (
-            <li key={`${d.file}:${d.line}:${d.column}:${d.code}`} className="text-sky-700">
-              Worth considering, {d.file === file ? "line" : `${d.file} line`} {d.line}: {d.message}
-            </li>
-          ))}
         </ul>
+        {notes.length > 0 && (
+          <ul
+            aria-label="Worth considering"
+            className="max-h-16 space-y-0.5 overflow-y-auto text-xs"
+          >
+            {notes.slice(0, 3).map((d) => (
+              <li key={`${d.file}:${d.line}:${d.column}:${d.code}`} className="text-sky-700">
+                Worth considering, {d.file === file ? "line" : `${d.file} line`} {d.line}:{" "}
+                {d.message}
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* A mistaken edit, or one that cannot be saved, is dropped for the file as saved. */}
           <Button
