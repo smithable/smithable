@@ -5184,16 +5184,23 @@ for (const [index, example] of examples.entries()) {
           };
           ok(smithable(dir, "op", "setLanguage", "sv"));
           try {
-            const words = readFileSync(join(dir, "src/kit/words.ts"), "utf8");
-            if (!words.includes('signIn: "Logga in"')) throw new Error("the words are not Swedish");
-            if (existsSync(join(dir, "src/kit/words")))
-              throw new Error("the words directory is in the app");
+            // The app's language's words, and the chooser naming it (languages.md §4).
+            const sv = join(dir, "src/kit/words/sv.ts");
+            if (!existsSync(sv) || !readFileSync(sv, "utf8").includes('signIn: "Logga in"'))
+              throw new Error("the words are not Swedish");
+            if (existsSync(join(dir, "src/kit/words/en.ts")))
+              throw new Error("the English words are in a Swedish app");
+            if (!readFileSync(join(dir, "src/kit/words.ts"), "utf8").includes('const MAIN = "sv";'))
+              throw new Error("words.ts does not choose Swedish");
             run("pnpm", ["typecheck"], dir);
           } finally {
             ok(smithable(dir, "undo"));
           }
-          if (!readFileSync(join(dir, "src/kit/words.ts"), "utf8").includes('signIn: "Sign in"'))
+          const en = join(dir, "src/kit/words/en.ts");
+          if (!existsSync(en) || !readFileSync(en, "utf8").includes('signIn: "Sign in"'))
             throw new Error("the undo did not bring the English words back");
+          if (existsSync(join(dir, "src/kit/words/sv.ts")))
+            throw new Error("the undo left the Swedish words");
         },
       );
     step("builds, and the production build contains no preview-editor markers", () => {
