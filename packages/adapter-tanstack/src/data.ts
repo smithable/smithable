@@ -959,6 +959,7 @@ ${loose
     : "";
   if (usesOr) drizzle.push("or");
   if (threadTarget?.trash) drizzle.push("isNull");
+  if (reads) drizzle.push("gt", "inArray", "isNotNull", "isNull", "ne", "or");
   if (group.length) drizzle.push("count");
   if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
     drizzle.push("isNull");
@@ -1557,8 +1558,13 @@ ${
   unread(viewer: Viewer | null): SQL {
     if (!viewer) return sql\`false\`;
     const target = ${tableRef(threadTarget)};
-    const mark = sql\`coalesce((select \${${reads}.readAt} from \${${reads}} where \${${reads}.recordId} = \${${n.table}.id} and \${${reads}.userId} = \${viewer.id}), 0)\`;
-    return sql\`exists (select 1 from \${target} where \${target.${dataKey(threadRef)}} = \${${n.table}.id}${threadTarget.trash ? ` and \${target.deletedAt} is null` : ""} and (\${target.${ownerKey(threadTarget)}} is null or \${target.${ownerKey(threadTarget)}} <> \${viewer.id}) and \${target.createdAt} > \${mark})\`;
+    // Not correlated: a list's relational query names the outer table its own way.
+    const fresh = db
+      .select({ id: target.${dataKey(threadRef)} })
+      .from(target)
+      .leftJoin(${reads}, and(eq(${reads}.recordId, target.${dataKey(threadRef)}), eq(${reads}.userId, viewer.id)))
+      .where(and(isNotNull(target.${dataKey(threadRef)}),${threadTarget.trash ? " isNull(target.deletedAt)," : ""} or(isNull(target.${ownerKey(threadTarget)}), ne(target.${ownerKey(threadTarget)}, viewer.id)), gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)));
+    return inArray(${n.table}.id, fresh) as SQL;
   },
 `
     : ""
