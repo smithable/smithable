@@ -110,6 +110,26 @@ const SUM = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const AVG = (values: number[]) => (values.length ? SUM(values) / values.length : 0);
 const MIN = (values: number[]) => (values.length ? Math.min(...values) : 0);
 const MAX = (values: number[]) => (values.length ? Math.max(...values) : 0);
+/** The newest (LAST) or oldest (FIRST) record of a list by when it was made, then its number. */
+const when = (row: Record<string, unknown>) => [
+  new Date(String(row.createdAt ?? 0)).getTime() || 0,
+  Number(row.id) || 0,
+];
+const newest = (rows: Record<string, unknown>[], last: boolean) =>
+  rows.reduce<Record<string, unknown> | undefined>((best, row) => {
+    if (!best) return row;
+    const [a, b] = [when(row), when(best)] as [number[], number[]];
+    const later = (a[0] as number) - (b[0] as number) || (a[1] as number) - (b[1] as number);
+    return (last ? later > 0 : later < 0) ? row : best;
+  }, undefined);
+const LAST = <T>(rows: Record<string, unknown>[], value: (row: Record<string, unknown>) => T) => {
+  const row = newest(rows, true);
+  return row ? value(row) : null;
+};
+const FIRST = <T>(rows: Record<string, unknown>[], value: (row: Record<string, unknown>) => T) => {
+  const row = newest(rows, false);
+  return row ? value(row) : null;
+};
 
 /** Money is stored in cents; formulas work in whole currency units. */
 const fromCents = (value: Value) => n(value) / 100;
@@ -131,6 +151,8 @@ export const F = {
   AVG,
   MIN,
   MAX,
+  LAST,
+  FIRST,
   fromCents,
   toCents,
 };

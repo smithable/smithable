@@ -37,7 +37,9 @@ const FUNCTIONS = [
   "DAYS",
   "CONCAT",
 ] as const;
-const AGGREGATES = ["SUM", "COUNT", "COUNTIF", "AVG", "MIN", "MAX"] as const;
+// LAST and FIRST: the value of the newest (oldest) record in the list, by when it was made; empty
+// for an empty list (record-rules.md §5).
+const AGGREGATES = ["SUM", "COUNT", "COUNTIF", "AVG", "MIN", "MAX", "LAST", "FIRST"] as const;
 export type FunctionName = (typeof FUNCTIONS)[number];
 export type AggregateName = (typeof AGGREGATES)[number];
 const DATE_UNITS = ["day", "month", "year"];
@@ -315,7 +317,7 @@ export function checkFormula(expr: Expr, model: ModelIR, models: ModelIR[]): Val
       case "field": {
         if (e.name.includes(".")) {
           throw new FormulaError(
-            `"${e.name}" refers to related records. Use it inside SUM, COUNT, COUNTIF, AVG, MIN or MAX.`,
+            `"${e.name}" refers to related records. Use it inside SUM, COUNT, COUNTIF, AVG, MIN, MAX, LAST or FIRST.`,
             0,
           );
         }
@@ -407,6 +409,8 @@ export function checkFormula(expr: Expr, model: ModelIR, models: ModelIR[]): Val
                 didYouMean(e.value.value, field.type.values),
               );
             }
+          } else if (e.name === "LAST" || e.name === "FIRST") {
+            return t;
           } else if (e.name !== "COUNT") {
             need(t, "number", e.name);
           }

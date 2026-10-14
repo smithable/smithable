@@ -105,7 +105,7 @@ models:
     [
       "lines.amount",
       [
-        '"lines.amount" refers to related records. Use it inside SUM, COUNT, COUNTIF, AVG, MIN or MAX.',
+        '"lines.amount" refers to related records. Use it inside SUM, COUNT, COUNTIF, AVG, MIN, MAX, LAST or FIRST.',
         undefined,
       ],
     ],

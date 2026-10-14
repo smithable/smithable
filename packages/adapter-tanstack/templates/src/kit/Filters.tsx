@@ -15,9 +15,10 @@ export interface FilterUi {
   label: string;
   /**
    * chips (a choice or a reference), range (a number, amount or date), toggle (yes/no), mine
-   * (the viewer's own records, for those signed in).
+   * (the viewer's own records, for those signed in), person (a field that refers to a person:
+   * Mine, Unassigned and the people by name).
    */
-  kind: "chips" | "range" | "toggle" | "mine";
+  kind: "chips" | "range" | "toggle" | "mine" | "person";
   options?: { value: string; label: string }[];
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
@@ -174,9 +175,71 @@ function Filter({
       </div>
     );
   if (filter.kind === "range") return <Range filter={filter} value={value} onChange={onChange} />;
-  const options = filter.options ?? [];
+  // A person (record-rules.md §6): Mine and Unassigned, then the people as chips, or a list to
+  // pick one from when there are many.
+  const people = filter.kind === "person" ? (filter.options ?? []) : [];
+  const many = people.length > 8;
+  const options =
+    filter.kind === "person"
+      ? [
+          { value: "me", label: w.mine },
+          { value: "none", label: w.unassigned },
+          ...(many ? [] : people),
+        ]
+      : (filter.options ?? []);
+  if (many) {
+    const picked = [...chosen].find((v) => people.some((p) => p.value === v)) ?? "";
+    return (
+      <fieldset className="space-y-1">
+        <legend className="text-sm font-semibold">{filter.label}</legend>
+        <div className="flex flex-wrap items-center gap-2">
+          {options.map((o) => {
+            const on = chosen.has(o.value);
+            return (
+              <button
+                key={o.value}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  const next = new Set(chosen);
+                  if (on) next.delete(o.value);
+                  else next.add(o.value);
+                  onChange([...next].join(",") || undefined);
+                }}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-sm",
+                  on
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card hover:bg-hover",
+                )}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+          <select
+            aria-label={filter.label}
+            value={picked}
+            onChange={(e) => {
+              const next = new Set<string>([...chosen].filter((v) => v === "me" || v === "none"));
+              if (e.target.value) next.add(e.target.value);
+              onChange([...next].join(",") || undefined);
+            }}
+            className="h-control max-w-60 rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="">{w.any}</option>
+            {people.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </fieldset>
+    );
+  }
   // Many values read better as a list to pick one from than as a row of chips.
-  if (options.length > 8)
+  if (filter.kind !== "person" && options.length > 8)
     return (
       <div className="flex flex-col gap-1">
         <Label htmlFor={id}>{filter.label}</Label>
@@ -296,7 +359,15 @@ function describe(filter: FilterUi, value: string): string {
     const [from, to] = value.split("..");
     return from && to ? `${from}–${to}` : from ? w.fromValue(from) : w.upToValue(to);
   }
-  const labels = new Map((filter.options ?? []).map((o) => [o.value, o.label]));
+  const labels = new Map([
+    ...(filter.kind === "person"
+      ? [
+          ["me", w.mine],
+          ["none", w.unassigned],
+        ]
+      : []),
+    ...(filter.options ?? []).map((o) => [o.value, o.label]),
+  ] as [string, string][]);
   return value
     .split(",")
     .map((v) => labels.get(v) ?? v)

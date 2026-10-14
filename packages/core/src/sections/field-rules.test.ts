@@ -136,3 +136,42 @@ test("a condition on required for a field always required is refused", () => {
     validateSpec({ path: "smithable.yml", text: always }).diagnostics.map((d) => d.code),
   ).toContain("conflict");
 });
+
+test("LAST of a list is a computed value an action's condition may name; a person is a filter", () => {
+  const text = spec
+    .replace(
+      "      notes: text\n",
+      "      notes: text\n      lastStatus: { type: string, formula: LAST(orders.status) }\n",
+    )
+    .replace(
+      "\nactions:\n",
+      "\nactions:\n  thank: { on: Customer, when: { lastStatus: shipped }, set: { segment: enterprise } }\n",
+    )
+    .replace(
+      "    search: [number, customer]\n",
+      "    search: [number, customer]\n    filters: [owner]\n",
+    );
+  const result = validateSpec({ path: "smithable.yml", text });
+  expect(result.diagnostics.filter((d) => d.severity === "error").map((d) => d.message)).toEqual(
+    [],
+  );
+  expect(result.ir?.actions.find((a) => a.name === "thank")).toMatchObject({
+    when: { lastStatus: "shipped" },
+  });
+  // A computed field is never a query's condition: a public read's where may not name it.
+  const where = validateSpec({
+    path: "smithable.yml",
+    text: text.replace("    crud: Customer\n", "    crud: Customer\n    filters: [lastStatus]\n"),
+  });
+  expect(where.diagnostics.map((d) => d.code)).toContain("invalid-filter");
+});
+
+test("a condition on a computed number is refused: only text and yes/no compare", () => {
+  const text = spec.replace(
+    "\nactions:\n",
+    '\nactions:\n  free: { on: Order, when: { shippingCost: "0" }, set: { status: placed } }\n',
+  );
+  expect(validateSpec({ path: "smithable.yml", text }).diagnostics.map((d) => d.code)).toContain(
+    "invalid-where",
+  );
+});

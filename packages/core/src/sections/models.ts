@@ -705,7 +705,7 @@ function readRules(
     if (readBoolean(ctx, locked.value, `"locked" of ${where}`)) field.locked = true;
   } else if (locked)
     pending.push((model) => {
-      const condition = readCondition(ctx, locked.value, `"locked" of ${where}`, model);
+      const condition = readCondition(ctx, locked.value, `"locked" of ${where}`, model, true);
       if (condition) field.locked = condition;
     });
   if (requiredWhen && field.required)
@@ -716,7 +716,13 @@ function readRules(
     );
   else if (requiredWhen)
     pending.push((model) => {
-      const condition = readCondition(ctx, requiredWhen.value, `"required" of ${where}`, model);
+      const condition = readCondition(
+        ctx,
+        requiredWhen.value,
+        `"required" of ${where}`,
+        model,
+        true,
+      );
       if (condition) field.requiredWhen = condition;
     });
 }

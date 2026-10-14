@@ -75,6 +75,8 @@ function filterCode(
   let ranges = false;
   // A related model titled by a long text: its names are cut by the kit's titleOf.
   let titles = false;
+  // A field that refers to a person, as a filter.
+  let people = false;
   let lists = false;
   let toggles = false;
   let mine = false;
@@ -147,6 +149,23 @@ function filterCode(
         `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`,
       );
       controls.push({ name, label, kind: "chips", options: code(`options.${name}`) });
+    } else if (
+      field.type.kind === "relation" &&
+      !field.type.many &&
+      field.type.model === USER_MODEL
+    ) {
+      // A person (record-rules.md §6): "me" is the viewer, "none" nobody, else a person; any of
+      // them, as chips together.
+      people = true;
+      const column = `${n.table}.${dataKey(field)}`;
+      conditions.push(
+        `${value} ? or(...${value}.split(",").map((v) => (v === "me" ? eq(${column}, viewer?.id ?? "") : v === "none" ? isNull(${column}) : eq(${column}, v)))) : undefined`,
+      );
+      // The people by name, for those signed in (a user's name is shown anyway).
+      options.push(
+        `${name}: viewer ? db.select({ value: schema.user.id, label: schema.user.name }).from(schema.user).orderBy(asc(schema.user.name)).all() : []`,
+      );
+      controls.push({ name, label, kind: "person", options: code(`options.${name}`) });
     } else if (field.type.kind === "scalar") {
       const kind = field.type.name;
       if (["int", "decimal", "money", "date", "datetime"].includes(kind)) {
@@ -209,7 +228,7 @@ function filterCode(
     }),
     mine,
     favorites,
-    imports: { ranges, lists, titles, toggles: toggles || mine },
+    imports: { ranges, lists, titles, people, toggles: toggles || mine },
   };
 }
 
@@ -438,7 +457,9 @@ export function listParts(
     if (search.imports.titled.length || filtering?.imports.lists)
       route.add("drizzle-orm", "inArray");
     if (filtering) route.add("drizzle-orm", "and");
-    if (filtering?.imports.toggles) route.add("drizzle-orm", "eq");
+    if (filtering?.imports.toggles || filtering?.imports.people) route.add("drizzle-orm", "eq");
+    if (filtering?.imports.people)
+      route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
     if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
     if (filtering?.imports.titles) route.add("#/kit/format", "titleOf");
     if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");

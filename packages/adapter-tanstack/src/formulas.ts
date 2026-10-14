@@ -224,13 +224,27 @@ export function formulaCompiler(model: ModelIR, ir: SpecIR, home?: ModelIR) {
         const item = `x${depth}`;
         const value = fieldValue(target, e.field as string, item);
         const result =
-          e.name === "COUNTIF"
-            ? `${items}.filter((${item}) => F.compare("=", ${value}, ${compile(e.value as Expr, owner, row)})).length`
-            : `F.${e.name}(${items}.map((${item}) => ${value}))`;
+          e.name === "LAST" || e.name === "FIRST"
+            ? `(F.${e.name}(${items}, (${item}) => ${value})${emptyOf(target, e.field as string)})`
+            : e.name === "COUNTIF"
+              ? `${items}.filter((${item}) => F.compare("=", ${value}, ${compile(e.value as Expr, owner, row)})).length`
+              : `F.${e.name}(${items}.map((${item}) => ${value}))`;
         depth--;
         return result;
       }
     }
+  };
+
+  /** What LAST or FIRST of an empty list gives, as the field's kind has it: "", 0 or false. */
+  const emptyOf = (target: ModelIR, name: string): string => {
+    const field = target.fields.find((f) => f.name === name) as FieldIR;
+    if (field.type.kind === "choice") return ' ?? ""';
+    if (field.type.kind !== "scalar") return "";
+    if (["int", "decimal", "money"].includes(field.type.name)) return " ?? 0";
+    if (field.type.name === "bool") return " ?? false";
+    if (["date", "datetime", "picture", "pictures", "file", "files"].includes(field.type.name))
+      return "";
+    return ' ?? ""';
   };
 
   /** A computed value converted back to stored units. */

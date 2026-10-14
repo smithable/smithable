@@ -459,9 +459,29 @@ export type PatternOf<K extends PatternKind> = Extract<PageIR["pattern"], { kind
  */
 export type Condition = Record<string, string | boolean | string[]>;
 
-export function conditionFits(model: ModelIR, field: string, wanted: Condition[string]): boolean {
+export function conditionFits(
+  model: ModelIR,
+  field: string,
+  wanted: Condition[string],
+  /**
+   * Whether a computed field may be named: read on the record as it is loaded (an action's
+   * `when`, a field's `locked` and `required`), never in a query (record-rules.md §5).
+   */
+  computed = false,
+): boolean {
   const f = model.fields.find((x) => x.name === field);
   if (!f) return false;
+  // A computed field as its kind says: yes/no takes true or false, a text a value or a list of
+  // them; a number or a date is never a condition (a computed field compares it instead).
+  if (f.formula) {
+    if (!computed || f.type.kind !== "scalar") return false;
+    if (f.type.name === "bool") return typeof wanted === "boolean";
+    if (f.type.name === "string" || f.type.name === "text")
+      return Array.isArray(wanted)
+        ? wanted.length > 0 && wanted.every((v) => typeof v === "string")
+        : typeof wanted === "string";
+    return false;
+  }
   if (f.type.kind === "choice") {
     const values = Array.isArray(wanted) ? wanted : [wanted];
     return (

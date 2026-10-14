@@ -1271,6 +1271,24 @@ async function rulesFlow(base) {
     console.log(
       "  ✓ browser: a locked field cannot be changed once its condition holds; an action asks for a person from the people who may be chosen",
     );
+    // A person as a filter: Mine is who handled the order.
+    await open(page, `${base}/orders`);
+    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await page.waitForURL(/handledBy=me/);
+    await page.locator("tr", { hasText: "ORD-3001" }).waitFor({ timeout: 10000 });
+    await page.getByRole("button", { name: "Unassigned", exact: true }).click();
+    await page.waitForURL(/handledBy=me%2Cnone|handledBy=me,none/);
+    // The newest order of the customer has shipped: an action whose condition is on that is
+    // offered on the customer's page.
+    await open(page, `${base}/customers`);
+    await page.getByRole("button", { name: "Nordic Timber Oy" }).first().click();
+    await page.getByRole("button", { name: "Thank" }).click();
+    await page
+      .getByRole("checkbox", { name: "Thanked", checked: true })
+      .waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: a person is a filter (Mine, Unassigned); an action's condition on LAST of a list holds on the record's page",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -5283,6 +5301,28 @@ for (const [index, example] of examples.entries()) {
               "status=shipped",
             ],
             ["addAction", "assignPacker", "--on", "Order", "--set", "packedBy="],
+            // The status of a customer's newest order, and an action only for when it shipped.
+            [
+              "addField",
+              "Customer",
+              "lastOrderStatus",
+              "string",
+              "--formula",
+              "LAST(orders.status)",
+            ],
+            ["addField", "Customer", "thanked", "bool"],
+            [
+              "addAction",
+              "thank",
+              "--on",
+              "Customer",
+              "--when",
+              "lastOrderStatus=shipped",
+              "--set",
+              "thanked=true",
+            ],
+            // Orders filtered by who handled them: Mine, Unassigned, the people.
+            ["setFilters", "orders", "handledBy"],
           ]) {
             const result = smithable(dir, "op", ...args);
             if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
@@ -6010,7 +6050,11 @@ test("the session cookie's name and attributes", async () => {
           const undone = smithable(dir, "undo");
           if (undone.code !== 0) throw new Error(undone.out);
         }
-        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+        // The customers page as written (the orders page keeps its own filter from the rules step).
+        const spec =
+          /^ {2}customers:\n(?: {4}.*\n| {6}.*\n)*/m.exec(
+            readFileSync(join(dir, "smithable.yml"), "utf8"),
+          )?.[0] ?? "";
         if (["filters:", "favorites:", "contact:"].some((key) => spec.includes(key)))
           throw new Error("the filters, favorites or contact block are still in the spec");
       });

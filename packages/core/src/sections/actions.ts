@@ -386,7 +386,7 @@ function readStandardAction(
   }
   const whenEntry = byKey.get("when");
   const when = whenEntry
-    ? readCondition(ctx, whenEntry.value, `"when" of ${where}`, model)
+    ? readCondition(ctx, whenEntry.value, `"when" of ${where}`, model, true)
     : undefined;
   let failed = false;
   const read = (entry: Entry, target: ModelIR, what: string, skip?: string) => {

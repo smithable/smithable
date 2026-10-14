@@ -131,9 +131,8 @@ ${keys}
 `,
     }).diagnostics.map((d) => d.message);
   expect(messages("    filters: [owner, price]")).toEqual([]);
-  expect(messages("    filters: [seller]")[0]).toContain(
-    "people are not listed as filters; owner gives a Mine toggle",
-  );
+  // A person is a filter (record-rules.md §6): Mine, Unassigned and the people by name.
+  expect(messages("    filters: [seller]")).toEqual([]);
   expect(messages("    sortable: [double]")[0]).toContain(
     "a calculated field has no stored value to sort by",
   );

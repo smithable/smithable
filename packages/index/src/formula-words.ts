@@ -106,6 +106,10 @@ export function formulaInWords(expr: Expr, label: (name: string) => string): str
           return `the lowest ${what}`;
         case "MAX":
           return `the highest ${what}`;
+        case "LAST":
+          return `the ${label(expr.field ?? "")} of the newest of its ${label(expr.list)}`;
+        case "FIRST":
+          return `the ${label(expr.field ?? "")} of the first of its ${label(expr.list)}`;
       }
     }
   }
