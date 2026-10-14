@@ -914,7 +914,9 @@ export function answered(question, text, expected, also) {
   if (question.kind === "names")
     return expected.length
       ? expected.every((w) => t.includes(flat(w)))
-      : /\b(no|none|nothing|not any|zero|0)\b/.test(t);
+      : // "None", or that all of them have it ("All customers have placed at least one order").
+        /\b(no|none|nothing|not any|zero|0)\b/.test(t) ||
+          /\b(all|every|each)\b.*\b(ha(ve|s)|are|is)\b/.test(t);
   if (question.kind === "pairs")
     return Object.entries(expected).every(([k, v]) => {
       const at = t.indexOf(flat(k));

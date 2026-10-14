@@ -197,14 +197,17 @@ function mistral(model) {
  * `cascade:<cheap>><better>`: a question starts on the cheap model and goes on to the better one
  * when the cheap one is seen failing: two tool calls refused, a fourth model call (the kit's last
  * round), or an answer that gives up, which is asked again of the better model. Once there, the
- * question stays there. The conversation is kept in the cheap model's (OpenAI) shape and turned
- * into Converse's for Claude. Each turn says what it cost, at its own model's price, and why it moved.
+ * question stays there. An answer the app's check finds ungrounded twice moves too, as the
+ * gateway does on the kit's `x-assistant-ask: ungrounded` (cloud #202). The conversation is kept
+ * in the cheap model's (OpenAI) shape and turned into Converse's for Claude (a Mistral better model
+ * takes it as it is). Each turn says what it cost, at its own model's price, and why it moved.
  */
 function cascade(cheap, better) {
   const GIVE_UP =
     /\b(I (cannot|can't|can not|am unable|'m unable|don't have (access|the ability))|unable to (find|answer|help|access)|jag kan (inte|tyvärr inte))\b/i;
   const callCheap = mistral(cheap);
-  const callBetter = bedrock(better);
+  // Strict's cascade is Mistral to Mistral (Small, then Medium): the same shape, nothing to turn.
+  const callBetter = better.startsWith("mistral-") ? mistral(better) : bedrock(better);
   const onBetter = new WeakSet();
   const cost = (model, t) => {
     const [pin, pout] = price(model);
@@ -213,7 +216,8 @@ function cascade(cheap, better) {
   const converse = (messages) => {
     const out = [];
     for (const m of messages) {
-      if (m.role === "user") out.push({ role: "user", content: [{ text: m.content }] });
+      if (m.role === "user" || m.role === "system")
+        out.push({ role: "user", content: [{ text: m.content }] });
       else if (m.role === "assistant")
         out.push({
           role: "assistant",
@@ -240,6 +244,10 @@ function cascade(cheap, better) {
     return out;
   };
   const askBetter = async (system, messages, tools) => {
+    if (better.startsWith("mistral-")) {
+      const turn = await callBetter(system, messages, tools);
+      return { ...turn, cost: cost(better, turn) };
+    }
     const turn = await callBetter(system, converse(messages), tools);
     return {
       ...turn,
@@ -262,7 +270,13 @@ function cascade(cheap, better) {
   return async (system, messages, tools) => {
     if (onBetter.has(messages)) return askBetter(system, messages, tools);
     const rounds = messages.filter((m) => m.role === "assistant" && m.tool_calls?.length).length;
-    const why = (messages.refused ?? 0) >= 2 ? "refused" : rounds >= 3 ? "rounds" : undefined;
+    const why = messages.ungrounded
+      ? "ungrounded"
+      : (messages.refused ?? 0) >= 2
+        ? "refused"
+        : rounds >= 3
+          ? "rounds"
+          : undefined;
     if (why) {
       onBetter.add(messages);
       return { ...(await askBetter(system, messages, tools)), moved: why };
@@ -304,8 +318,16 @@ function results(model, done) {
     : done.map((r) => ({ role: "tool", tool_call_id: r.id, name: r.name, content: r.text }));
 }
 
-/** One question: the model asks for tools until it answers, at most MAX_CALLS model calls. */
-async function ask(model, call, tools, system, question) {
+/** The writes the app's tools make; at /mcp they are done, in the kit only proposed. */
+const WRITES = /^(add|change|delete|remove|run)(_|$)/;
+
+/**
+ * One question: the model asks for tools until it answers, at most MAX_CALLS model calls. With the
+ * app's answer check (its kit's grounded.ts, ask-checks.md §3), as the kit's loop runs it: an
+ * answer that is not grounded goes back once with why, then once more marked (the cascade moves it
+ * to the better model), and is then shown as not confirmed; each check adds a call to the limit.
+ */
+async function ask(model, call, tools, system, question, check) {
   const messages = [
     { role: "user", content: model.startsWith("eu.anthropic.") ? [{ text: question }] : question },
   ];
@@ -316,8 +338,10 @@ async function ask(model, call, tools, system, question) {
   let resultTokens = 0;
   let cost;
   let moved;
+  let checks = 0;
+  const steps = [];
   const trace = [];
-  while (calls < MAX_CALLS) {
+  while (calls < MAX_CALLS + checks) {
     calls++;
     const turn = await call(system, messages, tools.list);
     tokensIn += turn.tokensIn;
@@ -325,6 +349,18 @@ async function ask(model, call, tools, system, question) {
     if (turn.cost !== undefined) cost = (cost ?? 0) + turn.cost;
     moved ??= turn.moved;
     messages.push(turn.message);
+    const why = !turn.calls.length && turn.text.trim() && check?.(turn.text, question, steps);
+    if (why && checks < 2) {
+      checks++;
+      trace.push(`check: ${why}`);
+      messages.push(
+        model.startsWith("eu.anthropic.")
+          ? { role: "user", content: [{ text: why }] }
+          : { role: "system", content: why },
+      );
+      if (checks === 2) messages.ungrounded = true;
+      continue;
+    }
     if (!turn.calls.length)
       return {
         text: turn.text,
@@ -336,6 +372,8 @@ async function ask(model, call, tools, system, question) {
         trace,
         cost,
         moved,
+        checks: check ? checks : undefined,
+        unconfirmed: Boolean(why) || undefined,
       };
     const done = [];
     for (const c of turn.calls) {
@@ -345,11 +383,23 @@ async function ask(model, call, tools, system, question) {
         const text = (r.content ?? []).map((x) => x.text ?? "").join("\n");
         resultTokens += Math.ceil(text.length / 4);
         done.push({ id: c.id, name: c.name, text, error: r.isError });
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = text;
+        }
+        steps.push(
+          r.isError
+            ? { tool: c.name, args: c.input ?? {}, error: text }
+            : { tool: c.name, args: c.input ?? {}, result, proposed: WRITES.test(c.name) },
+        );
         trace.push(
           `${c.name}(${JSON.stringify(c.input ?? {}).slice(0, 120)})${r.isError ? ` → ${text.slice(0, 160)}` : ""}`,
         );
       } catch (error) {
         done.push({ id: c.id, name: c.name, text: String(error.message), error: true });
+        steps.push({ tool: c.name, args: c.input ?? {}, error: String(error.message) });
         trace.push(`${c.name} → ${String(error.message).slice(0, 160)}`);
       }
     }
@@ -368,6 +418,7 @@ async function ask(model, call, tools, system, question) {
     gaveUp: true,
     cost,
     moved,
+    checks: check ? checks : undefined,
   };
 }
 
@@ -522,6 +573,29 @@ for (const starter of rescore ? [] : starters) {
     )?.[1];
   if (voice && !voiceLine) throw new Error(`No line for the voice ${voice} in the app's kit.`);
   const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.${voiceLine ? ` ${voiceLine}` : ""}${instructions ? `\n\n${instructions}` : ""}`;
+  // The app's answer check, when its kit has one: grounded.ts bundled by the app's own esbuild
+  // (Vite's, since the app does not depend on it directly; grounded.ts imports ./words without an
+  // extension), with the kinds of record named as the app names them.
+  let check;
+  if (existsSync(join(dir, "src/kit/grounded.ts"))) {
+    const out = join(dir, "..", "grounded.mjs");
+    const vite = createRequire(join(dir, "package.json")).resolve("vite");
+    await createRequire(vite)("esbuild").build({
+      entryPoints: [join(dir, "src/kit/grounded.ts")],
+      bundle: true,
+      format: "esm",
+      platform: "node",
+      outfile: out,
+      logLevel: "error",
+    });
+    const { ungrounded } = await import(out);
+    const words = (name) => name.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+    const kinds = ir.models.map((m) => ({
+      label: words(m.name),
+      pluralLabel: words(plural(m.name)),
+    }));
+    check = (text, q, steps) => ungrounded(text, q, steps, kinds);
+  }
   const reset = async () => {
     stop();
     copyFileSync(pristine, join(dir, "data/db/app.db"));
@@ -563,7 +637,7 @@ for (const starter of rescore ? [] : starters) {
         if (question.kind === "change") await reset();
         let r;
         try {
-          r = await ask(model, call, tools, system, question.q);
+          r = await ask(model, call, tools, system, question.q, check);
         } catch (error) {
           r = {
             text: "",
@@ -604,6 +678,8 @@ for (const starter of rescore ? [] : starters) {
           trace: r.trace,
           cost: r.cost ?? (r.tokensIn * pin + r.tokensOut * pout) / 1e6,
           moved: r.moved,
+          checks: r.checks,
+          unconfirmed: r.unconfirmed,
           seconds: (Date.now() - started) / 1000,
           note: r.error,
         };
@@ -647,7 +723,8 @@ const unsure = (r) =>
   /\b(could not|couldn't|can't|cannot|unable|not sure|don't know|do not know|did you mean|which one)\b/i.test(
     r.answer ?? "",
   );
-const wrongKind = (r) => (unsure(r) ? "said unsure" : "stated as fact");
+const wrongKind = (r) =>
+  r.unconfirmed ? "shown as not confirmed" : unsure(r) ? "said unsure" : "stated as fact";
 /** A question whose answer is a count, sum or average over records. */
 const adds = (q) =>
   q.kind === "pairs" ||
@@ -670,7 +747,7 @@ const totals = models.map((m) => {
     (r) => r.outcome === "wrong" && adds(QUESTIONS[r.starter][r.n - 1]) && byModel(r),
   ).length;
   const wrong = rows.filter((r) => r.outcome === "wrong");
-  const asFact = wrong.filter((r) => !unsure(r)).length;
+  const asFact = wrong.filter((r) => !unsure(r) && !r.unconfirmed).length;
   const valid = rows.filter(allValid);
   const validRight = valid.filter((r) => r.outcome === "right").length;
   return `| ${m} | ${k("right")} / ${rows.length} (${Math.round((100 * k("right")) / Math.max(1, rows.length))} %) | ${k("wrong")} | ${asFact} | ${added} | ${validRight} / ${valid.length} | ${k("gave up") + k("error")} | ${avg((r) => r.calls).toFixed(1)} | ${lookups} / ${reads.length} | ${Math.round(avg((r) => r.tokensIn)).toLocaleString("en")} / ${Math.round(avg((r) => r.tokensOut)).toLocaleString("en")} | ${Math.round(avg((r) => r.resultTokens)).toLocaleString("en")} | $${avg((r) => r.cost).toFixed(4)} | ${avg((r) => r.seconds).toFixed(1)} s |`;
@@ -691,7 +768,19 @@ ${models
     const up = rows.filter((r) => r.moved);
     const by = (w) => up.filter((r) => r.moved === w).length;
     const right = (rs) => rs.filter((r) => r.outcome === "right").length;
-    return `\n**${m}** moved ${up.length} of ${rows.length} questions to the better model (${by("refused")} after two refused tool calls, ${by("rounds")} at the fourth call, ${by("gave up")} after an answer that gave up); ${right(up)} of them were then right. Of the ${rows.length - up.length} that stayed on the cheap model, ${right(rows.filter((r) => !r.moved))} were right.\n`;
+    return `\n**${m}** moved ${up.length} of ${rows.length} questions to the better model (${by("refused")} after two refused tool calls, ${by("rounds")} at the fourth call, ${by("gave up")} after an answer that gave up, ${by("ungrounded")} after an answer the check sent back twice); ${right(up)} of them were then right. Of the ${rows.length - up.length} that stayed on the cheap model, ${right(rows.filter((r) => !r.moved))} were right.\n`;
+  })
+  .join("")}${models
+  .map((m) => {
+    const rows = results_.filter((r) => r.model === m && r.checks !== undefined);
+    if (!rows.length) return "";
+    const back = rows.filter((r) => r.checks > 0);
+    const shown = rows.filter((r) => r.unconfirmed);
+    const of = (rs, o) => rs.filter((r) => r.outcome === o).length;
+    return `\n**${m}**, the app's answer check (ask-checks.md §3): ${back.length} of ${rows.length} answers went back to the model; ${back.length - shown.length} of them came back grounded (${of(
+      back.filter((r) => !r.unconfirmed),
+      "right",
+    )} right). ${shown.length} were shown as not confirmed: ${of(shown, "wrong")} wrong and ${of(shown, "right")} right. A wrong answer shown as not confirmed is not counted as stated as fact.\n`;
   })
   .join("")}
 The tools each starter offers (\`tools/list\`, about four characters a token):
