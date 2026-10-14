@@ -1,6 +1,8 @@
 // Smithable app kit: a table of records for any model. Choice values show as badges.
 // To customize a table, copy this file into src/custom/components/ and edit the copy.
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -62,6 +64,15 @@ interface ModelTableProps<R extends Row> {
   more?: { total: number; load: () => Promise<void> };
   /** The whole list as it is filtered, for "Export CSV" (the selection bar exports chosen rows). */
   exportRows?: () => Promise<R[]>;
+  /**
+   * Sorting by a column's header (the page's sortable fields): each column's key in the address,
+   * the order now ("key", or "-key" for largest or latest first) and choosing another.
+   */
+  sorting?: {
+    keys: Partial<Record<keyof R & string, string>>;
+    value?: string;
+    onChange: (sort?: string) => void;
+  };
 }
 
 /** "1–50 of 1,234" and Previous / Next, under a table that is one page of a longer list. */
@@ -167,6 +178,7 @@ export function ModelTable<R extends Row>({
   paging,
   more,
   exportRows,
+  sorting,
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
@@ -428,15 +440,48 @@ export function ModelTable<R extends Row>({
                     />
                   </TableHead>
                 )}
-                {columns.map((field) => (
-                  <TableHead
-                    key={field.name}
-                    className={numeric(field.kind) ? "text-right" : undefined}
-                    {...editorMarker(ui, field, "column", page)}
-                  >
-                    {second(field) ? `${field.label} / ${second(field)?.label}` : field.label}
-                  </TableHead>
-                ))}
+                {columns.map((field) => {
+                  const label = second(field)
+                    ? `${field.label} / ${second(field)?.label}`
+                    : field.label;
+                  const key = sorting?.keys[field.name as keyof R & string];
+                  const order =
+                    key && sorting?.value === key
+                      ? "ascending"
+                      : key && sorting?.value === `-${key}`
+                        ? "descending"
+                        : undefined;
+                  return (
+                    <TableHead
+                      key={field.name}
+                      aria-sort={key ? (order ?? "none") : undefined}
+                      className={numeric(field.kind) ? "text-right" : undefined}
+                      {...editorMarker(ui, field, "column", page)}
+                    >
+                      {key && sorting ? (
+                        // Once ascending, again descending, a third time the page's own order.
+                        <button
+                          type="button"
+                          onClick={() =>
+                            sorting.onChange(
+                              order === "ascending" ? `-${key}` : order ? undefined : key,
+                            )
+                          }
+                          className="inline-flex cursor-pointer items-center gap-1 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {label}
+                          {order === "ascending" ? (
+                            <ArrowUp aria-hidden className="size-3.5" />
+                          ) : order === "descending" ? (
+                            <ArrowDown aria-hidden className="size-3.5" />
+                          ) : null}
+                        </button>
+                      ) : (
+                        label
+                      )}
+                    </TableHead>
+                  );
+                })}
                 {saved && (
                   <TableHead className="w-12">
                     <span className="sr-only">{w.saved}</span>

@@ -1176,6 +1176,28 @@ async function filtersFlow(base) {
       throw new Error("the removed range came back");
     if ((await page.getByRole("spinbutton", { name: "Credit limit from" }).inputValue()) !== "")
       throw new Error("the removed range still shows its from");
+    await page.getByRole("checkbox", { name: "Mine" }).click();
+    await page.waitForURL((url) => !url.searchParams.has("owner"));
+    // A sortable column's header sorts: once ascending, again descending, a third time the
+    // page's own order. The list is high to low now (from Sort by), so the next click is off.
+    const header = page.getByRole("button", { name: "Credit limit", exact: true });
+    await header.click();
+    await page.waitForURL((url) => !url.searchParams.has("sort"));
+    // Each click goes by the order the header shows, so the next waits for it.
+    await page
+      .locator("th[aria-sort=none]", { hasText: "Credit limit" })
+      .waitFor({ timeout: 10000 });
+    await header.click();
+    await page.waitForURL(/sort=creditLimit(&|$)/);
+    // The address changes first; the header follows when the list's data arrives.
+    await page
+      .locator("th[aria-sort=ascending]", { hasText: "Credit limit" })
+      .waitFor({ timeout: 10000 })
+      .catch(() => {
+        throw new Error("the sorted column does not say it is ascending");
+      });
+    await header.click();
+    await page.waitForURL(/sort=-creditLimit/);
     console.log(
       "  ✓ browser: a list filters by a chip, a range and Mine and sorts by the address's order, applied by the query; a linked view gives the same list",
     );
