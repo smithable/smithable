@@ -341,7 +341,16 @@ ${tests.join("\n\n")}
   });
   // A standard action: who may run it on others' records and on their own (whoever may edit,
   // narrowed by "allow"), and that it is refused on a record its condition does not fit.
-  const standard = ir.actions.filter((a): a is StandardActionIR => !a.custom);
+  // A condition on a computed field (LAST of a list, record-rules.md §5) is fitted by related
+  // records a test does not make: the app's own flows try such an action.
+  const standard = ir.actions
+    .filter((a): a is StandardActionIR => !a.custom)
+    .filter(
+      (a) =>
+        !Object.keys(a.when ?? {}).some(
+          (k) => ir.models.find((m) => m.name === a.on)?.fields.find((f) => f.name === k)?.formula,
+        ),
+    );
   const overMany = new Set<string>();
   for (const action of standard) {
     const model = ir.models.find((m) => m.name === action.on) as ModelIR;

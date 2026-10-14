@@ -138,6 +138,8 @@ export const w = {
   messageSent: "Ditt meddelande är skickat.",
   modelNotReached: "Modellen gick inte att nå.",
   month: "Månad",
+  mine: "Mina",
+  unassigned: "Ej tilldelade",
   more: "Mer",
   moreArticles: "Fler artiklar",
   moreBelow: "Mer längre ned",

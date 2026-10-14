@@ -137,6 +137,9 @@ export const w = {
   messageSent: "Your message is sent.",
   modelNotReached: "The model could not be reached.",
   month: "Month",
+  /** A person filter's chips (record-rules.md §6): the viewer, and nobody. */
+  mine: "Mine",
+  unassigned: "Unassigned",
   more: "More",
   moreArticles: "More articles",
   moreBelow: "More below",

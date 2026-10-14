@@ -728,7 +728,7 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
   const locks = model.fields.flatMap((f) =>
     f.locked
       ? [
-          `          if (${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, before)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
+          `          if (${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, was)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
         ]
       : [],
   );
@@ -746,11 +746,24 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     .map((f) => `${f.name}: ${JSON.stringify(f.default)}, `)
     .join("");
   const ruled = locks.length > 0 || needs("next").length > 0;
+  // A condition naming a computed field (record-rules.md §5) reads the record as the page loads
+  // it, its formulas worked out: the stored row has none.
+  const formulaNames = new Set(model.fields.filter((f) => f.formula).map((f) => f.name));
+  const namesComputed = model.fields.some((f) =>
+    [f.locked === true ? undefined : f.locked, f.requiredWhen].some(
+      (c) => c && Object.keys(c).some((k) => formulaNames.has(k)),
+    ),
+  );
+  const loadComputed =
+    ruled && namesComputed
+      ? `    const loaded: Record<string, unknown> = (await ${n.data}.get(viewer, id)) ?? {};\n`
+      : "";
   const updateRules = ruled
     ? `
         if (before) {
-          const given: Record<string, unknown> = updated;${locks.length ? `\n          if (what === "changed") {\n  ${locks.join("\n  ")}\n          }` : ""}
-          const next: Record<string, unknown> = { ...before, ...given };${needs("next")
+          const given: Record<string, unknown> = updated;
+          const was: Record<string, unknown> = ${loadComputed ? "{ ...before, ...loaded }" : "before"};${locks.length ? `\n          if (what === "changed") {\n  ${locks.join("\n  ")}\n          }` : ""}
+          const next: Record<string, unknown> = { ...was, ...given };${needs("next")
             .map((l) => `\n          ${l}`)
             .join("")}
         }`
@@ -1817,7 +1830,7 @@ ${
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
-${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let changed: typeof ${n.table}.$inferSelect;
+${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
     try {
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}

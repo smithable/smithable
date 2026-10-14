@@ -16,8 +16,9 @@ const RANGE = ["int", "decimal", "money", "date", "datetime"];
 export const filterable = (field: FieldIR): boolean =>
   !field.formula &&
   (field.type.kind === "choice" ||
-    // People who sign in are never listed as chips; the automatic owner is a "Mine" toggle.
-    (field.type.kind === "relation" && !field.type.many && field.type.model !== "User") ||
+    // A person (record-rules.md §6): Mine, Unassigned and the people by name; the automatic
+    // owner stays a "Mine" toggle.
+    (field.type.kind === "relation" && !field.type.many) ||
     (field.type.kind === "scalar" &&
       (field.type.name === "bool" || RANGE.includes(field.type.name))));
 
@@ -73,9 +74,7 @@ function checkListFields(
         at,
         key === "filters" ? "invalid-filter" : "invalid-sort",
         key === "filters"
-          ? field.type.kind === "relation" && field.type.model === "User"
-            ? `"${name}" cannot be a filter: people are not listed as filters; owner gives a Mine toggle.`
-            : `"${name}" cannot be a filter: only choices, references, numbers, amounts, dates and yes/no fields can (text is searched, not filtered).`
+          ? `"${name}" cannot be a filter: only choices, references, numbers, amounts, dates and yes/no fields can (text is searched, not filtered).`
           : field.formula
             ? `"${name}" cannot be sorted by: a calculated field has no stored value to sort by.`
             : `"${name}" cannot be sorted by: pictures, long text and lists of records have no order.`,

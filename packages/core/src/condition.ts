@@ -15,6 +15,8 @@ export function readCondition(
   node: At,
   what: string,
   model?: ModelIR,
+  /** A computed field may be named (a condition read on the loaded record, not in a query). */
+  computed = false,
 ): Condition | undefined {
   const condition: Condition = {};
   for (const { key, keyNode, value } of mapEntries(ctx, node, what) ?? []) {
@@ -23,7 +25,7 @@ export function readCondition(
       ctx.error(value, "invalid-value", `${what} ${SHAPE}`);
       continue;
     }
-    if (model && !conditionFits(model, key, wanted)) {
+    if (model && !conditionFits(model, key, wanted, computed)) {
       const field = model.fields.find((f) => f.name === key);
       if (!field)
         ctx.error(
