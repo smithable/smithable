@@ -211,7 +211,8 @@ function Part({
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">
           {titled &&
-            (model ? (
+            // A kind of record or an action opens its properties (an action's button and help).
+            (model || section.concept.startsWith("action:") ? (
               <button
                 type="button"
                 className="hover:text-accent"

@@ -94,6 +94,8 @@ export function texts(content: ContentIR, appName = "") {
     /** An action's button and page title: its label, else its name in words. */
     action: (action: { name: string }) =>
       content.actions[action.name]?.label ?? humanize(action.name),
+    /** What an action does, in the app's words: its button's tooltip and its dialog's line. */
+    actionHelp: (action: { name: string }) => content.actions[action.name]?.help,
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];

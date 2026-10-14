@@ -565,7 +565,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || favorites 
     .map(
       (a) => `
   const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
-    <Link to=${attr(join(page.route, `actions/${kebab(a.name)}`))} className={buttonVariants({ variant: "outline" })}>
+    <Link to=${attr(join(page.route, `actions/${kebab(a.name)}`))}${t.actionHelp(a) ? ` title=${attr(t.actionHelp(a) as string)}` : ""} className={buttonVariants({ variant: "outline" })}>
       ${t.action(a)}
     </Link>
   );`,
@@ -617,7 +617,7 @@ ${
             .map(
               (a) => `
             {
-              label: ${JSON.stringify(t.action(a))},
+              label: ${JSON.stringify(t.action(a))},${t.actionHelp(a) ? `\n              help: ${JSON.stringify(t.actionHelp(a))},` : ""}
               concept: "action:${a.name}",
               applies: chosen.filter((row) => ${fits(a)}).length,${askedFields(a).length ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks} },` : ""}
               run: (${askedFields(a).length ? "values" : ""}) => ${actionNames(a).many}({ data: { ids: chosen.map((row) => row.id)${askedFields(a).length ? ", values: values as never" : ""} } }),

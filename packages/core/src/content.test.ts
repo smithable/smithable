@@ -60,8 +60,10 @@ test("an action's label, by its name in smithable.yml", () => {
   const read = (text: string) =>
     validateContent({ path: "smithable.content.yml", text }, withAction);
   expect(
-    read("smithableContent: 0.1\nactions:\n  upgrade: { label: Uppgradera }\n").content?.actions,
-  ).toEqual({ upgrade: { label: "Uppgradera" } });
+    read(
+      "smithableContent: 0.1\nactions:\n  upgrade: { label: Uppgradera, help: Gör kunden till storkund. }\n",
+    ).content?.actions,
+  ).toEqual({ upgrade: { label: "Uppgradera", help: "Gör kunden till storkund." } });
   expect(
     read("smithableContent: 0.1\nactions:\n  upgrad: { label: X }\n").diagnostics.map((d) => [
       d.code,

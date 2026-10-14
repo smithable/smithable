@@ -238,6 +238,46 @@ export function Properties({
       </div>
     );
   }
+  if (kind === "action") {
+    const action = ir.actions.find((x) => x.name === name);
+    if (!action) return null;
+    const texts = spec.content?.actions[name];
+    return (
+      <div className="space-y-3 border-b border-line p-3 text-sm">
+        {heading}
+        <TextSetting
+          label="Button"
+          path={["actions", name, "label"]}
+          current={texts?.label}
+          fallback={humanize(name)}
+          run={run}
+        />
+        <TextSetting
+          label="Help"
+          shown="Help: the button's tooltip"
+          path={["actions", name, "help"]}
+          current={texts?.help}
+          fallback="None"
+          run={run}
+        />
+        {/* The intent is for the maker and the model, never shown in the app: it becomes the
+            help only when the maker says so. */}
+        {action.intent && action.intent !== texts?.help && (
+          <div className="space-y-1">
+            <p className="text-muted">Its intent: “{action.intent}”</p>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void run("setText", { path: ["actions", name, "help"], text: action.intent })
+              }
+            >
+              Use as the help text
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
   if (kind === "page") {
     const page = ir.pages.find((p) => p.id === name);
     if (!page) return null;

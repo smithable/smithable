@@ -672,8 +672,9 @@ export function actionButton(
   const after = action.copy
     ? `await navigate({ to: ${JSON.stringify(join(route, "$id"))}, params: { id: String(copy) } });`
     : "await router.invalidate();";
+  const help = t.actionHelp(action);
   return `<ActionButton
-                label=${attr(t.action(action))}
+                label=${attr(t.action(action))}${help ? `\n                help=${attr(help)}` : ""}
                 concept="action:${action.name}"${
                   asks
                     ? `
