@@ -147,7 +147,18 @@ export const ICON_CHOICES = [
 ];
 
 /** The selected concept's properties, changed with operations (the Photoshop-like panel). */
-export function Properties({ concept, spec, run }: { concept: string; spec: Spec; run: Run }) {
+export function Properties({
+  concept,
+  spec,
+  run,
+  onLook,
+}: {
+  concept: string;
+  spec: Spec;
+  run: Run;
+  /** Opens the Look tab (Builder only), where a list's columns and a form's fields are set. */
+  onLook?: () => void;
+}) {
   const ir = spec.ir;
   const [kind = "", rest = ""] = concept.split(":");
   const [name = "", fieldName] = rest.split(".");
@@ -248,6 +259,22 @@ export function Properties({ concept, spec, run }: { concept: string; spec: Spec
           fallback="None"
           run={run}
         />
+        {page.pattern.kind === "crud" && (
+          <p className="text-muted">
+            The columns its list shows and the order of its form are part of the look:
+            {onLook ? (
+              <>
+                {" "}
+                <button type="button" className="text-accent hover:underline" onClick={onLook}>
+                  set them in Look
+                </button>
+                .
+              </>
+            ) : (
+              ` pages.${name}.table.columns in smithable.ux.yml.`
+            )}
+          </p>
+        )}
         <Label text="Icon in the menu">
           <Select
             aria-label="Icon in the menu"

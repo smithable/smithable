@@ -12,6 +12,9 @@ import { CustomCode, customFile } from "./custom-code";
  * app is being made (`making`), a request is kept for later instead (`waiting`, in Studio's
  * server); once the app is in place each is taken in turn, as if typed then.
  */
+/** Where the words box keeps a request not yet sent. */
+const DRAFT = "smithable:ask-draft";
+
 export function Ask({
   example,
   onDone,
@@ -29,7 +32,22 @@ export function Ask({
   making?: boolean;
   waiting?: string[];
 }) {
-  const [request, setRequest] = useState("");
+  // A request half written stays when the person looks elsewhere (another tab, a mode) and
+  // comes back: kept for the browser tab's session.
+  const [request, setRequestState] = useState(() => {
+    try {
+      return sessionStorage.getItem(DRAFT) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const setRequest = (text: string) => {
+    setRequestState(text);
+    try {
+      if (text) sessionStorage.setItem(DRAFT, text);
+      else sessionStorage.removeItem(DRAFT);
+    } catch {}
+  };
   const [proposal, setProposal] = useState<Proposal>();
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
