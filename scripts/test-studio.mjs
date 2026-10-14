@@ -221,6 +221,13 @@ try {
   await step(
     "a note in What it does applies its advice with Apply, and undo takes it back",
     async () => {
+      // The CRM took its own advice (filters on its orders): take them away for the note to show.
+      const op = (...args) => {
+        const done = spawnSync("node", [cli, "op", ...args], { cwd: dir, encoding: "utf8" });
+        if (done.status !== 0) throw new Error(`${args[0]}: ${done.stdout}${done.stderr}`);
+      };
+      op("setFilters", "orders");
+      await page.reload();
       const notes = page.getByRole("region", { name: "Worth considering" });
       const orders = notes.getByRole("listitem").filter({ hasText: "orders lists orders" });
       await orders.getByRole("button", { name: "Apply" }).click();
@@ -232,6 +239,8 @@ try {
       await orders.waitFor({ timeout: 30000 });
       if (/ {4}filters: \[status, shippingMethod\]/.test(spec()))
         throw new Error("undo left the filters");
+      op("setFilters", "orders", "status");
+      await page.reload();
     },
   );
   await step("the preview says its records are samples, until dismissed", async () => {
