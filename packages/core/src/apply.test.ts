@@ -1241,6 +1241,33 @@ test("addField --formula and addModel's long form add computed fields; a shortha
   expect(model.files.spec).toContain(
     "      amount:\n        type: money\n        formula: quantity * unitPrice\n",
   );
+  // A number within bounds: the long form, the default as its own key; addField the same.
+  const bounded = applyOperation(files, "addModel", {
+    model: "Ticket",
+    fields: { title: "string!", priority: { type: "int!", min: 1, max: 5, default: 3 } },
+  });
+  if (!bounded.ok) throw new Error(bounded.message);
+  expect(bounded.files.spec).toContain(
+    "      priority:\n        type: int!\n        min: 1\n        max: 5\n        default: 3\n",
+  );
+  const withMax = applyOperation(bounded.files, "addField", {
+    model: "Ticket",
+    field: "note",
+    type: "string",
+    max: 80,
+  });
+  if (!withMax.ok) throw new Error(withMax.message);
+  expect(withMax.files.spec).toContain("      note:\n        type: string\n        max: 80\n");
+  // The long form without a formula or bounds, and bounds on a computed field, are refused.
+  expect(
+    applyOperation(files, "addModel", { model: "Ticket", fields: { n: { type: "int!" } } }).ok,
+  ).toBe(false);
+  expect(
+    applyOperation(files, "addModel", {
+      model: "Ticket",
+      fields: { n: "int", d: { type: "int", formula: "n * 2", max: 9 } },
+    }).ok,
+  ).toBe(false);
   // A computed field is never entered: the parser's own refusal for one that is required.
   expect(
     applyOperation(files, "addModel", {

@@ -69,7 +69,7 @@ export function draftOperations(): AnyOperation[] {
 const GUIDANCE = `You design the first version of a web app as a list of Smithable operations, applied in order to an empty app. Smithable generates the whole app from the result.
 Order: setApp (name, one-sentence description, currency, timezone); addModel for each kind of record with its fields; addPage for the records people manage (one crud page per model, the first page is the app's start); addLandingPage only for an app with public visitors (it already has a hero and a footer; addSection adds other sections), and with it addPrivacyPage (a privacy page written from the app; the operator's details come later); addDataPage or addUsersPage only for administrators' tools; setDefaultAccess only to change the access the app starts with (shared: a team works on the same records; private: each person sees only their own); setRoles when the app has more than one kind of user, then grant for each role (pages, create, write, delete, actions: "all" or a list; the member role already opens every page and adds every kind of record, so grant it less when the description says so, e.g. { role: "member", what: "create", names: ["Booking"] }); setOwner when a record belongs to someone other than whoever created it ("each customer has an account manager", "the salesperson who handles the order": add a field that refers to User, then setOwner with it, and "owner" in the access means that person); setPublic for what visitors may open, read or create; setTheme for the look; setText for the landing page's texts; addAction with "on", "set" and usually "when" for a button that moves a record to its next state (resolve an incident, mark an invoice paid, cancel a booking), e.g. { action: "resolve", on: "Incident", when: { status: "investigating | identified" }, set: { status: "resolved", resolvedAt: "NOW()" }, add: { "IncidentUpdate.at": "NOW()", "IncidentUpdate.status": "resolved", "IncidentUpdate.message": "" } }: "add" also creates a related record (a model that refers to this one), and an empty value asks the person for it when they press the button; "copy" (with "with" for its lists) makes a new record from this one ("duplicate invoice"), and "ME()" sets a User field to whoever presses the button ("take ticket"). Never add a custom action (one without "on") unless the description asks for something only code can do: it does nothing until someone writes its code. Booking a place needs no action: the booking refers to what is booked ("session: Session!", with "unique" only when bookings are private, as in the booking starter, where it means one place per person; in a shared app "unique" would allow one booking per session in all) and setCapacity limits the bookings per session to its places ("session.capacity"); the Book button and the places left come with it. A "when" compares choice and yes/no fields only, never numbers. addOutgoing only when the description says someone is told of something ("send a confirmation when a booking is made", "mail the customer when the order ships"): { outgoing: "bookingMade", when: "Booking created", recipient: "owner" } (when: "<Model> created | changed | deleted" or an action's name; recipient: "owner", a role, an email field, or one reference away as "customer.email"; "where" for "becomes shipped").
 When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, standard actions (those with "on"; never its custom ones), roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. A role opens only the pages and adds only the records its grants name, and changes or deletes only its own records unless granted "write" or "delete" on a model: grant as the starter does, and as the description says. The starter's app name, its people, places and texts are sample content: never reuse them.
-Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), markdown (formatted long text), int, decimal, money, bool, date, datetime, email, phone, url, picture (one stored picture), pictures (up to ten), file (one stored document: a PDF, an Office file), files (up to ten; attachments); choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
+Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), markdown (formatted long text), int, decimal, money, bool, date, datetime, email, phone, url, picture (one stored picture), pictures (up to ten), file (one stored document: a PDF, an Office file), files (up to ten; attachments); choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A number held within bounds ("priority 1 to 5", "stars 1-5", "at least 18") is the long form { "type": "int!", "min": 1, "max": 5, "default": 3 } (the default as its own key there, never "=" in "type"); so is a text with a longest length. A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Language: everything a person reads is written in one language, the description's (or the one you are told): the app's name and description, the landing page's texts, and, when that language is not English, a label for every model (setText with path [models, <Model>, label] and [models, <Model>, pluralLabel]), field ([models, <Model>, fields, <field>, label]), choice value ([models, <Model>, fields, <field>, values, <value>]), action ([actions, <action>, label]) and page ([pages, <page>, title]); never one action or choice left in English beside the others. Model, field and choice names themselves stay English identifiers; a page's name becomes its address, so it may be a word of that language written with plain letters (boka-nu). When the description is in a language the app kit has words in (setLanguage), setLanguage with it comes first, so the app's own words (Save, Cancel, the sign-in page) are in that language too; it is already applied when "Applied so far" lists it.
 Keep it small: what the description needs, nothing for later. Every model needs a page or a place it is shown. A public site needs a landing page, public pages and public read in setPublic. What people come to look at before they join is public even when the rest needs sign-in (the tools of a tool library, the plots of an allotment, a menu, the listings, the classes to book): a landing page, that model's page in setPublic's pages and the model in its read; signing in is then for what a person does (borrow, book, sell) and for the records about people (members, loans, bookings), which are never public. An app for a team's own work (a CRM, invoicing, a help desk, an inventory) has nothing public. A landing page's button leads to a page visitors may open, unless it is the way into the app ("Book now", "Sign in"). Never make a model with an email or phone field, or a field that refers to User, readable by visitors (setPublic's read): that publishes people's names and contact details; keep those in a model that is not public, or collect them with a contact form. An app with shared access is for people who are invited (Smithable adds the team page): call setSignUp anyone only when the description says anybody may join.`;
 
@@ -145,9 +145,27 @@ const fieldStep = (model: unknown, field: string, value: unknown): Step => ({
   op: "addField",
   args:
     typeof value === "object" && value
-      ? { model, field, ...(value as { type: string; formula: string }) }
+      ? { model, field, ...(value as { type: string; formula?: string }) }
       : { model, field, type: value },
 });
+
+/**
+ * A field in the long form (a formula, bounds): its type mended as the shorthand is, and a
+ * default written in the type ("int! = 3") moved to its own key when the form is the bounded one.
+ */
+export function repairLongField(value: Record<string, unknown>): Record<string, unknown> {
+  if (typeof value.type !== "string") return value;
+  const type = repairFieldShorthand(value.type);
+  const m = /^(.*?)\s*=\s*(.+)$/.exec(type);
+  // Only the bounded long form has a "default" key; elsewhere "= x" is a default or a formula
+  // the shorthand's own checks sort out.
+  const bounded = value.min !== undefined || value.max !== undefined;
+  if (!m?.[1] || !m[2] || !bounded || "formula" in value || value.default !== undefined)
+    return type === value.type ? value : { ...value, type };
+  const raw = m[2].trim();
+  const n = Number(raw);
+  return { ...value, type: m[1].trim(), default: raw !== "" && !Number.isNaN(n) ? n : raw };
+}
 
 const AUTOMATIC_FIELDS = ["id", "owner", "createdAt", "updatedAt"];
 
@@ -169,7 +187,11 @@ export function repaired(step: Step): Step | undefined {
     );
     const fields = Object.fromEntries(
       Object.entries(given).map(([k, v]) => {
-        if (typeof v !== "string") return [k, v];
+        if (typeof v !== "string")
+          return [
+            k,
+            v && typeof v === "object" ? repairLongField(v as Record<string, unknown>) : v,
+          ];
         const text = repairFieldShorthand(v);
         return [
           k,
@@ -185,8 +207,8 @@ export function repaired(step: Step): Step | undefined {
       : { ...step, args: { ...step.args, fields } };
   }
   if (step.op === "addField" && typeof step.args.type === "string") {
-    const type = repairFieldShorthand(step.args.type);
-    return type === step.args.type ? undefined : { ...step, args: { ...step.args, type } };
+    const args = repairLongField(step.args);
+    return JSON.stringify(args) === JSON.stringify(step.args) ? undefined : { ...step, args };
   }
   return undefined;
 }
