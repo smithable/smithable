@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { RUNTIME } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
-function page() {
+function page(at = "/", storage: Record<string, string> = {}) {
   // One rule for the dark color scheme, as the app's styles have; and the development sign-in's buttons.
   const darkRule = { media: { mediaText: "(prefers-color-scheme: dark)" } };
   const clicked: string[] = [];
@@ -11,6 +11,11 @@ function page() {
     click: () => clicked.push(role),
   }));
   const listeners: ((event: unknown) => void)[] = [];
+  // The development sign-in page's own button, and the timers the runtime starts, run by hand.
+  const signInButtons = [
+    { textContent: " Sign in as admin ", click: () => clicked.push("sign-in") },
+  ];
+  const ticks: (() => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
   const parent = { postMessage() {} };
   const scrolled: number[] = [];
@@ -31,7 +36,8 @@ function page() {
     createElement: () => ({ id: "", textContent: "" }),
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
     addEventListener() {},
-    querySelectorAll: (selector: string) => (selector === "[data-dev-role]" ? buttons : []),
+    querySelectorAll: (selector: string) =>
+      selector === "[data-dev-role]" ? buttons : selector === "button" ? signInButtons : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
@@ -47,17 +53,24 @@ function page() {
     "setTimeout",
     "clearInterval",
     "MutationObserver",
+    "sessionStorage",
     RUNTIME,
   )(
     window,
     document,
     { pushState() {}, replaceState() {} },
-    { pathname: "/", search: "" },
-    noop,
+    { pathname: at, search: "" },
+    (tick: () => void) => ticks.push(tick),
     noop,
     noop,
     class {
       observe() {}
+    },
+    {
+      getItem: (key: string) => storage[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storage[key] = value;
+      },
     },
   );
   const send = (data: unknown, origin = "http://localhost:5173", source: unknown = parent) => {
@@ -70,8 +83,29 @@ function page() {
     darkRule,
     clicked,
     scrolled,
+    tick: () => {
+      for (const t of [...ticks]) t();
+    },
   };
 }
+
+test("the preview signs in once a session, and again when a reload came before the sign-in did", () => {
+  const storage: Record<string, string> = {};
+  const first = page("/sign-in", storage);
+  first.tick();
+  expect(first.clicked).toEqual(["sign-in"]);
+  expect(storage["smithable:signed-in"]).toBe("pending");
+  // Reloaded on the sign-in page before it was through: pressed again.
+  const reloaded = page("/sign-in", storage);
+  reloaded.tick();
+  expect(reloaded.clicked).toEqual(["sign-in"]);
+  // In the app: it counts; after signing out the sign-in page stays for another role.
+  page("/customers", storage);
+  expect(storage["smithable:signed-in"]).toBe("1");
+  const after = page("/sign-in", storage);
+  after.tick();
+  expect(after.clicked).toEqual([]);
+});
 
 test("a theme's CSS from the lab replaces the app's until reload, its fonts at Vite's paths", () => {
   const { send, theme, head } = page();
