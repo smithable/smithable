@@ -440,7 +440,7 @@ export function ModelTable<R extends Row>({
                   </TableHead>
                 )}
                 {rowActions && (
-                  <TableHead>
+                  <TableHead className="sticky right-0 bg-muted">
                     <span className="sr-only">{w.actions}</span>
                   </TableHead>
                 )}
@@ -464,7 +464,8 @@ export function ModelTable<R extends Row>({
                         numeric(field.kind) && "text-right tabular-nums",
                         // A date and its time on one line.
                         (field.kind === "date" || field.kind === "datetime") && "whitespace-nowrap",
-                        field.name === ui.titleField && "font-semibold",
+                        // The title wraps at words, never one word a line.
+                        field.name === ui.titleField && "min-w-40 font-semibold",
                       )}
                     >
                       {field === title ? open(row, cell(field, row)) : stacked(field, row)}
@@ -472,8 +473,13 @@ export function ModelTable<R extends Row>({
                   ))}
                   {saved && <TableCell className="py-0">{heart(row)}</TableCell>}
                   {rowActions && (
-                    // At its natural width, so the title is not the column that wraps.
-                    <TableCell data-part="row-actions" className="relative z-10 w-px py-2">
+                    // At its natural width, so the title is not the column that wraps; kept at the
+                    // right edge when the table is wider than its box, the other columns scrolling
+                    // under it.
+                    <TableCell
+                      data-part="row-actions"
+                      className="sticky right-0 z-10 w-px bg-card py-2 shadow-[-8px_0_8px_-8px_rgb(0_0_0/0.3)]"
+                    >
                       <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {rowActions(row)}
                       </div>
