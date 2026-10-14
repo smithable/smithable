@@ -21,6 +21,7 @@ import {
   validateSpec,
   validateUx,
 } from "@smithable/core";
+import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 
@@ -95,6 +96,8 @@ export function loadSpec(
   print(authResult.diagnostics);
   if (!authResult.auth) return failed(authPath, authResult.diagnostics);
   const auth = authResult.auth;
+  // On the hosted service at Strict: a sign-in provider the level does not allow.
+  print(levelWarnings(hostedLevel(), auth, authFile));
 
   // The optional companions: visible text and presentation.
   let content: ContentIR | undefined;
