@@ -1,6 +1,6 @@
 # Why Smithable
 
-Smithable is for two kinds of people: those who have never written code and want an app that keeps working, and developers who want to move faster without inheriting a mess. Both get the same thing: an app described in a short file, generated as ordinary code, and changed by operations that cannot break it.
+Smithable is for two kinds of people: those who have never written code and want an app that keeps working, and developers who want to move faster without inheriting a mess. Both get the same thing: an app described in a short file, generated as ordinary code, and changed by operations that are checked, migrated and tested before they apply.
 
 ## A supported change is protected
 
