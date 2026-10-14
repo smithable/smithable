@@ -41,7 +41,7 @@ test("the CRM in plain language, with labels from the content file", () => {
   ]);
   expect(sections[1]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”)",
-    "- Orders (lists orders; search by number or customer)",
+    "- Orders (lists orders; search by number or customer; filter by status)",
     "- Team (who has access: invite people, change roles, remove users; only for admins)",
   ]);
 });

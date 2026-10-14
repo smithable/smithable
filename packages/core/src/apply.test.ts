@@ -978,7 +978,7 @@ describe("standard actions", () => {
       "  cancelOrder:\n    on: Order\n    when:\n      status: [placed, shipped]\n    set:\n      status: canceled\n      total: 0\n",
     );
     expect(result.files.spec).toMatch(
-      / {2}orders:\n {4}crud: Order\n {4}search: \[number, customer\]\n {4}actions: \[cancelOrder\]/,
+      / {2}orders:\n {4}crud: Order\n {4}search: \[number, customer\]\n {4}filters: \[status\]\n {4}actions: \[cancelOrder\]/,
     );
   });
 

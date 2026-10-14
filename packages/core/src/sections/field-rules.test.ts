@@ -147,10 +147,7 @@ test("LAST of a list is a computed value an action's condition may name; a perso
       "\nactions:\n",
       "\nactions:\n  thank: { on: Customer, when: { lastStatus: shipped }, set: { segment: enterprise } }\n",
     )
-    .replace(
-      "    search: [number, customer]\n",
-      "    search: [number, customer]\n    filters: [owner]\n",
-    );
+    .replace("    filters: [status]\n", "    filters: [status, owner]\n");
   const result = validateSpec({ path: "smithable.yml", text });
   expect(result.diagnostics.filter((d) => d.severity === "error").map((d) => d.message)).toEqual(
     [],

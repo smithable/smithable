@@ -28,5 +28,6 @@ pages:
   items:
     crud: Item
     search: [name, summary]
+    filters: [kind]
 
 navigation: [items]

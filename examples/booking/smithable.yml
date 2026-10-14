@@ -17,12 +17,14 @@ models:
         type: beginner | allLevels | advanced
         default: allLevels
       durationMinutes: int! = 60
+      sessions: Session[]               # the sessions of this kind, on its page
 
   Instructor:
     fields:
       name: string!
       bio: markdown                     # formatted text: headings, lists, links
       portrait: picture                 # a stored picture with its description
+      sessions: Session[]               # the classes they teach, on their page
 
   Session:
     description: One scheduled occurrence of a class.
@@ -103,6 +105,7 @@ pages:
     crud: Session
   class-types:
     crud: ClassType
+    filters: [level]
   instructors:
     crud: Instructor
   messages:
@@ -114,6 +117,7 @@ pages:
     legal: privacy                      # written from the app: who runs it, what it stores, cookies, mail
   posts:                              # where staff write them
     crud: Post
+    filters: [status]
   my-bookings:                        # a member's own bookings (private access)
     crud: Booking
   admin:

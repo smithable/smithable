@@ -11,14 +11,12 @@ test("validate accepts a directory and summarizes a valid spec", async () => {
   const io = captureIo();
   const path = join(examples, "crm");
   expect(await run(["validate", path], io)).toBe(0);
-  // The verdict first; then the notes (advice, with the operation that does it), the starter's two.
+  // The verdict first; then the notes (advice, with the operation that does it), the starter's one.
   expect(
     io.stdout.startsWith(`${join(path, "smithable.yml")} is valid: 2 models, 3 pages.\n`),
   ).toBe(true);
-  expect(io.stdout).toContain("2 notes, advice the app is fine without:");
-  expect(io.stdout).toContain(
-    "do: smithable op setFilters --page orders --fields status,shippingMethod",
-  );
+  expect(io.stdout).toContain("1 note, advice the app is fine without:");
+  expect(io.stdout).toContain("do: smithable op setFilters --page customers --fields segment");
 });
 
 test("validate reports errors with file, line and column, and exits with 1", async () => {
