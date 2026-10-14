@@ -254,6 +254,8 @@ export const w = {
   /** The reply box of a conversation (docs/design/conversation.md). */
   reply: "Reply",
   send: "Send",
+  /** How many messages on a row the viewer has not read (conversation.md §1). */
+  unreadCount: (count: number) => `${count} new`,
   callsTo: (target: string) => `Calls to ${target}`,
   lastCall: (when: string, answer: string) => `last ${when}, ${answer}.`,
   answered: (status: string) => `answered ${status}`,

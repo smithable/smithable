@@ -1326,6 +1326,28 @@ async function threadFlow(base) {
     console.log(
       "  ✓ browser: a list shown as a conversation; a comment sent from the reply box shows in place, with no page of its own",
     );
+    // Another person sees it unread: a badge on the row, the Unread toggle keeps that customer,
+    // and opening its conversation reads it.
+    await signInAs(page, base, "sales");
+    await open(page, `${base}/customers`);
+    const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
+    await helios.locator('[data-part="thread"]', { hasText: "1 new" }).waitFor({ timeout: 10000 });
+    await page.getByRole("checkbox", { name: "Unread" }).check();
+    await page.waitForURL(/unread=1/, { timeout: 10000 });
+    await page
+      .waitForFunction(() => document.querySelectorAll('tr[data-part="row"]').length === 1, null, {
+        timeout: 10000,
+      })
+      .catch(() => {
+        throw new Error("the Unread toggle keeps only the customer with a new comment");
+      });
+    await helios.getByRole("button", { name: "Helios Energy" }).click();
+    await page.locator('[data-kit="thread"]').getByText("Called them about the renewal.").waitFor();
+    await open(page, `${base}/customers?unread=1`);
+    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: another person sees the comment unread, with a badge and the Unread toggle, until they open it",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,

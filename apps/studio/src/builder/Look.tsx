@@ -186,6 +186,9 @@ export function Look({
                 <ListAndForm
                   page={page.id}
                   fields={model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many))}
+                  lists={model.fields
+                    .filter((f) => f.type.kind === "relation" && f.type.many)
+                    .map((f) => f.name)}
                   ux={ux.pages[page.id] ?? {}}
                   run={run}
                 />
@@ -534,11 +537,14 @@ function Columns({
 function ListAndForm({
   page,
   fields,
+  lists,
   ux,
   run,
 }: {
   page: string;
   fields: FieldIR[];
+  /** The record's lists of related records: each a table or a conversation on its page. */
+  lists: string[];
   ux: PageUx;
   run: Run;
 }) {
@@ -569,6 +575,20 @@ function ListAndForm({
           className="h-8 w-52 text-xs"
         />
       </div>
+      {lists.map((field) => (
+        <div key={field} className="flex items-center gap-2">
+          <span className="text-xs text-muted">{humanize(field)} on a record</span>
+          <Segmented
+            label={`${humanize(field)} on a record of ${title}`}
+            value={ux.lists?.[field] ?? "table"}
+            options={[
+              ["table", "Table"],
+              ["thread", "Conversation"],
+            ]}
+            onChange={(look) => run("setRecordList", { page, field, look })}
+          />
+        </div>
+      ))}
       <details>
         <summary className="cursor-pointer text-xs font-medium text-muted">Form of {title}</summary>
         <FormLook page={page} fields={fields} ux={ux} run={run} />

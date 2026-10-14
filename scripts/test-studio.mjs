@@ -1348,6 +1348,17 @@ try {
     await pages.getByRole("button", { name: "Add a section" }).first().click();
     await pages.getByLabel("Section of Email").first().selectOption("contact");
     await waitUx(/name: contact/);
+    // A list on the record page as a conversation (conversation.md §2): the orders have no long
+    // text to show as the message, so the change is refused in words.
+    await pages
+      .getByRole("group", { name: "Orders on a record of Customers" })
+      .getByRole("button", { name: "Conversation" })
+      .click();
+    await page
+      .getByText(/Order cannot be a thread: it has no long text field/)
+      .first()
+      .waitFor({ timeout: 60000 });
+    if (/lists:/.test(ux())) throw new Error("a refused conversation changed smithable.ux.yml");
     await page.getByRole("tab", { name: "What it does" }).click();
   });
 

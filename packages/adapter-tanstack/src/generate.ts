@@ -584,7 +584,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
     ],
     files: ({ ir, t, auth, ux, options }) => [
-      generated("src/db/schema.ts", schemaModule(ir, auth)),
+      generated("src/db/schema.ts", schemaModule(ir, auth, ux)),
       generated("src/db/seed.ts", seedModule(ir, options)),
       ...(hasUploads(ir) ? [generated("src/generated/uploads.ts", uploadsModule(ir, t))] : []),
       // Files reviewed before others see them (docs/design/file-review.md).
@@ -612,7 +612,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         return [
           generated(`${base}.ts`, modelModule(model, t, ir, auth, ux)),
           generated(`${base}.schema.ts`, modelSchemaModule(model, t, auth)),
-          generated(`${base}.server.ts`, dataModule(model, t, ir, auth)),
+          generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
           ...(hasFormulas(model)
             ? [generated(`${base}.formulas.ts`, formulasModuleSource(model, ir))]
             : []),

@@ -447,3 +447,22 @@ test("a field's rules on the record are said with it: who fills it, when it is f
   expect(said).toContain("required when status is shipped");
   expect(said).toContain("who makes it, by default, filled by the app");
 });
+
+test("a list shown as a conversation is said on its page", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: 'smithable: 0.1\napp: { name: Desk }\nmodels:\n  SupportCase:\n    fields: { subject: string!, messages: "Message[]" }\n  Message:\n    fields: { content: text!, supportCase: SupportCase! }\npages:\n  cases: { crud: SupportCase }\n',
+  });
+  if (!ir) throw new Error("the spec is invalid");
+  const pages = (lists?: Record<string, "thread" | "table">) =>
+    summarize(ir, undefined, emptyContent(), [], {
+      assistant: { voice: "plain" },
+      pages: { cases: { lists } },
+    })
+      .find((s) => s.concept === "pages")
+      ?.sentences.join(" ");
+  expect(pages({ messages: "thread" })).toContain(
+    "a support case's messages shown as a conversation with a reply box",
+  );
+  expect(pages({ messages: "table" })).not.toContain("conversation");
+});

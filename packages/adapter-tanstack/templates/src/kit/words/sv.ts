@@ -246,6 +246,7 @@ export const w = {
   selectAll: "Välj alla",
   reply: "Svara",
   send: "Skicka",
+  unreadCount: (count: number) => `${count} nya`,
   callsTo: (target: string) => `Anrop till ${target}`,
   lastCall: (when: string, answer: string) => `senast ${when}, ${answer}.`,
   answered: (status: string) => `svarade ${status}`,
