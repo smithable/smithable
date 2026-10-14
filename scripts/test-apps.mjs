@@ -5601,7 +5601,7 @@ test("measure sums, averages and sums per value", async () => {
   expect(await callTool(key, "measure", { kind: "Row", where: { size: "medium" } })).toMatchObject({ total: 0, note: expect.stringContaining("small, large") });
   expect(await callTool(key, "find", { kind: "Row", where: { group: "Nort" } })).toMatchObject({ total: 2 });
   expect(await callTool(key, "find", { kind: "Row", where: { group: "Westh" } })).toMatchObject({ total: 0, note: expect.stringContaining("The nearest: ") });
-  expect(await callTool(key, "find", { kind: "Row", where: { label: "zz" } })).toMatchObject({ total: 0, note: expect.stringContaining("No row has "zz" in label; the nearest: ") });
+  expect(await callTool(key, "find", { kind: "Row", where: { label: "zz" } })).toMatchObject({ total: 0, note: expect.stringContaining('No row has "zz" in label; the nearest: ') });
   expect(await callTool(key, "find", { kind: "Row", search: "bee" })).toMatchObject({ total: 0, note: expect.stringContaining("The nearest labels: ") });
   expect(await callTool(key, "measure", { kind: "Row", by: "group" })).toMatchObject({ note: expect.stringContaining("share the top, with 2 each") });
   expect(await callTool(key, "read", { kind: "Value", id: groups.North })).toMatchObject({ name: "North", rows: { total: 2, rows: [{ label: expect.any(String) }, { label: expect.any(String) }] } });
