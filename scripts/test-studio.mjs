@@ -223,7 +223,10 @@ try {
     async () => {
       // The CRM took its own advice (filters on its orders): take them away for the note to show.
       const op = (...args) => {
-        const done = spawnSync("node", [cli, "op", ...args], { cwd: dir, encoding: "utf8" });
+        const done = spawnSync("node", [cli, "op", ...args, "--dir", dir], {
+          cwd: repo,
+          encoding: "utf8",
+        });
         if (done.status !== 0) throw new Error(`${args[0]}: ${done.stdout}${done.stderr}`);
       };
       op("setFilters", "orders");
