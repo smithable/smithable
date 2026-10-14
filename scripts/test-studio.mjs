@@ -1467,8 +1467,17 @@ try {
         .waitFor();
       if (await page.getByRole("button", { name: "Save", exact: true }).isEnabled())
         throw new Error("Save is enabled");
+      // Two alike problems at one place (the YAML parser gives two for a line indented too far),
+      // then put right: the list says only "No problems.", none of them left behind.
+      await write(text.replace("      notes: text\n", "      notes: text\n        fax: phone\n"));
+      await page
+        .getByRole("list", { name: "Problems" })
+        .getByText(/Implicit keys need to be on a single line/)
+        .waitFor();
       await write(text.replace("      notes: text\n", "      notes: text\n      fax: phone\n"));
       await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
+      const rows = await page.getByRole("list", { name: "Problems" }).getByRole("listitem").count();
+      if (rows !== 1) throw new Error(`the problems list has ${rows} rows beside "No problems."`);
       // Valid, it is saved by itself after a pause: one change.
       await settled();
       if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      fax: phone\n"))
