@@ -2,6 +2,7 @@
 
 import {
   type AuthIR,
+  emptyUx,
   type FieldIR,
   humanize,
   isPicture,
@@ -14,6 +15,7 @@ import {
   storesFiles,
   storesPictures,
   USER_MODEL,
+  type UxIR,
   uniquePerOwner,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
@@ -34,11 +36,12 @@ import {
   references,
   storedFields,
   tableNames,
+  threadLists,
 } from "./shared.js";
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
-export function schemaModule(ir: SpecIR, auth: AuthIR): string {
+export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): string {
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   const tables = ir.models.map((model) => {
@@ -140,6 +143,29 @@ export const ${n.table}Favorites = sqliteTable(
       .notNull()
       .references(() => ${n.table}.id, { onDelete: "cascade" }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [unique().on(t.userId, t.recordId)],
+);`);
+  }
+  // Each viewer's read marks on a record whose page shows a conversation (conversation.md §2):
+  // when they last read it, for its unread badge; one per person and record, gone with either.
+  for (const model of ir.models.filter(
+    (m) => hasSignIn(auth) && threadLists(m, ir, ux).length > 0,
+  )) {
+    const n = tableNames(model);
+    imports.add("unique");
+    tables.push(`// When each person last read a record's conversation: their own, never shown to others.
+export const ${n.table}Reads = sqliteTable(
+  ${JSON.stringify(`${n.sqlTable}_reads`)},
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recordId: integer()
+      .notNull()
+      .references(() => ${n.table}.id, { onDelete: "cascade" }),
+    readAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (t) => [unique().on(t.userId, t.recordId)],
 );`);

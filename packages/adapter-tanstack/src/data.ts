@@ -4,6 +4,7 @@ import {
   apiOffers,
   type Condition,
   defaultColumns,
+  emptyUx,
   FILES_MAX,
   type FieldIR,
   humanize,
@@ -296,7 +297,11 @@ export const ${n.get} = createServerFn()
     }`
         : ""
     }
-    if (!row) return null;
+    if (!row) return null;${
+      model.fields.some((f) => threadLists(model, ir, ux).includes(f.name)) && hasSignIn(auth)
+        ? `\n    // Opening its page reads its conversation (conversation.md §2).\n    ${n.data}.markRead(viewer, id);`
+        : ""
+    }
     return {
       row,${model.trash ? "\n      trashed: null," : ""}${model.review ? `\n      // Its files waiting for review, or rejected with the reason: for its owner and the reviewers.\n      review: ${n.data}.reviewNotes(viewer, id),` : ""}${
         hasFavorites(model, ir, auth)
@@ -409,7 +414,13 @@ export function reserveNames(model: ModelIR) {
  * The model's data functions: every read and write goes through the access rules, for the
  * given viewer. Server-only; custom code uses these too.
  */
-export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): string {
+export function dataModule(
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  auth: AuthIR,
+  ux: UxIR = emptyUx(),
+): string {
   const n = names(model, t);
   const formulas = hasFormulas(model);
   const signedIn = hasSignIn(auth);
@@ -794,6 +805,16 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
         audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${queue("made.id", "undefined", "made")}${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
+  // Read marks for a record whose page shows a conversation (conversation.md §2): when each person
+  // last read it, and the messages after that by someone else as its unread.
+  const threadList = signedIn
+    ? model.fields.find((f) => threadLists(model, ir, ux).includes(f.name))
+    : undefined;
+  const threadTarget =
+    threadList?.type.kind === "relation" ? modelNamed(ir, threadList.type.model) : undefined;
+  const threadRef =
+    threadTarget && references(threadTarget).find((f) => f.type.model === model.name);
+  const reads = threadTarget && threadRef ? `${n.table}Reads` : undefined;
   // The trash (docs/design/trash.md): a delete moves the record there.
   const trashing = Boolean(model.trash);
   // What points to a record with a required reference cannot exist without it: it goes to the
@@ -937,6 +958,8 @@ ${loose
         .join("")
     : "";
   if (usesOr) drizzle.push("or");
+  if (threadTarget?.trash) drizzle.push("isNull");
+  if (reads) drizzle.push("gt", "inArray", "isNotNull", "isNull", "ne", "or");
   if (group.length) drizzle.push("count");
   if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
     drizzle.push("isNull");
@@ -1501,6 +1524,51 @@ ${
     return found !== undefined;
   },
 ${
+  reads && threadTarget && threadRef
+    ? `
+  /** Marks the ${n.label.toLowerCase()}'s conversation read for the viewer, now. */
+  markRead(viewer: Viewer | null, id: number): void {
+    if (!viewer) return;
+    db.insert(${reads})
+      .values({ userId: viewer.id, recordId: id, readAt: new Date() })
+      .onConflictDoUpdate({ target: [${reads}.userId, ${reads}.recordId], set: { readAt: new Date() } })
+      .run();
+  },
+
+  /** Each ${n.label.toLowerCase()}'s messages, and how many the viewer has not read: a message is read once they opened the conversation after it, and their own always. */
+  threadCounts(viewer: Viewer | null, ids: number[]): Record<number, { count: number; unread: number }> {
+    const counts: Record<number, { count: number; unread: number }> = {};
+    if (!ids.length) return counts;
+    const marks = new Map(
+      viewer
+        ? db.select({ id: ${reads}.recordId, at: ${reads}.readAt }).from(${reads}).where(and(eq(${reads}.userId, viewer.id), inArray(${reads}.recordId, ids))).all().map((r) => [r.id, r.at.getTime()])
+        : [],
+    );
+    const target = ${tableRef(threadTarget)};
+    for (const m of db.select({ parent: target.${dataKey(threadRef)}, at: target.createdAt, by: target.${ownerKey(threadTarget)} }).from(target).where(${threadTarget.trash ? `and(inArray(target.${dataKey(threadRef)}, ids), isNull(target.deletedAt))` : `inArray(target.${dataKey(threadRef)}, ids)`}).all()) {
+      if (m.parent === null) continue;
+      const c = (counts[m.parent] ??= { count: 0, unread: 0 });
+      c.count++;
+      if (viewer && m.by !== viewer.id && m.at.getTime() > (marks.get(m.parent) ?? 0)) c.unread++;
+    }
+    return counts;
+  },
+
+  /** The ${n.pluralLabel.toLowerCase()} with a message the viewer has not read, as a list's condition. */
+  unread(viewer: Viewer | null): SQL {
+    if (!viewer) return sql\`false\`;
+    const target = ${tableRef(threadTarget)};
+    // Not correlated: a list's relational query names the outer table its own way.
+    const fresh = db
+      .select({ id: target.${dataKey(threadRef)} })
+      .from(target)
+      .leftJoin(${reads}, and(eq(${reads}.recordId, target.${dataKey(threadRef)}), eq(${reads}.userId, viewer.id)))
+      .where(and(isNotNull(target.${dataKey(threadRef)}),${threadTarget.trash ? " isNull(target.deletedAt)," : ""} or(isNull(target.${ownerKey(threadTarget)}), ne(target.${ownerKey(threadTarget)}, viewer.id)), gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)));
+    return inArray(${n.table}.id, fresh) as SQL;
+  },
+`
+    : ""
+}${
   favorites
     ? `
   /** The ${n.pluralLabel.toLowerCase()} the viewer saved, by id: their own marks, never anyone else's. */

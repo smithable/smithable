@@ -16,9 +16,10 @@ export interface FilterUi {
   /**
    * chips (a choice or a reference), range (a number, amount or date), toggle (yes/no), mine
    * (the viewer's own records, for those signed in), person (a field that refers to a person:
-   * Mine, Unassigned and the people by name).
+   * Mine, Unassigned and the people by name), unread (the records with a message the viewer
+   * has not read, for those signed in).
    */
-  kind: "chips" | "range" | "toggle" | "mine" | "person";
+  kind: "chips" | "range" | "toggle" | "mine" | "person" | "unread";
   options?: { value: string; label: string }[];
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
@@ -50,7 +51,7 @@ export function Filters({
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
-  const shown = filters.filter((f) => f.kind !== "mine" || signedIn);
+  const shown = filters.filter((f) => (f.kind !== "mine" && f.kind !== "unread") || signedIn);
   const active = shown.filter((f) => values[f.name]);
   const set = (name: string, value: string | undefined) =>
     onChange({ ...values, [name]: value || undefined, sort });
@@ -146,18 +147,20 @@ function Filter({
 }) {
   const id = useId();
   const chosen = new Set((value ?? "").split(",").filter(Boolean));
-  if (filter.kind === "mine")
+  if (filter.kind === "mine" || filter.kind === "unread") {
+    const on = filter.kind === "mine" ? "mine" : "1";
     return (
       <label className="flex h-control items-center gap-2 text-sm font-semibold">
         <input
           type="checkbox"
-          checked={value === "mine"}
-          onChange={(e) => onChange(e.target.checked ? "mine" : undefined)}
+          checked={value === on}
+          onChange={(e) => onChange(e.target.checked ? on : undefined)}
           className="size-4 accent-primary"
         />
         {filter.label}
       </label>
     );
+  }
   if (filter.kind === "toggle")
     return (
       <div className="flex flex-col gap-1">
@@ -353,7 +356,7 @@ function Range({
 
 /** An active filter in words, for its removable chip. */
 function describe(filter: FilterUi, value: string): string {
-  if (filter.kind === "mine") return "yes";
+  if (filter.kind === "mine" || filter.kind === "unread") return w.yes;
   if (filter.kind === "toggle") return value === "true" ? w.yes : w.no;
   if (filter.kind === "range") {
     const [from, to] = value.split("..");

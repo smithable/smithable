@@ -41,6 +41,7 @@ import {
   standardActions,
   type Texts,
   tableRef,
+  threadLists,
   type Within,
 } from "../shared.js";
 import { actionButton } from "./record.js";
@@ -66,6 +67,8 @@ function filterCode(
   ir: SpecIR,
   favorites?: Favorites,
   ownOnly?: boolean,
+  /** The records whose conversation has a message the viewer has not read (conversation.md §1). */
+  unread?: boolean,
 ) {
   const n = names(model, t);
   const conditions: string[] = [];
@@ -92,6 +95,10 @@ function filterCode(
   if (ownOnly) {
     toggles = true;
     conditions.push(`eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`);
+  }
+  if (unread) {
+    conditions.push(`data.f?.unread === "1" ? ${n.data}.unread(viewer) : undefined`);
+    controls.push({ name: "unread", label: "Unread", kind: "unread" });
   }
   for (const name of page.filters ?? []) {
     if (name === "owner" && ownOnly) continue;
@@ -220,13 +227,17 @@ function filterCode(
         return field ? [[name, dataKey(field)]] : [];
       }),
     ) as Record<string, string>,
-    names: (page.filters ?? []).filter((name) => !(ownOnly && name === "owner")),
+    names: [
+      ...(unread ? ["unread"] : []),
+      ...(page.filters ?? []).filter((name) => !(ownOnly && name === "owner")),
+    ],
     columns: (page.sortable ?? []).map((name) => {
       const field = model.fields.find((f) => f.name === name);
       const key = AUTOMATIC[name]?.key ?? (field ? dataKey(field) : name);
       return `${key}: ${n.table}.${key}`;
     }),
     mine,
+    unread,
     favorites,
     imports: { ranges, lists, titles, people, toggles: toggles || mine },
   };
@@ -246,12 +257,13 @@ export function searchCode(
   ownOnly?: boolean,
   /** The list's order until someone sorts it, as an SQL expression (the ux file's sort). */
   order?: string,
+  unread?: boolean,
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
-    !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly)
-      ? filterCode(page, model, t, ir, favorites, ownOnly)
+    !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly || unread)
+      ? filterCode(page, model, t, ir, favorites, ownOnly, unread)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -296,6 +308,7 @@ export function searchCode(
       ? `data.q ? ${terms.length > 1 ? `or(${terms.join(", ")})` : terms[0]} : undefined`
       : "undefined";
     const view = favorites === "all";
+    const paged = `await ${n.data}.page(viewer, where, ${filtering.columns.length ? (order ? `order ?? ${order}` : "order") : (order ?? "undefined")}, ${PAGED_ARGS})`;
     const keys = ["q", "sort", ...filtering.names];
     return {
       fn: `
@@ -317,15 +330,15 @@ const ${fn} = createServerFn()
     // The order the viewer chose, among the fields the page offers; else the newest first.
     const order = orderOf({ ${filtering.columns.join(", ")} }, data.sort);`
         : ""
-    }
+    }${unread ? `\n    const found = ${paged};` : ""}
     return {
-      ...(await ${n.data}.page(viewer, where, ${filtering.columns.length ? (order ? `order ?? ${order}` : "order") : (order ?? "undefined")}, ${PAGED_ARGS})),
+      ...${unread ? "found" : `(${paged})`},
       canCreate: allows(${n.access}.create, viewer),
-      options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}
+      options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}${unread ? `\n      threads: ${n.data}.threadCounts(viewer, found.rows.map((row) => row.id)),` : ""}
     };
   });
 `,
-      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => `${k}: text(s.${k})`).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
+      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => (k === "unread" ? 'unread: String(s.unread) === "1" ? "1" : undefined' : `${k}: text(s.${k})`)).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
@@ -404,8 +417,14 @@ export function listParts(
   );
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
+  // A conversation on each record: its count column and the Unread toggle (conversation.md §1).
+  const threadField =
+    !within && auth && hasSignIn(auth)
+      ? model.fields.find((f) => threadLists(model, ir, ux).includes(f.name))
+      : undefined;
   const filtered =
-    !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly);
+    !within &&
+    (page.filters?.length || page.sortable?.length || favorites || ownOnly || threadField);
   // The ux file's order, in the query: a page of a longer list is the right fifty, not fifty
   // sorted (a computed field is not a column, so it stays sorted in the page only).
   const sorted = within ? undefined : ux.pages[page.id]?.sort;
@@ -419,7 +438,7 @@ export function listParts(
       : undefined;
   const search =
     page.search?.length || filtered
-      ? searchCode(page, model, t, ir, within, favorites, ownOnly, order)
+      ? searchCode(page, model, t, ir, within, favorites, ownOnly, order, Boolean(threadField))
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
   const searchable = Boolean(page.search?.length);
@@ -448,7 +467,11 @@ export function listParts(
   if (search) {
     route
       .add("@tanstack/react-start", "createServerFn")
-      .add("#/db/schema", "* as schema", ...search.imports.related)
+      .add(
+        "#/db/schema",
+        ...(search.fn.includes("schema.") ? ["* as schema"] : []),
+        ...search.imports.related,
+      )
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows");
     if (search.imports.or) route.add("drizzle-orm", "or");
@@ -557,8 +580,8 @@ export function listParts(
     // route's server function, and a table, are paged instead (docs/design/paging.md).
     const scrolling = cards && !within && !owned;
     return `function ${component}() {
-  const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || selecting || filtering?.mine || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
+  const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""}${threadField ? ", threads" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
+${actions.length || offered.length || selecting || filtering?.mine || filtering?.unread || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
       scrolling
         ? `
   // The cards loaded after the first page, as the reader scrolls; a new search starts again.
@@ -636,7 +659,7 @@ ${
   filtering && (filtering.controls.length || filtering.sorts.length)
     ? `      <Filters
         filters={${literal(filtering.controls)}}
-        values={values}${filtering.mine ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
+        values={values}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
         onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true, resetScroll: false })}
       />
 `
@@ -703,7 +726,7 @@ ${
           filtering && Object.keys(filtering.headers).length
             ? `\n        sorting={{ keys: ${literal(filtering.headers)}, value: sort, onChange: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}`
             : ""
-        }${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
+        }${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (

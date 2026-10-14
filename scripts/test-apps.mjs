@@ -1276,6 +1276,10 @@ async function rulesFlow(base) {
     await page.getByRole("button", { name: "Mine", exact: true }).click();
     await page.waitForURL(/handledBy=me/);
     await page.locator("tr", { hasText: "ORD-3001" }).waitFor({ timeout: 10000 });
+    // The chip is on before the next is added to it (the page keeps its state while it loads).
+    await page
+      .getByRole("button", { name: "Mine", exact: true, pressed: true })
+      .waitFor({ timeout: 10000 });
     await page.getByRole("button", { name: "Unassigned", exact: true }).click();
     await page.waitForURL(/handledBy=me%2Cnone|handledBy=me,none/);
     // The newest order of the customer has shipped: an action whose condition is on that is
@@ -1325,6 +1329,28 @@ async function threadFlow(base) {
       throw new Error("the reply box keeps what was sent");
     console.log(
       "  ✓ browser: a list shown as a conversation; a comment sent from the reply box shows in place, with no page of its own",
+    );
+    // Another person sees it unread: a badge on the row, the Unread toggle keeps that customer,
+    // and opening its conversation reads it.
+    await signInAs(page, base, "sales");
+    await open(page, `${base}/customers`);
+    const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
+    await helios.locator('[data-part="thread"]', { hasText: "1 new" }).waitFor({ timeout: 10000 });
+    await page.getByRole("checkbox", { name: "Unread" }).click();
+    await page.waitForURL(/unread=/, { timeout: 10000 });
+    await page
+      .waitForFunction(() => document.querySelectorAll('tr[data-part="row"]').length === 1, null, {
+        timeout: 10000,
+      })
+      .catch(() => {
+        throw new Error("the Unread toggle keeps only the customer with a new comment");
+      });
+    await helios.getByRole("button", { name: "Helios Energy" }).first().click();
+    await page.locator('[data-kit="thread"]').getByText("Called them about the renewal.").waitFor();
+    await open(page, `${base}/customers?unread=1`);
+    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    console.log(
+      "  ✓ browser: another person sees the comment unread, with a badge and the Unread toggle, until they open it",
     );
   } catch (error) {
     console.log(
@@ -4538,11 +4564,14 @@ function operationsFlow(dir) {
       if (!readFileSync(custom, "utf8").includes("Our customers"))
         throw new Error("the custom page was changed");
       run("git", ["checkout", "--", "src/custom/pages/customers.tsx"], dir);
-      // The spec no longer gives the page a search: the custom page's code no longer fits.
+      // The spec no longer gives the page a search, nor its records a conversation (which keeps
+      // the address's filters): the custom page's code no longer fits.
       expectOk(smithable(dir, "op", "setSearch", "customers"));
+      expectOk(smithable(dir, "op", "setRecordList", "customers", "comments", "table"));
       const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
       if (typecheck.status === 0 || !typecheck.stdout.includes("src/custom/pages/customers.tsx"))
         throw new Error(`expected the custom page to fail type-checking:\n${typecheck.stdout}`);
+      expectOk(smithable(dir, "undo"));
       expectOk(smithable(dir, "undo"));
       expectOk(smithable(dir, "undo"));
       if (spawnSync("test", ["-e", custom]).status === 0)

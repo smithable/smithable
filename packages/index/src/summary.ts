@@ -78,8 +78,8 @@ export function summarize(
   auth?: AuthIR,
   content: ContentIR = emptyContent(),
   plugins: readonly SpecPlugin[] = [],
-  /** smithable.ux.yml, for the assistant's voice; plain without it. */
-  ux?: Pick<UxIR, "assistant">,
+  /** smithable.ux.yml, for the assistant's voice and a record's conversations; plain without it. */
+  ux?: Pick<UxIR, "assistant"> & Partial<Pick<UxIR, "pages">>,
 ): SummarySection[] {
   const { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item } = wordsFor(
     ir,
@@ -137,6 +137,15 @@ export function summarize(
             ? "records can be saved as favorites"
             : "",
         p.contact ? contactWords(p.contact, model, fieldLabel) : "",
+        // A list on the record page as a conversation (conversation.md §2).
+        ...Object.entries(ux?.pages?.[p.id]?.lists ?? {}).flatMap(([name, look]) => {
+          const field = model?.fields.find((f) => f.name === name);
+          return model && field && look === "thread"
+            ? [
+                `${article(one(model))}'s ${fieldLabel(model, field)} shown as a conversation with a reply box`,
+              ]
+            : [];
+        }),
         ...(p.actions ?? []).map((a) => `“${humanize(a)}”`),
         narrowed ? `only for ${who(opens)}` : "",
         shown.length && model

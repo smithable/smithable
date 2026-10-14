@@ -54,6 +54,11 @@ interface ModelTableProps<R extends Row> {
   icon?: LucideIcon;
   /** A heart on each record: the ids the viewer saved, and what a click does (sign in, for a visitor). */
   saved?: { ids: number[]; onToggle: (id: number) => void };
+  /**
+   * A conversation on each record (conversation.md §1): the list's name, and each record's
+   * count of messages and how many of them the viewer has not read.
+   */
+  thread?: { label: string; counts: Record<number, { count: number; unread: number }> };
   /** Buttons for a record, e.g. its standard actions; above the row's own link. */
   rowActions?: (row: R) => React.ReactNode;
   /** Checkboxes to choose records (a page offering actions or delete): the chosen ids, and a change. */
@@ -173,6 +178,7 @@ export function ModelTable<R extends Row>({
   view = "table",
   icon,
   saved,
+  thread,
   rowActions,
   selection,
   paging,
@@ -219,6 +225,16 @@ export function ModelTable<R extends Row>({
       </Card>
     );
   }
+  // A record's messages, with a badge for those the viewer has not read.
+  const messages = (row: R) => {
+    const c = thread?.counts[row.id] ?? { count: 0, unread: 0 };
+    return (
+      <span data-part="thread" className="inline-flex items-center gap-2 tabular-nums">
+        {c.count}
+        {c.unread > 0 && <Badge>{w.unreadCount(c.unread)}</Badge>}
+      </span>
+    );
+  };
   const second = (field: RecordFieldUi<R>) =>
     ui.fields.find((f) => f.name === (below as Record<string, string>)[field.name]);
   // A column with a second field below its value: both on their own line.
@@ -400,6 +416,11 @@ export function ModelTable<R extends Row>({
                   {rowActions(row)}
                 </div>
               )}
+              {thread && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {thread.label} {messages(row)}
+                </p>
+              )}
               {(date || amount) && (
                 <p className="flex items-baseline justify-between gap-3 pt-2 text-sm">
                   <span className="text-muted-foreground">
@@ -482,6 +503,7 @@ export function ModelTable<R extends Row>({
                     </TableHead>
                   );
                 })}
+                {thread && <TableHead>{thread.label}</TableHead>}
                 {saved && (
                   <TableHead className="w-12">
                     <span className="sr-only">{w.saved}</span>
@@ -519,6 +541,7 @@ export function ModelTable<R extends Row>({
                       {field === title ? open(row, cell(field, row)) : stacked(field, row)}
                     </TableCell>
                   ))}
+                  {thread && <TableCell>{messages(row)}</TableCell>}
                   {saved && <TableCell className="py-0">{heart(row)}</TableCell>}
                   {rowActions && (
                     // At its natural width, so the title is not the column that wraps; kept at the
