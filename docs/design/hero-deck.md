@@ -45,13 +45,15 @@ saved at 2× as WebP, light scheme (the hero sits on the start page's own ground
 - **Edit without code:** the Change form for a field, filled in (the kind of record, the name,
   the type), before the button.
 - **Edit by code:** the Code mode editor on smithable.yml, scrolled to the model, the new line
-  typed and highlighted, the "Saved" state (the edit saves itself). It is taken in a window
-  under 1024 pixels, where Studio gives the editor the window's width, so the spec's long lines
-  and their comments fit.
+  typed and highlighted, the "Saved" state (the edit saves itself): the editor at its own text
+  size (taken in a window under 1024 pixels, where Studio gives the editor the window's width),
+  whole lines with the new one near the end. A long line runs off the card's right edge, as in
+  an editor; readable text matters more than whole lines (Johan, 2026-10-14).
 
-No card cuts through a word: each is cropped to whole elements (the prompt card from its label
-"Describe a change, or ask a question" down, with room above for the badge; the code card to
-whole lines, as wide as the longest of them). A line wider than the editor stops the script.
+The three cards are one size, 560×420 (1120×840 at 2×), so they read as a deck: each picture is
+fitted whole into it on white, Studio's own background. The prompt card and the form card cut
+no word: the prompt card from its label "Describe a change, or ask a question" down, with room
+above for the badge; the form card is the field form from the kind of record to its button.
 
 The result is two screenshots of the record's form, whole and from the page's top: before the
 change and after it. They line up at the top, so in the fade the new field is the one thing
