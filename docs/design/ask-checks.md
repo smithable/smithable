@@ -95,3 +95,52 @@ ungrounded one costs one more model call.
    then cost per question. If the checks catch fewer than half of the confident wrong answers
    on the stored questions, the rules are widened before the question of a default model is
    reopened.
+
+## 6. After the first measurement (2026-10-15)
+
+C's runs on Mistral Small ([bench-ask-small-checks.md](../benchmarks/bench-ask-small-checks.md)),
+right of 134 and wrong stated as fact: before 123 / 10; the tools 122 / 10; the checks 121 / 11;
+Strict (Small, then Medium) 122 / 11 at 2.7 times the cost. The model's own variation between
+runs is about three questions either way, so the tools and the checks changed the count of
+confident wrong answers by nothing yet. What the checks did: three answers sent back, one of
+them a duration the model had worked out (status 5), which ended as "gave up" instead of a
+wrong number; one false alarm (crm 14, below). Two of ten is fewer than half, so by §5 the rules
+widen. The widening is in layer one, since every wrong "none" left came from a tool that
+answered zero quietly, and the none check (§3) then had nothing to hold it to:
+
+1. **A range on a field that is no number or date is refused.** `where: { link: { from: "1",
+   to: "9999" } }` was the model's way to ask "has a link" (records 6), and the tool answered
+   `total: 0`. The refusal says what the field is and that `search`, or reading the field, is
+   the way. A refusal is already a signal the cascade escalates on.
+2. **An exact value no record has, on a text field, gets the nearest values that exist**, as a
+   title does: `number: 2026006` found no invoice, since the numbers are written `2026-006`
+   (invoicing 24), and the note names it. The rule in §2 covered choice fields, references and
+   `search`; it covers an exact value on any string field now.
+3. **A zero result or a zero sum under `mine: true` notes the count without it** ("none of
+   your own; 8 in all"), since the model reaches for `mine` when the question says "us"
+   (invoicing 19: a sum of 0 for the viewer's own invoices, answered as "none").
+
+With these the none check sends those answers back, since the result carries a note or the
+call was refused. Not widened: a `search` for a word no field holds (Finland, in addresses
+that hold a city; invoicing 10) is a true zero, and the right answer is "no address mentions
+Finland", which the model has from the tool. The wrong answers the checks cannot reach are the
+judgement kind: the wrong record changed, the second of two tied names, a count that includes
+what was sold (booking 25, invoicing 8, marketplace 1); §4 stands, those are the better model's.
+
+**The known false alarm.** crm 14, "Which customers have never ordered anything?", is answered
+"none" rightly by comparing the customers with the orders' customers, and no tool returned an
+empty result, so the answer is shown as not confirmed and the retry costs one call. It stays
+so: a rule that lets "none" stand when the question says never or ever would let every such
+"none" through, grounded or not. The way to a grounded "none" is a filter on an empty list,
+`orders: none` (the kit's "without" chip, which people want for the same question), a later
+line in §2; then the check needs no exception.
+
+**The mark.** In the Strict run the gateway moved nineteen questions to Medium, every one on
+its earlier signals (two refused calls, the fourth call), none on `ungrounded`: the check's
+retry is the fourth call at the earliest, and the fourth-call rule has moved the question by
+then. Seventeen of the nineteen were then right, for one more right answer over Small alone
+in all. The mark stays, since it costs nothing, and the gateway stays as it is; the mark
+carries weight once the tools above make the check send more back, and C's next run says
+whether the fourth-call rule should move later (a decision for the gateway, B 35).
+
+Steps: A, the three tool rules, kit only, one PR; C, the same bench after it; B, nothing.
