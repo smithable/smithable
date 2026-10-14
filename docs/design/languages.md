@@ -18,9 +18,11 @@ go-ahead for the keys.
   signed in from) and keeps it: every page, every dialog, the mails the app sends them. The
   address does not change for them: `/requests` is `/requests`, in their language.
 - **The maker** writes the app's texts once, in the app's language, as today, then adds a
-  language: `smithable op addLanguage sv` makes `smithable.content.sv.yml` with every text the
-  content file has (page titles, labels, landing sections, the assistant's greeting, plural
-  labels), to be filled in. Studio's Languages view shows the two side by side, each empty line
+  language: `smithable op addLanguage sv` makes `smithable.content.sv.yml` with every text a person
+  reads, to be filled in: the content file's own texts (page titles, landing sections, the
+  assistant's greeting) and the ones the app derives from names (each model's label and
+  plural, each field's label, choice values, action and menu labels), since "Credit limit"
+  has no line in the content file and still wants to be "Kreditgräns". Studio's Languages view shows the two side by side, each empty line
   marked, and a model fills a first draft of them when one is configured (a hundred short texts;
   cents). What is left empty shows in the app's language and `smithable validate` says so.
 - **Records are data** and stay as written: a dish named "Fish soup" is "Fish soup" on `/sv/`.
@@ -56,10 +58,13 @@ models:
 - `languages` lists the other languages, each one the kit has words in (`en`, `sv` today;
   refused otherwise, with the list). The app's own `language` is not in it. `addLanguage <lang>`
   adds one and writes its file; `removeLanguage <lang>` takes both away (asked first).
-- A language file holds the content file's keys and nothing else: no `language`, no
-  `languages`, no `assistant.for`. A key the content file does not have is an error naming it;
-  a key the content file has and the language file lacks is a warning (`text-untranslated`,
-  with the count), and the app shows the app's language there.
+- A language file may hold any key the content file may hold (the content reader checks the
+  names against the spec, as it does for the content file), whether or not the content file
+  has a line for it, since most texts are derived from names and have none; it holds no
+  `language`, `languages` or `assistant.for`. The full list of texts a person reads is derived
+  from the spec, one function for `addLanguage`, for the reader's fallback and for the
+  warning: a text on that list the language file leaves empty or lacks is a warning
+  (`text-untranslated`, with the count), and the app shows the app's language there.
 - `setText` takes `--language sv` to write into a language file; `setLanguage` stays the app's
   own. Renaming a page, a model or a field follows into every language file.
 - Why the content file: a translation is visible text and nothing else (rule 1). Why a file per
