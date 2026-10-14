@@ -1276,6 +1276,10 @@ async function rulesFlow(base) {
     await page.getByRole("button", { name: "Mine", exact: true }).click();
     await page.waitForURL(/handledBy=me/);
     await page.locator("tr", { hasText: "ORD-3001" }).waitFor({ timeout: 10000 });
+    // The chip is on before the next is added to it (the page keeps its state while it loads).
+    await page
+      .getByRole("button", { name: "Mine", exact: true, pressed: true })
+      .waitFor({ timeout: 10000 });
     await page.getByRole("button", { name: "Unassigned", exact: true }).click();
     await page.waitForURL(/handledBy=me%2Cnone|handledBy=me,none/);
     // The newest order of the customer has shipped: an action whose condition is on that is
@@ -1341,7 +1345,7 @@ async function threadFlow(base) {
       .catch(() => {
         throw new Error("the Unread toggle keeps only the customer with a new comment");
       });
-    await helios.getByRole("button", { name: "Helios Energy" }).click();
+    await helios.getByRole("button", { name: "Helios Energy" }).first().click();
     await page.locator('[data-kit="thread"]').getByText("Called them about the renewal.").waitFor();
     await open(page, `${base}/customers?unread=1`);
     await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
