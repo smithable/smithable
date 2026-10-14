@@ -20888,7 +20888,7 @@ export const customerData = {
     if (!row) throw new AccessDenied(viewer !== null);
     check(customerAccess.write, viewer, row.accountManagerId);
     let changed: typeof schema.customers.$inferSelect;
-    const updated = { ...values, accountManagerId: ownerFor(viewer, values.accountManagerId ?? row.accountManagerId) };
+    const updated = { ...values, accountManagerId: viewer && customerAccess.write.roles.includes(viewer.role) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
     try {
       changed = db.transaction((tx) => {
         const before = tx.select().from(schema.customers).where(eq(schema.customers.id, id)).get();
@@ -24575,7 +24575,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "deac0d54 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "f68118fb generated",
+  "src/generated/customer.server.ts": "df5629d6 generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
