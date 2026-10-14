@@ -8,7 +8,7 @@ import {
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
-const generate = (name: string, action: string) => {
+const generate = (name: string, action: string, content = emptyContent()) => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -31,7 +31,7 @@ pages:
     },
     ir,
   ).auth as AuthIR;
-  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
   return (path: string) => files.find((f) => f.path === path)?.content ?? "";
 };
 
@@ -41,6 +41,18 @@ test("a record page whose only action is a copy has no router (the copy opens th
   expect(copyOnly("src/routes/tasks/$id.tsx")).not.toContain("useRouter");
   const change = generate("finish", "{ on: Task, when: { status: open }, set: { status: done } }");
   expect(change("src/routes/tasks/$id.tsx")).toContain("await router.invalidate();");
+});
+
+test("an action's help in the content file is its button's tooltip and its dialog's line", () => {
+  const help = "Marks the task done for everyone.";
+  const file = generate("finish", "{ on: Task, when: { status: open }, set: { status: done } }", {
+    ...emptyContent(),
+    actions: { finish: { help } },
+  });
+  expect(file("src/routes/tasks/$id.tsx")).toContain(`help="${help}"`);
+  expect(
+    generate("finish", "{ on: Task, set: { status: done } }")("src/routes/tasks/$id.tsx"),
+  ).not.toContain("help=");
 });
 
 test("a copy run by Ask or through the API answers with the new record, read by the id the copy gives", () => {

@@ -10,11 +10,14 @@ import { w } from "./words";
 
 export function ActionButton({
   label,
+  help,
   concept,
   onRun,
   ask,
 }: {
   label: string;
+  /** What it does, in the app's words (the content file's help): the tooltip and the dialog's line. */
+  help?: string;
   /** The action in the app description ("action:identified"), for the preview editor: development only. */
   concept?: string;
   /** Runs the action, with the asked values when it asks for any. */
@@ -44,6 +47,7 @@ export function ActionButton({
       <Button
         type="button"
         variant="outline"
+        title={help}
         disabled={busy}
         onClick={() => (ask ? dialog.current?.showModal() : run())}
       >
@@ -61,7 +65,10 @@ export function ActionButton({
           className="m-auto w-full max-w-lg bg-transparent p-0 backdrop:bg-black/50"
         >
           <Card className="space-y-4 p-card text-left">
-            <h2 className="text-lg font-semibold">{label}</h2>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">{label}</h2>
+              {help && <p className="text-sm text-muted-foreground">{help}</p>}
+            </div>
             <ModelForm
               ui={ask.ui}
               app={ask.app}

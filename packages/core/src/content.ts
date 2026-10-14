@@ -30,7 +30,8 @@ export interface ContentIR {
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
   /** An action's button and page title, by its name in smithable.yml; else its name in words. */
-  actions: Record<string, { label?: string }>;
+  /** An action's button (label) and the line that says what it does (help: tooltip, dialog). */
+  actions: Record<string, { label?: string; help?: string }>;
   /** An outgoing mail's subject and the text above the record (integrations.md §4.1b). */
   outgoing: Record<string, { subject?: string; text?: string }>;
   /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
@@ -280,6 +281,7 @@ export function validateContent(
       )) {
         content.actions[action.key] = readTexts(ctx, action.value, `action "${action.key}"`, [
           "label",
+          "help",
         ]);
       }
     }

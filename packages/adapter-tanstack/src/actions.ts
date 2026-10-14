@@ -550,7 +550,7 @@ ${options.length ? "  const { options } = Route.useLoaderData();\n" : ""}  const
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });
   return (
     <>
-      <PageHeader title=${attr(t.action(action))} />
+      <PageHeader title=${attr(t.action(action))}${t.actionHelp(action) ? ` subtitle=${attr(t.actionHelp(action) as string)}` : ""} />
       <ModelForm
         ui={${a.ui}}
         app={app}

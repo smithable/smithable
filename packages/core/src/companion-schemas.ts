@@ -627,11 +627,11 @@ export const CONTENT_SCHEMA: JsonSchema = {
     actions: {
       type: "object",
       description:
-        "An action's words, by its name in smithable.yml: { resolve: { label: Mark as resolved } }. The label is its button and its page's title; else its name in words.",
+        "An action's words, by its name in smithable.yml: { resolve: { label: Mark as resolved, help: Closes the case for good. } }. The label is its button and its page's title, else its name in words; the help is the button's tooltip and a line under its dialog's title.",
       additionalProperties: {
         type: "object",
         additionalProperties: false,
-        properties: { label: { type: "string" } },
+        properties: { label: { type: "string" }, help: { type: "string" } },
       },
     },
     outgoing: {

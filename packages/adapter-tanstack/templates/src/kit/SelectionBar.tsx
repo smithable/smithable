@@ -12,6 +12,7 @@ import { w } from "./words";
 
 export interface SelectionAction {
   label: string;
+  help?: string;
   /** The action in the app description, for the preview editor. */
   concept?: string;
   /** How many of the chosen records it fits and the viewer may run it on. */
@@ -100,6 +101,7 @@ export function SelectionBar({
                 <ActionButton
                   key={a.label}
                   label={`${a.label} (${a.applies})`}
+                  help={a.help}
                   concept={a.concept}
                   ask={a.ask && { ...a.ask, initial: {}, app }}
                   onRun={async (values) => {
