@@ -16,6 +16,7 @@ function page(at = "/", storage: Record<string, string> = {}) {
     { textContent: " Sign in as admin ", click: () => clicked.push("sign-in") },
   ];
   const ticks: (() => void)[] = [];
+  const clicks: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
   const parent = { postMessage() {} };
   const scrolled: number[] = [];
@@ -35,7 +36,8 @@ function page(at = "/", storage: Record<string, string> = {}) {
     },
     createElement: () => ({ id: "", textContent: "" }),
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
-    addEventListener() {},
+    addEventListener: (type: string, listener: (event: unknown) => void) =>
+      type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
       selector === "[data-dev-role]" ? buttons : selector === "button" ? signInButtons : [],
     styleSheets: [{ cssRules: [darkRule] }],
@@ -86,22 +88,25 @@ function page(at = "/", storage: Record<string, string> = {}) {
     tick: () => {
       for (const t of [...ticks]) t();
     },
+    /** The owner presses the app's Sign out. */
+    signOut: () => {
+      for (const c of clicks)
+        c({ target: { closest: (s: string) => (s.includes("sign-out") ? {} : null) } });
+    },
   };
 }
 
-test("the preview signs in once a session, and again when a reload came before the sign-in did", () => {
+test("the preview signs in whenever it shows the sign-in page, until the owner signs out", () => {
   const storage: Record<string, string> = {};
   const first = page("/sign-in", storage);
   first.tick();
   expect(first.clicked).toEqual(["sign-in"]);
-  expect(storage["smithable:signed-in"]).toBe("pending");
-  // Reloaded on the sign-in page before it was through: pressed again.
-  const reloaded = page("/sign-in", storage);
-  reloaded.tick();
-  expect(reloaded.clicked).toEqual(["sign-in"]);
-  // In the app: it counts; after signing out the sign-in page stays for another role.
-  page("/customers", storage);
-  expect(storage["smithable:signed-in"]).toBe("1");
+  // A session lost (the server started again, a database put back): signed in again.
+  const again = page("/sign-in", storage);
+  again.tick();
+  expect(again.clicked).toEqual(["sign-in"]);
+  // The owner signs out: the sign-in page stays, to try another role.
+  page("/customers", storage).signOut();
   const after = page("/sign-in", storage);
   after.tick();
   expect(after.clicked).toEqual([]);

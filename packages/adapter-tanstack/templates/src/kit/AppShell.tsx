@@ -209,7 +209,12 @@ function Navigation({
                 </p>
               )}
               <p className="capitalize">{viewer.role}</p>
-              <button type="button" onClick={onSignOut} className={`${sidebarItem} -mx-3 mt-2`}>
+              <button
+                type="button"
+                data-part="sign-out"
+                onClick={onSignOut}
+                className={`${sidebarItem} -mx-3 mt-2`}
+              >
                 <LogOut aria-hidden className="size-5" />
                 {w.signOut}
               </button>

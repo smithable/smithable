@@ -300,10 +300,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   } catch {}
   // The page the preview is on, for Studio's address bar: after every navigation, including
   // the app's own (the router uses the History API) and Back.
-  const report = () => {
-    settle();
-    post({ type: "navigated", path: location.pathname + location.search });
-  };
+  const report = () => post({ type: "navigated", path: location.pathname + location.search });
   for (const name of ["pushState", "replaceState"]) {
     const original = history[name];
     history[name] = function (...args) {
@@ -313,33 +310,27 @@ if (typeof window !== "undefined" && window.parent !== window) {
     };
   }
   window.addEventListener("popstate", report);
-  // The owner opens the preview signed in as an administrator: the first time it shows the
-  // sign-in page, once its buttons work, the development "Sign in as admin" is pressed. Once a
-  // browser session, so after signing out the sign-in page stays to try another role. The press
-  // counts once a page other than the sign-in page is shown after it: a reload in between (the
-  // dev server optimizing its dependencies, a restart) finds it pending and presses again.
-  const SIGNED_IN = "smithable:signed-in";
-  const mark = () => {
-    try {
-      return sessionStorage.getItem(SIGNED_IN);
-    } catch {
-      return "1";
-    }
-  };
-  function settle() {
-    if (location.pathname === "/sign-in" || mark() !== "pending") return;
-    try {
-      sessionStorage.setItem(SIGNED_IN, "1");
-    } catch {}
-  }
-  settle();
+  // The owner sees the preview signed in as an administrator: whenever it shows the sign-in page,
+  // once its buttons work, the development "Sign in as admin" is pressed, also after a session
+  // was lost (the server started again, a checkpoint's database put back). Only after the owner
+  // pressed Sign out in it does the sign-in page stay, to try another role, for the browser session.
+  const SIGNED_OUT = "smithable:signed-out";
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.target?.closest?.('[data-part="sign-out"]'))
+        try {
+          sessionStorage.setItem(SIGNED_OUT, "1");
+        } catch {}
+    },
+    true,
+  );
   const signIn = setInterval(() => {
     if (location.pathname !== "/sign-in") return clearInterval(signIn);
     if (document.body.dataset.hydrated !== "true") return;
     clearInterval(signIn);
-    if (mark() === "1") return;
     try {
-      sessionStorage.setItem(SIGNED_IN, "pending");
+      if (sessionStorage.getItem(SIGNED_OUT)) return;
     } catch {
       return;
     }
