@@ -181,7 +181,8 @@ The five questions (ARCHITECTURE §2.4): common (an assistant in an app is becom
 5. **The kit's panel:** the rules first, then the model's tool loop, the results shown by the app, the confirmation cards. As the administrator's inspector first, since that needs no new grammar. (A.) (The inspector: built 2026-10-05, the data page's `ask` when the app offers tools to assistants; a change is shown and never run there, the confirmation cards come with "Ask" in step 6. The host's model comes as `ASSISTANT_URL`, `_KEY` and `_MODEL`, neutral names since a generated app names nothing of Smithable's.)
 6. **The `assistant` block** and `setAssistant`, and "Ask" for the people who use the app. (Fable for core, A.) (The block, `setAssistant`, the summary sentence and `asksWith` in core: built 2026-10-04. Inside the app the offer only reads unless the block says `may: change`.) (Ask for the app's people, reading: built 2026-10-05: the Ask button and sheet for the roles the block names, answered as the person, visitors by the rules only. The confirmation cards for `may: change` are next.)
 7. **The service:** the model's address for previews and published apps, the limits, the counts on the usage page. (B.)
-8. **Voice:** the read-aloud button, then the microphone setting. (A.) (The read-aloud button: built 2026-10-05 on the inspector's answers, the browser's own speech, the words, numbers and first rows of an answer.)
+8. **Voice:** the read-aloud button, then the microphone setting. (A.)
+9. **Answers grounded in the tools** ([ask-checks.md](ask-checks.md), 2026-10-14): tools that say why a result is empty and show their ties and lists, and a check of the answer against what the tools returned, with a retry and the cascade escalating on it. (A, B; C measures.) (The read-aloud button: built 2026-10-05 on the inspector's answers, the browser's own speech, the words, numbers and first rows of an answer.)
 
 ## 11. Decisions (Johan, 2026-10-04: yes to all six)
 
