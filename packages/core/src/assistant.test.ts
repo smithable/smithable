@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
-import { type AssistantOffer, asksWith, assistantOffer } from "./assistant.js";
+import { ANSWER_RULE, type AssistantOffer, asksWith, assistantOffer } from "./assistant.js";
 import { type AuthIR, validateAuth } from "./auth.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -79,6 +79,7 @@ test("a few tools whatever the app, and a line per kind of record the caller may
       "Order (orders): number*, customer* -> Customer, status* (draft | placed | shipped), total* (money), placedOn (date), rush (yes/no). Title: number.",
       "Actions: ship (Order, when status is placed).",
       "* required. You act as someone with the role sales.",
+      ANSWER_RULE,
     ].join("\n"),
   );
   // Reading is marked as reading, and what changes records as changing: assistants that ask

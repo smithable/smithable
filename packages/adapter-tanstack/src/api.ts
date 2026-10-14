@@ -31,6 +31,7 @@ import {
   modelNamed,
   names,
   ownerKey,
+  references,
   relatedTitle,
   type Texts,
   titleField,
@@ -784,11 +785,22 @@ function toolsModule(
           ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
       )
       .map((f) => f.name);
+    // Its lists, as `read` gives them: the related kind and its reference back.
+    const lists = Object.fromEntries(
+      model.fields.flatMap((f) => {
+        if (f.type.kind !== "relation" || !f.type.many) return [];
+        const target = models.find(
+          (m) => m.model.name === (f.type as { model: string }).model,
+        )?.model;
+        const back = target && references(target).find((r) => r.type.model === model.name);
+        return target && back ? [[f.name, { kind: target.name, ref: back.name }]] : [];
+      }),
+    );
     const named =
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
@@ -854,6 +866,7 @@ function toolsModule(
   }
 ${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
 ${app ? `import type { AskKind } from "#/kit/ask";\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
   app
@@ -950,6 +963,29 @@ const keyed = (viewer: Viewer | null): Viewer => {
 `
     : ""
 }
+/** A call's result, or its note when \`where\` names a value no record has. */
+async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof NoSuchValue) return { none: error.message };
+    throw error;
+  }
+}
+const noted = (result: unknown): result is { none: string } =>
+  typeof result === "object" && result !== null && "none" in result;
+
+/** Why a call found none: a text no record has, or a search nothing fits, with the nearest. */
+async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, unknown>): Promise<string | undefined> {
+  const text = kind.data.whyNone(viewer, args.where);
+  if (text) return text;
+  if (typeof args.search !== "string") return undefined;
+  // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
+  const refs = Object.keys(kind.refs);
+  const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+}
+
 /** Calls one tool as the key's role, or as a visitor without a key. */
 export async function callTool(viewer: Viewer | null, name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -971,44 +1007,64 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       }
       const limit = Math.min(50, Math.max(1, Number(args.limit) || 10));
       const page = Math.max(1, Number(args.page) || 1);
-      const { items, total } = await kind.data.find(viewer, {
-        where: args.where,
-        search: typeof args.search === "string" ? args.search : undefined,
-        sort: typeof args.sort === "string" ? args.sort : undefined,
-        limit,
-        offset: (page - 1) * limit,
-      });
       const asked = Array.isArray(args.fields) ? args.fields.map(String) : [];
       const columns = [...new Set(["id", kind.title, ...asked])];
+      // A value no record has is none, with what there is (docs/design/ask-checks.md §2).
+      const result = await none<{ items: unknown[]; total: number }>(() =>
+        kind.data.find(viewer, {
+          where: args.where,
+          search: typeof args.search === "string" ? args.search : undefined,
+          sort: typeof args.sort === "string" ? args.sort : undefined,
+          limit,
+          offset: (page - 1) * limit,
+        }),
+      );
+      if (noted(result)) return { columns, rows: [], total: 0, note: result.none };
+      const { items, total } = result;
       const rows = items.map((row) => {
         const api = kind.toApi(row as Record<string, any>) as Record<string, unknown>;
         return columns.map((field) => shown(kind, row as Record<string, unknown>, api, field));
       });
-      // Nothing found by a search: say where it looked, and how a reference is matched instead.
-      const refs = Object.keys(kind.refs);
-      if (!total && typeof args.search === "string")
-        return {
-          columns,
-          rows,
-          total,
-          note: \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`,
-        };
-      return { columns, rows, total };
+      if (total) return { columns, rows, total };
+      const why = await whyNone(kind, viewer, args);
+      return why ? { columns, rows, total, note: why } : { columns, rows, total };
     }
     case "measure": {
       const kind = kindOf(args);
       const { how, field } = measureOf(args.of);
       const options = { field, where: args.where, search: typeof args.search === "string" ? args.search : undefined };
-      if (typeof args.by === "string") return { by: args.by, rows: await kind.data.measureBy(viewer, how, args.by, options) };
-      const value = await kind.data.measure(viewer, how, options);
+      const key = how === "count" ? "total" : how;
+      if (typeof args.by === "string") {
+        const by = args.by;
+        const rows = await none(() => kind.data.measureBy(viewer, how, by, options));
+        if (noted(rows)) return { by, rows: [], note: rows.none };
+        // A top shared by several is said, so one is not given as the winner.
+        const top = rows[0]?.number;
+        const tied = rows.filter((r) => r.number === top);
+        return tied.length > 1 && top !== null && top !== undefined
+          ? { by, rows, note: \`\${tied.map((r) => r.title ?? String(r.value)).join(", ")} share the top, with \${top} each.\` }
+          : { by, rows };
+      }
+      const value = await none(() => kind.data.measure(viewer, how, options));
+      if (noted(value)) return { [key]: how === "count" ? 0 : null, note: value.none };
       // The smallest or largest: which record holds it.
       if ((how === "smallest" || how === "largest") && value !== null)
         return { [how]: value, of: await kind.data.holder(viewer, how, options) };
-      return { [how === "count" ? "total" : how]: value };
+      const why = !value ? await whyNone(kind, viewer, args) : undefined;
+      return why ? { [key]: value, note: why } : { [key]: value };
     }
     case "read": {
       const kind = kindOf(args);
-      return kind.toApi((await found(kind, viewer, args.id)) as Record<string, any>);
+      const row = await found(kind, viewer, args.id);
+      // With its lists, as its page shows them: an invoice with its lines (twenty of each at most).
+      const lists: Record<string, unknown> = {};
+      for (const [field, list] of Object.entries(kind.lists)) {
+        const related = KINDS[list.kind as keyof typeof KINDS] as Kind;
+        const find = related.data.find.bind(related.data) as (viewer: Viewer | null, options: { where: unknown; limit: number }) => Promise<{ items: unknown[]; total: number }>;
+        const shown = await find(viewer, { where: { [list.ref]: row.id }, limit: 20 }).catch(() => undefined);
+        if (shown) lists[field] = { rows: shown.items.map((r) => related.toApi(r as Record<string, any>)), total: shown.total };
+      }
+      return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
       const kind = kindOf(args);

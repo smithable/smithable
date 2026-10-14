@@ -491,7 +491,9 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
     const target = modelNamed(ir, f.type.model);
     if (!offeredModels.includes(target.name) || titleField(target) === "id") return [];
     const data = target.name === model.name ? self : names(target, t).data;
-    return [`${f.name}: (text: string) => ${data}.named(viewer, text)`];
+    return [
+      `${f.name}: { find: (text: string) => ${data}.named(viewer, text), titles: () => ${data}.titles(viewer) }`,
+    ];
   });
   const numeric = stored.filter(
     (f) => f.type.kind === "scalar" && ["int", "decimal", "money"].includes(f.type.name),
@@ -1199,7 +1201,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1714,9 +1716,39 @@ ${
       .map((row) => ({ id: row.id, title: ${shownTitle(model, "row.title")} }));
   },
 
+  /** Every ${titleColumn} the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: ${n.table}.${titleColumn} })
+      .from(${n.table})
+      .where(${self}.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => ${shownTitle(model, "row.title")});
+  },
+
 `
     : ""
-}  /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
+}  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = FILTERABLE[name];
+      if (field?.kind !== "text" || typeof v !== "string") continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(${n.table})
+        .where(and(${self}.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      if (values.length && !values.some((x) => x.toLowerCase().includes(v.toLowerCase())))
+        return \`No ${n.label.toLowerCase()} has "\${v}" in \${name}; the nearest: \${nearest(v, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
+  /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       ${self}.readable(viewer),

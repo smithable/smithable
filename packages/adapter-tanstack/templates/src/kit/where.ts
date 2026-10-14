@@ -22,6 +22,13 @@ import {
 import { BadInput } from "./refusal";
 import { relatedContains } from "./search";
 
+/**
+ * A value no record has (a choice's value that does not exist, a reference by a name nothing
+ * has): the API refuses it, the assistants' tools answer "none" with this as the note
+ * (docs/design/ask-checks.md §2).
+ */
+export class NoSuchValue extends BadInput {}
+
 /** A field as `where` may name it. */
 export type Filterable =
   | { kind: "text" | "bool"; column: Column }
@@ -57,8 +64,14 @@ export function whereOf(
   where: unknown,
   mine?: SQL,
   me?: string,
-  /** Per reference: the records the viewer may read whose title fits a text. */
-  named: Record<string, (text: string) => { id: number; title: string }[]> = {},
+  /**
+   * Per reference: the records the viewer may read whose title fits a text, and every title, for
+   * the nearest when none fits.
+   */
+  named: Record<
+    string,
+    { find: (text: string) => { id: number; title: string }[]; titles: () => string[] }
+  > = {},
 ): SQL | undefined {
   if (where === undefined || where === null) return undefined;
   if (typeof where !== "object" || Array.isArray(where))
@@ -80,7 +93,7 @@ export function whereOf(
       const values = list(v).map(String);
       const wrong = values.find((x) => !field.values.includes(x));
       if (wrong)
-        throw new BadInput(`"${name}" is one of ${field.values.join(", ")}; not "${wrong}".`);
+        throw new NoSuchValue(`"${name}" is one of ${field.values.join(", ")}; not "${wrong}".`);
       parts.push(values.length === 1 ? eq(field.column, values[0]) : inArray(field.column, values));
     } else if (field.kind === "bool") {
       if (![true, false, "true", "false"].includes(v as never))
@@ -101,7 +114,8 @@ export function whereOf(
       // By title, among the records the viewer may read: the one that fits, never a guess.
       const lookup = named[name];
       if (lookup) {
-        for (const text of titles) ids.push(oneNamed(lookup(text), text, name).id);
+        for (const text of titles)
+          ids.push(oneNamed(lookup.find(text), text, name, lookup.titles).id);
         titles = [];
       }
       if (titles.length && !field.title)
@@ -195,15 +209,57 @@ export function oneNamed(
   found: { id: number; title: string }[],
   text: string,
   what: string,
+  /** Every title there is, for the nearest when none fits. */
+  titles?: () => string[],
 ): { id: number; title: string } {
   const exact = found.filter((r) => r.title.toLowerCase() === text.toLowerCase());
   const pick = exact.length === 1 ? exact : found;
   if (pick.length === 1 && pick[0]) return pick[0];
-  if (!pick.length) throw new BadInput(`No ${what} called "${text}" that you may read.`);
+  if (!pick.length) {
+    const near = titles ? nearest(text, titles()) : [];
+    throw new NoSuchValue(
+      `No ${what} called "${text}" that you may read.${near.length ? ` The nearest: ${near.join(", ")}.` : ""}`,
+    );
+  }
   throw new BadInput(
     `"${text}" fits several: ${pick
       .slice(0, 5)
       .map((r) => `${r.title} (${r.id})`)
       .join(", ")}. Give its whole name or its id.`,
   );
+}
+
+/**
+ * The values nearest a text, the closest first (at most `n`): by the edit distance between the
+ * text and the value, or the value's part of the text's length when that is closer ("Website
+ * down" is near "Website outage"). For "none" with what there is instead.
+ */
+export function nearest(text: string, values: readonly string[], n = 3): string[] {
+  const needle = text.toLowerCase();
+  const scored = [...new Set(values)].map((value) => {
+    const v = value.toLowerCase();
+    const whole = distance(needle, v);
+    const part = v.length > needle.length ? distance(needle, v.slice(0, needle.length)) : whole;
+    return { value, score: Math.min(whole, part + 1) };
+  });
+  return scored
+    .sort((a, b) => a.score - b.score || a.value.localeCompare(b.value))
+    .slice(0, n)
+    .map((s) => s.value);
+}
+
+/** The edits that turn one text into another. */
+function distance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++)
+      current[j] = Math.min(
+        (previous[j] ?? 0) + 1,
+        (current[j - 1] ?? 0) + 1,
+        (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    previous = current;
+  }
+  return previous[b.length] ?? 0;
 }
