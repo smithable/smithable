@@ -7,6 +7,20 @@ export function displayValue<R>(field: RecordFieldUi<R>, row: R): unknown {
   return field.get(row);
 }
 
+/**
+ * A record's title as shown: its first line, at most sixty characters. A short name is shown as
+ * it is; a model titled by a long text (a message's words) shows their start. The API keeps the
+ * whole value.
+ */
+export function titleOf(value: unknown): string {
+  const line =
+    String(value ?? "")
+      .split("\n")
+      .map((l) => l.replace(/^[#>*\-\s]+/, "").trim())
+      .find(Boolean) ?? "";
+  return line.length > 60 ? `${line.slice(0, 59).trimEnd()}…` : line;
+}
+
 /** Text for showing a stored value in tables and headings. */
 export function formatValue(field: FieldUi, value: unknown, app: AppUi): string {
   if (value === null || value === undefined || value === "") return "—";
@@ -47,7 +61,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       return field.choices?.find((c) => c.value === value)?.label ?? String(value);
     case "relation":
     case "user":
-      return String(value);
+      return titleOf(value);
     default:
       return String(value);
   }

@@ -36,6 +36,7 @@ import {
   keyOf,
   lists,
   literal,
+  longTitle,
   modelNamed,
   names,
   optionsFor,
@@ -322,12 +323,16 @@ export function detailRoute(
   const order = fieldOrder(page, model, ux, t);
   const component = `${model.name}Page`;
   const title = titleField(model);
+  // A long title (a message's words) heads the page cut to its first line.
   const heading =
-    title === "id" ? `\`${n.label} #\${row.id}\`` : `row.${title} || \`${n.label} #\${row.id}\``;
+    title === "id"
+      ? `\`${n.label} #\${row.id}\``
+      : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${n.label} #\${row.id}\``;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
   // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
   const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
+    ...(longTitle(model) ? ([["#/kit/format", ["titleOf"]]] as [string, string[]][]) : []),
     [n.module, [n.remove, n.get, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])]],
     [`${n.module}.schema`, [n.schema]],
     ...(trash

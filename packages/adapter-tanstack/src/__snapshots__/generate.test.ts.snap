@@ -8992,7 +8992,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -19067,7 +19067,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -24615,7 +24615,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -31351,7 +31351,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "171b02f3 kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -35553,7 +35553,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "171b02f3 kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -38462,7 +38462,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -41157,7 +41157,7 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: id.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.",
     "tools": [
       {
         "name": "find",
@@ -41316,7 +41316,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: id.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.",
     "tools": [
       {
         "name": "find",
@@ -41486,7 +41486,7 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 const KINDS = {
   Component: { data: componentData, toApi: componentToApi, fromApi: componentFromApi, title: "name", refs: {}, searched: ["name","description"], label: "component", named: (viewer: Viewer | null, text: string) => componentData.named(viewer, text) },
   Incident: { data: incidentData, toApi: incidentToApi, fromApi: incidentFromApi, title: "title", refs: {"component":"name"}, searched: ["title","summary"], label: "incident", named: (viewer: Viewer | null, text: string) => incidentData.named(viewer, text) },
-  IncidentUpdate: { data: incidentUpdateData, toApi: incidentUpdateToApi, fromApi: incidentUpdateFromApi, title: "id", refs: {"incident":"title"}, searched: ["message"], label: "incident update", named: undefined },
+  IncidentUpdate: { data: incidentUpdateData, toApi: incidentUpdateToApi, fromApi: incidentUpdateFromApi, title: "message", refs: {"incident":"title"}, searched: ["message"], label: "incident update", named: (viewer: Viewer | null, text: string) => incidentUpdateData.named(viewer, text) },
   Maintenance: { data: maintenanceData, toApi: maintenanceToApi, fromApi: maintenanceFromApi, title: "title", refs: {"component":"name"}, searched: ["title","description"], label: "maintenance", named: (viewer: Viewer | null, text: string) => maintenanceData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
@@ -42947,6 +42947,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { titleOf } from "#/kit/format";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";
@@ -43143,18 +43144,18 @@ export const incidentUpdateData = {
         if (typeof v !== "number") continue;
         if (!best || (how === "largest" ? v > (best[field] as number) : v < (best[field] as number))) best = row;
       }
-      return best ? { id: best.id as number, title: String(best.id) } : null;
+      return best ? { id: best.id as number, title: titleOf(best.message) } : null;
     }
     const column = NUMBERS[field];
     if (!column) return null;
     const row = db
-      .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.id })
+      .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.message })
       .from(schema.incidentUpdates)
       .where(and(condition, isNotNull(column)))
       .orderBy(how === "largest" ? desc(column) : asc(column), asc(schema.incidentUpdates.id))
       .limit(1)
       .get();
-    return row ? { id: row.id, title: String(row.title) } : null;
+    return row ? { id: row.id, title: titleOf(row.title) } : null;
   },
 
   /**
@@ -43218,6 +43219,17 @@ export const incidentUpdateData = {
     if (rows.length > 10000)
       throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
+  },
+
+  /** The incident updates the viewer may read whose message has the text: a few, for naming one. */
+  named(viewer: Viewer | null, text: string): { id: number; title: string }[] {
+    return db
+      .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.message })
+      .from(schema.incidentUpdates)
+      .where(and(incidentUpdateData.readable(viewer), contains([schema.incidentUpdates.message], text)))
+      .limit(6)
+      .all()
+      .map((row) => ({ id: row.id, title: titleOf(row.title) }));
   },
 
   /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
@@ -43296,7 +43308,7 @@ export const incidentUpdateData = {
       db.transaction((tx) => {
         const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, id)).returning().get();
         if (gone) {
-          audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: gone.id });
+          audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: titleOf(gone.message) });
         }
       });
     } catch (error) {
@@ -43321,7 +43333,7 @@ export const incidentUpdateData = {
         try {
           const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, row.id)).returning().get();
           if (gone) {
-            audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: row.id, title: gone.id });
+            audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: row.id, title: titleOf(gone.message) });
           }
         } catch (error) {
           const refused = refusal(error);
@@ -43368,7 +43380,7 @@ export const incidentUpdateUi: RecordUi<IncidentUpdateRow> = {
   model: "IncidentUpdate",
   label: "Incident update",
   pluralLabel: "Incident updates",
-  titleField: "id",
+  titleField: "message",
   descriptionField: "message",
   columns: ["message", "incidentId", "at", "status"],
   fields: [
@@ -47545,7 +47557,7 @@ const getActivity = createServerFn()
         "IncidentUpdate",
         new Map(
           db
-            .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.id })
+            .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.message })
             .from(schema.incidentUpdates)
             .where(inArray(schema.incidentUpdates.id, ids("IncidentUpdate")))
             .all()
@@ -47792,6 +47804,7 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
+import { titleOf } from "#/kit/format";
 import { deleteIncidentUpdate, getIncidentUpdate, incidentUpdateUi, updateIncidentUpdate } from "#/generated/incident-update";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { incidentOptions } from "#/generated/incident";
@@ -47846,7 +47859,7 @@ function IncidentUpdatePage() {
   const back = () => navigate({ to: "/updates" });
   return (
     <>
-      <PageHeader title={\`Incident update #\${row.id}\`} />
+      <PageHeader title={titleOf(row.message) || \`Incident update #\${row.id}\`} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={incidentUpdateUi}
@@ -47897,6 +47910,7 @@ import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteIncidentUpdates, incidentUpdateDeleteRule, incidentUpdateUi } from "#/generated/incident-update";
+import { titleOf } from "#/kit/format";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -47945,7 +47959,7 @@ function UpdatesPage() {
           count={chosen.length}
           noun={["incident update", "incident updates"]}
           app={app}
-          titleOf={(id) => String(rows.find((row) => row.id === id)?.id ?? id)}
+          titleOf={(id) => titleOf(rows.find((row) => row.id === id)?.message ?? id)}
           actions={[]}
           deletable={chosen.filter((row) => allows(incidentUpdateDeleteRule, viewer, row.ownerId)).length}
           onDelete={(together) => deleteIncidentUpdates({ data: { ids: chosen.map((row) => row.id), together } })}
@@ -48514,15 +48528,15 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "a587d798 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "421fe6bb generated",
+  "src/generated/ask.server.ts": "0a18aeac generated",
   "src/generated/component.schema.ts": "310141e3 generated",
   "src/generated/component.server.ts": "3888aa08 generated",
   "src/generated/component.ts": "d63a4c5b generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "0057ed0f generated",
-  "src/generated/incident-update.ts": "069a32ca generated",
+  "src/generated/incident-update.server.ts": "96048417 generated",
+  "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
   "src/generated/incident.server.ts": "c3188dea generated",
   "src/generated/incident.ts": "9088c218 generated",
@@ -48570,7 +48584,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "8bd0794c kit",
+  "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "80d56605 kit",
   "src/kit/limit.ts": "748fe3c0 kit",
   "src/kit/log.server.ts": "4f35dda4 kit",
@@ -48620,10 +48634,10 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "86edddef generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
-  "src/routes/team/activity.tsx": "a4af8796 generated",
+  "src/routes/team/activity.tsx": "22056d84 generated",
   "src/routes/team/index.tsx": "9100f9bd generated",
-  "src/routes/updates/$id.tsx": "0fffa578 generated",
-  "src/routes/updates/index.tsx": "40f4b24a generated",
+  "src/routes/updates/$id.tsx": "2fc9bbd2 generated",
+  "src/routes/updates/index.tsx": "f488fba7 generated",
   "src/routes/updates/new.tsx": "a9bfc7fc generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "19116c27 kit",

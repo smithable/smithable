@@ -31,11 +31,13 @@ import {
   join,
   keyOf,
   literal,
+  longTitle,
   modelNamed,
   names,
   ownerKey,
   paramsUsed,
   relatedTitle,
+  shownTitle,
   standardActions,
   type Texts,
   tableRef,
@@ -71,6 +73,8 @@ function filterCode(
   const options: string[] = [];
   const modules: { module: string; data: string }[] = [];
   let ranges = false;
+  // A related model titled by a long text: its names are cut by the kit's titleOf.
+  let titles = false;
   let lists = false;
   let toggles = false;
   let mine = false;
@@ -133,13 +137,14 @@ function filterCode(
       const target = modelNamed(ir, field.type.model);
       const tn = names(target, t);
       const title = relatedTitle(ir, target.name);
+      if (longTitle(target)) titles = true;
       modules.push({ module: `#/generated/${kebab(target.name)}.server`, data: tn.data });
       conditions.push(
         `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").map(Number).filter(Number.isInteger)) : undefined`,
       );
       // The related records the viewer may read, by their names.
       options.push(
-        `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.${title}) }))`,
+        `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`,
       );
       controls.push({ name, label, kind: "chips", options: code(`options.${name}`) });
     } else if (field.type.kind === "scalar") {
@@ -197,7 +202,7 @@ function filterCode(
     }),
     mine,
     favorites,
-    imports: { ranges, lists, toggles: toggles || mine },
+    imports: { ranges, lists, titles, toggles: toggles || mine },
   };
 }
 
@@ -428,6 +433,7 @@ export function listParts(
     if (filtering) route.add("drizzle-orm", "and");
     if (filtering?.imports.toggles) route.add("drizzle-orm", "eq");
     if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
+    if (filtering?.imports.titles) route.add("#/kit/format", "titleOf");
     if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");
     for (const t of search.imports.titled) route.add(t.module, t.data);
     route.add("#/lib/viewer.server", "currentViewer");
@@ -476,6 +482,7 @@ export function listParts(
       .add("#/kit/csv", "csvName", "csvOf", "download")
       .add("#/kit/access", "allows")
       .add(n.module, n.removeMany, n.deleteRule);
+    if (longTitle(model)) view.add("#/kit/format", "titleOf");
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
   }
   const owner = `row.${ownerKey(model)}`;
@@ -612,7 +619,7 @@ ${
           count={chosen.length}
           noun={${literal([n.label.toLowerCase(), n.pluralLabel.toLowerCase()])}}
           app={app}
-          titleOf={(id) => String(rows.find((row) => row.id === id)?.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))} ?? id)}
+          titleOf={(id) => ${shownTitle(model, `rows.find((row) => row.id === id)?.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))} ?? id`)}}
           actions={[${many
             .map(
               (a) => `

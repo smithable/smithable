@@ -43,6 +43,7 @@ import {
   keyOf,
   lists,
   literal,
+  longTitle,
   modelNamed,
   names,
   ownerKey,
@@ -50,6 +51,7 @@ import {
   relatedTitle,
   SCHEMA_IMPORT,
   shownFields,
+  shownTitle,
   storedFields,
   type Texts,
   tableRef,
@@ -1030,7 +1032,7 @@ ${eraseMembers}`
       db.transaction((tx) => {
         for (const row of rows) {
           const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: gone.${titleKey} });
+          if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
         }
       });
     } catch (error) {
@@ -1132,7 +1134,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1557,7 +1559,7 @@ ${
         if (typeof v !== "number") continue;
         if (!best || (how === "largest" ? v > (best[field] as number) : v < (best[field] as number))) best = row;
       }
-      return best ? { id: best.id as number, title: String(best.${titleColumn}) } : null;
+      return best ? { id: best.id as number, title: ${shownTitle(model, `best.${titleColumn}`)} } : null;
     }
     const column = NUMBERS[field];
     if (!column) return null;
@@ -1568,7 +1570,7 @@ ${
       .orderBy(how === "largest" ? desc(column) : asc(column), asc(${n.table}.id))
       .limit(1)
       .get();
-    return row ? { id: row.id, title: String(row.title) } : null;
+    return row ? { id: row.id, title: ${shownTitle(model, "row.title")} } : null;
   },
 
   /**
@@ -1644,7 +1646,7 @@ ${
       .where(and(${self}.readable(viewer), contains([${n.table}.${titleColumn}], text)))
       .limit(6)
       .all()
-      .map((row) => ({ id: row.id, title: String(row.title) }));
+      .map((row) => ({ id: row.id, title: ${shownTitle(model, "row.title")} }));
   },
 
 `
@@ -1796,7 +1798,7 @@ ${dropPictures(
       db.transaction((tx) => {
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
-          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
+          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
         }
       });
     } catch (error) {
@@ -1828,7 +1830,7 @@ ${
         try {
 ${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
-            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: gone.${titleKey} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
+            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
           }
         } catch (error) {
           const refused = refusal(error);

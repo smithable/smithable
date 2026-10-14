@@ -34,10 +34,22 @@ export interface SamplePicture {
 export type SampleRecordValue = string | number | boolean | null | SamplePicture | SamplePicture[];
 export type SamplesIR = Record<string, Record<string, SampleRecordValue>[]>;
 
-/** The field that names a record: the first text field called like a name or title. */
+/**
+ * The field that names a record: the first short text called like a name or title, else the
+ * first short text; a model with none (a message: its words, who sent it) is named by its first
+ * long text, which the app cuts to its first line (the kit's titleOf); else by its number.
+ */
 export function titleField(model: ModelIR): string {
-  const strings = model.fields.filter((f) => f.type.kind === "scalar" && f.type.name === "string");
-  return (strings.find((f) => /name|title/i.test(f.name)) ?? strings[0])?.name ?? "id";
+  const kind = (f: { type: ModelIR["fields"][number]["type"] }, ...names: string[]) =>
+    f.type.kind === "scalar" && names.includes(f.type.name);
+  const strings = model.fields.filter((f) => kind(f, "string"));
+  return (
+    (
+      strings.find((f) => /name|title/i.test(f.name)) ??
+      strings[0] ??
+      model.fields.find((f) => kind(f, "text", "markdown"))
+    )?.name ?? "id"
+  );
 }
 
 /**
