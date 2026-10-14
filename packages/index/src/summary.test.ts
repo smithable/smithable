@@ -431,3 +431,19 @@ test("Ask in the summary: who, its name from the content file, and its voice", (
   );
   expect(said("formal")).toContain("It answers formally.");
 });
+
+test("a field's rules on the record are said with it: who fills it, when it is fixed or required", () => {
+  const text = file("smithable.yml").replace(
+    "      total: money!\n",
+    "      total: { type: money!, locked: { status: [shipped, canceled] } }\n      trackingCode: { type: string, required: { status: shipped } }\n      handledBy: { type: User, by: app, default: ME() }\n",
+  );
+  const ir = validateSpec({ path: "smithable.yml", text }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const auth = validateAuth({ path: "smithable.auth.yml", text: file("smithable.auth.yml") }).auth;
+  const lines =
+    summarize(ir, auth, emptyContent()).find((s) => s.concept === "model:Order")?.sentences ?? [];
+  const said = lines.join("\n");
+  expect(said).toContain("fixed when status is shipped or canceled");
+  expect(said).toContain("required when status is shipped");
+  expect(said).toContain("who makes it, by default, filled by the app");
+});

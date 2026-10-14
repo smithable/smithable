@@ -118,6 +118,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
     // Each section returns the IR value for its own key.
     (parsed as Record<string, unknown>)[section.key] = section.parse(ctx, entry?.value, parsed);
   }
+  unfilled(ctx, parsed);
   for (const role of options.roles ?? []) ctx.define("role", role);
   ctx.checkReferences(options.roles ? [] : ["role"]);
 
@@ -179,4 +180,36 @@ function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
 
 function firstLine(message: string): string {
   return message.split("\n")[0] ?? message;
+}
+
+/**
+ * A required field the app fills (record-rules.md §1) with nothing to fill it: no default, no
+ * action's set and no incoming entry's set naming it. A form that creates a record without it is
+ * refused, so it is said here, where it is written; code of one's own may still fill it.
+ */
+function unfilled(ctx: ParseContext, parsed: Partial<SpecIR>): void {
+  const given = new Set<string>();
+  for (const action of parsed.actions ?? []) {
+    if (action.custom) continue;
+    for (const v of [...action.set, ...(action.copy ?? [])]) given.add(`${action.on}.${v.field}`);
+    for (const add of action.add ?? [])
+      for (const v of add.values) given.add(`${add.model}.${v.field}`);
+  }
+  for (const entry of parsed.incoming ?? []) {
+    if (!entry.create) continue;
+    for (const v of entry.set) given.add(`${entry.create}.${v.field}`);
+    for (const field of Object.values(entry.mail ?? {})) given.add(`${entry.create}.${field}`);
+  }
+  for (const model of parsed.models ?? [])
+    for (const f of model.fields) {
+      if (!f.byApp || !f.required || f.defaultMe || f.defaultFormula || f.default !== undefined)
+        continue;
+      if (given.has(`${model.name}.${f.name}`)) continue;
+      ctx.warning(
+        ctx.at(`by:field "${model.name}.${f.name}"`),
+        "app-field-unfilled",
+        `${model.name}.${f.name} is required and filled by the app, but no default, action or incoming entry gives it a value: a record cannot be created without it.`,
+        "Give it a default (a value, or ME() for a person), set it in an action or an incoming entry, or fill it in your own code.",
+      );
+    }
 }

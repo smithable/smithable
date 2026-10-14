@@ -4,9 +4,11 @@
 import {
   ACCESS_OPERATIONS,
   type AccessOperation,
+  type FieldIR,
   humanize,
   identifier,
   isUpload,
+  type ModelIR,
   modelAccess,
   plural,
 } from "@smithable/core";
@@ -192,6 +194,13 @@ export function Properties({
           />
         )}
         <ListToggle spec={spec} run={run} model={name} field={fieldName} />
+        {!field.formula && !(field.type.kind === "relation" && field.type.many) && (
+          <FieldRules
+            model={ir.models.find((m) => m.name === name) as ModelIR}
+            field={field}
+            run={run}
+          />
+        )}
         {isUpload(field) && <ReviewChip spec={spec} run={run} model={name} field={fieldName} />}
         <TextSetting
           label="Label"
@@ -473,6 +482,119 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
 }
 
 /** Whether a field is a column of its list, and a switch to show or hide it there. */
+/**
+ * A field's rules on the record (record-rules.md): filled by the app, when it can be changed and
+ * when it is required, each a setFieldRules. A condition is one choice or yes/no field's value.
+ */
+function FieldRules({ model, field, run }: { model: ModelIR; field: FieldIR; run: Run }) {
+  const set = (args: Record<string, unknown>) =>
+    void run("setFieldRules", { model: model.name, field: field.name, ...args });
+  const fields = model.fields.filter(
+    (f) =>
+      f.name !== field.name &&
+      !f.formula &&
+      (f.type.kind === "choice" || (f.type.kind === "scalar" && f.type.name === "bool")),
+  );
+  const lock = field.locked === true ? "once" : field.locked ? "when" : "always";
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-semibold text-quiet">Rules</legend>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={Boolean(field.byApp)}
+          onChange={(e) => set({ by: e.target.checked ? "app" : "" })}
+        />
+        Filled by the app, not in the form
+      </label>
+      <Label text="Can be changed">
+        <Select
+          aria-label="Can be changed"
+          value={lock}
+          onChange={(e) => {
+            if (e.target.value === "always") set({ locked: {}, once: false });
+            if (e.target.value === "once") set({ once: true });
+          }}
+          options={[
+            ["always", "Always"],
+            ["once", "Never, once it is made"],
+            ...(lock === "when"
+              ? [["when", "Not while a condition holds"] as [string, string]]
+              : []),
+          ]}
+        />
+      </Label>
+      {fields.length > 0 && (
+        <ConditionPicker
+          label="Not while"
+          fields={fields}
+          current={field.locked === true ? undefined : field.locked}
+          onPick={(condition) => set({ locked: condition })}
+        />
+      )}
+      {fields.length > 0 && !field.required && (
+        <ConditionPicker
+          label="Required while"
+          fields={fields}
+          current={field.requiredWhen}
+          onPick={(condition) => set({ required: condition })}
+        />
+      )}
+    </fieldset>
+  );
+}
+
+/** A condition as one field and its value, picked and applied; Clear removes it. */
+function ConditionPicker({
+  label,
+  fields,
+  current,
+  onPick,
+}: {
+  label: string;
+  fields: FieldIR[];
+  current?: Record<string, string | boolean | string[]>;
+  onPick: (condition: Record<string, string>) => void;
+}) {
+  const [name, setName] = useState(Object.keys(current ?? {})[0] ?? fields[0]?.name ?? "");
+  const chosen = fields.find((f) => f.name === name);
+  const values =
+    chosen?.type.kind === "choice" ? chosen.type.values : chosen ? ["true", "false"] : [];
+  const [value, setValue] = useState(
+    String([Object.values(current ?? {})[0]].flat()[0] ?? values[0] ?? ""),
+  );
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <Label text={label}>
+        <Select
+          aria-label={`${label}: field`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          options={fields.map((f) => [f.name, humanize(f.name)])}
+        />
+      </Label>
+      <Select
+        aria-label={`${label}: value`}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        options={values.map((v) => [v, v === "true" ? "Yes" : v === "false" ? "No" : humanize(v)])}
+      />
+      <Button
+        variant="ghost"
+        className="border border-line"
+        onClick={() => onPick({ [name]: value })}
+      >
+        Set
+      </Button>
+      {current && (
+        <Button variant="ghost" onClick={() => onPick({})}>
+          Clear
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function ListToggle({
   spec,
   run,
