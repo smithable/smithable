@@ -66,7 +66,17 @@ function checkType(type: string): void {
  *  computed field's formula, a number's or a text's bounds; the default then as its own key). */
 export type FieldArg =
   | string
-  | { type: string; formula?: string; min?: number; max?: number; default?: FieldValue };
+  | {
+      type: string;
+      formula?: string;
+      min?: number;
+      max?: number;
+      default?: FieldValue;
+      /** Its rules on the record (record-rules.md), as the long form writes them. */
+      by?: "app";
+      locked?: true | Record<string, string | boolean | string[]>;
+      required?: boolean | Record<string, string | boolean | string[]>;
+    };
 
 /** The bounds and the default of a field's long form, for the operations that take them. */
 export const FIELD_BOUNDS = {
@@ -96,11 +106,14 @@ export const FIELD_ARG = {
         type: { type: "string" },
         formula: { type: "string", minLength: 1 },
         ...FIELD_BOUNDS,
+        by: { enum: ["app"] },
+        locked: { anyOf: [{ const: true }, { type: "object" }] },
+        required: { anyOf: [{ type: "boolean" }, { type: "object" }] },
       },
     },
   ],
   description:
-    'Field shorthand, e.g. "string!", or the long form for a computed field, e.g. { "type": "money", "formula": "quantity * unitPrice" }, or for a number within bounds, e.g. { "type": "int!", "min": 1, "max": 5, "default": 3 }.',
+    'Field shorthand, e.g. "string!", or the long form for a computed field, e.g. { "type": "money", "formula": "quantity * unitPrice" }, for a number within bounds, e.g. { "type": "int!", "min": 1, "max": 5, "default": 3 }, or with its rules on the record, e.g. { "type": "User", "by": "app", "default": "ME()" }, { "type": "int!", "locked": { "status": "closed" } }, { "type": "User", "required": { "status": "inProgress" } }.',
 };
 
 /** Checks a field given to an operation; a computed one's formula is checked with the spec. */
@@ -108,9 +121,11 @@ export function checkFieldArg(name: string, value: FieldArg): void {
   checkFieldName(name);
   checkType(typeof value === "string" ? value : value.type);
   if (typeof value === "string") return;
-  if (value.formula === undefined && value.min === undefined && value.max === undefined)
+  const ruled =
+    value.by !== undefined || value.locked !== undefined || value.required !== undefined;
+  if (value.formula === undefined && value.min === undefined && value.max === undefined && !ruled)
     throw new OperationError(
-      `Field "${name}": the long form is for a formula or bounds (min, max); otherwise write the shorthand, like "int! = 3".`,
+      `Field "${name}": the long form is for a formula, bounds (min, max) or rules (by, locked, required); otherwise write the shorthand, like "int! = 3".`,
     );
   if (value.formula !== undefined && (value.min !== undefined || value.max !== undefined))
     throw new OperationError(

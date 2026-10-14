@@ -173,7 +173,9 @@ export function summarize(
       : [];
     for (const f of model.fields) {
       if (f.type.kind === "relation" && f.type.model === USER_MODEL) {
-        sentences.push(`Each ${single} can have ${article(fieldLabel(model, f))} (a user).`);
+        sentences.push(
+          `Each ${single} can have ${article(fieldLabel(model, f))} (${["a user", ...ruleNotes(f)].join(", ")}).`,
+        );
       } else if (f.type.kind === "relation" && f.type.many) {
         const target = modelNamed(f.type.model);
         if (target) sentences.push(`Each ${single} lists its ${many(target)}.`);
@@ -477,6 +479,7 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
     if (f.unique) notes.push("unique");
     if (f.default !== undefined && f.type.kind !== "choice") notes.push(`${f.default} by default`);
     if (f.defaultFormula) notes.push(`${words(model, f.defaultFormula)} by default`);
+    notes.push(...ruleNotes(f));
     // A field named by a bare preposition ("at", "on", "from") is said by what it holds:
     // "a date and time (at, required)", not "an at (a date and time, required)".
     const kind = f.type.kind === "scalar" ? KINDS[f.type.name] : undefined;
@@ -684,6 +687,20 @@ function contactWords(
       ? "the owner"
       : `the ${fieldLabel(model, field).toLowerCase()}`;
   return `contact ${who} by mail${contact.keep ? ` (kept in ${contact.keep})` : ""}`;
+}
+
+/** A field's rules on the record (record-rules.md) in words: who fills it, when it is fixed or required. */
+function ruleNotes(f: FieldIR): string[] {
+  return [
+    ...(f.defaultMe ? ["who makes it, by default"] : []),
+    ...(f.byApp ? ["filled by the app"] : []),
+    ...(f.locked === true
+      ? ["fixed once made"]
+      : f.locked
+        ? [`fixed when ${conditionWords(f.locked)}`]
+        : []),
+    ...(f.requiredWhen ? [`required when ${conditionWords(f.requiredWhen)}`] : []),
+  ];
 }
 
 /** A condition in words: "status is published and pinned is yes". */

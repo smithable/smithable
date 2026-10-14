@@ -693,8 +693,10 @@ function readRules(
     }
   }
   if (by) {
-    if (readString(ctx, by.value, `"by" of ${where}`) === "app") field.byApp = true;
-    else
+    if (readString(ctx, by.value, `"by" of ${where}`) === "app") {
+      field.byApp = true;
+      ctx.mark(`by:${where}`, by.keyNode);
+    } else
       ctx.error(
         by.value,
         "invalid-value",

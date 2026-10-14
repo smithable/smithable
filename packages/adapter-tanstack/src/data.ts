@@ -1831,7 +1831,15 @@ ${
     if (!row) throw new AccessDenied(viewer !== null);
     check(${n.access}.write, viewer, ${ownerOf});
 ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
-    const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
+    const updated = ${
+      model.ownedBy && signedIn
+        ? ownerRequired
+          ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
+          : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
+            // writer never takes it by changing it); anyone else changes only their own.
+            `{ ...values, ${owner}: viewer && ${n.access}.write.roles.includes(viewer.role) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
+        : "values"
+    };
     try {
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
         const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();${updateRules}

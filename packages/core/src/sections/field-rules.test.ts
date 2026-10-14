@@ -175,3 +175,18 @@ test("a condition on a computed number is refused: only text and yes/no compare"
     "invalid-where",
   );
 });
+
+test("a required field the app fills with nothing to fill it is a warning; a default or an action's set is enough", () => {
+  const codes = (text: string) =>
+    validateSpec({ path: "smithable.yml", text }).diagnostics.map((d) => d.code);
+  const unfilled = spec.replace(
+    "      status: draft",
+    "      reference: { type: string!, by: app }\n      status: draft",
+  );
+  expect(codes(unfilled)).toContain("app-field-unfilled");
+  const defaulted = unfilled.replace(
+    "      reference: { type: string!, by: app }",
+    "      reference: { type: string!, by: app, default: R-1 }",
+  );
+  expect(codes(defaulted)).not.toContain("app-field-unfilled");
+});

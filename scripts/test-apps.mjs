@@ -1286,6 +1286,10 @@ async function rulesFlow(base) {
     await page
       .getByRole("checkbox", { name: "Thanked", checked: true })
       .waitFor({ timeout: 10000 });
+    // A change keeps an empty owner field empty: the action does not make whoever pressed it the
+    // account manager.
+    if ((await page.getByRole("combobox", { name: "Account manager" }).inputValue()) !== "")
+      throw new Error("the action made its runner the account manager");
     console.log(
       "  ✓ browser: a person is a filter (Mine, Unassigned); an action's condition on LAST of a list holds on the record's page",
     );
