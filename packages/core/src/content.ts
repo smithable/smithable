@@ -29,8 +29,7 @@ export interface ContentIR {
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
-  /** An action's button and page title, by its name in smithable.yml; else its name in words. */
-  /** An action's button (label) and the line that says what it does (help: tooltip, dialog). */
+  /** An action's button and page title (label, else its name in words) and what it does (help: its tooltip and its dialog's line), by its name in smithable.yml. */
   actions: Record<string, { label?: string; help?: string }>;
   /** An outgoing mail's subject and the text above the record (integrations.md §4.1b). */
   outgoing: Record<string, { subject?: string; text?: string }>;
