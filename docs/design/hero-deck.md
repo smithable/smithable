@@ -45,10 +45,17 @@ saved at 2× as WebP, light scheme (the hero sits on the start page's own ground
 - **Edit without code:** the Change form for a field, filled in (the kind of record, the name,
   the type), before the button.
 - **Edit by code:** the Code mode editor on smithable.yml, scrolled to the model, the new line
-  typed and highlighted, the "Saved" state (the edit saves itself).
+  typed and highlighted, the "Saved" state (the edit saves itself). It is taken in a window
+  under 1024 pixels, where Studio gives the editor the window's width, so the spec's long lines
+  and their comments fit.
 
-The result is two screenshots of the app's page at 1280×800: before the change and after it,
-the same page and scroll, so the difference is the one thing that moved.
+No card cuts through a word: each is cropped to whole elements (the prompt card from its label
+"Describe a change, or ask a question" down, with room above for the badge; the code card to
+whole lines, as wide as the longest of them). A line wider than the editor stops the script.
+
+The result is two screenshots of the record's form, whole and from the page's top: before the
+change and after it. They line up at the top, so in the fade the new field is the one thing
+that appears; the "after" is taller by that field.
 
 ## 3. On the page
 
@@ -86,16 +93,15 @@ docs/site/brand/hero/deck.json
 `deck.json` is the data the page reads: per starter the change's three texts (the sentence, the
 form's values, the YAML lines), the result page's route, the alt texts and the five files.
 The script takes its instructions from `scripts/hero-shots.json` (the table in §1 as data:
-starter, sentence, operation and arguments, the form's values, the lines, the result route and
-a selector to scroll to). Steps per starter:
+starter, sentence, operation and arguments, the form's values, the lines, the result route). Steps per starter:
 
 1. `new` the starter; start Studio; wait for the preview.
-2. The result "before": the preview's page at the route, scrolled to the selector.
+2. The result "before": the preview's page at the route, from the top to the form's end.
 3. The prompt card: type the sentence, wait for the proposal, crop to the box and the proposal.
 4. The no-code card: open the Change form for the operation, fill the values, crop.
 5. The code card: open Code mode on smithable.yml, go to the model, type the line, wait for
    "Saved", crop. (The change is now applied once, by this save.)
-6. The result "after": the same page and scroll.
+6. The result "after": the same page, from the top to the form's end.
 7. Write the WebP files and the starter's entry in `deck.json`.
 
 Deterministic (the same spec and change give the same pictures but for the day's dates, which

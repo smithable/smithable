@@ -105,18 +105,22 @@ async function shoot(browser, starter, change) {
     });
     await page.goto(`http://localhost:${port}/?guide=off`);
     const frame = page.locator('iframe[title="App preview"]');
-    const clip = async (locators, pad = 12) => {
+    // Whole elements with a margin, and more above them for the card's badge, down to what is
+    // above them (`over`), so no word is cut at an edge.
+    const clip = async (locators, over, pad = 12, top = 40) => {
       const boxes = [];
       for (const l of locators) boxes.push(await l.boundingBox());
+      const floor = over ? await over.boundingBox().then((b) => b.y + b.height + 4) : 0;
       const x = Math.max(0, Math.min(...boxes.map((b) => b.x)) - pad);
-      const y = Math.max(0, Math.min(...boxes.map((b) => b.y)) - pad);
+      const y = Math.max(floor, Math.min(...boxes.map((b) => b.y)) - top);
       const r = Math.max(...boxes.map((b) => b.x + b.width)) + pad;
       const b = Math.max(...boxes.map((b) => b.y + b.height)) + pad;
       return page.screenshot({ clip: { x, y, width: r - x, height: b - y } });
     };
-    // The record's form, in a preview wide enough to show it as the app does.
+    // The record's form, whole and from the page's top, in a preview wide enough to show it as the
+    // app does: before and after line up, and after is taller by what the change added.
     const result = async () => {
-      await page.setViewportSize({ width: 1600, height: 1000 });
+      await page.setViewportSize({ width: 1600, height: 1800 });
       await page
         .locator('section[aria-busy="true"]', {
           has: page.getByRole("heading", { name: "Preview" }),
@@ -125,13 +129,22 @@ async function shoot(browser, starter, change) {
       await page.getByLabel("Preview address").fill(change.route);
       await page.getByRole("button", { name: "Go", exact: true }).click();
       await page.waitForTimeout(6000);
-      // The page's end, where an added field goes on the form, in both pictures.
-      await frame
+      const bottom = await frame
         .contentFrame()
         .locator("body")
-        .evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        .evaluate(() => {
+          window.scrollTo(0, 0);
+          const forms = [...document.querySelectorAll("main form")];
+          if (!forms.length) return document.documentElement.scrollHeight;
+          return Math.ceil(Math.max(...forms.map((f) => f.getBoundingClientRect().bottom)) + 40);
+        });
       await page.waitForTimeout(500);
-      const png = await frame.screenshot({ animations: "disabled" });
+      const fb = await frame.boundingBox();
+      if (bottom > fb.height) throw new Error(`${starter}: the form is taller than the preview`);
+      const png = await page.screenshot({
+        clip: { x: fb.x, y: fb.y, width: fb.width, height: bottom },
+        animations: "disabled",
+      });
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.waitForTimeout(1000);
       return png;
@@ -149,11 +162,19 @@ async function shoot(browser, starter, change) {
     if (!/No AI needed/.test(said))
       throw new Error(`${starter}: the rules did not read "${change.sentence}":\n${said}`);
     await page.waitForTimeout(500);
-    await save("prompt", await clip([ask, proposal]));
+    await save(
+      "prompt",
+      await clip(
+        [page.locator('form[data-guide="change"]'), proposal],
+        page.getByRole("tab", { name: "Changes" }),
+      ),
+    );
     const discard = proposal.getByRole("button", { name: /Discard/ });
     if (await discard.isVisible().catch(() => false)) await discard.click();
 
-    // Edit without code: the field form, filled in, before its button.
+    // Edit without code: the field form, filled in, before its button, in a window tall enough
+    // for the whole form.
+    await page.setViewportSize({ width: 1280, height: 1100 });
     const forms = page.locator("details", { hasText: "Change by form" });
     if ((await forms.getAttribute("open")) === null) await forms.locator("summary").click();
     await page.getByLabel("What do you want to change?").selectOption({ label: "Add a field" });
@@ -162,7 +183,7 @@ async function shoot(browser, starter, change) {
     await page.getByLabel("Holds").selectOption({ label: change.holds });
     if (change.values) await page.getByLabel("Values").fill(change.values);
     await page.waitForTimeout(500);
-    await save("nocode", await clip([forms]));
+    await save("nocode", await clip([forms], undefined, 8, 8));
 
     // Edit by code: the line in smithable.yml, saved by itself (this applies the change, once).
     await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
@@ -176,24 +197,53 @@ async function shoot(browser, starter, change) {
       withLine(text, change.model, change.line),
     );
     await page.getByText("Saved", { exact: true }).waitFor({ timeout: 90000 });
-    const line = page.locator(".cm-line", { hasText: change.line }).first();
+    // Under 1024 pixels Studio gives the editor the window's width, so the spec's long lines fit.
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await page.waitForTimeout(1000);
+    const yml = page.locator(".cm-editor", { has: page.getByLabel("smithable.yml") });
+    const line = yml.locator(".cm-line", { hasText: change.line }).first();
     await line.scrollIntoViewIfNeeded();
     await line.click();
     await page.keyboard.press("Home");
-    await page
+    await yml
       .locator(".cm-scroller")
       .first()
       .evaluate((e) => {
         e.scrollLeft = 0;
       });
+    await page.evaluate(() => document.activeElement?.blur());
     await page.waitForTimeout(500);
-    const lb = await line.boundingBox();
-    const eb = await page.locator(".cm-editor").first().boundingBox();
-    const top = Math.max(eb.y, lb.y - 170);
+    // Whole lines down to the new one, as wide as the longest of them: no word cut at an edge.
+    const eb = await yml.boundingBox();
+    const rows = await yml.locator(".cm-line").evaluateAll((ls) =>
+      ls.map((l) => {
+        const r = document.createRange();
+        r.selectNodeContents(l);
+        const b = l.getBoundingClientRect();
+        return {
+          text: l.textContent,
+          top: b.top,
+          bottom: b.bottom,
+          right: r.getBoundingClientRect().right,
+        };
+      }),
+    );
+    const here = rows.findIndex((r) => r.text.trim() === change.line);
+    const shown = rows
+      .slice(Math.max(0, here - 8), here + 1)
+      .filter((r) => r.top >= eb.y && r.bottom <= eb.y + eb.height);
+    const right = Math.max(...shown.map((r) => r.right)) + 24;
+    if (right > eb.x + eb.width) throw new Error(`${starter}: a line is wider than the editor`);
+    const top = shown[0].top;
     await save(
       "code",
       await page.screenshot({
-        clip: { x: eb.x, y: top, width: Math.min(eb.width, 640), height: 340 },
+        clip: {
+          x: eb.x,
+          y: top,
+          width: Math.max(480, right - eb.x),
+          height: shown.at(-1).bottom - top,
+        },
       }),
     );
 
