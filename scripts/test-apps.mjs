@@ -1167,6 +1167,15 @@ async function filtersFlow(base) {
     await page.getByRole("checkbox", { name: "Mine" }).click();
     await page.waitForURL(/owner=mine/);
     await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    // A range removed by its chip stays removed: what was typed in it goes too, or the typed
+    // range came back with the next render.
+    await page.getByRole("button", { name: "Remove the credit limit filter" }).click();
+    await page.waitForURL((url) => !url.searchParams.has("creditLimit"));
+    await page.waitForTimeout(1000);
+    if (new URL(page.url()).searchParams.has("creditLimit"))
+      throw new Error("the removed range came back");
+    if ((await page.getByRole("spinbutton", { name: "Credit limit from" }).inputValue()) !== "")
+      throw new Error("the removed range still shows its from");
     console.log(
       "  ✓ browser: a list filters by a chip, a range and Mine and sorts by the address's order, applied by the query; a linked view gives the same list",
     );

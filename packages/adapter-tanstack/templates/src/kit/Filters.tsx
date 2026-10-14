@@ -112,14 +112,19 @@ export function Filters({
       {active.length > 0 && (
         <ul aria-label={w.activeFilters} className="flex flex-wrap gap-2">
           {active.map((f) => (
-            <li key={f.name}>
+            <li
+              key={f.name}
+              className="inline-flex items-center gap-1 rounded-full bg-accent py-1 pr-1 pl-3 text-sm text-accent-foreground"
+            >
+              {f.label}: {describe(f, values[f.name] as string)}
+              {/* Only the × removes it, not a click on its words. */}
               <button
                 type="button"
+                aria-label={w.removeFilter(f.label)}
                 onClick={() => set(f.name, undefined)}
-                className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm text-accent-foreground"
+                className="cursor-pointer rounded-full p-0.5 outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {f.label}: {describe(f, values[f.name] as string)}
-                <X aria-label={w.removeFilter(f.label)} className="size-4" />
+                <X aria-hidden className="size-4" />
               </button>
             </li>
           ))}
@@ -234,10 +239,20 @@ function Range({
   const id = useId();
   const [from = "", to = ""] = (value ?? "").split("..");
   const [text, setText] = useState({ from, to });
+  // A change from elsewhere (its chip removed, the address changed) replaces what was typed, or
+  // the typed range would come straight back; the range this field sent itself does not.
+  const [seen, setSeen] = useState({ value, sent: value });
+  if (value !== seen.value) {
+    setSeen({ ...seen, value });
+    if (value !== seen.sent) setText({ from, to });
+  }
   useEffect(() => {
     const next = text.from || text.to ? `${text.from}..${text.to}` : undefined;
     if (next === value) return;
-    const timer = setTimeout(() => onChange(next), 400);
+    const timer = setTimeout(() => {
+      setSeen((s) => ({ ...s, sent: next }));
+      onChange(next);
+    }, 400);
     return () => clearTimeout(timer);
   }, [text, value, onChange]);
   const type = filter.input === "date" ? "date" : "number";
