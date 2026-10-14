@@ -63,6 +63,31 @@ The coder is subject to the same AI policy as every model call: Claude Code coun
 
 `smithable ask` runs the coder by itself when its proposal adds a query. `smithable code hooks "email the customer when an order ships"` has it write a hook in `src/custom/hooks.ts`, what happens after a record is created, changed or deleted, or once a day; `ask` points there when a request describes such behaviour. The coder is asked to read only the project, edit only `src/custom/`, and run only the type check (Claude Code runs with `--permission-mode dontAsk` and path-scoped rules). It never runs the tests: they execute the code it wrote, so Smithable runs them itself afterwards. Be clear about the boundary: the coder is a program running with your privileges, and those rules are its tool's settings, not a sandbox. What Smithable guarantees is what gets committed: every changed file, ignored file and Git hook is checked, and so are the installed packages, build output and dev database, before any test runs (except the caches the preview's dev server writes, and Smithable's own snapshots and token log). A change anywhere else undoes everything: Git's undo, the hooks put back, build output removed, packages installed again, and a changed dev database named so it can be restored. A failing type check or test undoes everything too. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
 
+## The app's assistant (Ask)
+
+A generated app's **Ask** panel answers questions about its records and makes the changes it is asked for, through the app's own tools and as the person asking: it may do only what their role may. Questions worded the usual way are read by rules in the app itself, with no model and at no cost. For the rest, the app uses the model its host gives it:
+
+```bash
+export ASSISTANT_URL=https://api.mistral.ai/v1   # any OpenAI-compatible chat endpoint that can call tools
+export ASSISTANT_KEY=…
+export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-4-5, through a gateway that serves Claude
+```
+
+Without them, Ask answers by its rules alone and says when a question needs a model.
+
+On smithable.ai, apps' assistants use Claude Haiku 4.5, run in the EU. When it is not available, Mistral Medium answers. A host set to EU-only uses Mistral Small instead, and a question moves to Haiku when Small gets stuck: after two refused tool calls, or when it has no answer by its fourth call. Choosing EU-only for a single project is not available yet.
+
+Measured on 134 questions and changes across six starters ([bench-ask](benchmarks/bench-ask-seven-tools.md), [cascade](benchmarks/bench-ask-cascade.md)), with each answer checked against the records:
+
+| Model | Right | Cost per question | Time |
+|---|---|---|---|
+| Claude Haiku 4.5 | 131 / 134 (98 %) | $0.0061 | 5.9 s |
+| Mistral Small | 119 / 134 (89 %) | $0.0006 | 2.9 s |
+| Mistral Small, moving to Haiku when stuck | 120 / 134 (90 %) | $0.0010 | 3.8 s |
+| Claude Sonnet 4.6 | 134 / 134 (100 %) | $0.0179 | 6.3 s |
+
+Almost every wrong answer was stated as fact rather than as doubt, so a cheaper model's misses are not easy to spot: that is why Haiku is the default.
+
 ## Teaching Smithable a section
 
 For a section of `smithable.yml` Smithable does not know, `smithable teach <section>` has the coder write a project plugin once (see the [spec reference](spec/v0.1.md)). The coder may write only in `smithable/plugins/<section>/`, read only the project, and run only the type check (validating the plugin would run its code). Smithable then declares the plugin, validates it by regenerating, type-checks and tests, or undoes everything. Measured: a `newsletter:` section was taught with Sonnet for about $0.60; regenerating afterwards used no AI.
