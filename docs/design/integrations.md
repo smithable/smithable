@@ -76,6 +76,7 @@ incoming:
 - **Operations:** `addIncoming <name> --create <Model> --set field=value… --as <role>`, `addIncoming <name> --custom --as <role>`, `removeIncoming <name>`.
 - **Summary:** "When the monitor calls: adds an incident titled with the check's name, as staff."
 - **Left out for now:** running an action on a record found by a field (`run: resolve, find: { reference: "{id}" }`), which is the next small step and what "a monitor's recovery resolves the incident" needs; several records from one call; answering with data.
+- **A reply to a mail the app sent or received joins the record it was about**, as a message on it, with the case number and the threading headers on every mail out: [mail-threads.md](mail-threads.md) (2026-10-14).
 
 ## 4. Outgoing calls
 
