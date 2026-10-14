@@ -11,6 +11,7 @@ import {
   openLinked,
   repaired,
   repairFieldShorthand,
+  repairLongField,
   untranslated,
   visitorFlaws,
 } from "./draft-operations.js";
@@ -34,6 +35,17 @@ test("the empty app is valid, and the draft's operations leave out what a draft 
 });
 
 test("field shorthand slips are mended", () => {
+  // The long form: its type mended the same way, a default in the type moved to its own key.
+  expect(repairLongField({ type: "int required = 3", min: 1, max: 5 })).toEqual({
+    type: "int!",
+    min: 1,
+    max: 5,
+    default: 3,
+  });
+  expect(repairLongField({ type: "money", formula: "a = b" })).toEqual({
+    type: "money",
+    formula: "a = b",
+  });
   expect(repairFieldShorthand("email unique!")).toBe("email! unique");
   expect(repairFieldShorthand("string required")).toBe("string!");
   expect(repairFieldShorthand("low | normal | high = normal")).toBe("normal | low | high");

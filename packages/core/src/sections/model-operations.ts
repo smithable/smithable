@@ -2,7 +2,15 @@ import { defaultColumns } from "../columns.js";
 import { conditionArgs } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula, renameTextInFormula } from "../formula.js";
-import { type FieldIR, isUpload, type ModelIR, type SpecIR, storageOf, typeKey } from "../ir.js";
+import {
+  type FieldIR,
+  type FieldValue,
+  isUpload,
+  type ModelIR,
+  type SpecIR,
+  storageOf,
+  typeKey,
+} from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import {
   type AnyOperation,
@@ -54,7 +62,27 @@ function checkType(type: string): void {
 }
 
 /** A field as an operation is given it: the shorthand, or the long form of a computed field. */
-export type FieldArg = string | { type: string; formula: string };
+/** A field as the operations take it: the shorthand, or the long form for what it cannot say (a
+ *  computed field's formula, a number's or a text's bounds; the default then as its own key). */
+export type FieldArg =
+  | string
+  | { type: string; formula?: string; min?: number; max?: number; default?: FieldValue };
+
+/** The bounds and the default of a field's long form, for the operations that take them. */
+export const FIELD_BOUNDS = {
+  min: {
+    type: "number",
+    description: "The least value (int, decimal, money) or the shortest length (string, text).",
+  },
+  max: {
+    type: "number",
+    description: "The greatest value (int, decimal, money) or the longest length (string, text).",
+  },
+  default: {
+    type: ["string", "number", "boolean"],
+    description: 'With "min" or "max": the default, as its own value (never "=" in "type").',
+  },
+};
 
 /** The JSON Schema of a FieldArg, for addModel's and addCalculatorPage's fields. */
 export const FIELD_ARG = {
@@ -62,19 +90,32 @@ export const FIELD_ARG = {
     { type: "string" },
     {
       type: "object",
-      required: ["type", "formula"],
+      required: ["type"],
       additionalProperties: false,
-      properties: { type: { type: "string" }, formula: { type: "string", minLength: 1 } },
+      properties: {
+        type: { type: "string" },
+        formula: { type: "string", minLength: 1 },
+        ...FIELD_BOUNDS,
+      },
     },
   ],
   description:
-    'Field shorthand, e.g. "string!", or a computed field\'s long form, e.g. { "type": "money", "formula": "quantity * unitPrice" }.',
+    'Field shorthand, e.g. "string!", or the long form for a computed field, e.g. { "type": "money", "formula": "quantity * unitPrice" }, or for a number within bounds, e.g. { "type": "int!", "min": 1, "max": 5, "default": 3 }.',
 };
 
 /** Checks a field given to an operation; a computed one's formula is checked with the spec. */
 export function checkFieldArg(name: string, value: FieldArg): void {
   checkFieldName(name);
   checkType(typeof value === "string" ? value : value.type);
+  if (typeof value === "string") return;
+  if (value.formula === undefined && value.min === undefined && value.max === undefined)
+    throw new OperationError(
+      `Field "${name}": the long form is for a formula or bounds (min, max); otherwise write the shorthand, like "int! = 3".`,
+    );
+  if (value.formula !== undefined && (value.min !== undefined || value.max !== undefined))
+    throw new OperationError(
+      `Field "${name}": a computed field has no bounds; leave out "min" and "max".`,
+    );
 }
 
 /** The base type of a field, ignoring "!", "unique" and defaults: changing it can lose data. */
@@ -125,6 +166,9 @@ const addField: Operation<{
   field: string;
   type: string;
   formula?: string;
+  min?: number;
+  max?: number;
+  default?: FieldValue;
   list?: boolean;
 }> = {
   name: "addField",
@@ -142,6 +186,7 @@ const addField: Operation<{
         description:
           'A computed field: worked out from the record\'s other fields, never entered, e.g. "quantity * unitPrice" (the type is then its kind only, e.g. "money").',
       },
+      ...FIELD_BOUNDS,
       list: {
         type: "boolean",
         description: "Also show it as a column of its list page's table, in the same change.",
@@ -149,14 +194,25 @@ const addField: Operation<{
     },
   },
   positional: ["model", "field", "...type"],
-  describe: ({ model, field, type, formula, list }) =>
-    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}) to ${model}${list && !isMany(type) ? ", shown in its list" : ""}`,
+  describe: ({ model, field, type, formula, min, max, list }) =>
+    `Add field ${field} (${type}${formula ? ` = ${formula}` : ""}${min !== undefined || max !== undefined ? `, ${min ?? "…"} to ${max ?? "…"}` : ""}) to ${model}${list && !isMany(type) ? ", shown in its list" : ""}`,
   destructive: () => false,
-  apply({ spec, ux }, { model: m, field: f, type, formula, list }, ir) {
-    checkFieldArg(f, formula ? { type, formula } : type);
+  apply({ spec, ux }, { model: m, field: f, type, formula, min, max, default: given, list }, ir) {
+    // The long form when the shorthand cannot say it; the default then as its own key.
+    const long = formula !== undefined || min !== undefined || max !== undefined;
+    const value: FieldArg = long
+      ? {
+          type,
+          ...(formula !== undefined ? { formula } : {}),
+          ...(min !== undefined ? { min } : {}),
+          ...(max !== undefined ? { max } : {}),
+          ...(given !== undefined ? { default: given } : {}),
+        }
+      : type;
+    checkFieldArg(f, value);
     if (model(ir, m).fields.some((x) => x.name === f))
       throw new OperationError(`${m} already has a field named "${f}".`);
-    spec.add(fieldPath(m, f, ir).slice(0, -1), f, formula ? { type, formula } : type);
+    spec.add(fieldPath(m, f, ir).slice(0, -1), f, value);
     // A list of related records is never a column (the record's page shows them), so "list" is
     // ignored for one rather than refused: a draft asks for every field in its list.
     if (!list || isMany(type)) return [];
