@@ -1162,6 +1162,11 @@ async function filtersFlow(base) {
     );
     await page.getByRole("button", { name: "Remove the segment filter" }).click();
     await page.waitForURL((url) => !url.searchParams.has("segment"));
+    // "Mine": the admin manages no customers; a visitor is not offered it at all.
+    // The box follows the address, which changes a moment after the click.
+    await page.getByRole("checkbox", { name: "Mine" }).click();
+    await page.waitForURL(/owner=mine/);
+    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
     // A range removed by its chip stays removed: what was typed in it goes too, or the typed
     // range came back with the next render.
     await page.getByRole("button", { name: "Remove the credit limit filter" }).click();
@@ -1171,11 +1176,6 @@ async function filtersFlow(base) {
       throw new Error("the removed range came back");
     if ((await page.getByRole("spinbutton", { name: "Credit limit from" }).inputValue()) !== "")
       throw new Error("the removed range still shows its from");
-    // "Mine": the admin manages no customers; a visitor is not offered it at all.
-    // The box follows the address, which changes a moment after the click.
-    await page.getByRole("checkbox", { name: "Mine" }).click();
-    await page.waitForURL(/owner=mine/);
-    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
     console.log(
       "  ✓ browser: a list filters by a chip, a range and Mine and sorts by the address's order, applied by the query; a linked view gives the same list",
     );
