@@ -114,6 +114,20 @@ export function App() {
   // On a narrow window the preview is the mode switch's third choice, the window's width
   // (Johan, 2026-10-09); from lg it is a column beside either mode.
   const narrow = useMedia("(max-width: 1023px)");
+  // The preview's share of a wide window, in percent: the edge between the two is dragged.
+  const room = useRef<HTMLElement>(null);
+  const [previewWidth, setPreviewWidth] = useState(() => {
+    try {
+      return clampWidth(Number(localStorage.getItem(PREVIEW_WIDTH)) || 55);
+    } catch {
+      return 55;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREVIEW_WIDTH, String(previewWidth));
+    } catch {}
+  }, [previewWidth]);
   const viewing = narrow && Boolean(place.viewing);
   const view = (on: boolean) =>
     setPlace((p) => (Boolean(p.viewing) === on ? p : { ...p, viewing: on }));
@@ -530,7 +544,7 @@ export function App() {
           <Making making={project.making} project={project} />
         </main>
       ) : (
-        <main className="flex min-h-0 flex-1">
+        <main ref={room} className="flex min-h-0 flex-1">
           <div className={cx("min-h-0 min-w-0 flex-1", viewing && "hidden")}>
             {mode === "builder" ? (
               <Builder
@@ -560,6 +574,13 @@ export function App() {
               </Suspense>
             )}
           </div>
+          {!narrow && !place.previewHidden && (
+            <PreviewEdge
+              width={previewWidth}
+              onWidth={setPreviewWidth}
+              of={() => room.current?.getBoundingClientRect()}
+            />
+          )}
           <div
             data-guide-view
             className={cx(
@@ -570,8 +591,9 @@ export function App() {
                   : "hidden"
                 : place.previewHidden
                   ? "hidden"
-                  : "w-[55%] border-l border-line",
+                  : "",
             )}
+            style={narrow || place.previewHidden ? undefined : { width: `${previewWidth}%` }}
           >
             <Preview
               url={project.preview}
@@ -588,6 +610,52 @@ export function App() {
         </main>
       )}
     </div>
+  );
+}
+
+/** Where the preview's width is kept, and how narrow or wide it may be. */
+const PREVIEW_WIDTH = "smithable:preview-width";
+const clampWidth = (percent: number) => Math.min(75, Math.max(30, Math.round(percent)));
+
+/**
+ * The edge between the mode and the preview: dragged (or moved with the arrow keys) to give the
+ * preview more or less of the window, so an app's page can be seen as wide as it needs.
+ */
+function PreviewEdge({
+  width,
+  onWidth,
+  of,
+}: {
+  width: number;
+  onWidth: (percent: number) => void;
+  of: () => DOMRect | undefined;
+}) {
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a window splitter has no element of its own
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Preview width"
+      aria-valuenow={width}
+      aria-valuemin={30}
+      aria-valuemax={75}
+      tabIndex={0}
+      title="Drag to make the preview wider or narrower"
+      // Kept on the edge while dragging, also over the preview's frame.
+      onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
+      onPointerMove={(e) => {
+        const box = of();
+        if (!box || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        onWidth(clampWidth(((box.right - e.clientX) / box.width) * 100));
+      }}
+      onKeyDown={(e) => {
+        const step = e.key === "ArrowLeft" ? 2 : e.key === "ArrowRight" ? -2 : 0;
+        if (!step) return;
+        e.preventDefault();
+        onWidth(clampWidth(width + step));
+      }}
+      className="w-1 shrink-0 cursor-col-resize border-l border-line outline-none hover:bg-accent/40 focus-visible:bg-accent"
+    />
   );
 }
 
