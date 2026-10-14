@@ -35,7 +35,7 @@ export function levelWarnings(
       {
         severity: "warning" as const,
         code: "hosted-level-sign-in",
-        message: `This project's level is Strict: sign-in with ${name} is not allowed there, and the hosted service refuses its keys.`,
+        message: `This project's level is Strict: sign-in with ${name} is not allowed at that level.`,
         hint: "Use sign-in by email, or ask the project's owner to choose Normal or Relaxed.",
         file: file.path,
         line: at + 1 || 1,
