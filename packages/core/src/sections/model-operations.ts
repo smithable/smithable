@@ -1,5 +1,5 @@
 import { defaultColumns } from "../columns.js";
-import { conditionArgs } from "../condition.js";
+import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { renameInFormula, renameTextInFormula } from "../formula.js";
 import {
@@ -579,10 +579,131 @@ const setReview: Operation<{ model: string; fields: string[] }> = {
   },
 };
 
+/** A condition argument as setAction's --when takes one: field=value, a list as "a | b". */
+const CONDITION_ARG = {
+  type: "object",
+  propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+  additionalProperties: { type: ["string", "boolean", "array"], items: { type: "string" } },
+};
+
+const setFieldRules: Operation<{
+  model: string;
+  field: string;
+  by?: "app" | "";
+  locked?: Record<string, string | boolean | string[]>;
+  once?: boolean;
+  required?: Record<string, string | boolean | string[]>;
+}> = {
+  name: "setFieldRules",
+  summary:
+    "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds.",
+  schema: {
+    type: "object",
+    required: ["model", "field"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }, name),
+      field: refTo({ ref: "field", model: "model", label: "Field" }, name),
+      by: {
+        enum: ["app", ""],
+        description:
+          'app: the form never shows it; its default, an action or code fills it. "" removes it.',
+      },
+      locked: {
+        ...CONDITION_ARG,
+        description:
+          "Read-only while the record fits the condition, e.g. { status: closed }; {} removes it.",
+      },
+      once: {
+        type: "boolean",
+        description:
+          "Locked once made: set when the record is made, never changed after; false removes it.",
+      },
+      required: {
+        ...CONDITION_ARG,
+        description:
+          'Required while the record fits the condition, e.g. { status: "inProgress | closed" }; {} removes it. Always required is "!" in the type (changeField).',
+      },
+    },
+  },
+  positional: ["model", "field"],
+  describe: ({ model, field, by, locked, once, required }) =>
+    `Set ${model}.${field}'s rules: ${[
+      by !== undefined && (by ? "filled by the app" : "filled in the form"),
+      once !== undefined && (once ? "locked once made" : "not locked once made"),
+      locked !== undefined &&
+        (Object.keys(locked).length
+          ? `locked when ${conditionText(conditionArgs(locked))}`
+          : "not locked"),
+      required !== undefined &&
+        (Object.keys(required).length
+          ? `required when ${conditionText(conditionArgs(required))}`
+          : "required only as its type says"),
+    ]
+      .filter(Boolean)
+      .join(", ")}`,
+  destructive: () => false,
+  apply({ spec }, { model: m, field: f, by, locked, once, required }, ir) {
+    const found = field(ir, m, f);
+    if (found.formula)
+      throw new OperationError(`${m}.${f} is computed by its formula: nobody fills it in.`);
+    if (by === undefined && locked === undefined && once === undefined && required === undefined)
+      throw new OperationError("Say what to set: --by, --locked, --once or --required.");
+    if (once && locked && Object.keys(locked).length)
+      throw new OperationError("A field is locked once made or while a condition holds, not both.");
+    const path = fieldPath(m, f, ir);
+    const current = spec.get(path);
+    // The long form, from the shorthand when the field has none yet ("int! = 3" gives its default its own key).
+    const long: Record<string, YamlValue> =
+      typeof current === "object" && current !== null
+        ? { ...(current as Record<string, YamlValue>) }
+        : longForm(String(current));
+    const keep = (key: string, value: YamlValue | undefined) => {
+      if (value === undefined) delete long[key];
+      else long[key] = value;
+    };
+    if (by !== undefined) keep("by", by || undefined);
+    if (once !== undefined) keep("locked", once || undefined);
+    if (locked !== undefined)
+      keep("locked", Object.keys(locked).length ? (conditionArgs(locked) as YamlValue) : undefined);
+    if (required !== undefined)
+      keep(
+        "required",
+        Object.keys(required).length ? (conditionArgs(required) as YamlValue) : undefined,
+      );
+    // Back to the shorthand when nothing but the type (and a default) is left.
+    const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+    spec.set(
+      path,
+      keys.length
+        ? long
+        : long.default === undefined
+          ? String(long.type)
+          : `${String(long.type)} = ${String(long.default)}`,
+    );
+    return [];
+  },
+};
+
+/** A field's shorthand as the long form: its type, and its default as its own key. */
+function longForm(shorthand: string): Record<string, YamlValue> {
+  const at = shorthand.indexOf("=");
+  if (at < 0) return { type: shorthand.trim() };
+  const raw = shorthand.slice(at + 1).trim();
+  const value: YamlValue =
+    raw === "true" || raw === "false"
+      ? raw === "true"
+      : /^-?\d+(\.\d+)?$/.test(raw)
+        ? Number(raw)
+        : raw;
+  return { type: shorthand.slice(0, at).trim(), default: value };
+}
+
 export const modelOperations: AnyOperation[] = [
   addModel,
   addField,
   changeField,
+  setFieldRules,
   renameField,
   removeField,
   setCapacity,

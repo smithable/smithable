@@ -101,6 +101,10 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
     ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
+    // What the app fills is never taken from a form (record-rules.md §1).
+    ...storedFields(model)
+      .filter((f) => f.byApp)
+      .map(dataKey),
   ];
   return `${HEADER}import { createInsertSchema } from "drizzle-zod";
 import ${/\bz\.(?!output)/.test(schema) ? "{ z }" : "type { z }"} from "zod";
@@ -704,11 +708,58 @@ export function dataModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR): 
       }`;
   });
   const ownerOf = signedIn ? `row.${owner}` : "undefined";
+  // A person's default ME(): who makes the record; a field the form shows keeps what was chosen.
+  const byMe = model.fields
+    .filter((f) => f.defaultMe)
+    .map((f) =>
+      f.byApp
+        ? `${dataKey(f)}: personOf(viewer)`
+        : `${dataKey(f)}: values.${dataKey(f)} ?? personOf(viewer)`,
+    );
   const createValues = !signedIn
     ? "values"
     : model.ownedBy
-      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner}) }`
-      : `{ ...values, ownerId: personOf(viewer) }`;
+      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${byMe.map((e) => `, ${e}`).join("")} }`
+      : `{ ...values, ownerId: personOf(viewer)${byMe.map((e) => `, ${e}`).join("")} }`;
+  // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
+  // API or Ask (an action's set may change a locked field, which is how a case is reopened), and
+  // a value required while the record fits a condition, on any change.
+  const label = (f: FieldIR) => JSON.stringify(t.field(model, f).label ?? humanize(f.name));
+  const locks = model.fields.flatMap((f) =>
+    f.locked
+      ? [
+          `          if (${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, before)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
+        ]
+      : [],
+  );
+  const needs = (record: string) =>
+    model.fields.flatMap((f) =>
+      f.requiredWhen
+        ? [
+            `if (fits(${literal(f.requiredWhen)}, ${record}) && (${record}.${dataKey(f)} ?? "") === "") throw new BadInput(w.requiredNow(${label(f)}));`,
+          ]
+        : [],
+    );
+  // A choice the request leaves out has its default, as the database gives it.
+  const choiceDefaults = model.fields
+    .filter((f) => f.type.kind === "choice" && typeof f.default === "string")
+    .map((f) => `${f.name}: ${JSON.stringify(f.default)}, `)
+    .join("");
+  const ruled = locks.length > 0 || needs("next").length > 0;
+  const updateRules = ruled
+    ? `
+        if (before) {
+          const given: Record<string, unknown> = updated;${locks.length ? `\n          if (what === "changed") {\n  ${locks.join("\n  ")}\n          }` : ""}
+          const next: Record<string, unknown> = { ...before, ...given };${needs("next")
+            .map((l) => `\n          ${l}`)
+            .join("")}
+        }`
+    : "";
+  const createRules = needs("next").length
+    ? `    const next: Record<string, unknown> = { ${choiceDefaults}...values };\n${needs("next")
+        .map((l) => `    ${l}\n`)
+        .join("")}`
+    : "";
   const self = n.data;
   // The record's title as the audit log keeps it, and a create with its line.
   const titleKey = titleField(model);
@@ -1134,7 +1185,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged ? 'import { BadInput } from "#/kit/refusal";\nimport { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1738,7 +1789,7 @@ ${
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
-}${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}    let row: typeof ${n.table}.$inferSelect;
+}${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${createRules}    let row: typeof ${n.table}.$inferSelect;
     try {
       ${
         capacity
@@ -1770,7 +1821,7 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
     const updated = ${model.ownedBy && signedIn ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }` : "values"};
     try {
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
-        const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();
+        const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();${updateRules}
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
         return after;
@@ -1951,6 +2002,11 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
     kind,
     required: field.required,
     ...(field.formula ? { computed: true } : {}),
+    // Its rules on the record (record-rules.md §1–3); a condition names choice and yes/no fields,
+    // whose keys in a row are their names.
+    ...(field.byApp ? { byApp: true } : {}),
+    ...(field.locked ? { locked: field.locked } : {}),
+    ...(field.requiredWhen ? { requiredWhen: field.requiredWhen } : {}),
     ...(own.help ? { help: own.help } : {}),
     ...(field.type.kind === "choice"
       ? {

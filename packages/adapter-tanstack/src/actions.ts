@@ -20,6 +20,7 @@ import { formulaCompiler, formulasName } from "./formulas.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   attr,
+  dataKey,
   guard,
   HEADER,
   join,
@@ -103,6 +104,7 @@ export function actionNames(action: ActionIR) {
     runMany: `run${type}Many`,
     many: `${action.name}Many`,
     askUi: `${action.name}AskUi`,
+    askOptions: `${action.name}AskOptions`,
     run: `run${type}`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
@@ -225,12 +227,46 @@ export function askedFields(
     ...[...action.set, ...(action.copy ?? [])]
       .filter((v) => "asked" in v)
       .map((v) => ({ model: action.on, field: v.field, key: v.field })),
+    // What the change makes required (record-rules.md §3), asked as the action's own fields are.
+    ...(action.asksRequired ?? []).map((field) => ({ model: action.on, field, key: field })),
     ...(action.add ?? []).flatMap((a) =>
       a.values
         .filter((v) => "asked" in v)
         .map((v) => ({ model: a.model, field: v.field, key: `${a.model}.${v.field}` })),
     ),
   ];
+}
+
+/**
+ * The asked values under the keys their forms and schemas use: a reference's is its stored key
+ * (assigneeId), a plain field's its name; an added record's keeps its model in front.
+ */
+export function askedKeys(action: StandardActionIR, ir: SpecIR) {
+  return askedFields(action).map((x) => {
+    const field = modelNamed(ir, x.model).fields.find((f) => f.name === x.field) as FieldIR;
+    const stored = dataKey(field);
+    return { ...x, field: stored, key: x.key === x.field ? stored : `${x.model}.${stored}` };
+  });
+}
+
+/**
+ * The choices for the references an action asks for (a record's combobox, the people chooser),
+ * loaded when its dialog opens: imports and the entries, or none when it asks for no reference.
+ */
+export function askOptions(action: StandardActionIR, ir: SpecIR, t: Texts) {
+  const imports = new Map<string, string>();
+  const entries = askedKeys(action, ir).flatMap((x) => {
+    const field = modelNamed(ir, x.model).fields.find((f) => dataKey(f) === x.field);
+    if (field?.type.kind !== "relation") return [];
+    if (field.type.model === USER_MODEL) {
+      imports.set("userOptions", "#/generated/users");
+      return [`${JSON.stringify(x.key)}: await userOptions()`];
+    }
+    const target = names(modelNamed(ir, field.type.model), t);
+    imports.set(target.options, target.module);
+    return [`${JSON.stringify(x.key)}: await ${target.options}()`];
+  });
+  return entries.length ? { imports, entries } : undefined;
 }
 
 export function standardActionModule(
@@ -242,9 +278,16 @@ export function standardActionModule(
   const a = actionNames(action);
   const n = names(modelNamed(ir, action.on), t);
   const when = Object.keys(action.when ?? {});
-  const asked = askedFields(action);
+  const asked = askedKeys(action, ir);
   const models = [...new Set(asked.map((x) => x.model))].map((m) => names(modelNamed(ir, m), t));
   const named = (m: string) => names(modelNamed(ir, m), t);
+  const choices = askOptions(action, ir, t);
+  // What the change makes required is required in its dialog, whatever the record is now.
+  const required = new Set(
+    (action.asksRequired ?? []).map((name) =>
+      dataKey(modelNamed(ir, action.on).fields.find((f) => f.name === name) as FieldIR),
+    ),
+  );
   const asks = asked.length
     ? `
 /** What the "${action.name}" action asks for when its button is pressed. */
@@ -259,7 +302,7 @@ export const ${a.askUi}: ModelUi = {
   titleField: "id",
   columns: [],
   fields: [
-${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)})${x.key === x.field ? "" : `.map((f) => ({ ...f, name: ${JSON.stringify(x.key)} }))`},`).join("\n")}
+${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)})${x.key === x.field ? "" : `.map((f) => ({ ...f, name: ${JSON.stringify(x.key)} }))`}${required.has(x.key) ? ".map((f) => ({ ...f, required: true }))" : ""},`).join("\n")}
   ],
   sections: ${literal(
     [...new Set(asked.filter((x) => x.key !== x.field).map((x) => x.model))].map((m) => ({
@@ -269,14 +312,23 @@ ${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === 
     })),
   )},
 };
+${
+  choices
+    ? `
+/** The choices of the references it asks for, loaded when its dialog opens. */
+export async function ${a.askOptions}() {
+  return { ${choices.entries.join(", ")} };
+}
 `
+    : ""
+}`
     : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 ${models.map((m) => `import { ${m.ui} } from "${m.module}";\nimport { ${m.schema} } from "${m.module}.schema";\n`).join("")}import type { Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}import { writeAllowed } from "#/kit/limit";
+${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}${choices ? [...choices.imports].map(([fn, module]) => `import { ${fn} } from "${module}";\n`).join("") : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
 
@@ -325,7 +377,10 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   const valueCode = (target: ModelIR, v: StandardActionIR["set"][number], key: string) => {
     const field = target.fields.find((f) => f.name === v.field) as FieldIR;
     const scalar = field.type.kind === "scalar" ? field.type.name : field.type.kind;
-    if ("asked" in v) return `${field.name}: asked[${JSON.stringify(key)}],`;
+    if ("asked" in v) {
+      const stored = dataKey(field);
+      return `${stored}: asked[${JSON.stringify(key === v.field ? stored : `${target.name}.${stored}`)}],`;
+    }
     // ME(): the signed-in person who pressed the button (an action is never a visitor's).
     if ("me" in v) return `${field.name}Id: personOf(viewer),`;
     const code =
@@ -338,7 +393,13 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
   };
   if (action.copy) return copyActionServer(action, ir, t, valueCode, imports);
-  const values = action.set.map((v) => valueCode(model, v, v.field));
+  const values = [
+    ...action.set.map((v) => valueCode(model, v, v.field)),
+    // What the change makes required, as the person gave it in the dialog (record-rules.md §3).
+    ...(action.asksRequired ?? []).map((name) =>
+      valueCode(model, { field: name, asked: true }, name),
+    ),
+  ];
   const adds = (action.add ?? []).map((add) => {
     const target = modelNamed(ir, add.model);
     return {
@@ -357,7 +418,10 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
   const title = titleField(model);
   // The writes of one record's plan, inside a transaction ("tx"), each with its audit line,
   // returning what was written.
-  const setFields = JSON.stringify(action.set.map((v) => v.field));
+  const setFields = JSON.stringify([
+    ...action.set.map((v) => v.field),
+    ...(action.asksRequired ?? []),
+  ]);
   // Who is told (outgoing mail, integrations.md §4.1b), in the same transaction.
   const tell = (m: string, what: string, record: string, before = "") =>
     toldAbout(ir, m)

@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, type ParsedNode } from "yaml";
-import { followRenamed, lostValues, readCondition } from "../condition.js";
+import { conditionText, followRenamed, lostValues, readCondition } from "../condition.js";
 import {
   checkKeys,
   type Entry,
@@ -29,6 +29,7 @@ import {
   isUpload,
   type ModelIR,
   SCALAR_TYPES,
+  type SpecIR,
   USER_MODEL,
 } from "../ir.js";
 import { capitalize } from "../naming.js";
@@ -53,6 +54,11 @@ const model = "[A-Z][A-Za-z0-9]*";
 const shorthandPattern = `^\\s*(?:(?:${types})!?(?:\\s+unique)?(?:\\s*=\\s*\\S.*)?|${model}!?(?:\\s+unique)?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 const typePattern = `^\\s*(?:(?:${types})!?|${model}!?|${model}\\[\\]|${choice}(?:\\s*\\|\\s*${choice})+)\\s*$`;
 
+/** A condition's value, as an action's `when` writes it: a choice's value, a list of them, or true/false. */
+const conditionValueSchema: JsonSchema = {
+  oneOf: [{ type: ["string", "boolean"] }, { type: "array", items: { type: "string" } }],
+};
+
 const fieldSchema: JsonSchema = {
   oneOf: [
     {
@@ -71,11 +77,27 @@ const fieldSchema: JsonSchema = {
           description:
             'What the field holds: a type (string, money, date, …), another model (Customer, or Order[] for all that refer here), or choices ("draft | sent | paid").',
         },
-        required: { type: "boolean", description: "A record cannot be saved without it." },
+        required: {
+          type: ["boolean", "object"],
+          description:
+            "A record cannot be saved without it; or a condition, e.g. { status: [inProgress, closed] }: required while the record fits it.",
+          additionalProperties: conditionValueSchema,
+        },
+        by: {
+          enum: ["app"],
+          description:
+            "app: the form never shows it; its default (a value, or ME()), an action, an incoming entry or code fills it.",
+        },
+        locked: {
+          type: ["boolean", "object"],
+          description:
+            "true: set when the record is made, never changed after; or a condition, e.g. { status: closed }: read-only while the record fits it. An action's set may still change it.",
+          additionalProperties: conditionValueSchema,
+        },
         unique: { type: "boolean", description: "No two records may hold the same value." },
         default: {
           type: ["string", "number", "boolean"],
-          description: `For choices, "none" means no default.`,
+          description: `For choices, "none" means no default. ME() on a field that refers to User: who makes the record.`,
         },
         min: {
           type: "number",
@@ -117,6 +139,14 @@ export const modelsSection: SpecSection<"models"> = {
     // Formulas (and their examples) and an owner field follow a renamed field.
     // A field a capacity counts on cannot go while it does.
     if (effect.kind === "remove-field") {
+      // Nor one a sibling's lock or requirement names (record-rules.md §2–3).
+      const named = ruleConditions(ir, effect.model).find(
+        (r) => r.field !== effect.field && effect.field in r.condition,
+      );
+      if (named)
+        return {
+          refusal: `${effect.model}.${named.field} is ${named.rule} when ${conditionText(named.condition)}; change its rules first.`,
+        };
       followReview(spec, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
@@ -139,6 +169,17 @@ export const modelsSection: SpecSection<"models"> = {
     if (effect.kind === "change-field") {
       if (effect.renamed)
         renameValuesInFormulas(spec, ir, effect.model, effect.field, effect.renamed);
+      // A lock's or a requirement's condition follows a renamed value; one that goes is refused.
+      for (const r of ruleConditions(ir, effect.model)) {
+        const named = r.condition[effect.field];
+        if (named === undefined) continue;
+        const path = ["models", effect.model, "fields", r.field, r.key, effect.field];
+        const lost = lostValues(followRenamed(spec, path, named, effect.renamed), effect.choices);
+        if (lost.length)
+          return {
+            refusal: `${effect.model}.${r.field} is ${r.rule} when ${effect.field} is ${lost.join(" or ")}; change its rules first.`,
+          };
+      }
       for (const m of ir.models) {
         const named = m.name === effect.model ? m.capacity?.where?.[effect.field] : undefined;
         const wanted =
@@ -159,6 +200,20 @@ export const modelsSection: SpecSection<"models"> = {
       return undefined;
     }
     if (effect.kind !== "rename-field") return undefined;
+    // A lock's or a requirement's condition names the field by its new name.
+    for (const r of ruleConditions(ir, effect.model))
+      if (effect.from in r.condition)
+        spec.renameKey(
+          [
+            "models",
+            effect.model,
+            "fields",
+            r.field === effect.from ? effect.to : r.field,
+            r.key,
+            effect.from,
+          ],
+          effect.to,
+        );
     followReview(spec, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
@@ -319,8 +374,10 @@ function readModel(
   if (fieldEntries.length === 0 && isMap(fields.value)) {
     ctx.error(fields.keyNode, "missing-key", `Model "${name}" needs at least one field.`);
   }
+  // A field's conditions (locked, required) name the model's other fields: read once all are in.
+  const pending: ((model: ModelIR) => void)[] = [];
   for (const entry of fieldEntries) {
-    const field = readField(ctx, name, entry);
+    const field = readField(ctx, name, entry, pending);
     if (!field) continue;
     model.fields.push(field);
     // A name that looks like data an app should not hold, or hold with great care.
@@ -332,6 +389,7 @@ function readModel(
       relationNodes.set(`${name}.${field.name}`, entry.value ?? entry.keyNode);
     }
   }
+  for (const read of pending) read(model);
   const review = known.find((e) => e.key === "review");
   if (review) readReview(ctx, model, review);
   return model;
@@ -404,6 +462,8 @@ export function readField(
   ctx: ParseContext,
   model: string,
   { key: name, keyNode, value }: Entry,
+  /** Reads to do once the model's fields are all in (a condition names its other fields). */
+  pending: ((model: ModelIR) => void)[] = [],
 ): FieldIR | undefined {
   const where = `field "${model}.${name}"`;
   if (!FIELD_NAME_PATTERN.test(name)) {
@@ -434,7 +494,7 @@ export function readField(
     }
     return buildField(ctx, name, shorthand.value, value, where);
   }
-  if (isMap(value)) return readLongField(ctx, name, value, where);
+  if (isMap(value)) return readLongField(ctx, name, value, where, pending);
   ctx.error(
     value ?? keyNode,
     "invalid-field",
@@ -448,6 +508,7 @@ function readLongField(
   name: string,
   node: ParsedNode,
   where: string,
+  pending: ((model: ModelIR) => void)[] = [],
 ): FieldIR | undefined {
   const entries = mapEntries(ctx, node, where) ?? [];
   const known = checkKeys(ctx, entries, where, {
@@ -460,6 +521,8 @@ function readLongField(
       "max",
       "formula",
       "examples",
+      "by",
+      "locked",
       ...TEXT_KEYS,
     ],
     content: ["label", "help", "placeholder"],
@@ -488,7 +551,12 @@ function readLongField(
   const shorthand: FieldShorthand = { ...parsed.value };
   const requiredEntry = byKey.get("required");
   const uniqueEntry = byKey.get("unique");
-  const required = requiredEntry && readBoolean(ctx, requiredEntry.value, `"required"`);
+  // "required" is true or false, or a condition (record-rules.md §3), read once the fields are in.
+  const requiredWhen = requiredEntry && isMap(requiredEntry.value) ? requiredEntry : undefined;
+  const required =
+    requiredEntry && !requiredWhen
+      ? readBoolean(ctx, requiredEntry.value, `"required"`)
+      : undefined;
   const unique = uniqueEntry && readBoolean(ctx, uniqueEntry.value, `"unique"`);
   if (unique !== undefined) shorthand.unique = unique;
 
@@ -569,6 +637,7 @@ function readLongField(
       );
     }
   }
+  readRules(ctx, field, byKey, where, pending, requiredWhen);
   const examplesEntry = byKey.get("examples");
   if (examplesEntry) {
     if (!formulaEntry) {
@@ -584,6 +653,72 @@ function readLongField(
   }
   Object.assign(field, readSemanticText(ctx, known));
   return field;
+}
+
+/** The conditions of a model's fields' locks and requirements, each with where it is written. */
+function ruleConditions(ir: SpecIR, model: string) {
+  return (ir.models.find((m) => m.name === model)?.fields ?? []).flatMap((f) => [
+    ...(f.locked && f.locked !== true
+      ? [{ field: f.name, key: "locked", rule: "locked", condition: f.locked }]
+      : []),
+    ...(f.requiredWhen
+      ? [{ field: f.name, key: "required", rule: "required", condition: f.requiredWhen }]
+      : []),
+  ]);
+}
+
+/**
+ * A field's rules on the record (record-rules.md §1–3): `by: app`, `locked` (true, or a
+ * condition as an action's `when` writes it) and `required` as a condition. A computed field
+ * has none of them: nobody fills it in.
+ */
+function readRules(
+  ctx: ParseContext,
+  field: FieldIR,
+  byKey: Map<string, Entry>,
+  where: string,
+  pending: ((model: ModelIR) => void)[],
+  requiredWhen: Entry | undefined,
+): void {
+  const by = byKey.get("by");
+  const locked = byKey.get("locked");
+  for (const entry of [by, locked, requiredWhen]) {
+    if (entry && field.formula) {
+      ctx.error(
+        entry.keyNode,
+        "invalid-field",
+        `${capitalize(where)} is computed by its formula, so "${entry.key}" does not apply.`,
+      );
+      return;
+    }
+  }
+  if (by) {
+    if (readString(ctx, by.value, `"by" of ${where}`) === "app") field.byApp = true;
+    else
+      ctx.error(
+        by.value,
+        "invalid-value",
+        `"by" of ${where} is "app": the app fills it, and the form never shows it.`,
+      );
+  }
+  if (locked && !isMap(locked.value)) {
+    if (readBoolean(ctx, locked.value, `"locked" of ${where}`)) field.locked = true;
+  } else if (locked)
+    pending.push((model) => {
+      const condition = readCondition(ctx, locked.value, `"locked" of ${where}`, model);
+      if (condition) field.locked = condition;
+    });
+  if (requiredWhen && field.required)
+    ctx.error(
+      requiredWhen.keyNode,
+      "conflict",
+      `${capitalize(where)} is always required (its type says "!", or a choice has a default), so a condition on "required" adds nothing.`,
+    );
+  else if (requiredWhen)
+    pending.push((model) => {
+      const condition = readCondition(ctx, requiredWhen.value, `"required" of ${where}`, model);
+      if (condition) field.requiredWhen = condition;
+    });
 }
 
 /** Parses a formula, reporting problems at the formula's position. */
@@ -696,6 +831,19 @@ function buildField(
     raw ??= shorthand.type.values[0];
   }
   if (raw === undefined) return field;
+  // ME(): who makes the record, for a field that refers to a person (record-rules.md §1).
+  if (typeof raw === "string" && raw.replace(/\s/g, "") === "ME()") {
+    if (field.type.kind === "relation" && field.type.model === "User" && !field.type.many) {
+      field.defaultMe = true;
+      return field;
+    }
+    ctx.error(
+      rawAt,
+      "invalid-default",
+      `The default of ${where} is ME(), a person: the field must refer to User.`,
+    );
+    return undefined;
+  }
   if (typeof raw === "string" && raw.includes("(")) {
     try {
       field.defaultFormula = parseFormula(raw);

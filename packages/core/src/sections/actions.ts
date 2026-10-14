@@ -22,6 +22,7 @@ import {
   type ActionAddIR,
   type ActionIR,
   type ActionValueIR,
+  type Condition,
   type FieldIR,
   type ModelIR,
   type SemanticText,
@@ -488,6 +489,7 @@ function readStandardAction(
       "rules-not-enforced",
       `The rules of ${where} are documentation only: a standard action does what "set" and "add" say.`,
     );
+  const asks = copy ? [] : requiredBy(model, when, values);
   return {
     ...common,
     custom: false,
@@ -495,10 +497,43 @@ function readStandardAction(
     on: model.name,
     ...(when ? { when } : {}),
     set: values,
+    ...(asks.length ? { asksRequired: asks } : {}),
     ...(add.length ? { add } : {}),
     ...(copy ? { copy } : {}),
     ...(lists?.length ? { with: lists } : {}),
   };
+}
+
+/**
+ * The fields an action's change makes required (record-rules.md §3): a field required while the
+ * record fits a condition that the record surely fits after the change (each value the action
+ * sets, or its `when` allows only, is one the condition wants). Its dialog asks for them, with the
+ * record's value filled in; one the action sets itself is not asked.
+ */
+function requiredBy(
+  model: ModelIR,
+  when: Condition | undefined,
+  values: ActionValueIR[],
+): string[] {
+  const set = new Map(values.map((v) => [v.field, v]));
+  const wantedBy = (wanted: Condition[string], value: unknown) =>
+    typeof wanted === "boolean"
+      ? value === wanted
+      : (Array.isArray(wanted) ? wanted : [wanted]).includes(String(value));
+  return model.fields
+    .filter((f) => f.requiredWhen && !set.has(f.name))
+    .filter((f) =>
+      Object.entries(f.requiredWhen as Condition).every(([key, wanted]) => {
+        const given = set.get(key);
+        if (given && "value" in given) return wantedBy(wanted, given.value);
+        const allowed = when?.[key];
+        if (allowed === undefined || given) return false;
+        return typeof allowed === "boolean"
+          ? wantedBy(wanted, allowed)
+          : (Array.isArray(allowed) ? allowed : [allowed]).every((v) => wantedBy(wanted, v));
+      }),
+    )
+    .map((f) => f.name);
 }
 
 /**
@@ -616,6 +651,18 @@ function readValues(
       if (field.type.kind === "relation" && field.type.model === USER_MODEL && !field.type.many)
         values.push({ field: key, me: true });
       else ctx.error(value, "invalid-set", `${what}: ME() is a person: ${key} must refer to User.`);
+      continue;
+    }
+    // A reference with no value is asked for, with the form's own control for it (a record's
+    // combobox, the people chooser): the dialog needs nothing new (record-rules.md §4). A
+    // literal reference stays refused: a record's id in a spec means nothing.
+    if (
+      (raw === null || raw === "") &&
+      field.type.kind === "relation" &&
+      !field.type.many &&
+      !field.formula
+    ) {
+      values.push({ field: key, asked: true });
       continue;
     }
     const why = unsettable(field);

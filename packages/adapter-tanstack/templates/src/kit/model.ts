@@ -46,10 +46,28 @@ export interface FieldUi {
   max?: number;
   /** How the field is entered, when the ux file chose one (docs/design/look.md §1.1). */
   control?: "slider" | "stepper" | "radio" | "select" | "combobox" | "textarea" | "switch";
+  /** Filled by the app (its default, an action, code): the form never shows it (record-rules.md §1). */
+  byApp?: boolean;
+  /** Read-only once the record is made (true), or while it fits the condition (record-rules.md §2). */
+  locked?: true | Condition;
+  /** Required while the record fits the condition (record-rules.md §3). */
+  requiredWhen?: Condition;
   /** The field's own input control, when a plain one does not do (a Markdown editor). */
   input?: (props: FieldControlProps) => React.ReactNode;
   /** How someone who may only read sees its text, when plain text does not do (Markdown). */
   view?: (props: { text: string }) => React.ReactNode;
+}
+
+/** A condition on a record, as an action's `when` writes it: a choice's value or values, a yes/no. */
+export type Condition = Record<string, string | boolean | string[]>;
+
+/** Whether a record (or the values entered for one) fits a condition. */
+export function fits(condition: Condition, row: Record<string, unknown>): boolean {
+  return Object.entries(condition).every(([key, wanted]) =>
+    typeof wanted === "boolean"
+      ? Boolean(row[key]) === wanted
+      : (Array.isArray(wanted) ? wanted : [wanted]).includes(String(row[key] ?? "")),
+  );
 }
 
 /** What a field's own input control gets from the form. */
