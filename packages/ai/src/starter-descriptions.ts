@@ -49,7 +49,7 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     pages: {},
   },
   support: {
-    text: "A support desk for a small team: customer requests by mail, each a case with its messages and replies, answered by agents we invite, with nothing public.",
+    text: "A support desk for a small team: customer requests to our inbox, each a case with its messages and replies, answered by agents we invite, with nothing public.",
     pages: { case: "cases" },
   },
 };

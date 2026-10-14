@@ -84,8 +84,9 @@ cue("status", 1, "down service");
 cue("records", 3, "collection catalogue catalog log register archive inventory");
 cue("records", 2, "sighting museum recipe list record");
 cue("api", 3, "backend assistant chatbot bot");
-cue("support", 3, "support helpdesk help-desk ticket case");
-cue("support", 2, "request mail email inbox agent reply");
+cue("support", 3, "support helpdesk help-desk case");
+cue("support", 2, "inbox agent reply");
+cue("support", 1, "request");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business
@@ -159,6 +160,7 @@ const PHRASES: [RegExp, string][] = [
   [/\bsigns? up\b/gi, "sign-up"],
   [/\bfront page\b/gi, "front-page"],
   [/\bsecond hand\b/gi, "second-hand"],
+  [/\bhelp ?desk\b/gi, "help-desk"],
   [/\bstatus pages?\b/gi, "status-page"],
 ];
 
