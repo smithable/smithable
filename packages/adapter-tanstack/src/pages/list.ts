@@ -338,7 +338,7 @@ const ${fn} = createServerFn()
     };
   });
 `,
-      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => `${k}: text(s.${k})`).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
+      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => (k === "unread" ? 'unread: String(s.unread) === "1" ? "1" : undefined' : `${k}: text(s.${k})`)).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
@@ -467,7 +467,11 @@ export function listParts(
   if (search) {
     route
       .add("@tanstack/react-start", "createServerFn")
-      .add("#/db/schema", "* as schema", ...search.imports.related)
+      .add(
+        "#/db/schema",
+        ...(search.fn.includes("schema.") ? ["* as schema"] : []),
+        ...search.imports.related,
+      )
       .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
       .add("#/kit/access", "allows");
     if (search.imports.or) route.add("drizzle-orm", "or");

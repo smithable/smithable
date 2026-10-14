@@ -1332,7 +1332,7 @@ async function threadFlow(base) {
     await open(page, `${base}/customers`);
     const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
     await helios.locator('[data-part="thread"]', { hasText: "1 new" }).waitFor({ timeout: 10000 });
-    await page.getByRole("checkbox", { name: "Unread" }).check();
+    await page.getByRole("checkbox", { name: "Unread" }).click();
     await page.waitForURL(/unread=1/, { timeout: 10000 });
     await page
       .waitForFunction(() => document.querySelectorAll('tr[data-part="row"]').length === 1, null, {
