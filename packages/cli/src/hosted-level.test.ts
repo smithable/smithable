@@ -14,7 +14,9 @@ const auth = validateAuth(file, ir).auth as AuthIR;
 
 test("the level is read from the hosted service's setting, and only its three values", () => {
   expect(hostedLevel({ SMITHABLE_HOSTED_LEVEL: "strict" })).toBe("strict");
-  expect(hostedLevel({ SMITHABLE_HOSTED_LEVEL: "loose" })).toBeUndefined();
+  expect(hostedLevel({ SMITHABLE_HOSTED_LEVEL: "non-eu" })).toBe("non-eu");
+  // A level it does not know is the strictest, as the service reads one.
+  expect(hostedLevel({ SMITHABLE_HOSTED_LEVEL: "loose" })).toBe("strict");
   expect(hostedLevel({})).toBeUndefined();
 });
 
@@ -30,4 +32,8 @@ test("the release check's line names the level and the app's connections", () =>
   expect(levelLine("strict", ir, auth)).toBe(
     "This app's level is Strict; its connections: sign-in with Google, mail.",
   );
+  expect(levelLine("non-eu", ir, auth)).toBe(
+    "This is a non-EU app; its connections: sign-in with Google, mail.",
+  );
+  expect(levelWarnings("non-eu", auth, file)).toEqual([]);
 });
