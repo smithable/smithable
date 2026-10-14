@@ -58,6 +58,8 @@ export interface Spec {
   ux?: UxIR;
   /** The project's plugins, loaded in this tab. */
   plugins?: SpecPlugin[];
+  /** What validation says of smithable.yml, notes (advice with its fix) among them. */
+  diagnostics?: Diagnostic[];
 }
 
 export function readSpec(

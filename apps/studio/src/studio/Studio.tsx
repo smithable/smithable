@@ -701,9 +701,26 @@ function SpecEditor({
             className="max-h-16 space-y-0.5 overflow-y-auto text-xs"
           >
             {notes.slice(0, 3).map((d) => (
-              <li key={`${d.file}:${d.line}:${d.column}:${d.code}`} className="text-sky-700">
-                Worth considering, {d.file === file ? "line" : `${d.file} line`} {d.line}:{" "}
-                {d.message}
+              <li
+                key={`${d.file}:${d.line}:${d.column}:${d.code}`}
+                className="flex items-baseline gap-2 text-sky-700"
+              >
+                <span>
+                  Worth considering, {d.file === file ? "line" : `${d.file} line`} {d.line}:{" "}
+                  {d.message}
+                </span>
+                {/* Its fix through the operation path, as any change: checked, undoable. */}
+                {d.fix && (
+                  <Button
+                    variant="ghost"
+                    className="h-5 shrink-0 px-1 text-xs"
+                    disabled={text !== saved}
+                    title={text !== saved ? "Save or discard your edits first" : undefined}
+                    onClick={() => d.fix && void run(d.fix.op, d.fix.args)}
+                  >
+                    Apply
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

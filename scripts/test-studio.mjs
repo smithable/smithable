@@ -218,6 +218,34 @@ try {
     await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
     if (await alert.count()) throw new Error("the notice came back");
   });
+  await step(
+    "a note in What it does applies its advice with Apply, and undo takes it back",
+    async () => {
+      // The CRM took its own advice (filters on its orders): take them away for the note to show.
+      const op = (...args) => {
+        const done = spawnSync("node", [cli, "op", ...args, "--dir", dir], {
+          cwd: repo,
+          encoding: "utf8",
+        });
+        if (done.status !== 0) throw new Error(`${args[0]}: ${done.stdout}${done.stderr}`);
+      };
+      op("setFilters", "orders");
+      await page.reload();
+      const notes = page.getByRole("region", { name: "Worth considering" });
+      const orders = notes.getByRole("listitem").filter({ hasText: "orders lists orders" });
+      await orders.getByRole("button", { name: "Apply" }).click();
+      await orders.waitFor({ state: "detached", timeout: 30000 });
+      const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+      if (!/ {2}orders:\n(?: {4}.*\n)*? {4}filters: \[status, shippingMethod\]/.test(spec()))
+        throw new Error("the orders page has no filters after Apply");
+      await page.getByRole("button", { name: "Undo", exact: true }).click();
+      await orders.waitFor({ timeout: 30000 });
+      if (/ {4}filters: \[status, shippingMethod\]/.test(spec()))
+        throw new Error("undo left the filters");
+      op("setFilters", "orders", "status");
+      await page.reload();
+    },
+  );
   await step("the preview says its records are samples, until dismissed", async () => {
     const note = page.getByRole("note").filter({ hasText: "Your published app starts empty" });
     await note.waitFor();
