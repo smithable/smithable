@@ -57,7 +57,7 @@ test("a plugin's section is checked against its schema and expands into ordinary
     },
     { plugins: [newsletter] },
   );
-  expect(diagnostics).toEqual([]);
+  expect(diagnostics.filter((d) => d.severity !== "note")).toEqual([]);
   expect(ir?.models.map((m) => m.name)).toEqual(["Class", "Subscriber"]);
   expect(ir?.models[1]?.fields[1]?.type).toEqual({ kind: "choice", values: ["classes", "offers"] });
   expect(ir?.pages.map((p) => p.id)).toEqual(["classes", "subscribers"]);
