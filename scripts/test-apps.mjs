@@ -40,6 +40,9 @@ const examples = process.argv.slice(2).length
 const failures = [];
 // The secret of the mail address incomingMailFlow adds on the booking site (integrations.md §3).
 process.env.INCOMING_SUPPORT_SECRET = "support-secret";
+// And mailThreadFlow's, with the mailbox a reply goes to (mail-threads.md §4).
+process.env.INCOMING_THREADS_SECRET = "threads-secret";
+process.env.INCOMING_THREADS_ADDRESS = "help@studio.example";
 /** Apps under test; removed when everything passes, kept for inspection otherwise. */
 const dirs = [];
 // Apps kept by failed runs, once a day old: each failure keeps its app to look at, and they add up.
@@ -670,6 +673,177 @@ async function callReceiver() {
       proxy.close();
     },
   };
+}
+
+/**
+ * Mail threads (mail-threads.md §7.2) on the booking site's messages: a mail makes a message and
+ * its acknowledgement carries the tag and the thread's headers and is kept in mail_threads; a mail
+ * answering it by its headers becomes a reply on that message and sets what "then" says; one with
+ * only the tag in its subject does the same; an automatic one joins and tells nobody.
+ */
+async function mailThreadFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const header = (raw, name) =>
+    new RegExp(`^${name}: (.*(?:\\n[ \\t].*)*)`, "im")
+      .exec(raw.split("\n\n")[0] ?? "")?.[1]
+      ?.replace(/\s+/g, " ")
+      .trim() ?? "";
+  const sentSince = async (before, count) => {
+    for (let i = 0; i < 100 && mails().length < before + count; i++)
+      await new Promise((r) => setTimeout(r, 100));
+    return mails()
+      .slice(before)
+      .map((f) => readFileSync(join(outbox, f), "utf8"));
+  };
+  const post = async (mail) => {
+    for (let i = 0; i < 60; i++) {
+      const answer = await fetch(`${base}/incoming/threads`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer threads-secret" },
+        body: JSON.stringify({ to: "help@studio.example", attachments: [], ...mail }),
+      });
+      if (answer.status !== 404) return answer;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    throw new Error("the route never came");
+  };
+  const done = [];
+  try {
+    for (const args of [
+      ["addModel", "Reply", "message=Message!", "from=email", "body=text!"],
+      ["addField", "Message", "handled", "bool"],
+      [
+        "addIncoming",
+        "threads",
+        "--mail",
+        "--create",
+        "Message",
+        "--fields",
+        "from=email",
+        "--fields",
+        "subject=name",
+        "--fields",
+        "body=message",
+        "--reply",
+        "Reply",
+        "--reply-fields",
+        "from=from",
+        "--reply-fields",
+        "body=body",
+        "--reply-then",
+        "handled=true",
+      ],
+      ["addOutgoing", "messageReceived", "Message created", "--recipient", "email"],
+      ["addOutgoing", "replyIn", "Reply created", "--recipient", "admin"],
+    ]) {
+      ok(smithable(dir, "op", ...args));
+      done.push(args);
+    }
+    // A mail makes a message; its acknowledgement is a thread mail.
+    let before = mails().length;
+    const first = await post({
+      from: "Ada Lovelace <ada@example.org>",
+      subject: "Tuesday evenings",
+      text: "Is there a class on Tuesday evenings?",
+      messageId: "<first@example.org>",
+      inReplyTo: "",
+      references: [],
+      autoSubmitted: "",
+    });
+    if (first.status !== 201)
+      throw new Error(`the first mail answers ${first.status}: ${await first.text()}`);
+    const { id } = await first.json();
+    const [ack] = (await sentSince(before, 1)).filter((m) => /^To: ada@example\.org/m.test(m));
+    if (!ack) throw new Error("no acknowledgement to the sender");
+    if (!header(ack, "Subject").endsWith(`#${id}]`))
+      throw new Error(`the subject: ${header(ack, "Subject")}`);
+    if (header(ack, "In-Reply-To") !== "<first@example.org>")
+      throw new Error(`In-Reply-To: ${header(ack, "In-Reply-To")}`);
+    if (header(ack, "Reply-To") !== "help@studio.example")
+      throw new Error(`Reply-To: ${header(ack, "Reply-To")}`);
+    if (header(ack, "Auto-Submitted") !== "auto-generated")
+      throw new Error("not marked Auto-Submitted");
+    const ackId = header(ack, "Message-ID");
+    const kept = query(
+      dir,
+      `select message_id as id, received from mail_threads where record_id = ${Number(id)} order by id`,
+    );
+    if (
+      !kept.some((k) => k.id === "<first@example.org>" && k.received) ||
+      !kept.some((k) => k.id === ackId)
+    )
+      throw new Error(`mail_threads: ${JSON.stringify(kept)}`);
+    // An answer by its headers: a reply on the message, "then" applied, the admin told.
+    before = mails().length;
+    const answered = await post({
+      from: "ada@example.org",
+      subject: "Re: Tuesday evenings",
+      text: "Thanks, and on Thursdays?",
+      messageId: "<second@example.org>",
+      inReplyTo: ackId,
+      references: ["<first@example.org>", ackId],
+      autoSubmitted: "",
+    });
+    if (answered.status !== 201)
+      throw new Error(`the answer answers ${answered.status}: ${await answered.text()}`);
+    if ((await answered.json()).thread !== id)
+      throw new Error("the answer did not join its message");
+    const replies = () =>
+      query(dir, `select body from replies where message_id = ${Number(id)} order by id`);
+    if (replies().at(-1)?.body !== "Thanks, and on Thursdays?")
+      throw new Error(`the replies: ${JSON.stringify(replies())}`);
+    if (query(dir, `select handled from messages where id = ${Number(id)}`)[0]?.handled !== 1)
+      throw new Error("then did not set handled");
+    if (!(await sentSince(before, 1)).some((m) => /^To: dev-admin@/m.test(m)))
+      throw new Error("the admin was not told of the reply");
+    // By the tag alone, a forwarded mail.
+    const tagged = await post({
+      from: "bo@example.org",
+      subject: `Fwd: question ${/\[[^\]]*#\d+\]$/.exec(header(ack, "Subject"))?.[0]}`,
+      text: "Same question from me.",
+      messageId: "",
+      inReplyTo: "",
+      references: [],
+      autoSubmitted: "",
+    });
+    if ((await tagged.json()).thread !== id) throw new Error("the tag did not find the message");
+    // Its notice to the admin out first, so the next count starts after it.
+    await sentSince(before + 1, 1);
+    // An automatic answer joins and tells nobody.
+    before = mails().length;
+    const away = await post({
+      from: "ada@example.org",
+      subject: "Out of office",
+      text: "I am away.",
+      messageId: "<away@example.org>",
+      inReplyTo: ackId,
+      references: [],
+      autoSubmitted: "auto-replied",
+    });
+    if ((await away.json()).thread !== id) throw new Error("the auto-reply did not join");
+    await new Promise((r) => setTimeout(r, 1000));
+    if (mails().length !== before) throw new Error("an auto-reply sent mail");
+    if (replies().length !== 3) throw new Error(`the replies: ${replies().length}`);
+    console.log(
+      "  ✓ mail threads: the acknowledgement carries the tag and the thread's headers and is kept; an answer by its headers, and one by the tag, become replies on the message; an auto-reply joins and tells nobody",
+    );
+  } catch (error) {
+    console.log(`  ✗ mail threads: ${error.message.split("\n")[0]}`);
+    failures.push("mail threads");
+  } finally {
+    // Taken off by operations, newest first, so the next flows find the site as it was.
+    const off = {
+      addOutgoing: (a) => ["removeOutgoing", a[1]],
+      addIncoming: (a) => ["removeIncoming", a[1]],
+      addField: (a) => ["removeField", a[1], a[2]],
+      addModel: (a) => ["removeModel", a[1]],
+    };
+    for (const args of done.reverse()) smithable(dir, "op", ...off[args[0]](args));
+  }
 }
 
 /**
@@ -6138,6 +6312,7 @@ test("the session cookie's name and attributes", async () => {
         await pictureFlow(dir, base);
         await picturesFlow(dir, base);
         await incomingMailFlow(dir, base);
+        await mailThreadFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);

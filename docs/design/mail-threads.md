@@ -71,7 +71,7 @@ outgoing:
   the `as` role may not create the reply model. The summary adds "a reply to one of them is
   added to it as a message".
 - **Operations:** `addIncoming … --mail --create Request --fields … --reply Message
-  --reply-fields from=email body=body attachments=files [--reply-set direction=in] [--then
+  --reply-fields from=email body=body attachments=files [--reply-set direction=in] [--reply-then
   status=open]`; `setIncomingReply <name> --create <Model> --fields … [--set …] [--then …]`
   and `setIncomingReply <name> --none` on an existing entry. A rename of a model or field
   follows into `reply` as it does into `fields`.
@@ -117,9 +117,10 @@ For a record that a mail-kind entry creates, and for its reply model, every outg
   thread's ids, oldest first, the last twenty; `Reply-To` the mailbox the entry is fed from,
   the setting `INCOMING_<NAME>_ADDRESS` (the hosted service sets it from the connected
   mailbox; self-hosted the owner does, with the secret). Without it the reply goes to
-  `MAIL_FROM`, as today. `X-Smithable-App` on every mail the app sends, which the hosted relay
-  sets today, is set by the kit itself from now on, so a self-hosted watcher can drop the app's
-  own mail the same way.
+  `MAIL_FROM`, as today. Every mail the app sends is marked `Auto-Submitted: auto-generated`
+  (RFC 3834), so auto-responders do not answer it and a self-hosted watcher can drop the app's
+  own mail; the hosted relay also sets `X-Smithable-App`, as it does today. (Built 2026-10-14:
+  the kit sets no header naming Smithable, since a detached app names it nowhere.)
 - **The body of a mail about a reply model record is its body part alone** (the field
   `reply.fields.body` names), with the content file's text above it if the entry has one: a
   reply reads as a letter, not as a record with labels, and the customer gets no link to a page
@@ -160,7 +161,7 @@ transaction, so a retry sends the same mail.
 
 1. Core: `reply` and `then` on the mail kind, validation, the summary, the operations, the
    schema, the spec reference.
-2. Adapter: `mail_threads`; the thread subject, the headers, `X-Smithable-App` and the reply
+2. Adapter: `mail_threads`; the thread subject, the headers, `Auto-Submitted` and the reply
    body on outgoing mail; the route's matching and the reply record; a test-apps flow on a
    starter with the entry: a mail makes a request and the acknowledgement carries the tag and
    is kept in `mail_threads`; a second mail with `In-Reply-To` of that acknowledgement becomes

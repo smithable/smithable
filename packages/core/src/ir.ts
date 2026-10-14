@@ -404,8 +404,28 @@ export interface IncomingIR {
    * A mail that becomes a record (backlog Fable 29): the call's body is the fixed mail payload,
    * and these name the fields its sender, subject, text and attachments go to.
    */
-  mail?: { from?: string; subject?: string; body?: string; attachments?: string };
+  mail?: IncomingMailIR;
+  /**
+   * A mail of the thread of a record this entry made (docs/design/mail-threads.md §2): one
+   * record of `create`, referring to that record by `ref`, instead of a new one. `then` sets
+   * fields of the record it joins (the spec's `then`: a reply reopens a closed request).
+   */
+  reply?: {
+    create: string;
+    ref: string;
+    mail: IncomingMailIR;
+    set: IncomingValueIR[];
+    update: IncomingValueIR[];
+  };
 }
+
+/** Which field each part of a mail goes to. */
+export type IncomingMailIR = {
+  from?: string;
+  subject?: string;
+  body?: string;
+  attachments?: string;
+};
 
 /** A value an incoming call sets: a literal, a formula, or a text with {path} placeholders from its JSON. */
 export type IncomingValueIR =

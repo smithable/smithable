@@ -1,5 +1,6 @@
 import type { ParsedNode } from "yaml";
 import { isScalar } from "yaml";
+import { followRenamed, lostValues } from "../condition.js";
 import { checkKeys, type Entry, mapEntries, type ParseContext, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
 import { checkFormula, FormulaError, parseFormula, valueTypeOf } from "../formula.js";
@@ -41,9 +42,11 @@ function readValues(
   model: ModelIR,
   models: ModelIR[],
   where: string,
+  /** The map's own name in messages: set, or a reply's then. */
+  label = "set",
 ): IncomingValueIR[] {
   const values: IncomingValueIR[] = [];
-  for (const { key, keyNode, value } of mapEntries(ctx, node, `"set" of ${where}`) ?? []) {
+  for (const { key, keyNode, value } of mapEntries(ctx, node, `"${label}" of ${where}`) ?? []) {
     const field = model.fields.find((f) => f.name === key);
     if (!field) {
       ctx.error(
@@ -117,7 +120,7 @@ function readIncoming(
 ): IncomingIR | undefined {
   const where = `incoming "${name}"`;
   const known = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["create", "set", "custom", "signed", "header", "id", "as", "mail", "fields"],
+    allowed: ["create", "set", "custom", "signed", "header", "id", "as", "mail", "fields", "reply"],
     later: ["run", "find"],
   });
   const byKey = new Map<string, Entry>(known.map((e) => [e.key, e]));
@@ -206,6 +209,16 @@ function readIncoming(
       "invalid-incoming",
       `"fields" of ${where} is for a mail ("mail: true").`,
     );
+  const replyEntry = byKey.get("reply");
+  let reply: IncomingIR["reply"];
+  if (replyEntry && !mail)
+    ctx.error(
+      replyEntry.value,
+      "invalid-incoming",
+      `"reply" of ${where} is for a mail ("mail: true", with "create").`,
+    );
+  else if (replyEntry && create !== undefined)
+    reply = readReply(ctx, replyEntry.value, create, models, where);
   return {
     name,
     ...(create !== undefined ? { create } : {}),
@@ -216,7 +229,73 @@ function readIncoming(
     ...(id ? { id } : {}),
     as,
     ...(mail ? { mail } : {}),
+    ...(reply ? { reply } : {}),
   };
+}
+
+/**
+ * What a mail of a record's thread becomes (mail-threads.md §2): a record of a model that refers
+ * to the entry's own once, the mail's parts in its fields, and what it changes on the record.
+ */
+function readReply(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  create: string,
+  models: ModelIR[],
+  entry: string,
+): IncomingIR["reply"] {
+  const where = `"reply" of ${entry}`;
+  const known = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
+    allowed: ["create", "fields", "set", "then"],
+  });
+  const byKey = new Map<string, Entry>(known.map((e) => [e.key, e]));
+  const createEntry = byKey.get("create");
+  const name = createEntry ? readString(ctx, createEntry.value, `"create" of ${where}`) : undefined;
+  if (name === undefined) {
+    ctx.error(
+      node,
+      "invalid-incoming",
+      `${where} needs "create: <Model>": the record a reply becomes.`,
+    );
+    return undefined;
+  }
+  const model = models.find((m) => m.name === name);
+  if (!model) {
+    ctx.error(
+      createEntry?.value ?? node,
+      "unknown-model",
+      `There is no model named "${name}".`,
+      didYouMean(
+        name,
+        models.map((m) => m.name),
+      ),
+    );
+    return undefined;
+  }
+  const refs = model.fields.filter(
+    (f) => f.type.kind === "relation" && !f.type.many && f.type.model === create,
+  );
+  if (refs.length !== 1 || !refs[0]) {
+    ctx.error(
+      createEntry?.value ?? node,
+      "invalid-incoming",
+      `${where}: ${name} must refer to ${create} exactly once, and it does ${refs.length ? `${refs.length} times` : "not"}.`,
+      refs.length
+        ? undefined
+        : `Add a field like "${create[0]?.toLowerCase()}${create.slice(1)}: ${create}!" to ${name}.`,
+    );
+    return undefined;
+  }
+  const ref = refs[0].name;
+  const set = byKey.get("set")
+    ? readValues(ctx, byKey.get("set")?.value ?? null, model, models, where)
+    : [];
+  const mail = readMailFields(ctx, byKey.get("fields")?.value ?? null, model, set, where);
+  const owner = models.find((m) => m.name === create) as ModelIR;
+  const update = byKey.get("then")
+    ? readValues(ctx, byKey.get("then")?.value ?? null, owner, models, where, "then")
+    : [];
+  return { create: name, ref, mail, set, update };
 }
 
 /** What kinds of field each part of a mail may go to. */
@@ -292,6 +371,44 @@ function setArgs(set: string[] | undefined): Record<string, YamlValue> {
   );
 }
 
+/** What a reply becomes, as the command line gives it (mail-threads.md §2). */
+const REPLY_ARGS = {
+  reply: refTo(
+    { ref: "model", label: "A reply becomes" },
+    { description: "For a mail: the model a reply to one of its records becomes, e.g. Message." },
+  ),
+  replyFields: {
+    type: "array",
+    items: { type: "string" },
+    description: "For a reply: part=field pairs, e.g. from=from body=body attachments=files.",
+  },
+  replySet: {
+    type: "array",
+    items: { type: "string" },
+    description: "For a reply: field=value pairs on it, e.g. direction=in.",
+  },
+  replyThen: {
+    type: "array",
+    items: { type: "string" },
+    description: "For a reply: field=value pairs on the record it joins, e.g. status=open.",
+  },
+} as const;
+
+function replyValue(
+  create: string,
+  fields: string[] | undefined,
+  set: string[] | undefined,
+  then: string[] | undefined,
+): Record<string, YamlValue> {
+  return {
+    create,
+    fields: setArgs(fields),
+    ...(set?.length ? { set: setArgs(set) } : {}),
+    // biome-ignore lint/suspicious/noThenProperty: the spec's own key (mail-threads.md §2)
+    ...(then?.length ? { then: setArgs(then) } : {}),
+  };
+}
+
 const addIncoming: Operation<{
   name: string;
   create?: string;
@@ -301,6 +418,10 @@ const addIncoming: Operation<{
   as?: string;
   mail?: boolean;
   fields?: string[];
+  reply?: string;
+  replyFields?: string[];
+  replySet?: string[];
+  replyThen?: string[];
 }> = {
   name: "addIncoming",
   summary:
@@ -339,6 +460,7 @@ const addIncoming: Operation<{
         description:
           "For a mail: part=field pairs, e.g. from=email subject=title body=body attachments=files.",
       },
+      ...REPLY_ARGS,
     },
   },
   positional: ["name"],
@@ -349,7 +471,24 @@ const addIncoming: Operation<{
         ? `Add incoming mail ${name} (each mail becomes ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()})`
         : `Add incoming call ${name} (adds ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()} per call)`,
   destructive: () => false,
-  apply({ spec }, { name, create, set, custom, signed, as, mail, fields }, ir) {
+  apply(
+    { spec },
+    {
+      name,
+      create,
+      set,
+      custom,
+      signed,
+      as,
+      mail,
+      fields,
+      reply,
+      replyFields,
+      replySet,
+      replyThen,
+    },
+    ir,
+  ) {
     if (!FIELD_NAME_PATTERN.test(name)) throw new OperationError(nameRule("incoming", name));
     if (ir.incoming.some((i) => i.name === name))
       throw new OperationError(`There is an incoming call named "${name}" already.`);
@@ -359,6 +498,10 @@ const addIncoming: Operation<{
       throw new OperationError(`There is no model named "${create}".`);
     if (mail && !create)
       throw new OperationError("A mail needs --create <Model>: the record each mail becomes.");
+    if (reply && !mail)
+      throw new OperationError(
+        "--reply is for a mail (--mail): what a reply to one of its records becomes.",
+      );
     const values = setArgs(set);
     const value: Record<string, YamlValue> = {
       ...(mail ? { mail: true } : {}),
@@ -366,11 +509,62 @@ const addIncoming: Operation<{
         ? { create, ...(Object.keys(values).length || !mail ? { set: values } : {}) }
         : { custom: true }),
       ...(mail ? { fields: setArgs(fields) } : {}),
+      ...(reply ? { reply: replyValue(reply, replyFields, replySet, replyThen) } : {}),
       ...(signed ? { signed: "sha256" } : {}),
       ...(as && as !== "admin" ? { as } : {}),
     };
     if (spec.has(["incoming"])) spec.add(["incoming"], name, value);
     else spec.add([], "incoming", { [name]: value });
+    return [];
+  },
+};
+
+const setIncomingReply: Operation<{
+  name: string;
+  create?: string;
+  fields?: string[];
+  set?: string[];
+  then?: string[];
+  none?: boolean;
+}> = {
+  name: "setIncomingReply",
+  summary:
+    "Say what a reply to one of an incoming mail's records becomes (--create Message --fields from=from body=body, --set on it, --then on the record it joins), or --none to make every mail a new record again.",
+  schema: {
+    type: "object",
+    required: ["name"],
+    additionalProperties: false,
+    properties: {
+      name: refTo({ ref: "incoming", label: "Incoming call" }),
+      create: REPLY_ARGS.reply,
+      fields: REPLY_ARGS.replyFields,
+      set: REPLY_ARGS.replySet,
+      // biome-ignore lint/suspicious/noThenProperty: the operation's --then, as the spec says it
+      then: REPLY_ARGS.replyThen,
+      none: { type: "boolean", description: "No replies: every mail becomes a new record." },
+    },
+  },
+  positional: ["name"],
+  describe: ({ name, create, none }) =>
+    none
+      ? `Make every mail to ${name} a new record`
+      : `Add a reply to ${name}'s records as ${/^[aeiou]/i.test(create ?? "") ? "an" : "a"} ${humanize(create ?? "").toLowerCase()}`,
+  destructive: () => false,
+  apply({ spec }, { name, create, fields, set, then, none }, ir) {
+    const entry = ir.incoming.find((i) => i.name === name);
+    if (!entry) throw new OperationError(`There is no incoming call named "${name}".`);
+    if (!entry.mail) throw new OperationError(`${name} is no mail: only a mail has replies.`);
+    if (none) {
+      if (!entry.reply) throw new OperationError(`${name} has no reply to remove.`);
+      spec.remove(["incoming", name, "reply"]);
+      return [];
+    }
+    if (!create) throw new OperationError("Say --create <Model> (and --fields), or --none.");
+    if (!ir.models.some((m) => m.name === create))
+      throw new OperationError(`There is no model named "${create}".`);
+    const value = replyValue(create, fields, set, then);
+    if (entry.reply) spec.set(["incoming", name, "reply"], value);
+    else spec.add(["incoming", name], "reply", value);
     return [];
   },
 };
@@ -404,17 +598,111 @@ export function incomingText(incoming: IncomingIR, one: (model: string) => strin
   const what = incoming.custom
     ? "its code decides what happens"
     : incoming.mail
-      ? `a mail becomes ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}${incoming.mail.attachments ? ", its attachments with it" : ""}`
+      ? `a mail becomes ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}${incoming.mail.attachments ? ", its attachments with it" : ""}${incoming.reply ? `; a reply to one of them is added to it as ${/^[aeiou]/i.test(one(incoming.reply.create)) ? "an" : "a"} ${one(incoming.reply.create)}${incoming.reply.update.length ? ` and sets its ${incoming.reply.update.map((v) => v.field).join(" and ")}` : ""}` : ""}`
       : `adds ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}`;
   return `When ${humanize(incoming.name).toLowerCase()} is called: ${what}, as ${incoming.as}${incoming.signed ? "; the call is signed" : ""}.`;
 }
 
-export const incomingOperations: AnyOperation[] = [addIncoming, removeIncoming];
+export const incomingOperations: AnyOperation[] = [addIncoming, setIncomingReply, removeIncoming];
+
+/** Where a mail's parts go, for an entry and for its reply. */
+const MAIL_FIELDS_SCHEMA = {
+  type: "object",
+  description: "For a mail: the fields its parts go to.",
+  additionalProperties: false,
+  properties: {
+    from: { type: "string", description: "An email field for the sender." },
+    subject: { type: "string", description: "A text field for the subject." },
+    body: { type: "string", description: "A text or markdown field for the mail's text." },
+    attachments: {
+      type: "string",
+      description: "A file or files field for its attachments.",
+    },
+  },
+} as const;
 
 export const incomingSection: SpecSection<"incoming"> = {
   key: "incoming",
   required: false,
   operations: incomingOperations,
+  // A renamed field follows into the entries that name it; a removed one an entry needs is refused.
+  follow(spec, effect, ir) {
+    // A choice's renamed values follow into the values an entry sets; a value it loses is refused.
+    if (effect.kind === "change-field") {
+      const before = ir.models
+        .find((m) => m.name === effect.model)
+        ?.fields.find((f) => f.name === effect.field);
+      if (before?.type.kind !== "choice") return undefined;
+      for (const i of ir.incoming) {
+        const places: [string[], IncomingValueIR[]][] = [
+          ...(i.create === effect.model ? [[["set"], i.set] as [string[], IncomingValueIR[]]] : []),
+          ...(i.create === effect.model && i.reply
+            ? [[["reply", "then"], i.reply.update] as [string[], IncomingValueIR[]]]
+            : []),
+          ...(i.reply?.create === effect.model
+            ? [[["reply", "set"], i.reply.set] as [string[], IncomingValueIR[]]]
+            : []),
+        ];
+        for (const [at, values] of places)
+          for (const v of values) {
+            if (v.field !== effect.field || !("value" in v) || typeof v.value !== "string")
+              continue;
+            const now = followRenamed(
+              spec,
+              ["incoming", i.name, ...at, effect.field],
+              v.value,
+              effect.renamed ?? {},
+            );
+            if (lostValues(now, effect.choices).length)
+              return {
+                refusal: `The incoming call "${i.name}" wants a value ${effect.model}.${effect.field} no longer has; change or remove it first.`,
+              };
+          }
+      }
+      return undefined;
+    }
+    if (effect.kind !== "rename-field" && effect.kind !== "remove-field") return undefined;
+    const from = effect.kind === "rename-field" ? effect.from : effect.field;
+    for (const i of ir.incoming) {
+      const path = ["incoming", i.name];
+      // Each place a field of the model is named: [where in the entry, the names there, whether by key].
+      const places: [string[], Record<string, string | undefined>, boolean][] = [];
+      if (i.create === effect.model) {
+        places.push([["set"], Object.fromEntries(i.set.map((v) => [v.field, v.field])), true]);
+        if (i.mail) places.push([["fields"], i.mail, false]);
+        if (i.reply)
+          places.push([
+            ["reply", "then"],
+            Object.fromEntries(i.reply.update.map((v) => [v.field, v.field])),
+            true,
+          ]);
+      }
+      if (i.reply?.create === effect.model) {
+        places.push([
+          ["reply", "set"],
+          Object.fromEntries(i.reply.set.map((v) => [v.field, v.field])),
+          true,
+        ]);
+        places.push([["reply", "fields"], i.reply.mail, false]);
+      }
+      const named = places.filter(([, names]) => Object.values(names).includes(from));
+      const theRef = i.reply?.create === effect.model && i.reply.ref === from;
+      if (effect.kind === "remove-field") {
+        if (named.length || theRef)
+          return {
+            refusal: `The incoming call "${i.name}" uses ${effect.model}.${from}; change or remove it first.`,
+          };
+        continue;
+      }
+      for (const [at, names, byKey] of named) {
+        if (byKey) spec.renameKey([...path, ...at, from], effect.to);
+        else
+          for (const [part, field] of Object.entries(names))
+            if (field === from) spec.set([...path, ...at, part], effect.to);
+      }
+    }
+    return undefined;
+  },
   schema: {
     type: "object",
     description:
@@ -449,17 +737,29 @@ export const incomingSection: SpecSection<"incoming"> = {
           const: true,
           description: "The call's body is a mail (from, to, subject, text, html, attachments).",
         },
-        fields: {
+        fields: MAIL_FIELDS_SCHEMA,
+        reply: {
           type: "object",
-          description: "For a mail: the fields its parts go to.",
+          description:
+            "For a mail: what a mail of one of its records' threads becomes (a reply, by its headers or the subject's [app #id] tag), instead of a new record.",
           additionalProperties: false,
+          required: ["create", "fields"],
           properties: {
-            from: { type: "string", description: "An email field for the sender." },
-            subject: { type: "string", description: "A text field for the subject." },
-            body: { type: "string", description: "A text or markdown field for the mail's text." },
-            attachments: {
+            create: {
               type: "string",
-              description: "A file or files field for its attachments.",
+              description: "The model a reply becomes; it refers to the entry's own once.",
+            },
+            fields: MAIL_FIELDS_SCHEMA,
+            set: {
+              type: "object",
+              description: "The reply's other values, e.g. { direction: in }.",
+              additionalProperties: { type: ["string", "number", "boolean"] },
+            },
+            // biome-ignore lint/suspicious/noThenProperty: the spec's own key (mail-threads.md §2)
+            then: {
+              type: "object",
+              description: "Values set on the record it joins, e.g. { status: open }.",
+              additionalProperties: { type: ["string", "number", "boolean"] },
             },
           },
         },

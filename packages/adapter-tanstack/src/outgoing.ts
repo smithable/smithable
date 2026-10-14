@@ -111,11 +111,51 @@ export function outgoingModule(
   const calls = entries.filter((o) => o.to !== "mail");
   const modelsOf = (list: OutgoingIR[]) =>
     [...new Set(list.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
+  // Mail threads (mail-threads.md §4): the record an incoming mail entry makes, and its replies.
+  const threadOf = (model: ModelIR) => {
+    for (const i of ir.incoming) {
+      if (!i.reply || !i.create) continue;
+      const address = `process.env.INCOMING_${i.name.toUpperCase()}_ADDRESS`;
+      if (i.create === model.name) return { owner: model, record: "r.id as number", address };
+      if (i.reply.create === model.name)
+        return {
+          owner: modelNamed(ir, i.create),
+          record: `r.${i.reply.ref}Id as number`,
+          address,
+          letter: i.reply.mail.body,
+        };
+    }
+    return undefined;
+  };
+  let threaded = false;
+  // A change made from an incoming mail: its id joins the thread; an automatic one tells nobody.
+  const threading = ir.incoming.some((i) => i.reply);
   const showers = modelsOf(mails).map((model) => {
     const n = names(model, t);
     const lines = shown(model);
     const title = titleField(model);
     const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === model.name);
+    const thread = threadOf(model);
+    if (thread) {
+      threaded = true;
+      const ownerTitle = titleField(thread.owner);
+      // The subject is the thread's record's title (its first mail's subject), the tag after it.
+      const subject =
+        thread.owner === model
+          ? ownerTitle === "id"
+            ? `\`#\${r.id}\``
+            : `String(${shownTitle(model, `r.${ownerTitle} ?? r.id`)})`
+          : ownerTitle === "id"
+            ? `\`#\${${thread.record}}\``
+            : `String(${value(thread.owner, ownerTitle, thread.record)} ?? "")`;
+      return `  ${JSON.stringify(model.name)}: (tx, r) => ({
+    subject: ${subject},
+    fields: [
+${lines.join("\n")}
+    ],${thread.letter ? `\n    letter: String(r.${thread.letter} ?? ""),` : page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
+    thread: thread(tx, ${JSON.stringify(thread.owner.name)}, ${thread.record}, ${thread.address}),
+  }),`;
+    }
     return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) ? "tx" : "_tx"}, r) => ({
     subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#${r.id}" : `\${${shownTitle(model, `r.${title} ?? r.id`)}}`}\`,
     fields: [
@@ -146,6 +186,9 @@ ${apiFields(model)
           )
           .join(" && ")}`
       : undefined;
+  // Whom to mail, naming only what it reads (a role's people need no record).
+  const toCode = (code: string) =>
+    `to: (${/\btx\b/.test(code) ? "tx" : "_tx"}, ${/\br\./.test(code) ? "r" : "_r"}) => ${code},`;
   const list = entries.map((o) => {
     const model = modelNamed(ir, o.when.model);
     const words = content?.outgoing?.[o.name];
@@ -155,16 +198,24 @@ ${apiFields(model)
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
     when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
-    ${o.to === "mail" ? `to: (tx, r) => ${recipients(model, o.recipient)},` : `target: ${JSON.stringify(o.to)},`}
+    ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
   const body = [...showers, ...senders, ...list].join("\n");
   const ones = body.includes("one(tx,");
   const trashOne = body.includes(".deletedAt)");
-  return `${HEADER}${ones || users ? `import { ${trashOne ? "and, " : ""}eq${trashOne ? ", isNull" : ""}${users ? ", type SQL" : ""} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
-${tables.size || users ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
+  const imports = threading ? 'import { AsyncLocalStorage } from "node:async_hooks";\n' : "";
+  const drizzle = [
+    ...(trashOne || threaded ? ["and"] : []),
+    ...(threaded ? ["asc"] : []),
+    ...(ones || users || threaded ? ["eq"] : []),
+    ...(trashOne ? ["isNull"] : []),
+    ...(users ? ["type SQL"] : []),
+  ];
+  return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
+${tables.size || users || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
 ${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}import { counts } from "#/kit/outgoing";
-import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : [])].join(", ")} } from "#/kit/outgoing.server";
+import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -184,6 +235,52 @@ function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn,
 /** The users that fit, with their addresses. */
 function people(tx: Tx, where: SQL): Recipient[] {
   return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
+}
+`
+    : ""
+}${
+  threading
+    ? `
+const arriving = new AsyncLocalStorage<{ messageId?: string; quiet: boolean }>();
+
+/**
+ * Runs a change made from an incoming mail (mail-threads.md §3): the mail's id joins the thread its
+ * first answer starts, and an automatic mail (an auto-reply, a bounce) tells nobody.
+ */
+export function fromMail<T>(mail: { messageId?: string; quiet: boolean }, run: () => Promise<T>): Promise<T> {
+  return arriving.run(mail, run);
+}
+`
+    : ""
+}${
+  threaded
+    ? `
+/**
+ * A record's mail thread (mail-threads.md §4): the tag at the end of the subject, the latest mail
+ * received as the one answered, the thread's last twenty ids, where a reply goes, and each id sent kept.
+ */
+function thread(tx: Tx, model: string, record: number, replyTo: string | undefined): Thread {
+  const ids = tx
+    .select({ id: schema.mailThreads.messageId, received: schema.mailThreads.received })
+    .from(schema.mailThreads)
+    .where(and(eq(schema.mailThreads.model, model), eq(schema.mailThreads.recordId, record)))
+    .orderBy(asc(schema.mailThreads.at), asc(schema.mailThreads.id))
+    .all();
+  // The mail this change came from is the one its first answer answers.
+  const got = arriving.getStore()?.messageId;
+  if (got && !ids.some((i) => i.id === got)) {
+    tx.insert(schema.mailThreads).values({ model, recordId: record, messageId: got, received: true }).run();
+    ids.push({ id: got, received: true });
+  }
+  return {
+    tag: \`[\${app.name} #\${record}]\`,
+    inReplyTo: (ids.filter((i) => i.received).at(-1) ?? ids.at(-1))?.id,
+    references: ids.slice(-20).map((i) => i.id),
+    replyTo: replyTo || undefined,
+    keep: (messageId) => {
+      tx.insert(schema.mailThreads).values({ model, recordId: record, messageId }).run();
+    },
+  };
 }
 `
     : ""
@@ -222,7 +319,7 @@ ${list.join("\n")}
  * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
-export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
+export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, model: string, what: string, record: Row, before?: Row): void {${threading ? "\n  if (arriving.getStore()?.quiet) return;" : ""}
   for (const entry of ENTRIES) {
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;${
       calls.length

@@ -141,3 +141,152 @@ test("addIncoming writes a mail entry with its fields", () => {
     ok: false,
   });
 });
+
+test("a reply to a mail's record becomes a record of a model that refers to it once (mail-threads.md §2)", () => {
+  const mail = `  support:
+    mail: true
+    create: Incident
+    set: { status: investigating, detectedAt: NOW() }
+    fields: { subject: title, body: summary }
+    reply:
+      create: IncidentUpdate
+      fields: { body: message }
+      set: { at: NOW() }
+      then: { status: identified }
+`;
+  const { ir, diagnostics } = read(mail);
+  expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(ir?.incoming[0]?.reply).toEqual({
+    create: "IncidentUpdate",
+    ref: "incident",
+    mail: { body: "message" },
+    set: [expect.objectContaining({ field: "at", text: "NOW()" })],
+    update: [{ field: "status", value: "identified" }],
+  });
+  expect(incomingText(ir?.incoming[0] as never, (m) => m.toLowerCase())).toBe(
+    "When support is called: a mail becomes an incident; a reply to one of them is added to it as an incidentupdate and sets its status, as admin.",
+  );
+  const entry = (reply: string) =>
+    `  x:\n    mail: true\n    create: Incident\n    fields: { subject: title }\n    reply: ${reply}\n`;
+  // A model that does not refer to the entry's, or one that does not exist.
+  expect(codes(entry("{ create: Maintenance, fields: { body: description } }"))).toContain(
+    "invalid-incoming",
+  );
+  expect(codes(entry("{ create: Updates, fields: { body: message } }"))).toContain("unknown-model");
+  // Its parts go to fields of the right kind; "then" names the entry's own model's fields.
+  expect(codes(entry("{ create: IncidentUpdate, fields: { body: at } }"))).toContain(
+    "invalid-incoming",
+  );
+  expect(
+    codes(entry("{ create: IncidentUpdate, fields: { body: message }, then: { status: gone } }")),
+  ).not.toEqual([]);
+  // Only a mail has replies.
+  expect(
+    codes(
+      "  x: { create: Incident, reply: { create: IncidentUpdate, fields: { body: message } } }\n",
+    ),
+  ).toContain("invalid-incoming");
+});
+
+test("addIncoming and setIncomingReply write the reply; a rename follows into it, a removal it needs is refused", () => {
+  const added = applyOperation({ spec, auth }, "addIncoming", {
+    name: "support",
+    mail: true,
+    create: "Incident",
+    set: ["status=investigating", "detectedAt=NOW()"],
+    fields: ["subject=title", "body=summary"],
+    reply: "IncidentUpdate",
+    replyFields: ["body=message"],
+    replySet: ["at=NOW()"],
+    replyThen: ["status=identified"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.files.spec).toMatch(
+    / {4}reply:\n {6}create: IncidentUpdate\n {6}fields:\n {8}body: message\n {6}set:\n {8}at: NOW\(\)\n {6}then:\n {8}status: identified/,
+  );
+  const files = { spec: added.files.spec, auth };
+  const renamed = applyOperation(files, "renameField", {
+    model: "IncidentUpdate",
+    from: "message",
+    to: "text",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toMatch(
+    /reply:\n {6}create: IncidentUpdate\n {6}fields:\n {8}body: text/,
+  );
+  const thenRenamed = applyOperation(files, "renameField", {
+    model: "Incident",
+    from: "status",
+    to: "state",
+  });
+  if (!thenRenamed.ok) throw new Error(thenRenamed.message);
+  expect(thenRenamed.files.spec).toMatch(/ {6}then:\n {8}state: identified/);
+  expect(
+    applyOperation(files, "removeField", { model: "Incident", field: "summary" }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining('"support" uses Incident.summary'),
+  });
+  const none = applyOperation(files, "setIncomingReply", { name: "support", none: true });
+  if (!none.ok) throw new Error(none.message);
+  expect(none.files.spec).not.toContain("reply:");
+  const back = applyOperation({ spec: none.files.spec, auth }, "setIncomingReply", {
+    name: "support",
+    create: "IncidentUpdate",
+    fields: ["body=message"],
+    set: ["at=NOW()"],
+  });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.spec).toMatch(/ {4}reply:\n {6}create: IncidentUpdate/);
+});
+
+test("a choice value an entry sets follows its rename; one it loses is refused; then needs write", () => {
+  const priority = applyOperation({ spec, auth }, "addField", {
+    model: "IncidentUpdate",
+    field: "channel",
+    type: "mail | phone",
+  });
+  if (!priority.ok) throw new Error(priority.message);
+  const added = applyOperation({ spec: priority.files.spec, auth }, "addIncoming", {
+    name: "support",
+    mail: true,
+    create: "Incident",
+    set: ["status=investigating", "detectedAt=NOW()"],
+    fields: ["subject=title", "body=summary"],
+    reply: "IncidentUpdate",
+    replyFields: ["body=message"],
+    replySet: ["at=NOW()", "channel=mail"],
+    replyThen: ["status=identified"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  const files = { spec: added.files.spec, auth };
+  const renamed = applyOperation(files, "changeField", {
+    model: "Incident",
+    field: "status",
+    type: "investigating | found | monitoring | resolved",
+    renames: ["identified=found"],
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toMatch(/ {6}then:\n {8}status: found/);
+  const lost = applyOperation(files, "changeField", {
+    model: "IncidentUpdate",
+    field: "channel",
+    type: "phone | chat",
+  });
+  expect(lost).toMatchObject({
+    ok: false,
+    message: expect.stringContaining(
+      '"support" wants a value IncidentUpdate.channel no longer has',
+    ),
+  });
+  // A role that may add the reply but not change the incident gets the reopening warned.
+  const { ir } = validateSpec({ path: "smithable.yml", text: added.files.spec });
+  const staffOnly = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles:\n  admin: all\n  intake: { create: all, read: all }\n",
+    },
+    { ...ir, incoming: ir?.incoming.map((i) => ({ ...i, as: "intake" })) } as never,
+  );
+  expect(staffOnly.diagnostics.map((d) => d.code)).toContain("incoming-cannot-update");
+});

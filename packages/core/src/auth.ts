@@ -974,6 +974,23 @@ function checkAgainstSpec(
         `Incoming call "${i.name}" acts as ${i.as}, who may not add ${model.name} records: every call would be refused.`,
         `Grant ${i.as} create on ${model.name}, or let the call act as another role.`,
       );
+    // What a reply changes on its record (then) is a change made as that role.
+    if (model && i.reply?.update.length && !modelAccess(model, auth).write.roles.includes(i.as))
+      ctx.warning(
+        accessAt,
+        "incoming-cannot-update",
+        `Incoming call "${i.name}" acts as ${i.as}, who may not change ${model.name} records: a reply would be added but change nothing on its ${model.name.toLowerCase()}.`,
+        `Grant ${i.as} write on ${model.name}, or let the call act as another role.`,
+      );
+    // A reply to one of its records (mail-threads.md §2) is added the same way.
+    const reply = i.reply ? ir.models.find((m) => m.name === i.reply?.create) : undefined;
+    if (reply && !modelAccess(reply, auth).create.roles.includes(i.as))
+      ctx.warning(
+        accessAt,
+        "incoming-cannot-create",
+        `Incoming call "${i.name}" acts as ${i.as}, who may not add ${reply.name} records: every reply would be refused.`,
+        `Grant ${i.as} create on ${reply.name}, or let the call act as another role.`,
+      );
   }
   // Outgoing mail (integrations.md §4.1b) meets the access rules here. An address typed by a
   // visitor is not sent to: the app would mail whoever a stranger names. A role that may not

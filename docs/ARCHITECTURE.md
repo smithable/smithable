@@ -33,7 +33,7 @@ Every change, whether it comes from the CLI, Studio, AI or a plugin, goes throug
 
 The manifest describes application functionality in technology-neutral terms. It never contains React, Drizzle, Tailwind, file paths, CSS or visible copy.
 
-v0.1 covers: `app`, `models` (fields, relations, formulas), `actions`, `outgoing` (who is told when something happens to a record: mail, later a signed call; [design/integrations.md §4](design/integrations.md)), `queries`, `pages`, `navigation`, `jobs`. Incoming integrations and external endpoints come later. Roles, what each may do, and everything public are defined in `smithable.auth.yml`; `smithable.yml` names no role. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
+v0.1 covers: `app`, `models` (fields, relations, formulas), `actions`, `outgoing` (who is told when something happens to a record: mail, later a signed call; [design/integrations.md §4](design/integrations.md)), `incoming` (an address another service calls, one record per call, or a mail that becomes a record; with `reply`, a mail of one of its records' threads becomes a record under it, found by its headers in the kit's `mail_threads` table or by the `[app #id]` tag in its subject, and every mail the app sends about such a record carries the tag and the thread's headers; [design/integrations.md §3](design/integrations.md), [design/mail-threads.md](design/mail-threads.md)), `queries`, `pages`, `navigation`, `jobs`. External endpoints come later. Roles, what each may do, and everything public are defined in `smithable.auth.yml`; `smithable.yml` names no role. Presentation lives in `smithable.ux.yml` and visible text in `smithable.content.yml` (§3).
 
 ### 2.2 Style: neat by default, explicit when needed
 

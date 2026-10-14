@@ -815,6 +815,66 @@
                 "description": "A file or files field for its attachments."
               }
             }
+          },
+          "reply": {
+            "type": "object",
+            "description": "For a mail: what a mail of one of its records' threads becomes (a reply, by its headers or the subject's [app #id] tag), instead of a new record.",
+            "additionalProperties": false,
+            "required": [
+              "create",
+              "fields"
+            ],
+            "properties": {
+              "create": {
+                "type": "string",
+                "description": "The model a reply becomes; it refers to the entry's own once."
+              },
+              "fields": {
+                "type": "object",
+                "description": "For a mail: the fields its parts go to.",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "description": "An email field for the sender."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "A text field for the subject."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "A text or markdown field for the mail's text."
+                  },
+                  "attachments": {
+                    "type": "string",
+                    "description": "A file or files field for its attachments."
+                  }
+                }
+              },
+              "set": {
+                "type": "object",
+                "description": "The reply's other values, e.g. { direction: in }.",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "then": {
+                "type": "object",
+                "description": "Values set on the record it joins, e.g. { status: open }.",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              }
+            }
           }
         }
       }
