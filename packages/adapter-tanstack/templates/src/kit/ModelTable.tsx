@@ -248,6 +248,9 @@ export function ModelTable<R extends Row>({
           className="h-10 w-10 rounded-md border object-cover"
         />
       );
+    // A long text (a message's words, where a model has nothing shorter to show) cut to two lines.
+    if ((field.kind === "text" || field.kind === "markdown") && text !== "—")
+      return <span className="line-clamp-2 max-w-md">{text}</span>;
     if (field.kind !== "choice" || text === "—") return text;
     const tone = field.choices?.find((c) => c.value === displayValue(field, row))?.tone;
     return <Badge variant={tone}>{text}</Badge>;

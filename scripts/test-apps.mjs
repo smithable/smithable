@@ -1665,7 +1665,11 @@ async function statusFlow(base) {
     await row.getByRole("button", { name: "Card payments slow at checkout" }).click();
     // The newest update, last in the incident's list, carries it (its own page shows the message).
     await page.locator("section", { hasText: "Updates" }).locator("tbody tr").last().click();
-    await page.getByText("The errors are back; we are looking again.").waitFor({ timeout: 10000 });
+    await page.waitForURL(/\/updates\/\d+/);
+    await page
+      .getByText("The errors are back; we are looking again.")
+      .first()
+      .waitFor({ timeout: 10000 });
     console.log(
       "  ✓ browser: a standard action's button is on the rows it fits; it asks for a message, reopens the incident and adds the update",
     );
