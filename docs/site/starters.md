@@ -77,6 +77,21 @@ smithable new my-status --starter status
 
 See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/status](https://smithable.ai/starters/status).
 
+## Support desk
+
+*Requests that come in by mail, answered by your team in a conversation.*
+
+![The cases of the support starter, Harbour Support, with their unread messages](starters/support-1.webp)
+![A case's conversation, with the reply box](starters/support-2.webp)
+
+For a small team that answers customers by mail. A mail to the support address becomes a case; the acknowledgement carries the case's number in its subject, and a reply to any of the case's mails joins it as a message, found by its headers or by that number. On a case's page its messages read as a conversation, the customer's on one side and the team's on the other, with a reply box that mails the customer from the page; the cases list counts each case's messages and marks those you have not read, with an Unread filter. A case has a priority from 1 to 5 and needs an assignee once it is in progress or closed; agents take a case or give it to a colleague, and the customer's address stays as it came. The mailbox is a setting: on smithable.ai you connect one, self-hosted your own receiver posts to `/incoming/support`.
+
+```sh
+smithable new my-support --starter support
+```
+
+See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/support](https://smithable.ai/starters/support).
+
 ## A collection
 
 *A catalogue of things with pictures, public to browse: books, plants, wine.*

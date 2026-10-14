@@ -1,0 +1,17 @@
+# Three requests that came in by mail, none taken by an agent yet: two new, one the customer wrote
+# back on after it was answered.
+- subject: Printer out of toner
+  customerEmail: maria@harbourfreight.example
+  status: open
+  priority: 2
+  body: The office printer says it is out of toner. Can you send a new cartridge?
+- subject: Cannot sign in to the booking site
+  customerEmail: johan@skerrycafe.example
+  status: open
+  priority: 4
+  body: Since this morning the sign-in page says my code has expired, every time.
+- subject: Invoice sent to the wrong address
+  customerEmail: accounts@nordicbuild.example
+  status: reopened
+  priority: 3
+  body: Our September invoice went to our old office. Could you send it to accounts@ instead?

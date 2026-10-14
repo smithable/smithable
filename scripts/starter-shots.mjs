@@ -46,6 +46,11 @@ const SHOTS = {
     ["home", "list", "visitor"],
     ["incidents", 1, "admin"],
   ],
+  // The cases with their unread counts, and a case's conversation with the reply box.
+  support: [
+    ["cases", "list", "admin"],
+    ["cases", 2, "admin", true],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.

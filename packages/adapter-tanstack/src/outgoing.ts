@@ -51,6 +51,8 @@ export function outgoingModule(
   const entries = outgoingOf(ir);
   const tables = new Set<string>();
   let users = false;
+  // A user's name shown in the mail (the schema's user table, not the people() helper).
+  let named = false;
   const value = (target: ModelIR, column: string, id: string) => {
     const n = names(target, t);
     tables.add(n.table);
@@ -98,7 +100,7 @@ export function outgoingModule(
     if (f.type.kind !== "relation")
       return `formatValue(${literal({ name: ui.name, label: ui.label, kind: ui.kind, required: false, ...(ui.choices ? { choices: ui.choices.map(({ value, label }) => ({ value, label })) } : {}) })}, r.${f.name}, app)`;
     if (f.type.model === USER_MODEL) {
-      users = true;
+      named = true;
       return `String(one(tx, schema.user, schema.user.id, schema.user.name, r.${f.name}Id) ?? "—")`;
     }
     const target = modelNamed(ir, f.type.model);
@@ -213,7 +215,7 @@ ${apiFields(model)
     ...(users ? ["type SQL"] : []),
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
-${tables.size || users || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
+${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
 ${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}import { counts } from "#/kit/outgoing";
 import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
 

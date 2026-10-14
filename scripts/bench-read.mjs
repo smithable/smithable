@@ -70,7 +70,8 @@ const SET = [
   [
     "dev",
     "A help desk for an IT team: tickets, priorities and who handles them.",
-    ["crm", "records"],
+    // The support starter fits it best since 2026-10-14; the two before it still do.
+    ["support", "crm", "records"],
     ["team"],
     ["nothing"],
   ],

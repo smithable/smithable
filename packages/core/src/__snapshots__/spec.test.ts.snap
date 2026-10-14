@@ -2671,6 +2671,392 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "intent": "Take the case: you become its assignee.",
+      "name": "assignToMe",
+      "on": "SupportCase",
+      "set": [
+        {
+          "field": "assignee",
+          "me": true,
+        },
+      ],
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "Give the case to an agent, chosen from the team.",
+      "name": "assignTo",
+      "on": "SupportCase",
+      "set": [
+        {
+          "asked": true,
+          "field": "assignee",
+        },
+      ],
+    },
+    {
+      "asksRequired": [
+        "assignee",
+      ],
+      "custom": false,
+      "input": [],
+      "intent": "Someone is working on the case now; it needs an assignee.",
+      "name": "startWork",
+      "on": "SupportCase",
+      "set": [
+        {
+          "field": "status",
+          "value": "inProgress",
+        },
+      ],
+      "when": {
+        "status": [
+          "open",
+          "reopened",
+        ],
+      },
+    },
+    {
+      "asksRequired": [
+        "assignee",
+      ],
+      "custom": false,
+      "input": [],
+      "intent": "The customer has their answer.",
+      "name": "close",
+      "on": "SupportCase",
+      "set": [
+        {
+          "field": "status",
+          "value": "closed",
+        },
+      ],
+      "when": {
+        "status": [
+          "open",
+          "inProgress",
+          "reopened",
+        ],
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The case needs more work after all.",
+      "name": "reopen",
+      "on": "SupportCase",
+      "set": [
+        {
+          "field": "status",
+          "value": "reopened",
+        },
+      ],
+      "when": {
+        "status": "closed",
+      },
+    },
+  ],
+  "app": {
+    "currency": "EUR",
+    "description": "Mail from customers, answered by the team.",
+    "name": "Harbour Support",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [
+    {
+      "as": "admin",
+      "create": "SupportCase",
+      "custom": false,
+      "mail": {
+        "attachments": "attachments",
+        "body": "body",
+        "from": "customerEmail",
+        "subject": "subject",
+      },
+      "name": "support",
+      "reply": {
+        "create": "Message",
+        "mail": {
+          "attachments": "attachments",
+          "body": "content",
+          "from": "fromEmail",
+        },
+        "ref": "supportCase",
+        "set": [
+          {
+            "field": "sender",
+            "value": "customer",
+          },
+        ],
+        "update": [],
+      },
+      "set": [
+        {
+          "field": "status",
+          "value": "open",
+        },
+      ],
+    },
+  ],
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "subject",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "locked": true,
+          "name": "customerEmail",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "default": "open",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "open",
+              "inProgress",
+              "closed",
+              "reopened",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": 3,
+          "max": 5,
+          "min": 1,
+          "name": "priority",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "assignee",
+          "required": false,
+          "requiredWhen": {
+            "status": [
+              "inProgress",
+              "closed",
+            ],
+          },
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+        {
+          "name": "body",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "attachments",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "files",
+          },
+          "unique": false,
+        },
+        {
+          "name": "messages",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Message",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "SupportCase",
+    },
+    {
+      "fields": [
+        {
+          "name": "content",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": "agent",
+          "name": "sender",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "agent",
+              "customer",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "defaultMe": true,
+          "name": "agent",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
+        {
+          "name": "fromEmail",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "attachments",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "files",
+          },
+          "unique": false,
+        },
+        {
+          "name": "supportCase",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "SupportCase",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Message",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "cases",
+        "team",
+      ],
+    },
+  ],
+  "outgoing": [
+    {
+      "name": "caseReceived",
+      "recipient": {
+        "kind": "field",
+        "path": [
+          "customerEmail",
+        ],
+        "via": "email",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "SupportCase",
+      },
+    },
+    {
+      "name": "replySent",
+      "recipient": {
+        "kind": "field",
+        "path": [
+          "supportCase",
+          "customerEmail",
+        ],
+        "via": "email",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "Message",
+      },
+      "where": {
+        "sender": "agent",
+      },
+    },
+  ],
+  "pages": [
+    {
+      "actions": [
+        "assignToMe",
+        "assignTo",
+        "startWork",
+        "close",
+        "reopen",
+      ],
+      "filters": [
+        "status",
+        "priority",
+        "assignee",
+      ],
+      "id": "cases",
+      "pattern": {
+        "kind": "crud",
+        "model": "SupportCase",
+      },
+      "route": "/cases",
+      "search": [
+        "subject",
+        "customerEmail",
+      ],
+      "sortable": [
+        "priority",
+        "createdAt",
+      ],
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
 {
   "actions": [

@@ -48,6 +48,10 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     text: "A backend where my AI assistant keeps tasks and notes by project for a small team, with nothing public.",
     pages: {},
   },
+  support: {
+    text: "A support desk for a small team: customer requests to our inbox, each a case with its messages and replies, answered by agents we invite, with nothing public.",
+    pages: { case: "cases" },
+  },
 };
 
 export type Edit =

@@ -1,0 +1,15 @@
+# Each case's conversation: what the customer wrote after the first mail, and the team's answers.
+- supportCase: Cannot sign in to the booking site
+  sender: agent
+  content: Thanks for writing. We are looking into the sign-in codes now and will get back to you within the hour.
+- supportCase: Cannot sign in to the booking site
+  sender: customer
+  fromEmail: johan@skerrycafe.example
+  content: Thank you. It still happens on my phone, on the laptop it works.
+- supportCase: Invoice sent to the wrong address
+  sender: agent
+  content: We have sent the September invoice to accounts@nordicbuild.example and changed the address for the next ones.
+- supportCase: Invoice sent to the wrong address
+  sender: customer
+  fromEmail: accounts@nordicbuild.example
+  content: Got it, thanks for the quick help.
