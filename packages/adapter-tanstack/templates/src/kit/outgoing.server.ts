@@ -4,7 +4,7 @@
 // happen and no change without what it sends; it is sent after, and what cannot be sent is tried
 // again with growing pauses for a day, then given up and shown in Activity, where an
 // administrator can send it again. A call is signed with its target's secret.
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { and, eq, isNull, lte } from "drizzle-orm";
 import { db } from "#/db";
@@ -47,6 +47,27 @@ export interface Happening {
   fields: [string, string][];
   /** The record's page, e.g. /bookings/12. */
   link?: string;
+  /** A reply's own words: the mail is them alone (and the content file's text), a letter. */
+  letter?: string;
+  /** A mail of a record's thread (docs/design/mail-threads.md §4). */
+  thread?: Thread;
+}
+
+/** Where a thread mail belongs: its tag, the ids it answers, where a reply goes, and its own id kept. */
+export interface Thread {
+  /** At the end of the subject, e.g. "[Harbour Support #12]". */
+  tag: string;
+  inReplyTo?: string;
+  /** The thread's ids, oldest first. */
+  references: string[];
+  replyTo?: string;
+  keep(messageId: string): void;
+}
+
+/** A new message id at the sender's own domain, with its angle brackets. */
+function messageId(): string {
+  const domain = /@([^>\s]+)/.exec(process.env.MAIL_FROM ?? "")?.[1] ?? "localhost";
+  return `<${randomUUID()}@${domain}>`;
 }
 
 /** The address the app's own pages are at, for the link in a mail. */
@@ -78,7 +99,12 @@ export function queueMail(
   to: Recipient[],
   own = false,
 ): void {
-  const text = mailText(happening);
+  const thread = happening.thread;
+  const text =
+    happening.letter !== undefined
+      ? [happening.text, happening.letter].filter(Boolean).join("\n\n")
+      : mailText(happening);
+  const subject = thread ? `${happening.subject} ${thread.tag}` : happening.subject;
   const sent = new Set<string>();
   for (const person of to) {
     const email = person.email?.trim();
@@ -87,16 +113,26 @@ export function queueMail(
     if (!viewer && !person.id) continue;
     if (!own && viewer && (person.id === viewer.id || key === viewer.email.toLowerCase())) continue;
     sent.add(key);
+    const id = thread ? messageId() : undefined;
     tx.insert(outgoingMail)
       .values({
         entry: happening.entry,
         model: happening.model,
         recordId: happening.record,
         to: email,
-        subject: happening.subject,
+        subject,
         text,
+        ...(thread && id
+          ? {
+              messageId: id,
+              inReplyTo: thread.inReplyTo ?? null,
+              references: thread.references.join(" ") || null,
+              replyTo: thread.replyTo ?? null,
+            }
+          : {}),
       })
       .run();
+    if (thread && id) thread.keep(id);
   }
   if (sent.size) sendSoon();
 }
@@ -175,7 +211,15 @@ export async function sendDue(now = Date.now()): Promise<number> {
     for (const mail of due) {
       const about = { model: mail.model, record: mail.recordId };
       try {
-        await sendMail({ to: mail.to, subject: mail.subject, text: mail.text });
+        await sendMail({
+          to: mail.to,
+          subject: mail.subject,
+          text: mail.text,
+          ...(mail.messageId ? { messageId: mail.messageId } : {}),
+          ...(mail.inReplyTo ? { inReplyTo: mail.inReplyTo } : {}),
+          ...(mail.references ? { references: mail.references } : {}),
+          ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
+        });
         db.transaction((tx) => {
           tx.update(outgoingMail)
             .set({ sentAt: new Date(), tries: mail.tries + 1 })

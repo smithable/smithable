@@ -72,9 +72,60 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain("title: text(mail.subject),");
   expect(route).toContain("body: bodyOf(mail),");
   expect(route).toContain("attachments: files,");
-  expect(route).toContain('files.push(saveFile("request", bytes, text(name) || "attachment"));');
+  expect(route).toContain('const files = await saved(mail, "request");');
+  expect(route).toContain('files.push(saveFile(model, bytes, text(name) || "attachment"));');
   expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES)");
   expect(route).toContain("await scanned(bytes);");
   // No templates and no id: no path helpers to leave unused.
   expect(route).not.toContain("const fill");
+});
+
+test("a reply joins its thread: found by the ids it answers, else the tag; a thread mail carries its tag and headers", () => {
+  const threaded = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Harbour Support }
+models:
+  Request:
+    fields: { title: string!, email: email!, body: text, status: new | open | closed, messages: "Message[]" }
+  Message:
+    fields: { request: Request!, from: email, body: text!, direction: in | out }
+pages:
+  requests: { crud: Request }
+incoming:
+  support:
+    mail: true
+    create: Request
+    fields: { from: email, subject: title, body: body }
+    reply:
+      create: Message
+      fields: { from: from, body: body }
+      set: { direction: in }
+      then: { status: open }
+outgoing:
+  requestReceived: { when: Request created, to: mail, recipient: email }
+  replySent: { when: Message created, where: { direction: out }, to: mail, recipient: request.email }
+`,
+  }).ir as SpecIR;
+  const app = generateApp(threaded, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => app.find((f) => f.path === path)?.content ?? "";
+  const route = at("src/routes/incoming/support.ts");
+  expect(route).toContain("inArray(mailThreads.messageId, answers)");
+  expect(route).toContain("const tagged = /\\[[^[\\]]*#(\\d+)\\]/.exec(text(mail.subject))?.[1];");
+  expect(route).toContain("requestId: thread,");
+  expect(route).toContain('direction: "in",');
+  expect(route).toContain("fromMail({ messageId: mailId || undefined, quiet: automatic }");
+  expect(route).toContain('status: "open",');
+  expect(at("src/db/schema.ts")).toContain('"mail_threads"');
+  const outgoing = at("src/generated/outgoing.server.ts");
+  expect(outgoing).toContain("tag: `[${app.name} #${record}]`,");
+  expect(outgoing).toContain(
+    'thread: thread(tx, "Request", r.id as number, process.env.INCOMING_SUPPORT_ADDRESS),',
+  );
+  expect(outgoing).toContain(
+    'thread: thread(tx, "Request", r.requestId as number, process.env.INCOMING_SUPPORT_ADDRESS),',
+  );
+  // A reply's mail is its body alone, a letter, with the request's title as its subject.
+  expect(outgoing).toContain('letter: String(r.body ?? ""),');
+  expect(outgoing).toContain("if (arriving.getStore()?.quiet) return;");
 });

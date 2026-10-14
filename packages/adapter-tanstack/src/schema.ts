@@ -17,7 +17,7 @@ import {
   uniquePerOwner,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
-import { INCOMING_SEEN_TABLE } from "./incoming.js";
+import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
 import { outgoingOf } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
@@ -173,7 +173,7 @@ export const ${n.table}Favorites = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -269,6 +269,11 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
+    /** A thread mail's headers (docs/design/mail-threads.md §4): its own id, what it answers, the thread. */
+    messageId: text(),
+    inReplyTo: text(),
+    references: text(),
+    replyTo: text(),
     tries: integer().notNull().default(0),
     nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     sentAt: integer({ mode: "timestamp_ms" }),

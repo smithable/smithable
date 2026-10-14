@@ -18,6 +18,10 @@ export interface Mail {
   text: string;
   html?: string;
   replyTo?: string;
+  /** A thread mail's own id, the mail it answers and the thread's ids (mail-threads.md §4). */
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
 }
 
 /** Where mails go without SMTP settings. */
@@ -48,7 +52,13 @@ export function mailConfigured(): boolean {
 
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
 export async function sendMail(mail: Mail): Promise<void> {
-  const message = { from: process.env.MAIL_FROM ?? "app@localhost", ...mail };
+  // Sent by the app, not typed in a mail client (RFC 3834): auto-responders do not answer it, and
+  // a mailbox watcher does not take it back in as a new mail.
+  const message = {
+    from: process.env.MAIL_FROM ?? "app@localhost",
+    ...mail,
+    headers: { "Auto-Submitted": "auto-generated" },
+  };
   const settings = smtp();
   if (settings) {
     await createTransport(settings).sendMail(message);
@@ -69,7 +79,16 @@ export async function sendMail(mail: Mail): Promise<void> {
 }
 
 /** The mails in the outbox, oldest first, as tests read them: the headers and the text body. */
-export function outbox(): { file: string; to: string; subject: string; text: string }[] {
+export function outbox(): {
+  file: string;
+  to: string;
+  subject: string;
+  text: string;
+  messageId: string;
+  inReplyTo: string;
+  references: string;
+  replyTo: string;
+}[] {
   let files: string[];
   try {
     files = readdirSync(OUTBOX)
@@ -84,6 +103,15 @@ export function outbox(): { file: string; to: string; subject: string; text: str
     const headers = raw.slice(0, at);
     const header = (name: string) =>
       new RegExp(`^${name}: (.*)$`, "im").exec(headers)?.[1]?.trim() ?? "";
-    return { file, to: header("To"), subject: header("Subject"), text: raw.slice(at + 2).trim() };
+    return {
+      file,
+      to: header("To"),
+      subject: header("Subject"),
+      text: raw.slice(at + 2).trim(),
+      messageId: header("Message-ID"),
+      inReplyTo: header("In-Reply-To"),
+      references: header("References"),
+      replyTo: header("Reply-To"),
+    };
   });
 }
