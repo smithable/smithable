@@ -84,6 +84,8 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
   parts?(pattern: PatternOf<K>): Record<string, string>;
   /** Custom queries its pages show. */
   queries?(pattern: PatternOf<K>): string[];
+  /** The models visitors must read for its public pages to show anything; by default `models`. */
+  reads?(pattern: PatternOf<K>): string[];
   /** Models visitors add records of from its pages without an account (contact forms). */
   forms?(pattern: PatternOf<K>): string[];
   /** Operations that make or change pages of this pattern. */
@@ -829,8 +831,9 @@ const order: PagePattern<"order"> = {
   },
   example: "order: { from: <Model>, into: <Model> }",
   parse: (ctx, value, where, parsed) => readOrder(ctx, value, where, parsed),
-  // It shows what is chosen; the order and its lines are written, never shown to the visitor.
-  models: (p) => [p.from],
+  models: (p) => [p.from, p.into, p.line],
+  // Visitors read what they choose; the order and its lines they only write.
+  reads: (p) => [p.from],
   inMenu: false,
   forms: (p) => [p.into],
   operations: orderOperations,
@@ -1020,6 +1023,7 @@ export function patternInfo(page: PageIR) {
   const pattern = page.pattern as PatternOf<"crud">;
   return {
     models: () => info.models(pattern),
+    reads: () => (info.reads ?? info.models)(pattern),
     manages: () => info.manages?.(pattern),
     icon: info.icon,
     inMenu: info.inMenu,

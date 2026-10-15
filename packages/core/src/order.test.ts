@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation, findOperation, parseOperationArgs } from "./apply.js";
+import { validateAuth } from "./auth.js";
 import { hoursText, readHours } from "./hours.js";
 import type { PatternOf } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -126,4 +127,20 @@ test("addOrderPage adds the page, and a renamed field asked for follows into ask
   );
   if (!renamed.ok) throw new Error(renamed.message);
   expect(renamed.files.spec).toMatch(/ask:\s*(\[\s*name,\s*mobile\s*\]|\n\s*- name\n\s*- mobile)/);
+});
+
+test("visitors must read what they choose, never the orders or their lines", () => {
+  const ir = read(KIOSK).ir;
+  if (!ir) throw new Error("no ir");
+  const warnings = (publicRead: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { staff: { pages: all } }\ndefaultRole: staff\npublic: { pages: [menu], read: [${publicRead}], create: [Order] }\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.message);
+  expect(warnings("Dish").join()).not.toMatch(/may not read/);
+  expect(warnings("").join()).toContain("may not read Dish");
+  expect(warnings("").join()).not.toMatch(/may not read.*Order/);
 });

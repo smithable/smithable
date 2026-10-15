@@ -951,14 +951,6 @@ function checkAgainstSpec(
           `Add ${form} to "create" under "public".`,
         );
     }
-    // An order page shows what is chosen: visitors must be able to read it (orders.md §3).
-    if (page?.pattern.kind === "order" && !auth.public.read.includes(page.pattern.from))
-      ctx.warning(
-        at,
-        "order-menu-closed",
-        `The ${name} page shows ${page.pattern.from} to choose from, but visitors may not read it, so they see nothing to order.`,
-        `Add ${page.pattern.from} to "read" under "public".`,
-      );
   }
   // An incoming call acts as its role (integrations.md §3): the role must exist, and a record it
   // adds goes through that role's create rule.
@@ -1050,7 +1042,7 @@ function checkAgainstSpec(
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
     if (!page || page.mine) continue;
-    const closed = [...new Set(patternInfo(page).models())].filter(
+    const closed = [...new Set(patternInfo(page).reads())].filter(
       (m) => m !== USER_MODEL && !auth.public.read.includes(m),
     );
     if (closed.length)
