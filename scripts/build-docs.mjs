@@ -294,7 +294,7 @@ const html = (page, body) => {
 <style>${CSS}</style>
 </head>
 <body>
-<header><a class="home" href="/"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable" height="26" width="125"></picture></a><strong>docs</strong>${PAGES.map((p) => `<a href="/${p.out === "index.html" ? "" : p.out}"${p === page ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("")}<a href="${SITE}${schemaPath}">JSON Schema</a></header>
+<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><strong>docs</strong>${PAGES.map((p) => `<a href="/${p.out === "index.html" ? "" : p.out}"${p === page ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("")}<a href="${SITE}${schemaPath}">JSON Schema</a></header>
 <div class="layout${page.toc ? " toc" : ""}">${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
