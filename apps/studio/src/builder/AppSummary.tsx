@@ -1,19 +1,19 @@
 // "Your app": the app in plain language, a map to its parts (docs/design/studio-v2.md §5).
 // A click on a part opens its properties, the same panel Code mode has, where each control is
 // an operation; "In my words" rewords a part for this session only and never changes the app;
-// the add buttons open the Change tab's forms, filled in with their group.
+// an add button opens its form in place, and what it made opens its properties next.
 import type { SummarySection } from "@smithable/index";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import { Properties } from "../properties";
 import { Button, cx } from "../ui";
-import type { Prefill, Run } from "./ChangeForms";
+import { type ADDS, AddForm, type Run } from "./ChangeForms";
 
 /** Headings for the summary's groups of sections, and what their add button adds. */
-const GROUPS: Record<string, { title: string; add?: [string, Prefill] }> = {
-  model: { title: "Records", add: ["Add a record", { op: "addModel", args: {} }] },
-  pages: { title: "Pages", add: ["Add a page", { op: "addPage", args: {} }] },
-  action: { title: "Actions", add: ["Add an action", { op: "addAction", args: {} }] },
+const GROUPS: Record<string, { title: string; add?: [string, (typeof ADDS)[number]] }> = {
+  model: { title: "Records", add: ["Add a record", "addModel"] },
+  pages: { title: "Pages", add: ["Add a page", "addPage"] },
+  action: { title: "Actions", add: ["Add an action", "addAction"] },
   outgoing: { title: "Who is told" },
   query: { title: "Queries" },
   auth: { title: "Sign-in and access" },
@@ -43,7 +43,6 @@ export function AppSummary({
   sections,
   spec,
   run,
-  onAdd,
   onWho,
   onLook,
 }: {
@@ -51,8 +50,6 @@ export function AppSummary({
   sections: SummarySection[];
   spec: Spec;
   run: Run;
-  /** Opens the Change tab's form for an addition, filled in. */
-  onAdd: (prefill: Prefill) => void;
   /** Opens the Who can tab with a column marked: a role's name, or "anyone". */
   onWho: (column: string) => void;
   /** Opens the Look tab, where a list's columns and a form's fields are set. */
@@ -60,8 +57,35 @@ export function AppSummary({
 }) {
   const [wording, setWording] = useState(() => loadWording(app));
   const [updated, setUpdated] = useState<string[]>([]);
-  // The part whose properties are open, e.g. "field:Customer.email".
+  // The part whose properties are open, e.g. "field:Customer.email", or an addition's form
+  // ("add:addField:Customer", "add:addPage").
   const [open, setOpen] = useState<string>();
+  // What an addition made opens its properties, brought into view once the summary has it.
+  const added = useRef(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!added.current) return;
+    const box = root.current?.querySelector("[data-properties]");
+    if (!box) return;
+    added.current = false;
+    box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+  const adding = (key: string, op: (typeof ADDS)[number], initial?: Record<string, unknown>) =>
+    open === key && (
+      <div className="my-2 rounded-md border border-line bg-surface">
+        <AddForm
+          op={op}
+          spec={spec}
+          run={run}
+          initial={initial}
+          onCancel={() => setOpen(undefined)}
+          onAdded={(concept) => {
+            added.current = true;
+            setOpen(concept);
+          }}
+        />
+      </div>
+    );
   useEffect(() => {
     try {
       sessionStorage.setItem(storageKey(app), JSON.stringify(wording));
@@ -83,25 +107,30 @@ export function AppSummary({
   const heading = (group: string) => {
     const g = GROUPS[group];
     if (!g) return null;
+    const key = `add:${g.add?.[1]}`;
     return (
-      <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-1">
-        <h2 className="text-xs font-semibold tracking-wide text-quiet uppercase">{g.title}</h2>
-        {g.add && (
-          <button
-            type="button"
-            className="text-xs font-medium text-accent"
-            onClick={() => onAdd(g.add?.[1] as Prefill)}
-          >
-            {g.add[0]}
-          </button>
-        )}
-      </div>
+      <>
+        <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-1">
+          <h2 className="text-xs font-semibold tracking-wide text-quiet uppercase">{g.title}</h2>
+          {g.add && (
+            <button
+              type="button"
+              className="text-xs font-medium text-accent"
+              aria-expanded={open === key}
+              onClick={() => setOpen((o) => (o === key ? undefined : key))}
+            >
+              {g.add[0]}
+            </button>
+          )}
+        </div>
+        {g.add && adding(key, g.add[1])}
+      </>
     );
   };
   // Advice the app is fine without (docs/design/advice.md), each with its one-click way.
   const notes = (spec.diagnostics ?? []).filter((d) => d.severity === "note");
   return (
-    <div data-guide="summary" className="space-y-5 p-4">
+    <div ref={root} data-guide="summary" className="space-y-5 p-4">
       {notes.length > 0 && (
         <section
           aria-label="Worth considering"
@@ -141,7 +170,7 @@ export function AppSummary({
             updated={updated.includes(s.concept)}
             open={open}
             onOpen={(concept) => setOpen((o) => (o === concept ? undefined : concept))}
-            onAdd={onAdd}
+            adding={adding}
             onWho={onWho}
             onLook={onLook}
             onWording={(text) =>
@@ -196,7 +225,7 @@ function Part({
   updated,
   open,
   onOpen,
-  onAdd,
+  adding,
   onWho,
   onLook,
   onWording,
@@ -209,7 +238,12 @@ function Part({
   updated: boolean;
   open?: string;
   onOpen: (concept: string) => void;
-  onAdd: (prefill: Prefill) => void;
+  /** An addition's form in place, when it is the one open. */
+  adding: (
+    key: string,
+    op: (typeof ADDS)[number],
+    initial?: Record<string, unknown>,
+  ) => React.ReactNode;
   onWho: (column: string) => void;
   onLook: () => void;
   onWording: (text: string | undefined) => void;
@@ -229,7 +263,7 @@ function Part({
   });
   const properties = (concept: string) =>
     open === concept && (
-      <div className="my-2 rounded-md border border-line bg-surface">
+      <div data-properties className="my-2 rounded-md border border-line bg-surface">
         <Properties key={concept} concept={concept} spec={spec} run={run} onLook={onLook} />
       </div>
     );
@@ -336,13 +370,17 @@ function Part({
         />
       )}
       {model && (
-        <button
-          type="button"
-          className="mt-1 text-xs font-medium text-accent"
-          onClick={() => onAdd({ op: "addField", args: { model } })}
-        >
-          Add a field
-        </button>
+        <>
+          <button
+            type="button"
+            className="mt-1 text-xs font-medium text-accent"
+            aria-expanded={open === `add:addField:${model}`}
+            onClick={() => onOpen(`add:addField:${model}`)}
+          >
+            Add a field
+          </button>
+          {adding(`add:addField:${model}`, "addField", { model })}
+        </>
       )}
     </div>
   );

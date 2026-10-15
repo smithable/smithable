@@ -222,7 +222,6 @@ export function Builder({
                 sections={sections}
                 spec={spec}
                 run={run}
-                onAdd={openForm}
                 onWho={(column) => {
                   setMarked(column);
                   setTab("who");

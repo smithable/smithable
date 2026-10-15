@@ -4,7 +4,7 @@ import { wordsFor } from "@smithable/index";
 import { useState } from "react";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
-import { Button, Input, Panel } from "../ui";
+import { Button, Check, Input, Panel } from "../ui";
 import { listOf, type Run, shorthandOf } from "./ChangeForms";
 
 /** The field a selection is, when this panel can show it (not a model, nor a field since removed). */
@@ -68,21 +68,19 @@ export function Selected({
           </label>
         )}
         {list && (
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={list.columns.includes(field.name)}
-              onChange={() =>
-                run("setColumns", {
-                  page: list.page,
-                  columns: list.columns.includes(field.name)
-                    ? list.columns.filter((c) => c !== field.name)
-                    : [...list.columns, field.name],
-                })
-              }
-            />
-            Show in the list
-          </label>
+          <Check
+            text="Show it in listings"
+            tip="Adds this field as a column on the list page of these records."
+            checked={list.columns.includes(field.name)}
+            onChange={() =>
+              run("setColumns", {
+                page: list.page,
+                columns: list.columns.includes(field.name)
+                  ? list.columns.filter((c) => c !== field.name)
+                  : [...list.columns, field.name],
+              })
+            }
+          />
         )}
         {selection.part === "column" && selection.page && selection.columns && (
           <Button

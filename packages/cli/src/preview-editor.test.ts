@@ -153,3 +153,9 @@ test("asked by the lab, the page starts scrolling through, so its motion plays",
   send({ type: "smithable:motion-tour" });
   expect(scrolled).toHaveLength(1);
 });
+
+test("loaded again on the same page, the preview keeps its place; on another page it starts at the top", () => {
+  const storage = { "smithable:place": JSON.stringify({ path: "/orders", y: 500 }) };
+  expect(page("/orders", storage).scrolled).toEqual([500]);
+  expect(page("/customers", storage).scrolled).toEqual([]);
+});

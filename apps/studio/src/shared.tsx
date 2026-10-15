@@ -9,7 +9,8 @@ import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
 
 const PAGE_KEY = "smithable:preview-page";
-const keptPage = () => {
+/** The page the preview is on, e.g. "/customers/12". */
+export const keptPage = () => {
   try {
     return sessionStorage.getItem(PAGE_KEY) ?? "/";
   } catch {

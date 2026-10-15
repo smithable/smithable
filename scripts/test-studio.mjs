@@ -358,9 +358,9 @@ try {
     async () => {
       await change("Add a field");
       await page.getByLabel("Name", { exact: true }).fill("website");
-      await page.getByLabel("Holds").selectOption({ label: "Web address" });
+      await page.getByLabel("Field type").selectOption({ label: "Web address" });
       await page.getByRole("button", { name: "Add field" }).click();
-      // The field, then its column in the list (Show it in the list): the trace has both.
+      // The field, then its column in the list (Show it in listings): the trace has both.
       await last
         .getByText("Customers: added a website (a web address)")
         .waitFor({ timeout: 60000 });
@@ -373,7 +373,7 @@ try {
       await page.getByText("a web address").first().waitFor();
       await openPreview("/customers/new");
       await preview.getByLabel("Website").waitFor({ timeout: 60000 });
-      // "Show it in the list" was on: the customers list has the column (its look names columns).
+      // "Show it in listings" was on: the customers list has the column (its look names columns).
       await openPreview("/customers");
       await preview
         .getByRole("columnheader", { name: "Website" })
@@ -974,17 +974,20 @@ try {
         .getByText("sales may delete only their own records")
         .first()
         .waitFor({ timeout: 60000 });
-      // Adding a field: the Change tab's form, with the record filled in.
-      await page
-        .getByRole("region", { name: "Customers", exact: true })
-        .getByRole("button", { name: "Add a field" })
-        .click();
-      if ((await page.getByLabel("Kind of record").inputValue()) !== "Customer")
-        throw new Error("the form is not for customers");
-      await page.getByLabel("Name", { exact: true }).fill("loyalty code");
-      await page.getByRole("checkbox", { name: "Unique" }).check();
-      await page.getByRole("button", { name: "Add field" }).click();
+      // Adding a field: its form in place, under the customers (A 116), never the Changes tab;
+      // once added, the new field's own properties are open there.
+      const adding = page.getByRole("region", { name: "Customers", exact: true });
+      await adding.getByRole("button", { name: "Add a field" }).click();
+      if (await adding.getByLabel("Kind of record").count())
+        throw new Error("the form in place asks which kind of record");
+      await adding.getByLabel("Name", { exact: true }).fill("loyalty code");
+      await adding.getByRole("checkbox", { name: "Unique" }).check();
+      await adding.getByRole("button", { name: "Add field" }).click();
       await last.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
+      await adding
+        .getByRole("button", { name: "a loyalty code (unique)", expanded: true })
+        .waitFor({ timeout: 30000 });
+      await adding.getByRole("button", { name: "Remove field" }).waitFor();
       // In my words: the wording only, for this session; no change is made.
       await page.getByRole("tab", { name: "What it does" }).click();
       const changes = await changeCount();

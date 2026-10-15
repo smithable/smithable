@@ -11,11 +11,12 @@ import {
   type ModelIR,
   modelAccess,
   plural,
+  type SpecIR,
 } from "@smithable/core";
 import { useState } from "react";
-import { FieldShapeForm, listOf, type Run } from "./builder/ChangeForms";
+import { FieldShapeForm, listOf, type Run, shorthandOf } from "./builder/ChangeForms";
 import type { Spec } from "./engine";
-import { Button, cx, Input, Label, Select } from "./ui";
+import { Button, Check, cx, Input, Label, Select } from "./ui";
 
 /** One visible text, saved with setText; empty restores the text Smithable derives. */
 function TextSetting({
@@ -148,6 +149,23 @@ export const ICON_CHOICES = [
   "list",
 ];
 
+/** A page's kind, as the add form names it. */
+const PAGE_KINDS: Record<string, string> = {
+  crud: "A list of records",
+  landing: "A landing page for visitors",
+  custom: "A page of your own, in code",
+  dashboard: "A dashboard",
+  settings: "Settings of",
+  onboarding: "An onboarding for",
+  users: "Who has access",
+  data: "All the records, for administrators",
+  review: "Files waiting for review",
+  calendar: "A calendar of",
+  articles: "Articles from",
+  calculator: "A calculator",
+  legal: "The privacy page",
+};
+
 /** The selected concept's properties, changed with operations (the Photoshop-like panel). */
 export function Properties({
   concept,
@@ -196,6 +214,7 @@ export function Properties({
         <ListToggle spec={spec} run={run} model={name} field={fieldName} />
         {!field.formula && !(field.type.kind === "relation" && field.type.many) && (
           <FieldRules
+            ir={ir}
             model={ir.models.find((m) => m.name === name) as ModelIR}
             field={field}
             run={run}
@@ -291,9 +310,16 @@ export function Properties({
     const page = ir.pages.find((p) => p.id === name);
     if (!page) return null;
     const texts = spec.content?.pages[name];
+    const pattern = page.pattern;
     return (
       <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
+        {/* Another kind is another page: its kind is set when it is added, and stays. */}
+        <p className="text-muted" data-part="page-kind">
+          {"model" in pattern
+            ? `${PAGE_KINDS[pattern.kind] ?? humanize(pattern.kind)}: ${humanize(plural(pattern.model))}`
+            : (PAGE_KINDS[pattern.kind] ?? humanize(pattern.kind))}
+        </p>
         <TextSetting
           label="Title"
           path={["pages", name, "title"]}
@@ -486,7 +512,17 @@ function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
  * A field's rules on the record (record-rules.md): filled by the app, when it can be changed and
  * when it is required, each a setFieldRules. A condition is one choice or yes/no field's value.
  */
-function FieldRules({ model, field, run }: { model: ModelIR; field: FieldIR; run: Run }) {
+function FieldRules({
+  ir,
+  model,
+  field,
+  run,
+}: {
+  ir: SpecIR;
+  model: ModelIR;
+  field: FieldIR;
+  run: Run;
+}) {
   const set = (args: Record<string, unknown>) =>
     void run("setFieldRules", { model: model.name, field: field.name, ...args });
   const fields = model.fields.filter(
@@ -507,6 +543,7 @@ function FieldRules({ model, field, run }: { model: ModelIR; field: FieldIR; run
         />
         Filled by the app, not in the form
       </label>
+      {field.byApp && <FilledBy ir={ir} model={model} field={field} run={run} />}
       <Label text="Can be changed">
         <Select
           aria-label="Can be changed"
@@ -541,6 +578,84 @@ function FieldRules({ model, field, run }: { model: ModelIR; field: FieldIR; run
         />
       )}
     </fieldset>
+  );
+}
+
+/**
+ * Where a field the app fills gets its value (record-rules.md §1): its default, the actions and
+ * incoming entries that set it, or custom code; the default can be set here.
+ */
+export function fillSources(ir: SpecIR, model: string, field: FieldIR): string[] {
+  const sources: string[] = [];
+  if (field.defaultMe) sources.push("who makes the record");
+  else if (field.defaultFormula) sources.push("a formula, when the record is made");
+  else if (field.default !== undefined) sources.push(`its default, ${String(field.default)}`);
+  const sets = (values: { field: string }[] | undefined) =>
+    (values ?? []).some((v) => v.field === field.name);
+  for (const a of ir.actions) {
+    if (a.custom) continue;
+    if (
+      (a.on === model && (sets(a.set) || sets(a.copy))) ||
+      a.add?.some((x) => x.model === model && sets(x.values))
+    )
+      sources.push(`set by the action ${humanize(a.name)}`);
+  }
+  for (const entry of ir.incoming) {
+    const mail = (m?: Record<string, string | undefined>) =>
+      Object.values(m ?? {}).includes(field.name);
+    if (
+      (entry.create === model && (sets(entry.set) || mail(entry.mail))) ||
+      (entry.reply?.create === model && (sets(entry.reply.set) || mail(entry.reply.mail)))
+    )
+      sources.push(`set by the incoming entry ${humanize(entry.name)}`);
+  }
+  return sources;
+}
+
+function FilledBy({
+  ir,
+  model,
+  field,
+  run,
+}: {
+  ir: SpecIR;
+  model: ModelIR;
+  field: FieldIR;
+  run: Run;
+}) {
+  const sources = fillSources(ir, model.name, field);
+  const [value, setValue] = useState(field.default === undefined ? "" : String(field.default));
+  // A default in the shorthand: a value of the field's own kind, not a link or a choice (their first value is theirs).
+  const defaultable = field.type.kind === "scalar" && !field.defaultMe && !field.defaultFormula;
+  const bare = shorthandOf({ ...field, default: undefined });
+  return (
+    <div className="space-y-2 rounded-md bg-subtle p-2 text-xs">
+      <p data-part="filled-by">
+        {sources.length
+          ? `Its value comes from ${sources.join("; ")}.`
+          : "Nothing gives it a value yet: give it a default here, let an action set it, or fill it in custom code."}
+      </p>
+      {defaultable && (
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run("changeField", {
+              model: model.name,
+              field: field.name,
+              type: value.trim() ? `${bare} = ${value.trim()}` : bare,
+            });
+          }}
+        >
+          <Label text="Default">
+            <Input aria-label="Default" value={value} onChange={(e) => setValue(e.target.value)} />
+          </Label>
+          <Button type="submit" variant="ghost" className="border border-line">
+            Set
+          </Button>
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -610,18 +725,16 @@ function ListToggle({
   if (!list) return null;
   const shown = list.columns.includes(field);
   return (
-    <label className="flex items-center gap-2">
-      <input
-        type="checkbox"
-        checked={shown}
-        onChange={() =>
-          run("setColumns", {
-            page: list.page,
-            columns: shown ? list.columns.filter((c) => c !== field) : [...list.columns, field],
-          })
-        }
-      />
-      Show in the list
-    </label>
+    <Check
+      text="Show it in listings"
+      tip="Adds this field as a column on the list page of these records."
+      checked={shown}
+      onChange={() =>
+        run("setColumns", {
+          page: list.page,
+          columns: shown ? list.columns.filter((c) => c !== field) : [...list.columns, field],
+        })
+      }
+    />
   );
 }
