@@ -1,6 +1,14 @@
 import { buildJsonSchema, COMPANION_SCHEMAS } from "@smithable/core";
 import { expect, test } from "vitest";
-import { alternativeFor, controlOf, labelOf, operationFor, uncovered } from "./spec-form";
+import {
+  alternativeFor,
+  choicesFor,
+  controlOf,
+  labelOf,
+  operationFor,
+  uncovered,
+  wordOrList,
+} from "./spec-form";
 
 test("every key of the spec and its companion files has a control (what-it-does.md §2)", () => {
   const files = { "smithable.yml": buildJsonSchema(), ...COMPANION_SCHEMAS };
@@ -82,4 +90,38 @@ test("a key with an operation of its own goes through it; the rest through editS
     "setPublic",
     { read: ["Customer"] },
   ]);
+});
+
+test("a role's grants go through grant", () => {
+  const auth = "smithable.auth.yml";
+  expect(operationFor(auth, ["roles", "sales", "pages"], ["contacts"])).toEqual([
+    "grant",
+    { role: "sales", what: "pages", names: ["contacts"] },
+  ]);
+  expect(operationFor(auth, ["roles", "sales", "write"], "all")).toEqual([
+    "grant",
+    { role: "sales", what: "write", names: ["all"] },
+  ]);
+  expect(operationFor(auth, ["roles", "sales", "delete"], undefined)).toEqual([
+    "grant",
+    { role: "sales", what: "delete", names: ["none"] },
+  ]);
+  expect(operationFor(auth, ["roles", "sales"], "all")).toEqual([
+    "grant",
+    { role: "sales", what: "all" },
+  ]);
+  expect(operationFor(auth, ["roles", "sales", "description"], "Sells")).toBeUndefined();
+});
+
+test("a grant is all or a list of names, offering the app's pages, kinds of record or actions", () => {
+  const grant = [{ enum: ["all"] }, { type: "array", items: { type: "string" } }];
+  expect(wordOrList(grant)).toEqual({ word: "all", list: grant[1] });
+  expect(wordOrList([{ type: "string" }, { type: "object" }])).toBeUndefined();
+  const spec = { models: { Customer: {} }, pages: { home: {} }, actions: { close: {} } };
+  const auth = "smithable.auth.yml";
+  expect(choicesFor(auth, ["roles", "sales", "delete"], spec)).toEqual(["Customer"]);
+  expect(choicesFor(auth, ["roles", "sales", "pages"], spec)).toEqual(["home"]);
+  expect(choicesFor(auth, ["public", "read"], spec)).toEqual(["Customer"]);
+  expect(choicesFor(auth, ["roles", "sales", "actions"], spec)).toEqual(["close"]);
+  expect(choicesFor("smithable.yml", ["models"], spec)).toEqual([]);
 });

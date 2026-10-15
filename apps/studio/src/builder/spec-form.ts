@@ -148,6 +148,19 @@ export function alternativeFor(options: JsonSchema[], value: unknown): JsonSchem
   return options.find(fits);
 }
 
+/**
+ * Alternatives that are one word or a list (a grant: all, or the names): the word and the list's
+ * schema, so the form shows one check for the word and the list's chips otherwise.
+ */
+export function wordOrList(options: JsonSchema[]): { word: string; list: JsonSchema } | undefined {
+  const rest = options.filter((o) => !(types(o).length === 1 && types(o)[0] === "null"));
+  const list = rest.find((o) => types(o).includes("array"));
+  const word = (
+    rest.find((o) => Array.isArray(o.enum) && o.enum.length === 1)?.enum as unknown[]
+  )?.[0];
+  return rest.length === 2 && list && typeof word === "string" ? { word, list } : undefined;
+}
+
 /** A new entry of a named map, as the form's Add writes it: an empty map. */
 const isNew = (value: unknown) =>
   value !== null &&
@@ -234,5 +247,45 @@ export function operationFor(
     (Array.isArray(value) || value === undefined)
   )
     return ["setPublic", { [key]: value ?? [] }];
+  // A role: the whole app, or what it may do beyond the record rule, a grant at a time.
+  if (file === "smithable.auth.yml" && first === "roles" && typeof key === "string") {
+    if (path.length === 2 && value === "all") return ["grant", { role: key, what: "all" }];
+    if (
+      path.length === 3 &&
+      typeof third === "string" &&
+      ["pages", "read", "create", "write", "delete", "actions", "review"].includes(third) &&
+      (Array.isArray(value) || value === "all" || value === undefined)
+    )
+      return [
+        "grant",
+        {
+          role: key,
+          what: third,
+          names: value === "all" ? ["all"] : value?.length ? value : ["none"],
+        },
+      ];
+  }
   return undefined;
+}
+
+const GRANT_MODELS = ["read", "create", "write", "delete", "review"];
+
+/**
+ * The names a list of names in the auth file offers (its roles' and visitors' grants): the pages,
+ * the kinds of record or the custom actions of the app, read from smithable.yml.
+ */
+export function choicesFor(file: string, path: (string | number)[], spec: unknown): string[] {
+  if (file !== "smithable.auth.yml") return [];
+  const what =
+    path[0] === "roles" && path.length === 3
+      ? path[2]
+      : path[0] === "public" && path.length === 2
+        ? path[1]
+        : undefined;
+  const keys = (key: string) =>
+    Object.keys(((spec ?? {}) as Record<string, Record<string, unknown> | undefined>)[key] ?? {});
+  if (what === "pages") return keys("pages");
+  if (what === "actions") return keys("actions");
+  if (typeof what === "string" && GRANT_MODELS.includes(what)) return keys("models");
+  return [];
 }
