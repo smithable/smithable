@@ -397,12 +397,16 @@ pages:
     ...options,
     content: { language: "sv", models: {}, pages: {}, menus: {}, actions: {}, outgoing: {} },
   });
+  // Its language's words, chosen at run time (languages.md §4): the Swedish file on its own,
+  // with no English beside it to import, and words.ts choosing among the app's languages.
+  const sv = swedish.find((f) => f.path === "src/kit/words/sv.ts")?.content ?? "";
+  expect(sv).toContain('signIn: "Logga in"');
+  expect(sv).not.toContain("./en");
+  expect(swedish.some((f) => f.path === "src/kit/words/en.ts")).toBe(false);
   const words = swedish.find((f) => f.path === "src/kit/words.ts")?.content ?? "";
-  expect(words).toContain('signIn: "Logga in"');
-  // On its own in the app: no English beside it to import.
-  expect(words).not.toContain("./en");
-  expect(words).toContain("export type Words = typeof w;");
-  expect(swedish.some((f) => f.path.startsWith("src/kit/words/"))).toBe(false);
+  expect(words).toContain('import { w as sv } from "./words/sv";');
+  expect(words).toContain("const BY: Record<string, Words> = { sv };");
+  expect(words).toContain('const MAIN = "sv";');
 });
 
 test("an action's label from the content file is its button, in the list's row and the selection bar", () => {
