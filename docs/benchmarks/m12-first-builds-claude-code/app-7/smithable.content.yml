@@ -13,13 +13,8 @@ pages:
       title: Upcoming matches
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
-actions:
-  recordResult:
-    label: Record result
-  postpone:
-    label: Postpone
 logo:
   src: images/logo.webp
   alt: A football

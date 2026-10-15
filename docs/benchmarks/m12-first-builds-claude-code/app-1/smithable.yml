@@ -11,11 +11,13 @@ models:
       summary: text
       level: allLevels | beginner | advanced
       durationMinutes: int! = 60
+      sessions: Session[]
   Instructor:
     fields:
       name: string!
       bio: markdown
       portrait: picture
+      sessions: Session[]
   Session:
     fields:
       classType: ClassType!
@@ -33,28 +35,31 @@ models:
       per: session
       max: session.capacity
 pages:
+  sessions:
+    crud: Session
+  class-types:
+    crud: ClassType
+    filters: [level]
+  instructors:
+    crud: Instructor
+  my-bookings:
+    crud: Booking
+  schedule:
+    calendar: Session
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule]
       footer:
       classes:
         records: ClassType
       teachers:
         records: Instructor
+      faq:
       callToAction:
         button: schedule
-  schedule:
-    calendar: Session
-  sessions:
-    crud: Session
-  class-types:
-    crud: ClassType
-  instructors:
-    crud: Instructor
-  my-bookings:
-    crud: Booking
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage

@@ -1,10 +1,10 @@
 {
   "description": "A help desk for an IT team: tickets, priorities and who handles them.",
-  "starter": "records",
+  "starter": "support",
   "wordStarter": "invoicing",
   "questions": [
     "Who opens tickets?",
-    "Can the people who report a problem follow their ticket in the app?",
-    "Besides title, priority and assignee, what should a ticket hold?"
+    "Can people who open a ticket follow it and reply to it?",
+    "Besides priority and who handles it, what else should a ticket hold?"
   ]
 }

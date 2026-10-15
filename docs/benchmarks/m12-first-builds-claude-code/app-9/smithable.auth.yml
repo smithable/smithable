@@ -5,7 +5,13 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all, write: [Ticket] }
+  agent:
+    description: Handles tickets, takes them and passes them on.
+    pages: [tickets]
+    create: all
+    write: all
+    actions: all
 assistant:
   for: signed-in
+defaultRole: agent
 admins: [johan@smithable.ai]

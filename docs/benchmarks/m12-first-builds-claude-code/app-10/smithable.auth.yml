@@ -5,12 +5,7 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member:
-    description: "A family member: adds and edits recipes and shopping lists."
-    pages: all
-    create: all
-    write: all
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
-defaultRole: member
 admins: [johan@smithable.ai]

@@ -6,5 +6,10 @@ pages:
   speakers:
     table:
       view: cards
+tones:
+  Talk.track:
+    workshop: warning
 theme:
-  preset: corporate
+  preset: modern
+  brand:
+    primary: "#4f46e5"

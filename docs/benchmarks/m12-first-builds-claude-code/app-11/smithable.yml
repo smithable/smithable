@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: "The live state of our API: open incidents, their updates and planned maintenance."
-  timezone: UTC
+  description: "The live state of our API: incidents being fixed and maintenance that is planned."
 models:
   Component:
     fields:
@@ -10,6 +9,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -35,6 +35,7 @@ models:
 pages:
   incidents:
     crud: Incident
+    filters: [status, component]
     actions: [identified, monitoring, resolve]
   updates:
     crud: IncidentUpdate
@@ -42,18 +43,6 @@ pages:
     crud: Maintenance
   components:
     crud: Component
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
   home:
     route: /
     landing:
@@ -74,6 +63,18 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
   team:
     users: manage
 actions:

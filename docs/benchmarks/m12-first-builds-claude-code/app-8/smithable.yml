@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Conference Registration
-  description: Browse the conference programme and speakers, and register for the talks you want to attend.
+  name: Conference Hub
+  description: The conference programme of talks and speakers, where attendees register for the talks they want to attend.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -11,6 +11,7 @@ models:
       company: string
       bio: markdown
       portrait: picture
+      talks: Talk[]
   Talk:
     fields:
       title: string!
@@ -19,6 +20,7 @@ models:
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
+      track: general | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -35,8 +37,7 @@ pages:
     calendar: Talk
   talks:
     crud: Talk
-    search: [title, room]
-    filters: [speaker, startsAt]
+    filters: [track, speaker]
   speakers:
     crud: Speaker
   my-registrations:
@@ -47,7 +48,7 @@ pages:
       hero:
         shortcuts: [schedule, speakers]
       footer:
-      lineup:
+      speakersList:
         records: Speaker
       faq:
       callToAction:
@@ -55,5 +56,12 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
+outgoing:
+  registrationMade:
+    when: Registration created
+    to: mail
+    recipient: owner
+  registrationCancelled:
+    when: Registration deleted
+    to: mail
+    recipient: owner

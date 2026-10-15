@@ -1,51 +1,74 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: A help desk where the IT team tracks tickets, their priority and who handles them.
-  timezone: Europe/Stockholm
+  description: "Tickets for the IT team: their priorities and who handles them."
 models:
-  Ticket:
+  SupportCase:
     fields:
-      title: string!
-      description: text
-      priority: normal | low | high | urgent
-      status: open | inProgress | waiting | resolved
-      category: other | hardware | software | network | account
-      requester: string
-      requesterEmail: email
-      assignee: User
-      resolvedAt: datetime
+      subject: string!
+      customerEmail:
+        type: email!
+        locked: true
+      status: open | inProgress | closed | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+      assignee:
+        type: User
+        required:
+          status: [inProgress, closed]
+      body: text
       attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      agent:
+        type: User
+        by: app
+        default: ME()
+      attachments: files
+      supportCase: SupportCase!
 pages:
   tickets:
-    crud: Ticket
-    search: [title, description, requester]
-    sortable: [priority, status, createdAt]
-    actions: [take, resolve, reopen]
+    crud: SupportCase
+    search: [subject, customerEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
   team:
     users: manage
 actions:
-  take:
-    on: Ticket
-    when:
-      status: [open, waiting]
+  assignToMe:
+    on: SupportCase
     set:
       assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: SupportCase
+    set:
+      assignee:
+    intent: Give the ticket to someone on the team.
+  startWork:
+    on: SupportCase
+    when:
+      status: [open, reopened]
+    set:
       status: inProgress
-    intent: Take the ticket and start working on it.
-  resolve:
-    on: Ticket
+    intent: Someone is working on the ticket now; it needs an assignee.
+  close:
+    on: SupportCase
     when:
-      status: [open, inProgress, waiting]
+      status: [open, inProgress, reopened]
     set:
-      status: resolved
-      resolvedAt: NOW()
-    intent: Mark the ticket as resolved.
+      status: closed
+    intent: The issue is solved.
   reopen:
-    on: Ticket
+    on: SupportCase
     when:
-      status: resolved
+      status: closed
     set:
-      status: open
-      resolvedAt:
-    intent: Open a resolved ticket again.
+      status: reopened
+    intent: The ticket needs more work after all.

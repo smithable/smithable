@@ -2,13 +2,13 @@ smithableUx: 0.1
 pages:
   matches:
     table:
+      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
       sort: -kickoff
-      columns: [kickoff, team, opponent, homeOrAway, status, ourScore, theirScore]
     icon: calendar
   players:
     table:
-      columns: [name, shirtNumber, position, team]
-      sort: shirtNumber
+      columns: [photo, name, number, position, team]
+      sort: number
       view: cards
     icon: user
   teams:
@@ -22,7 +22,6 @@ tones:
     canceled: danger
 theme:
   preset: modern
-  motion: subtle
   brand:
     primary: "#15803d"
     font: DM Sans
