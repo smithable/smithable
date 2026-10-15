@@ -189,6 +189,7 @@ export function Studio({
                     concept={concept.concept}
                     spec={spec}
                     run={run}
+                    files={project.files}
                   />
                   <ConceptDetails
                     info={concept}

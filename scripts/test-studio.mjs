@@ -1982,6 +1982,24 @@ try {
       await page.getByRole("tab", { name: "What it does" }).click();
     },
   );
+  await step(
+    "a kind of record's properties in What it does have All settings: its description changed there lands in smithable.yml",
+    async () => {
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+      await page.getByRole("tab", { name: "What it does" }).click();
+      const customers = page.getByRole("region", { name: "Customers", exact: true });
+      await customers.getByRole("button", { name: "Customers", exact: true }).click();
+      await customers.getByText("All settings").click();
+      const box = customers.getByRole("textbox", { name: "description" }).first();
+      await box.fill("Everyone we sell to.");
+      await box.press("Enter");
+      const file = join(dir, "smithable.yml");
+      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Everyone we sell to."); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (!readFileSync(file, "utf8").includes("description: Everyone we sell to."))
+        throw new Error("the description did not reach smithable.yml");
+    },
+  );
   await step("a message from a window other than the preview is ignored", async () => {
     const before = (await project()).files.content;
     // Studio's own window, not the preview frame, pretending to be the preview.

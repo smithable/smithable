@@ -334,3 +334,58 @@ function Key({
     </div>
   );
 }
+
+/** The schema of the part at `path`, walking groups, entries, lists and the value's alternative. */
+function schemaAt(root: JsonSchema, value: unknown, path: Path): JsonSchema | undefined {
+  let schema: JsonSchema | undefined = root;
+  let here = value;
+  for (const step of path) {
+    if (!schema) return undefined;
+    let control = controlOf(schema);
+    if (control?.kind === "alternatives") {
+      schema = alternativeFor(control.options, here);
+      control = schema && controlOf(schema);
+    }
+    schema =
+      control?.kind === "group"
+        ? control.keys.find(([key]) => key === step)?.[1]
+        : control?.kind === "entries"
+          ? control.entry
+          : control?.kind === "list"
+            ? control.items
+            : undefined;
+    here = (here as Record<string | number, unknown> | undefined)?.[step];
+  }
+  return schema;
+}
+
+/**
+ * One part of a file as its form (what-it-does.md §5 step 3): a field, a kind of record, a page or
+ * an action, shown in its properties under "All settings", each key writing as in the tab.
+ */
+export function SpecPart({
+  files,
+  run,
+  path,
+  file = "smithable.yml",
+}: {
+  files: Project["files"];
+  run: Run;
+  path: Path;
+  file?: EditableFile;
+}) {
+  const entry = FILES.find(([, name]) => name === file);
+  const root = file === "smithable.yml" ? buildJsonSchema() : COMPANION_SCHEMAS[file];
+  const whole = entry ? read(files[entry[0]]) : undefined;
+  const schema = root && schemaAt(root, whole, path);
+  if (!schema) return null;
+  let value = whole;
+  for (const step of path) value = (value as Record<string | number, unknown> | undefined)?.[step];
+  const write = (at: Path, next: unknown) =>
+    run("editSpec", { file, path: at, value: next === undefined ? null : next });
+  return (
+    <Writer.Provider value={write}>
+      <Value schema={schema} value={value} path={path} />
+    </Writer.Provider>
+  );
+}
