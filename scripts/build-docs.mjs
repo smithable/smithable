@@ -35,8 +35,28 @@ const PAGES = [
     src: "docs/site/start.md",
     out: "start.html",
     description:
-      "Install the Smithable CLI, make a first app from a starter, change it with one command and open it in Studio, all on your own machine with no account.",
+      "Two ways to start with Smithable: in the browser on smithable.ai with nothing to install, or on your own machine with the free, open-source command line.",
     nav: "Getting started",
+    group: "Start",
+  },
+  // A page with `sub` is shown in the menu under the page before it.
+  {
+    src: "docs/site/start-hosted.md",
+    out: "start-hosted.html",
+    description:
+      "Start on smithable.ai: try an app in a free sandbox with no sign-up, change it in the browser, publish it on your own domain, and download it whenever you like.",
+    nav: "On smithable.ai",
+    group: "Start",
+    sub: true,
+  },
+  {
+    src: "docs/site/start-local.md",
+    out: "start-local.html",
+    description:
+      "Install the Smithable CLI, make a first app from a starter, change it with one command and open it in Studio, all on your own machine with no account.",
+    nav: "On your own machine",
+    group: "Start",
+    sub: true,
   },
   {
     src: "docs/site/starters.md",
@@ -44,6 +64,7 @@ const PAGES = [
     description:
       "Eight complete apps to begin from, with pictures: a CRM, booking, invoicing, a marketplace, records, a status page, an assistant's notes and a support desk.",
     nav: "Starters",
+    group: "Start",
   },
   {
     src: "docs/site/change.md",
@@ -51,6 +72,7 @@ const PAGES = [
     description:
       "Five changes to a status page, each one command: a field, which records the front page shows, what visitors may read, the look, and undo.",
     nav: "Changing an app",
+    group: "Build",
   },
   {
     src: "docs/site/actions.md",
@@ -58,6 +80,7 @@ const PAGES = [
     description:
       "Standard actions: buttons on a record's page that move it on, from setting a field to asking for a value or copying a record with its lines, with no code.",
     nav: "Buttons on a record",
+    group: "Build",
   },
   {
     src: "docs/site/api.md",
@@ -65,6 +88,7 @@ const PAGES = [
     description:
       "Let other programs use your app: API keys, the calls the app's API answers, and the refusals they get, shown on the status starter.",
     nav: "The API",
+    group: "Connect",
   },
   {
     src: "docs/site/assistants.md",
@@ -72,6 +96,7 @@ const PAGES = [
     description:
       "An app made for programs and AI assistants: the api starter, a key for an assistant, and Claude Code connected to it to keep tasks and notes.",
     nav: "Programs and assistants",
+    group: "Connect",
   },
   {
     src: "docs/site/outgoing.md",
@@ -79,6 +104,7 @@ const PAGES = [
     description:
       "Mail and calls out: when something happens in an app it can mail a person or call another system, through an outbox that retries until it is sent.",
     nav: "Mail and calls out",
+    group: "Connect",
   },
   {
     src: "docs/site/incoming.md",
@@ -86,6 +112,7 @@ const PAGES = [
     description:
       "Mail and calls in: a mail to a support address or a call from another service, such as a monitor, becomes a record in the app, as smithable.yml says.",
     nav: "Mail and calls in",
+    group: "Connect",
   },
   {
     src: "docs/site/language.md",
@@ -93,6 +120,7 @@ const PAGES = [
     description:
       "An app in another language: set the language, and the app's own words (buttons, sign-in, messages) follow it. Swedish for the booking starter, step by step.",
     nav: "Another language",
+    group: "Build",
   },
   {
     src: "docs/site/theme.md",
@@ -100,6 +128,7 @@ const PAGES = [
     description:
       "Make a theme of your own: colors, fonts, headings, cards and buttons in a small file, checked for readable contrast, or made in the theme lab on real pages.",
     nav: "Make a theme",
+    group: "Build",
   },
   {
     src: "docs/site/self-host.md",
@@ -107,6 +136,7 @@ const PAGES = [
     description:
       "Run a Smithable app on your own machine or server with Docker: deploying, where the data lives, backing up, restoring and updating.",
     nav: "Self-hosting",
+    group: "Run",
   },
   {
     src: "docs/site/google-sign-in.md",
@@ -114,6 +144,7 @@ const PAGES = [
     description:
       'Offer "Continue with Google" beside the code by email: register the app with Google, give it its keys, and choose who may sign in.',
     nav: "Sign in with Google",
+    group: "Connect",
   },
   // Generated from the operations at build time, not a file in the repository.
   {
@@ -122,6 +153,7 @@ const PAGES = [
     description:
       "Every operation that changes a Smithable app, from addField to setTheme: what it does, its arguments and options, and an example command.",
     nav: "Operations",
+    group: "Reference",
     generate: operationsPage,
   },
   {
@@ -130,6 +162,7 @@ const PAGES = [
     description:
       "Why Smithable: changes without an AI rewriting code, low cost, an app you own outright, security and where it runs, with the measurements behind each.",
     nav: "Why Smithable",
+    group: "About",
   },
   {
     src: "docs/site/faq.md",
@@ -137,6 +170,7 @@ const PAGES = [
     description:
       "Questions and answers about Smithable: how it compares, whether an app depends on it, AI models, running costs, hosting, data and what it builds today.",
     nav: "Questions",
+    group: "About",
   },
   {
     src: "docs/spec/v0.1.md",
@@ -144,6 +178,7 @@ const PAGES = [
     description:
       "The spec reference: everything smithable.yml and its companion files for sign-in, looks, texts and context can say, with an example for each.",
     nav: "Spec reference",
+    group: "Reference",
     toc: true,
   },
   {
@@ -152,6 +187,7 @@ const PAGES = [
     description:
       "AI setup for Smithable: the models behind smithable ask and drafting an app from a sentence, configured with environment variables, local first.",
     nav: "AI setup",
+    group: "Run",
   },
 ];
 const schemaDir = join(root, "packages/core/schema");
@@ -236,15 +272,40 @@ const CSS = `
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--accent)}
-header{border-bottom:1px solid var(--line);padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;align-items:baseline}
-header strong{margin-right:auto}
+header{border-bottom:1px solid var(--line);padding:.75rem 1rem;display:flex;gap:1rem;align-items:center;position:relative}
 header .home{display:flex;align-items:center}header .home img{display:block;border:0;border-radius:0}
 header a{text-decoration:none}
-header a[aria-current]{color:var(--fg);font-weight:600}
-.layout{max-width:72rem;margin:0 auto;padding:1.5rem 1rem 4rem;display:grid;gap:2rem}
-@media (min-width:60rem){.layout.toc{grid-template-columns:14rem minmax(0,1fr)}nav.toc{position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow:auto}}
-nav.toc ul{list-style:none;margin:0;padding:0;font-size:.9rem}
-nav.toc li{margin:.2rem 0}
+header .docs{color:var(--fg);font-weight:700;margin-right:auto}
+header .gh{color:var(--muted);font-size:.9rem}
+.drawer summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:.2rem .85rem;font-weight:600}
+.drawer summary::-webkit-details-marker{display:none}
+.drawer[open] summary{background:var(--code)}
+.drawer .side{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:.25rem 1rem 1rem;max-height:calc(100vh - 4rem);overflow:auto}
+.side p{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.1rem 0 .3rem}
+.side ul{list-style:none;margin:0;padding:0}
+.side a{display:block;padding:.25rem .5rem;margin-left:-.5rem;border-radius:6px;text-decoration:none;color:var(--fg)}
+.side a.sub{padding-left:1.4rem;color:var(--muted)}
+.side a[aria-current]{background:var(--code);color:var(--fg);font-weight:600}
+.layout{max-width:80rem;margin:0 auto;padding:1.5rem 1rem 4rem;display:grid;gap:2rem}
+.layout>.side,nav.toc{display:none}
+nav.toc.always{display:block}
+@media (min-width:60rem){
+.drawer,nav.toc.always{display:none}
+.layout{grid-template-columns:13rem minmax(0,1fr)}
+.layout>.side{display:block}
+.layout>.side,nav.toc{position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow:auto;font-size:.92rem}
+.layout>.side>p:first-child{margin-top:0}
+}
+@media (min-width:76rem){
+.layout.toc{grid-template-columns:13rem minmax(0,1fr) 12rem}
+nav.toc,nav.toc.always{display:block;grid-column:3;grid-row:1;font-size:.85rem}
+main{grid-column:2;grid-row:1}
+}
+nav.toc p{font-weight:600;margin:0 0 .3rem}
+nav.toc ul{list-style:none;margin:0;padding:0}
+nav.toc li{margin:.25rem 0}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover{color:var(--accent)}
 main{min-width:0;max-width:48rem}
 h1{font-size:2rem;line-height:1.2;margin-top:0}
 h2{margin-top:2.5rem;padding-top:.5rem;border-top:1px solid var(--line)}
@@ -265,6 +326,22 @@ const PRERELEASE =
 for (const page of PAGES)
   if (!page.description) throw new Error(`${page.src} has no description in PAGES.`);
 
+// The menu: the pages in six groups, each in the order of PAGES.
+const GROUPS = ["Start", "Build", "Connect", "Run", "Reference", "About"];
+for (const page of PAGES)
+  if (page.out !== "index.html" && !GROUPS.includes(page.group))
+    throw new Error(`${page.src} has no menu group in PAGES.`);
+const menu = (page) =>
+  GROUPS.map((group) => {
+    const links = PAGES.filter((p) => p.group === group).map(
+      (p) =>
+        `<li><a href="/${p.out}"${p.sub ? ' class="sub"' : ""}${p === page ? ' aria-current="page"' : ""}>${p.nav}</a></li>`,
+    );
+    if (group === "Reference")
+      links.push(`<li><a href="${SITE}${schemaPath}">JSON Schema</a></li>`);
+    return `<p>${group}</p><ul>${links.join("")}</ul>`;
+  }).join("");
+
 const html = (page, body) => {
   const title = page.headings.find((h) => h.depth === 1)?.text.replace(/`/g, "") ?? "Smithable";
   // The page's own address (none for the 404 page, which answers at any address).
@@ -272,12 +349,15 @@ const html = (page, body) => {
   const where = url
     ? `\n<meta property="og:url" content="${url}">\n<link rel="canonical" href="${url}">`
     : "";
-  const toc = page.toc
-    ? `<nav class="toc" aria-label="On this page"><ul>${page.headings
-        .filter((h) => h.depth === 2)
-        .map((h) => `<li><a href="#${h.id}">${esc(h.text.replace(/`/g, ""))}</a></li>`)
-        .join("")}</ul></nav>`
-    : "";
+  // "On this page" beside a page with three sections or more, on a wide screen; the spec
+  // reference (`toc`) also on a phone, above the page.
+  const sections = page.headings.filter((h) => h.depth === 2);
+  const toc =
+    page.toc || sections.length >= 3
+      ? `<nav class="toc${page.toc ? " always" : ""}" aria-label="On this page"><p>On this page</p><ul>${sections
+          .map((h) => `<li><a href="#${h.id}">${esc(h.text.replace(/`/g, ""))}</a></li>`)
+          .join("")}</ul></nav>`
+      : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -294,8 +374,8 @@ const html = (page, body) => {
 <style>${CSS}</style>
 </head>
 <body>
-<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><strong>docs</strong>${PAGES.map((p) => `<a href="/${p.out === "index.html" ? "" : p.out}"${p === page ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("")}<a href="${SITE}${schemaPath}">JSON Schema</a></header>
-<div class="layout${page.toc ? " toc" : ""}">${toc}<main>
+<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
+<div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
 </body>

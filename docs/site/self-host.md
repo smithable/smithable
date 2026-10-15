@@ -110,4 +110,4 @@ No schema changes, nothing to migrate 😴
 Already up to date (stack profile 2026-09).
 ```
 
-`update --security` brings in the security fixes your Smithable knows about (newer dependency versions); `upgrade` moves the app to your Smithable's spec version and stack profile. With a newer Smithable installed they have something to do; then `smithable deploy` again replaces the container, and the data volume stays. An app you have [detached](start.md) is updated like any other TypeScript project instead.
+`update --security` brings in the security fixes your Smithable knows about (newer dependency versions); `upgrade` moves the app to your Smithable's spec version and stack profile. With a newer Smithable installed they have something to do; then `smithable deploy` again replaces the container, and the data volume stays. An app you have [detached](start-local.md#running-it-elsewhere) is updated like any other TypeScript project instead.

@@ -1,6 +1,6 @@
 # Sign in with Google
 
-New apps sign people in with a code by email, which needs no keys (see [Getting started](start.md#signing-in)). If the people who use your app have Google accounts, you can offer "Continue with Google" beside it. Google wants to know about every app that signs people in through it, so you register the app once and give it the two keys Google hands you. It takes about ten minutes.
+New apps sign people in with a code by email, which needs no keys (see [Getting started](start-local.md#signing-in)). If the people who use your app have Google accounts, you can offer "Continue with Google" beside it. Google wants to know about every app that signs people in through it, so you register the app once and give it the two keys Google hands you. It takes about ten minutes.
 
 ## 1. Register the app with Google
 

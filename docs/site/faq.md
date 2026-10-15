@@ -12,7 +12,7 @@ No. A generated app has no Smithable package at build time or run time; a test i
 
 ## Do I need an AI model?
 
-No. Everything in [Getting started](start.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, a hosted model with your own key, or none. See [AI setup](../ai.md).
+No. Everything in [Getting started on your own machine](start-local.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, a hosted model with your own key, or none. See [AI setup](../ai.md).
 
 ## What does it cost to run?
 

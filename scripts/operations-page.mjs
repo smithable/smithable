@@ -67,7 +67,7 @@ function kind(p) {
 
 /** The first example of an operation in the docs: a `smithable op` line, else inline code. */
 function examples(root) {
-  const texts = ["docs/site/change.md", "docs/site/start.md", "docs/spec/v0.1.md"].map((f) =>
+  const texts = ["docs/site/change.md", "docs/site/start-local.md", "docs/spec/v0.1.md"].map((f) =>
     readFileSync(join(root, f), "utf8"),
   );
   const found = new Map();
