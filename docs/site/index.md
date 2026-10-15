@@ -6,7 +6,7 @@ Smithable is an app builder for people who have never written code and for devel
 
 Routine changes are made by deterministic generators, not by an AI rewriting code: adding a phone number to customers is one operation, in milliseconds, for no tokens. The generated app is a normal TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. It has no dependency on Smithable at build time or run time, and a developer can take it over at any time.
 
-- **[Getting started](start.md)**: install the CLI, make a first app, open it in Studio.
+- **[Getting started](start.md)**: in the browser [on smithable.ai](start-hosted.md), with nothing to install, or [on your own machine](start-local.md) with the command line and Studio.
 - **[Starters](starters.md)**: the nine apps to begin from, with pictures: a CRM, a booking site, invoicing, a marketplace, records, a status page, tasks and notes an AI assistant keeps, a support desk fed by mail, and a food truck people order ahead from.
 - **[Why Smithable](why.md)**: what is different about changes, cost, ownership, security and where things run, with the measurements.
 - **[Questions and answers](faq.md)**: how it compares, what it can build today, hosting, data, contributing.
