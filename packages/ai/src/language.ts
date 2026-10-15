@@ -54,13 +54,17 @@ export function languageQuestion(site: Language, person: Language = "en") {
  * description without its English frame.
  */
 export function textLanguage(description: string): Language | undefined {
+  const names = Object.values(NAMES).join("|");
   // Asked, the answer follows the question; answered in order (--answers), it is a language's
-  // name on its own after the question's number.
+  // name, or two together (the main one first), after the question's number.
   const answer =
     (/^- (?:The site is in \w+\. Should the app's texts be in \w+ or \w+|Which languages should the app be in)\? (.+)$/m.exec(
       description,
     ) ??
-      new RegExp(`^- \\(\\d+\\) (${Object.values(NAMES).join("|")})$`, "im").exec(description))?.[1]
+      new RegExp(
+        `^- \\(\\d+\\) ((?:${names})(?:\\s*(?:,|and|och|ja|&|\\+)\\s*(?:${names}))?)$`,
+        "im",
+      ).exec(description))?.[1]
       ?.trim()
       .toLowerCase();
   const named = (Object.entries(NAMES) as [Language, string][]).find(([, name]) =>

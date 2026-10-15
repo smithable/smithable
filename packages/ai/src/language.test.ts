@@ -94,3 +94,9 @@ test("the answer to which languages names the main one first; a pair adds the ot
   expect(otherLanguages(answered("Swedish and English"), "sv")).toEqual(["en"]);
   expect(otherLanguages(answered("Swedish"), "sv")).toEqual([]);
 });
+
+test("a numbered answer may name two languages, the main one first (--answers)", () => {
+  const numbered = "A booking app for our customers.\n\nAnswers:\n- (1) Swedish and English";
+  expect(textLanguage(numbered)).toBe("sv");
+  expect(otherLanguages(numbered, "sv")).toEqual(["en"]);
+});
