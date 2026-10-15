@@ -19,7 +19,7 @@ import type { Project } from "./api";
 import { listOf, type Run, shorthandOf } from "./builder/ChangeForms";
 import { SpecPart } from "./builder/SpecForm";
 import type { Spec } from "./engine";
-import { Button, Check, cx, Input, Label, Select } from "./ui";
+import { Button, cx, Input, Label, Select } from "./ui";
 
 /** One visible text, saved with setText; empty restores the text Smithable derives. */
 function TextSetting({
@@ -213,7 +213,7 @@ export function Properties({
             ir={ir}
           />
         )}
-        <ListToggle spec={spec} run={run} model={name} field={fieldName} />
+        <Listed spec={spec} model={name} field={fieldName} onLook={onLook} />
         {!field.formula && !(field.type.kind === "relation" && field.type.many) && (
           <FieldRules
             ir={ir}
@@ -737,31 +737,35 @@ function ConditionPicker({
   );
 }
 
-function ListToggle({
+/**
+ * Whether a field is a column of its records' list, as a pointer to where the columns are set
+ * (the page's look, which offers only the model's fields): never a second control for them.
+ */
+function Listed({
   spec,
-  run,
   model,
   field,
+  onLook,
 }: {
   spec: Spec;
-  run: Run;
   model: string;
   field: string;
+  onLook?: () => void;
 }) {
   const list = listOf(spec, model);
   if (!list) return null;
-  const shown = list.columns.includes(field);
+  const page = spec.content?.pages[list.page]?.title ?? humanize(list.page);
   return (
-    <Check
-      text="Show it in listings"
-      tip="Adds this field as a column on the list page of these records."
-      checked={shown}
-      onChange={() =>
-        run("setColumns", {
-          page: list.page,
-          columns: shown ? list.columns.filter((c) => c !== field) : [...list.columns, field],
-        })
-      }
-    />
+    <p className="text-xs text-muted" data-part="listed">
+      {list.columns.includes(field) ? `Shown in listings on ${page}` : `Not in listings on ${page}`}
+      {" · "}
+      {onLook ? (
+        <button type="button" className="text-accent hover:underline" onClick={onLook}>
+          its columns are set in Look
+        </button>
+      ) : (
+        `its columns are pages.${list.page}.columns in smithable.ux.yml`
+      )}
+    </p>
   );
 }

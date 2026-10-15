@@ -956,6 +956,13 @@ try {
       await page.getByRole("tab", { name: "What it does" }).click();
       const customers = page.getByRole("region", { name: "Customers", exact: true });
       await customers.getByRole("button", { name: "a phone", exact: true }).click();
+      // Its listing is a pointer to where the columns are set, not a second control for them.
+      await customers
+        .getByText(/in listings on \w+ ·/)
+        .first()
+        .waitFor();
+      if (await customers.getByRole("checkbox", { name: "Show it in listings" }).count())
+        throw new Error("a field's properties still have their own listing switch");
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
       await customers.getByRole("button", { name: "Save label" }).click();
       await last.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
