@@ -6,9 +6,12 @@ import type { Provider } from "@smithable/ai";
 
 /**
  * Prices per million tokens of Claude through Amazon Bedrock's EU inference profiles (eu-north-1,
- * AWS Price List, 2026-10-04), in dollars: input, output, a cache write, a cache read.
+ * AWS Price List, 2026-10-04; Haiku 5.5 from Anthropic's list price plus the EU profiles' tenth,
+ * 2026-10-16, for prompts under 100k tokens, which every call of ours is), in dollars: input,
+ * output, a cache write, a cache read.
  */
 const PRICES: [RegExp, { input: number; output: number; write: number; read: number }][] = [
+  [/claude-haiku-5-5/, { input: 0.11, output: 0.55, write: 0.1375, read: 0.011 }],
   [/claude-sonnet-5-5/, { input: 2.2, output: 11, write: 2.75, read: 0.22 }],
   [/claude-sonnet-4-6/, { input: 3.3, output: 16.5, write: 4.125, read: 0.33 }],
   [/claude-haiku-4-5/, { input: 1.1, output: 5.5, write: 1.375, read: 0.11 }],
