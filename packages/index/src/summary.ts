@@ -715,7 +715,7 @@ function contactWords(
 function ruleNotes(f: FieldIR): string[] {
   return [
     ...(f.defaultMe ? ["who makes it, by default"] : []),
-    ...(f.byApp ? ["filled by the app"] : []),
+    ...(f.sequence ? ["numbered by the app, counting up"] : f.byApp ? ["filled by the app"] : []),
     ...(f.locked === true
       ? ["fixed once made"]
       : f.locked

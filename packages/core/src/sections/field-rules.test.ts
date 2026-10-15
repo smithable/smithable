@@ -187,3 +187,22 @@ test("a required field the app fills with nothing to fill it is a warning; a def
   );
   expect(codes(defaulted)).not.toContain("app-field-unfilled");
 });
+
+test("sequence: true counts an int! up for the app; anything else is refused in words", () => {
+  const withNumber = (type: string) =>
+    spec.replace(
+      /( {2}Order:\n(?:.*\n)*? {4}fields:\n)/,
+      `$1      ticket: { type: ${type}, sequence: true }\n`,
+    );
+  const counted = order(withNumber("int!"))?.fields.find((f) => f.name === "ticket");
+  expect(counted).toMatchObject({ sequence: true, byApp: true, required: true });
+  // The app gives it its value: no warning that nothing does.
+  const checked = validateSpec({ path: "smithable.yml", text: withNumber("int!") });
+  expect(checked.diagnostics.filter((d) => d.code === "app-field-unfilled")).toEqual([]);
+  for (const type of ["int", "string!"]) {
+    const result = validateSpec({ path: "smithable.yml", text: withNumber(type) });
+    expect(result.diagnostics.map((d) => d.message).join("\n")).toContain(
+      'counts up only as a required whole number with no default: its type is "int!"',
+    );
+  }
+});

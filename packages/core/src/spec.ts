@@ -202,7 +202,14 @@ function unfilled(ctx: ParseContext, parsed: Partial<SpecIR>): void {
   }
   for (const model of parsed.models ?? [])
     for (const f of model.fields) {
-      if (!f.byApp || !f.required || f.defaultMe || f.defaultFormula || f.default !== undefined)
+      if (
+        !f.byApp ||
+        f.sequence ||
+        !f.required ||
+        f.defaultMe ||
+        f.defaultFormula ||
+        f.default !== undefined
+      )
         continue;
       if (given.has(`${model.name}.${f.name}`)) continue;
       ctx.warning(
