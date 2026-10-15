@@ -1,6 +1,7 @@
 // Smithable app kit: "Ask" for the people who use the app (docs/design/assistant.md §4 and §6): a
 // button that opens a sheet with a question field; the answer is worked out by the app with what
 // the person may read, marked as from the records or by an AI, and can be read aloud.
+import { Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -50,13 +51,16 @@ export function Ask({
   };
   return (
     <>
-      <Button
+      <button
         type="button"
-        className="fixed right-4 bottom-4 z-20 shadow-lg"
+        className="fixed right-4 bottom-4 z-20 inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border bg-card pr-5 pl-2 text-sm font-semibold text-card-foreground shadow-xl outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => sheet.current?.showModal()}
       >
+        <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground">
+          <Sparkles aria-hidden className="size-4" />
+        </span>
         {name}
-      </Button>
+      </button>
       <dialog
         ref={sheet}
         aria-labelledby="ask-title"
