@@ -1,6 +1,6 @@
 import { buildJsonSchema, COMPANION_SCHEMAS } from "@smithable/core";
 import { expect, test } from "vitest";
-import { alternativeFor, controlOf, labelOf, uncovered } from "./spec-form";
+import { alternativeFor, controlOf, labelOf, operationFor, uncovered } from "./spec-form";
 
 test("every key of the spec and its companion files has a control (what-it-does.md §2)", () => {
   const files = { "smithable.yml": buildJsonSchema(), ...COMPANION_SCHEMAS };
@@ -39,4 +39,20 @@ test("a label is the description's first sentence, or the key made readable", ()
     labelOf("currency", { description: "ISO 4217 currency code, e.g. EUR. Used for money." }),
   ).toBe("ISO 4217 currency code, e.g. EUR");
   expect(labelOf("defaultRole", {})).toBe("Default Role");
+});
+
+test("a key with an operation of its own goes through it; the rest through editSpec", () => {
+  expect(operationFor("smithable.content.yml", ["pages", "home", "title"], "Hem")).toEqual([
+    "setText",
+    { path: ["pages", "home", "title"], text: "Hem" },
+  ]);
+  expect(operationFor("smithable.content.yml", ["pages", "home", "title"], undefined)).toEqual([
+    "setText",
+    { path: ["pages", "home", "title"], text: "" },
+  ]);
+  expect(operationFor("smithable.yml", ["app", "timezone"], "Europe/Stockholm")).toEqual([
+    "setApp",
+    { timezone: "Europe/Stockholm" },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Customer", "trash"], true)).toBeUndefined();
 });

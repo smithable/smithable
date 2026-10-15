@@ -33,7 +33,7 @@ Start from the spec, not from the sentences. The spec is a tree whose shape is k
 ## 5. Steps
 
 1. (Done, 2026-10-15, opus/what-it-does.) The form from the schema, read-only, beside today's summary: every key shown with its label and value, on the experimental branch; the walk script that fails on a key without a control. This is where Johan looks first.
-2. (Done, 2026-10-15; Johan: the form becomes the real controls.) The controls write through operations: for now every key through `editSpec` with its `path`, the specific operation per key next; a refusal in Studio's message bar; a named map's entry added by its name.
+2. (Done, 2026-10-15; Johan: the form becomes the real controls.) The controls write through operations: each key through its own operation where there is one (`operationFor` in Studio: the content file's texts through `setText`, the app's name, description, currency and time zone through `setApp`; more as they are mapped), else `editSpec` with its `path`; a refusal in Studio's message bar; a named map's entry added by its name.
 3. The properties panel and the Changes tab's forms replaced by the same forms; "In my own words" removed.
 4. Custom code's warning, docs link and file link.
 
