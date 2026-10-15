@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation, translationPath } from "./apply.js";
-import { type ContentIR, textsToTranslate, validateContent } from "./content.js";
+import { type ContentIR, textsToTranslate, translationMap, validateContent } from "./content.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 
@@ -171,4 +171,26 @@ test("a choice value named like a non-text key is a text: contact: email | phone
     language: "sv",
   });
   expect(read.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+});
+
+test("the map: a text's own word before another's lowering; one text with two words warned", () => {
+  const spec = `${files.spec}\n`.replace(
+    "      phone: phone\n",
+    "      phone: phone\n      stage: open | won\n",
+  );
+  const ir2 = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+  const content = validateContent({ path: "smithable.content.yml", text: files.content }, ir2)
+    .content as ContentIR;
+  const sv = validateContent(
+    {
+      path: translationPath("sv"),
+      text: "smithableContent: 0.1\nmodels:\n  Customer:\n    label: Kund\n    fields:\n      stage:\n        values:\n          open: öppen\n          won: vunnen\n  Order:\n    label: Order\n",
+    },
+    ir2,
+    { of: content, language: "sv" },
+  ).content as ContentIR;
+  const { texts } = translationMap(content, sv, ir2);
+  expect(texts.open).toBe("öppen");
+  expect(texts.Customer).toBe("Kund");
+  expect(texts.customer).toBe("kund");
 });

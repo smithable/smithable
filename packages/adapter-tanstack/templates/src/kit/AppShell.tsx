@@ -9,7 +9,7 @@ import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { textMarker } from "./model";
-import { w } from "./words";
+import { tx, w } from "./words";
 
 export interface MenuUi {
   name: string;
@@ -165,7 +165,7 @@ function Navigation({
             <div key={menu.name} className="flex flex-col gap-1">
               {menu.label && (
                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide">
-                  {menu.label}
+                  {tx(menu.label)}
                 </p>
               )}
               {items.map((item) => (
@@ -181,7 +181,7 @@ function Navigation({
                   }}
                 >
                   {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
-                  {item.label}
+                  {tx(item.label)}
                   {(counts?.[String(item.to)] ?? 0) > 0 && (
                     <span
                       data-part="count"
@@ -363,14 +363,14 @@ export function PageHeader({
           className="break-words text-[28px] leading-9 font-bold [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
           {...(page ? textMarker(`pages.${page}.title`) : {})}
         >
-          {title}
+          {tx(title)}
         </h1>
         {subtitle && (
           <p
             className="mt-1 text-muted-foreground"
             {...(page ? textMarker(`pages.${page}.subtitle`) : {})}
           >
-            {subtitle}
+            {tx(subtitle)}
           </p>
         )}
       </div>
