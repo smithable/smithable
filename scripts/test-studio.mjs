@@ -959,17 +959,24 @@ try {
       await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
       await customers.getByRole("button", { name: "Save label" }).click();
       await last.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
-      // Who can: a record's properties, a chip per role; a chip grants the role the operation
-      // on this kind of record in the auth file, and again takes it back. Each one's own
-      // records stay theirs, and seeing is the record rule's under shared access.
+      // Who can: a record's properties say which roles may for everyone's, and under it the
+      // roles as the spec's form has them: a name added to a grant goes through grant (offered
+      // from the app's kinds of record), and taken away again.
       await customers.getByRole("button", { name: "Customers", exact: true }).click();
-      await customers.getByRole("button", { name: "Delete: sales" }).click();
+      const who = customers.getByRole("region", { name: "Who can" });
+      await who.getByText("only their own").first().waitFor();
+      await who.locator("summary", { hasText: /^sales$/ }).click();
+      await who
+        .locator("summary", { hasText: /^Not set/ })
+        .last()
+        .click();
+      await who.getByLabel("Add to delete").fill("Customer");
+      await who.getByLabel("Add to delete").press("Enter");
       await last
         .getByText(/sales may delete everyone's customers/i)
         .first()
         .waitFor({ timeout: 60000 });
-      await customers.getByText("and each one their own").first().waitFor();
-      await customers.getByRole("button", { name: "Delete: sales" }).click();
+      await who.getByRole("button", { name: "Remove Customer" }).click();
       await last
         .getByText("sales may delete only their own records")
         .first()

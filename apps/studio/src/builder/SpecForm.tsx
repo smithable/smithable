@@ -8,12 +8,19 @@ import {
   type EditableFile,
   type JsonSchema,
 } from "@smithable/core";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useId, useMemo, useState } from "react";
 import { parse } from "yaml";
 import type { Project } from "../api";
 import { cx } from "../ui";
 import type { Run } from "./ChangeForms";
-import { alternativeFor, controlOf, labelOf, operationFor } from "./spec-form";
+import {
+  alternativeFor,
+  choicesFor,
+  controlOf,
+  labelOf,
+  operationFor,
+  wordOrList,
+} from "./spec-form";
 
 const FILES: [Exclude<keyof Project["files"], "translations">, EditableFile, string][] = [
   ["spec", "smithable.yml", "What the app does"],
@@ -42,6 +49,12 @@ const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown) => {
 };
 /** Writes a part of the file being shown: its path and the new value (undefined takes it away). */
 const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(async () => false);
+/** The names a list at a path offers (a role's pages, kinds of record, actions); none for most. */
+const Choices = createContext<(path: Path) => string[]>(() => []);
+const choicesOf = (files: Project["files"], file: EditableFile) => {
+  const spec = read(files.spec);
+  return (path: Path) => choicesFor(file, path, spec);
+};
 
 export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) {
   const schemas = useMemo(
@@ -65,7 +78,9 @@ export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) 
               {title} <span className="font-normal normal-case">({file})</span>
             </h2>
             <Writer.Provider value={write}>
-              <Value schema={schema} value={read(files[key])} path={[]} />
+              <Choices.Provider value={choicesOf(files, file)}>
+                <Value schema={schema} value={read(files[key])} path={[]} />
+              </Choices.Provider>
             </Writer.Provider>
           </section>
         );
@@ -79,11 +94,30 @@ const box = "block h-7 w-full rounded-md border border-line bg-panel px-2 text-s
 /** A value under its schema: its control, filled with what the file says, writing at `path`. */
 function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; path: Path }) {
   const write = useContext(Writer);
+  const choices = useContext(Choices);
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");
   switch (control.kind) {
     case "alternatives": {
+      const either = wordOrList(control.options);
+      if (either) {
+        const whole = value === either.word;
+        return (
+          <div className="space-y-1">
+            <label className="flex items-center gap-1.5 text-xs">
+              <input
+                type="checkbox"
+                aria-label={`${label}: ${either.word}`}
+                checked={whole}
+                onChange={() => void write(path, whole ? undefined : either.word)}
+              />
+              {either.word}
+            </label>
+            {!whole && <Value schema={either.list} value={value} path={path} />}
+          </div>
+        );
+      }
       const chosen = alternativeFor(control.options, value);
       return chosen ? (
         <Value schema={chosen} value={value} path={path} />
@@ -139,6 +173,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
         <Chips
           label={label}
           items={items}
+          choices={choices(path)}
           onChange={(next) => write(path, next.length ? next : undefined)}
         />
       ) : (
@@ -247,17 +282,21 @@ function TextBox({
   );
 }
 
-/** A list of plain values as chips: × takes one away, the box adds one. */
+/** A list of plain values as chips: × takes one away, the box adds one (offering `choices`). */
 function Chips({
   label,
   items,
+  choices,
   onChange,
 }: {
   label: string;
   items: unknown[];
+  choices: string[];
   onChange: (items: unknown[]) => Promise<boolean>;
 }) {
   const [adding, setAdding] = useState("");
+  const listId = useId();
+  const offered = choices.filter((c) => !items.includes(c));
   return (
     <div className="flex flex-wrap items-center gap-1">
       {items.map((item, i) => (
@@ -281,6 +320,7 @@ function Chips({
         aria-label={`Add to ${label}`}
         className="h-6 w-28 rounded-md border border-line bg-panel px-1.5 text-xs"
         placeholder="Add…"
+        list={offered.length ? listId : undefined}
         value={adding}
         onChange={(e) => setAdding(e.target.value)}
         onKeyDown={(e) => {
@@ -288,6 +328,13 @@ function Chips({
           void onChange([...items, adding.trim()]).then((ok) => ok && setAdding(""));
         }}
       />
+      {offered.length > 0 && (
+        <datalist id={listId}>
+          {offered.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+      )}
     </div>
   );
 }
@@ -391,7 +438,9 @@ export function SpecPart({
   const write = (at: Path, next: unknown) => writeKey(run, file, at, next);
   return (
     <Writer.Provider value={write}>
-      <Value schema={schema} value={value} path={path} />
+      <Choices.Provider value={choicesOf(files, file)}>
+        <Value schema={schema} value={value} path={path} />
+      </Choices.Provider>
     </Writer.Provider>
   );
 }

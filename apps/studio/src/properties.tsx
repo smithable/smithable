@@ -397,7 +397,7 @@ export function Properties({
           }
           run={run}
         />
-        <WhoCan model={name} spec={spec} run={run} />
+        {files && <WhoCan model={name} spec={spec} files={files} run={run} />}
         {all(["models", name])}
       </div>
     );
@@ -483,71 +483,47 @@ const ACCESS_WORDS: Record<AccessOperation, string> = {
 };
 
 /**
- * Who may do what with a model's records: a row per operation, a chip per role. A chip grants
- * the role the operation on this kind of record (or takes it back) in smithable.auth.yml; the
- * record rule (everyone changes and deletes their own; shared: everyone reads all) and admins
- * stay as they are.
+ * Who may do what with a model's records: a line per operation naming the roles that may for
+ * everyone's (the record rule and admins stay as they are), and under it the roles as the spec's
+ * form has them, where a grant is changed through grant (what-it-does.md §5 step 3).
  */
-function WhoCan({ model, spec, run }: { model: string; spec: Spec; run: Run }) {
+function WhoCan({
+  model,
+  spec,
+  files,
+  run,
+}: {
+  model: string;
+  spec: Spec;
+  files: Project["files"];
+  run: Run;
+}) {
   const found = spec.ir?.models.find((m) => m.name === model);
   const auth = spec.auth;
   if (!found || !auth || auth.signIn === "none") return null;
   const allowed = modelAccess(found, auth);
-  const roles = auth.roles.filter((r) => r.name !== "admin");
-  const kinds = spec.ir?.models.map((m) => m.name) ?? [];
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-xs font-semibold text-quiet">Who can</legend>
+    <section aria-label="Who can" className="space-y-1">
+      <h4 className="text-xs font-semibold text-quiet">Who can</h4>
       <p className="text-xs text-quiet">
         {auth.defaultAccess === "shared"
-          ? "Everyone sees all records and changes and deletes their own; a role ticked here may for everyone's. Admins always may."
-          : "Everyone sees, changes and deletes their own records; a role ticked here may for everyone's. Admins always may."}
+          ? "Everyone sees all records and changes and deletes their own. Admins always may."
+          : "Everyone sees, changes and deletes their own records. Admins always may."}
       </p>
-      {ACCESS_OPERATIONS.map((op) => {
-        const shared = op === "read" && auth.defaultAccess === "shared";
-        return (
-          <div key={op} className="flex flex-wrap items-center gap-1">
-            <span className="w-14 text-xs text-muted">{ACCESS_WORDS[op]}</span>
-            {roles.map((role) => {
-              const on = allowed[op].roles.includes(role.name);
-              const grants = role.grants === "all" ? undefined : role.grants[op];
-              // The names the role keeps when this one is ticked or unticked.
-              const names = grants === "all" || role.grants === "all" ? kinds : [...(grants ?? [])];
-              const next = on ? names.filter((n) => n !== model) : [...names, model];
-              return (
-                <button
-                  key={role.name}
-                  type="button"
-                  aria-pressed={on}
-                  disabled={shared}
-                  aria-label={`${ACCESS_WORDS[op]}: ${role.name}`}
-                  onClick={() =>
-                    void run("grant", {
-                      role: role.name,
-                      what: op,
-                      names: next.length === kinds.length ? ["all"] : next,
-                    })
-                  }
-                  className={cx(
-                    "h-6 rounded-full border px-2 text-xs",
-                    on ? "border-accent bg-accent-soft text-accent" : "border-line text-muted",
-                    shared && "opacity-60",
-                  )}
-                >
-                  {role.name}
-                </button>
-              );
-            })}
-            {allowed[op].owner && (
-              <span className="text-xs text-quiet">and each one their own</span>
-            )}
-          </div>
-        );
-      })}
-      {allowed.read.public && (
-        <p className="text-xs text-quiet">Visitors may see these too (smithable.auth.yml).</p>
-      )}
-    </fieldset>
+      <ul className="text-xs text-muted" data-part="who-can">
+        {ACCESS_OPERATIONS.map((op) => {
+          const roles = allowed[op].roles.filter((r) => r !== "admin");
+          return (
+            <li key={op}>
+              <span className="inline-block w-14">{ACCESS_WORDS[op]}</span>
+              {roles.length ? roles.join(", ") : "only their own"}
+              {allowed.read.public && op === "read" ? ", and visitors" : ""}
+            </li>
+          );
+        })}
+      </ul>
+      <SpecPart files={files} run={run} file="smithable.auth.yml" path={["roles"]} />
+    </section>
   );
 }
 
