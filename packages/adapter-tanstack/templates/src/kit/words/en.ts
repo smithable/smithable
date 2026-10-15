@@ -499,6 +499,19 @@ export const w = {
   /** The inspector: a change the role may only propose. */
   wouldPropose: (tool: string, what: string) =>
     `Would ${tool} ${what}: an assistant with this role may propose it, and nothing was changed.`,
+  /** The order page (orders.md §1). */
+  orderRemove: (label: string) => `Remove one ${label}`,
+  soldOut: "Sold out",
+  orderBar: (count: number, total: string) =>
+    `${count} ${count === 1 ? "item" : "items"} · ${total}`,
+  orderSend: "Order",
+  orderDetails: "Your details",
+  orderPlace: "Send the order",
+  orderPlaced: (number: string) => `Order ${number} is in.`,
+  orderClosed: (opens?: string) => (opens ? `Closed, opens ${opens}` : "Closed"),
+  orderSoldOut: (label: string) => `Sold out: ${label}`,
+  orderEmpty: "Nothing chosen yet.",
+  orderTotal: "Total",
 };
 
 export type Words = typeof w;

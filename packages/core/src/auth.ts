@@ -941,12 +941,13 @@ function checkAgainstSpec(
   // A public page's contact form is sent by visitors: they must be allowed to add its records.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
+    const what = page?.pattern.kind === "order" ? "order form" : "contact form";
     for (const form of page ? patternInfo(page).forms() : []) {
       if (!auth.public.create.includes(form))
         ctx.warning(
           at,
           "contact-form-closed",
-          `The contact form on the ${name} page adds a ${form}, but visitors may not add one, so nobody without an account can send it.`,
+          `The ${what} on the ${name} page adds a ${form}, but visitors may not add one, so nobody without an account can send it.`,
           `Add ${form} to "create" under "public".`,
         );
     }
@@ -1041,7 +1042,7 @@ function checkAgainstSpec(
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
     if (!page || page.mine) continue;
-    const closed = [...new Set(patternInfo(page).models())].filter(
+    const closed = [...new Set(patternInfo(page).reads())].filter(
       (m) => m !== USER_MODEL && !auth.public.read.includes(m),
     );
     if (closed.length)

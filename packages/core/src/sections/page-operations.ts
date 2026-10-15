@@ -208,6 +208,52 @@ const addCalendarPage: Operation<{ page: string; model: string; starts?: string 
   },
 };
 
+const addOrderPage: Operation<{
+  page: string;
+  from: string;
+  into: string;
+  ask?: string[];
+  route?: string;
+}> = {
+  name: "addOrderPage",
+  summary:
+    "Add a page where visitors choose records of one model (dishes) and send them as one order of another (with its lines and a number counting up); it is not in the menu.",
+  schema: {
+    type: "object",
+    required: ["page", "from", "into"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. menu." },
+      from: refTo({ ref: "model", label: "Chosen from" }),
+      into: refTo({ ref: "model", label: "An order is" }),
+      ask: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "The order's fields the customer fills, in order, e.g. [name, phone, wanted, note].",
+      },
+      route: { type: "string", description: "Its address, e.g. / for the home page." },
+    },
+  },
+  positional: ["page", "from", "into"],
+  describe: ({ page, from, into }) => `Add order page ${page}: ${from} into ${into}`,
+  destructive: () => false,
+  apply({ spec }, { page, from, into, ask, route }, ir) {
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    for (const model of [from, into])
+      if (!ir.models.some((m) => m.name === model))
+        throw new OperationError(`There is no model named "${model}".`);
+    // What the models lack (a price, a list of lines, a number) validation says in words.
+    spec.add(["pages"], page, {
+      ...(route ? { route } : {}),
+      order: { from, into, ...(ask?.length ? { ask } : {}) },
+    });
+    return [];
+  },
+};
+
 const addArticlesPage: Operation<{ page: string; model: string }> = {
   name: "addArticlesPage",
   summary:
@@ -977,6 +1023,8 @@ export const dashboardOperations: AnyOperation[] = [addTile];
 /** Operations of the calendar pattern. */
 export const calendarOperations: AnyOperation[] = [addCalendarPage];
 export const articlesOperations: AnyOperation[] = [addArticlesPage];
+/** Operations of the order pattern (docs/design/orders.md §3). */
+export const orderOperations: AnyOperation[] = [addOrderPage];
 /** Operations of the data pattern. */
 export const dataOperations: AnyOperation[] = [addDataPage];
 export const reviewOperations: AnyOperation[] = [addReviewPage];

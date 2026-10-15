@@ -124,6 +124,11 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Onboarding.tsx": [
     "data-kit="onboarding"",
   ],
+  "src/kit/OrderPage.tsx": [
+    "data-kit="order-placed"",
+    "data-kit="order"",
+    "data-part="choice"",
+  ],
   "src/kit/Overflow.tsx": [
     "data-part="more-actions"",
   ],

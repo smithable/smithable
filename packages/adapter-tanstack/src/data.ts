@@ -17,6 +17,7 @@ import {
   looseReferrers,
   type ModelIR,
   modelAccess,
+  type PatternOf,
   PICTURES_MAX,
   pascal,
   plural,
@@ -448,6 +449,10 @@ export function dataModule(
   ux: UxIR = emptyUx(),
 ): string {
   const n = names(model, t);
+  // The order an order page makes (orders.md §3): its lines are written with it, priced here.
+  const orderPage = ir.pages
+    .map((p) => p.pattern)
+    .find((p): p is PatternOf<"order"> => p.kind === "order" && p.into === model.name);
   const formulas = hasFormulas(model);
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
@@ -574,6 +579,7 @@ export function dataModule(
   };
   const listWith = [...withReferences(model), ...aggregatedLists(model).map(liveList)];
   const others = new Set<ModelIR>();
+  if (orderPage && orderPage.from !== model.name) others.add(modelNamed(ir, orderPage.from));
   const getWith = [
     ...withReferences(model),
     ...lists(model).map((f) => {
@@ -838,7 +844,33 @@ export function dataModule(
   // A new file in a reviewed field starts waiting, in the change's own transaction.
   const queue = (record: string, before: string, after: string) =>
     model.review ? `\n        queueReviews(tx, viewer, ${record}, ${before}, ${after});` : "";
-  const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();
+  // An order's lines, in its transaction: each chosen record read as the viewer may, refused when
+  // it is not available, its price copied (orders.md §3 items 1–2).
+  const orderLines = (() => {
+    if (!orderPage) return "";
+    const from = modelNamed(ir, orderPage.from);
+    const line = modelNamed(ir, orderPage.line);
+    const nf = names(from, t);
+    const nl = names(line, t);
+    const field = (m: ModelIR, name: string) =>
+      dataKey(m.fields.find((x) => x.name === name) as FieldIR);
+    const back = line.fields.find(
+      (x) => x.type.kind === "relation" && !x.type.many && x.type.model === model.name,
+    );
+    const title = titleField(from);
+    return `
+        for (const chosen of lines ?? []) {
+          const item = tx.select().from(${nf.table}).where(and(eq(${nf.table}.id, chosen.id), ${nf.data}.readable(viewer))).get();
+          if (!item) throw new BadInput("order-item");${
+            orderPage.available
+              ? `
+          if (item.${field(from, orderPage.available)} === false) throw new Conflict(\`sold-out:\${${title && title !== "id" ? `item.${title}` : "item.id"}}\`);`
+              : ""
+          }
+          tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && !line.ownedBy ? ", ownerId: personOf(viewer)" : ""} }).run();
+        }`;
+  })();
+  const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();${orderLines}
         audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${queue("made.id", "undefined", "made")}${tell('"created"', "made")}
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
@@ -1262,7 +1294,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
@@ -1933,7 +1965,7 @@ ${
 
 `
     : ""
-}  async create(viewer: Viewer | null, values: ${n.values}) {
+}  async create(viewer: Viewer | null, values: ${n.values}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public

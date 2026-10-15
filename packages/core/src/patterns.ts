@@ -15,6 +15,7 @@ import {
   readString,
 } from "./context.js";
 import type { YamlEditor } from "./edit.js";
+import { readHours } from "./hours.js";
 import {
   type CalculatorExample,
   type CalculatorIR,
@@ -49,6 +50,7 @@ import {
   dataOperations,
   landingOperations,
   legalOperations,
+  orderOperations,
   reviewOperations,
   usersOperations,
 } from "./sections/page-operations.js";
@@ -82,6 +84,8 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
   parts?(pattern: PatternOf<K>): Record<string, string>;
   /** Custom queries its pages show. */
   queries?(pattern: PatternOf<K>): string[];
+  /** The models visitors must read for its public pages to show anything; by default `models`. */
+  reads?(pattern: PatternOf<K>): string[];
   /** Models visitors add records of from its pages without an account (contact forms). */
   forms?(pattern: PatternOf<K>): string[];
   /** Operations that make or change pages of this pattern. */
@@ -782,6 +786,88 @@ const custom: PagePattern<"custom"> = {
   operations: customOperations,
 };
 
+/** The order page's keys besides from and into (docs/design/orders.md §2). */
+const ORDER_KEYS = ["from", "into", "ask", "hours", "lead"];
+
+/** A page where visitors compose an order from a model's records (docs/design/orders.md §3). */
+const order: PagePattern<"order"> = {
+  kind: "order",
+  schema: {
+    type: "object",
+    description:
+      "A page where visitors choose records of one model and send them as one order of another, with its lines, in one write; the prices are read on the server.",
+    required: ["from", "into"],
+    additionalProperties: false,
+    properties: {
+      from: {
+        type: "string",
+        description:
+          "The model people choose from (dishes): its price, picture, section and available.",
+      },
+      into: {
+        type: "string",
+        description:
+          "The model an order is (one record per order, numbered with sequence: true), whose one list holds the lines.",
+      },
+      ask: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "The order's fields the customer fills, in this order (name, phone, wanted, note).",
+      },
+      hours: {
+        type: "object",
+        description: `When orders are taken, in the app's time zone: a day or a range of days to a span or a list of spans, e.g. { mon-thu: "11:00-20:00", sat: ["10:00-14:00", "17:00-22:00"] }. Without hours, always.`,
+        additionalProperties: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+        },
+      },
+      lead: {
+        type: "integer",
+        minimum: 0,
+        description: "Minutes from now to the earliest time a customer may want the order.",
+      },
+    },
+  },
+  example: "order: { from: <Model>, into: <Model> }",
+  parse: (ctx, value, where, parsed) => readOrder(ctx, value, where, parsed),
+  models: (p) => [p.from, p.into, p.line],
+  // Visitors read what they choose; the order and its lines they only write.
+  reads: (p) => [p.from],
+  inMenu: false,
+  forms: (p) => [p.into],
+  operations: orderOperations,
+  follow(spec, page, effect) {
+    // A renamed field the customer is asked for follows; a field the page relies on is refused.
+    // A change of such a field's type is not refused here: the next validation says what is wrong.
+    const f = fieldEffect(effect);
+    if (!f) return undefined;
+    const p = page.pattern;
+    const relied: [string, string][] = [
+      [p.from, p.price],
+      [p.into, p.lines],
+      [p.into, p.number],
+      [p.line, p.item],
+      [p.line, p.unitPrice],
+    ];
+    if (relied.some(([m, name]) => m === f.model && name === f.from))
+      return f.to
+        ? undefined
+        : {
+            refusal: `The ${page.id} order page uses ${f.model}.${f.from}; change or remove the page first.`,
+          };
+    if (f.model !== p.into || !p.ask.includes(f.from)) return undefined;
+    const path = ["pages", page.id, "order", "ask"];
+    spec.set(
+      path,
+      f.to
+        ? p.ask.map((a) => (a === f.from ? (f.to as string) : a))
+        : p.ask.filter((a) => a !== f.from),
+    );
+    return undefined;
+  },
+};
+
 const legal: PagePattern<"legal"> = {
   kind: "legal",
   schema: {
@@ -926,6 +1012,7 @@ export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   articles,
   custom,
   legal,
+  order,
 };
 
 export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
@@ -936,6 +1023,7 @@ export function patternInfo(page: PageIR) {
   const pattern = page.pattern as PatternOf<"crud">;
   return {
     models: () => info.models(pattern),
+    reads: () => (info.reads ?? info.models)(pattern),
     manages: () => info.manages?.(pattern),
     icon: info.icon,
     inMenu: info.inMenu,
@@ -1592,5 +1680,207 @@ function readCalendar(
     ...(ends ? { ends: ends.value } : {}),
     ...(duration && !ends ? { duration: duration.value } : {}),
     ...(title ? { title: title.value } : {}),
+  };
+}
+
+/** The fields of a model that hold a stored amount of money. */
+const moneyFields = (fields: FieldIR[]) =>
+  fields.filter((f) => !f.formula && f.type.kind === "scalar" && f.type.name === "money");
+
+/**
+ * An order page (docs/design/orders.md §3): `from` and `into` named, and the fields the page
+ * relies on found in them: the price, the one list of lines with its reference to `from` and
+ * its unit price, the number counting up; what the customer is asked, and the hours.
+ */
+function readOrder(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  parsed: Partial<SpecIR>,
+): PatternOf<"order"> | undefined {
+  const orderWhere = `the order page of ${where}`;
+  if (!isMap(node)) {
+    ctx.error(
+      node,
+      "expected-map",
+      `${capitalize(orderWhere)} names what is chosen and what an order is.`,
+      'Write "order: { from: Dish, into: Order }".',
+    );
+    return undefined;
+  }
+  const entries = checkKeys(ctx, mapEntries(ctx, node, orderWhere) ?? [], orderWhere, {
+    allowed: ORDER_KEYS,
+  });
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  const named = (key: "from" | "into") => {
+    const entry = byKey.get(key);
+    if (!entry) {
+      ctx.error(node, "missing-key", `${capitalize(orderWhere)} needs "${key}".`);
+      return undefined;
+    }
+    const name = readString(ctx, entry.value, `"${key}" in ${orderWhere}`);
+    if (name !== undefined) ctx.reference("model", name, entry.value);
+    return name === undefined ? undefined : { name, at: entry.value as At };
+  };
+  const from = named("from");
+  const into = named("into");
+  if (!from || !into) return undefined;
+  const models = parsed.models ?? [];
+  const fromModel = models.find((m) => m.name === from.name);
+  const intoModel = models.find((m) => m.name === into.name);
+  if (!fromModel || !intoModel) return undefined;
+  const refuse = (at: At, message: string, hint?: string) => {
+    ctx.error(at, "invalid-value", message, hint);
+    return undefined;
+  };
+  const names = (fields: FieldIR[]) => fields.map((f) => f.name).join(", ");
+
+  // Several money fields (a cost beside the price): the one named price is the price.
+  const money = moneyFields(fromModel.fields);
+  const prices =
+    money.length > 1 && money.some((f) => f.name === "price")
+      ? money.filter((f) => f.name === "price")
+      : money;
+  if (prices.length !== 1)
+    return refuse(
+      from.at,
+      prices.length
+        ? `${from.name} has several money fields (${names(prices)}): the order page needs one price.`
+        : `${from.name} has no money field: the order page needs its price.`,
+    );
+  const lists = intoModel.fields.filter((f) => f.type.kind === "relation" && f.type.many);
+  const lines = lists[0];
+  if (lists.length !== 1 || !lines || lines.type.kind !== "relation")
+    return refuse(
+      into.at,
+      lists.length
+        ? `${into.name} has several lists (${names(lists)}): the order page fills one list of lines.`
+        : `${into.name} has no list of lines for the order page to fill.`,
+      lists.length ? undefined : `Give it one, e.g. "lines: ${into.name}Line[]".`,
+    );
+  const lineName = lines.type.model;
+  const lineModel = models.find((m) => m.name === lineName);
+  if (!lineModel) return undefined;
+  const items = lineModel.fields.filter(
+    (f) => f.type.kind === "relation" && !f.type.many && f.type.model === from.name,
+  );
+  if (items.length !== 1)
+    return refuse(
+      into.at,
+      `${lineName} needs one reference to ${from.name} for the order page (it has ${items.length}).`,
+    );
+  const unitPrices = moneyFields(lineModel.fields);
+  if (unitPrices.length !== 1)
+    return refuse(
+      into.at,
+      `${lineName} needs one money field for the price when ordered (it has ${unitPrices.length ? names(unitPrices) : "none"}).`,
+      'For example "unitPrice: money!", and the amount as a formula: "{ type: money, formula: quantity * unitPrice }".',
+    );
+  const number = intoModel.fields.find((f) => f.sequence);
+  if (!number)
+    return refuse(
+      into.at,
+      `${into.name} needs a number counting up for the order page, the one customers say.`,
+      'For example "number: { type: int!, sequence: true }".',
+    );
+  const ints = lineModel.fields.filter(
+    (f) => !f.formula && f.type.kind === "scalar" && f.type.name === "int",
+  );
+  const quantity = ints.find((f) => f.name === "quantity") ?? ints[0];
+
+  // What the customer is asked: the order's own values, never what the app or the page fills.
+  const askable = (f: FieldIR) =>
+    !f.formula && !f.byApp && f.type.kind === "scalar" && f.name !== "status";
+  const ask: string[] = [];
+  const askEntry = byKey.get("ask");
+  if (askEntry)
+    for (const { name, at } of readNameList(ctx, askEntry.value, `"ask" in ${orderWhere}`)) {
+      const f = intoModel.fields.find((x) => x.name === name);
+      if (!f)
+        ctx.error(
+          at,
+          "unknown-field",
+          `${into.name} has no field named "${name}".`,
+          didYouMean(
+            name,
+            intoModel.fields.map((x) => x.name),
+          ),
+        );
+      else if (!askable(f))
+        ctx.error(
+          at,
+          "invalid-value",
+          `The customer cannot be asked for "${name}": the app, a formula or the page fills it, or it is not a value of the order's own.`,
+        );
+      else ask.push(name);
+    }
+  else ask.push(...intoModel.fields.filter((f) => askable(f) && f.required).map((f) => f.name));
+  const unasked = intoModel.fields.filter(
+    (f) =>
+      askable(f) &&
+      f.required &&
+      f.default === undefined &&
+      !f.defaultFormula &&
+      !ask.includes(f.name),
+  );
+  if (unasked.length)
+    ctx.error(
+      askEntry?.value ?? node,
+      "missing-value",
+      `An order needs ${names(unasked)}, but the order page does not ask for ${unasked.length > 1 ? "them" : "it"}.`,
+      `Add ${unasked.length > 1 ? "them" : "it"} to "ask".`,
+    );
+
+  let hours: PatternOf<"order">["hours"];
+  const hoursEntry = byKey.get("hours");
+  if (hoursEntry) {
+    const what = `"hours" in ${orderWhere}`;
+    const pairs: [string, string | string[]][] = [];
+    const keyAt = new Map<string, At>();
+    for (const { key, keyNode, value } of mapEntries(ctx, hoursEntry.value, what) ?? []) {
+      keyAt.set(key, keyNode);
+      if (isSeq(value))
+        pairs.push([key, readNameList(ctx, value, `"${key}" in ${what}`).map((n) => n.name)]);
+      else {
+        const span = readString(ctx, value, `"${key}" in ${what}`);
+        if (span !== undefined) pairs.push([key, span]);
+      }
+    }
+    const read = readHours(pairs);
+    for (const problem of read.problems)
+      ctx.error(keyAt.get(problem.key) ?? hoursEntry.value, "invalid-value", problem.message);
+    hours = read.hours;
+    // Hours are the business's clock: without the app's time zone the server's would decide.
+    if (!parsed.app?.timezone)
+      ctx.warning(
+        hoursEntry.keyNode,
+        "hours-without-timezone",
+        `The hours of ${orderWhere} are read in the server's time zone, since the app names none.`,
+        'Give the app one, e.g. "timezone: Europe/Mariehamn" under "app".',
+      );
+  }
+  const leadEntry = byKey.get("lead");
+  const lead = leadEntry ? readNumber(ctx, leadEntry.value, `"lead" in ${orderWhere}`) : undefined;
+  if (lead !== undefined && (!Number.isInteger(lead) || lead < 0))
+    ctx.error(leadEntry?.value ?? node, "invalid-value", `"lead" is a whole number of minutes.`);
+
+  const available = fromModel.fields.find(
+    (f) => f.name === "available" && f.type.kind === "scalar" && f.type.name === "bool",
+  );
+  return {
+    kind: "order",
+    from: from.name,
+    into: into.name,
+    ask,
+    ...(hours ? { hours } : {}),
+    ...(lead !== undefined ? { lead } : {}),
+    price: (prices[0] as FieldIR).name,
+    ...(available ? { available: available.name } : {}),
+    lines: lines.name,
+    line: lineName,
+    item: (items[0] as FieldIR).name,
+    unitPrice: (unitPrices[0] as FieldIR).name,
+    ...(quantity ? { quantity: quantity.name } : {}),
+    number: number.name,
   };
 }

@@ -715,7 +715,8 @@ function readRules(
       field.type.kind !== "scalar" ||
       field.type.name !== "int" ||
       !field.required ||
-      field.default !== undefined
+      field.default !== undefined ||
+      field.defaultFormula
     )
       ctx.error(
         sequence.keyNode,

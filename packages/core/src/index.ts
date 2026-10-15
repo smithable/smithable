@@ -89,6 +89,15 @@ export type { YamlValue } from "./edit.js";
 export { EditError, YamlEditor } from "./edit.js";
 export type { Expr } from "./formula.js";
 export { formatFormula, parseFormula } from "./formula.js";
+export {
+  daysOf,
+  type Hours,
+  hoursText,
+  readSpan,
+  type Span,
+  WEEKDAYS,
+  type Weekday,
+} from "./hours.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
