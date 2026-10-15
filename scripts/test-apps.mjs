@@ -837,8 +837,20 @@ async function languagesFlow(dir, base) {
     await page.locator('[data-kit="languages"]').getByRole("link", { name: "English" }).click();
     await page.getByRole("heading", { name: "Find your calm" }).waitFor({ timeout: 15000 });
     if (new URL(page.url()).pathname !== "/") throw new Error(`the switch went to ${page.url()}`);
+    // Signed in, the switch keeps the choice with the person (languages.md §3.2): another
+    // browser of theirs, with no choice of its own, opens their pages in it.
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/my-bookings`);
+    await page.locator('[data-kit="languages"]').getByRole("link", { name: "Svenska" }).click();
+    await page.locator('html[lang="sv"]').waitFor({ timeout: 15000 });
+    if (new URL(page.url()).pathname !== "/my-bookings")
+      throw new Error(`the signed-in switch went to ${page.url()}`);
+    const other = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await signInAs(other, base, "admin");
+    await open(other, `${base}/my-bookings`);
+    await other.locator('html[lang="sv"]').waitFor({ timeout: 15000 });
     console.log(
-      "  ✓ languages: /sv is the home page in Swedish with the kit's Swedish words and its English version named; / stays English; the sitemap lists both; the switch goes between them",
+      "  ✓ languages: /sv is the home page in Swedish with the kit's Swedish words and its English version named; / stays English; the sitemap lists both; the switch goes between them; signed in, the choice is kept with the person and another browser of theirs opens in it",
     );
   } catch (error) {
     console.log(

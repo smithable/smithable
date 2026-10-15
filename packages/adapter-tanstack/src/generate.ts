@@ -165,7 +165,7 @@ export const OFFERED: Offered = ${JSON.stringify({ main: content.language, other
 `,
     zone: "generated",
   });
-  const swap = (path: string, edits: [string, string][]) => {
+  const swap = (path: string, edits: [string | RegExp, string][]) => {
     const file = files.find((f) => f.path === path);
     if (file) for (const [from, to] of edits) file.content = file.content.replace(from, to);
   };
@@ -191,8 +191,9 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
       input: ({ url }) => {
         if (typeof document !== "undefined") {
           shown = languageOf(url.pathname, document.cookie, OFFERED);
-          // A public page in a language is the choice the sign-in and the signed-in pages keep.
-          if (isPublic(fromPath(url.pathname, OFFERED).path, OFFERED))
+          // A public page whose address names a language is the choice the sign-in and the
+          // signed-in pages keep; one in the app's own says nothing (the switch says it).
+          if (shown !== OFFERED.main && isPublic(fromPath(url.pathname, OFFERED).path, OFFERED))
             document.cookie = \`\${LANGUAGE_COOKIE}=\${shown}; path=/; max-age=31536000; samesite=lax\`;
         }
         url.pathname = fromPath(url.pathname, OFFERED).path;
@@ -207,18 +208,101 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
     },`,
     ],
   ]);
+  // The person's own language (languages.md §3.2), kept with them: chosen with the switch on a
+  // signed-in page, or the page they signed up from; a new browser of theirs starts in it.
+  const signIn = files.some((f) => f.path === "src/lib/auth.ts");
+  if (signIn) {
+    swap("src/db/schema.ts", [
+      ["  image: text(),\n  role:", "  image: text(),\n  language: text(),\n  role:"],
+    ]);
+    swap("src/lib/auth.ts", [
+      [
+        'role: { type: "string", required: true,',
+        'language: { type: "string", required: false, input: false },\n      role: { type: "string", required: true,',
+      ],
+      [
+        "return { data: { ...newUser, role:",
+        "return { data: { ...newUser, language: OFFERED.others.includes(language()) ? language() : null, role:",
+      ],
+      [
+        /^import /m,
+        'import { OFFERED } from "#/generated/languages";\nimport { language } from "#/kit/words";\nimport ',
+      ],
+    ]);
+  }
+  // A mail to a user is in their language; one to an address that is no one's in the page's.
+  swap("src/generated/outgoing.server.ts", [
+    [
+      "select({ id: schema.user.id, email: schema.user.email })",
+      "select({ id: schema.user.id, email: schema.user.email, language: schema.user.language })",
+    ],
+    [
+      "    const shown = SHOWN[model]?.(tx, record);\n    if (!shown || !entry.to) continue;\n    queueMail(",
+      `    if (!entry.to) continue;
+    const groups = new Map<string, Recipient[]>();
+    for (const person of entry.to(tx, record)) {
+      const spoken = person.language || language();
+      groups.set(spoken, [...(groups.get(spoken) ?? []), person]);
+    }
+    for (const [spoken, to] of groups)
+      speaking(spoken, () => {
+    const shown = SHOWN[model]?.(tx, record);
+    if (!shown) return;
+    queueMail(`,
+    ],
+    [
+      '      entry.to(tx, record),\n      entry.when === "created",\n    );',
+      '      to,\n      entry.when === "created",\n    );\n      });',
+    ],
+    [
+      /^import /m,
+      'import { speaking } from "#/kit/language.server";\nimport { language } from "#/kit/words";\nimport ',
+    ],
+  ]);
+  files.push({
+    path: "src/generated/my-language.ts",
+    content: signIn
+      ? `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import { OFFERED } from "#/generated/languages";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** Keeps the language a signed-in person chose with the switch: their pages and mails are in it. */
+export const saveLanguage = createServerFn({ method: "POST" })
+  .validator((data: unknown) => String(data))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    if (!viewer || viewer.id.startsWith("key:")) return;
+    if (data !== OFFERED.main && !OFFERED.others.includes(data)) return;
+    db.update(user)
+      .set({ language: data === OFFERED.main ? null : data })
+      .where(eq(user.id, viewer.id))
+      .run();
+  });
+`
+      : `${HEADER}/** An app without sign-in keeps no one's language: the switch's cookie is the choice. */
+export async function saveLanguage(_: { data: string }): Promise<void> {}
+`,
+    zone: "generated",
+  });
   swap("src/start.ts", [
     [
       'import { traced } from "#/kit/trace.server";',
       `import { OFFERED } from "#/generated/languages";
-import { inLanguage } from "#/kit/language.server";
+import { inLanguage } from "#/kit/language.server";${signIn ? '\nimport { auth } from "#/lib/auth";' : ""}
 import { traced } from "#/kit/trace.server";`,
     ],
     [
       "/**\n * Server functions are what",
       `/** Each request in its page's language: the address's prefix, else the person's choice. */
 const language = createMiddleware().server(({ request, next }) =>
-  inLanguage(request, OFFERED, async () => (await next()).response),
+  inLanguage(request, OFFERED, async () => (await next()).response${
+    signIn
+      ? ", async () =>\n    (await auth.api.getSession({ headers: request.headers }))?.user.language"
+      : ""
+  }),
 );
 
 /**

@@ -28,10 +28,10 @@ export function isPublic(path: string, offered: Offered): boolean {
   );
 }
 
-/** The language a Cookie header (or document.cookie) chose, if it is one the app has. */
+/** The language a Cookie header (or document.cookie) chose, if it is one the app has (its own too). */
 export function cookieLanguage(cookies: string, offered: Offered): string | undefined {
   const value = new RegExp(`(?:^|;\\s*)${LANGUAGE_COOKIE}=([^;]*)`).exec(cookies)?.[1];
-  return value && offered.others.includes(value) ? value : undefined;
+  return value && (value === offered.main || offered.others.includes(value)) ? value : undefined;
 }
 
 /** A page's language: a public page's by its address, another's by the cookie, else the app's own. */
