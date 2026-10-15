@@ -1338,8 +1338,10 @@ try {
       .getByRole("group", { name: "View of Customers" })
       .getByRole("button", { name: "Cards" })
       .click();
-    await waitUx(/view: cards/);
+    // The order chosen at once, while the view is still being changed: it waits its turn and
+    // is made too (a change made while one runs was once refused, its refusal hidden).
     await pages.getByLabel("Order of Customers").selectOption("-email");
+    await waitUx(/view: cards/);
     await waitUx(/sort: -email/);
     await pages.getByText("Form of Customers").click();
     await pages
