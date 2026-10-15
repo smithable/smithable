@@ -32,6 +32,8 @@ type Writer = {
 export interface Recipient {
   id?: string | null;
   email?: string | null;
+  /** A user's own language, in an app of several (docs/design/languages.md §3.3). */
+  language?: string | null;
 }
 
 /** What happened to which record, and how the mail shows it. */

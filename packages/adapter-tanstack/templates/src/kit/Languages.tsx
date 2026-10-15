@@ -1,7 +1,9 @@
 // Smithable app kit: an app in several languages (docs/design/languages.md §3): each public
 // page tells search engines of its other versions, and a switch goes to the same page in
-// another language; on a signed-in page it keeps the choice and shows the page again.
+// another language; on a signed-in page it keeps the choice, with the person when signed in,
+// and shows the page again.
 import { OFFERED } from "#/generated/languages";
+import { saveLanguage } from "#/generated/my-language";
 import { isPublic, LANGUAGE_COOKIE } from "./language";
 import { language, w } from "./words";
 
@@ -41,9 +43,15 @@ export function LanguageSwitch({ path }: { path: string }) {
           lang={code}
           hrefLang={code}
           href={open ? inLanguage(code, path) : path}
-          onClick={() => {
-            // A signed-in page keeps its address: the choice is the cookie's.
+          onClick={(event) => {
+            // A signed-in page keeps its address: the choice is the cookie's, and the person's
+            // own (their other browsers and their mails), kept before the page is shown again.
             document.cookie = `${LANGUAGE_COOKIE}=${code}; path=/; max-age=31536000; samesite=lax`;
+            if (open) return;
+            event.preventDefault();
+            void saveLanguage({ data: code })
+              .catch(() => undefined)
+              .then(() => location.assign(path));
           }}
           className="ml-4 underline-offset-4 hover:underline"
         >

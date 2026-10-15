@@ -1,4 +1,11 @@
-import { type AuthIR, LANGUAGES, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
+import {
+  type AuthIR,
+  type ContentIR,
+  LANGUAGES,
+  type SpecIR,
+  validateAuth,
+  validateSpec,
+} from "@smithable/core";
 import { describe, expect, test } from "vitest";
 import { customPageFromEdit, customPageSource, generateApp } from "./generate.js";
 import { TEMPLATES } from "./templates.gen.js";
@@ -429,4 +436,35 @@ test("an action's label from the content file is its button, in the list's row a
   expect(list).toContain('label="Åtgärdad"');
   expect(list).toContain('label: "Åtgärdad"');
   expect(list).not.toContain('label="Resolve"');
+});
+
+test("in an app of several languages each person's own is kept, and their mails are in it", () => {
+  const path = "../../../examples/booking/smithable.yml";
+  const auth = authOf(authFiles[path.replace("smithable.yml", "smithable.auth.yml")] as string);
+  const empty = { models: {}, pages: {}, menus: {}, actions: {}, outgoing: {} };
+  const content = {
+    ...empty,
+    language: "en",
+    languages: ["sv"],
+    translations: { sv: { ...empty, language: "sv" } },
+  } as unknown as ContentIR;
+  const files = generateApp(ir(path, examples[path] as string), { ...options, auth, content });
+  const file = (p: string) => files.find((f) => f.path === p)?.content ?? "";
+  expect(file("src/db/schema.ts")).toContain("  language: text(),\n  role:");
+  const lib = file("src/lib/auth.ts");
+  expect(lib).toContain('language: { type: "string", required: false, input: false }');
+  expect(lib).toContain("language: OFFERED.others.includes(language()) ? language() : null");
+  expect(file("src/generated/my-language.ts")).toContain(
+    "export const saveLanguage = createServerFn",
+  );
+  expect(file("src/start.ts")).toContain(
+    "auth.api.getSession({ headers: request.headers }))?.user.language",
+  );
+  const outgoing = file("src/generated/outgoing.server.ts");
+  expect(outgoing).toContain("language: schema.user.language");
+  expect(outgoing).toContain("speaking(spoken, () => {");
+  // An app in one language is as it was: no column, no switch to keep.
+  const one = generateApp(ir(path, examples[path] as string), { ...options, auth });
+  expect(one.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("language: text()");
+  expect(one.some((f) => f.path === "src/generated/my-language.ts")).toBe(false);
 });

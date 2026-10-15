@@ -132,7 +132,7 @@ models:
 3. (Done, 2026-10-15.) The public routes with the prefix, hreflang, `<html lang>`, the sitemap, the switch, the
    cookie; a test-apps flow on the booking starter with a Swedish file: `/sv/` reads Swedish,
    `/` English, both in the sitemap, the alternates right.
-4. The person's language: `users.language`, the signed-in switch, the mails.
+4. (Done, 2026-10-15.) The person's language: `users.language`, the signed-in switch, the mails.
 5. Studio's Languages view and the model's first draft.
 6. First builds.
 
