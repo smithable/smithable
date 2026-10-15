@@ -17,9 +17,25 @@ export function languageFrom(source: () => string): void {
   now = source;
 }
 
+/** The language now: the page's, the request's on the server, else the app's own. */
+export function language(): string {
+  return now();
+}
+
 /** A language's words, the app's own for one it does not have. */
 export function words(language = now()): Words {
   return BY[language] ?? (BY[MAIN] as Words);
+}
+
+/**
+ * The maker's texts in the app's other languages, each by the app's own text (languages.md §4):
+ * a translation's map, written by the generator.
+ */
+const TEXTS: Record<string, Record<string, string>> = {};
+
+/** A text of the app's own (a page's title, a field's label) in the language now; as it is where none is given. */
+export function tx(text: string, language = now()): string {
+  return TEXTS[language]?.[text] ?? text;
 }
 
 /** The words of the language now: `w.save`, as everywhere in the kit and the app. */

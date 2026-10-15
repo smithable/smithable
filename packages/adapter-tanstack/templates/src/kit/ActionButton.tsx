@@ -6,11 +6,11 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ModelForm } from "./ModelForm";
 import type { AppUi, ModelUi, Options } from "./model";
-import { w } from "./words";
+import { tx, w } from "./words";
 
 export function ActionButton({
-  label,
-  help,
+  label: own,
+  help: ownHelp,
   concept,
   onRun,
   ask,
@@ -32,6 +32,9 @@ export function ActionButton({
     loadOptions?: () => Promise<Options>;
   };
 }) {
+  // The app's texts in the language now (languages.md §4).
+  const label = tx(own);
+  const help = ownHelp && tx(ownHelp);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
   const dialog = useRef<HTMLDialogElement>(null);

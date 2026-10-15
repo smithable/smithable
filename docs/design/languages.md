@@ -129,7 +129,7 @@ models:
 2. `languages` and the language files in core: parsing, validation, `addLanguage`,
    `removeLanguage`, `setText --language`, renames following, the summary, the schema, the
    spec reference.
-3. The public routes with the prefix, hreflang, `<html lang>`, the sitemap, the switch, the
+3. (Done, 2026-10-15.) The public routes with the prefix, hreflang, `<html lang>`, the sitemap, the switch, the
    cookie; a test-apps flow on the booking starter with a Swedish file: `/sv/` reads Swedish,
    `/` English, both in the sitemap, the alternates right.
 4. The person's language: `users.language`, the signed-in switch, the mails.

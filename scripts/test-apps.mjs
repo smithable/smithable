@@ -784,6 +784,74 @@ async function supportFlow(dir, base) {
 }
 
 /**
+ * An app in two languages (languages.md §6 step 3) on the booking site: with Swedish added and
+ * its hero translated, /sv is the home page in Swedish (lang, the hero, the kit's own words),
+ * telling search engines of its other version; / stays English; the sitemap lists both; the
+ * switch goes from one to the other. Swedish is taken away again for the flows after it.
+ */
+async function languagesFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let added = false;
+  try {
+    ok(smithable(dir, "op", "addLanguage", "sv"));
+    added = true;
+    ok(
+      smithable(
+        dir,
+        "op",
+        "setText",
+        "Hitta ditt lugn",
+        "pages",
+        "home",
+        "hero",
+        "title",
+        "--language",
+        "sv",
+      ),
+    );
+    // The dev server takes the new router and start a moment after the change.
+    let html = "";
+    for (let i = 0; i < 60; i++) {
+      html = await (await fetch(`${base}/sv`)).text();
+      if (html.includes("Hitta ditt lugn")) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (!/<html lang="sv"/.test(html)) throw new Error("/sv is not lang=sv");
+    if (!html.includes("Hitta ditt lugn")) throw new Error("/sv does not show the Swedish hero");
+    if (!html.includes("Logga in")) throw new Error("/sv does not have the kit's Swedish words");
+    if (!/<link rel="alternate" hrefLang="en" href="\/"/.test(html))
+      throw new Error("/sv names no English version");
+    const english = await (await fetch(`${base}/`)).text();
+    if (!/<html lang="en"/.test(english) || !english.includes("Find your calm"))
+      throw new Error("/ is not English");
+    const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+    if (!sitemap.includes("/sv/schedule</loc>") || !sitemap.includes("/schedule</loc>"))
+      throw new Error("the sitemap does not list both versions");
+    // The switch, in a browser: from Swedish to English and back.
+    await open(page, `${base}/sv`);
+    await page.getByRole("heading", { name: "Hitta ditt lugn" }).waitFor({ timeout: 15000 });
+    await page.locator('[data-kit="languages"]').getByRole("link", { name: "English" }).click();
+    await page.getByRole("heading", { name: "Find your calm" }).waitFor({ timeout: 15000 });
+    if (new URL(page.url()).pathname !== "/") throw new Error(`the switch went to ${page.url()}`);
+    console.log(
+      "  ✓ languages: /sv is the home page in Swedish with the kit's Swedish words and its English version named; / stays English; the sitemap lists both; the switch goes between them",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ languages: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("languages");
+  } finally {
+    await browser.close();
+    if (added) smithable(dir, "op", "removeLanguage", "sv", "--yes");
+  }
+}
+
+/**
  * Mail threads (mail-threads.md §7.2) on the booking site's messages: a mail makes a message and
  * its acknowledgement carries the tag and the thread's headers and is kept in mail_threads; a mail
  * answering it by its headers becomes a reply on that message and sets what "then" says; one with
@@ -6433,6 +6501,7 @@ test("the session cookie's name and attributes", async () => {
         await picturesFlow(dir, base);
         await incomingMailFlow(dir, base);
         await mailThreadFlow(dir, base);
+        await languagesFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);

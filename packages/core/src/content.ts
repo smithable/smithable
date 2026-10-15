@@ -244,6 +244,40 @@ export function derivedTexts(ir: SpecIR): Map<string, string> {
   return derived;
 }
 
+/**
+ * A language's texts by the app's own (docs/design/languages.md §4, gettext's model): each text
+ * of textsToTranslate the language file says, keyed by the text in the app's language, and in
+ * lower case beside it for the words the kit puts in a sentence ("New customer"). An empty
+ * translation is left out, so the app's own shows. Two texts alike with different translations
+ * take the one whose path sorts first; `shared` names them.
+ */
+export function translationMap(
+  content: ContentIR,
+  translation: ContentIR,
+  ir: SpecIR,
+): { texts: Record<string, string>; shared: { text: string; paths: [string, string][] }[] } {
+  const own = textsToTranslate(content, ir);
+  const said = textPaths(translation);
+  const texts: Record<string, string> = {};
+  const from = new Map<string, [string, string][]>();
+  for (const path of [...own.keys()].sort()) {
+    const text = own.get(path) as string;
+    const word = said.get(path)?.trim();
+    if (!word) continue;
+    from.set(text, [...(from.get(text) ?? []), [path, word]]);
+    if (!(text in texts)) texts[text] = word;
+  }
+  // Then the lower-case variants, only where no text of its own is that already.
+  for (const [text, word] of Object.entries({ ...texts })) {
+    const lower = text.toLowerCase();
+    if (!(lower in texts)) texts[lower] = word.toLowerCase();
+  }
+  const shared = [...from]
+    .filter(([, ways]) => new Set(ways.map(([, w]) => w)).size > 1)
+    .map(([text, paths]) => ({ text, paths }));
+  return { texts, shared };
+}
+
 /** Parses smithable.content.yml and checks every reference against the spec. */
 export function validateContent(
   file: { path: string; text: string },
@@ -443,6 +477,13 @@ export function validateContent(
     const missing = [...textsToTranslate(translation.of, ir).keys()].filter(
       (path) => !here.get(path)?.trim(),
     );
+    // One text, two translations: the app can show only one (languages.md §4).
+    for (const { text, paths } of translationMap(translation.of, content, ir).shared)
+      ctx.warning(
+        root,
+        "text-shared",
+        `The text "${text}" has different words here (${paths.map(([p, w]) => `${p}: ${w}`).join(", ")}); the app shows "${paths[0]?.[1]}" for both.`,
+      );
     if (missing.length)
       ctx.warning(
         root,

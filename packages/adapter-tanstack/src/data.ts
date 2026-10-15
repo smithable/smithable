@@ -38,6 +38,7 @@ import {
   code,
   dataKey,
   type GenContext,
+  Getter,
   HEADER,
   hasFavorites,
   type importList,
@@ -180,7 +181,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     );
   }
   const uiSource = literal({
-    ...ui,
+    ...(t.translated ? localized(ui) : ui),
     ...(formulas
       ? { compute: code(withFormulasName(model)), defaults: code(defaultsName(model)) }
       : {}),
@@ -249,7 +250,7 @@ import { z } from "zod";
 import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
-import type { RecordUi } from "#/kit/model";
+${t.translated ? 'import { tx } from "#/kit/words";\n' : ""}import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}${[
   ...new Set(adds.map((a) => a.target)),
@@ -414,6 +415,31 @@ export function reserveNames(model: ModelIR) {
  * The model's data functions: every read and write goes through the access rules, for the
  * given viewer. Server-only; custom code uses these too.
  */
+/**
+ * A model's ui with its texts read in the language now (languages.md §4): each label, plural,
+ * help and choice a getter of tx, so the kit shows the page's language without a change.
+ */
+function localized<U extends { label: string; pluralLabel: string; fields: object[] }>(ui: U): U {
+  const tx = (text: unknown) =>
+    typeof text === "string" ? new Getter(`tx(${JSON.stringify(text)})`) : text;
+  return {
+    ...ui,
+    label: tx(ui.label),
+    pluralLabel: tx(ui.pluralLabel),
+    fields: ui.fields.map((f) => {
+      const field = f as { label?: string; help?: string; choices?: { label: string }[] };
+      return {
+        ...field,
+        label: tx(field.label),
+        ...(field.help ? { help: tx(field.help) } : {}),
+        ...(field.choices
+          ? { choices: field.choices.map((c) => ({ ...c, label: tx(c.label) })) }
+          : {}),
+      };
+    }),
+  } as unknown as U;
+}
+
 export function dataModule(
   model: ModelIR,
   t: Texts,

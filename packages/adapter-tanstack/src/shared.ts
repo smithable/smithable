@@ -83,6 +83,8 @@ export const HEADER =
 /** Visible text: from smithable.content.yml when given there, otherwise derived from names. */
 export function texts(content: ContentIR, appName = "") {
   return {
+    /** The app is in other languages too: its texts are read in the language now (languages.md §4). */
+    translated: Boolean(content.languages?.length),
     /** The app's language: the kit's words and the page's `lang` follow it. */
     language: content.language,
     /** The app's mark as a prop of the shell or the landing frame (its file's address), or nothing. */
@@ -116,6 +118,19 @@ export function texts(content: ContentIR, appName = "") {
       const own = content.pages[page.id];
       const name = own?.title ?? humanize(page.id);
       const title = !appName ? name : page.route === "/" ? appName : `${name} · ${appName}`;
+      // In an app of several languages the title and description are read in the page's.
+      if (content.languages?.length) {
+        const named = `tx(${JSON.stringify(name)})`;
+        const titled = !appName
+          ? named
+          : page.route === "/"
+            ? JSON.stringify(appName)
+            : `${named} + ${JSON.stringify(` · ${appName}`)}`;
+        const described = own?.description
+          ? `, { name: "description", content: tx(${JSON.stringify(own.description)}) }`
+          : "";
+        return `  head: () => ({ meta: [{ title: ${titled} }${described}] }),\n`;
+      }
       const meta: Record<string, string>[] = [{ title }];
       if (own?.description) meta.push({ name: "description", content: own.description });
       return `  head: () => ({ meta: ${JSON.stringify(meta)} }),\n`;
@@ -508,6 +523,14 @@ class Code {
 }
 export const code = (text: string) => new Code(text);
 
+/**
+ * A value read each time it is asked for, written as a getter: a text in the language now
+ * (languages.md §4), `get label() { return tx("Customer"); }`.
+ */
+export class Getter {
+  constructor(readonly text: string) {}
+}
+
 export function literal(value: unknown, indent = ""): string {
   if (value instanceof Code) return value.text;
   if (Array.isArray(value)) {
@@ -519,10 +542,14 @@ export function literal(value: unknown, indent = ""): string {
   if (value !== null && typeof value === "object") {
     const entries = Object.entries(value).filter(([, v]) => v !== undefined);
     const key = (k: string) => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k));
-    const inline = `{ ${entries.map(([k, v]) => `${key(k)}: ${literal(v)}`).join(", ")} }`;
+    const entry = (k: string, v: unknown, inner = "") =>
+      v instanceof Getter
+        ? `get ${key(k)}() { return ${v.text}; }`
+        : `${key(k)}: ${literal(v, inner)}`;
+    const inline = `{ ${entries.map(([k, v]) => entry(k, v)).join(", ")} }`;
     if (inline.length <= 80 && !inline.includes("\n")) return inline;
     const inner = `${indent}  `;
-    return `{\n${entries.map(([k, v]) => `${inner}${key(k)}: ${literal(v, inner)},`).join("\n")}\n${indent}}`;
+    return `{\n${entries.map(([k, v]) => `${inner}${entry(k, v, inner)},`).join("\n")}\n${indent}}`;
   }
   return JSON.stringify(value);
 }

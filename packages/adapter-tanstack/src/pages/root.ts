@@ -171,7 +171,7 @@ ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}imp
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
-import { w } from "#/kit/words";
+import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
@@ -285,9 +285,9 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
 `
     : ""
 }  return (
-    <html lang=${JSON.stringify(t.language)}>
+    <html lang=${t.translated ? "{language()}" : JSON.stringify(t.language)}>
       <head>
-        <HeadContent />
+        <HeadContent />${t.translated ? "\n        <Alternates path={pathname} />" : ""}
       </head>
       <body data-page={pageOf(pathname)} data-hydrated={hydrated ? "true" : undefined}>
         {asOf && (
@@ -325,7 +325,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}        <Consent${consentProps} />
+${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
         <Scripts />
       </body>
     </html>
@@ -410,7 +410,7 @@ export function sitemapRoute(ir: SpecIR, auth: AuthIR, t: Texts): string {
     })
     .join("\n");
   return `${HEADER}import { createFileRoute } from "@tanstack/react-router";
-import { originOf } from "#/kit/origin";
+import { originOf } from "#/kit/origin";${t.translated ? '\nimport { OFFERED } from "#/generated/languages";' : ""}
 ${imports.join("\n")}${imports.length ? "\n" : ""}
 const PAGES = ${JSON.stringify(pages.map((p) => p.route))};
 
@@ -425,7 +425,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         const entries: { loc: string; lastmod?: string | Date | null }[] = [
           ...PAGES.map((route) => ({ loc: route })),
 ${articles}
-        ];
+        ]${t.translated ? `.flatMap((e) => [e, ...OFFERED.others.map((code) => ({ ...e, loc: \`/\${code}\${e.loc === "/" ? "" : e.loc}\` }))])` : ""};
         const body = \`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 \${entries

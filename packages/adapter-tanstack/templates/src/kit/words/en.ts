@@ -137,6 +137,8 @@ export const w = {
   messageSent: "Your message is sent.",
   modelNotReached: "The model could not be reached.",
   month: "Month",
+  /** The language switch of an app in several languages. */
+  language: "Language",
   /** A person filter's chips (record-rules.md §6): the viewer, and nobody. */
   mine: "Mine",
   unassigned: "Unassigned",
