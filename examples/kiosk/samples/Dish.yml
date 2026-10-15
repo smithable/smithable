@@ -1,0 +1,73 @@
+# The truck's menu as the starter shows it. The pictures are from the Smithable image library
+# (smithable-images, CC0).
+- name: Fish soup
+  description: Salmon, cod and shrimp in a creamy broth with dill, served with bread.
+  price: 14.5
+  section: mains
+  picture: { file: food-soup-b.webp, alt: "A bowl of soup with bread", generated: true }
+  diet: none
+  allergens: fish, shellfish, milk, gluten
+- name: Salmon with dill potatoes
+  description: Pan-fried salmon, new potatoes and a dill and lemon sauce.
+  price: 17
+  section: mains
+  picture: { file: food-fish-b.webp, alt: "A plate of salmon with potatoes and dill", generated: true }
+  diet: none
+  allergens: fish, milk
+- name: Harbour burger
+  description: Beef burger with cheddar, pickles and fries.
+  price: 15
+  section: mains
+  picture: { file: food-burger.webp, alt: "A burger with fries on a board", generated: true }
+  diet: none
+  allergens: gluten, milk, mustard
+- name: Green salad
+  description: Leaves, cucumber, peas and a lemon dressing.
+  price: 9
+  section: starters
+  picture: { file: food-salad-b.webp, alt: "A bowl of green salad on a wooden table", generated: true }
+  diet: vegan
+- name: Sourdough and butter
+  description: A slice of the day's sourdough with salted butter.
+  price: 4
+  section: starters
+  picture: { file: food-bread-b.webp, alt: "A loaf of sourdough bread on a board", generated: true }
+  diet: vegetarian
+  allergens: gluten, milk
+- name: Cheese board
+  description: Three cheeses from the islands, crackers and fig jam.
+  price: 12
+  section: starters
+  picture: { file: food-cheese-b.webp, alt: "A board of cheeses and crackers", generated: true }
+  diet: vegetarian
+  allergens: milk, gluten
+  available: false
+- name: Coffee
+  price: 3.5
+  section: drinks
+  picture: { file: drink-coffee-b.webp, alt: "A cup of black coffee on a saucer", generated: true }
+  diet: vegan
+- name: Orange juice
+  description: Freshly pressed.
+  price: 4.5
+  section: drinks
+  picture: { file: drink-juice-b.webp, alt: "A glass of orange juice by a window", generated: true }
+  diet: vegan
+- name: Tea
+  price: 3
+  section: drinks
+  picture: { file: drink-tea-b.webp, alt: "A teapot and a cup of tea", generated: true }
+  diet: vegan
+- name: Berry cake
+  description: A slice of the day's cake with lingonberries and cream.
+  price: 6
+  section: sweets
+  picture: { file: food-cake-b.webp, alt: "A slice of berry cake on a plate", generated: true }
+  diet: vegetarian
+  allergens: gluten, milk, egg
+- name: Cinnamon bun
+  price: 4
+  section: sweets
+  picture: { file: cafe-cinnamon-buns-b.webp, alt: "A tray of cinnamon buns by a café window", generated: true }
+  diet: vegetarian
+  allergens: gluten, milk, egg

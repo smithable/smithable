@@ -11,7 +11,8 @@ export type Kind =
   | "status"
   | "records"
   | "api"
-  | "support";
+  | "support"
+  | "kiosk";
 
 export interface Question {
   about: "kind" | "audience" | "visitors";
@@ -87,6 +88,9 @@ cue("api", 3, "backend assistant chatbot bot");
 cue("support", 3, "support helpdesk help-desk case");
 cue("support", 2, "inbox agent reply");
 cue("support", 1, "request");
+cue("kiosk", 3, "takeaway take-away food-truck truck pre-order preorder hatch");
+cue("kiosk", 2, "dish dishes pick-up pickup");
+cue("kiosk", 1, "menu");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business

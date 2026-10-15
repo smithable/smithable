@@ -1,0 +1,29 @@
+# What people read. Derived from names when not given here.
+smithableContent: 0.1
+logo: { src: images/logo.webp, alt: A cup, generated: true }
+
+models:
+  Dish:
+    fields:
+      section: { values: { starters: Starters, mains: Mains, drinks: Drinks, sweets: Sweets } }
+
+pages:
+  menu:
+    title: Order from the truck
+  where:
+    title: Where we are
+    hero:
+      title: Find the truck
+      subtitle: Fish soup, burgers and buns by the harbour. Order ahead and pick up at the hatch.
+    stops:
+      title: This week
+
+outgoing:
+  orderPlaced:
+    subject: A new order
+  orderAccepted:
+    subject: Your order is being made
+    text: Thank you. The kitchen has your order; we mail you again when it is ready.
+  orderReady:
+    subject: Your order is ready
+    text: Your order waits at the hatch.

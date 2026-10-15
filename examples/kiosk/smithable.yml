@@ -1,0 +1,111 @@
+smithable: 0.1
+app:
+  name: Kiosken
+  description: A harbour food truck where people order ahead and pick up.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Dish:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      section: starters | mains | drinks | sweets
+      picture: picture
+      diet: none | vegetarian | vegan
+      allergens: string                        # free text: "fish, gluten"
+      available: bool = true
+  Order:
+    fields:
+      number: { type: int!, sequence: true }   # given by the app, counting up, said to the customer
+      name: string!
+      phone: phone!
+      email: email
+      wanted: datetime                         # empty means as soon as possible
+      note: text
+      status: new | accepted | ready | collected | declined
+      reason: text
+      lines: OrderLine[]
+      total: { type: money, formula: SUM(lines.amount) }
+  OrderLine:
+    fields:
+      order: Order!
+      dish: Dish!
+      quantity: int! = 1
+      unitPrice: money!                        # the dish's price when ordered
+      amount: { type: money, formula: quantity * unitPrice }
+  Stop:                                        # where the truck stands when
+    fields:
+      place: string!
+      day: date!
+      hours: string!                           # as written: "11:00-14:00"
+      note: text
+
+pages:
+  menu:
+    route: /
+    order:
+      from: Dish
+      into: Order
+      ask: [name, phone, email, wanted, note]
+      hours: { mon-thu: "11:00-20:00", fri-sat: "11:00-22:00" }
+      lead: 20
+  orders:
+    crud: Order
+    filters: [status]
+    sortable: [createdAt, wanted]
+    actions: [accept, ready, collected, decline]
+  dishes:
+    crud: Dish
+    filters: [section, available]
+    actions: [soldOut, backOn]
+  stops:
+    crud: Stop
+  where:
+    landing:
+      hero: {}
+      stops: { records: Stop, limit: 7 }
+      footer: {}
+  team:
+    users: manage
+
+navigation: [orders, dishes, stops, team]
+
+actions:
+  soldOut:
+    on: Dish
+    when: { available: true }
+    set: { available: false }
+    intent: Nothing more of it today.
+  backOn:
+    on: Dish
+    when: { available: false }
+    set: { available: true }
+    intent: It can be ordered again.
+  accept:
+    on: Order
+    when: { status: new }
+    set: { status: accepted }
+    intent: The kitchen takes the order.
+  ready:
+    on: Order
+    when: { status: accepted }
+    set: { status: ready }
+    intent: The order waits at the hatch.
+  collected:
+    on: Order
+    when: { status: ready }
+    set: { status: collected }
+    intent: The customer has it.
+  decline:
+    on: Order
+    when: { status: [new, accepted] }
+    set: { status: declined, reason: }
+    intent: "The order cannot be made: say why."
+
+outgoing:
+  orderPlaced:   { when: Order created, to: mail, recipient: admin }
+  orderAccepted: { when: accept, to: mail, recipient: email }
+  orderReady:    { when: ready, to: mail, recipient: email }
+  toKitchen:     { when: Order created, to: kitchen }   # OUTGOING_KITCHEN_URL and _SECRET

@@ -59,7 +59,7 @@ test("new requires a directory and a known starter", async () => {
   expect(await run(["new"], io)).toBe(2);
   expect(await run(["new", "x", "--starter", "nope"], io)).toBe(2);
   expect(io.stderr).toContain(
-    'Unknown starter "nope". Available: api, booking, crm, invoicing, marketplace, records, status, support.',
+    'Unknown starter "nope". Available: api, booking, crm, invoicing, kiosk, marketplace, records, status, support.',
   );
 });
 

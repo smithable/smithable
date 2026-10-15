@@ -51,6 +51,11 @@ const SHOTS = {
     ["cases", "list", "admin"],
     ["cases", 2, "admin", true],
   ],
+  // The menu a visitor orders from, and the orders as staff see them.
+  kiosk: [
+    ["menu", "list", "visitor", true],
+    ["orders", "list", "admin"],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.
