@@ -30,7 +30,17 @@ export function complete(words: string[], current: string, dir = "."): string[] 
   if (!command) return COMMANDS.map((c) => c.name).filter((n) => n.startsWith(current));
   if (command === "completion") return ["bash", "zsh", "fish"].filter((s) => s.startsWith(current));
   if (command === "new" && words.at(-1) === "--starter")
-    return ["crm", "booking", "invoicing", "marketplace", "records", "status", "api", "support"];
+    return [
+      "crm",
+      "booking",
+      "invoicing",
+      "marketplace",
+      "records",
+      "status",
+      "api",
+      "support",
+      "kiosk",
+    ];
   if (command === "security" && words.at(-1) === "--level") return ["fast", "normal", "release"];
   if (command === "deploy" && words.at(-1) === "--target") return ["docker", "compose"];
   const project = readProject(dir);

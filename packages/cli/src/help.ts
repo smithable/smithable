@@ -27,7 +27,7 @@ export const COMMANDS: Command[] = [
     name: "new",
     usage: "new <dir>",
     text: [
-      "Create a project from a starter (--starter crm|booking|invoicing|marketplace|records|status|api|support, default crm),",
+      "Create a project from a starter (--starter crm|booking|invoicing|marketplace|records|status|api|support|kiosk, default crm),",
       'or --describe "a booking site for a yoga studio": a model may ask up to three questions,',
       'picks the starter to adapt, drafts the app, and you confirm the result. --answers "a; b"',
       "answers the questions in order; --yes asks nothing and creates the app directly;",

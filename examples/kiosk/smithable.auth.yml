@@ -1,0 +1,26 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false                # only staff invited from the team page
+
+defaultAccess: shared              # everyone on the staff sees every order
+
+roles:
+  admin: all
+  staff:
+    description: Takes the orders and keeps the menu.
+    pages: [orders, dishes, stops]
+    create: all
+    write: all
+    actions: all
+
+defaultRole: staff
+admins: [owner@kiosken.example]
+
+# The menu and where the truck stands are open to everyone; visitors send orders without an account.
+public:
+  pages: [menu, where]
+  read: [Dish, Stop]
+  create: [Order]

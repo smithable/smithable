@@ -1,0 +1,18 @@
+# What each sample order holds, at the price when it was ordered.
+- { order: Lena Berg, dish: Fish soup, quantity: 2, unitPrice: 14.5 }
+- { order: Lena Berg, dish: Coffee, quantity: 2, unitPrice: 3.5 }
+- { order: Mats Holm, dish: Harbour burger, quantity: 1, unitPrice: 15 }
+- { order: Aino Laine, dish: Salmon with dill potatoes, quantity: 1, unitPrice: 17 }
+- { order: Aino Laine, dish: Orange juice, quantity: 1, unitPrice: 4.5 }
+- { order: Johan Ek, dish: Cheese board, quantity: 1, unitPrice: 12 }
+- { order: Sara Nyström, dish: Fish soup, quantity: 1, unitPrice: 14.5 }
+- { order: Sara Nyström, dish: Cinnamon bun, quantity: 2, unitPrice: 4 }
+- { order: Erik Sund, dish: Harbour burger, quantity: 2, unitPrice: 15 }
+- { order: Erik Sund, dish: Sourdough and butter, quantity: 1, unitPrice: 4 }
+- { order: Maja Lind, dish: Green salad, quantity: 1, unitPrice: 9 }
+- { order: Maja Lind, dish: Tea, quantity: 1, unitPrice: 3 }
+- { order: Oskar Fors, dish: Fish soup, quantity: 1, unitPrice: 14.5 }
+- { order: Elin Strand, dish: Harbour burger, quantity: 1, unitPrice: 15 }
+- { order: Elin Strand, dish: Berry cake, quantity: 2, unitPrice: 6 }
+- { order: Noah Kask, dish: Coffee, quantity: 1, unitPrice: 3.5 }
+- { order: Noah Kask, dish: Cinnamon bun, quantity: 1, unitPrice: 4 }

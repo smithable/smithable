@@ -1780,6 +1780,638 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "intent": "Nothing more of it today.",
+      "name": "soldOut",
+      "on": "Dish",
+      "set": [
+        {
+          "field": "available",
+          "value": false,
+        },
+      ],
+      "when": {
+        "available": true,
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "It can be ordered again.",
+      "name": "backOn",
+      "on": "Dish",
+      "set": [
+        {
+          "field": "available",
+          "value": true,
+        },
+      ],
+      "when": {
+        "available": false,
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The kitchen takes the order.",
+      "name": "accept",
+      "on": "Order",
+      "set": [
+        {
+          "field": "status",
+          "value": "accepted",
+        },
+      ],
+      "when": {
+        "status": "new",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The order waits at the hatch.",
+      "name": "ready",
+      "on": "Order",
+      "set": [
+        {
+          "field": "status",
+          "value": "ready",
+        },
+      ],
+      "when": {
+        "status": "accepted",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The customer has it.",
+      "name": "collected",
+      "on": "Order",
+      "set": [
+        {
+          "field": "status",
+          "value": "collected",
+        },
+      ],
+      "when": {
+        "status": "ready",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The order cannot be made: say why.",
+      "name": "decline",
+      "on": "Order",
+      "set": [
+        {
+          "field": "status",
+          "value": "declined",
+        },
+        {
+          "asked": true,
+          "field": "reason",
+        },
+      ],
+      "when": {
+        "status": [
+          "new",
+          "accepted",
+        ],
+      },
+    },
+  ],
+  "app": {
+    "currency": "EUR",
+    "description": "A harbour food truck where people order ahead and pick up.",
+    "name": "Kiosken",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [],
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "price",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "default": "starters",
+          "name": "section",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "starters",
+              "mains",
+              "drinks",
+              "sweets",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "picture",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "picture",
+          },
+          "unique": false,
+        },
+        {
+          "default": "none",
+          "name": "diet",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "none",
+              "vegetarian",
+              "vegan",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "allergens",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": true,
+          "name": "available",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "bool",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Dish",
+    },
+    {
+      "fields": [
+        {
+          "byApp": true,
+          "name": "number",
+          "required": true,
+          "sequence": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "phone",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "wanted",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "note",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": "new",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "new",
+              "accepted",
+              "ready",
+              "collected",
+              "declined",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "lines",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "OrderLine",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "field": "amount",
+            "kind": "aggregate",
+            "list": "lines",
+            "name": "SUM",
+          },
+          "name": "total",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Order",
+    },
+    {
+      "fields": [
+        {
+          "name": "order",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Order",
+          },
+          "unique": false,
+        },
+        {
+          "name": "dish",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Dish",
+          },
+          "unique": false,
+        },
+        {
+          "default": 1,
+          "name": "quantity",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "unitPrice",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "kind": "binary",
+            "left": {
+              "kind": "field",
+              "name": "quantity",
+            },
+            "op": "*",
+            "right": {
+              "kind": "field",
+              "name": "unitPrice",
+            },
+          },
+          "name": "amount",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "OrderLine",
+    },
+    {
+      "fields": [
+        {
+          "name": "place",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "day",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "name": "hours",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "note",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Stop",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "orders",
+        "dishes",
+        "stops",
+        "team",
+      ],
+    },
+  ],
+  "outgoing": [
+    {
+      "name": "orderPlaced",
+      "recipient": {
+        "kind": "role",
+        "role": "admin",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "Order",
+      },
+    },
+    {
+      "name": "orderAccepted",
+      "recipient": {
+        "kind": "field",
+        "path": [
+          "email",
+        ],
+        "via": "email",
+      },
+      "to": "mail",
+      "when": {
+        "action": "accept",
+        "model": "Order",
+      },
+    },
+    {
+      "name": "orderReady",
+      "recipient": {
+        "kind": "field",
+        "path": [
+          "email",
+        ],
+        "via": "email",
+      },
+      "to": "mail",
+      "when": {
+        "action": "ready",
+        "model": "Order",
+      },
+    },
+    {
+      "name": "toKitchen",
+      "to": "kitchen",
+      "when": {
+        "event": "created",
+        "model": "Order",
+      },
+    },
+  ],
+  "pages": [
+    {
+      "id": "menu",
+      "pattern": {
+        "ask": [
+          "name",
+          "phone",
+          "email",
+          "wanted",
+          "note",
+        ],
+        "available": "available",
+        "from": "Dish",
+        "hours": {
+          "fri": [
+            [
+              660,
+              1320,
+            ],
+          ],
+          "mon": [
+            [
+              660,
+              1200,
+            ],
+          ],
+          "sat": [
+            [
+              660,
+              1320,
+            ],
+          ],
+          "thu": [
+            [
+              660,
+              1200,
+            ],
+          ],
+          "tue": [
+            [
+              660,
+              1200,
+            ],
+          ],
+          "wed": [
+            [
+              660,
+              1200,
+            ],
+          ],
+        },
+        "into": "Order",
+        "item": "dish",
+        "kind": "order",
+        "lead": 20,
+        "line": "OrderLine",
+        "lines": "lines",
+        "number": "number",
+        "price": "price",
+        "quantity": "quantity",
+        "unitPrice": "unitPrice",
+      },
+      "route": "/",
+    },
+    {
+      "actions": [
+        "accept",
+        "ready",
+        "collected",
+        "decline",
+      ],
+      "filters": [
+        "status",
+      ],
+      "id": "orders",
+      "pattern": {
+        "kind": "crud",
+        "model": "Order",
+      },
+      "route": "/orders",
+      "sortable": [
+        "createdAt",
+        "wanted",
+      ],
+    },
+    {
+      "actions": [
+        "soldOut",
+        "backOn",
+      ],
+      "filters": [
+        "section",
+        "available",
+      ],
+      "id": "dishes",
+      "pattern": {
+        "kind": "crud",
+        "model": "Dish",
+      },
+      "route": "/dishes",
+    },
+    {
+      "id": "stops",
+      "pattern": {
+        "kind": "crud",
+        "model": "Stop",
+      },
+      "route": "/stops",
+    },
+    {
+      "id": "where",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "limit": 7,
+            "model": "Stop",
+            "name": "stops",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/where",
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
 {
   "actions": [],

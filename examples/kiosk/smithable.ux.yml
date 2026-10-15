@@ -1,0 +1,13 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: street-food
+
+tones:
+  Order.status: { new: warning, accepted: neutral, ready: success, collected: neutral, declined: danger }
+
+pages:
+  orders:
+    table:
+      columns: [number, name, status, wanted, total]

@@ -681,6 +681,93 @@ async function callReceiver() {
  * conversation and the customer gets the answer alone, in the case's thread; the customer's
  * reply to it joins the case as a message.
  */
+/**
+ * The kiosk starter (orders.md §9): a visitor orders two of a dish from the menu and gets the
+ * order's number, and staff are mailed; a dish sold out while it is in the basket is refused
+ * in words; staff accept the order and the customer is mailed. The truck is open all week here,
+ * so the flow does not depend on the hour it runs at (the closed refusal is a unit test).
+ */
+async function kioskFlow(dir, base) {
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const read = (file) => readFileSync(join(outbox, file), "utf8");
+  const subjects = (before) =>
+    mails()
+      .slice(before)
+      .map((m) => /^Subject: (.*)$/im.exec(read(m))?.[1] ?? "");
+  const waitFor = async (what, ok) => {
+    for (let i = 0; i < 150; i++) {
+      if (await ok()) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    throw new Error(`no ${what}`);
+  };
+  const spec = join(dir, "smithable.yml");
+  writeFileSync(
+    spec,
+    readFileSync(spec, "utf8").replace(
+      /hours: \{ mon-thu[^}]*\}/,
+      'hours: { mon-sun: "00:00-24:00" }',
+    ),
+  );
+  const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+  if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+  try {
+    // The dev server takes the new hours a moment after the change.
+    await waitFor("open menu", async () => {
+      await open(page, `${base}/`);
+      return page.getByRole("button", { name: "Add Fish soup" }).isEnabled();
+    });
+    let before = mails().length;
+    const add = page.getByRole("button", { name: "Add Fish soup" });
+    await add.click();
+    await add.click();
+    await page.getByText(/^2 items · /).waitFor();
+    await page.getByRole("button", { name: "Order", exact: true }).click();
+    await page.getByLabel(/^Name/).fill("Pia Wall");
+    await page.getByLabel(/^Phone/).fill("+358 40 111 2222");
+    await page.getByLabel(/^Email/).fill("pia@archipelago.example");
+    await page.getByRole("button", { name: "Send the order" }).click();
+    await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 });
+    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    // Sold out while in the basket: the server refuses it in words.
+    await open(page, `${base}/`);
+    await page.getByRole("button", { name: "Add Coffee" }).click();
+    write(dir, "update dishes set available = 0 where name = 'Coffee'");
+    await page.getByRole("button", { name: "Order", exact: true }).click();
+    await page.getByLabel(/^Name/).fill("Mats Holm");
+    await page.getByLabel(/^Phone/).fill("+358 40 333 4444");
+    await page.getByRole("button", { name: "Send the order" }).click();
+    await page.getByRole("alert").getByText("Sold out: Coffee").waitFor({ timeout: 15000 });
+    write(dir, "update dishes set available = 1 where name = 'Coffee'");
+    // Staff accept it, and the customer is mailed.
+    before = mails().length;
+    // Staff at a desk: the orders as a table.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/orders`);
+    await page
+      .getByRole("row", { name: /Pia Wall/ })
+      .getByRole("button", { name: "Accept" })
+      .click();
+    await waitFor("mail to the customer", () =>
+      subjects(before).includes("Your order is being made"),
+    );
+    console.log(
+      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed; a dish sold out in the basket is refused in words; Accept mails the customer",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ kiosk: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("kiosk flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function supportFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
@@ -5468,8 +5555,10 @@ for (const [index, example] of examples.entries()) {
                   ? html.includes('data-kit="articles"') && !/>New [a-z ]+<\/a>/.test(html)
                   : page.pattern.kind === "legal"
                     ? html.includes('data-kit="legal"')
-                    : // A list, as a table or as cards.
-                      html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
+                    : page.pattern.kind === "order"
+                      ? html.includes('data-kit="order"') && html.includes('data-part="choice"')
+                      : // A list, as a table or as cards.
+                        html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
@@ -5481,7 +5570,9 @@ for (const [index, example] of examples.entries()) {
                 ? "is public: the published articles without sign-in, read-only"
                 : page.pattern.kind === "legal"
                   ? "is public: the privacy page opens without sign-in"
-                  : "is public: lists sample data without sign-in, read-only";
+                  : page.pattern.kind === "order"
+                    ? "is public: the menu to order from, without sign-in"
+                    : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
         // A starter's pictures (its hero) are in the app and served.
@@ -6518,6 +6609,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);
       if (example === "support") await supportFlow(dir, base);
+      if (example === "kiosk") await kioskFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);

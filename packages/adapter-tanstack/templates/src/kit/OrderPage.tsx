@@ -15,6 +15,7 @@ import { w } from "./words";
 export interface Choice {
   id: number;
   name: string;
+  /** In cents, as money is stored. */
   price: number;
   section?: string | null;
   description?: string | null;
@@ -53,7 +54,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
   const [placed, setPlaced] = useState<{ number: string; lines: [Choice, number][] }>();
   const [problem, setProblem] = useState<string>();
   const money = (n: number) =>
-    new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(n);
+    new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(n / 100);
   const lines = menu.choices.flatMap((c): [Choice, number][] =>
     chosen[c.id] ? [[c, chosen[c.id] as number]] : [],
   );

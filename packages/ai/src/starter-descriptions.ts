@@ -52,6 +52,10 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     text: "A support desk for a small team: customer requests to our inbox, each a case with its messages and replies, answered by agents we invite, with nothing public.",
     pages: { case: "cases" },
   },
+  kiosk: {
+    text: "A takeaway where people browse our menu and order dishes to pick up, with staff we invite.",
+    pages: { dish: "dishes", order: "orders" },
+  },
 };
 
 export type Edit =

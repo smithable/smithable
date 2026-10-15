@@ -994,8 +994,10 @@ function checkAgainstSpec(
       );
   }
   // Outgoing mail (integrations.md §4.1b) meets the access rules here. An address typed by a
-  // visitor is not sent to: the app would mail whoever a stranger names. A role that may not
-  // read the record would be told what it holds.
+  // visitor is not sent to when the visitor's own change sends it: the app would mail whoever a
+  // stranger names. On a standard action staff press (an order accepted, orders.md §4) it is the
+  // staff's decision, and the mail goes. A role that may not read the record would be told what
+  // it holds.
   for (const o of ir.outgoing) {
     const r = o.recipient;
     if (o.to !== "mail" || !r) continue;
@@ -1004,7 +1006,7 @@ function checkAgainstSpec(
     const field =
       r.kind === "field" && r.via === "email" && r.path.length === 1 ? r.path[0] : undefined;
     const createdByVisitors = publicNodes.create?.find((n) => n.name === model.name);
-    if (field && createdByVisitors)
+    if (field && createdByVisitors && "event" in o.when)
       ctx.warning(
         createdByVisitors.at,
         "visitor-typed-recipient",
