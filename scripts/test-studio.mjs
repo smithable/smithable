@@ -1935,6 +1935,33 @@ try {
       }
     },
   );
+  await step(
+    "the Languages tab adds a language, shows each text beside its words in it, saves one, and takes the language away",
+    async () => {
+      // Late in the run, so the steps before keep their last change; Builder's mode first.
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+      await page.getByRole("tab", { name: "Languages" }).click();
+      await page.getByLabel("Add a language").selectOption("sv");
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      const texts = page.getByRole("region", { name: "Texts in Swedish" });
+      await texts.waitFor({ timeout: 60000 });
+      await texts.getByText(/texts have no Swedish words yet/).waitFor();
+      const file = join(dir, "smithable.content.sv.yml");
+      const box = texts.getByLabel("Customers in Swedish").first();
+      await box.fill("Kunder");
+      await box.press("Enter");
+      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Kunder"); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (!readFileSync(file, "utf8").includes("Kunder"))
+        throw new Error(`the Swedish file has no Kunder:\n${readFileSync(file, "utf8")}`);
+      await texts.getByRole("button", { name: "Remove Swedish" }).click();
+      await page.getByRole("button", { name: "Apply anyway" }).click({ timeout: 30000 });
+      for (let i = 0; i < 60 && existsSync(file); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (existsSync(file)) throw new Error("removing Swedish left its file");
+      await page.getByRole("tab", { name: "What it does" }).click();
+    },
+  );
   await step("a message from a window other than the preview is ignored", async () => {
     const before = (await project()).files.content;
     // Studio's own window, not the preview frame, pretending to be the preview.

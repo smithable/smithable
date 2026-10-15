@@ -11,6 +11,7 @@ import { AppDetails } from "./AppDetails";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
+import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { Selected, selectedField } from "./Selected";
 import { WhoCan } from "./WhoCan";
@@ -32,8 +33,10 @@ export function Builder({
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTabState] = useState<"app" | "look" | "who" | "changes">(place.tab ?? "app");
-  const setTab = (next: "app" | "look" | "who" | "changes") => {
+  const [tab, setTabState] = useState<"app" | "look" | "who" | "languages" | "changes">(
+    place.tab ?? "app",
+  );
+  const setTab = (next: "app" | "look" | "who" | "languages" | "changes") => {
     setTabState(next);
     onPlace({ tab: next });
   };
@@ -205,6 +208,7 @@ export function Builder({
                   ["app", "What it does"],
                   ["look", "Look", "look"],
                   ["who", "Who can"],
+                  ["languages", "Languages"],
                   ["changes", "Changes", "change"],
                 ]}
                 value={tab}
@@ -212,7 +216,9 @@ export function Builder({
               />
             }
           >
-            {tab === "look" ? (
+            {tab === "languages" ? (
+              <Languages spec={spec} run={run} />
+            ) : tab === "look" ? (
               <Look spec={spec} run={run} themes={project.themes} />
             ) : tab === "who" ? (
               <WhoCan spec={spec} run={run} authText={project.files.auth} marked={marked} />

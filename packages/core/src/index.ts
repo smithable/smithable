@@ -69,6 +69,7 @@ export {
   type Language,
   LOGO_SRC,
   RESERVE_TEXTS,
+  textPaths,
   textsToTranslate,
   translationMap,
   validateContent,

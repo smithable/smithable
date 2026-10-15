@@ -29,7 +29,7 @@ export type Selection = Extract<PreviewMessage, { type: "select" }>;
  * session: a mode switch or a reload comes back to it.
  */
 export interface Place {
-  builder: { tab?: "app" | "look" | "who" | "changes"; selection?: Selection };
+  builder: { tab?: "app" | "look" | "who" | "languages" | "changes"; selection?: Selection };
   /** Code mode: its tab, the concept picked and the file open in the editor. */
   studio: { tab?: string; concept?: string; file?: EditableFile };
   /** The preview's column is hidden (wide windows), for more room for the mode. */

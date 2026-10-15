@@ -6,6 +6,7 @@ import {
   type Diagnostic,
   EDITABLE_FILES,
   type EditableFile,
+  type Language,
   resolvePlugin,
   type SpecIR,
   type SpecPlugin,
@@ -76,10 +77,27 @@ export function readSpec(
     { path: "smithable.yml", text: specText },
     { ...(roles ? { roles } : {}), plugins },
   );
-  const content =
+  const own =
     ir && files.content
       ? validateContent({ path: "smithable.content.yml", text: files.content }, ir).content
       : undefined;
+  // The other languages' files, read against the app's own (the Languages tab).
+  const content =
+    own && ir && files.translations
+      ? {
+          ...own,
+          translations: Object.fromEntries(
+            Object.entries(files.translations).flatMap(([language, text]) => {
+              const read = validateContent(
+                { path: `smithable.content.${language}.yml`, text },
+                ir,
+                { of: own, language: language as Language },
+              ).content;
+              return read ? [[language, read]] : [];
+            }),
+          ),
+        }
+      : own;
   const ux = ir
     ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir, themes).ux
     : undefined;

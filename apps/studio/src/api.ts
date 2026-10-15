@@ -49,7 +49,15 @@ export interface Making {
 
 export interface Project {
   name: string;
-  files: { spec?: string; auth?: string; content?: string; ux?: string; context?: string };
+  files: {
+    spec?: string;
+    auth?: string;
+    content?: string;
+    ux?: string;
+    context?: string;
+    /** The app's other languages' files (smithable.content.<language>.yml), by language. */
+    translations?: Record<string, string>;
+  };
   /** The themes the ux file may name: built in or the project's, each with its picture (an SVG). */
   themes: { name: string; source: "built-in" | "project"; font: string; thumbnail: string }[];
   /** The project's own themes (themes/<name>.yml), parsed: `theme.preset` may name them. */
