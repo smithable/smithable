@@ -19,6 +19,7 @@ import {
   controlOf,
   labelOf,
   operationFor,
+  renameFor,
   wordOrList,
 } from "./spec-form";
 
@@ -49,6 +50,16 @@ const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown) => {
 };
 /** Writes a part of the file being shown: its path and the new value (undefined takes it away). */
 const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(async () => false);
+/** Renames the entry at a path through its operation; undefined where there is none. */
+const Renamer = createContext<(path: Path) => ((to: string) => Promise<boolean>) | undefined>(
+  () => undefined,
+);
+const renamerOf = (run: Run, file: EditableFile) => (path: Path) => {
+  const op = (to: string) => renameFor(file, path, to);
+  return op(" ")
+    ? (to: string) => run(...(op(to) as [string, Record<string, unknown>]))
+    : undefined;
+};
 /** The names a list at a path offers (a role's pages, kinds of record, actions); none for most. */
 const Choices = createContext<(path: Path) => string[]>(() => []);
 const choicesOf = (files: Project["files"], file: EditableFile) => {
@@ -79,7 +90,9 @@ export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) 
             </h2>
             <Writer.Provider value={write}>
               <Choices.Provider value={choicesOf(files, file)}>
-                <Value schema={schema} value={read(files[key])} path={[]} />
+                <Renamer.Provider value={renamerOf(run, file)}>
+                  <Value schema={schema} value={read(files[key])} path={[]} />
+                </Renamer.Provider>
               </Choices.Provider>
             </Writer.Provider>
           </section>
@@ -95,6 +108,7 @@ const box = "block h-7 w-full rounded-md border border-line bg-panel px-2 text-s
 function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; path: Path }) {
   const write = useContext(Writer);
   const choices = useContext(Choices);
+  const renamer = useContext(Renamer);
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");
@@ -195,7 +209,13 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
           {entries.map(([name, v]) => (
             <details key={name} className="rounded-md border border-line" open={path.length === 0}>
               <summary className="cursor-pointer px-2 py-1 font-medium">{name}</summary>
-              <div className="border-t border-line p-2">
+              <div className="space-y-2 border-t border-line p-2">
+                {renamer([...path, name]) && (
+                  <Rename
+                    name={name}
+                    onRename={renamer([...path, name]) as (to: string) => Promise<boolean>}
+                  />
+                )}
                 <Value schema={control.entry} value={v} path={[...path, name]} />
               </div>
             </details>
@@ -339,6 +359,29 @@ function Chips({
   );
 }
 
+/** An entry's new name, renamed through its operation (a field keeps its data). */
+function Rename({ name, onRename }: { name: string; onRename: (to: string) => Promise<boolean> }) {
+  const [to, setTo] = useState(name);
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        aria-label={`New name for ${name}`}
+        className="h-6 w-40 rounded-md border border-line bg-panel px-1.5 text-xs"
+        value={to}
+        onChange={(e) => setTo(e.target.value)}
+      />
+      <button
+        type="button"
+        className="h-6 rounded-md border border-line px-2 text-xs disabled:opacity-50"
+        disabled={!to.trim() || to.trim() === name}
+        onClick={() => void onRename(to.trim())}
+      >
+        Rename
+      </button>
+    </div>
+  );
+}
+
 /** A new entry of a named map (a kind of record, a page): its name, then its own keys. */
 function AddEntry({ label, onAdd }: { label: string; onAdd: (name: string) => Promise<boolean> }) {
   const [name, setName] = useState("");
@@ -439,7 +482,9 @@ export function SpecPart({
   return (
     <Writer.Provider value={write}>
       <Choices.Provider value={choicesOf(files, file)}>
-        <Value schema={schema} value={value} path={path} />
+        <Renamer.Provider value={renamerOf(run, file)}>
+          <Value schema={schema} value={value} path={path} />
+        </Renamer.Provider>
       </Choices.Provider>
     </Writer.Provider>
   );

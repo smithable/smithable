@@ -6,6 +6,7 @@ import {
   controlOf,
   labelOf,
   operationFor,
+  renameFor,
   uncovered,
   wordOrList,
 } from "./spec-form";
@@ -124,4 +125,13 @@ test("a grant is all or a list of names, offering the app's pages, kinds of reco
   expect(choicesFor(auth, ["public", "read"], spec)).toEqual(["Customer"]);
   expect(choicesFor(auth, ["roles", "sales", "actions"], spec)).toEqual(["close"]);
   expect(choicesFor("smithable.yml", ["models"], spec)).toEqual([]);
+});
+
+test("a field is renamed through renameField; other entries offer no rename", () => {
+  expect(renameFor("smithable.yml", ["models", "Customer", "fields", "phone"], "mobile")).toEqual([
+    "renameField",
+    { model: "Customer", from: "phone", to: "mobile" },
+  ]);
+  expect(renameFor("smithable.yml", ["models", "Customer"], "Client")).toBeUndefined();
+  expect(renameFor("smithable.yml", ["pages", "home"], "start")).toBeUndefined();
 });
