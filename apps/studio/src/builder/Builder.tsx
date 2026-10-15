@@ -228,7 +228,6 @@ export function Builder({
               <WhoCan spec={spec} run={run} authText={project.files.auth} marked={marked} />
             ) : tab === "app" ? (
               <AppSummary
-                app={project.name}
                 sections={sections}
                 spec={spec}
                 files={project.files}
