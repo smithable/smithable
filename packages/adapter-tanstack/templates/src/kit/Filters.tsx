@@ -7,7 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
-import { w } from "./words";
+import { tx, w } from "./words";
 
 export interface FilterUi {
   /** The field's name: its key in the address. */
@@ -34,7 +34,7 @@ export interface SortUi {
 export type FilterValues = Record<string, string | undefined>;
 
 export function Filters({
-  filters,
+  filters: given,
   values,
   sorts = [],
   sort,
@@ -49,6 +49,12 @@ export function Filters({
   signedIn?: boolean;
   onChange: (next: FilterValues & { sort?: string }) => void;
 }) {
+  // The labels in the language now (languages.md §4).
+  const filters = given.map((f) => ({
+    ...f,
+    label: tx(f.label),
+    ...(f.options ? { options: f.options.map((o) => ({ ...o, label: tx(o.label) })) } : {}),
+  }));
   const [open, setOpen] = useState(false);
   const id = useId();
   const shown = filters.filter((f) => (f.kind !== "mine" && f.kind !== "unread") || signedIn);

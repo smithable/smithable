@@ -8,7 +8,7 @@ import { ActionButton } from "./ActionButton";
 import type { AppUi, ModelUi, Options } from "./model";
 import { Overflow } from "./Overflow";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
-import { w } from "./words";
+import { tx, w } from "./words";
 
 export interface SelectionAction {
   label: string;
@@ -24,7 +24,7 @@ export interface SelectionAction {
 
 export function SelectionBar({
   count,
-  noun,
+  noun: nouns,
   actions,
   deletable,
   onDelete,
@@ -52,6 +52,7 @@ export function SelectionBar({
   /** Deleting moves the records to the trash (docs/design/trash.md), where they can be restored. */
   trash?: boolean;
 }) {
+  const noun: [string, string] = [tx(nouns[0]), tx(nouns[1])];
   const [message, setMessage] = useState<string>();
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);

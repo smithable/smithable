@@ -70,6 +70,7 @@ export {
   LOGO_SRC,
   RESERVE_TEXTS,
   textsToTranslate,
+  translationMap,
   validateContent,
 } from "./content.js";
 export {

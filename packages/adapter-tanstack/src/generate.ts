@@ -6,6 +6,7 @@ import {
   kebab,
   type SpecIR,
   storesFiles,
+  translationMap,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -109,17 +110,124 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
       content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
-  files.push(...wordsFiles([ctx.options.content?.language ?? "en"]));
+  const content = ctx.options.content;
+  files.push(
+    ...wordsFiles(
+      [content?.language ?? "en", ...(content?.languages ?? [])],
+      // Each other language's texts by the app's own (languages.md §4).
+      Object.fromEntries(
+        (content?.languages ?? []).flatMap((language) => {
+          const said = content?.translations?.[language];
+          return content && said ? [[language, translationMap(content, said, ir).texts]] : [];
+        }),
+      ),
+    ),
+  );
   for (const generator of SECTION_GENERATORS)
     files.push(...generator.files(ctx).map((f) => ({ ...f, content: wordsIfUsed(f.content) })));
+  if (content?.languages?.length) translatedApp(files, ctx);
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+/**
+ * An app in several languages (languages.md §3): which they are and the public pages' addresses
+ * (src/generated/languages.ts); the router reading a public page's language from the address's
+ * prefix and writing it into the links; each request on the server answered in its page's.
+ */
+function translatedApp(files: GeneratedFile[], { ir, auth, options }: GenContext): void {
+  // A generated file that reads a text in the page's language imports tx.
+  for (const file of files)
+    if (
+      file.zone === "generated" &&
+      /\btx\(/.test(file.content) &&
+      !/import \{[^}]*\btx\b[^}]*\} from "#\/kit\/words"/.test(file.content)
+    )
+      file.content = file.content.replace(
+        /^import /m,
+        'import { tx } from "#/kit/words";\nimport ',
+      );
+  const content = options.content as NonNullable<GenerateOptions["content"]>;
+  const publicRoutes = ir.pages.filter((p) => auth.public.pages.includes(p.id)).map((p) => p.route);
+  files.push({
+    path: "src/generated/languages.ts",
+    content: `${HEADER}import type { Offered } from "#/kit/language";
+
+/** The app's languages, and the pages whose address names one (/sv/…). */
+export const OFFERED: Offered = ${JSON.stringify({ main: content.language, others: content.languages, public: [...new Set(publicRoutes)].sort() })};
+`,
+    zone: "generated",
+  });
+  const swap = (path: string, edits: [string, string][]) => {
+    const file = files.find((f) => f.path === path);
+    if (file) for (const [from, to] of edits) file.content = file.content.replace(from, to);
+  };
+  swap("src/router.tsx", [
+    [
+      'import { routeTree } from "./routeTree.gen";',
+      `import { OFFERED } from "#/generated/languages";
+import { fromPath, isPublic, LANGUAGE_COOKIE, languageOf } from "#/kit/language";
+import { language, languageFrom } from "#/kit/words";
+import { routeTree } from "./routeTree.gen";
+
+// In the browser the page's language is the address's (a public page) or the person's choice;
+// on the server each request sets its own (src/kit/language.server.ts).
+let shown = OFFERED.main;
+if (typeof document !== "undefined") languageFrom(() => shown);`,
+    ],
+    [
+      "    ssr: ssrOptions(),",
+      `    ssr: ssrOptions(),
+    // /sv/menu is the menu in Swedish: the routes never see the prefix, and the links get it
+    // back on a public page shown in another language (docs/design/languages.md §3).
+    rewrite: {
+      input: ({ url }) => {
+        if (typeof document !== "undefined") {
+          shown = languageOf(url.pathname, document.cookie, OFFERED);
+          // A public page in a language is the choice the sign-in and the signed-in pages keep.
+          if (isPublic(fromPath(url.pathname, OFFERED).path, OFFERED))
+            document.cookie = \`\${LANGUAGE_COOKIE}=\${shown}; path=/; max-age=31536000; samesite=lax\`;
+        }
+        url.pathname = fromPath(url.pathname, OFFERED).path;
+        return url;
+      },
+      output: ({ url }) => {
+        const now = language();
+        if (now !== OFFERED.main && isPublic(url.pathname, OFFERED))
+          url.pathname = \`/\${now}\${url.pathname === "/" ? "" : url.pathname}\`;
+        return url;
+      },
+    },`,
+    ],
+  ]);
+  swap("src/start.ts", [
+    [
+      'import { traced } from "#/kit/trace.server";',
+      `import { OFFERED } from "#/generated/languages";
+import { inLanguage } from "#/kit/language.server";
+import { traced } from "#/kit/trace.server";`,
+    ],
+    [
+      "/**\n * Server functions are what",
+      `/** Each request in its page's language: the address's prefix, else the person's choice. */
+const language = createMiddleware().server(({ request, next }) =>
+  inLanguage(request, OFFERED, async () => (await next()).response),
+);
+
+/**
+ * Server functions are what`,
+    ],
+    ["requestMiddleware: [trace, ownPages]", "requestMiddleware: [trace, language, ownPages]"],
+  ]);
 }
 
 /**
  * The kit's words in the app's languages (docs/design/languages.md §4), the first the app's
  * own: a file per language, and src/kit/words.ts choosing among them at run time.
  */
-function wordsFiles(languages: string[]): GeneratedFile[] {
+function wordsFiles(
+  languages: string[],
+  texts: Record<string, Record<string, string>> = {},
+): GeneratedFile[] {
   const [main = "en"] = languages;
   const files = languages.map((language): GeneratedFile => {
     const words = TEMPLATES[`${WORDS_DIR}${language}.ts`];
@@ -143,7 +251,11 @@ function wordsFiles(languages: string[]): GeneratedFile[] {
       "const BY: Record<string, Words> = { en };",
       `const BY: Record<string, Words> = { ${languages.join(", ")} };`,
     )
-    .replace('const MAIN = "en";', `const MAIN = ${JSON.stringify(main)};`);
+    .replace('const MAIN = "en";', `const MAIN = ${JSON.stringify(main)};`)
+    .replace(
+      "const TEXTS: Record<string, Record<string, string>> = {};",
+      `const TEXTS: Record<string, Record<string, string>> = ${JSON.stringify(texts, null, 2)};`,
+    );
   return [...files, { path: WORDS_FILE, content: chooser, zone: "kit" }];
 }
 
@@ -528,6 +640,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // "Contact the owner" on a record's page (marketplace.md §2.4).
         files: ["src/kit/ContactOwner.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.pages.some((p) => p.contact),
+      },
+      {
+        // An app in several languages (docs/design/languages.md §3): where a page's comes from.
+        files: ["src/kit/language.ts", "src/kit/language.server.ts", "src/kit/Languages.tsx"],
+        used: ({ options }) => Boolean(options.content?.languages?.length),
       },
       {
         // A list on a record page shown as a conversation (docs/design/conversation.md).

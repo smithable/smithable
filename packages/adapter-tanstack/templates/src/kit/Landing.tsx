@@ -25,7 +25,7 @@ import { AppLink } from "./AppLink";
 import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
-import { w } from "./words";
+import { tx, w } from "./words";
 
 export interface LandingLink {
   to: LinkProps["to"];
@@ -55,7 +55,7 @@ export interface LandingSite {
   contact?: { address?: string; phone?: string; email?: string; hours?: string };
 }
 
-export function LandingLayout({
+function LandingLayoutView({
   appName,
   logo,
   link,
@@ -269,7 +269,7 @@ const sectionHooks = (texts: string | undefined) => ({
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
-export function Section({
+function SectionView({
   texts,
   id,
   title,
@@ -315,7 +315,7 @@ export interface LandingImage {
   generated?: boolean;
 }
 
-export function Hero({
+function HeroView({
   texts,
   title,
   subtitle,
@@ -517,7 +517,7 @@ export function Hero({
   );
 }
 
-export function Features({
+function FeaturesView({
   texts,
   title,
   text,
@@ -561,7 +561,7 @@ export function Features({
 }
 
 /** Records shown as cards, e.g. the classes a studio offers. */
-export function RecordCards({
+function RecordCardsView({
   texts,
   id,
   title,
@@ -735,7 +735,7 @@ export function RecordCards({
   );
 }
 
-export function Pricing({
+function PricingView({
   texts,
   title,
   text,
@@ -823,7 +823,7 @@ export function Pricing({
   );
 }
 
-export function Testimonials({
+function TestimonialsView({
   texts,
   title,
   items,
@@ -886,7 +886,7 @@ export function Testimonials({
 }
 
 /** Questions that open in place; the browser handles the keyboard and the expanded state. */
-export function Faq({
+function FaqView({
   texts,
   title,
   items,
@@ -937,7 +937,7 @@ export function Faq({
   );
 }
 
-export function CallToAction({
+function CallToActionView({
   texts,
   title,
   text,
@@ -982,7 +982,7 @@ export function CallToAction({
  * Contact details (address with a map link, phone, email, opening hours one per line) and,
  * when the app has one, a form visitors send; `thanks` replaces it once sent.
  */
-export function Contact({
+function ContactView({
   texts,
   title,
   text,
@@ -1115,7 +1115,7 @@ export function Contact({
 }
 
 /** Pictures in a grid; one opens large in a lightbox, with the arrow keys to move on. */
-export function Gallery({
+function GalleryView({
   texts,
   title,
   text,
@@ -1230,4 +1230,83 @@ export function Gallery({
       </dialog>
     </Section>
   );
+}
+
+/** The keys whose texts a person reads: those go through tx; addresses, records and markers do not. */
+const TEXT_KEYS = new Set([
+  "title",
+  "subtitle",
+  "text",
+  "label",
+  "button",
+  "caption",
+  "question",
+  "answer",
+  "alt",
+  "quote",
+  "period",
+  "note",
+]);
+
+/**
+ * A section's props in the language now (docs/design/languages.md §4): each text through tx, the
+ * records it shows (cards), its children and its marker for the preview as they are.
+ */
+function translated<P>(props: P): P {
+  const walk = (value: unknown, key?: string): unknown => {
+    if (typeof value === "string") return key && TEXT_KEYS.has(key) ? tx(value) : value;
+    if (Array.isArray(value)) return value.map((v) => walk(v, key));
+    if (!value || typeof value !== "object" || "$$typeof" in value) return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [
+        k,
+        k === "cards" || k === "children" ? v : walk(v, k),
+      ]),
+    );
+  };
+  return walk(props) as P;
+}
+
+export function LandingLayout(props: Parameters<typeof LandingLayoutView>[0]) {
+  return LandingLayoutView(translated(props));
+}
+
+export function Section(props: Parameters<typeof SectionView>[0]) {
+  return SectionView(translated(props));
+}
+
+export function Hero(props: Parameters<typeof HeroView>[0]) {
+  return HeroView(translated(props));
+}
+
+export function Features(props: Parameters<typeof FeaturesView>[0]) {
+  return FeaturesView(translated(props));
+}
+
+export function RecordCards(props: Parameters<typeof RecordCardsView>[0]) {
+  return RecordCardsView(translated(props));
+}
+
+export function Pricing(props: Parameters<typeof PricingView>[0]) {
+  return PricingView(translated(props));
+}
+
+export function Testimonials(props: Parameters<typeof TestimonialsView>[0]) {
+  return TestimonialsView(translated(props));
+}
+
+export function Faq(props: Parameters<typeof FaqView>[0]) {
+  return FaqView(translated(props));
+}
+
+export function CallToAction(props: Parameters<typeof CallToActionView>[0]) {
+  return CallToActionView(translated(props));
+}
+
+export function Contact(props: Parameters<typeof ContactView>[0]) {
+  return ContactView(translated(props));
+}
+
+export function Gallery(props: Parameters<typeof GalleryView>[0]) {
+  return GalleryView(translated(props));
 }
