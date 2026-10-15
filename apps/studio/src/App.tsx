@@ -204,59 +204,73 @@ export function App() {
     if (next) setProject((p) => keepWaiting(p, next));
   };
 
-  /** Applies an operation; a change that loses data first asks for confirmation. */
-  const run = async (
-    name: string,
-    args: Record<string, unknown>,
-    confirm = false,
-    file?: { path: string; data: string },
-  ) => {
-    setBusy(true);
-    setMessage(undefined);
-    let result: Awaited<ReturnType<typeof api.operation>>;
-    try {
-      result = await api.operation(name, args, confirm, file);
-    } catch (error) {
-      setMessage({ ok: false, text: (error as Error).message });
-      return false;
-    } finally {
-      setBusy(false);
-    }
-    if (result.needsConfirm) {
-      setPending({
-        name,
-        args,
-        impact: result.output.replace(/\n?Run again with --yes to apply it\.$/, ""),
-      });
-      return false;
-    }
-    setPending(undefined);
-    if (result.ok) await catchUp();
-    // The last line says what happened; the rest is tool output.
-    const lines = result.output.split("\n").filter((l) => l.trim());
-    const summary = result.ok
-      ? (lines.at(-1) ?? "Done.").replace(/ Undo with: smithable undo$/, "")
-      : mode === "builder"
-        ? plainRefusal(result.output)
-        : result.output;
-    // Builder says it in the words of its summary.
-    const plain =
-      result.ok && mode === "builder" && spec.ir
-        ? describeChange(name, args, spec.ir, spec.content)
-        : undefined;
-    setMessage({
-      ok: result.ok,
-      text:
-        result.report === "sent"
-          ? `${plain ?? summary}\nA report of this was sent.`
-          : (plain ?? summary),
-      change: result.ok,
-      report: result.report,
-    });
-    return result.ok;
-  };
+  // Changes go one after the other: one made while another is still being applied (two Look
+  // controls clicked quickly) waits for it, instead of being refused while the first one's
+  // "Last change" covers the refusal.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const inTurn =
+    <A extends unknown[], R>(task: (...args: A) => Promise<R>) =>
+    (...args: A): Promise<R> => {
+      const turn = queue.current.then(() => task(...args));
+      queue.current = turn.catch(() => undefined);
+      return turn;
+    };
 
-  const undo = async () => {
+  /** Applies an operation; a change that loses data first asks for confirmation. */
+  const run = inTurn(
+    async (
+      name: string,
+      args: Record<string, unknown>,
+      confirm?: boolean,
+      file?: { path: string; data: string },
+    ) => {
+      setBusy(true);
+      setMessage(undefined);
+      let result: Awaited<ReturnType<typeof api.operation>>;
+      try {
+        result = await api.operation(name, args, confirm ?? false, file);
+      } catch (error) {
+        setMessage({ ok: false, text: (error as Error).message });
+        return false;
+      } finally {
+        setBusy(false);
+      }
+      if (result.needsConfirm) {
+        setPending({
+          name,
+          args,
+          impact: result.output.replace(/\n?Run again with --yes to apply it\.$/, ""),
+        });
+        return false;
+      }
+      setPending(undefined);
+      if (result.ok) await catchUp();
+      // The last line says what happened; the rest is tool output.
+      const lines = result.output.split("\n").filter((l) => l.trim());
+      const summary = result.ok
+        ? (lines.at(-1) ?? "Done.").replace(/ Undo with: smithable undo$/, "")
+        : mode === "builder"
+          ? plainRefusal(result.output)
+          : result.output;
+      // Builder says it in the words of its summary.
+      const plain =
+        result.ok && mode === "builder" && spec.ir
+          ? describeChange(name, args, spec.ir, spec.content)
+          : undefined;
+      setMessage({
+        ok: result.ok,
+        text:
+          result.report === "sent"
+            ? `${plain ?? summary}\nA report of this was sent.`
+            : (plain ?? summary),
+        change: result.ok,
+        report: result.report,
+      });
+      return result.ok;
+    },
+  );
+
+  const undo = inTurn(async () => {
     // What is undone: the newest change that is still in place.
     const last = project?.trace.find((e) => !e.undone && !e.isUndo)?.operation;
     const plain =
@@ -271,9 +285,9 @@ export function App() {
       ok: result.ok,
       text: result.ok && plain ? `Undid: ${plain}` : (result.output.split("\n")[0] ?? ""),
     });
-  };
+  });
 
-  const redo = async () => {
+  const redo = inTurn(async () => {
     setBusy(true);
     const result = await api.redo().catch((e: Error) => ({ ok: false, output: e.message }));
     setBusy(false);
@@ -283,7 +297,7 @@ export function App() {
         ? `Redid: ${(result.output.split("\n")[0] ?? "").replace(/ Undo with: smithable undo$/, "")}`
         : (result.output.split("\n")[0] ?? ""),
     });
-  };
+  });
 
   // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview;
   // Ctrl+Shift+Z or Ctrl+Y makes it again.
