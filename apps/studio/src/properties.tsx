@@ -4,6 +4,7 @@
 import {
   ACCESS_OPERATIONS,
   type AccessOperation,
+  type EditableFile,
   type FieldIR,
   humanize,
   identifier,
@@ -318,7 +319,6 @@ export function Properties({
   if (kind === "page") {
     const page = ir.pages.find((p) => p.id === name);
     if (!page) return null;
-    const texts = spec.content?.pages[name];
     const pattern = page.pattern;
     return (
       <div className="space-y-3 border-b border-line p-3 text-sm">
@@ -329,20 +329,33 @@ export function Properties({
             ? `${PAGE_KINDS[pattern.kind] ?? humanize(pattern.kind)}: ${humanize(plural(pattern.model))}`
             : (PAGE_KINDS[pattern.kind] ?? humanize(pattern.kind))}
         </p>
-        <TextSetting
-          label="Title"
-          path={["pages", name, "title"]}
-          current={texts?.title}
-          fallback={humanize(name)}
-          run={run}
-        />
-        <TextSetting
-          label="Subtitle"
-          path={["pages", name, "subtitle"]}
-          current={texts?.subtitle}
-          fallback="None"
-          run={run}
-        />
+        {/* Its texts, its look and what it is, each file's part as the spec's form has it
+            (what-it-does.md §5 step 3): the hand-made title, subtitle and icon went. */}
+        {files && (
+          <>
+            <PartOf
+              title="Texts"
+              files={files}
+              run={run}
+              file="smithable.content.yml"
+              path={["pages", name]}
+            />
+            <PartOf
+              title="Look"
+              files={files}
+              run={run}
+              file="smithable.ux.yml"
+              path={["pages", name]}
+            />
+            <PartOf
+              title="What it is"
+              files={files}
+              run={run}
+              file="smithable.yml"
+              path={["pages", name]}
+            />
+          </>
+        )}
         {page.pattern.kind === "crud" && (
           <p className="text-muted">
             The columns its list shows and the order of its form are part of the look:
@@ -359,22 +372,6 @@ export function Properties({
             )}
           </p>
         )}
-        <Label text="Icon in the menu">
-          <Select
-            aria-label="Icon in the menu"
-            value=""
-            onChange={(e) =>
-              e.target.value && void run("setIcon", { page: name, icon: e.target.value })
-            }
-            options={[
-              ["", "Choose…"],
-              ...ICON_CHOICES.map((i): [string, string] => [
-                i,
-                i === "auto" ? "Automatic" : humanize(i),
-              ]),
-            ]}
-          />
-        </Label>
         <Button
           variant="ghost"
           className="border border-red-200 text-red-700"
@@ -383,7 +380,6 @@ export function Properties({
         >
           Remove page
         </Button>
-        {all(["pages", name])}
       </div>
     );
   }
@@ -407,6 +403,28 @@ export function Properties({
     );
   }
   return null;
+}
+
+/** One file's part of a concept, open under its heading (a page's texts, its look, what it is). */
+function PartOf({
+  title,
+  files,
+  run,
+  file,
+  path,
+}: {
+  title: string;
+  files: Project["files"];
+  run: Run;
+  file: EditableFile;
+  path: string[];
+}) {
+  return (
+    <section aria-label={title} className="space-y-1">
+      <h4 className="text-xs font-semibold text-quiet">{title}</h4>
+      <SpecPart files={files} run={run} file={file} path={path} />
+    </section>
+  );
 }
 
 /** A part's every setting, folded; drawn only once opened. */
