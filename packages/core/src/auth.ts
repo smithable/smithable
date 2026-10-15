@@ -941,15 +941,24 @@ function checkAgainstSpec(
   // A public page's contact form is sent by visitors: they must be allowed to add its records.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
+    const what = page?.pattern.kind === "order" ? "order form" : "contact form";
     for (const form of page ? patternInfo(page).forms() : []) {
       if (!auth.public.create.includes(form))
         ctx.warning(
           at,
           "contact-form-closed",
-          `The contact form on the ${name} page adds a ${form}, but visitors may not add one, so nobody without an account can send it.`,
+          `The ${what} on the ${name} page adds a ${form}, but visitors may not add one, so nobody without an account can send it.`,
           `Add ${form} to "create" under "public".`,
         );
     }
+    // An order page shows what is chosen: visitors must be able to read it (orders.md §3).
+    if (page?.pattern.kind === "order" && !auth.public.read.includes(page.pattern.from))
+      ctx.warning(
+        at,
+        "order-menu-closed",
+        `The ${name} page shows ${page.pattern.from} to choose from, but visitors may not read it, so they see nothing to order.`,
+        `Add ${page.pattern.from} to "read" under "public".`,
+      );
   }
   // An incoming call acts as its role (integrations.md §3): the role must exist, and a record it
   // adds goes through that role's create rule.

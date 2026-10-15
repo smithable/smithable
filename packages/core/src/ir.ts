@@ -1,4 +1,5 @@
 import type { Expr } from "./formula.js";
+import type { Hours } from "./hours.js";
 
 /**
  * The Smithable IR: a normalized, technology-independent model of an application.
@@ -206,6 +207,34 @@ export interface PageIR extends SemanticText {
      * stores and why, cookies, mail, logs, rights; the operator's details are texts.
      */
     | { kind: "legal"; legal: "privacy" }
+    /**
+     * Visitors compose an order (docs/design/orders.md §3): records of `from` chosen with
+     * quantities make one `into` record and its lines in one write, the prices read on the
+     * server. The keys after `lead` are what validation found in the models, for the generator.
+     */
+    | {
+        kind: "order";
+        from: string;
+        into: string;
+        /** into's fields the customer fills, in this order. */
+        ask: string[];
+        /** When orders are taken; without hours, always. */
+        hours?: Hours;
+        /** Minutes from now to the earliest time a customer may want the order. */
+        lead?: number;
+        /** from's price (its one money field) and, if it has one, its yes/no field `available`. */
+        price: string;
+        available?: string;
+        /** into's list of lines, the lines' model, its reference to from and its unit price. */
+        lines: string;
+        line: string;
+        item: string;
+        unitPrice: string;
+        /** The line's whole-number field for how many, if it has one. */
+        quantity?: string;
+        /** into's `sequence: true` field: the order's number. */
+        number: string;
+      }
     /**
      * A model's records as articles (a blog, news): `title` and `body` (a markdown field) always;
      * a `picture`, a `date`, an `address` (a unique string for the article's address) and a

@@ -13,6 +13,7 @@ import { activityRoute, dataRoutes } from "./data.js";
 import { landingRoute } from "./landing.js";
 import { legalRoute } from "./legal.js";
 import { listRoute } from "./list.js";
+import { orderRoute } from "./order.js";
 import { allTrashRoute, detailRoute, newRoute, recordPageRoute, trashRoute } from "./record.js";
 import { usersRoute } from "./users.js";
 
@@ -26,6 +27,10 @@ export const PAGE_GENERATORS: {
     routes(page: PageOf<K>, ctx: GenContext): Record<string, string>;
   };
 } = {
+  order: {
+    kit: ["src/kit/OrderPage.tsx", "src/kit/hours.ts", "src/kit/refusal.ts"],
+    routes: (page, ctx) => ({ "index.tsx": orderRoute(page, ctx) }),
+  },
   crud: {
     routes(page, { ir, t, ux, auth, options }): Record<string, string> {
       const model = ir.models.find((m) => m.name === page.pattern.model);

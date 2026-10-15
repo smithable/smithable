@@ -947,7 +947,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, review, calendar, calculator, articles, custom or legal.",
+      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, review, calendar, calculator, articles, custom, legal or order.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -1017,6 +1017,11 @@
           {
             "required": [
               "legal"
+            ]
+          },
+          {
+            "required": [
+              "order"
             ]
           }
         ],
@@ -1372,6 +1377,54 @@
               "privacy"
             ],
             "description": "A privacy page written from the app itself: who runs it, what it stores and why, cookies, mail, logs, your rights. The operator's details are texts in smithable.content.yml (operator: name, address, email, country, hosting)."
+          },
+          "order": {
+            "type": "object",
+            "description": "A page where visitors choose records of one model and send them as one order of another, with its lines, in one write; the prices are read on the server.",
+            "required": [
+              "from",
+              "into"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "The model people choose from (dishes): its price, picture, section and available."
+              },
+              "into": {
+                "type": "string",
+                "description": "The model an order is (one record per order, numbered with sequence: true), whose one list holds the lines."
+              },
+              "ask": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The order's fields the customer fills, in this order (name, phone, wanted, note)."
+              },
+              "hours": {
+                "type": "object",
+                "description": "When orders are taken, in the app's time zone: a day or a range of days to a span or a list of spans, e.g. { mon-thu: \"11:00-20:00\", sat: [\"10:00-14:00\", \"17:00-22:00\"] }. Without hours, always.",
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                }
+              },
+              "lead": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Minutes from now to the earliest time a customer may want the order."
+              }
+            }
           },
           "actions": {
             "type": "array",

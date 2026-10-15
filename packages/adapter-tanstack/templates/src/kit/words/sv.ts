@@ -466,4 +466,16 @@ export const w = {
   legalMoreTitle: "Mer",
   wouldPropose: (tool: string, what: string) =>
     `Skulle ${tool} ${what}: en assistent med den här rollen får föreslå det, och inget ändrades.`,
+  orderRemove: (label: string) => `Ta bort en ${label}`,
+  soldOut: "Slutsåld",
+  orderBar: (count: number, total: string) =>
+    `${count} ${count === 1 ? "vara" : "varor"} · ${total}`,
+  orderSend: "Beställ",
+  orderDetails: "Dina uppgifter",
+  orderPlace: "Skicka beställningen",
+  orderPlaced: (number: string) => `Beställning ${number} har kommit in.`,
+  orderClosed: (opens?: string) => (opens ? `Stängt, öppnar ${opens}` : "Stängt"),
+  orderSoldOut: (label: string) => `Slutsåld: ${label}`,
+  orderEmpty: "Inget valt ännu.",
+  orderTotal: "Totalt",
 } satisfies Words;

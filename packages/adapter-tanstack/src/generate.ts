@@ -104,7 +104,11 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
     .filter(([path]) => !path.startsWith(WORDS_DIR) && path !== WORDS_FILE)
-    .filter(([path]) => kits.every((k) => !k.files.includes(path) || k.used(ctx)))
+    // A file two parts share (refusal.ts) comes with either of them.
+    .filter(([path]) => {
+      const parts = kits.filter((k) => k.files.includes(path));
+      return !parts.length || parts.some((k) => k.used(ctx));
+    })
     .map(([path, content]) => ({
       path,
       content,

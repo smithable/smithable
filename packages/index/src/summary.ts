@@ -6,6 +6,7 @@ import {
   emptyContent,
   type FieldIR,
   type GrantNames,
+  hoursText,
   humanize,
   incomingText,
   type LandingSection,
@@ -685,6 +686,8 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
     `a first-time setup of your ${humanize(p.model).toLowerCase()} in ${p.steps.length} steps`,
   users: () => "who has access: invite people, change roles, remove users",
   calendar: (p) => `a calendar of ${plural(humanize(p.model)).toLowerCase()} by week or month`,
+  order: (p) =>
+    `where visitors choose ${plural(humanize(p.from)).toLowerCase()} and send ${article(humanize(p.into).toLowerCase())}${p.hours ? `; open ${hoursText(p.hours)}` : ""}`,
   articles: (p) =>
     `${plural(humanize(p.model)).toLowerCase()} as articles, newest first, each on its own page`,
   review: (p) =>
