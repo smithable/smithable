@@ -148,6 +148,13 @@ export function alternativeFor(options: JsonSchema[], value: unknown): JsonSchem
   return options.find(fits);
 }
 
+/** A new entry of a named map, as the form's Add writes it: an empty map. */
+const isNew = (value: unknown) =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  !Object.keys(value).length;
+
 /**
  * The specific operation that sets a key, when there is one (what-it-does.md §2): a text of the
  * content file through setText (empty restores the default), the app's name, description,
@@ -178,6 +185,16 @@ export function operationFor(
   const [, name, third, field] = path;
   // A field written in the short form: its type and modifiers through changeField, which keeps
   // the data it can; taken away through removeField (a migration's, confirmed first).
+  const added = isNew(value);
+  // A new kind of record: added with a required name, its fields then added and changed.
+  if (
+    file === "smithable.yml" &&
+    path.length === 2 &&
+    first === "models" &&
+    typeof key === "string" &&
+    added
+  )
+    return ["addModel", { model: key, fields: { name: "string!" } }];
   if (
     file === "smithable.yml" &&
     path.length === 4 &&
@@ -186,6 +203,8 @@ export function operationFor(
     typeof name === "string" &&
     typeof field === "string"
   ) {
+    // A new field starts as a text; its type is changed after, through changeField.
+    if (added) return ["addField", { model: name, field, type: "string" }];
     if (typeof value === "string") return ["changeField", { model: name, field, type: value }];
     if (value === undefined) return ["removeField", { model: name, field }];
   }

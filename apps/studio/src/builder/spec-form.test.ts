@@ -65,6 +65,15 @@ test("a key with an operation of its own goes through it; the rest through editS
     "setIcon",
     { page: "customers", icon: "star" },
   ]);
+  // The form's Add: a new field as a text, a new kind of record with a required name.
+  expect(operationFor("smithable.yml", ["models", "Customer", "fields", "website"], {})).toEqual([
+    "addField",
+    { model: "Customer", field: "website", type: "string" },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Supplier"], {})).toEqual([
+    "addModel",
+    { model: "Supplier", fields: { name: "string!" } },
+  ]);
   expect(operationFor("smithable.auth.yml", ["defaultAccess"], "private")).toEqual([
     "setDefaultAccess",
     { access: "private" },

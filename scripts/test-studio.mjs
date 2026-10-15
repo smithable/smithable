@@ -2018,6 +2018,42 @@ try {
         throw new Error("the hand-made icon control is still there");
     },
   );
+  await step(
+    "the Every setting tab adds a kind of record and a field through their operations",
+    async () => {
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+      await page.getByRole("tab", { name: "Every setting" }).click();
+      const app = page.getByRole("region", { name: "What the app does" });
+      const file = join(dir, "smithable.yml");
+      const waitFile = async (text) => {
+        for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes(text); i++)
+          await new Promise((r) => setTimeout(r, 1000));
+        if (!readFileSync(file, "utf8").includes(text))
+          throw new Error(`no ${text} in smithable.yml`);
+      };
+      await app.getByLabel("New entry in models").fill("Supplier");
+      await app
+        .getByLabel("New entry in models")
+        .locator("..")
+        .getByRole("button", { name: "Add" })
+        .click();
+      await waitFile("Supplier:");
+      await app
+        .locator("summary", { hasText: /^Customer$/ })
+        .first()
+        .click();
+      const customer = app
+        .locator("details", { has: page.locator("summary", { hasText: /^Customer$/ }) })
+        .first();
+      await customer.getByLabel("New entry in fields").fill("website");
+      await customer
+        .getByLabel("New entry in fields")
+        .locator("..")
+        .getByRole("button", { name: "Add" })
+        .click();
+      await waitFile("website: string");
+    },
+  );
   await step("a message from a window other than the preview is ignored", async () => {
     const before = (await project()).files.content;
     // Studio's own window, not the preview frame, pretending to be the preview.
