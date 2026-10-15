@@ -41,7 +41,7 @@ import {
 } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
-import { loadSpec } from "./validate.js";
+import { loadSpec, projectTranslations } from "./validate.js";
 import { warmPreview } from "./warm.js";
 
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
@@ -560,6 +560,7 @@ export async function studio(
         content: read("smithable.content.yml"),
         ux: read("smithable.ux.yml"),
         context: read("smithable.context.yml"),
+        translations: projectTranslations(dir),
       },
       // For the engine in the tab, which imports them from /api/plugins/; the version is for
       // its module cache.
