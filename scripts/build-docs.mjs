@@ -23,30 +23,135 @@ const out = resolve(process.argv[2] ?? join(root, "site"));
 const SITE = "https://docs.smithable.ai/";
 const REPO = "https://github.com/smithable/smithable/blob/main/";
 const PAGES = [
-  { src: "docs/site/index.md", out: "index.html", nav: "Home" },
-  { src: "docs/site/start.md", out: "start.html", nav: "Getting started" },
-  { src: "docs/site/starters.md", out: "starters.html", nav: "Starters" },
-  { src: "docs/site/change.md", out: "change.html", nav: "Changing an app" },
-  { src: "docs/site/actions.md", out: "actions.html", nav: "Buttons on a record" },
-  { src: "docs/site/api.md", out: "api.html", nav: "The API" },
-  { src: "docs/site/assistants.md", out: "assistants.html", nav: "Programs and assistants" },
-  { src: "docs/site/outgoing.md", out: "outgoing.html", nav: "Mail and calls out" },
-  { src: "docs/site/incoming.md", out: "incoming.html", nav: "Mail and calls in" },
-  { src: "docs/site/language.md", out: "language.html", nav: "Another language" },
-  { src: "docs/site/theme.md", out: "theme.html", nav: "Make a theme" },
-  { src: "docs/site/self-host.md", out: "self-host.html", nav: "Self-hosting" },
-  { src: "docs/site/google-sign-in.md", out: "google-sign-in.html", nav: "Sign in with Google" },
+  {
+    src: "docs/site/index.md",
+    out: "index.html",
+    description:
+      "Smithable turns a plain-language description into a compact spec and an ordinary full-stack web app you own. Guides, starters and the spec reference.",
+    nav: "Home",
+  },
+  {
+    src: "docs/site/start.md",
+    out: "start.html",
+    description:
+      "Install the Smithable CLI, make a first app from a starter, change it with one command and open it in Studio, all on your own machine with no account.",
+    nav: "Getting started",
+  },
+  {
+    src: "docs/site/starters.md",
+    out: "starters.html",
+    description:
+      "Eight complete apps to begin from, with pictures: a CRM, booking, invoicing, a marketplace, records, a status page, an assistant's notes and a support desk.",
+    nav: "Starters",
+  },
+  {
+    src: "docs/site/change.md",
+    out: "change.html",
+    description:
+      "Five changes to a status page, each one command: a field, which records the front page shows, what visitors may read, the look, and undo.",
+    nav: "Changing an app",
+  },
+  {
+    src: "docs/site/actions.md",
+    out: "actions.html",
+    description:
+      "Standard actions: buttons on a record's page that move it on, from setting a field to asking for a value or copying a record with its lines, with no code.",
+    nav: "Buttons on a record",
+  },
+  {
+    src: "docs/site/api.md",
+    out: "api.html",
+    description:
+      "Let other programs use your app: API keys, the calls the app's API answers, and the refusals they get, shown on the status starter.",
+    nav: "The API",
+  },
+  {
+    src: "docs/site/assistants.md",
+    out: "assistants.html",
+    description:
+      "An app made for programs and AI assistants: the api starter, a key for an assistant, and Claude Code connected to it to keep tasks and notes.",
+    nav: "Programs and assistants",
+  },
+  {
+    src: "docs/site/outgoing.md",
+    out: "outgoing.html",
+    description:
+      "Mail and calls out: when something happens in an app it can mail a person or call another system, through an outbox that retries until it is sent.",
+    nav: "Mail and calls out",
+  },
+  {
+    src: "docs/site/incoming.md",
+    out: "incoming.html",
+    description:
+      "Mail and calls in: a mail to a support address or a call from another service, such as a monitor, becomes a record in the app, as smithable.yml says.",
+    nav: "Mail and calls in",
+  },
+  {
+    src: "docs/site/language.md",
+    out: "language.html",
+    description:
+      "An app in another language: set the language, and the app's own words (buttons, sign-in, messages) follow it. Swedish for the booking starter, step by step.",
+    nav: "Another language",
+  },
+  {
+    src: "docs/site/theme.md",
+    out: "theme.html",
+    description:
+      "Make a theme of your own: colors, fonts, headings, cards and buttons in a small file, checked for readable contrast, or made in the theme lab on real pages.",
+    nav: "Make a theme",
+  },
+  {
+    src: "docs/site/self-host.md",
+    out: "self-host.html",
+    description:
+      "Run a Smithable app on your own machine or server with Docker: deploying, where the data lives, backing up, restoring and updating.",
+    nav: "Self-hosting",
+  },
+  {
+    src: "docs/site/google-sign-in.md",
+    out: "google-sign-in.html",
+    description:
+      'Offer "Continue with Google" beside the code by email: register the app with Google, give it its keys, and choose who may sign in.',
+    nav: "Sign in with Google",
+  },
   // Generated from the operations at build time, not a file in the repository.
   {
     src: "docs/site/operations.md",
     out: "operations.html",
+    description:
+      "Every operation that changes a Smithable app, from addField to setTheme: what it does, its arguments and options, and an example command.",
     nav: "Operations",
     generate: operationsPage,
   },
-  { src: "docs/site/why.md", out: "why.html", nav: "Why Smithable" },
-  { src: "docs/site/faq.md", out: "faq.html", nav: "Questions" },
-  { src: "docs/spec/v0.1.md", out: "spec.html", nav: "Spec reference", toc: true },
-  { src: "docs/ai.md", out: "ai.html", nav: "AI setup" },
+  {
+    src: "docs/site/why.md",
+    out: "why.html",
+    description:
+      "Why Smithable: changes without an AI rewriting code, low cost, an app you own outright, security and where it runs, with the measurements behind each.",
+    nav: "Why Smithable",
+  },
+  {
+    src: "docs/site/faq.md",
+    out: "faq.html",
+    description:
+      "Questions and answers about Smithable: how it compares, whether an app depends on it, AI models, running costs, hosting, data and what it builds today.",
+    nav: "Questions",
+  },
+  {
+    src: "docs/spec/v0.1.md",
+    out: "spec.html",
+    description:
+      "The spec reference: everything smithable.yml and its companion files for sign-in, looks, texts and context can say, with an example for each.",
+    nav: "Spec reference",
+    toc: true,
+  },
+  {
+    src: "docs/ai.md",
+    out: "ai.html",
+    description:
+      "AI setup for Smithable: the models behind smithable ask and drafting an app from a sentence, configured with environment variables, local first.",
+    nav: "AI setup",
+  },
 ];
 const schemaDir = join(root, "packages/core/schema");
 const schemas = readdirSync(schemaDir)
@@ -154,8 +259,17 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 const PRERELEASE =
   process.env.SITE_PRERELEASE === "1" ? '\n<meta name="robots" content="noindex">' : "";
 
+// Every page says what it covers, for search results and link previews (about 150 characters).
+for (const page of PAGES)
+  if (!page.description) throw new Error(`${page.src} has no description in PAGES.`);
+
 const html = (page, body) => {
   const title = page.headings.find((h) => h.depth === 1)?.text.replace(/`/g, "") ?? "Smithable";
+  // The page's own address (none for the 404 page, which answers at any address).
+  const url = page.out && SITE + (page.out === "index.html" ? "" : page.out);
+  const where = url
+    ? `\n<meta property="og:url" content="${url}">\n<link rel="canonical" href="${url}">`
+    : "";
   const toc = page.toc
     ? `<nav class="toc" aria-label="On this page"><ul>${page.headings
         .filter((h) => h.depth === 2)
@@ -168,6 +282,11 @@ const html = (page, body) => {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">${PRERELEASE}
 <title>${esc(title)} · Smithable docs</title>
+<meta name="description" content="${esc(page.description)}">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(page.description)}">
+<meta property="og:site_name" content="Smithable docs">
+<meta property="og:type" content="website">${where}
 <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <style>${CSS}</style>
@@ -221,7 +340,11 @@ for (const [i, each] of schemas.entries())
 writeFileSync(
   join(out, "404.html"),
   html(
-    { headings: [{ depth: 1, text: "Not found" }] },
+    {
+      headings: [{ depth: 1, text: "Not found" }],
+      description:
+        "That page does not exist. The Smithable documentation starts at docs.smithable.ai.",
+    },
     `<h1>Not found</h1>\n<p>That page does not exist. <a href="/">The documentation starts here.</a></p>\n`,
   ),
 );
