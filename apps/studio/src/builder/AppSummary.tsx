@@ -1,6 +1,6 @@
 // "Your app": the app in plain language, a map to its parts (docs/design/studio-v2.md §5).
 // A click on a part opens its properties, the same panel Code mode has, where each control is
-// an operation; "In my words" rewords a part for this session only and never changes the app;
+// an operation (a sentence is a way into its form, never a text to edit: what-it-does.md §2);
 // an add button opens its form in place, and what it made opens its properties next.
 import type { SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
@@ -21,26 +21,7 @@ const GROUPS: Record<string, { title: string; add?: [string, (typeof ADDS)[numbe
 };
 const kind = (concept: string) => concept.split(":")[0] ?? "";
 
-/**
- * A part in the user's own words, kept for the session. `before` is the summary it was
- * written against: when a change moves the summary on, the generated sentences come back.
- */
-interface Wording {
-  text: string;
-  before: string;
-}
-
-const storageKey = (app: string) => `smithable:wording:${app}`;
-function loadWording(app: string): Record<string, Wording> {
-  try {
-    return JSON.parse(sessionStorage.getItem(storageKey(app)) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
 export function AppSummary({
-  app,
   sections,
   spec,
   files,
@@ -48,7 +29,6 @@ export function AppSummary({
   onWho,
   onLook,
 }: {
-  app: string;
   sections: SummarySection[];
   spec: Spec;
   /** The project's files, for each part's "All settings". */
@@ -59,8 +39,6 @@ export function AppSummary({
   /** Opens the Look tab, where a list's columns and a form's fields are set. */
   onLook: () => void;
 }) {
-  const [wording, setWording] = useState(() => loadWording(app));
-  const [updated, setUpdated] = useState<string[]>([]);
   // The part whose properties are open, e.g. "field:Customer.email", or an addition's form
   // ("add:addField:Customer", "add:addPage").
   const [open, setOpen] = useState<string>();
@@ -90,23 +68,6 @@ export function AppSummary({
         />
       </div>
     );
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(storageKey(app), JSON.stringify(wording));
-    } catch {}
-  }, [app, wording]);
-  // A change moved a reworded part on: its generated sentences come back, marked updated.
-  useEffect(() => {
-    const replaced = Object.entries(wording)
-      .filter(
-        ([concept, w]) =>
-          sections.find((s) => s.concept === concept)?.sentences.join("\n") !== w.before,
-      )
-      .map(([concept]) => concept);
-    if (!replaced.length) return;
-    setWording((w) => Object.fromEntries(Object.entries(w).filter(([c]) => !replaced.includes(c))));
-    setUpdated(replaced);
-  }, [sections, wording]);
 
   const heading = (group: string) => {
     const g = GROUPS[group];
@@ -171,21 +132,11 @@ export function AppSummary({
             run={run}
             // A part named like its group (Pages) needs no heading of its own.
             titled={s.title !== GROUPS[kind(s.concept)]?.title}
-            wording={wording[s.concept]?.text}
-            updated={updated.includes(s.concept)}
             open={open}
             onOpen={(concept) => setOpen((o) => (o === concept ? undefined : concept))}
             adding={adding}
             onWho={onWho}
             onLook={onLook}
-            onWording={(text) =>
-              setWording((w) => {
-                const { [s.concept]: _, ...rest } = w;
-                return text === undefined
-                  ? rest
-                  : { ...rest, [s.concept]: { text, before: s.sentences.join("\n") } };
-              })
-            }
           />
         </section>
       ))}
@@ -227,22 +178,17 @@ function Part({
   files,
   run,
   titled,
-  wording,
-  updated,
   open,
   onOpen,
   adding,
   onWho,
   onLook,
-  onWording,
 }: {
   section: SummarySection;
   spec: Spec;
   files?: Project["files"];
   run: Run;
   titled: boolean;
-  wording?: string;
-  updated: boolean;
   open?: string;
   onOpen: (concept: string) => void;
   /** An addition's form in place, when it is the one open. */
@@ -253,10 +199,8 @@ function Part({
   ) => React.ReactNode;
   onWho: (column: string) => void;
   onLook: () => void;
-  onWording: (text: string | undefined) => void;
 }) {
   const generated = section.sentences.join("\n");
-  const [draft, setDraft] = useState<string>();
   const model =
     kind(section.concept) === "model" ? section.concept.slice("model:".length) : undefined;
   // Under the heading "Customers", "Customers have:" would only repeat it.
@@ -300,89 +244,37 @@ function Part({
             ) : (
               section.title
             ))}
-          {updated && <span className="ml-2 text-xs font-normal text-accent">updated</span>}
         </h3>
-        {draft === undefined && section.concept !== "auth" && (
-          <button
-            type="button"
-            className="text-xs text-quiet hover:text-accent"
-            onClick={() => setDraft(wording ?? generated)}
-          >
-            In my words
-          </button>
-        )}
       </div>
       {properties(section.concept)}
-      {draft !== undefined ? (
-        <div className="space-y-2">
-          <textarea
-            aria-label={`${section.title}, in your words`}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={Math.max(3, draft.split("\n").length + 1)}
-            className="block w-full rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-          />
-          <p className="text-xs text-quiet">
-            Only the wording, for you: it changes nothing in the app. To change the app, click a
-            part above, or describe the change in the Changes tab.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => {
-                onWording(draft === generated ? undefined : draft);
-                setDraft(undefined);
-              }}
-            >
-              Keep my words
-            </Button>
-            <Button variant="ghost" onClick={() => setDraft(undefined)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : wording !== undefined ? (
-        <>
-          <Lines text={wording} />
-          <button
-            type="button"
-            className="mt-1 text-xs text-quiet hover:text-accent"
-            onClick={() => onWording(undefined)}
-          >
-            Back to the generated text
-          </button>
-        </>
-      ) : (
-        <Lines
-          text={lines.join("\n")}
-          item={(text, index) => {
-            const concept = concepts[index];
-            return concept ? (
-              <>
-                <button
-                  type="button"
-                  className={cx(
-                    // A button stays inline-block whatever its display, and sits on its last
-                    // line: aligned to the top, a wrapped entry keeps its bullet on its first.
-                    "text-left align-top hover:text-accent",
-                    open === concept && "font-medium text-accent",
-                  )}
-                  aria-expanded={concept.startsWith("who:") ? undefined : open === concept}
-                  onClick={() =>
-                    concept.startsWith("who:")
-                      ? onWho(concept.slice("who:".length))
-                      : onOpen(concept)
-                  }
-                >
-                  {text}
-                </button>
-                {properties(concept)}
-              </>
-            ) : (
-              text
-            );
-          }}
-        />
-      )}
+      <Lines
+        text={lines.join("\n")}
+        item={(text, index) => {
+          const concept = concepts[index];
+          return concept ? (
+            <>
+              <button
+                type="button"
+                className={cx(
+                  // A button stays inline-block whatever its display, and sits on its last
+                  // line: aligned to the top, a wrapped entry keeps its bullet on its first.
+                  "text-left align-top hover:text-accent",
+                  open === concept && "font-medium text-accent",
+                )}
+                aria-expanded={concept.startsWith("who:") ? undefined : open === concept}
+                onClick={() =>
+                  concept.startsWith("who:") ? onWho(concept.slice("who:".length)) : onOpen(concept)
+                }
+              >
+                {text}
+              </button>
+              {properties(concept)}
+            </>
+          ) : (
+            text
+          );
+        }}
+      />
       {model && (
         <>
           <button

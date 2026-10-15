@@ -951,7 +951,7 @@ try {
   );
 
   await step(
-    "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and In my words changes only the wording",
+    "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and no sentence is a text to edit",
     async () => {
       await page.getByRole("tab", { name: "What it does" }).click();
       const customers = page.getByRole("region", { name: "Customers", exact: true });
@@ -988,16 +988,10 @@ try {
         .getByRole("button", { name: "a loyalty code (unique)", expanded: true })
         .waitFor({ timeout: 30000 });
       await adding.getByRole("button", { name: "Remove field" }).waitFor();
-      // In my words: the wording only, for this session; no change is made.
-      await page.getByRole("tab", { name: "What it does" }).click();
-      const changes = await changeCount();
+      // A sentence is a way into its form, never a text to edit (what-it-does.md §2).
       const again = page.getByRole("region", { name: "Customers", exact: true });
-      await again.getByRole("button", { name: "In my words" }).click();
-      await page.getByLabel("Customers, in your words").fill("Our clients and how to reach them.");
-      await again.getByRole("button", { name: "Keep my words" }).click();
-      await again.getByText("Our clients and how to reach them.").waitFor();
-      if ((await changeCount()) !== changes) throw new Error("rewording made a change");
-      await again.getByRole("button", { name: "Back to the generated text" }).click();
+      if (await again.getByRole("button", { name: "In my words" }).count())
+        throw new Error("In my words is still offered");
       await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
     },
   );
