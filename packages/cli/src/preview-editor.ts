@@ -268,6 +268,36 @@ if (typeof window !== "undefined" && window.parent !== window) {
       location.reload();
     }
   });
+  // The place on a page survives Studio loading it again after a change (studio-v2 §2): its
+  // scroll, kept with its address, is put back once the page is hydrated and long enough.
+  const PLACE = "smithable:place";
+  const here = () => location.pathname + location.search;
+  let saving;
+  window.addEventListener(
+    "scroll",
+    () => {
+      clearTimeout(saving);
+      saving = setTimeout(() => {
+        try {
+          sessionStorage.setItem(PLACE, JSON.stringify({ path: here(), y: window.scrollY }));
+        } catch {}
+      }, 150);
+    },
+    { passive: true },
+  );
+  try {
+    const kept = JSON.parse(sessionStorage.getItem(PLACE) ?? "null");
+    if (kept?.y > 0 && kept.path === here()) {
+      const until = Date.now() + 5000;
+      const restore = () => {
+        const fits = document.documentElement.scrollHeight - window.innerHeight >= kept.y;
+        if ((document.body.dataset.hydrated === "true" && fits) || Date.now() > until)
+          window.scrollTo(0, kept.y);
+        else setTimeout(restore, 100);
+      };
+      restore();
+    }
+  } catch {}
   // The page the preview is on, for Studio's address bar: after every navigation, including
   // the app's own (the router uses the History API) and Back.
   const report = () => {

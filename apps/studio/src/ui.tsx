@@ -57,6 +57,39 @@ export function Label({
   );
 }
 
+/** A checkbox with its words, and a tooltip saying what it does (also read out as its description). */
+export function Check({
+  text,
+  tip,
+  checked,
+  onChange,
+  className,
+}: {
+  text: string;
+  tip: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  const id = useId();
+  return (
+    <>
+      <label className={cx("flex items-center gap-2", className)} title={tip}>
+        <input
+          type="checkbox"
+          checked={checked}
+          aria-describedby={id}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        {text}
+      </label>
+      <span id={id} className="sr-only">
+        {tip}
+      </span>
+    </>
+  );
+}
+
 const control =
   "block h-8 w-full rounded-md border border-line-strong bg-panel px-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
 

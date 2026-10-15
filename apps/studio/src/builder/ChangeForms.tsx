@@ -18,7 +18,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
-import { Button, Input, Label, Select } from "../ui";
+import { Button, Check, Input, Label, Select } from "../ui";
 import { CustomCode, customFile } from "./custom-code";
 
 /**
@@ -49,6 +49,24 @@ const KINDS: [string, string][] = [
   ["choice", "One of a list…"],
   ["relation", "A link to…"],
 ];
+
+/** A name a field of each type might have, for the name box's example. */
+const EXAMPLE_NAMES: Record<string, string> = {
+  string: "Title",
+  text: "Notes",
+  markdown: "Description",
+  picture: "Photo",
+  int: "Seats",
+  decimal: "Weight",
+  money: "Price",
+  bool: "Paid",
+  date: "Due date",
+  datetime: "Starts at",
+  email: "Email",
+  phone: "Phone",
+  url: "Website",
+  choice: "Status",
+};
 
 /** A field as written in the spec's shorthand, e.g. "email! unique" or "a | b". */
 export function shorthandOf(field: FieldIR): string {
@@ -141,9 +159,9 @@ function FieldShapeControls({
   const set = (change: Partial<FieldShape>) => onChange({ ...shape, ...change });
   return (
     <>
-      <Label text="Holds">
+      <Label text="Field type">
         <Select
-          aria-label="Holds"
+          aria-label="Field type"
           value={shape.kind}
           onChange={(e) => set({ kind: e.target.value, target: shape.target || (models[0] ?? "") })}
           options={KINDS}
@@ -171,22 +189,20 @@ function FieldShapeControls({
       )}
       {shape.kind !== "choice" && (
         <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={shape.required}
-              onChange={(e) => set({ required: e.target.checked })}
-            />{" "}
-            Required
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={shape.unique}
-              onChange={(e) => set({ unique: e.target.checked })}
-            />{" "}
-            Unique
-          </label>
+          <Check
+            className="text-sm"
+            text="Required"
+            tip="The form will not save a record until this field has a value."
+            checked={shape.required}
+            onChange={(required) => set({ required })}
+          />
+          <Check
+            className="text-sm"
+            text="Unique"
+            tip="No two records may have the same value here; the form says so when one already does."
+            checked={shape.unique}
+            onChange={(unique) => set({ unique })}
+          />
         </div>
       )}
     </>
@@ -320,7 +336,68 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
   );
 }
 
-type FormProps = { spec: Spec; run: Run; initial?: Record<string, unknown> };
+type FormProps = {
+  spec: Spec;
+  run: Run;
+  initial?: Record<string, unknown>;
+  /** Opened in place under the part it adds to (What it does): what that part gives is not asked. */
+  inPlace?: boolean;
+};
+
+/** The part an addition made, as the summary and the properties name it. */
+function addedConcept(op: string, args: Record<string, unknown>): string | undefined {
+  if (op === "addField") return `field:${args.model}.${args.field}`;
+  if (op === "addModel") return `model:${args.model}`;
+  if (op === "addAction") return `action:${args.action}`;
+  if (["addPage", "addLandingPage", "addCustomPage"].includes(op)) return `page:${args.page}`;
+  return undefined;
+}
+
+/** What "What it does" adds in place: a field, a record, a page or an action. */
+export const ADDS = ["addField", "addModel", "addPage", "addAction"] as const;
+
+/**
+ * An addition in place, under the part it adds to (docs/design/studio-v2.md §5): its form, and
+ * once it went through, `onAdded` with the part it made, whose properties open next.
+ */
+export function AddForm({
+  op,
+  spec,
+  run,
+  initial,
+  onAdded,
+  onCancel,
+}: {
+  op: (typeof ADDS)[number];
+  spec: Spec;
+  run: Run;
+  initial?: Record<string, unknown>;
+  onAdded: (concept: string | undefined) => void;
+  onCancel: () => void;
+}) {
+  const added: Run = async (name, args, ...rest) => {
+    const ok = await run(name, args, ...rest);
+    if (ok) onAdded(addedConcept(name, args));
+    return ok;
+  };
+  const props = { spec, run: added, initial, inPlace: true };
+  return (
+    <div className="space-y-3 p-3 text-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-quiet">
+          {CHANGES.find(([o]) => o === op)?.[1].replace(/^An action$/, "Add an action")}
+        </h3>
+        <Button variant="ghost" className="h-6 text-xs" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+      {op === "addField" && <AddField {...props} />}
+      {op === "addModel" && <AddModel run={added} />}
+      {op === "addPage" && <AddPage {...props} />}
+      {op === "addAction" && <AddAction {...props} />}
+    </div>
+  );
+}
 
 /** The app's actions to choose from, by their friendly names, for the forms that change or remove one. */
 const actionPicker = (spec: Spec) => (value: string, set: (value: string) => void) => (
@@ -442,7 +519,7 @@ export function listOf(
   return { page: page.id, columns: chosen ?? defaultColumns(model), chosen: Boolean(chosen) };
 }
 
-function AddField({ spec, run, initial }: FormProps) {
+function AddField({ spec, run, initial, inPlace }: FormProps) {
   const models = spec.ir?.models ?? [];
   const [model, setModel] = useState(str(initial?.model) ?? models[0]?.name ?? "");
   const [label, setLabel] = useState(str(initial?.field) ?? "");
@@ -462,28 +539,37 @@ function AddField({ spec, run, initial }: FormProps) {
         run("addField", { model, field: name, type, ...(list && inList ? { list: true } : {}) })
       }
     >
-      <Label text="Kind of record">
-        <Select
-          aria-label="Kind of record"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          options={models.map((m) => [m.name, humanize(m.name)])}
-        />
-      </Label>
+      {!inPlace && (
+        <Label text="Kind of record">
+          <Select
+            aria-label="Kind of record"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            options={models.map((m) => [m.name, humanize(m.name)])}
+          />
+        </Label>
+      )}
       <Label text="Name">
         <Input
           aria-label="Name"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Website"
+          placeholder={
+            shape.kind === "relation"
+              ? humanize(shape.target || "Customer")
+              : (EXAMPLE_NAMES[shape.kind] ?? "Website")
+          }
         />
       </Label>
       <FieldShapeControls shape={shape} onChange={setShape} models={models.map((m) => m.name)} />
       {list && (
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={inList} onChange={(e) => setInList(e.target.checked)} />
-          Show it in the list
-        </label>
+        <Check
+          className="text-sm"
+          text="Show it in listings"
+          tip="Adds this field as a column on the list page of these records."
+          checked={inList}
+          onChange={setInList}
+        />
       )}
       <SpecNote
         label="Will read:"

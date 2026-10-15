@@ -5,14 +5,14 @@ import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Builder } from "./builder/Builder";
-import { useSpec } from "./engine";
+import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
-import { isPreviewMessage, type Place, shared, touched } from "./preview";
+import { isPreviewMessage, type Place, shared, touched, touchesPage } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
-import { Preview } from "./shared";
+import { keptPage, Preview } from "./shared";
 import { Button, cx, useMedia } from "./ui";
 
 // Code mode (its editor, CodeMirror and the operation forms) and the tour load when first
@@ -138,13 +138,30 @@ export function App() {
     else view(anchor === "preview");
   };
 
+  // The spec the preview shows now, for what a change touches (refresh).
+  const shownIR = useRef<Spec["ir"]>(undefined);
+  // The newest change the preview has had: a "changed" without a new one (a file edited by hand,
+  // a restart) always loads it again.
+  const seen = useRef<string>(undefined);
   const refresh = useCallback(async () => {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
     const next = await api.project().catch(() => undefined);
     if (!next) return;
     if (next.notice) setMessage({ ok: false, text: next.notice });
     setProject((p) => keepWaiting(p, next));
-    setVersion((v) => v + 1);
+    // The preview loads again only when the change touches the page it shows (studio-v2 §2):
+    // another kind of record's field leaves it, and the person's place in it, as it is.
+    const change = next.trace[0];
+    const key = change && `${change.at}:${change.description}`;
+    const fresh = key !== undefined && seen.current !== undefined && key !== seen.current;
+    seen.current = key;
+    if (
+      !fresh ||
+      !change ||
+      change.isUndo ||
+      touchesPage(change.operation, keptPage(), shownIR.current)
+    )
+      setVersion((v) => v + 1);
     setUpdating(false);
   }, []);
 
@@ -165,6 +182,7 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
+  shownIR.current = spec.ir;
   // The pages the preview's address offers: each page's address and title, and sign-in.
   const pages = useMemo(
     (): [string, string][] => [

@@ -1,4 +1,4 @@
-import type { EditableFile } from "@smithable/core";
+import type { EditableFile, SpecIR } from "@smithable/core";
 
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
@@ -89,4 +89,47 @@ export function touched(
       .filter((n) => n !== "all" && n !== "none")
       .map((n) => (args.what === "pages" ? `page:${n}` : `model:${n}`));
   return [];
+}
+
+/**
+ * Whether a change touches the page the preview is on (`path`), so it is loaded again: false
+ * only when sure it does not, a change to a field, a record's text or a page's text of another
+ * kind of record or page than the ones it shows (with those its links name). Everything else
+ * (the menu, the look, access, an undo, a change made by hand) loads it again.
+ */
+export function touchesPage(
+  operation: { op: string; args: Record<string, unknown> } | undefined,
+  path: string,
+  ir: SpecIR | undefined,
+): boolean {
+  if (!operation || !ir) return true;
+  const { op, args } = operation;
+  const bare = path.split(/[?#]/)[0] || "/";
+  const page = ir.pages
+    .filter((p) => p.route === bare || (p.route !== "/" && bare.startsWith(`${p.route}/`)))
+    .sort((a, b) => b.route.length - a.route.length)[0];
+  if (!page) return true;
+  const pattern = page.pattern;
+  const own =
+    "model" in pattern
+      ? [pattern.model]
+      : (pattern.kind === "data" || pattern.kind === "review") && !pattern.all
+        ? pattern.models
+        : undefined;
+  // A landing page, a dashboard, all the data: whatever changes may be on it.
+  if (!own) return true;
+  const shown = new Set(own);
+  for (const name of own)
+    for (const f of ir.models.find((m) => m.name === name)?.fields ?? [])
+      if (f.type.kind === "relation") shown.add(f.type.model);
+  const model = typeof args.model === "string" ? args.model : undefined;
+  if (op === "addModel") return false;
+  if (model && /^(add|change|remove|rename)Field$|^setFieldRules$/.test(op))
+    return shown.has(model);
+  if (op === "setText" && Array.isArray(args.path)) {
+    const [area, name] = args.path as string[];
+    if (area === "models" && name) return shown.has(name);
+    if (area === "pages" && name) return name === page.id;
+  }
+  return true;
 }
