@@ -18,6 +18,11 @@ export interface Suggestion {
   detail?: string;
   /** What is put in the text for it, when that is more than the label. */
   insert?: string;
+  /**
+   * A template to fill in instead of a word: a new entry of a named map (an action, a model, a
+   * page) with its required keys, as a snippet whose \${…} parts are the places to type.
+   */
+  snippet?: string;
 }
 
 export interface Completion {
@@ -53,6 +58,8 @@ interface Place {
   /** What is written of the word so far, and what the line's list already holds. */
   typed: string;
   written: string[];
+  /** The line's indentation, for what a template puts on the lines after it. */
+  indent: number;
 }
 
 const KEY_LINE = /^( *)(- )?([^\s:#][^:#]*?):(?:\s|$)/;
@@ -127,8 +134,15 @@ function placeAt(text: string, offset: number): Place | undefined {
   const top = open.at(-1);
   const typed = word.trimStart();
   if (top?.list)
-    return { path, list: true, typed, written: top.written, ...(top.key ? { key: top.key } : {}) };
-  return { path, list: false, typed, written: [], ...(key ? { key } : {}) };
+    return {
+      path,
+      list: true,
+      typed,
+      written: top.written,
+      indent,
+      ...(top.key ? { key: top.key } : {}),
+    };
+  return { path, list: false, typed, written: [], indent, ...(key ? { key } : {}) };
 }
 
 type Node = JsonSchema & {
@@ -140,6 +154,8 @@ type Node = JsonSchema & {
   enum?: unknown[];
   type?: string | string[];
   description?: string;
+  required?: string[];
+  propertyNames?: { pattern?: string };
 };
 
 /**
@@ -408,6 +424,47 @@ function companionNames(
   return undefined;
 }
 
+/**
+ * A new entry for a map of names: a name in the shape the schema wants, then each required key
+ * with a value to replace, as a snippet. Nothing where the map is not one of names.
+ */
+function templateFor(nodes: Node[], indent: number): Suggestion[] {
+  const map = nodes
+    .flatMap(branches)
+    .find((n) => typeof n.additionalProperties === "object" && n.additionalProperties.properties);
+  const pattern = (map?.propertyNames as { pattern?: string } | undefined)?.pattern;
+  if (!map || !pattern) return [];
+  const name = pattern.startsWith("^[A-Z]")
+    ? "MyRecord"
+    : pattern.includes("(?:-")
+      ? "my-page"
+      : "myEntry";
+  const entry = map.additionalProperties as Node;
+  const pad = " ".repeat(indent + 2);
+  const lines = (entry.required ?? []).map((key) => {
+    const node = branches(entry.properties?.[key] ?? {})[0] ?? {};
+    const value = Array.isArray(node.enum)
+      ? String(node.enum[0])
+      : node.type === "boolean"
+        ? "true"
+        : node.type === "integer" || node.type === "number"
+          ? "1"
+          : node.type === "array"
+            ? "[]"
+            : node.type === "object"
+              ? "{}"
+              : "value";
+    return `\n${pad}${key}: \${${value}}`;
+  });
+  return [
+    {
+      label: name,
+      detail: "A new entry: a name of your own, and what it needs.",
+      snippet: `\${${name}}:${lines.join("")}${lines.length ? "" : "\n"}${pad}`,
+    },
+  ];
+}
+
 /** The keys already written beside the one being written at `offset`: in its map, or its item of a list. */
 function siblings(text: string, offset: number): Set<string> {
   const lines = text.split("\n");
@@ -468,8 +525,11 @@ export function completeSpec(
       label,
       insert: `${label}: `,
     }));
+    // Under a map of the app's own names (actions, models, pages, queries, a model's fields)
+    // there is nothing to list, so a template of a new entry is offered instead.
+    const template = own.length ? [] : templateFor(schemaAt(place.path, file), place.indent);
     const seen = new Set<string>();
-    suggestions = [...fromSchema, ...own].filter(
+    suggestions = [...fromSchema, ...own, ...template].filter(
       (s) => !there.has(s.label) && !seen.has(s.label) && seen.add(s.label) !== undefined,
     );
   } else {

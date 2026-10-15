@@ -1583,6 +1583,26 @@ try {
       await page.getByRole("button", { name: "What goes here?" }).click();
       await offered.getByText("route", { exact: true }).waitFor();
       await page.keyboard.press("Escape");
+      // Where there is nothing to offer (inside a sentence), the button says so.
+      const intent = "    intent: Find a customer";
+      await cursor(good.indexOf(intent) + intent.length);
+      await page.getByRole("button", { name: "What goes here?" }).click();
+      await page.getByText("Nothing to suggest at the cursor").waitFor();
+      // Under a map of names (the actions) a template entry is offered and fills in its keys.
+      const actions = "actions:\n";
+      await write(good.replace(actions, `${actions}  \n`));
+      await editor.focus();
+      await cursor(good.indexOf(actions) + actions.length + 2);
+      await offered.getByText("myEntry", { exact: true }).waitFor();
+      await accept();
+      if (!/^actions:\n {2}myEntry:\n/m.test(await editor.evaluate((e) => e.value)))
+        throw new Error("the template entry was not put in the text");
+      // The first time, the editor says how to ask it; once seen, it stays quiet.
+      const hint = page.getByText(/Ctrl-Space \(⌃Space on a Mac\) lists what fits/);
+      if (await hint.isVisible()) {
+        await page.getByRole("button", { name: "Got it" }).click();
+        await hint.waitFor({ state: "hidden" });
+      }
       await write(good);
       // A key says what it is for when the pointer rests on it.
       await cursor(good.indexOf("    crud: Customer"));
