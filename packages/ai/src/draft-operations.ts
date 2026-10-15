@@ -17,7 +17,7 @@ import {
   validateSpec,
 } from "@smithable/core";
 import type { Draft, SpecFiles } from "./draft.js";
-import { LANGUAGE_NAMES, languageNote, textLanguage } from "./language.js";
+import { LANGUAGE_NAMES, languageNote, otherLanguages, textLanguage } from "./language.js";
 import { plainSchema } from "./propose.js";
 import { completeJson, type Provider, type Usage } from "./provider.js";
 
@@ -674,6 +674,13 @@ const toFiles = (files: ProjectFiles): SpecFiles => ({
   "smithable.auth.yml": files.auth ?? "",
   "smithable.content.yml": files.content ?? "",
   "smithable.ux.yml": files.ux ?? "",
+  // The app's other languages' files, when the description asked for them.
+  ...Object.fromEntries(
+    Object.entries(files.translations ?? {}).map(([language, text]) => [
+      `smithable.content.${language}.yml`,
+      text,
+    ]),
+  ),
 });
 
 /** At most this many operations in one draft, and rounds of corrections. */
@@ -727,13 +734,24 @@ export async function draftProjectByOperations(options: {
     // The best the draft has been, by its flaws: a remedy that makes it worse (personal details
     // closed in one round and opened again in the next) is not what the person gets.
     let best: { files: ProjectFiles; count: number; score: number } | undefined;
-    const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => ({
-      kind: "draft",
-      files: toFiles(best?.files ?? files),
-      usage,
-      operations: best ? done.slice(0, best.count) : done,
-      ...(dropped.length ? { dropped } : {}),
-    });
+    // A description that asks for two languages ("på svenska och engelska") gets the other one
+    // added last, when the app has its texts: its file lists every one, to be filled in.
+    const others = otherLanguages(options.description, language ?? "en");
+    const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => {
+      const steps = [...(best ? done.slice(0, best.count) : done)];
+      const chosen = applyAll(
+        best?.files ?? files,
+        steps,
+        others.map((other) => ({ op: "addLanguage", args: { language: other } })),
+      ).files;
+      return {
+        kind: "draft",
+        files: toFiles(chosen),
+        usage,
+        operations: steps,
+        ...(dropped.length ? { dropped } : {}),
+      };
+    };
     while (round < MAX_ROUNDS) {
       round += 1;
       let answer: { operations?: Step[] };

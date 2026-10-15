@@ -70,6 +70,31 @@ export function textLanguage(description: string): Language | undefined {
   return writtenIn(own.startsWith(PAGE_START) ? own.slice(own.indexOf("\n") + 1) : own);
 }
 
+/** A language's names as a description may write them: in English, in itself, in Finnish. */
+const SAID: Record<Language, string> = {
+  en: "english|engelska|englanti",
+  sv: "swedish|svenska|svensk|ruotsi|ruotsiksi",
+};
+
+/**
+ * The other languages a description asks the app to be in besides `main` (languages.md §6
+ * step 6): only when it names two together ("in Swedish and English", "på svenska och
+ * engelska", "both English and Swedish"), so a word like "Swedish customers" adds none.
+ */
+export function otherLanguages(description: string, main: Language): Language[] {
+  const any = Object.values(SAID).join("|");
+  const pair = new RegExp(
+    `\\b(${any})\\s*(?:,|and|och|ja|&|\\+)\\s*(?:also\\s+|även\\s+|också\\s+)?(${any})\\b`,
+    "giu",
+  );
+  const named = new Set<Language>();
+  for (const m of description.toLowerCase().matchAll(pair))
+    for (const word of [m[1], m[2]])
+      for (const [code, names] of Object.entries(SAID) as [Language, string][])
+        if (names.split("|").includes(word ?? "")) named.add(code);
+  return named.has(main) || named.size > 1 ? [...named].filter((code) => code !== main) : [];
+}
+
 /** What the prompts say about the language, when it can be told; else nothing. */
 export function languageNote(description: string): string {
   const language = textLanguage(description);

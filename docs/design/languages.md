@@ -134,7 +134,7 @@ models:
    `/` English, both in the sitemap, the alternates right.
 4. (Done, 2026-10-15.) The person's language: `users.language`, the signed-in switch, the mails.
 5. (Done, 2026-10-15.) Studio's Languages view and the model's first draft.
-6. First builds.
+6. (Done, 2026-10-15, with a model.) First builds: a description that names two languages together ("på svenska och engelska") gets the other added last (addLanguage, its file to fill in or to draft with `smithable translate`). The reader without a model asking it is still to come.
 
 Steps 1–3 are what a public site needs and are the bulk; 4–6 follow. Size: a week of A's pull
 requests, none large.

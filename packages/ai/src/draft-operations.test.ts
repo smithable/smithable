@@ -713,3 +713,30 @@ actions:
     ],
   });
 });
+
+test("a description that asks for two languages gets the other one added last, its file to fill in", async () => {
+  const draft = await draftProjectByOperations({
+    description:
+      "En uppgiftslista för vårt lag, på svenska och engelska: varje uppgift har en titel och en ansvarig.",
+    providers: [
+      answering({
+        operations: [
+          { op: "setApp", args: { name: "Uppgifter" } },
+          { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+          { op: "setText", args: { path: ["models", "Task", "label"], text: "Uppgift" } },
+          { op: "setText", args: { path: ["models", "Task", "pluralLabel"], text: "Uppgifter" } },
+          {
+            op: "setText",
+            args: { path: ["models", "Task", "fields", "title", "label"], text: "Titel" },
+          },
+          { op: "addPage", args: { page: "uppgifter", model: "Task" } },
+          { op: "setText", args: { path: ["pages", "uppgifter", "title"], text: "Uppgifter" } },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.kind === "failed" ? draft.message : "no draft");
+  expect(draft.operations?.at(-1)).toEqual({ op: "addLanguage", args: { language: "en" } });
+  expect(draft.files["smithable.content.yml"]).toMatch(/languages: \[\s*en\s*\]/);
+  expect(draft.files["smithable.content.en.yml"]).toContain("models:");
+});

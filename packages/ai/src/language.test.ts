@@ -3,6 +3,7 @@ import { describedWith } from "./clarify.js";
 import {
   languageNote,
   languageQuestion,
+  otherLanguages,
   PAGE_START,
   textLanguage,
   writtenIn,
@@ -74,4 +75,13 @@ Vi levererar el till hushåll och företag på Åland. Här kan du anmäla avbro
   ).toBe("en");
   // Unanswered, English answers to the other questions do not make the app English.
   expect(textLanguage(answered(""))).toBe("sv");
+});
+
+test("the other languages a description asks for: two named together, never one word alone", () => {
+  expect(otherLanguages("En bokningssida på svenska och engelska", "sv")).toEqual(["en"]);
+  expect(otherLanguages("A shop site in English and Swedish for our customers", "en")).toEqual([
+    "sv",
+  ]);
+  expect(otherLanguages("A CRM for our Swedish customers", "en")).toEqual([]);
+  expect(otherLanguages("A CRM in English", "en")).toEqual([]);
 });
