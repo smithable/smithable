@@ -587,6 +587,7 @@ function FieldRules({
  */
 export function fillSources(ir: SpecIR, model: string, field: FieldIR): string[] {
   const sources: string[] = [];
+  if (field.sequence) sources.push("the next number after the highest");
   if (field.defaultMe) sources.push("who makes the record");
   else if (field.defaultFormula) sources.push("a formula, when the record is made");
   else if (field.default !== undefined) sources.push(`its default, ${String(field.default)}`);
@@ -626,7 +627,8 @@ function FilledBy({
   const sources = fillSources(ir, model.name, field);
   const [value, setValue] = useState(field.default === undefined ? "" : String(field.default));
   // A default in the shorthand: a value of the field's own kind, not a link or a choice (their first value is theirs).
-  const defaultable = field.type.kind === "scalar" && !field.defaultMe && !field.defaultFormula;
+  const defaultable =
+    field.type.kind === "scalar" && !field.defaultMe && !field.defaultFormula && !field.sequence;
   const bare = shorthandOf({ ...field, default: undefined });
   return (
     <div className="space-y-2 rounded-md bg-subtle p-2 text-xs">

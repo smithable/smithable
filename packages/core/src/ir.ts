@@ -155,6 +155,11 @@ export interface FieldIR extends SemanticText {
    */
   byApp?: true;
   /**
+   * `sequence: true` on an `int!`: the app gives each new record the next number after the
+   * highest (an order's, an invoice's); never entered, so it is also `byApp` (orders.md §4).
+   */
+  sequence?: true;
+  /**
    * `locked`: read-only while the record fits the condition (as it is before the change), and
    * after it is made for `true`; an action's `set` may still change it (record-rules.md §2).
    */

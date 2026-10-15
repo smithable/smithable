@@ -88,6 +88,11 @@ const fieldSchema: JsonSchema = {
           description:
             "app: the form never shows it; its default (a value, or ME()), an action, an incoming entry or code fills it.",
         },
+        sequence: {
+          type: "boolean",
+          description:
+            "On an int!: the app gives each new record the next number after the highest (an order or invoice number); the form never shows it.",
+        },
         locked: {
           type: ["boolean", "object"],
           description:
@@ -523,6 +528,7 @@ function readLongField(
       "examples",
       "by",
       "locked",
+      "sequence",
       ...TEXT_KEYS,
     ],
     content: ["label", "help", "placeholder"],
@@ -682,7 +688,8 @@ function readRules(
 ): void {
   const by = byKey.get("by");
   const locked = byKey.get("locked");
-  for (const entry of [by, locked, requiredWhen]) {
+  const sequence = byKey.get("sequence");
+  for (const entry of [by, locked, requiredWhen, sequence]) {
     if (entry && field.formula) {
       ctx.error(
         entry.keyNode,
@@ -702,6 +709,23 @@ function readRules(
         "invalid-value",
         `"by" of ${where} is "app": the app fills it, and the form never shows it.`,
       );
+  }
+  if (sequence && readBoolean(ctx, sequence.value, `"sequence" of ${where}`)) {
+    if (
+      field.type.kind !== "scalar" ||
+      field.type.name !== "int" ||
+      !field.required ||
+      field.default !== undefined
+    )
+      ctx.error(
+        sequence.keyNode,
+        "invalid-field",
+        `${capitalize(where)} counts up only as a required whole number with no default: its type is "int!".`,
+      );
+    else {
+      field.sequence = true;
+      field.byApp = true;
+    }
   }
   if (locked && !isMap(locked.value)) {
     if (readBoolean(ctx, locked.value, `"locked" of ${where}`)) field.locked = true;

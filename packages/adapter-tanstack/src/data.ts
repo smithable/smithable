@@ -756,11 +756,22 @@ export function dataModule(
         ? `${dataKey(f)}: personOf(viewer)`
         : `${dataKey(f)}: values.${dataKey(f)} ?? personOf(viewer)`,
     );
+  // A number counting up (`sequence: true`, orders.md §4): the next after the highest, read in
+  // the change's own transaction, so two records made at once never share one.
+  const counted = model.fields
+    .filter((f) => f.sequence)
+    .map(
+      (f) =>
+        `${dataKey(f)}: (tx.select({ n: max(${n.table}.${dataKey(f)}) }).from(${n.table}).get()?.n ?? 0) + 1`,
+    );
+  const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const createValues = !signedIn
-    ? "values"
+    ? counted.length
+      ? `{ ...values${set} }`
+      : "values"
     : model.ownedBy
-      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${byMe.map((e) => `, ${e}`).join("")} }`
-      : `{ ...values, ownerId: personOf(viewer)${byMe.map((e) => `, ${e}`).join("")} }`;
+      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`
+      : `{ ...values, ownerId: personOf(viewer)${set} }`;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
   // API or Ask (an action's set may change a locked field, which is how a case is reopened), and
   // a value required while the record fits a condition, on any change.
@@ -984,6 +995,7 @@ ${loose
         .join("")
     : "";
   if (usesOr) drizzle.push("or");
+  if (model.fields.some((f) => f.sequence)) drizzle.push("max");
   if (threadTarget?.trash) drizzle.push("isNull");
   if (reads) drizzle.push("gt", "inArray", "isNotNull", "isNull", "ne", "or");
   if (group.length) drizzle.push("count");

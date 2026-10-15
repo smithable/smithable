@@ -311,6 +311,10 @@
                       ],
                       "description": "app: the form never shows it; its default (a value, or ME()), an action, an incoming entry or code fills it."
                     },
+                    "sequence": {
+                      "type": "boolean",
+                      "description": "On an int!: the app gives each new record the next number after the highest (an order or invoice number); the form never shows it."
+                    },
                     "locked": {
                       "type": [
                         "boolean",
