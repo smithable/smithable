@@ -175,5 +175,45 @@ export function operationFor(
     typeof value === "string"
   )
     return ["setApp", { [key]: value }];
+  const [, name, third, field] = path;
+  // A field written in the short form: its type and modifiers through changeField, which keeps
+  // the data it can; taken away through removeField (a migration's, confirmed first).
+  if (
+    file === "smithable.yml" &&
+    path.length === 4 &&
+    first === "models" &&
+    third === "fields" &&
+    typeof name === "string" &&
+    typeof field === "string"
+  ) {
+    if (typeof value === "string") return ["changeField", { model: name, field, type: value }];
+    if (value === undefined) return ["removeField", { model: name, field }];
+  }
+  // A page's icon in the menu.
+  if (
+    file === "smithable.ux.yml" &&
+    path.length === 3 &&
+    first === "pages" &&
+    third === "icon" &&
+    typeof name === "string"
+  )
+    return ["setIcon", { page: name, icon: typeof value === "string" ? value : "auto" }];
+  // Access: the default, and what visitors may open, read and add.
+  if (
+    file === "smithable.auth.yml" &&
+    path.length === 1 &&
+    first === "defaultAccess" &&
+    typeof value === "string"
+  )
+    return ["setDefaultAccess", { access: value }];
+  if (
+    file === "smithable.auth.yml" &&
+    path.length === 2 &&
+    first === "public" &&
+    typeof key === "string" &&
+    ["pages", "read", "create"].includes(key) &&
+    (Array.isArray(value) || value === undefined)
+  )
+    return ["setPublic", { [key]: value ?? [] }];
   return undefined;
 }

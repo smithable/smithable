@@ -55,4 +55,22 @@ test("a key with an operation of its own goes through it; the rest through editS
     { timezone: "Europe/Stockholm" },
   ]);
   expect(operationFor("smithable.yml", ["models", "Customer", "trash"], true)).toBeUndefined();
+  expect(
+    operationFor("smithable.yml", ["models", "Customer", "fields", "phone"], "phone!"),
+  ).toEqual(["changeField", { model: "Customer", field: "phone", type: "phone!" }]);
+  expect(
+    operationFor("smithable.yml", ["models", "Customer", "fields", "phone"], undefined),
+  ).toEqual(["removeField", { model: "Customer", field: "phone" }]);
+  expect(operationFor("smithable.ux.yml", ["pages", "customers", "icon"], "star")).toEqual([
+    "setIcon",
+    { page: "customers", icon: "star" },
+  ]);
+  expect(operationFor("smithable.auth.yml", ["defaultAccess"], "private")).toEqual([
+    "setDefaultAccess",
+    { access: "private" },
+  ]);
+  expect(operationFor("smithable.auth.yml", ["public", "read"], ["Customer"])).toEqual([
+    "setPublic",
+    { read: ["Customer"] },
+  ]);
 });
