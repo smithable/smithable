@@ -16,7 +16,7 @@ import {
 } from "@smithable/core";
 import { useState } from "react";
 import type { Project } from "./api";
-import { FieldShapeForm, listOf, type Run, shorthandOf } from "./builder/ChangeForms";
+import { listOf, type Run, shorthandOf } from "./builder/ChangeForms";
 import { SpecPart } from "./builder/SpecForm";
 import type { Spec } from "./engine";
 import { Button, Check, cx, Input, Label, Select } from "./ui";
@@ -192,31 +192,25 @@ export function Properties({
   if (!ir) return null;
   const heading = <h3 className="text-xs font-semibold text-quiet">Properties</h3>;
   // Every setting of the part, as the spec's form has it (what-it-does.md §5 step 3).
-  const all = (path: string[]) => files && <AllSettings files={files} run={run} path={path} />;
+  const all = (path: string[]) =>
+    files && <AllSettings files={files} run={run} path={path} ir={ir} />;
   if (kind === "field" && fieldName) {
     const field = ir.models.find((m) => m.name === name)?.fields.find((f) => f.name === fieldName);
     if (!field) return null;
-    const models = ir.models.map((m) => m.name);
     const to = identifier(rename);
     return (
       <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
-        {field.formula || (field.type.kind === "relation" && field.type.many) ? (
-          <p className="text-muted">
-            {field.formula ? "Calculated" : "Lists related records"}: change it in smithable.yml.
-          </p>
-        ) : (
-          <FieldShapeForm
-            field={field}
-            models={models}
-            run={(type, renames) =>
-              run("changeField", {
-                model: name,
-                field: fieldName,
-                type,
-                ...(renames.length ? { renames } : {}),
-              })
-            }
+        {/* What it is, as the spec's form has it: its kind, required and unique through
+            changeField (what-it-does.md §5 step 3); the hand-made shape went. */}
+        {files && (
+          <PartOf
+            title="What it is"
+            files={files}
+            run={run}
+            file="smithable.yml"
+            path={["models", name, "fields", fieldName]}
+            ir={ir}
           />
         )}
         <ListToggle spec={spec} run={run} model={name} field={fieldName} />
@@ -271,7 +265,6 @@ export function Properties({
         >
           Remove field
         </Button>
-        {all(["models", name, "fields", fieldName])}
       </div>
     );
   }
@@ -412,30 +405,42 @@ function PartOf({
   run,
   file,
   path,
+  ir,
 }: {
   title: string;
   files: Project["files"];
   run: Run;
   file: EditableFile;
   path: string[];
+  ir?: SpecIR;
 }) {
   return (
     <section aria-label={title} className="space-y-1">
       <h4 className="text-xs font-semibold text-quiet">{title}</h4>
-      <SpecPart files={files} run={run} file={file} path={path} />
+      <SpecPart files={files} run={run} file={file} path={path} ir={ir} />
     </section>
   );
 }
 
 /** A part's every setting, folded; drawn only once opened. */
-function AllSettings({ files, run, path }: { files: Project["files"]; run: Run; path: string[] }) {
+function AllSettings({
+  files,
+  run,
+  path,
+  ir,
+}: {
+  files: Project["files"];
+  run: Run;
+  path: string[];
+  ir?: SpecIR;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <details onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="cursor-pointer text-xs font-medium text-muted">All settings</summary>
       {open && (
         <div className="mt-2">
-          <SpecPart files={files} run={run} path={path} />
+          <SpecPart files={files} run={run} path={path} ir={ir} />
         </div>
       )}
     </details>

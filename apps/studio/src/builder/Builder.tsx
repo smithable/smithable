@@ -219,7 +219,7 @@ export function Builder({
             }
           >
             {tab === "spec" ? (
-              <SpecForm files={project.files} run={run} />
+              <SpecForm files={project.files} run={run} ir={spec.ir} />
             ) : tab === "languages" ? (
               <Languages spec={spec} run={run} />
             ) : tab === "look" ? (
