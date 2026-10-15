@@ -125,7 +125,7 @@ export function texts(content: ContentIR, appName = "") {
           ? named
           : page.route === "/"
             ? JSON.stringify(appName)
-            : `\`\${${named}} · ${appName.replace(/[`$\\]/g, (c) => `\\${c}`)}\``;
+            : `${named} + ${JSON.stringify(` · ${appName}`)}`;
         const described = own?.description
           ? `, { name: "description", content: tx(${JSON.stringify(own.description)}) }`
           : "";

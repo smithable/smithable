@@ -129,6 +129,18 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
+/** Whether a file's imports from the kit's words name tx (one import a line, as generated). */
+const importsTx = (content: string) =>
+  content.split("\n").some(
+    (line) =>
+      line.startsWith("import {") &&
+      line.endsWith('} from "#/kit/words";') &&
+      line
+        .slice(8, line.indexOf("}"))
+        .split(",")
+        .some((name) => name.trim() === "tx"),
+  );
+
 /**
  * An app in several languages (languages.md §3): which they are and the public pages' addresses
  * (src/generated/languages.ts); the router reading a public page's language from the address's
@@ -137,11 +149,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
 function translatedApp(files: GeneratedFile[], { ir, auth, options }: GenContext): void {
   // A generated file that reads a text in the page's language imports tx.
   for (const file of files)
-    if (
-      file.zone === "generated" &&
-      /\btx\(/.test(file.content) &&
-      !/import \{[^}]*\btx\b[^}]*\} from "#\/kit\/words"/.test(file.content)
-    )
+    if (file.zone === "generated" && /\btx\(/.test(file.content) && !importsTx(file.content))
       file.content = file.content.replace(
         /^import /m,
         'import { tx } from "#/kit/words";\nimport ',
