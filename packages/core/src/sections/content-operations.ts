@@ -66,6 +66,48 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
 };
 
 /**
+ * Several visible texts at once, each as setText would set it, in one change that one undo takes
+ * back: a language file's first draft (docs/design/languages.md §1) is a hundred of them.
+ */
+const setTexts: Operation<{ texts: Record<string, string>; language?: string }> = {
+  name: "setTexts",
+  summary:
+    'Change several visible texts at once, each by its path in dots, e.g. { "pages.customers.title": "Kunder" }; with language, in that language file. A key with a dot in it (a choice value like "e.g.") cannot be reached this way: use setText.',
+  schema: {
+    type: "object",
+    required: ["texts"],
+    additionalProperties: false,
+    properties: {
+      texts: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        minProperties: 1,
+        description:
+          'Path in dots → text, e.g. { "models.Customer.label": "Kund" }; "" restores the default.',
+      },
+      language: {
+        enum: [...LANGUAGES],
+        description:
+          "In one of the app's other languages: its file, smithable.content.<language>.yml.",
+      },
+    },
+  },
+  positional: [],
+  describe: ({ texts, language }) =>
+    `Change ${Object.keys(texts).length} texts${language ? ` in ${language}` : ""}`,
+  destructive: () => false,
+  apply(editors, { texts, language }, ir) {
+    for (const [path, text] of Object.entries(texts))
+      setText.apply(
+        editors,
+        { path: path.split("."), text, ...(language ? { language } : {}) },
+        ir,
+      );
+    return [];
+  },
+};
+
+/**
  * Ask's visible texts (docs/design/ask-defaults.md §2): its name, greeting, placeholder and the
  * sentence of what it is for. Each one given is set; "" clears it, so the kit's words come back.
  */
@@ -366,6 +408,7 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
 
 export const contentOperations: AnyOperation[] = [
   setText,
+  setTexts,
   nameRecords,
   setLanguage,
   addLanguage,

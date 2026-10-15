@@ -49,3 +49,4 @@ export {
   readDescription,
 } from "./read-description.js";
 export { type Edit, readEdit, STARTER_TEXTS } from "./starter-descriptions.js";
+export { draftTranslation } from "./translate.js";

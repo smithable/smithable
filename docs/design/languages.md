@@ -133,7 +133,7 @@ models:
    cookie; a test-apps flow on the booking starter with a Swedish file: `/sv/` reads Swedish,
    `/` English, both in the sitemap, the alternates right.
 4. (Done, 2026-10-15.) The person's language: `users.language`, the signed-in switch, the mails.
-5. Studio's Languages view (done, 2026-10-15) and the model's first draft (to come).
+5. (Done, 2026-10-15.) Studio's Languages view and the model's first draft.
 6. First builds.
 
 Steps 1–3 are what a public site needs and are the bulk; 4–6 follow. Size: a week of A's pull

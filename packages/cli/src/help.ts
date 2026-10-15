@@ -194,6 +194,15 @@ export const COMMANDS: Command[] = [
     options: ["dir"],
   },
   {
+    name: "translate",
+    usage: "translate <language>",
+    text: [
+      "Have a model draft the texts still empty in one of the app's other languages,",
+      "e.g. translate sv after op addLanguage sv; one change, which undo takes back",
+    ],
+    options: ["dir"],
+  },
+  {
     name: "op",
     usage: "op <name> …",
     text: [

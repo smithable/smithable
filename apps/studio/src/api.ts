@@ -176,6 +176,8 @@ export const api = {
     file?: { path: string; data: string },
   ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
+  /** The language's empty texts drafted by the configured model (smithable translate). */
+  translate: (language: string) => changing(call<Result>("/api/translate", { language })),
   undo: () => changing(call<Result>("/api/undo", {})),
   redo: () => changing(call<Result>("/api/redo", {})),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */

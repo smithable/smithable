@@ -29,6 +29,7 @@ import { teach } from "./teach.js";
 import { themeFrom } from "./theme-from.js";
 import { themeLab } from "./theme-lab.js";
 import { themes } from "./themes.js";
+import { translate } from "./translate.js";
 import { undo } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
@@ -116,6 +117,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return writeCode(values.dir ?? ".", io, args[0] ?? "", args.slice(1).join(" "));
   if (command === "ask")
     return ask(values.dir ?? ".", io, args.join(" ") || undefined, { yes: values.yes === true });
+  if (command === "translate") return translate(values.dir ?? ".", io, args[0]);
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
   if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
