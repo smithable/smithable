@@ -585,6 +585,27 @@ function SpecEditor({
   // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
   // which has no Ctrl-Space.
   const [ask, setAsk] = useState(0);
+  // "What goes here?" with nothing to offer says so for a moment, instead of doing nothing.
+  const [nothing, setNothing] = useState(false);
+  useEffect(() => {
+    if (!nothing) return;
+    const gone = setTimeout(() => setNothing(false), 4000);
+    return () => clearTimeout(gone);
+  }, [nothing]);
+  // The first time the editor opens in this browser: how to ask it what fits.
+  const [hint, setHint] = useState(() => {
+    try {
+      return localStorage.getItem("smithable:editor-hint") !== "seen";
+    } catch {
+      return false;
+    }
+  });
+  const hintSeen = () => {
+    setHint(false);
+    try {
+      localStorage.setItem("smithable:editor-hint", "seen");
+    } catch {}
+  };
   return (
     <div className="flex h-full min-w-0 flex-col">
       {/* In a narrow column the toolbar wraps onto a second line, never a word per line. */}
@@ -624,6 +645,26 @@ function SpecEditor({
           What goes here?
         </Button>
       </div>
+      {nothing && (
+        <p role="status" className="border-b border-line bg-subtle px-2 py-1 text-xs text-muted">
+          Nothing to suggest at the cursor: put it on a new line where a key goes, or after a key
+          and a space.
+        </p>
+      )}
+      {hint && (
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-x-2 border-b border-line bg-subtle px-2 py-1 text-xs text-muted"
+        >
+          <span>
+            Ctrl-Space (⌃Space on a Mac) lists what fits where the cursor is, and "What goes here?"
+            does the same.
+          </span>
+          <Button variant="ghost" className="h-6 whitespace-nowrap text-xs" onClick={hintSeen}>
+            Got it
+          </Button>
+        </p>
+      )}
       {/* The look has controls in No code (themes, columns, forms, a landing page's sections);
           this file is for what they do not cover, or for changing a lot at once. */}
       {file === "smithable.ux.yml" && (
@@ -649,6 +690,7 @@ function SpecEditor({
           kept={`smithable:editor:${project.name}:${file}`}
           assist
           ask={ask}
+          onNothing={() => setNothing(true)}
           known={{
             ...(roles ? { roles } : {}),
             spec: drafts["smithable.yml"] ?? project.files.spec ?? "",

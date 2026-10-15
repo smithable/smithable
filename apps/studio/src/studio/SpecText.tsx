@@ -2,7 +2,12 @@
 // search, the validator's problems shown in the text where they are, and what can be written at
 // the cursor and what a word means, from the spec's schema and the app's own names (core's
 // complete.ts). Its own module, loaded when the spec tab opens: Builder never pays for it.
-import { acceptCompletion, completionStatus, startCompletion } from "@codemirror/autocomplete";
+import {
+  acceptCompletion,
+  completionStatus,
+  snippet,
+  startCompletion,
+} from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -25,6 +30,7 @@ export default function SpecText({
   known,
   assist = false,
   ask,
+  onNothing,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -41,6 +47,8 @@ export default function SpecText({
   assist?: boolean;
   /** Open what can be written at the cursor, each time it changes (a phone has no Ctrl-Space). */
   ask?: number;
+  /** "What goes here?" found nothing to offer at the cursor. */
+  onNothing?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
@@ -48,6 +56,8 @@ export default function SpecText({
   changed.current = onChange;
   const knows = useRef(known);
   knows.current = known;
+  const nothing = useRef(onNothing);
+  nothing.current = onNothing;
   const file = label as EditedFile;
   const dark = matchMedia("(prefers-color-scheme: dark)");
   const scheme = useRef(new Compartment()).current;
@@ -89,8 +99,8 @@ export default function SpecText({
             options: found.suggestions.map((s, index) => ({
               label: s.label,
               boost: Math.max(-99, -index),
-              type: found.value ? "constant" : "property",
-              ...(s.insert ? { apply: s.insert } : {}),
+              type: s.snippet ? "keyword" : found.value ? "constant" : "property",
+              ...(s.snippet ? { apply: snippet(s.snippet) } : s.insert ? { apply: s.insert } : {}),
               ...(s.detail ? { info: s.detail } : {}),
             })),
           };
@@ -188,12 +198,17 @@ export default function SpecText({
       editor.destroy();
     };
   }, []);
-  // Each "What goes here?" (a count, so asking twice opens it twice).
+  // Each "What goes here?" (a count, so asking twice opens it twice). Where there is nothing
+  // to offer (after a value, in free text, in a comment), the asker is told so.
   useEffect(() => {
     const editor = view.current;
     if (!editor || !ask) return;
     editor.focus();
     startCompletion(editor);
+    const check = setTimeout(() => {
+      if (completionStatus(editor.state) === null) nothing.current?.();
+    }, 150);
+    return () => clearTimeout(check);
   }, [ask]);
   // A text from outside (a save, the file on disk): put in whole; typing arrives here unchanged.
   useEffect(() => {

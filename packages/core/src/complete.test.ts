@@ -300,3 +300,29 @@ test("a field line with a long run of spaces is read quickly (CodeQL #49)", () =
   at(long);
   expect(Date.now() - started).toBeLessThan(100);
 });
+
+test("under a map of the app's own names a template entry is offered, with its required keys", () => {
+  const found = completeSpec(
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\nactions:\n  ‸",
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\nactions:\n  ".length,
+  );
+  const template = found?.suggestions.find((s) => s.snippet);
+  expect(template?.label).toBe("myEntry");
+  expect(template?.snippet).toMatch(/^\$\{myEntry\}:\n {4}/);
+  // A model's name is PascalCase, a page's kebab-case.
+  const model = completeSpec("smithable: 0.1\nmodels:\n  ‸", "smithable: 0.1\nmodels:\n  ".length);
+  expect(model?.suggestions.find((s) => s.snippet)?.label).toBe("MyRecord");
+  expect(model?.suggestions.find((s) => s.snippet)?.snippet).toContain("fields: ${{}}");
+  const page = completeSpec(
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\npages:\n  ‸",
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\npages:\n  ".length,
+  );
+  expect(page?.suggestions.find((s) => s.snippet)?.label).toBe("my-page");
+  // Where there are own names to offer (the fields of a model under an action's set), no template.
+  const set = completeSpec(
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\nactions:\n  done:\n    on: Task\n    set:\n      ‸",
+    "smithable: 0.1\nmodels:\n  Task:\n    fields:\n      title: string!\nactions:\n  done:\n    on: Task\n    set:\n      "
+      .length,
+  );
+  expect(set?.suggestions.some((s) => s.snippet)).toBe(false);
+});
