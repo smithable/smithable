@@ -1994,6 +1994,30 @@ try {
         throw new Error("the description did not reach smithable.yml");
     },
   );
+  await step(
+    "a page's properties are its parts of the spec, the content and the look: its subtitle changed under Texts lands in the content file",
+    async () => {
+      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+      await page.getByRole("tab", { name: "What it does" }).click();
+      const pages = page.getByRole("region", { name: "Pages", exact: true });
+      await pages.getByRole("button", { name: /^(Customers|Clients) \(lists customers/ }).click();
+      const texts = pages.getByRole("region", { name: "Texts" });
+      const box = texts.getByRole("textbox", { name: "subtitle" });
+      await box.fill("Every client and their orders.");
+      await box.press("Enter");
+      const file = join(dir, "smithable.content.yml");
+      for (
+        let i = 0;
+        i < 60 && !readFileSync(file, "utf8").includes("Every client and their orders.");
+        i++
+      )
+        await new Promise((r) => setTimeout(r, 1000));
+      if (!readFileSync(file, "utf8").includes("Every client and their orders."))
+        throw new Error("the subtitle did not reach the content file");
+      if (await pages.getByLabel("Icon in the menu").count())
+        throw new Error("the hand-made icon control is still there");
+    },
+  );
   await step("a message from a window other than the preview is ignored", async () => {
     const before = (await project()).files.content;
     // Studio's own window, not the preview frame, pretending to be the preview.
