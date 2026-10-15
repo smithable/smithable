@@ -14,6 +14,7 @@ import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { Selected, selectedField } from "./Selected";
+import { SpecForm } from "./SpecForm";
 import { WhoCan } from "./WhoCan";
 
 export function Builder({
@@ -33,10 +34,10 @@ export function Builder({
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
 }) {
-  const [tab, setTabState] = useState<"app" | "look" | "who" | "languages" | "changes">(
+  const [tab, setTabState] = useState<"app" | "spec" | "look" | "who" | "languages" | "changes">(
     place.tab ?? "app",
   );
-  const setTab = (next: "app" | "look" | "who" | "languages" | "changes") => {
+  const setTab = (next: "app" | "spec" | "look" | "who" | "languages" | "changes") => {
     setTabState(next);
     onPlace({ tab: next });
   };
@@ -206,6 +207,7 @@ export function Builder({
               <Tabs
                 tabs={[
                   ["app", "What it does"],
+                  ["spec", "Every setting"],
                   ["look", "Look", "look"],
                   ["who", "Who can"],
                   ["languages", "Languages"],
@@ -216,7 +218,9 @@ export function Builder({
               />
             }
           >
-            {tab === "languages" ? (
+            {tab === "spec" ? (
+              <SpecForm files={project.files} run={run} />
+            ) : tab === "languages" ? (
               <Languages spec={spec} run={run} />
             ) : tab === "look" ? (
               <Look spec={spec} run={run} themes={project.themes} />

@@ -1,5 +1,6 @@
 import { parseDocument } from "yaml";
 import { COMPANIONS } from "../companion.js";
+import type { YamlValue } from "../edit.js";
 import { type SpecIR, storageOf } from "../ir.js";
 import { type AnyOperation, type Effect, type Operation, OperationError } from "../operation.js";
 import { validateSpec } from "../spec.js";
@@ -48,17 +49,34 @@ export const emptyFile = (file: EditableFile): string | undefined =>
  * Studio's editor: the edited smithable.yml, or one of its companion files, replaces the current
  * one, through the same checks, migrations, checkpoint and undo as every operation. The specific
  * operations stay better for agents: a renamed field shows here as a removed and an added one.
+ * With `path`, only that part of the file is set to `value` (null takes it away): what a form of
+ * the spec writes where no operation of its own covers the key (docs/design/what-it-does.md §2).
  */
-const editSpec: Operation<{ text: string; file?: EditableFile; grow?: string }> = {
+const editSpec: Operation<{
+  text?: string;
+  file?: EditableFile;
+  path?: (string | number)[];
+  value?: unknown;
+  grow?: string;
+}> = {
   name: "editSpec",
   summary:
     "Replace smithable.yml, or one of its companion files, with an edited version, as a whole.",
   schema: {
     type: "object",
-    required: ["text"],
     additionalProperties: false,
     properties: {
-      text: { type: "string", description: "The complete new file." },
+      text: { type: "string", description: "The complete new file (without path)." },
+      path: {
+        type: "array",
+        items: { type: ["string", "integer"] },
+        minItems: 1,
+        description:
+          "Only this part of the file, e.g. [app, timezone] or [pages, menu, order, lead].",
+      },
+      value: {
+        description: "The part's new value with path; null takes the part away.",
+      },
       file: {
         enum: Object.keys(EDITABLE_FILES),
         description: "Which file; smithable.yml when not said.",
@@ -72,10 +90,38 @@ const editSpec: Operation<{ text: string; file?: EditableFile; grow?: string }> 
     },
   },
   positional: ["text"],
-  describe: ({ file }) => `Edit ${file ?? "smithable.yml"}`,
-  destructive: ({ text, file }, ir, after) =>
-    (file ?? "smithable.yml") === "smithable.yml" && removedFields(ir, text, after).length > 0,
-  apply(editors, { text, file = "smithable.yml" }, ir) {
+  describe: ({ file, path }) =>
+    path
+      ? `Set ${path.join(".")} in ${file ?? "smithable.yml"}`
+      : `Edit ${file ?? "smithable.yml"}`,
+  destructive: ({ text, file, path, value }, ir, after) =>
+    (file ?? "smithable.yml") === "smithable.yml" &&
+    // A stored field lost either way, the whole text or one part (a model's fields set anew),
+    // asks for confirmation.
+    (path
+      ? after
+        ? removedFields(ir, "", after).length > 0
+        : path[0] === "models" && value === null
+      : text !== undefined && removedFields(ir, text, after).length > 0),
+  apply(editors, { text, file = "smithable.yml", path, value }, ir) {
+    if (path) {
+      // A form that forgot the value must not delete: null says so.
+      if (value === undefined)
+        throw new OperationError("path needs value; null takes the part away.");
+      // A list's item by its place, as the YAML library reads a key: "0", "1", …
+      const at = path.map(String);
+      const editor = editors[EDITABLE_FILES[file]];
+      if (!editor)
+        throw new OperationError(`The project has no ${file}; set up sign-in first (setSignUp).`);
+      if (value === null) {
+        if (!editor.has(at)) throw new OperationError(`${path.join(".")} is not in ${file}.`);
+        editor.remove(at);
+      } else editor.set(at, value as YamlValue);
+      // A stored field lost with the part is a migration's, as with the whole text.
+      return file === "smithable.yml" ? removedFields(ir, editors.spec.text) : [];
+    }
+    if (text === undefined)
+      throw new OperationError("editSpec needs the file's text, or a path and its value.");
     const doc = parseDocument(text);
     if (doc.errors.length)
       throw new OperationError(`The YAML is not valid: ${doc.errors[0]?.message.split("\n")[0]}`);

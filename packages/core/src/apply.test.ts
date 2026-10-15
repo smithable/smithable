@@ -1534,3 +1534,51 @@ test("setLogo sets the app's mark, keeps its alt on a new file, and an empty src
   expect(removed).toMatchObject({ ok: true, description: "Remove the app's logo" });
   expect(removed.ok && removed.files.content).toBe(bare.content);
 });
+
+test("editSpec with a path sets one part of a file, checked as a whole; null takes it away", () => {
+  const set = applyOperation(files, "editSpec", {
+    path: ["app", "timezone"],
+    value: "Europe/Stockholm",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.spec).toContain("timezone: Europe/Stockholm");
+  expect(set.destructive).toBe(false);
+  // A value the spec refuses is refused, in the validator's words.
+  expect(
+    applyOperation(files, "editSpec", { path: ["app", "currency"], value: "EURO" }),
+  ).toMatchObject({
+    ok: false,
+  });
+  // Taking a part away: a field is destructive; something not there is refused.
+  const gone = applyOperation(files, "editSpec", {
+    path: ["models", "Customer", "fields", "phone"],
+    value: null,
+  });
+  expect(gone).toMatchObject({ ok: true, destructive: true });
+  expect(
+    applyOperation(files, "editSpec", { path: ["app", "nothing"], value: null }),
+  ).toMatchObject({
+    ok: false,
+  });
+  // Setting a model's fields anew loses the ones left out: destructive, with the migration's effects.
+  const reset = applyOperation(files, "editSpec", {
+    path: ["models", "Customer", "fields"],
+    value: { name: "string!", email: "email! unique", accountManager: "User" },
+  });
+  expect(reset).toMatchObject({ ok: true, destructive: true });
+  expect(
+    reset.ok && reset.effects.some((e) => e.kind === "remove-field" && e.field === "phone"),
+  ).toBe(true);
+  // A path without a value deletes nothing: it is refused.
+  expect(applyOperation(files, "editSpec", { path: ["app", "timezone"] })).toMatchObject({
+    ok: false,
+  });
+  // A companion file's part.
+  const content = applyOperation(files, "editSpec", {
+    file: "smithable.content.yml",
+    path: ["pages", "customers", "subtitle"],
+    value: "Everyone we sell to.",
+  });
+  if (!content.ok) throw new Error(content.message);
+  expect(content.files.content).toContain("subtitle: Everyone we sell to.");
+});
