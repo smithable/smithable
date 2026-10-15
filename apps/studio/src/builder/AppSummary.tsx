@@ -4,6 +4,7 @@
 // an add button opens its form in place, and what it made opens its properties next.
 import type { SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
+import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { Properties } from "../properties";
 import { Button, cx } from "../ui";
@@ -42,6 +43,7 @@ export function AppSummary({
   app,
   sections,
   spec,
+  files,
   run,
   onWho,
   onLook,
@@ -49,6 +51,8 @@ export function AppSummary({
   app: string;
   sections: SummarySection[];
   spec: Spec;
+  /** The project's files, for each part's "All settings". */
+  files?: Project["files"];
   run: Run;
   /** Opens the Who can tab with a column marked: a role's name, or "anyone". */
   onWho: (column: string) => void;
@@ -163,6 +167,7 @@ export function AppSummary({
           <Part
             section={s}
             spec={spec}
+            files={files}
             run={run}
             // A part named like its group (Pages) needs no heading of its own.
             titled={s.title !== GROUPS[kind(s.concept)]?.title}
@@ -219,6 +224,7 @@ function conceptOf(
 function Part({
   section,
   spec,
+  files,
   run,
   titled,
   wording,
@@ -232,6 +238,7 @@ function Part({
 }: {
   section: SummarySection;
   spec: Spec;
+  files?: Project["files"];
   run: Run;
   titled: boolean;
   wording?: string;
@@ -264,7 +271,14 @@ function Part({
   const properties = (concept: string) =>
     open === concept && (
       <div data-properties className="my-2 rounded-md border border-line bg-surface">
-        <Properties key={concept} concept={concept} spec={spec} run={run} onLook={onLook} />
+        <Properties
+          key={concept}
+          concept={concept}
+          spec={spec}
+          run={run}
+          onLook={onLook}
+          files={files}
+        />
       </div>
     );
 

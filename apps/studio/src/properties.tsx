@@ -14,7 +14,9 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { useState } from "react";
+import type { Project } from "./api";
 import { FieldShapeForm, listOf, type Run, shorthandOf } from "./builder/ChangeForms";
+import { SpecPart } from "./builder/SpecForm";
 import type { Spec } from "./engine";
 import { Button, Check, cx, Input, Label, Select } from "./ui";
 
@@ -172,10 +174,13 @@ export function Properties({
   spec,
   run,
   onLook,
+  files,
 }: {
   concept: string;
   spec: Spec;
   run: Run;
+  /** The project's files: with them, every setting of the part is under "All settings". */
+  files?: Project["files"];
   /** Opens the Look tab (Builder only), where a list's columns and a form's fields are set. */
   onLook?: () => void;
 }) {
@@ -185,6 +190,8 @@ export function Properties({
   const [rename, setRename] = useState("");
   if (!ir) return null;
   const heading = <h3 className="text-xs font-semibold text-quiet">Properties</h3>;
+  // Every setting of the part, as the spec's form has it (what-it-does.md §5 step 3).
+  const all = (path: string[]) => files && <AllSettings files={files} run={run} path={path} />;
   if (kind === "field" && fieldName) {
     const field = ir.models.find((m) => m.name === name)?.fields.find((f) => f.name === fieldName);
     if (!field) return null;
@@ -263,6 +270,7 @@ export function Properties({
         >
           Remove field
         </Button>
+        {all(["models", name, "fields", fieldName])}
       </div>
     );
   }
@@ -303,6 +311,7 @@ export function Properties({
             </Button>
           </div>
         )}
+        {all(["actions", name])}
       </div>
     );
   }
@@ -374,6 +383,7 @@ export function Properties({
         >
           Remove page
         </Button>
+        {all(["pages", name])}
       </div>
     );
   }
@@ -392,10 +402,26 @@ export function Properties({
           run={run}
         />
         <WhoCan model={name} spec={spec} run={run} />
+        {all(["models", name])}
       </div>
     );
   }
   return null;
+}
+
+/** A part's every setting, folded; drawn only once opened. */
+function AllSettings({ files, run, path }: { files: Project["files"]; run: Run; path: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="cursor-pointer text-xs font-medium text-muted">All settings</summary>
+      {open && (
+        <div className="mt-2">
+          <SpecPart files={files} run={run} path={path} />
+        </div>
+      )}
+    </details>
+  );
 }
 
 /**

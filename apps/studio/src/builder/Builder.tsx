@@ -231,6 +231,7 @@ export function Builder({
                 app={project.name}
                 sections={sections}
                 spec={spec}
+                files={project.files}
                 run={run}
                 onWho={(column) => {
                   setMarked(column);
