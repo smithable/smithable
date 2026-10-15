@@ -15,7 +15,7 @@ export type Kind =
   | "kiosk";
 
 export interface Question {
-  about: "kind" | "audience" | "visitors";
+  about: "kind" | "audience" | "visitors" | "languages";
   question: string;
   options: string[];
 }
@@ -47,6 +47,15 @@ export interface Reading {
   /** How each word was read, for the report. */
   trace: { word: string; as: string }[];
 }
+
+// A language's name as a description may write it (in English, in itself, in Finnish), and two
+// named together, as packages/ai/src/language.ts reads them for the draft.
+const LANGUAGES = "english|engelska|englanti|swedish|svenska|svensk|ruotsi|ruotsiksi";
+const LANGUAGE_WORD = new RegExp(`\\b(${LANGUAGES})\\b`, "i");
+const TWO_LANGUAGES = new RegExp(
+  `\\b(${LANGUAGES})\\s*(?:,|and|och|ja|&|\\+)\\s*(?:also\\s+|även\\s+|också\\s+)?(${LANGUAGES})\\b`,
+  "i",
+);
 
 const set = (words: string) => new Set(words.split(/\s+/).filter(Boolean));
 
@@ -366,6 +375,15 @@ export function readDescription(given: string): Reading {
       about: "visitors",
       question: "Should people see anything without signing in?",
       options: ["No, nothing", "Yes, they can look", "Yes, and they can send a form"],
+    });
+  // A language named, but not two together ("for our Swedish customers", "in Swedish"): which
+  // the app is in is asked (languages.md §6 step 6). Two named together the draft settles, and
+  // an answer naming two ("Swedish and English") is read the same way.
+  if (LANGUAGE_WORD.test(given) && !TWO_LANGUAGES.test(given))
+    reading.questions.push({
+      about: "languages",
+      question: "Which languages should the app be in?",
+      options: ["English", "Swedish", "Swedish and English", "English and Swedish"],
     });
   return reading;
 }

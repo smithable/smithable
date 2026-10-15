@@ -56,12 +56,13 @@ export function languageQuestion(site: Language, person: Language = "en") {
 export function textLanguage(description: string): Language | undefined {
   // Asked, the answer follows the question; answered in order (--answers), it is a language's
   // name on its own after the question's number.
-  const answer = (/^- The site is in \w+\. Should the app's texts be in \w+ or \w+\? (.+)$/m.exec(
-    description,
-  ) ??
-    new RegExp(`^- \\(\\d+\\) (${Object.values(NAMES).join("|")})$`, "im").exec(description))?.[1]
-    ?.trim()
-    .toLowerCase();
+  const answer =
+    (/^- (?:The site is in \w+\. Should the app's texts be in \w+ or \w+|Which languages should the app be in)\? (.+)$/m.exec(
+      description,
+    ) ??
+      new RegExp(`^- \\(\\d+\\) (${Object.values(NAMES).join("|")})$`, "im").exec(description))?.[1]
+      ?.trim()
+      .toLowerCase();
   const named = (Object.entries(NAMES) as [Language, string][]).find(([, name]) =>
     answer?.startsWith(name.toLowerCase()),
   );
