@@ -2026,7 +2026,7 @@ try {
     },
   );
   await step(
-    "the Every setting tab adds a kind of record and a field through their operations",
+    "the Every setting tab adds a kind of record and a field, and renames the field, through their operations",
     async () => {
       await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
       await page.getByRole("tab", { name: "Every setting" }).click();
@@ -2059,6 +2059,11 @@ try {
         .getByRole("button", { name: "Add" })
         .click();
       await waitFile("website: string");
+      // A field is renamed through renameField, which keeps its data.
+      await customer.locator("summary", { hasText: /^website$/ }).click();
+      await customer.getByLabel("New name for website").fill("homepage");
+      await customer.getByRole("button", { name: "Rename", exact: true }).click();
+      await waitFile("homepage: string");
     },
   );
   await step("a message from a window other than the preview is ignored", async () => {

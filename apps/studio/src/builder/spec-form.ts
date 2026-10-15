@@ -289,3 +289,25 @@ export function choicesFor(file: string, path: (string | number)[], spec: unknow
   if (typeof what === "string" && GRANT_MODELS.includes(what)) return keys("models");
   return [];
 }
+
+/**
+ * The operation that renames an entry of a named map, when there is one: a field through
+ * renameField, which keeps its data. Undefined offers no rename (a plain edit would lose it).
+ */
+export function renameFor(
+  file: string,
+  path: (string | number)[],
+  to: string,
+): [string, Record<string, unknown>] | undefined {
+  const [first, model, third, from] = path;
+  if (
+    file === "smithable.yml" &&
+    path.length === 4 &&
+    first === "models" &&
+    third === "fields" &&
+    typeof model === "string" &&
+    typeof from === "string"
+  )
+    return ["renameField", { model, from, to }];
+  return undefined;
+}
