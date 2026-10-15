@@ -1,0 +1,20 @@
+{
+  "frames": [
+    {
+      "label": "Landing",
+      "path": "/frames/landing.html"
+    },
+    {
+      "label": "List",
+      "path": "/frames/list.html"
+    },
+    {
+      "label": "Form",
+      "path": "/frames/form.html"
+    },
+    {
+      "label": "Record",
+      "path": "/frames/record.html"
+    }
+  ]
+}

@@ -35,6 +35,9 @@ const MOTION_NOTES = {
     "As subtle with a little bounce, and the landing page's sections rise into view as they scroll in; the hero's picture settles once.",
 };
 
+/** On docs.smithable.ai (`pnpm site`): the exported pages beside it, no server, Save downloads. */
+const PUBLIC = import.meta.env.VITE_THEME_LAB === "public";
+
 const SIZES = {
   desktop: { width: 1280, height: 820, scale: 0.42 },
   phone: { width: 390, height: 780, scale: 0.6 },
@@ -45,12 +48,25 @@ export function App() {
   const [text, setText] = useState(() => themeText(BUILT_IN_THEMES[0] as ThemeIR));
   const [size, setSize] = useState<keyof typeof SIZES>("desktop");
   const [grey, setGrey] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+  const [signedIn, setSignedIn] = useState(PUBLIC);
   const [saved, setSaved] = useState<string>();
   useEffect(() => {
-    void fetch("/api/start")
-      .then((r) => r.json())
-      .then(setStart);
+    if (PUBLIC)
+      void fetch("start.json")
+        .then((r) => r.json())
+        .then(({ frames }) =>
+          setStart({
+            preview: new URL(".", location.href).href.replace(/\/$/, ""),
+            frames,
+            themes: [],
+            project: false,
+            target: "",
+          }),
+        );
+    else
+      void fetch("/api/start")
+        .then((r) => r.json())
+        .then(setStart);
   }, []);
 
   const name = /^name:\s*(\S+)/m.exec(text)?.[1] ?? "my-theme";
@@ -125,6 +141,14 @@ export function App() {
     setSaved(undefined);
   };
   const save = async () => {
+    if (PUBLIC) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([text], { type: "text/yaml" }));
+      link.download = `${name}.yml`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      return setSaved(`Downloaded ${name}.yml: add it to a project with addTheme.`);
+    }
     const answer = await fetch("/api/save", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -192,7 +216,9 @@ export function App() {
           Show the motion
         </button>
         <button type="button" disabled={!theme || errors.length > 0} onClick={save}>
-          Save{start && (start.project ? " to the project" : ` to ${start.target}/themes`)}
+          {PUBLIC
+            ? "Download"
+            : `Save${start ? (start.project ? " to the project" : ` to ${start.target}/themes`) : ""}`}
         </button>
         {saved && <span role="status">{saved}</span>}
       </header>
