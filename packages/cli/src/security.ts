@@ -12,7 +12,9 @@ import {
 import { appName } from "./build.js";
 import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
+import { hostedLevel, levelLine } from "./hosted-level.js";
 import type { Io } from "./io.js";
+import { loadSpec } from "./validate.js";
 
 /**
  * Security levels (ARCHITECTURE §12). External tools are detected, not bundled: a tool on the
@@ -594,6 +596,10 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
   }
   try {
     const url = `http://localhost:${port}`;
+    // On the hosted service, the project's level and what the app connects to outside itself.
+    const hosted = hostedLevel();
+    const spec = hosted ? loadSpec(dir, { ...io, err: () => {} }) : undefined;
+    if (hosted && spec?.ir && spec.auth) io.out(`${levelLine(hosted, spec.ir, spec.auth)}\n`);
     for (let i = 0; i < 120; i++) {
       try {
         if ((await fetch(`${url}/health`)).ok) break;
