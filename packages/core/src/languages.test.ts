@@ -194,3 +194,16 @@ test("the map: a text's own word before another's lowering; one text with two wo
   expect(texts.Customer).toBe("Kund");
   expect(texts.customer).toBe("kund");
 });
+
+test("setTexts writes several texts in one change, each as setText would", () => {
+  const added = applyOperation(files, "addLanguage", { language: "sv" });
+  if (!added.ok) throw new Error(added.message);
+  const set = applyOperation(added.files, "setTexts", {
+    language: "sv",
+    texts: { "models.Customer.label": "Kund", "pages.customers.title": "Kunder" },
+  });
+  if (!set.ok) throw new Error(set.message);
+  const file = set.files.translations?.sv ?? "";
+  expect(file).toMatch(/label: Kund\b/);
+  expect(file).toMatch(/title: Kunder\b/);
+});

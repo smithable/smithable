@@ -40,6 +40,7 @@ import {
   traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
+import { translate } from "./translate.js";
 import { undo } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 import { warmPreview } from "./warm.js";
@@ -923,6 +924,13 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/customize") {
         const { page } = await body();
         const result = await capture((io) => customize(dir, io, `page:${String(page)}`));
+        if (result.ok) changed({});
+        return json(result);
+      }
+      // A language's empty texts drafted by the configured model, as one change.
+      if (req.method === "POST" && url.pathname === "/api/translate") {
+        const { language } = await body();
+        const result = await capture((io) => translate(dir, io, String(language)));
         if (result.ok) changed({});
         return json(result);
       }

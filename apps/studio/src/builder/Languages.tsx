@@ -3,6 +3,7 @@
 // taking away a language. Each text is saved with setText in the language's file.
 import { type ContentIR, LANGUAGES, textPaths, textsToTranslate } from "@smithable/core";
 import { useMemo, useState } from "react";
+import { api } from "../api";
 import type { Spec } from "../engine";
 import { Button, cx, Input, Label, Select } from "../ui";
 import type { Run } from "./ChangeForms";
@@ -18,6 +19,9 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
   const shown = chosen && others.includes(chosen as never) ? chosen : others[0];
   const [adding, setAdding] = useState("");
   const [onlyEmpty, setOnlyEmpty] = useState(false);
+  // The model's first draft of the empty texts (smithable translate): what it said, while busy.
+  const [drafting, setDrafting] = useState(false);
+  const [drafted, setDrafted] = useState<{ ok: boolean; text: string }>();
   const own = useMemo(
     () =>
       content && ir ? [...textsToTranslate(content, ir)].sort(([a], [b]) => (a < b ? -1 : 1)) : [],
@@ -100,6 +104,40 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
               Only those
             </label>
           </p>
+          {empty > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                className="h-7 border border-line text-xs"
+                disabled={drafting}
+                onClick={async () => {
+                  setDrafting(true);
+                  setDrafted(undefined);
+                  const result = await api
+                    .translate(shown)
+                    .catch((error: Error) => ({ ok: false, output: error.message }));
+                  setDrafted({
+                    ok: result.ok,
+                    text: result.output.trim().split("\n").at(-1) ?? "",
+                  });
+                  setDrafting(false);
+                }}
+              >
+                {drafting ? "Drafting…" : `Draft them with the model`}
+              </Button>
+              <span className="text-xs text-quiet">
+                Read them after: a model's words are a first draft.
+              </span>
+              {drafted && (
+                <p
+                  role={drafted.ok ? "status" : "alert"}
+                  className={cx("w-full text-xs", !drafted.ok && "text-red-700")}
+                >
+                  {drafted.text}
+                </p>
+              )}
+            </div>
+          )}
           <table className="w-full text-left">
             <thead className="text-xs text-quiet">
               <tr>
