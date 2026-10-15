@@ -13,7 +13,8 @@
       "!packages/core/schema",
       "!**/*.gen.ts",
       "!docs/benchmarks",
-      "!docs/research"
+      "!docs/research",
+      "!docs/site/theme-lab"
     ]
   },
   "formatter": {

@@ -4,6 +4,7 @@
 // (a file under docs/site) is copied into the site at the same path; a missing one fails too.
 // Links between pages start at the root, so the 404 page works at any address.
 // Usage: node scripts/build-docs.mjs [out dir]
+import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   cpSync,
@@ -107,7 +108,8 @@ function target(page, href) {
   if (href.startsWith(SITE)) {
     if (
       !schemaPaths.includes(path.slice(SITE.length)) &&
-      !PAGES.some((p) => p.out === path.slice(SITE.length))
+      !PAGES.some((p) => p.out === path.slice(SITE.length)) &&
+      path !== `${SITE}theme-lab/`
     )
       problems.push(`${page.src}: ${href} is not on the site`);
     return href;
@@ -236,6 +238,30 @@ ${PAGES.map((p) => `  <url><loc>${SITE}${p.out === "index.html" ? "" : p.out}</l
 </urlset>
 `,
 );
+// The theme lab's public mode (docs/design/theme-lab.md §3): the lab built to read the pages
+// scripts/theme-lab-export.mjs exported, beside them, with paths relative to its folder.
+const lab = spawnSync(
+  "pnpm",
+  [
+    "exec",
+    "vite",
+    "build",
+    "--base",
+    "./",
+    "--outDir",
+    join(out, "theme-lab"),
+    "--logLevel",
+    "warn",
+  ],
+  {
+    cwd: join(root, "apps/theme-lab"),
+    env: { ...process.env, VITE_THEME_LAB: "public" },
+    stdio: "inherit",
+  },
+);
+if (lab.status !== 0) process.exit(lab.status ?? 1);
+cpSync(join(root, "docs/site/theme-lab"), join(out, "theme-lab"), { recursive: true });
+
 writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}sitemap.xml\n`);
 
 if (problems.length) {
