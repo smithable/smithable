@@ -1,10 +1,9 @@
 smithableUx: 0.1
 tones:
-  Ticket.priority:
-    high: warning
-    urgent: danger
-  Ticket.status:
+  SupportCase.status:
     inProgress: warning
-    resolved: success
+    closed: success
+    reopened: danger
 theme:
-  preset: corporate
+  preset: modern
+  density: compact

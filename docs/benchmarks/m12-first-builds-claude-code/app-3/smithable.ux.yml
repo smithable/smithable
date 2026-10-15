@@ -1,11 +1,5 @@
 smithableUx: 0.1
 pages:
-  invoices:
-    table:
-      sort: -issuedOn
-      columns: [number, client, issuedOn, dueOn, status, total, paid]
-  settings:
-    icon: settings
   payments:
     table:
       sort: -paidOn
@@ -17,4 +11,4 @@ tones:
 theme:
   preset: modern
   brand:
-    primary: "#2563eb"
+    primary: "#0f766e"

@@ -1,34 +1,26 @@
 smithable: 0.1
 app:
-  name: Shed Share
-  description: Neighbors lend each other tools instead of buying their own.
+  name: Toolshed
+  description: Neighbors lend each other tools instead of each buying their own.
   currency: EUR
 models:
   Tool:
     fields:
-      name: string!
+      title: string!
       photos: pictures!
       description: text!
-      category: garden | power | hand | ladders | cleaning | other
+      category: powerTools | handTools | garden | ladders | cleaning | painting | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
     review: [photos]
-  Loan:
-    fields:
-      tool: Tool!
-      startDate: date!
-      dueDate: date
-      status: borrowed | returned
-      returnedOn: date
-      notes: text
 pages:
-  tools:
+  catalog:
     route: /
     crud: Tool
-    search: [name, description, place]
+    search: [title, description, place]
     filters: [category, condition, available]
-    sortable: [name, createdAt]
+    sortable: [title, createdAt]
     favorites: true
     contact: owner
   myTools:
@@ -37,31 +29,33 @@ pages:
   saved:
     crud: Tool
     favorites: only
-  myLoans:
-    crud: Loan
-    mine: true
-    actions: [markReturned]
-  review:
-    review: all
   home:
     route: /welcome
     landing:
       hero:
+      footer:
       latest:
         records: Tool
         where:
           available: true
-      footer:
   privacy:
     route: /privacy
     legal: privacy
+  review:
+    review: all
 actions:
-  markReturned:
-    on: Loan
+  lendOut:
+    on: Tool
     when:
-      status: borrowed
+      available: true
     set:
-      status: returned
-      returnedOn: TODAY()
-    intent: Record that the borrowed tool has been brought back.
-navigation: [tools, myTools, myLoans, saved, review]
+      available: false
+    intent: Mark the tool as lent to a neighbor.
+  markReturned:
+    on: Tool
+    when:
+      available: false
+    set:
+      available: true
+    intent: Mark the tool as back and available to borrow.
+navigation: [catalog, myTools, saved, review]

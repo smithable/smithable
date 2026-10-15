@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Union Jobs
-  description: A job board where the local union posts jobs and members apply.
+  description: A job board where the local union posts jobs and members apply for them.
   currency: USD
 models:
   Job:
@@ -10,68 +10,85 @@ models:
       employer: string!
       description: text!
       location: string
-      type: fullTime | partTime | temporary | contract
+      trade: string
       pay: string
+      jobType: fullTime | partTime | temporary | apprenticeship
       deadline: date
-      status: open | closed
+      status: open | filled | closed
       applications: Application[]
   Application:
     fields:
       job: Job!
       name: string!
+      email: email!
       phone: phone
-      coverLetter: text!
-      cv: file
-      status: submitted | shortlisted | rejected | hired
+      memberNumber: string
+      message: text
+      resume: file
+      status: submitted | shortlisted | hired | declined
 pages:
   jobs:
+    route: /
     crud: Job
-    search: [title, employer, description, location]
-    filters: [type, status, deadline]
+    search: [title, employer, description, location, trade]
+    filters: [jobType, status, deadline]
     sortable: [deadline, createdAt]
-    actions: [closeJob]
+    actions: [markFilled, closeJob]
+  myApplications:
+    crud: Application
+    mine: true
   applications:
     crud: Application
     filters: [job, status]
-    actions: [shortlist, reject, hire]
+    search: [name, email, memberNumber]
   home:
     route: /welcome
     landing:
       hero:
       footer:
-      latestJobs:
+      openJobs:
         records: Job
         where:
           status: open
+      faq:
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
+  markFilled:
+    on: Job
+    when:
+      status: open
+    set:
+      status: filled
+    intent: Mark a job as filled once someone is hired.
   closeJob:
     on: Job
     when:
       status: open
     set:
       status: closed
-    intent: Stop taking applications for a job.
+    intent: Close a job to new applications.
   shortlist:
     on: Application
     when:
       status: submitted
     set:
       status: shortlisted
-    intent: Put an applicant on the shortlist.
-  reject:
+    intent: Put an application on the shortlist.
+  hire:
     on: Application
     when:
       status: [submitted, shortlisted]
     set:
-      status: rejected
-    intent: Turn down an application.
-  hire:
-    on: Application
-    when:
-      status: shortlisted
-    set:
       status: hired
     intent: Mark the applicant as hired.
+  decline:
+    on: Application
+    when:
+      status: [submitted, shortlisted]
+    set:
+      status: declined
+    intent: Decline an application.

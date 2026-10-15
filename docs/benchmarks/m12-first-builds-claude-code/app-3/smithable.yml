@@ -1,16 +1,9 @@
 smithable: 0.1
 app:
-  name: Billable
-  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
+  name: Ledgerly
+  description: "Invoicing for freelancers: keep track of clients, send invoices and record payments."
   currency: EUR
 models:
-  BusinessProfile:
-    fields:
-      businessName: string!
-      vatNumber: string
-      iban: string
-      paymentTermDays: int! = 30
-      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -27,13 +20,16 @@ models:
       status: draft | sent | paid | overdue
       contract: file
       lines: InvoiceLine[]
+      payments: Payment[]
+      paidAmount:
+        type: money
+        formula: SUM(payments.amount)
       total:
         type: money
         formula: SUM(lines.amount)
-      payments: Payment[]
-      paid:
+      balance:
         type: money
-        formula: SUM(payments.amount)
+        formula: SUM(lines.amount) - SUM(payments.amount)
   InvoiceLine:
     fields:
       invoice: Invoice!
@@ -51,8 +47,23 @@ models:
       method: bankTransfer | card | cash | other
       note: string
 pages:
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid]
+  clients:
+    crud: Client
+    search: [name, email]
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
+  invoice-lines:
+    crud: InvoiceLine
   overview:
     dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
       latest:
         list: Invoice
         limit: 5
@@ -64,20 +75,6 @@ pages:
         sum: Invoice.total
         where:
           status: overdue
-      received:
-        sum: Payment.amount
-        by: paidOn
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markOverdue, markPaid]
-  clients:
-    crud: Client
-    search: [name, email]
-  invoice-lines:
-    crud: InvoiceLine
-  settings:
-    crud: BusinessProfile
   home:
     route: /
     landing:
@@ -90,9 +87,6 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
 actions:
   markSent:
     on: Invoice
@@ -101,13 +95,6 @@ actions:
     set:
       status: sent
     intent: The invoice went to the client.
-  markOverdue:
-    on: Invoice
-    when:
-      status: sent
-    set:
-      status: overdue
-    intent: The due date passed without payment.
   markPaid:
     on: Invoice
     when:
@@ -120,3 +107,8 @@ actions:
         paidOn: TODAY()
         method:
     intent: The client paid the invoice; the payment is recorded with it.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

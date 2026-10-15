@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "marketplace",
   "questions": [
-    "Who posts jobs on the board?",
-    "What can visitors see without signing in?",
-    "Who can apply for jobs?"
+    "Who posts the jobs?",
+    "Who can apply for jobs?",
+    "What can visitors see without signing in?"
   ]
 }

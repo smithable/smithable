@@ -2,15 +2,17 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Union jobs, close to home
-      subtitle: Browse open positions posted by the union and apply in a few minutes.
+      title: Union jobs, posted for our members
+      subtitle: Browse open positions with union employers and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    latestJobs:
-      title: Latest openings
+    openJobs:
+      title: Open jobs
+    faq:
+      title: Questions
 logo:
   src: images/logo.webp
   alt: A map pin

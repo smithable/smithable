@@ -4,7 +4,7 @@
   "wordStarter": "invoicing",
   "questions": [
     "Who will use the app?",
-    "Can clients view their invoices without signing in?",
-    "How should payments be tracked?"
+    "Can clients see their invoices without signing in?",
+    "What should a payment record hold?"
   ]
 }

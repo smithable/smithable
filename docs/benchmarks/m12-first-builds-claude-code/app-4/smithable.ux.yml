@@ -1,15 +1,7 @@
 smithableUx: 0.1
 pages:
-  tools:
+  catalog:
     table:
       view: cards
-  myLoans:
-    table:
-      columns: [tool, startDate, dueDate, status]
-      sort: -startDate
-tones:
-  Loan.status:
-    borrowed: warning
-    returned: success
 theme:
   preset: woodland

@@ -6,7 +6,7 @@ roles:
   admin: all
   member:
     description: A student who books classes.
-    pages: [my-bookings, schedule]
+    pages: [my-bookings]
     create: [Booking]
 assistant:
   for: signed-in

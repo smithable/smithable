@@ -7,14 +7,14 @@ roles:
   admin: all
   staff:
     description: Writes incidents and their updates.
-    pages: [incidents, updates]
+    pages: [overview, incidents, updates, maintenance]
     create: all
     write: all
 assistant:
   for: signed-in
 public:
   pages: [home, privacy]
-  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate]
+  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 defaultRole: staff
 api:
   models: [Component, Incident]
