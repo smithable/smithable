@@ -2026,7 +2026,7 @@ try {
     },
   );
   await step(
-    "the Every setting tab adds a kind of record and a field, and renames the field, through their operations",
+    "the Every setting tab adds a kind of record and a field, renames the field and changes its type, through their operations",
     async () => {
       await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
       await page.getByRole("tab", { name: "Every setting" }).click();
@@ -2064,6 +2064,17 @@ try {
       await customer.getByLabel("New name for website").fill("homepage");
       await customer.getByRole("button", { name: "Rename", exact: true }).click();
       await waitFile("homepage: string");
+      // A field's type is its own control in the form, changed through changeField.
+      const homepage = customer.locator("details", {
+        has: page.locator("summary", { hasText: /^homepage$/ }),
+      });
+      if (!(await homepage.evaluate((d) => d.open)))
+        await homepage.locator("summary", { hasText: /^homepage$/ }).click();
+      await homepage.getByLabel("Field type").selectOption({ label: "Web address" });
+      await homepage.getByRole("button", { name: "Change field" }).click();
+      // Another type may lose values, so it is confirmed first.
+      await page.getByRole("button", { name: "Apply anyway" }).click();
+      await waitFile("homepage: url");
     },
   );
   await step("a message from a window other than the preview is ignored", async () => {

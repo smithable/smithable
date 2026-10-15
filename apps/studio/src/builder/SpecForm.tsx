@@ -7,12 +7,13 @@ import {
   COMPANION_SCHEMAS,
   type EditableFile,
   type JsonSchema,
+  type SpecIR,
 } from "@smithable/core";
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import { parse } from "yaml";
 import type { Project } from "../api";
 import { cx } from "../ui";
-import type { Run } from "./ChangeForms";
+import { FieldShapeForm, type Run } from "./ChangeForms";
 import {
   alternativeFor,
   choicesFor,
@@ -50,6 +51,36 @@ const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown) => {
 };
 /** Writes a part of the file being shown: its path and the new value (undefined takes it away). */
 const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(async () => false);
+/**
+ * A field's type (its short form, or type: in its long form) as the field's own control: the
+ * kind, required, unique, a choice's values, through changeField. Undefined for any other key,
+ * a calculated field and a list of related records, which keep the plain text.
+ */
+const Shape = createContext<(path: Path) => React.ReactNode>(() => undefined);
+const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path) => {
+  const [first, model, third, name, key] = path;
+  if (file !== "smithable.yml" || !ir || first !== "models" || third !== "fields") return undefined;
+  if (!(path.length === 4 || (path.length === 5 && key === "type"))) return undefined;
+  const field = ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === name);
+  if (!field || field.formula || (field.type.kind === "relation" && field.type.many))
+    return undefined;
+  return (
+    <FieldShapeForm
+      key={JSON.stringify(field)}
+      field={field}
+      models={ir.models.map((m) => m.name)}
+      run={(type, renames) =>
+        run("changeField", {
+          model: String(model),
+          field: String(name),
+          type,
+          ...(renames.length ? { renames } : {}),
+        })
+      }
+    />
+  );
+};
+
 /** Renames the entry at a path through its operation; undefined where there is none. */
 const Renamer = createContext<(path: Path) => ((to: string) => Promise<boolean>) | undefined>(
   () => undefined,
@@ -67,7 +98,7 @@ const choicesOf = (files: Project["files"], file: EditableFile) => {
   return (path: Path) => choicesFor(file, path, spec);
 };
 
-export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) {
+export function SpecForm({ files, run, ir }: { files: Project["files"]; run: Run; ir?: SpecIR }) {
   const schemas = useMemo(
     () =>
       ({ "smithable.yml": buildJsonSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
@@ -91,7 +122,9 @@ export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) 
             <Writer.Provider value={write}>
               <Choices.Provider value={choicesOf(files, file)}>
                 <Renamer.Provider value={renamerOf(run, file)}>
-                  <Value schema={schema} value={read(files[key])} path={[]} />
+                  <Shape.Provider value={shapeOf(run, file, ir)}>
+                    <Value schema={schema} value={read(files[key])} path={[]} />
+                  </Shape.Provider>
                 </Renamer.Provider>
               </Choices.Provider>
             </Writer.Provider>
@@ -109,6 +142,8 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const write = useContext(Writer);
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
+  const shaped = useContext(Shape)(path);
+  if (shaped && (typeof value === "string" || value === undefined)) return shaped;
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");
@@ -465,11 +500,13 @@ export function SpecPart({
   run,
   path,
   file = "smithable.yml",
+  ir,
 }: {
   files: Project["files"];
   run: Run;
   path: Path;
   file?: EditableFile;
+  ir?: SpecIR;
 }) {
   const entry = FILES.find(([, name]) => name === file);
   const root = file === "smithable.yml" ? buildJsonSchema() : COMPANION_SCHEMAS[file];
@@ -483,7 +520,9 @@ export function SpecPart({
     <Writer.Provider value={write}>
       <Choices.Provider value={choicesOf(files, file)}>
         <Renamer.Provider value={renamerOf(run, file)}>
-          <Value schema={schema} value={value} path={path} />
+          <Shape.Provider value={shapeOf(run, file, ir)}>
+            <Value schema={schema} value={value} path={path} />
+          </Shape.Provider>
         </Renamer.Provider>
       </Choices.Provider>
     </Writer.Provider>
