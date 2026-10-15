@@ -19,7 +19,7 @@ import { uxOperations } from "./sections/ux-operations.js";
 import { validateUx } from "./ux.js";
 
 export interface Companion {
-  key: Exclude<keyof Editors, "spec" | "themes">;
+  key: Exclude<keyof Editors, "spec" | "themes" | "translations">;
   file: string;
   /** A new file's text; without it the file is never created (sign-in is chosen, not implied). */
   empty?: string;

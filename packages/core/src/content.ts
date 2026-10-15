@@ -24,6 +24,13 @@ export type Language = (typeof LANGUAGES)[number];
 export interface ContentIR {
   /** The language of everything a person reads in the app: the kit's words follow it. */
   language: Language;
+  /**
+   * The other languages the app is offered in (docs/design/languages.md §2), each with its own
+   * file, smithable.content.<language>.yml, of the same keys.
+   */
+  languages?: Language[];
+  /** Each other language's texts, read from its file by the host; the app's own where one is empty. */
+  translations?: Partial<Record<Language, ContentIR>>;
   /** The app's mark, before its name in the shell and the landing header, and its tab icon. */
   logo?: ContentImage;
   models: Record<string, ModelContent>;
@@ -160,10 +167,89 @@ export function emptyContent(): ContentIR {
   return { language: LANGUAGES[0], models: {}, pages: {}, menus: {}, actions: {}, outgoing: {} };
 }
 
+/**
+ * Keys of the content file whose values no person reads as words: a picture's file, an address
+ * to go to, the operator's contact details, numbers. Not texts to translate, and not in a
+ * language file (docs/design/languages.md §2).
+ */
+export const NOT_TEXT = new Set([
+  "src",
+  "link",
+  "to",
+  "href",
+  "icon",
+  "for",
+  "generated",
+  "email",
+  "phone",
+  "vatNumber",
+  "paymentTermDays",
+]);
+
+/**
+ * A key and its value that no person reads: a plain value under a NOT_TEXT key. A field named
+ * email holds an object, and a choice's values (under `values`) are always texts.
+ */
+export const notText = (key: string, value: unknown, parent?: string) =>
+  parent !== "values" && NOT_TEXT.has(key) && (value === null || typeof value !== "object");
+
+/**
+ * Every text of a content file by its path (pages.home.title), the app's languages and its
+ * mark aside: what a language file has to say again.
+ */
+export function textPaths(content: ContentIR): Map<string, string> {
+  const paths = new Map<string, string>();
+  const walk = (value: unknown, at: string) => {
+    if (typeof value === "string") paths.set(at, value);
+    else if (value && typeof value === "object")
+      for (const [key, inner] of Object.entries(value))
+        if (!notText(key, inner, at.split(".").at(-1))) walk(inner, at ? `${at}.${key}` : key);
+  };
+  for (const [key, value] of Object.entries(content))
+    if (!["language", "languages", "translations", "logo"].includes(key)) walk(value, key);
+  return paths;
+}
+
+/**
+ * Every text a person reads that a language file can say again, by its path: the content
+ * file's own and those derived from names (a model's label and plural, a field's label, a
+ * choice's values, a page's title, an action's button), each with the app's words for it.
+ */
+export function textsToTranslate(content: ContentIR, ir: SpecIR): Map<string, string> {
+  const texts = derivedTexts(ir);
+  for (const [path, text] of textPaths(content)) texts.set(path, text);
+  return texts;
+}
+
+/** The texts the app derives from names, by their path in the content file, each in its words. */
+export function derivedTexts(ir: SpecIR): Map<string, string> {
+  const derived = new Map<string, string>();
+  for (const model of ir.models) {
+    const label = humanize(model.name);
+    derived.set(`models.${model.name}.label`, label);
+    derived.set(`models.${model.name}.pluralLabel`, plural(label));
+    for (const field of model.fields) {
+      derived.set(`models.${model.name}.fields.${field.name}.label`, humanize(field.name));
+      if (field.type.kind === "choice")
+        for (const value of field.type.values)
+          derived.set(`models.${model.name}.fields.${field.name}.values.${value}`, humanize(value));
+    }
+  }
+  for (const page of ir.pages) derived.set(`pages.${page.id}.title`, humanize(page.id));
+  // A menu's heading in the navigation (the main menu has none).
+  for (const menu of ir.navigation)
+    if (menu.name !== "main") derived.set(`menus.${menu.name}.label`, humanize(menu.name));
+  for (const action of ir.actions)
+    derived.set(`actions.${action.name}.label`, humanize(action.name));
+  return derived;
+}
+
 /** Parses smithable.content.yml and checks every reference against the spec. */
 export function validateContent(
   file: { path: string; text: string },
   ir: SpecIR,
+  /** A language file (smithable.content.<language>.yml): the content file it translates. */
+  translation?: { of: ContentIR; language: Language },
 ): { content?: ContentIR; diagnostics: Diagnostic[] } {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
@@ -205,8 +291,8 @@ export function validateContent(
   const known = checkKeys(ctx, entries, "smithable.content.yml", {
     allowed: [
       "smithableContent",
-      "language",
-      "logo",
+      // A language file holds the texts only: the app's languages and its mark are the content file's.
+      ...(translation ? [] : ["language", "languages", "logo"]),
       "models",
       "pages",
       "menus",
@@ -217,6 +303,10 @@ export function validateContent(
     ],
   });
 
+  if (translation) {
+    content.language = translation.language;
+    ctx.emptyTexts = true;
+  }
   // Where each model's entry is, for a warning about the model.
   const modelKeys = new Map<string, ParsedNode>();
   for (const { key, value } of known) {
@@ -231,6 +321,29 @@ export function validateContent(
           "unknown-language",
           `The app kit has no words in "${language}". Languages: ${LANGUAGES.join(", ")}.`,
         );
+    }
+    if (key === "languages") {
+      const given = isSeq(value) ? value.items : [];
+      if (!isSeq(value))
+        ctx.error(
+          value,
+          "invalid-languages",
+          '"languages" is a list of language codes, e.g. [sv].',
+        );
+      const languages: Language[] = [];
+      for (const item of given as ParsedNode[]) {
+        const code = isScalar(item) ? String(item.value) : "";
+        if (!(LANGUAGES as readonly string[]).includes(code))
+          ctx.error(
+            item,
+            "unknown-language",
+            `The app kit has no words in "${code}". Languages: ${LANGUAGES.join(", ")}.`,
+          );
+        else if (languages.includes(code as Language))
+          ctx.error(item, "invalid-languages", `"${code}" is in "languages" twice.`);
+        else languages.push(code as Language);
+      }
+      content.languages = languages;
     }
     if (key === "logo") {
       const { src, alt, generated } = readPicture(ctx, value, '"logo"');
@@ -298,6 +411,45 @@ export function validateContent(
         ]);
       }
     }
+  }
+  // The app's own language is not one of its others.
+  if (content.languages?.includes(content.language))
+    ctx.error(
+      byKey.get("languages")?.value ?? root,
+      "invalid-languages",
+      `"${content.language}" is the app's own language ("language"), not one of "languages".`,
+    );
+  // A language file has the content file's texts and no others; one it lacks shows in the
+  // app's language, said once with the count.
+  if (translation) {
+    // Texts only: what no person reads stays the content file's.
+    const found: string[] = [];
+    const walk = (value: unknown, at: string) => {
+      if (value && typeof value === "object")
+        for (const [key, inner] of Object.entries(value)) {
+          const path = at ? `${at}.${key}` : key;
+          if (notText(key, inner, at.split(".").at(-1))) found.push(path);
+          else walk(inner, path);
+        }
+    };
+    walk(doc.toJS(), "");
+    if (found.length)
+      ctx.error(
+        root,
+        "unknown-key",
+        `A language file holds texts only, and ${found.slice(0, 3).join(", ")}${found.length > 3 ? ", …" : ""} ${found.length === 1 ? "is" : "are"} not one: ${found.length === 1 ? "it stays" : "they stay"} in smithable.content.yml.`,
+      );
+    const here = textPaths(content);
+    const missing = [...textsToTranslate(translation.of, ir).keys()].filter(
+      (path) => !here.get(path)?.trim(),
+    );
+    if (missing.length)
+      ctx.warning(
+        root,
+        "text-untranslated",
+        `${missing.length} ${missing.length === 1 ? "text is" : "texts are"} not in ${file.path} yet (${missing.slice(0, 3).join(", ")}${missing.length > 3 ? ", …" : ""}): they show in the app's language until they are.`,
+      );
+    return done();
   }
   // In another language a plural made by an English rule reads wrong: each model says its own.
   // The warning sits on the model's entry when it has one, else on the language key.
@@ -552,6 +704,8 @@ function readImage(
   where: string,
 ): ContentImage | undefined {
   const { src, alt, generated } = readPicture(ctx, node, where);
+  // In a language file a picture says what it shows only: its file is the content file's.
+  if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
   if (!src || !IMAGE_SRC.test(src)) {
     ctx.error(
       node,

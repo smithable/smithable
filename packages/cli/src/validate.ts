@@ -6,11 +6,13 @@ import {
   type Diagnostic,
   formatDiagnostic,
   hasErrors,
+  LANGUAGES,
   parseTheme,
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
   type ThemeIR,
+  translationPath,
   type UxIR,
   validateAuth,
   validateContent,
@@ -105,6 +107,23 @@ export function loadSpec(
     print(result.diagnostics);
     if (!result.content) return failed(contentPath, result.diagnostics);
     content = result.content;
+    // Each other language's texts (docs/design/languages.md §2), against the content file.
+    for (const language of content.languages ?? []) {
+      const file = join(dirname(path), translationPath(language));
+      if (!existsSync(file)) {
+        io.err(
+          `${file} is missing: the app is in ${language} ("languages"), and its texts show in the app's own language. smithable op addLanguage ${language} writes it.\n`,
+        );
+        continue;
+      }
+      const read = validateContent({ path: file, text: readFileSync(file, "utf8") }, ir, {
+        of: content,
+        language,
+      });
+      print(read.diagnostics);
+      if (!read.content) return failed(file, read.diagnostics);
+      content.translations = { ...content.translations, [language]: read.content };
+    }
   }
   // The project's own themes, which the ux file's preset may name.
   const themes: ThemeIR[] = [];
@@ -155,6 +174,16 @@ export function loadSpec(
     ...(themes.length ? { themes } : {}),
     ...(samples ? { samples } : {}),
   };
+}
+
+/** The project's language files' texts, by language (smithable.content.<language>.yml). */
+export function projectTranslations(dir: string): Record<string, string> {
+  return Object.fromEntries(
+    LANGUAGES.flatMap((language) => {
+      const file = join(dir, translationPath(language));
+      return existsSync(file) ? [[language, readFileSync(file, "utf8")]] : [];
+    }),
+  );
 }
 
 /** The project's themes that parse, for operations; problems are reported by `loadSpec`. */

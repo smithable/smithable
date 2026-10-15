@@ -1,5 +1,7 @@
-import { ASSISTANT_TEXTS, LANGUAGES, LOGO_SRC } from "../content.js";
+import { parse, stringify } from "yaml";
+import { ASSISTANT_TEXTS, derivedTexts, LANGUAGES, LOGO_SRC, notText } from "../content.js";
 import type { YamlEditor } from "../edit.js";
+import type { SpecIR } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { pageModel } from "../patterns.js";
@@ -10,7 +12,7 @@ import { pageModel } from "../patterns.js";
  * text Smithable derives from names comes back. Which paths exist is the content file's own
  * validation, run after every operation.
  */
-const setText: Operation<{ path: string[]; text: string }> = {
+const setText: Operation<{ path: string[]; text: string; language?: string }> = {
   name: "setText",
   summary:
     'Change a visible text, e.g. path [pages, customers, subtitle] or [models, Customer, fields, email, label] ("" restores the default).',
@@ -26,14 +28,27 @@ const setText: Operation<{ path: string[]; text: string }> = {
         description: "Where in smithable.content.yml, e.g. [pages, customers, title].",
       },
       text: { type: "string", description: 'The new text; "" restores the default.' },
+      language: {
+        enum: [...LANGUAGES],
+        description:
+          "In one of the app's other languages: its file, smithable.content.<language>.yml.",
+      },
     },
   },
   positional: ["text", "...path"],
-  describe: ({ path, text }) =>
-    text ? `Change the text ${path.join(".")} to "${text}"` : `Restore the text ${path.join(".")}`,
+  describe: ({ path, text, language }) =>
+    `${text ? `Change the text ${path.join(".")} to "${text}"` : `Restore the text ${path.join(".")}`}${language ? ` in ${language}` : ""}`,
   destructive: () => false,
-  apply(editors, { path, text }) {
-    const content = editors.content;
+  apply(editors, { path, text, language }) {
+    const main = (editors.content.get(["language"]) as string | undefined) ?? LANGUAGES[0];
+    const content =
+      language === undefined || language === main
+        ? editors.content
+        : editors.translations.get(language);
+    if (!content)
+      throw new OperationError(
+        `The app is not in "${language}": add it first (smithable op addLanguage ${language}).`,
+      );
     const parent = path.slice(0, -1);
     // An item of a plain list, e.g. one of a plan's features.
     if (Array.isArray(content.get(parent)) && typeof content.get(path) === "string") {
@@ -198,6 +213,114 @@ const setLanguage: Operation<{ language: string }> = {
 };
 
 /**
+ * A language file with every text a person reads, each to be filled in (languages.md §1): the
+ * content file's own, in its shape, and those derived from names.
+ */
+function emptyTranslation(content: string, language: string, ir: SpecIR): string {
+  const blank = (value: unknown, parent?: string): unknown =>
+    typeof value === "string"
+      ? ""
+      : Array.isArray(value)
+        ? value.map((v) => blank(v))
+        : value && typeof value === "object"
+          ? Object.fromEntries(
+              Object.entries(value)
+                .filter(([k, v]) => !notText(k, v, parent))
+                .map(([k, v]) => [k, blank(v, k)]),
+            )
+          : value;
+  const {
+    smithableContent: _v,
+    language: _l,
+    languages: _ls,
+    logo: _logo,
+    ...texts
+  } = (parse(content) ?? {}) as Record<string, unknown>;
+  const tree = blank(texts) as Record<string, unknown>;
+  // The texts derived from names beside the content file's own (in the tree already, in its shape).
+  paths: for (const path of derivedTexts(ir).keys()) {
+    const keys = path.split(".");
+    let at: Record<string, unknown> = tree;
+    for (const key of keys.slice(0, -1)) {
+      const next = at[key];
+      if (Array.isArray(next)) continue paths;
+      if (!next || typeof next !== "object") at[key] = {};
+      at = at[key] as Record<string, unknown>;
+    }
+    const last = keys.at(-1) as string;
+    if (!(last in at)) at[last] = "";
+  }
+  const body = Object.keys(tree).length ? stringify(tree) : "";
+  return `# The app's texts in ${language}: the keys of smithable.content.yml, each to be filled in.
+# One left empty shows in the app's own language.
+smithableContent: 0.1
+${body}`;
+}
+
+/** Another language the app is offered in (docs/design/languages.md §2), with its file to fill in. */
+const addLanguage: Operation<{ language: string }> = {
+  name: "addLanguage",
+  summary: `Offer the app in another language too, with its own file of the app's texts to fill in: ${LANGUAGES.join(", ")}.`,
+  schema: {
+    type: "object",
+    required: ["language"],
+    additionalProperties: false,
+    properties: {
+      language: {
+        enum: [...LANGUAGES],
+        description: "A language the app kit has words in, other than the app's own.",
+      },
+    },
+  },
+  positional: ["language"],
+  describe: ({ language }) => `Offer the app in ${language} too`,
+  destructive: () => false,
+  apply({ content, translations }, { language }, ir) {
+    const main = (content.get(["language"]) as string | undefined) ?? LANGUAGES[0];
+    if (language === main) throw new OperationError(`${language} is the app's own language.`);
+    const now = (content.get(["languages"]) as string[] | undefined) ?? [];
+    // Listed already: its file is written again only when it is missing.
+    if (now.includes(language) && translations.get(language))
+      throw new OperationError(`The app is in ${language} already.`);
+    if (now.includes(language)) {
+      translations.add(language, emptyTranslation(content.text, language, ir));
+      return [];
+    }
+    if (content.has(["languages"])) content.set(["languages"], [...now, language]);
+    else content.add([], "languages", [language]);
+    translations.add(language, emptyTranslation(content.text, language, ir));
+    return [];
+  },
+};
+
+/** Takes a language away, and its file with its texts. */
+const removeLanguage: Operation<{ language: string }> = {
+  name: "removeLanguage",
+  summary: "Stop offering the app in one of its other languages; its file of texts goes too.",
+  schema: {
+    type: "object",
+    required: ["language"],
+    additionalProperties: false,
+    properties: {
+      language: { enum: [...LANGUAGES], description: "One of the app's other languages." },
+    },
+  },
+  positional: ["language"],
+  describe: ({ language }) => `Stop offering the app in ${language}`,
+  // Its texts go with it.
+  destructive: () => true,
+  apply({ content, translations }, { language }) {
+    const now = (content.get(["languages"]) as string[] | undefined) ?? [];
+    if (!now.includes(language)) throw new OperationError(`The app is not offered in ${language}.`);
+    const rest = now.filter((l) => l !== language);
+    if (rest.length) content.set(["languages"], rest);
+    else content.remove(["languages"]);
+    translations.remove(language);
+    return [];
+  },
+};
+
+/**
  * The app's mark (docs/design/app-logo.md §1): a file under public/images/, shown before the
  * name in the shell and the landing header and linked as the tab icon. An empty src removes it.
  */
@@ -245,6 +368,8 @@ export const contentOperations: AnyOperation[] = [
   setText,
   nameRecords,
   setLanguage,
+  addLanguage,
+  removeLanguage,
   setLogo,
   setAssistantTexts,
 ];

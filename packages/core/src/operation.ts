@@ -22,6 +22,16 @@ export interface Editors {
   /** smithable.context.yml (implementation choices); written only when it changed. */
   context: YamlEditor;
   themes: ThemeFiles;
+  /** The language files, smithable.content.<language>.yml (docs/design/languages.md §2). */
+  translations: TranslationFiles;
+}
+
+/** The project's language files, one editor each; an operation may add or take one away. */
+export interface TranslationFiles {
+  /** The file of a language the project has, to edit. */
+  get(language: string): YamlEditor | undefined;
+  add(language: string, text: string): void;
+  remove(language: string): void;
 }
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */

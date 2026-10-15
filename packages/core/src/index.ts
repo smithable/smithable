@@ -7,6 +7,7 @@ export {
   OPERATIONS,
   operationsFor,
   parseOperationArgs,
+  translationPath,
 } from "./apply.js";
 export { namesFor } from "./arguments.js";
 export type {
@@ -68,6 +69,7 @@ export {
   type Language,
   LOGO_SRC,
   RESERVE_TEXTS,
+  textsToTranslate,
   validateContent,
 } from "./content.js";
 export {

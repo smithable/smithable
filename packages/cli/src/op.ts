@@ -1,4 +1,11 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
@@ -13,6 +20,7 @@ import {
   parseOperationArgs,
   type SpecIR,
   storageOf,
+  translationPath,
   validateAuth,
   validateContent,
   validateSpec,
@@ -39,7 +47,7 @@ import { type Io, lap, lapFrom } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
-import { projectThemes } from "./validate.js";
+import { projectThemes, projectTranslations } from "./validate.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
@@ -180,6 +188,7 @@ async function applyAndCheckpoint(
     ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
     plugins,
     themes: projectThemes(dir),
+    translations: projectTranslations(dir),
   };
   const result = applyOperation(files, operation.name, args);
   if (!result.ok) {
@@ -256,6 +265,9 @@ async function applyAndCheckpoint(
     if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
     if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
     if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
+    for (const [language, text] of Object.entries(result.files.translations ?? {}))
+      writeFileSync(join(dir, translationPath(language)), text);
+    for (const path of result.removed) rmSync(join(dir, path), { force: true });
     for (const file of [...result.added, ...(flags.files ?? [])]) {
       mkdirSync(dirname(join(dir, file.path)), { recursive: true });
       writeFileSync(join(dir, file.path), "text" in file ? file.text : file.bytes);
