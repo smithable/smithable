@@ -85,3 +85,18 @@ test("the other languages a description asks for: two named together, never one 
   expect(otherLanguages("A CRM for our Swedish customers", "en")).toEqual([]);
   expect(otherLanguages("A CRM in English", "en")).toEqual([]);
 });
+
+test("the answer to which languages names the main one first; a pair adds the other", () => {
+  const answered = (answer: string) =>
+    `A booking app for our Swedish customers.\n\nAnswers:\n- Which languages should the app be in? ${answer}`;
+  expect(textLanguage(answered("Swedish"))).toBe("sv");
+  expect(textLanguage(answered("Swedish and English"))).toBe("sv");
+  expect(otherLanguages(answered("Swedish and English"), "sv")).toEqual(["en"]);
+  expect(otherLanguages(answered("Swedish"), "sv")).toEqual([]);
+});
+
+test("a numbered answer may name two languages, the main one first (--answers)", () => {
+  const numbered = "A booking app for our customers.\n\nAnswers:\n- (1) Swedish and English";
+  expect(textLanguage(numbered)).toBe("sv");
+  expect(otherLanguages(numbered, "sv")).toEqual(["en"]);
+});

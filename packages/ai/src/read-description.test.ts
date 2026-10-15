@@ -89,3 +89,11 @@ test("words are compared in the singular", () => {
     "status",
   ]);
 });
+
+test("a language named, but not two together, asks which languages the app is in", () => {
+  const asks = (text: string) =>
+    readDescription(text).questions.some((q) => q.about === "languages");
+  expect(asks("A booking app for my barbershop, for our Swedish customers.")).toBe(true);
+  expect(asks("A booking app for my barbershop, in Swedish and English.")).toBe(false);
+  expect(asks("A booking app for my barbershop.")).toBe(false);
+});
