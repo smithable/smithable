@@ -53,4 +53,14 @@ Every app is hosted in Sweden, with its backups in the same region. An account i
 - **Download everything (.zip)**: the code with its whole history, the data (also as spreadsheet files), the uploads and a README, ready in under a minute.
 - **Make a transfer link**: a one-time link, valid for seven days, that moves the app, with its published version and its data, to another account.
 
-The download is an ordinary Smithable project. On your own machine, `smithable studio` opens it and every command in [Getting started on your own machine](start-local.md) works on it. The app itself depends on nothing from Smithable.
+The download holds the app's code with its whole history (a Git bundle) and its data. Its README has the commands that make it an ordinary Smithable project again:
+
+```sh
+git clone project.bundle stillwater
+cp -r data stillwater/
+cd stillwater
+pnpm install
+smithable studio
+```
+
+Then every command in [Getting started on your own machine](start-local.md) works on it. The app also runs without Smithable (`pnpm dev`), and `smithable detach` removes what only Smithable uses.

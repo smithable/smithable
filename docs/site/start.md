@@ -16,4 +16,4 @@ Free and open source, with no account. You need Node 24: install the command lin
 
 ## The same either way
 
-The app is described by the same files (`smithable.yml` and its companions, see the [spec reference](../spec/v0.1.md)). It is changed by the same [operations](operations.md), each one undoable, and it is generated as an ordinary TanStack Start app that depends on nothing from Smithable. An app made on smithable.ai downloads as a project you can open on your own machine.
+The app is described by the same files (`smithable.yml` and its companions, see the [spec reference](../spec/v0.1.md)). It is changed by the same [operations](operations.md), each one undoable, and it is generated as an ordinary TanStack Start app that depends on nothing from Smithable. An app made on smithable.ai downloads with its code, history and data, ready to carry on with on your own machine.
