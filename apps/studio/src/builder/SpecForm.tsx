@@ -13,7 +13,7 @@ import { parse } from "yaml";
 import type { Project } from "../api";
 import { cx } from "../ui";
 import type { Run } from "./ChangeForms";
-import { alternativeFor, controlOf, labelOf } from "./spec-form";
+import { alternativeFor, controlOf, labelOf, operationFor } from "./spec-form";
 
 const FILES: [Exclude<keyof Project["files"], "translations">, EditableFile, string][] = [
   ["spec", "smithable.yml", "What the app does"],
@@ -32,6 +32,14 @@ const read = (text: string | undefined): unknown => {
 };
 
 type Path = (string | number)[];
+
+/** Writes one key: through its own operation when it has one, else editSpec with its path. */
+const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown) => {
+  const own = operationFor(file, path, value);
+  return own
+    ? run(own[0], own[1])
+    : run("editSpec", { file, path, value: value === undefined ? null : value });
+};
 /** Writes a part of the file being shown: its path and the new value (undefined takes it away). */
 const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(async () => false);
 
@@ -50,8 +58,7 @@ export function SpecForm({ files, run }: { files: Project["files"]; run: Run }) 
       {FILES.map(([key, file, title]) => {
         const schema = schemas[file];
         if (!schema || (key !== "spec" && files[key] === undefined)) return null;
-        const write = (path: Path, value: unknown) =>
-          run("editSpec", { file, path, value: value === undefined ? null : value });
+        const write = (path: Path, value: unknown) => writeKey(run, file, path, value);
         return (
           <section key={file} aria-label={title}>
             <h2 className="mb-2 border-b border-line pb-1 text-xs font-semibold tracking-wide text-quiet uppercase">
@@ -381,8 +388,7 @@ export function SpecPart({
   if (!schema) return null;
   let value = whole;
   for (const step of path) value = (value as Record<string | number, unknown> | undefined)?.[step];
-  const write = (at: Path, next: unknown) =>
-    run("editSpec", { file, path: at, value: next === undefined ? null : next });
+  const write = (at: Path, next: unknown) => writeKey(run, file, at, next);
   return (
     <Writer.Provider value={write}>
       <Value schema={schema} value={value} path={path} />

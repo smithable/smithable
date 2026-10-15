@@ -147,3 +147,33 @@ export function alternativeFor(options: JsonSchema[], value: unknown): JsonSchem
   };
   return options.find(fits);
 }
+
+/**
+ * The specific operation that sets a key, when there is one (what-it-does.md §2): a text of the
+ * content file through setText (empty restores the default), the app's name, description,
+ * currency and time zone through setApp. Undefined leaves it to editSpec with the key's path.
+ */
+export function operationFor(
+  file: string,
+  path: (string | number)[],
+  value: unknown,
+): [string, Record<string, unknown>] | undefined {
+  if (
+    file === "smithable.content.yml" &&
+    path.length >= 2 &&
+    path.every((p) => typeof p === "string") &&
+    (typeof value === "string" || value === undefined)
+  )
+    return ["setText", { path, text: value ?? "" }];
+  const [first, key] = path;
+  if (
+    file === "smithable.yml" &&
+    path.length === 2 &&
+    first === "app" &&
+    typeof key === "string" &&
+    ["name", "description", "currency", "timezone"].includes(key) &&
+    typeof value === "string"
+  )
+    return ["setApp", { [key]: value }];
+  return undefined;
+}
