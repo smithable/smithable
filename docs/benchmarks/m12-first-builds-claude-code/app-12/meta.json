@@ -3,8 +3,7 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who will post outages and updates?",
-    "Should the page also announce planned maintenance in advance?",
-    "Can visitors subscribe to get updates?"
+    "Who posts outages and updates?",
+    "Should the page also announce planned maintenance ahead of time?"
   ]
 }

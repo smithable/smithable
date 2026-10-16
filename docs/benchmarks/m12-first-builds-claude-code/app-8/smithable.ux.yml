@@ -8,7 +8,7 @@ pages:
       view: cards
 tones:
   Talk.track:
-    workshop: warning
+    keynote: success
 theme:
   preset: modern
   brand:

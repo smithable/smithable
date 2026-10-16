@@ -1,9 +1,11 @@
 smithableUx: 0.1
 tones:
-  SupportCase.status:
-    inProgress: warning
+  Ticket.status:
+    open: warning
     closed: success
     reopened: danger
+  Ticket.priority:
+    high: warning
+    urgent: danger
 theme:
   preset: modern
-  density: compact

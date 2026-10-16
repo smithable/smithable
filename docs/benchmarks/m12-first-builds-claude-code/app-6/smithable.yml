@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Union Jobs
-  description: A job board where the local union posts jobs and members apply for them.
+  description: Job posts from our local union, and a simple way for members to apply.
   currency: USD
 models:
   Job:
@@ -14,18 +14,19 @@ models:
       pay: string
       jobType: fullTime | partTime | temporary | apprenticeship
       deadline: date
-      status: open | filled | closed
+      status: open | closed
       applications: Application[]
   Application:
     fields:
-      job: Job!
+      job: Job! unique
       name: string!
       email: email!
       phone: phone
-      memberNumber: string
-      message: text
+      coverLetter: text
       resume: file
-      status: submitted | shortlisted | hired | declined
+      status:
+        type: submitted | reviewing | accepted | rejected
+        by: app
 pages:
   jobs:
     route: /
@@ -33,62 +34,60 @@ pages:
     search: [title, employer, description, location, trade]
     filters: [jobType, status, deadline]
     sortable: [deadline, createdAt]
-    actions: [markFilled, closeJob]
+    actions: [closeJob, reopenJob]
   myApplications:
     crud: Application
     mine: true
   applications:
     crud: Application
     filters: [job, status]
-    search: [name, email, memberNumber]
+    search: [name, email]
   home:
     route: /welcome
     landing:
       hero:
       footer:
-      openJobs:
+      latestJobs:
         records: Job
         where:
           status: open
-      faq:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
 actions:
-  markFilled:
-    on: Job
-    when:
-      status: open
-    set:
-      status: filled
-    intent: Mark a job as filled once someone is hired.
   closeJob:
     on: Job
     when:
       status: open
     set:
       status: closed
-    intent: Close a job to new applications.
-  shortlist:
+    intent: Stop taking applications for a job.
+  reopenJob:
+    on: Job
+    when:
+      status: closed
+    set:
+      status: open
+    intent: Take applications for a job again.
+  startReview:
     on: Application
     when:
       status: submitted
     set:
-      status: shortlisted
-    intent: Put an application on the shortlist.
-  hire:
+      status: reviewing
+    intent: Mark an application as being reviewed.
+  accept:
     on: Application
     when:
-      status: [submitted, shortlisted]
+      status: [submitted, reviewing]
     set:
-      status: hired
-    intent: Mark the applicant as hired.
-  decline:
+      status: accepted
+    intent: Accept an application.
+  reject:
     on: Application
     when:
-      status: [submitted, shortlisted]
+      status: [submitted, reviewing]
     set:
-      status: declined
-    intent: Decline an application.
+      status: rejected
+    intent: Turn down an application.
+navigation: [jobs, myApplications, applications]

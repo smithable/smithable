@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: "The live state of our API: incidents being fixed and maintenance that is planned."
+  description: Is the API working? Live status, incidents and planned maintenance.
 models:
   Component:
     fields:
@@ -32,51 +32,6 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-pages:
-  incidents:
-    crud: Incident
-    filters: [status, component]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  maintenance:
-    crud: Maintenance
-  components:
-    crud: Component
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      planned:
-        records: Maintenance
-      recent:
-        records: Incident
-        where:
-          status: resolved
-  privacy:
-    route: /privacy
-    legal: privacy
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-  team:
-    users: manage
 actions:
   identified:
     on: Incident
@@ -115,4 +70,48 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The incident is over, with an update saying so.
+pages:
+  incidents:
+    crud: Incident
+    filters: [status, component]
+  updates:
+    crud: IncidentUpdate
+  maintenance:
+    crud: Maintenance
+  components:
+    crud: Component
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      planned:
+        records: Maintenance
+      recent:
+        records: Incident
+        where:
+          status: resolved
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
 navigation: [overview, incidents, updates, maintenance, components, team]

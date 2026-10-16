@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Who keeps the site up to date?",
+    "Who updates the site?",
     "What can visitors see without signing in?",
-    "What should a match record hold besides date, opponent and score?"
+    "What should a match record hold?"
   ]
 }

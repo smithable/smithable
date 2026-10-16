@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
-    "Who will use the app?",
-    "Can clients see their invoices without signing in?",
-    "What should a payment record hold?"
+    "Can clients open their invoices through a link without signing in?",
+    "What should a payment record hold?",
+    "Who uses the app?"
   ]
 }

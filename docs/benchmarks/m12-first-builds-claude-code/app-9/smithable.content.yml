@@ -1,17 +1,4 @@
 smithableContent: 0.1
-models:
-  SupportCase:
-    label: Ticket
-    pluralLabel: Tickets
-    fields:
-      customerEmail:
-        label: Requester email
-  Message:
-    fields:
-      supportCase:
-        label: Ticket
-    label: Note
-    pluralLabel: Notes
 logo:
   src: images/logo.webp
   alt: A speech bubble

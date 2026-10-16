@@ -1,4 +1,8 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
 tones:
   Component.status:
     operational: success
@@ -7,4 +11,9 @@ tones:
   Incident.status:
     investigating: danger
     identified: warning
+    monitoring: warning
     resolved: success
+theme:
+  preset: modern
+  brand:
+    primary: "#16a34a"
