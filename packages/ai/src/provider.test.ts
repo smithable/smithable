@@ -153,3 +153,21 @@ test("a server that takes only its default temperature is asked again without on
   await completeJson(provider, { system: "s", user: "v", schema: {} }, []);
   expect(bodies.map((b) => "temperature" in b)).toEqual([true, false, false]);
 });
+
+test("a prompt over 100k tokens is never sent: the model charges more above it", async () => {
+  const complete = vi.fn();
+  const provider = {
+    name: "p",
+    tier: "frontier",
+    location: "eu",
+    model: "m",
+    price: { input: 0, output: 0 },
+    complete,
+  } as never;
+  const usage: Usage[] = [];
+  await expect(
+    completeJson(provider, { system: "s", user: "x".repeat(300_001), schema: {} }, usage),
+  ).rejects.toThrow(/too large/);
+  expect(complete).not.toHaveBeenCalled();
+  expect(usage).toEqual([]);
+});

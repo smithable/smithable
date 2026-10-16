@@ -20,7 +20,7 @@ import {
   matchRequest,
   refusalOf,
 } from "@smithable/index";
-import { completeJson, type Provider, type Usage } from "./provider.js";
+import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
 
 export interface ProposedOperation {
   op: string;
@@ -260,7 +260,7 @@ export async function proposeChange(options: {
     const schema = answerSchema(operations);
     const fallbackSchema = answerSchema(operations, false);
     let prompt = user;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 1 + REPAIRS; attempt++) {
       let answer: Answer;
       try {
         answer = (await completeJson(

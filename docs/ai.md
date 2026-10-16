@@ -48,6 +48,19 @@ export SMITHABLE_FRONTIER_MODEL=sonnet     # optional; Claude Code's default oth
 
 Smithable runs `claude -p` with no tools, no MCP servers and an empty working directory: it only answers, and cannot read or change the project. Its cost is reported in dollars.
 
+## Claude through Amazon Bedrock (tier 3)
+
+With the `aws` command signed in, Claude runs through Amazon Bedrock with no key in any file. An `eu.` inference profile keeps the request in the EU, so it counts as EU-hosted under `eu-only`:
+
+```bash
+export SMITHABLE_FRONTIER=bedrock
+export SMITHABLE_FRONTIER_MODEL=eu.anthropic.claude-haiku-5-5   # the newest Haiku: fast and cheap
+# export SMITHABLE_FRONTIER_MODEL=eu.anthropic.claude-sonnet-5-5  # stronger, about twenty times the price
+# export SMITHABLE_BEDROCK_REGION=eu-north-1                      # or AWS_REGION; eu-north-1 unsaid
+```
+
+The fixed instructions are cached between calls, and the cost is reported in dollars at Bedrock's EU price. A prompt over 100k tokens is never sent (Haiku 5.5 charges five times as much above it); none of Smithable's requests come near it.
+
 ## Custom code
 
 Some requests need code, not an operation: ranking customers by churn risk, a custom action's behaviour. A coder writes it, only in `src/custom/`:
@@ -74,7 +87,7 @@ A generated app's **Ask** panel answers questions about its records and makes th
 ```bash
 export ASSISTANT_URL=https://api.mistral.ai/v1   # any OpenAI-compatible chat endpoint that can call tools
 export ASSISTANT_KEY=…
-export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-4-5, through a gateway that serves Claude
+export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-5-5, through a gateway that serves Claude
 ```
 
 Without them, Ask answers by its rules alone and says when a question needs a model.
@@ -114,7 +127,7 @@ For a section of `smithable.yml` Smithable does not know, `smithable teach <sect
 | `local-only` | Only models on this machine |
 | `allow:local,smithable` | Only the named providers |
 
-A request worded like an everyday change ("Customers should have a phone number", "Only admins may delete customers", "Show orders first in the menu") becomes operations without any model, in milliseconds and offline; anything that does not resolve to exactly one model, field or page goes to the cheapest allowed tier first. A model gets two chances to repair an answer that does not apply; after that, or when it says no operation can do it while a stronger model is allowed, the request goes to the next tier. An unclear request gets a question back instead of a guess, and a request that needs custom code is said to need it.
+A request worded like an everyday change ("Customers should have a phone number", "Only admins may delete customers", "Show orders first in the menu") becomes operations without any model, in milliseconds and offline; anything that does not resolve to exactly one model, field or page goes to the cheapest allowed tier first. A model gets four chances to repair an answer that does not apply; after that, or when it says no operation can do it while a stronger model is allowed, the request goes to the next tier. An unclear request gets a question back instead of a guess, and a request that needs custom code is said to need it.
 
 A question about the app ("who can delete orders?", "is the schedule public?", "what is a customer?") is answered rather than applied: the common shapes from the spec itself without a model, the rest by the cheapest allowed model in a few sentences.
 

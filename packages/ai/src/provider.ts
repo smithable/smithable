@@ -205,6 +205,19 @@ export interface Usage {
 }
 
 /**
+ * Rounds in which a model mends its own answer from the checks' reasons before the next model
+ * tries: four, since a round of Claude Haiku 5.5 costs a tenth of a cent.
+ */
+export const REPAIRS = 4;
+
+/**
+ * The largest prompt sent, in tokens, estimated at three characters each (JSON and YAML make
+ * short tokens): Claude Haiku 5.5 charges five times as much for a prompt over 100k tokens, and
+ * none of ours needs that many.
+ */
+export const MAX_PROMPT_TOKENS = 100_000;
+
+/**
  * Asks a provider for a JSON answer and records what the call used. Throws when the model
  * is unreachable or its answer is not JSON.
  */
@@ -213,6 +226,13 @@ export async function completeJson(
   request: CompletionRequest,
   usage: Usage[],
 ): Promise<unknown> {
+  const size = Math.ceil(
+    (request.system.length + request.user.length + JSON.stringify(request.schema).length) / 3,
+  );
+  if (size > MAX_PROMPT_TOKENS)
+    throw new Error(
+      `The request is too large for the model (about ${size} tokens; at most ${MAX_PROMPT_TOKENS}).`,
+    );
   const completion = await provider.complete(request);
   usage.push({
     provider: provider.name,

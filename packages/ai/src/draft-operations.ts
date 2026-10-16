@@ -19,7 +19,7 @@ import {
 import type { Draft, SpecFiles } from "./draft.js";
 import { LANGUAGE_NAMES, languageNote, otherLanguages, textLanguage } from "./language.js";
 import { plainSchema } from "./propose.js";
-import { completeJson, type Provider, type Usage } from "./provider.js";
+import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
 
 /** An app with nothing in it yet: what the operations start from. */
 export const BLANK: SpecFiles = {
@@ -685,7 +685,7 @@ const toFiles = (files: ProjectFiles): SpecFiles => ({
 
 /** At most this many operations in one draft, and rounds of corrections. */
 const MAX_OPERATIONS = 160;
-const MAX_ROUNDS = 4;
+const MAX_ROUNDS = 1 + REPAIRS;
 
 /**
  * Drafts a project as operations from the description, with the strongest allowed model
