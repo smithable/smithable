@@ -38,7 +38,7 @@ describe("touchesPage", () => {
     ).toBe(false);
     expect(
       touchesPage(
-        { op: "setText", args: { path: ["pages", "suppliers", "title"] } },
+        { op: "setText", args: { path: ["pages", "suppliers", "subtitle"] } },
         "/orders",
         ir,
       ),
@@ -46,6 +46,14 @@ describe("touchesPage", () => {
     expect(touchesPage({ op: "addModel", args: { model: "Tag" } }, "/orders", ir)).toBe(false);
   });
   it("the menu, the look, a page not known, or no operation loads it again", () => {
+    // Another page's title is in this page's menu.
+    expect(
+      touchesPage(
+        { op: "setText", args: { path: ["pages", "suppliers", "title"] } },
+        "/orders",
+        ir,
+      ),
+    ).toBe(true);
     expect(
       touchesPage({ op: "addPage", args: { page: "x", model: "Supplier" } }, "/orders", ir),
     ).toBe(true);

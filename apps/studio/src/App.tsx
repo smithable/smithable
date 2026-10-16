@@ -8,6 +8,7 @@ import { AskSheet, useAskPlace } from "./builder/AskDock";
 import { Builder } from "./builder/Builder";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
+import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
 import { isPreviewMessage, type Place, shared, touched, touchesPage } from "./preview";
@@ -74,7 +75,6 @@ export function App() {
       clearTimeout(timer);
     };
   }, []);
-  const [logs, setLogs] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   // The preview: select mode, and the mode's slot it is placed over on narrow windows.
   const [selecting, setSelecting] = useState(false);
@@ -171,7 +171,7 @@ export function App() {
 
   useEffect(() => {
     refresh();
-    api.logs().then(setLogs, () => {});
+    api.logs().then(logStore.set, () => {});
     return api.events((event, data) => {
       if (event === "changed") refresh();
       // A described app being made: its stage, then null once it is in place ("changed" follows).
@@ -181,7 +181,7 @@ export function App() {
         setProject((p) => p && { ...p, waiting: (data as string[] | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
       else if (event === "open") api.project().then(setProject, () => {});
-      else setLogs((current) => [...current.slice(-499), String(data)]);
+      else logStore.push(String(data));
     });
   }, [refresh]);
 
@@ -598,7 +598,6 @@ export function App() {
                   project={project}
                   spec={spec}
                   run={run}
-                  logs={logs}
                   onCustomize={customize}
                   place={place.studio}
                   onPlace={studioPlace}

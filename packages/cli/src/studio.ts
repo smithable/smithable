@@ -407,6 +407,8 @@ export async function studio(
     const text = previewConfig(
       options.previewUrl,
       store ? [resolve(dir), resolve(store)] : undefined,
+      // Studio reloads the preview itself after a change (one reload, when the daemon says so).
+      { holdUpdates: true },
     );
     const path = join(dir, config);
     if (existsSync(path) && readFileSync(path, "utf8") === text) return;

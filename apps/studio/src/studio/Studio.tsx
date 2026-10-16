@@ -20,6 +20,7 @@ import { Ask } from "../builder/Ask";
 import type { Run } from "../builder/ChangeForms";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
+import { useLogs } from "../logs";
 import { isPreviewMessage, type Place } from "../preview";
 import { Properties } from "../properties";
 import { Trace } from "../shared";
@@ -45,7 +46,6 @@ export function Studio({
   project,
   spec,
   run,
-  logs,
   onCustomize,
   place,
   onPlace,
@@ -55,7 +55,6 @@ export function Studio({
   project: Project;
   spec: Spec;
   run: Run;
-  logs: string[];
   onCustomize: (page: string) => void;
   /** Opens No code's Look tab: where the ux file's choices have controls. */
   onLook: () => void;
@@ -247,13 +246,7 @@ export function Studio({
               </div>
             </div>
           )}
-          {tab === "logs" && (
-            <section aria-label="Logs">
-              <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-fg-soft">
-                {logs.slice(-300).join("\n")}
-              </pre>
-            </section>
-          )}
+          {tab === "logs" && <Logs />}
         </Panel>
       </div>
     </div>
@@ -1017,3 +1010,15 @@ const PHONE_PANELS: [PhonePanel, string][] = [
 
 /** A panel of the phone's snapping row: the screen's width, snapping to its start. */
 const PHONE_PANEL = "max-lg:w-full max-lg:shrink-0 max-lg:snap-start";
+
+/** The dev server's lines: the one component that renders when a line comes (logs.ts). */
+function Logs() {
+  const logs = useLogs();
+  return (
+    <section aria-label="Logs">
+      <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-fg-soft">
+        {logs.slice(-300).join("\n")}
+      </pre>
+    </section>
+  );
+}

@@ -356,6 +356,8 @@ const ID = "virtual:smithable-editor";
 /** The parts of Vite's dev server the plugin uses. */
 interface DevServer {
   watcher: { on(event: string, listener: () => void): void };
+  /** Vite's environments (client, ssr), each with the channel to its hot-reload clients. */
+  environments?: Record<string, { hot: { send: (...args: unknown[]) => void } }>;
   middlewares: {
     use(
       path: string,
@@ -364,10 +366,22 @@ interface DevServer {
   };
 }
 
-export function smithableEditor() {
+export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
   return {
     name: "smithable-editor",
     apply: "serve",
+    /**
+     * In Studio the dev server's own hot updates for the app's generated files are held back
+     * (`holdUpdates`): the generator writes the changed files one by one, and each route file
+     * among them made the dev server reload the page at once, one to four reloads in the second
+     * before the change was whole, the last with a stale client module meeting the new server
+     * HTML. Studio reloads the preview itself, once, when the daemon says the app has taken the
+     * change in, and only when the change touches the page shown. Code the app's maker writes
+     * (`src/custom/`) keeps hot reload; so does everything in the theme lab.
+     */
+    hotUpdate(update: { file: string }) {
+      return options.holdUpdates && !/\/src\/custom\//.test(update.file) ? [] : undefined;
+    },
     /**
      * /__smithable/settled answers once the dev server has taken in the latest file changes:
      * its watcher saw them and has been quiet for 300 ms (at most 3 s). Studio waits for it
@@ -375,6 +389,7 @@ export function smithableEditor() {
      * can leave the request hanging.
      */
     configureServer(server: DevServer) {
+      if (options.holdUpdates) holdFullReloads(server);
       let changed = 0;
       for (const event of ["add", "change", "unlink"])
         server.watcher.on(event, () => {
@@ -396,8 +411,33 @@ export function smithableEditor() {
   };
 }
 
+/**
+ * Full reloads the dev server's plugins send on their own (TanStack Start reloads every client
+ * when it has generated the route tree again, on any change under src/routes) are dropped, as
+ * the hot updates are (`hotUpdate` above): Studio makes the one reload. A reload for the app's
+ * maker's own code (`triggeredBy` under src/custom) passes.
+ */
+export function holdFullReloads(server: Pick<DevServer, "environments">) {
+  for (const environment of Object.values(server.environments ?? {})) {
+    const send = environment.hot.send.bind(environment.hot);
+    environment.hot.send = (...args: unknown[]) => {
+      const payload = args[0] as { type?: string; triggeredBy?: string } | undefined;
+      if (
+        payload?.type === "full-reload" &&
+        !(payload.triggeredBy && /\/src\/custom\//.test(payload.triggeredBy))
+      )
+        return;
+      send(...args);
+    };
+  }
+}
+
 /** The wrapper config: the app's own Vite config plus the editor, for the preview only. */
-export function previewConfig(publicUrl?: string, allow?: string[]): string {
+export function previewConfig(
+  publicUrl?: string,
+  allow?: string[],
+  options: { holdUpdates?: boolean } = {},
+): string {
   const plugin = new URL("./preview-editor.js", import.meta.url).pathname;
   const server: Record<string, unknown> = {};
   // Behind a proxy on its own public address, the dev server accepts that host and its
@@ -420,6 +460,6 @@ import { mergeConfig } from "vite";
 import app from "../../vite.config.ts";
 import { smithableEditor } from ${JSON.stringify(plugin)};
 
-export default mergeConfig(app, { plugins: [smithableEditor()]${extra} });
+export default mergeConfig(app, { plugins: [smithableEditor(${options.holdUpdates ? "{ holdUpdates: true }" : ""})]${extra} });
 `;
 }
