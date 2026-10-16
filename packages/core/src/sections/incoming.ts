@@ -145,6 +145,7 @@ function readIncoming(
   let set: IncomingValueIR[] = [];
   if (create !== undefined) {
     const model = models.find((m) => m.name === create);
+    if (model) ctx.reference("model", create, byKey.get("create")?.value);
     if (!model) {
       ctx.error(
         byKey.get("create")?.value ?? keyNode,
@@ -260,6 +261,7 @@ function readReply(
     return undefined;
   }
   const model = models.find((m) => m.name === name);
+  if (model) ctx.reference("model", name, createEntry?.value ?? node);
   if (!model) {
     ctx.error(
       createEntry?.value ?? node,

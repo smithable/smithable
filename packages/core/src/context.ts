@@ -20,6 +20,14 @@ interface Reference {
   at: At;
 }
 
+/** Where a name is written: the characters of the scalar that holds it, for a rename to follow. */
+export interface NameReference {
+  kind: SymbolKind;
+  name: string;
+  start: number;
+  end: number;
+}
+
 /** Shared state while parsing one spec file: diagnostics and cross-section symbols. */
 /** For text that YAML split: a ", " inside { … } or a ": " anywhere starts a new entry. */
 const QUOTE_HINT = `A ", " inside { … } or a ": " inside a text starts a new entry: put the whole text in quotes.`;
@@ -83,6 +91,18 @@ export class ParseContext {
   /** Records a reference, checked by `checkReferences` once every section is parsed. */
   reference(kind: SymbolKind, name: string, at: At): void {
     this.references.push({ kind, name, at });
+  }
+
+  /**
+   * Every reference written as a scalar of its own (a key, a list item, a value), with its place
+   * in the text: what a rename of a model or a page rewrites (rename.ts).
+   */
+  nameReferences(): NameReference[] {
+    const found: NameReference[] = [];
+    for (const { kind, name, at } of this.references)
+      if (isScalar(at) && at.range)
+        found.push({ kind, name, start: at.range[0], end: at.range[1] });
+    return found;
   }
 
   /** Remembers where something was written, for checks that run after parsing. */

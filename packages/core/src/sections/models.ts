@@ -389,10 +389,8 @@ function readModel(
     const sensitive = sensitiveKind(field);
     if (sensitive)
       ctx.warning(entry.keyNode, sensitive, sensitiveMessage(sensitive, name, field.name));
-    if (field.type.kind === "relation") {
-      ctx.reference("model", field.type.model, entry.value);
+    if (field.type.kind === "relation")
       relationNodes.set(`${name}.${field.name}`, entry.value ?? entry.keyNode);
-    }
   }
   for (const read of pending) read(model);
   const review = known.find((e) => e.key === "review");
@@ -497,6 +495,9 @@ export function readField(
       );
       return undefined;
     }
+    // The model a relation names, at the type itself, for a rename to follow.
+    if (shorthand.value.type.kind === "relation")
+      ctx.reference("model", shorthand.value.type.model, value);
     return buildField(ctx, name, shorthand.value, value, where);
   }
   if (isMap(value)) return readLongField(ctx, name, value, where, pending);
@@ -546,6 +547,8 @@ function readLongField(
     ctx.error(typeEntry.value, parsed.code, `${capitalize(where)}: ${parsed.message}`, parsed.hint);
     return undefined;
   }
+  if (parsed.value.type.kind === "relation")
+    ctx.reference("model", parsed.value.type.model, typeEntry.value);
   if (parsed.value.defaultText !== undefined) {
     ctx.error(
       typeEntry.value,

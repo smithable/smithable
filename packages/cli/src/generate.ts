@@ -9,6 +9,8 @@ import {
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
+  renameModelInSnapshot,
+  renameModelSql,
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
 import { analyticsOf, YamlEditor } from "@smithable/core";
@@ -63,6 +65,8 @@ export interface MigrationPlan {
   name: string;
   /** Stored fields to rename; `reference` for a reference column (customer_id). */
   renames: { model: string; from: string; to: string; reference: boolean }[];
+  /** Models renamed: their tables are renamed, with the kit's tables beside them. */
+  models?: { from: string; to: string }[];
   /** A choice field's values that go, and what the records holding them get ("" clears). */
   values?: { model: string; field: string; from: string; to: string }[];
   /** Apply the migration to the dev database now. */
@@ -206,7 +210,10 @@ export async function runTools(
     !installed &&
     (needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
       !existsSync(join(dir, "node_modules")));
-  const schema = needs((p) => p === "src/db/schema.ts") || (migration?.renames.length ?? 0) > 0;
+  const schema =
+    needs((p) => p === "src/db/schema.ts") ||
+    (migration?.renames.length ?? 0) > 0 ||
+    (migration?.models?.length ?? 0) > 0;
 
   const run = (args: string[]) => {
     const [command, rest] =
@@ -354,12 +361,14 @@ async function createMigration(
     ) as Snapshot;
     const schema = await importSchema(load, join(root, "src/db/schema.ts"));
     const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
-    const statements = migration.renames.length
-      ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
-      : [
-          ...(await api.generateSQLiteMigration(prev, current)).map(quoteReferences),
-          ...valueSql(migration),
-        ];
+    const statements = migration.models?.length
+      ? migration.models.flatMap((m) => renameModelSql(JSON.stringify(prev), m.from, m.to))
+      : migration.renames.length
+        ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
+        : [
+            ...(await api.generateSQLiteMigration(prev, current)).map(quoteReferences),
+            ...valueSql(migration),
+          ];
     if (statements.length === 0) return true;
     const idx = last.idx + 1;
     const tag = `${numbered(idx)}_${migration.name}`;
@@ -441,6 +450,23 @@ function migrate(
   migration: MigrationPlan | undefined,
   run: (args: string[]) => boolean,
 ): boolean {
+  // A renamed model becomes a custom migration with RENAME TABLE (and its indexes under their
+  // new names), the snapshot describing the renamed tables, so drizzle-kit never sees a dropped
+  // table and a new one.
+  for (const renamed of migration?.models ?? []) {
+    if (
+      !run(["exec", "drizzle-kit", "generate", "--custom", "--name", migration?.name ?? "rename"])
+    )
+      return false;
+    const tag = latestMigration(dir);
+    const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
+    const before = readFileSync(snapshot, "utf8");
+    writeFileSync(
+      join(dir, "drizzle", `${tag}.sql`),
+      renameModelSql(before, renamed.from, renamed.to).join("--> statement-breakpoint\n"),
+    );
+    writeFileSync(snapshot, renameModelInSnapshot(before, renamed.from, renamed.to));
+  }
   // A rename becomes a custom migration with RENAME COLUMN, so drizzle-kit never sees a
   // drop plus an add (which it would ask about) and the data is kept.
   for (const rename of migration?.renames ?? []) {

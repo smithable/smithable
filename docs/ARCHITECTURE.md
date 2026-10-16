@@ -334,7 +334,7 @@ It is checked against a JSON Schema like the other companions. It has structured
 
 The **only** way to change application semantics programmatically.
 
-- Each operation (`addModel`, `addField`, `changeField`, `renameField`, `removeField`, `addRelation`, `addPage`, `grant`, `addAction`, `addExample`, …) has a JSON Schema for its arguments. The same schema is used for CLI parsing, Studio forms and constrained AI output.
+- Each operation (`addModel`, `addField`, `changeField`, `renameField`, `renameModel`, `renamePage`, `removeField`, `addRelation`, `addPage`, `grant`, `addAction`, `addExample`, …) has a JSON Schema for its arguments. The same schema is used for CLI parsing, Studio forms and constrained AI output.
 - An operation is a pure function `manifest → manifest` plus validation. Side effects (regeneration, migration) follow from the changed manifest, not from the operation itself.
 - Applied operations are appended to an **operation log** (`.smithable/oplog.jsonl`, committed). Operations also report **effects**, such as a rename, so the migration step can rename a column instead of dropping and re-adding it.
 - **Edits preserve formatting.** Operations never re-serialize a file: a source editor splices text at the positions the YAML parser reports, so comments, alignment, flow style and blank lines outside the edited entry stay byte-for-byte identical. After every edit the result is re-parsed, and the operation is refused if the spec or content file would become invalid.

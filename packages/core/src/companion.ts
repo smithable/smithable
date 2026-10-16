@@ -12,6 +12,7 @@ import type { YamlEditor } from "./edit.js";
 import type { Condition, SpecIR } from "./ir.js";
 import type { AnyOperation, Editors, Effect, Note, Refusal } from "./operation.js";
 import { pageModel } from "./patterns.js";
+import { renameReferences } from "./rename.js";
 import { authOperations } from "./sections/auth-operations.js";
 import { contentOperations } from "./sections/content-operations.js";
 import { contextOperations } from "./sections/context-operations.js";
@@ -66,6 +67,12 @@ const content: Companion = {
   check: (text, ir) => validateContent({ path: "smithable.content.yml", text }, ir).diagnostics,
   operations: contentOperations,
   follow(editor, effect, ir) {
+    // A renamed model's or page's texts move to its new name.
+    if (effect.kind === "rename-model" || effect.kind === "rename-page") {
+      const path = [effect.kind === "rename-model" ? "models" : "pages", effect.from];
+      if (editor.has(path)) editor.renameKey(path, effect.to);
+      return undefined;
+    }
     // The texts of a choice field's values: a renamed value's text goes to its new name, and
     // those of values that are gone go with them.
     if (effect.kind === "change-field") {
@@ -97,6 +104,18 @@ const ux: Companion = {
     validateUx({ path: "smithable.ux.yml", text }, ir, files?.themes).diagnostics,
   operations: uxOperations,
   follow(editor, effect, ir) {
+    if (effect.kind === "rename-page") {
+      if (editor.has(["pages", effect.from])) editor.renameKey(["pages", effect.from], effect.to);
+      return undefined;
+    }
+    if (effect.kind === "rename-model") {
+      // Tones are keyed "Model.field"; a page's look is keyed by the page, which stays.
+      const tones = editor.has(["tones"]) ? Object.keys(editor.get(["tones"]) as object) : [];
+      for (const key of tones)
+        if (key.startsWith(`${effect.from}.`))
+          editor.renameKey(["tones", key], `${effect.to}.${key.slice(effect.from.length + 1)}`);
+      return undefined;
+    }
     if (effect.kind === "remove-page") {
       if (editor.has(["pages", effect.page])) editor.removeAndPrune(["pages", effect.page], 0);
       return undefined;
@@ -214,6 +233,14 @@ const auth: Companion = {
   check: (text, ir) => validateAuth({ path: "smithable.auth.yml", text }, ir).diagnostics,
   operations: authOperations,
   follow(editor, effect) {
+    // Grants, the public block and the api block name models and pages: rewritten where the
+    // parser saw them.
+    if (effect.kind === "rename-model" || effect.kind === "rename-page") {
+      const { references } = validateAuth({ path: "smithable.auth.yml", text: editor.text });
+      const kind = effect.kind === "rename-model" ? "model" : "page";
+      editor.replaceAll(renameReferences(editor.text, references, kind, effect.from, effect.to));
+      return undefined;
+    }
     // A removed page is no longer one visitors may open.
     if (effect.kind === "remove-page") {
       const pages = ["public", "pages"];

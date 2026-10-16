@@ -13,6 +13,7 @@ import {
   type TranslationFiles,
 } from "./operation.js";
 import { checkJson, type SpecPlugin } from "./plugin.js";
+import { renameReferences } from "./rename.js";
 import type { JsonSchema } from "./section.js";
 import { accessOperations } from "./sections/access-operations.js";
 import { ruleOperations } from "./sections/rule-operations.js";
@@ -171,6 +172,17 @@ export function applyOperation(
     const done = op.apply(editors, args, before.ir);
     effects = done.filter((e): e is Effect => !("note" in e));
     for (const e of done) if ("note" in e) notes.push(e.note);
+    // A renamed model or page: every place the spec names it is rewritten from where the parser
+    // saw the name in the text as it was, then its own key; the companions do the same for their
+    // files in their follow. The operation itself only checks and says what it renames.
+    for (const effect of effects) {
+      if (effect.kind !== "rename-model" && effect.kind !== "rename-page") continue;
+      const kind = effect.kind === "rename-model" ? "model" : "page";
+      editors.spec.replaceAll(
+        renameReferences(editors.spec.text, before.references, kind, effect.from, effect.to),
+      );
+      editors.spec.renameKey([kind === "model" ? "models" : "pages", effect.from], effect.to);
+    }
     // The other sections and the companions follow what the operation did (a field renamed, a
     // page removed); one of them may refuse, when something it owns still needs what went away.
     for (const effect of effects) {

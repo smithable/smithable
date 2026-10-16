@@ -10,6 +10,8 @@ export {
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
+  renameModelInSnapshot,
+  renameModelSql,
 } from "./migrations.js";
 export { dataKey, tableNames, titleField } from "./shared.js";
 export { STACK_PROFILE } from "./stack.js";

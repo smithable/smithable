@@ -370,6 +370,36 @@ const renameField: Operation<{ model: string; from: string; to: string }> = {
   },
 };
 
+const renameModel: Operation<{ from: string; to: string }> = {
+  name: "renameModel",
+  summary:
+    "Rename a kind of record, keeping its records. Every field, page, action, rule and grant that names it follows.",
+  schema: {
+    type: "object",
+    required: ["from", "to"],
+    additionalProperties: false,
+    properties: {
+      from: refTo({ ref: "model", label: "Kind of record" }, name),
+      to: { ...name, description: "The new name, like Customer." },
+    },
+  },
+  positional: ["from", "to"],
+  describe: ({ from, to }) => `Rename ${from} to ${to}`,
+  destructive: () => false,
+  apply(_editors, { from, to }, ir) {
+    if (isCalculator(ir, from))
+      throw new OperationError(`${from} is a calculator page, not a kind of record.`);
+    model(ir, from);
+    if (!MODEL_NAME_PATTERN.test(to)) throw new OperationError(nameRule("model", to));
+    if (to === from) throw new OperationError(`${from} is already called that.`);
+    if (ir.models.some((m) => m.name === to) || isCalculator(ir, to))
+      throw new OperationError(`There is a kind of record named "${to}" already.`);
+    // The key and every place the spec names the model are rewritten by applyOperation from the
+    // effect, and the companions follow it (companion.ts).
+    return [{ kind: "rename-model", from, to }];
+  },
+};
+
 const removeField: Operation<{ model: string; field: string }> = {
   name: "removeField",
   summary: "Remove a field and its data.",
@@ -721,6 +751,7 @@ export const modelOperations: AnyOperation[] = [
   setFieldRules,
   renameField,
   removeField,
+  renameModel,
   setCapacity,
   setTrash,
   setReview,
