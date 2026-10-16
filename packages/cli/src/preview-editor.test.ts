@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { RUNTIME } from "./preview-editor.js";
+import { holdFullReloads, previewConfig, RUNTIME, smithableEditor } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page(at = "/", storage: Record<string, string> = {}) {
@@ -163,4 +163,35 @@ test("loaded again on the same page, the preview keeps its place; on another pag
   const storage = { "smithable:place": JSON.stringify({ path: "/orders", y: 500 }) };
   expect(page("/orders", storage).scrolled).toEqual([500]);
   expect(page("/customers", storage).scrolled).toEqual([]);
+});
+
+test("in Studio the dev server's hot updates for generated files are held back; custom code keeps them", () => {
+  const studio = smithableEditor({ holdUpdates: true });
+  expect(studio.hotUpdate({ file: "/app/src/routes/orders/index.tsx" })).toEqual([]);
+  expect(studio.hotUpdate({ file: "/app/src/routeTree.gen.ts" })).toEqual([]);
+  expect(studio.hotUpdate({ file: "/app/src/styles.css" })).toEqual([]);
+  expect(studio.hotUpdate({ file: "/app/src/custom/pages/Hello.tsx" })).toBeUndefined();
+  // The theme lab and anything else: the dev server's own updates, as always.
+  expect(smithableEditor().hotUpdate({ file: "/app/src/routes/orders/index.tsx" })).toBeUndefined();
+  expect(previewConfig(undefined, undefined, { holdUpdates: true })).toContain(
+    "smithableEditor({ holdUpdates: true })",
+  );
+  expect(previewConfig()).toContain("smithableEditor()");
+});
+
+test("full reloads a plugin sends itself are dropped, except for custom code", () => {
+  const sent: unknown[] = [];
+  const server = {
+    environments: { client: { hot: { send: (...args: unknown[]) => sent.push(args[0]) } } },
+  };
+  holdFullReloads(server);
+  const hot = server.environments.client.hot;
+  hot.send({ type: "full-reload", path: "*" });
+  hot.send({ type: "full-reload", triggeredBy: "/app/src/routes/orders/index.tsx" });
+  hot.send({ type: "full-reload", triggeredBy: "/app/src/custom/pages/Hello.tsx" });
+  hot.send({ type: "update", updates: [] });
+  expect(sent).toEqual([
+    { type: "full-reload", triggeredBy: "/app/src/custom/pages/Hello.tsx" },
+    { type: "update", updates: [] },
+  ]);
 });

@@ -96,8 +96,9 @@ export function touched(
 
 /**
  * Whether a change touches the page the preview is on (`path`), so it is loaded again: false
- * only when sure it does not, a change to a field, a record's text or a page's text of another
- * kind of record or page than the ones it shows (with those its links name). Everything else
+ * only when sure it does not, a change to a field, a record's text or a page's text (not its
+ * title, which the menu shows) of another kind of record or page than the ones it shows (with
+ * those its links name). Everything else
  * (the menu, the look, access, an undo, a change made by hand) loads it again.
  */
 export function touchesPage(
@@ -132,7 +133,8 @@ export function touchesPage(
   if (op === "setText" && Array.isArray(args.path)) {
     const [area, name] = args.path as string[];
     if (area === "models" && name) return shown.has(name);
-    if (area === "pages" && name) return name === page.id;
+    // A page's title is in every page's menu; its other texts are on the page alone.
+    if (area === "pages" && name) return name === page.id || args.path[2] === "title";
   }
   return true;
 }
