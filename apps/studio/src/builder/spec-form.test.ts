@@ -7,7 +7,6 @@ import {
   labelOf,
   operationFor,
   renameFor,
-  renamesLater,
   uncovered,
   wordOrList,
 } from "./spec-form";
@@ -133,10 +132,13 @@ test("a field is renamed through renameField; other entries offer no rename", ()
     "renameField",
     { model: "Customer", from: "phone", to: "mobile" },
   ]);
-  expect(renameFor("smithable.yml", ["models", "Customer"], "Client")).toBeUndefined();
-  expect(renameFor("smithable.yml", ["pages", "home"], "start")).toBeUndefined();
-  expect(renamesLater("smithable.yml", ["models", "Customer"])).toBe(true);
-  expect(renamesLater("smithable.yml", ["pages", "home"])).toBe(true);
-  expect(renamesLater("smithable.yml", ["models", "Customer", "fields", "phone"])).toBe(false);
-  expect(renamesLater("smithable.ux.yml", ["pages", "home"])).toBe(false);
+  expect(renameFor("smithable.yml", ["models", "Customer"], "Client")).toEqual([
+    "renameModel",
+    { from: "Customer", to: "Client" },
+  ]);
+  expect(renameFor("smithable.yml", ["pages", "home"], "start")).toEqual([
+    "renamePage",
+    { from: "home", to: "start" },
+  ]);
+  expect(renameFor("smithable.ux.yml", ["pages", "home"], "start")).toBeUndefined();
 });

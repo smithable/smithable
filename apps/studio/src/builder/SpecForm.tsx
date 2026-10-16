@@ -21,7 +21,6 @@ import {
   labelOf,
   operationFor,
   renameFor,
-  renamesLater,
   wordOrList,
 } from "./spec-form";
 
@@ -92,8 +91,6 @@ const renamerOf = (run: Run, file: EditableFile) => (path: Path) => {
     ? (to: string) => run(...(op(to) as [string, Record<string, unknown>]))
     : undefined;
 };
-/** Whether the entry at a path is renamed later (a kind of record, a page), said read-only. */
-const RenamesLater = createContext<(path: Path) => boolean>(() => false);
 /** The names a list at a path offers (a role's pages, kinds of record, actions); none for most. */
 const Choices = createContext<(path: Path) => string[]>(() => []);
 const choicesOf = (files: Project["files"], file: EditableFile) => {
@@ -125,11 +122,9 @@ export function SpecForm({ files, run, ir }: { files: Project["files"]; run: Run
             <Writer.Provider value={write}>
               <Choices.Provider value={choicesOf(files, file)}>
                 <Renamer.Provider value={renamerOf(run, file)}>
-                  <RenamesLater.Provider value={(path) => renamesLater(file, path)}>
-                    <Shape.Provider value={shapeOf(run, file, ir)}>
-                      <Value schema={schema} value={read(files[key])} path={[]} />
-                    </Shape.Provider>
-                  </RenamesLater.Provider>
+                  <Shape.Provider value={shapeOf(run, file, ir)}>
+                    <Value schema={schema} value={read(files[key])} path={[]} />
+                  </Shape.Provider>
                 </Renamer.Provider>
               </Choices.Provider>
             </Writer.Provider>
@@ -147,7 +142,6 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const write = useContext(Writer);
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
-  const later = useContext(RenamesLater);
   const shaped = useContext(Shape)(path);
   if (shaped && (typeof value === "string" || value === undefined)) return shaped;
   const control = controlOf(schema);
@@ -251,17 +245,11 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
             <details key={name} className="rounded-md border border-line" open={path.length === 0}>
               <summary className="cursor-pointer px-2 py-1 font-medium">{name}</summary>
               <div className="space-y-2 border-t border-line p-2">
-                {renamer([...path, name]) ? (
+                {renamer([...path, name]) && (
                   <Rename
                     name={name}
                     onRename={renamer([...path, name]) as (to: string) => Promise<boolean>}
                   />
-                ) : (
-                  later([...path, name]) && (
-                    <p className="text-xs text-quiet">
-                      Renaming comes later; its records and links stay put.
-                    </p>
-                  )
                 )}
                 <Value schema={control.entry} value={v} path={[...path, name]} />
               </div>
@@ -532,11 +520,9 @@ export function SpecPart({
     <Writer.Provider value={write}>
       <Choices.Provider value={choicesOf(files, file)}>
         <Renamer.Provider value={renamerOf(run, file)}>
-          <RenamesLater.Provider value={(path) => renamesLater(file, path)}>
-            <Shape.Provider value={shapeOf(run, file, ir)}>
-              <Value schema={schema} value={value} path={path} />
-            </Shape.Provider>
-          </RenamesLater.Provider>
+          <Shape.Provider value={shapeOf(run, file, ir)}>
+            <Value schema={schema} value={value} path={path} />
+          </Shape.Provider>
         </Renamer.Provider>
       </Choices.Provider>
     </Writer.Provider>

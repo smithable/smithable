@@ -291,8 +291,9 @@ export function choicesFor(file: string, path: (string | number)[], spec: unknow
 }
 
 /**
- * The operation that renames an entry of a named map, when there is one: a field through
- * renameField, which keeps its data. Undefined offers no rename (a plain edit would lose it).
+ * The operation that renames an entry of a named map, when there is one: a field, a kind of
+ * record or a page through its rename, which keeps its data and follows every reference.
+ * Undefined offers no rename (a plain edit would lose it).
  */
 export function renameFor(
   file: string,
@@ -309,9 +310,9 @@ export function renameFor(
     typeof from === "string"
   )
     return ["renameField", { model, from, to }];
+  if (file === "smithable.yml" && path.length === 2 && typeof model === "string") {
+    if (first === "models") return ["renameModel", { from: model, to }];
+    if (first === "pages") return ["renamePage", { from: model, to }];
+  }
   return undefined;
 }
-
-/** A kind of record or a page: renamed by an operation that comes later, never by a plain edit. */
-export const renamesLater = (file: string, path: (string | number)[]) =>
-  file === "smithable.yml" && path.length === 2 && (path[0] === "models" || path[0] === "pages");

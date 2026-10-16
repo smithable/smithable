@@ -2033,7 +2033,7 @@ try {
     },
   );
   await step(
-    "the Every setting tab adds a kind of record and a field, renames the field and changes its type, through their operations",
+    "the Every setting tab adds a kind of record and a field, renames the field and a page and changes the field's type, through their operations",
     async () => {
       await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
       await page.getByRole("tab", { name: "Every setting" }).click();
@@ -2069,7 +2069,11 @@ try {
       // A field is renamed through renameField, which keeps its data.
       await customer.locator("summary", { hasText: /^website$/ }).click();
       await customer.getByLabel("New name for website").fill("homepage");
-      await customer.getByRole("button", { name: "Rename", exact: true }).click();
+      await customer
+        .getByLabel("New name for website")
+        .locator("..")
+        .getByRole("button", { name: "Rename", exact: true })
+        .click();
       await waitFile("homepage: string");
       // A field's type is its own control in the form, changed through changeField.
       const homepage = customer.locator("details", {
@@ -2082,6 +2086,26 @@ try {
       // Another type may lose values, so it is confirmed first.
       await page.getByRole("button", { name: "Apply anyway" }).click();
       await waitFile("homepage: url");
+      // A page is renamed through renamePage, its references following; and back again.
+      // The pages' own entries, not a customer's list of orders.
+      const pages = app.locator('[data-key="pages"]').first();
+      const entry = (name) =>
+        pages.locator("details", {
+          has: page.locator(`summary:text-is("${name}")`),
+        });
+      const renameBox = (name) => pages.getByLabel(`New name for ${name}`, { exact: true });
+      await entry("orders").locator(`summary:text-is("orders")`).click();
+      await renameBox("orders").fill("sales");
+      await renameBox("orders").locator("..").getByRole("button", { name: "Rename" }).click();
+      await waitFile("  sales:");
+      if (!(await renameBox("sales").isVisible()))
+        await entry("sales").locator(`summary:text-is("sales")`).click();
+      await renameBox("sales").fill("orders");
+      await renameBox("sales").locator("..").getByRole("button", { name: "Rename" }).click();
+      for (let i = 0; i < 60 && readFileSync(file, "utf8").includes("  sales:"); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (readFileSync(file, "utf8").includes("  sales:"))
+        throw new Error("sales was not renamed back");
     },
   );
   await step("a message from a window other than the preview is ignored", async () => {
