@@ -40,13 +40,20 @@ if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT
     exec nice -n 19 "$0" "$@"
   fi
 fi
-home=${GATE_HOME:-$HOME/repos}
+# The queue is shared by every user who runs gates on the machine: the sessions, and the runner,
+# which runs as a user of its own (docs/ci.md). /var/lib/smithable-gate when it is there (a group
+# both users are in, setgid), else ~/repos as before. Its files are made group-writable, so each
+# user may take the lock, write the note of who runs, and drop the other's finished tickets.
+home=${GATE_HOME:-/var/lib/smithable-gate}
+[ -n "${GATE_HOME:-}" ] || [ -w "$home" ] || home=$HOME/repos
 lock=$home/.gate-lock
 queue=$home/.gate-queue
 turns=$home/.gate-turns   # the sessions served since the queue was last empty, one a line
 session=${SESSION:-?}
+umask_was=$(umask)
+umask 002
 mkdir -p "$queue"
-touch "$turns"
+touch "$turns" "$lock"
 
 # The waiting gates in the order of their turns: "<ticket> <session> <worktree>" a line. A
 # ticket is "<arrival>.<pid>" and holds "session<TAB>worktree"; one whose process is gone is dropped.
@@ -55,7 +62,8 @@ waiting() {
   for t in "$queue"/*; do
     [ -e "$t" ] || continue
     pid=${t##*.}
-    kill -0 "$pid" 2>/dev/null || { rm -f "$t"; continue; }
+    # Another user's gate is alive too: kill -0 is refused for it, but /proc has it.
+    kill -0 "$pid" 2>/dev/null || [ -d "/proc/$pid" ] || { rm -f "$t"; continue; }
     IFS=$'\t' read -r who where < "$t" || continue
     printf '%s\t%s\t%s\n' "${t##*/}" "$who" "$where"
   done | sort -n |
@@ -111,6 +119,7 @@ rm -f "$ticket"
 [ -n "$said" ] || : > "$turns"
 echo "$session" >> "$turns"
 echo "$session in $(pwd) since $(date +%H:%M)" > "$lock.who"
+umask "$umask_was"
 
 # What the change touches, against main: committed on the branch, uncommitted, and new files.
 base=$(git merge-base HEAD origin/main 2>/dev/null || true)

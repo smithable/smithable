@@ -133,6 +133,8 @@ jobs:
       # The machine's Node through fnm (the runner's service has no shell profile).
       - run: echo "$HOME/.local/share/fnm/aliases/default/bin" >> "$GITHUB_PATH"
       - run: pnpm install --frozen-lockfile
+      # The runner's user keeps its own browser; nothing to do once it is there.
+      - run: pnpm exec playwright install chromium
       # Three examples at a time: the runner shares the machine with the sessions' own work.
       - run: SESSION=ci GATE_AHEAD_MAX=99 TEST_APPS_PORT=8600 TEST_STUDIO_PORT=8610 TEST_APPS_CONCURRENCY=3 scripts/gate.sh
         env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
