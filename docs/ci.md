@@ -79,6 +79,7 @@ A queued job waits for the runner for up to 24 hours, then fails as "no runner".
 ## Removing the runner
 
 ```sh
-systemctl --user disable --now actions-runner-engine
-cd ~/repos/.actions-runner/engine && ./config.sh remove --token "$(gh api -X POST repos/smithable/smithable/actions/runners/remove-token --jq .token)"
+sudo systemctl disable --now actions-runner-smithable
+token=$(gh api -X POST repos/smithable/smithable/actions/runners/remove-token --jq .token)
+sudo -u smithable-ci -H bash -c "cd ~/runner && ./config.sh remove --token '$token'"
 ```
