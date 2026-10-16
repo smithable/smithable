@@ -14,10 +14,12 @@
 // - Daily, after the day's merges: the first set on Claude (20 hours apart). Its second set
 //   (--set wide) once a week (Sundays), or when a pull request changes the drafting or clarify
 //   prompts (say so in the report).
-// - What the beta serves (Johan's choice, 2026-10-04: Claude Sonnet 4.6 through Amazon Bedrock in
-//   the EU): once a week (Sunday), `--model eu.anthropic.claude-sonnet-4-6` on the first set (about
-//   $1); the wide set only when a prompt changed. Mistral, the EU-owned alternative: once a week,
-//   `--model mistral-large-latest` on the first set. Every run of a named model is six days apart.
+// - What the beta serves (Johan, 2026-10-16: the newest models, Claude Haiku 5.5 first and Sonnet 5.5
+//   behind it, through Amazon Bedrock in the EU): `--model eu.anthropic.claude-haiku-5-5` on the
+//   first set daily and on the wide set on Sundays; `--model eu.anthropic.claude-sonnet-5-5` on the
+//   first set once a week. Mistral, the EU-owned alternative: once a week,
+//   `--model mistral-large-latest` on the first set. Every other run of a named model is six days
+//   apart.
 // In between, only the descriptions a change is about, once.
 // - `--only 3,7,11` or `--only invoicing` (the starter a description got in the last full run)
 //   runs just those and merges their rows into the last full report, marked as reruns.
@@ -471,8 +473,10 @@ const rowsFile = join(kept, "rows.json");
 // run starts the file afresh; `--only` adds its calls to the full run's.
 const usageFile = join(kept, "usage.jsonl");
 if (args.model?.startsWith("eu.anthropic.")) process.env.SMITHABLE_USAGE_LOG = usageFile;
-// Claude's first set once a day; its second set, and every run of a paid model, once a week.
-const HOURS = args.set === "wide" || args.model ? 6 * 24 : 20;
+// The first set once a day on Claude Code or the beta's model (Haiku 5.5); the second set, and
+// every run of another paid model, once a week.
+const daily = !args.model || /claude-haiku-5-5/.test(args.model);
+const HOURS = args.set === "wide" || !daily ? 6 * 24 : 20;
 const today = new Date().toISOString().slice(0, 10);
 
 // A targeted run merges into the last full one; a full one waits 20 hours after the last.
@@ -662,7 +666,7 @@ const caching = usage.length
   : "";
 const report = `# M12 first builds: ${model}${args.set === "wide" ? ", the second set" : ""} (${stamp.lastFullRun?.slice(0, 10) ?? today}${reruns.length ? `; ${reruns.length} rerun since` : ""})
 
-The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to twice).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""} *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.${caching}
+The app descriptions, each started with \`smithable new --describe … --yes\` (the starter the first step picks, adapted by the model; errors go back up to four times).${args.set === "wide" ? " The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported." : ""} Totals: ${rows.filter((r) => r.created).length} / ${rows.length} created, ${rows.filter((r) => r.typecheck).length} type-check, ${sum("tokens").toLocaleString("en")} tokens${rows.every((r) => r.tokensIn !== undefined) ? ` (${sum("tokensIn").toLocaleString("en")} in, ${sum("tokensOut").toLocaleString("en")} out)` : ""}, ${costs()}; ${sum("fromCache")} model calls answered from the response cache.${reruns.length ? " Rows marked *rerun* ran again on their own after the full run (`--only`)." : ""} *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.${caching}
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|

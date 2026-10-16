@@ -12,7 +12,7 @@ import {
   words,
 } from "@smithable/core";
 import { languageNote } from "./language.js";
-import { completeJson, type Provider, type Usage } from "./provider.js";
+import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
 
 export type SpecFiles = Record<string, string>;
 
@@ -184,7 +184,7 @@ export function checkSpecFiles(files: SpecFiles): Diagnostic[] {
 
 /**
  * Adapts a starter to a description with the strongest allowed model first. A draft with
- * errors goes back with the exact diagnostics, up to twice; then the next model tries.
+ * errors goes back with the exact diagnostics, up to four times; then the next model tries.
  */
 export async function draftProject(options: {
   description: string;
@@ -202,7 +202,7 @@ export async function draftProject(options: {
   let problem = "";
   for (const provider of [...options.providers].reverse()) {
     let prompt = user;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 1 + REPAIRS; attempt++) {
       let files: SpecFiles;
       try {
         files = (await completeJson(
