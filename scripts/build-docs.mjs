@@ -316,7 +316,21 @@ table{border-collapse:collapse;display:block;overflow-x:auto;margin:1rem 0}
 th,td{border:1px solid var(--line);padding:.4rem .6rem;text-align:left;vertical-align:top}
 img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px}
 footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:1rem;text-align:center}
+.search input{width:12rem;max-width:100%;font:inherit;font-size:.9rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.2rem .85rem}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.search ol{position:absolute;right:1rem;top:100%;z-index:6;width:min(36rem,calc(100% - 2rem));max-height:calc(100vh - 5rem);overflow:auto;margin:0;padding:.35rem;list-style:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.search ol:empty{display:none}
+.search li a{display:block;padding:.4rem .6rem;border-radius:6px;color:var(--fg);font-size:.9rem;line-height:1.4}
+.search li a b{display:block;font-weight:600}
+.search li a span{color:var(--muted)}
+.search li a[aria-selected="true"],.search li a:hover{background:var(--code)}
+.search mark{background:none;color:var(--accent);font-weight:600}
+.search li.none{padding:.4rem .6rem;color:var(--muted);font-size:.9rem}
+@media (max-width:40rem){header{flex-wrap:wrap;row-gap:.6rem}header .gh{display:none}.search{order:9;width:100%}.search input{width:100%;padding:.35rem .85rem}.search ol{left:1rem;right:1rem;width:auto}}
 `;
+
+// The search box's script (scripts/docs-search.js), inlined on every page.
+const SEARCH = readFileSync(join(import.meta.dirname, "docs-search.js"), "utf8");
 
 // Before the public release the site is reachable but kept out of search engines.
 const PRERELEASE =
@@ -374,10 +388,11 @@ const html = (page, body) => {
 <style>${CSS}</style>
 </head>
 <body>
-<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
+<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
 <div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
+<script>${SEARCH}</script>
 </body>
 </html>
 `;
@@ -417,6 +432,43 @@ for (const page of PAGES) {
   });
   writeFileSync(join(out, page.out), html(page, marked.parse(page.markdown)));
 }
+// The search index (search.json): every page cut at its headings, each part's words as plain
+// text, which the header's search box loads on first use and searches in the browser.
+/** Markdown as the words a reader sees: no link targets, pictures, marks or table rules. */
+const plain = (md) =>
+  md
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*(?:[-*+]|\d+\.|>|\|?\s*:?-{3,}.*)\s?/gm, "")
+    .replace(/`|\*\*?/g, "")
+    .replace(/[|#]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const index = { pages: [], parts: [] };
+for (const page of PAGES) {
+  const p = index.pages.push([page.out === "index.html" ? "" : page.out, page.nav]) - 1;
+  let heading = { text: page.nav, id: "" };
+  let text = [];
+  let next = 0;
+  const flush = () => {
+    const words = plain(text.join(" "));
+    if (words || heading.id) index.parts.push([p, plain(heading.text), heading.id, words]);
+    text = [];
+  };
+  for (const token of lexer.lexer(page.markdown)) {
+    if (token.type !== "heading") {
+      text.push(token.raw);
+      continue;
+    }
+    flush();
+    // The heading's id as the page gave it (also counting headings inside lists).
+    while (next < page.headings.length && page.headings[next].text !== token.text) next++;
+    heading = page.headings[next++] ?? { text: token.text, id: slug(token.text) };
+    if (heading.depth === 1) heading = { text: heading.text, id: "" };
+  }
+  flush();
+}
+writeFileSync(join(out, "search.json"), JSON.stringify(index));
 for (const [i, each] of schemas.entries())
   writeFileSync(join(out, schemaPaths[i]), `${JSON.stringify(each, null, 2)}\n`);
 writeFileSync(
