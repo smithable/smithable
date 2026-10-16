@@ -3,5 +3,10 @@ pages:
   catalog:
     table:
       view: cards
+    icon: package
+  myTools:
+    icon: user
+  saved:
+    icon: star
 theme:
   preset: woodland

@@ -3,18 +3,14 @@ pages:
   jobs:
     table:
       columns: [title, employer, location, jobType, deadline, status]
-    icon: briefcase
-  myApplications:
-    icon: file
-  applications:
-    icon: clipboard
 tones:
   Job.status:
     open: success
-    closed: warning
   Application.status:
-    shortlisted: warning
-    hired: success
-    declined: danger
+    reviewing: warning
+    accepted: success
+    rejected: danger
 theme:
-  preset: navy
+  preset: corporate
+  brand:
+    primary: "#b91c1c"

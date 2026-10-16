@@ -3,7 +3,7 @@
   "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Who in the family can add and edit recipes?",
+    "Who adds and edits recipes?",
     "Can people outside the family see the recipes without signing in?",
     "How should shopping lists work?"
   ]

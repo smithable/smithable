@@ -6,15 +6,16 @@ roles:
   admin: all
   staff:
     description: Union staff who post jobs and handle applications.
-    pages: [jobs, applications]
+    pages: all
     create: [Job]
     read: [Job, Application]
     write: [Job, Application]
     delete: [Job]
   member:
     description: Union members who browse jobs and apply.
-    pages: [jobs, myApplications]
+    pages: [home, jobs, myApplications, privacy]
     create: [Application]
+    read: [Job]
 assistant:
   for: signed-in
 public:

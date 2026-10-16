@@ -2,13 +2,12 @@ smithableUx: 0.1
 pages:
   matches:
     table:
-      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
+      columns: [kickoff, team, opponent, venue, goalsFor, goalsAgainst, status]
       sort: -kickoff
     icon: calendar
   players:
     table:
-      columns: [photo, name, number, position, team]
-      sort: number
+      columns: [number, name, position, team]
       view: cards
     icon: user
   teams:
@@ -19,9 +18,8 @@ tones:
   Match.status:
     played: success
     postponed: warning
-    canceled: danger
+    cancelled: danger
 theme:
   preset: modern
   brand:
     primary: "#15803d"
-    font: DM Sans

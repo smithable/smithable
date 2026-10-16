@@ -1,3 +1,5 @@
 smithableUx: 0.1
 theme:
-  preset: nordic
+  preset: woodland
+  brand:
+    font: Fraunces

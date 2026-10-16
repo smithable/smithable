@@ -5,7 +5,13 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: A family member who adds recipes and shopping lists.
+    pages: all
+    create: all
+    write: all
+    delete: [ShoppingList, ShoppingItem, Ingredient]
 assistant:
   for: signed-in
+defaultRole: member
 admins: [johan@smithable.ai]

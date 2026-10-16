@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "records",
   "questions": [
-    "Who can join and list tools?",
+    "Who adds tools to the library?",
     "What can visitors see without signing in?",
-    "How should borrowing work?"
+    "How does borrowing work in the app?"
   ]
 }

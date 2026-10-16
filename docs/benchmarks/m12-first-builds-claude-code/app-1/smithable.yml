@@ -35,6 +35,21 @@ models:
       per: session
       max: session.capacity
 pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, instructors]
+      footer:
+      classes:
+        records: ClassType
+      teachers:
+        records: Instructor
+      faq:
+      callToAction:
+        button: schedule
+  schedule:
+    calendar: Session
   sessions:
     crud: Session
   class-types:
@@ -44,22 +59,21 @@ pages:
     crud: Instructor
   my-bookings:
     crud: Booking
-  schedule:
-    calendar: Session
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      classes:
-        records: ClassType
-      teachers:
-        records: Instructor
-      faq:
-      callToAction:
-        button: schedule
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
+  admin:
+    data: all
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingChanged:
+    when: Booking changed
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner
