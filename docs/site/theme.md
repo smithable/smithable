@@ -82,7 +82,7 @@ Text needs 4.5:1 against what it sits on, and the focus ring 3:1, so a theme tha
 
 ## 4. Or make it in the theme lab
 
-The lab is also [on this site](https://docs.smithable.ai/theme-lab/), with nothing to install: the same controls on a booking app's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. Locally, it shows a running app and saves into the project:
+The lab is also [on this site](https://docs.smithable.ai/theme-lab/index.html), with nothing to install: the same controls on a booking app's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. Locally, it shows a running app and saves into the project:
 
 ```console
 $ smithable theme lab --project .
