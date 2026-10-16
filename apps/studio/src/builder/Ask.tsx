@@ -2,7 +2,7 @@
 // first, in the summary's words, and waits for Apply (Johan, 2026-10-11: one click more is the
 // design); Discard, Change it in the forms, or Refine it in a few more words (ARCHITECTURE §9.4).
 import { useEffect, useRef, useState } from "react";
-import { api, type Proposal } from "../api";
+import { api, type Proposal, type TraceEntry } from "../api";
 import { Button, Input, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
@@ -14,6 +14,22 @@ import { CustomCode, customFile } from "./custom-code";
  */
 /** Where the words box keeps a request not yet sent. */
 const DRAFT = "smithable:ask-draft";
+/** Where the thread keeps what left no change (answers, questions, discarded proposals). */
+const SAID = "smithable:ask-said";
+
+/** A line of the thread the change log does not hold: what was asked, and what came of it. */
+interface Said {
+  at: string;
+  request: string;
+  reply: string;
+}
+const readSaid = (): Said[] => {
+  try {
+    return JSON.parse(sessionStorage.getItem(SAID) ?? "[]") as Said[];
+  } catch {
+    return [];
+  }
+};
 
 export function Ask({
   example,
@@ -22,6 +38,7 @@ export function Ask({
   words,
   making = false,
   waiting = [],
+  trace,
 }: {
   /** The box's example, in the app's own words. */
   example?: string;
@@ -31,6 +48,11 @@ export function Ask({
   words?: Words;
   making?: boolean;
   waiting?: string[];
+  /**
+   * The change log, shown above the box as a thread with what this tab's session asked that
+   * left no change (docs/design/ask-in-studio.md §3); without it, only the box.
+   */
+  trace?: TraceEntry[];
 }) {
   // A request half written stays when the person looks elsewhere (another tab, a mode) and
   // comes back: kept for the browser tab's session.
@@ -49,6 +71,14 @@ export function Ask({
     } catch {}
   };
   const [proposal, setProposal] = useState<Proposal>();
+  const [said, setSaidState] = useState(readSaid);
+  const say = (request: string, reply: string) => {
+    const next = [...said, { at: new Date().toISOString(), request, reply }].slice(-40);
+    setSaidState(next);
+    try {
+      sessionStorage.setItem(SAID, JSON.stringify(next));
+    } catch {}
+  };
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
   // The next waiting request, once the app is in place and the box is free: out of the list
@@ -75,7 +105,22 @@ export function Ask({
     setBusy(true);
     setOutput("");
     try {
-      setProposal(await api.ask(text));
+      const next = await api.ask(text);
+      setProposal(next);
+      // An answer or a refusal is the end of that request: it goes into the thread.
+      const reply =
+        next.kind === "answer"
+          ? next.text
+          : next.kind === "none"
+            ? `No operation can do this: ${next.reason}`
+            : next.kind === "failed"
+              ? next.message
+              : undefined;
+      if (trace && reply) {
+        say(text, reply);
+        setProposal(undefined);
+        setRequest("");
+      }
     } catch (error) {
       setOutput((error as Error).message);
     } finally {
@@ -110,8 +155,8 @@ export function Ask({
 
   return (
     <div className="space-y-4 p-4">
+      {trace && <Thread trace={trace} said={said} words={words} />}
       <form
-        data-guide="change"
         className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
@@ -173,7 +218,10 @@ export function Ask({
           words={words}
           busy={busy}
           onApply={apply}
-          onCancel={() => setProposal(undefined)}
+          onCancel={() => {
+            if (trace) say(request.trim(), "Discarded.");
+            setProposal(undefined);
+          }}
           onEdit={onEdit}
           onOption={(option) => {
             const detailed = `${request.trim()} (${option})`;
@@ -192,7 +240,36 @@ export function Ask({
   );
 }
 
-/** A proposed change in plain language, with Apply; or the model's question or refusal. */
+/**
+ * The thread: the change log read as a conversation, oldest first, with what this tab's session
+ * asked that left no change. Nothing new is stored but those lines.
+ */
+function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; words?: Words }) {
+  const lines = [
+    ...trace.slice(0, 30).map((t) => {
+      const plain = t.operation && words?.(t.operation.op, t.operation.args);
+      const what = plain ?? t.description;
+      return {
+        at: t.at,
+        request: t.request,
+        reply: t.isUndo ? `Undid: ${what}` : t.undone ? `${what} (undone)` : `Done: ${what}`,
+      };
+    }),
+    ...said,
+  ].sort((a, b) => a.at.localeCompare(b.at));
+  if (!lines.length) return <p className="text-sm text-quiet">Nothing asked or changed yet.</p>;
+  return (
+    <ol aria-label="Thread" className="space-y-2 text-sm">
+      {lines.map((line) => (
+        <li key={`${line.at}|${line.reply}`} className="space-y-1">
+          {line.request && <p className="ml-6 rounded-md bg-subtle px-2 py-1">{line.request}</p>}
+          <p className="text-muted">{line.reply}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** Words an operation the Builder's way, where it can. */
 export type Words = (op: string, args: Record<string, unknown>) => string | undefined;
 

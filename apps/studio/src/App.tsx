@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
+import { AskSheet, useAskPlace } from "./builder/AskDock";
 import { Builder } from "./builder/Builder";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
@@ -114,6 +115,9 @@ export function App() {
   // On a narrow window the preview is the mode switch's third choice, the window's width
   // (Johan, 2026-10-09); from lg it is a column beside either mode.
   const narrow = useMedia("(max-width: 1023px)");
+  // The Ask panel's slot (docs/design/ask-in-studio.md): right of the preview or under it, a
+  // sheet on a phone; No code fills it.
+  const { place: ask, setSlot: setAskSlot } = useAskPlace(narrow);
   // The preview's share of a wide window, in percent: the edge between the two is dragged.
   const room = useRef<HTMLElement>(null);
   const [previewWidth, setPreviewWidth] = useState(() => {
@@ -576,7 +580,7 @@ export function App() {
           <Making making={project.making} project={project} />
         </main>
       ) : (
-        <main ref={room} className="flex min-h-0 flex-1">
+        <main ref={room} className="relative flex min-h-0 flex-1">
           <div className={cx("min-h-0 min-w-0 flex-1", viewing && "hidden")}>
             {mode === "builder" ? (
               <Builder
@@ -586,6 +590,7 @@ export function App() {
                 place={place.builder}
                 onPlace={builderPlace}
                 undo={() => void undo()}
+                ask={ask}
               />
             ) : (
               <Suspense fallback={<p className="p-3 text-sm text-quiet">Opening Code mode…</p>}>
@@ -638,7 +643,24 @@ export function App() {
               highlight={highlight}
               pages={pages}
             />
+            {mode === "builder" && !narrow && ask.dock === "foot" && !place.previewHidden && (
+              <section
+                aria-label="Ask"
+                ref={setAskSlot}
+                className="flex h-[40%] shrink-0 flex-col border-t border-line"
+              />
+            )}
           </div>
+          {mode === "builder" && !narrow && (ask.dock === "right" || place.previewHidden) && (
+            <aside
+              aria-label="Ask"
+              ref={setAskSlot}
+              className="flex w-[22rem] shrink-0 flex-col border-l border-line bg-panel"
+            />
+          )}
+          {mode === "builder" && narrow && (
+            <AskSheet sheet={ask.sheet} onSheet={ask.onSheet} slotRef={setAskSlot} />
+          )}
         </main>
       )}
     </div>

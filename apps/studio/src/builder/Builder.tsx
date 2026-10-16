@@ -2,6 +2,7 @@
 import { humanize, pageModel, plural } from "@smithable/core";
 import { describeChange, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
@@ -10,6 +11,7 @@ import { Button, cx, Panel, Tabs, useMedia } from "../ui";
 import { AppDetails } from "./AppDetails";
 import { AppSummary } from "./AppSummary";
 import { Ask } from "./Ask";
+import { AskPanel, type AskPlace } from "./AskDock";
 import { ChangeForms, type Prefill, type Run } from "./ChangeForms";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
@@ -24,6 +26,7 @@ export function Builder({
   place,
   onPlace,
   undo,
+  ask,
 }: {
   project: Project;
   spec: Spec;
@@ -33,6 +36,8 @@ export function Builder({
   /** Where the person was in this mode, and a way to say where they are now (App.tsx). */
   place: Place["builder"];
   onPlace: (place: Place["builder"]) => void;
+  /** Where the Ask panel goes (App.tsx's slot); none, no panel. */
+  ask?: AskPlace;
 }) {
   const [tab, setTabState] = useState<"app" | "spec" | "look" | "who" | "languages" | "changes">(
     place.tab ?? "app",
@@ -44,11 +49,11 @@ export function Builder({
   const [prefill, setPrefill] = useState<Prefill>();
   // A column of the Who can tab a click in the summary points at (a role, or "anyone").
   const [marked, setMarked] = useState<string>();
-  // Requests typed while the app was made are taken by the prompt, which is the Changes tab's.
+  // Requests typed while the app was made are taken by the Ask panel: a folded sheet opens.
   const waiting = project.waiting?.length ?? 0;
   // biome-ignore lint/correctness/useExhaustiveDependencies: when requests start waiting
   useEffect(() => {
-    if (waiting > 0) setTab("changes");
+    if (waiting > 0 && ask?.sheet === "bar") ask.onSheet("half");
   }, [waiting > 0]);
   // The Changes tab's forms, folded until a click elsewhere opens one filled in.
   const [forms, setForms] = useState(false);
@@ -211,7 +216,7 @@ export function Builder({
                   ["look", "Look", "look"],
                   ["who", "Who can"],
                   ["languages", "Languages"],
-                  ["changes", "Changes", "change"],
+                  ["changes", "Changes"],
                 ]}
                 value={tab}
                 onChange={setTab}
@@ -239,19 +244,8 @@ export function Builder({
                 onLook={() => setTab("look")}
               />
             ) : (
-              // The prompt first, the forms folded, then every change with the rest of the room.
+              // The forms folded, then every change with the rest of the room; words go to Ask.
               <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 border-b border-line">
-                  <Ask
-                    example={example}
-                    words={words}
-                    waiting={project.waiting}
-                    onEdit={(p) => {
-                      openForm(p);
-                      show("app");
-                    }}
-                  />
-                </div>
                 <details
                   open={forms}
                   onToggle={(e) => setForms(e.currentTarget.open)}
@@ -314,6 +308,22 @@ export function Builder({
           )}
         </div>
       </div>
+      {ask?.slot &&
+        createPortal(
+          <AskPanel place={ask} lastLine={lastWords || "Describe a change, or ask a question"}>
+            <Ask
+              example={example}
+              words={words}
+              waiting={project.waiting}
+              trace={project.trace}
+              onEdit={(p) => {
+                openForm(p);
+                show("app");
+              }}
+            />
+          </AskPanel>,
+          ask.slot,
+        )}
       {/* The newest change under the panels, while looking at the preview: what it was, and
           Undo while it is still in place. The list and the prompt are the Changes tab's. */}
       <section
