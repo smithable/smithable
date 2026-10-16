@@ -250,7 +250,7 @@ function target(page, href) {
     if (
       !schemaPaths.includes(path.slice(SITE.length)) &&
       !PAGES.some((p) => p.out === path.slice(SITE.length)) &&
-      path !== `${SITE}theme-lab/`
+      path !== `${SITE}theme-lab/index.html`
     )
       problems.push(`${page.src}: ${href} is not on the site`);
     return href;
