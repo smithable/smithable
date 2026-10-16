@@ -302,6 +302,8 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         continue;
       }
       const model = models.find((m) => m.name === read.when.model) as ModelIR;
+      // A model's event names the model in the text; a standard action names only the action.
+      if ("event" in read.when) ctx.reference("model", read.when.model, whenEntry.value);
       const toEntry = byKey.get("to");
       if (!toEntry) {
         ctx.error(keyNode, "missing-key", `${capital(where)} needs "to": mail, or a target.`);

@@ -749,6 +749,38 @@ const removePage: Operation<{ page: string }> = {
   },
 };
 
+const renamePage: Operation<{ from: string; to: string }> = {
+  name: "renamePage",
+  summary:
+    "Rename a page. Its menus, grants, texts and look follow; without a route of its own, its address becomes / plus the new name.",
+  schema: {
+    type: "object",
+    required: ["from", "to"],
+    additionalProperties: false,
+    properties: {
+      from: refTo({ ref: "page", label: "Page" }),
+      to: { type: "string", description: "The new name, like invoices." },
+    },
+  },
+  positional: ["from", "to"],
+  describe: ({ from, to }) => `Rename page ${from} to ${to}`,
+  destructive: () => false,
+  apply({ spec }, { from, to }, ir) {
+    const page = ir.pages.find((p) => p.id === from);
+    if (!page) throw new OperationError(`There is no page named "${from}".`);
+    if (!NAME_PATTERN.test(to)) throw new OperationError(nameRule("page", to));
+    if (to === from) throw new OperationError(`The page is already called ${from}.`);
+    if (ir.pages.some((p) => p.id === to)) throw new OperationError(`Page "${to}" already exists.`);
+    const ownRoute = spec.has(["pages", from, "route"]);
+    // The key, the menus and the landing links are rewritten by applyOperation from the effect,
+    // and the companions follow it (companion.ts).
+    return [
+      { kind: "rename-page", from, to },
+      ...(ownRoute ? [] : [{ note: `its address is now /${to}` }]),
+    ];
+  },
+};
+
 /** A landing page's section kinds other than records, which any name can have. */
 const KINDS = SECTION_KINDS.filter((k) => k !== "records" && k !== "calculator" && k !== "custom");
 
@@ -954,7 +986,7 @@ const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
 };
 
 /** Operations on pages of every pattern. */
-export const pageOperations: AnyOperation[] = [removePage];
+export const pageOperations: AnyOperation[] = [renamePage, removePage];
 /** Operations of the crud pattern. */
 export const crudOperations: AnyOperation[] = [
   addPage,

@@ -2,7 +2,9 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -286,6 +288,10 @@ async function applyAndCheckpoint(
       `${JSON.stringify({ id, op: operation.name, args: recordedArgs, description: result.description })}\n`,
     );
     // Only stored fields have a column to rename; a list of related records stores nothing.
+    // A renamed model keeps its rows: its tables are renamed, never dropped and made anew.
+    const models = result.effects.flatMap((e) =>
+      e.kind === "rename-model" ? [{ from: e.from, to: e.to }] : [],
+    );
     const renames = result.effects.flatMap((e) =>
       e.kind === "rename-field" && e.storage !== "none"
         ? [{ model: e.model, from: e.from, to: e.to, reference: e.storage === "reference" }]
@@ -306,7 +312,7 @@ async function applyAndCheckpoint(
       tools: true,
       onlyChanged: true,
       force: false,
-      migration: { name: migrationName(result.description), renames, values, apply: true },
+      migration: { name: migrationName(result.description), renames, values, models, apply: true },
     });
     if (code !== 0) return fail(`Regenerating the app failed.`);
     lap("generate and tools");
@@ -408,6 +414,12 @@ function choicesInUse(
  */
 function followInSamples(dir: string, effects: Effect[]): void {
   for (const effect of effects) {
+    // A sample file is named after its model.
+    if (effect.kind === "rename-model") {
+      const file = join(dir, "samples", `${effect.from}.yml`);
+      if (existsSync(file)) renameSync(file, join(dir, "samples", `${effect.to}.yml`));
+      continue;
+    }
     // A choice value that goes: each sample holding it gets the new one, or loses it.
     if (effect.kind === "change-field" && effect.renamed) {
       const file = join(dir, "samples", `${effect.model}.yml`);

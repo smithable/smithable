@@ -36,6 +36,10 @@ export interface TranslationFiles {
 
 /** Facts about a change that later steps need, e.g. migrations must rename, not drop and add. */
 export type Effect =
+  /** A model renamed: its table and every file that names it follow (rename.ts, the host). */
+  | { kind: "rename-model"; from: string; to: string }
+  /** A page renamed: the companions' entries for it follow; its default address changes. */
+  | { kind: "rename-page"; from: string; to: string }
   | { kind: "rename-field"; model: string; from: string; to: string; storage: Storage }
   | { kind: "remove-field"; model: string; field: string; storage: Storage }
   /** A field's type changed; `choices` are its choice values now (none if not a choice). */

@@ -1,6 +1,6 @@
 import { isScalar, LineCounter, type ParsedNode, parseDocument, visit } from "yaml";
 import { advise } from "./advice.js";
-import { checkKeys, mapEntries, ParseContext } from "./context.js";
+import { checkKeys, mapEntries, type NameReference, ParseContext } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { SpecIR } from "./ir.js";
 import { applyPlugins, type SpecPlugin } from "./plugin.js";
@@ -39,6 +39,8 @@ export interface ValidateResult {
   /** Present only when there are no errors. */
   ir?: SpecIR;
   diagnostics: Diagnostic[];
+  /** Where the spec names its models and pages, for a rename to follow (also with errors). */
+  references: NameReference[];
 }
 
 export interface ValidateOptions {
@@ -57,7 +59,10 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
     prettyErrors: false,
   });
   const ctx = new ParseContext(file.path, lines);
-  const done = () => ({ diagnostics: sortDiagnostics(ctx.diagnostics) });
+  const done = () => ({
+    diagnostics: sortDiagnostics(ctx.diagnostics),
+    references: ctx.nameReferences(),
+  });
 
   for (const error of doc.errors) {
     const code = error.code === "DUPLICATE_KEY" ? "duplicate-key" : "yaml-syntax";
@@ -125,7 +130,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   if (hasErrors(ctx.diagnostics)) return done();
   const ir = { specVersion: SPEC_VERSION, ...parsed, extensions } as SpecIR;
   advise(ctx, ir);
-  return { ir, diagnostics: sortDiagnostics(ctx.diagnostics) };
+  return { ir, diagnostics: sortDiagnostics(ctx.diagnostics), references: ctx.nameReferences() };
 }
 
 function reportVersion(ctx: ParseContext, at: ParsedNode | null, found: string): void {

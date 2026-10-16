@@ -372,6 +372,7 @@ function readStandardAction(
   const modelName = readString(ctx, on.value, `"on" of ${where}`);
   if (modelName === undefined) return undefined;
   const model = models.find((m) => m.name === modelName);
+  if (model) ctx.reference("model", modelName, on.value);
   if (!model) {
     ctx.error(
       on.value,
@@ -407,6 +408,7 @@ function readStandardAction(
     ? (mapEntries(ctx, addEntry.value, `"add" of ${where}`) ?? [])
     : []) {
     const target = models.find((m) => m.name === key);
+    if (target) ctx.reference("model", key, at);
     if (!target) {
       ctx.error(
         at,

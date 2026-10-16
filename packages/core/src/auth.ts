@@ -6,6 +6,7 @@ import {
   checkKeys,
   type Entry,
   mapEntries,
+  type NameReference,
   ParseContext,
   readBoolean,
   readNameList,
@@ -168,7 +169,7 @@ const PERSONAL_TYPES = ["email", "phone"];
 export function validateAuth(
   file: { path: string; text: string },
   ir?: SpecIR,
-): { auth?: AuthIR; diagnostics: Diagnostic[] } {
+): { auth?: AuthIR; diagnostics: Diagnostic[]; references: NameReference[] } {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
     lineCounter: lines,
@@ -187,6 +188,7 @@ export function validateAuth(
   const done = () => ({
     ...(hasErrors(ctx.diagnostics) ? {} : { auth }),
     diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
+    references: ctx.nameReferences(),
   });
 
   for (const error of doc.errors) {
@@ -309,6 +311,10 @@ export function validateAuth(
           if (!read) continue;
           (role.grants as RoleGrants)[grant] = read.names;
           grantNodes.push({ role: key, key: grant, at: entry.keyNode, items: read.items });
+          // Names of the spec's things, for a rename to follow (checked by checkGrants).
+          if (grant !== "actions")
+            for (const item of read.items)
+              ctx.reference(grant === "pages" ? "page" : "model", item.name, item.at);
         }
       }
       if (key === "admin") auth.roles[0] = role;
@@ -378,6 +384,8 @@ export function validateAuth(
           ? readPublicRead(ctx, value, auth.public.readWhere)
           : readNameList(ctx, value, `"${key}" in "public"`);
       auth.public[k] = publicNodes[k].map((n) => n.name);
+      for (const item of publicNodes[k])
+        ctx.reference(k === "pages" ? "page" : "model", item.name, item.at);
     }
   }
 
@@ -575,12 +583,14 @@ function readApi(ctx: ParseContext, entry: Entry, auth: AuthIR): ApiNodes | unde
   else {
     nodes.modelNames = offered;
     api.models = offered.map((m) => m.name);
+    for (const item of offered) ctx.reference("model", item.name, item.at);
   }
   const except = byKey.get("except");
   if (except) {
     nodes.exceptAt = except.keyNode;
     nodes.exceptNames = readNameList(ctx, except.value, `"except" in "api"`);
     api.except = nodes.exceptNames.map((m) => m.name);
+    for (const item of nodes.exceptNames) ctx.reference("model", item.name, item.at);
     if (api.models !== "all")
       ctx.error(
         except.keyNode,
