@@ -311,3 +311,7 @@ export function renameFor(
     return ["renameField", { model, from, to }];
   return undefined;
 }
+
+/** A kind of record or a page: renamed by an operation that comes later, never by a plain edit. */
+export const renamesLater = (file: string, path: (string | number)[]) =>
+  file === "smithable.yml" && path.length === 2 && (path[0] === "models" || path[0] === "pages");
