@@ -29,9 +29,9 @@ The records in the preview are samples for trying the app. The published app sta
 
 ## Publish and share
 
-**Publish and share** in Studio's header opens the app's page. In a sandbox, publishing, sharing and connecting an AI agent offer you an invite instead. [Ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build.
+**Publish and share** in Studio's header opens the app's page. In a sandbox the page says so up front: the sandbox lasts two hours, publishing, sharing, downloading and connecting an AI agent need an invite, and everything goes when the sandbox ends. [Ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build.
 
-![The app's page: Open in Studio, then Publish with Live and Staging, and what the check found before publishing](start-hosted/app.webp)
+![The app's page in a sandbox: Open in Studio, the note that publishing needs an invite, then Publish with Live and Staging](start-hosted/app.webp)
 
 An invite comes by mail as a link. Opening it makes your account, with Google or with your name. **Your apps** lists your apps and keeps them until you delete them. **New app** starts another one, from a description or an example, just like the start page.
 
