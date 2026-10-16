@@ -12,12 +12,13 @@ import { indentWithTab } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { lintGutter, setDiagnostics } from "@codemirror/lint";
-import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState, Prec } from "@codemirror/state";
 import { EditorView, hoverTooltip, keymap, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { completeSpec, type EditedFile, hoverSpec, type Known } from "@smithable/core";
 import { basicSetup } from "codemirror";
 import { useEffect, useRef } from "react";
+import { enterKeepingLevel } from "./enter-indent";
 import { type Problem, problemRange } from "./problems";
 
 export default function SpecText({
@@ -132,6 +133,9 @@ export default function SpecText({
           // indents and Shift+Tab outdents, as in any code editor. Escape then Tab leaves the
           // editor for the next control (CodeMirror's own way out, for the keyboard).
           keymap.of([{ key: "Tab", run: acceptCompletion }, indentWithTab]),
+          // Enter after a key goes one level deeper, otherwise keeps the level (enter-indent.ts);
+          // ahead of the default Enter, which guesses from the YAML grammar.
+          Prec.high(keymap.of([{ key: "Enter", run: enterKeepingLevel }])),
           yaml(),
           lintGutter(),
           // Studio's colours follow the system's light or dark setting, as it changes.
