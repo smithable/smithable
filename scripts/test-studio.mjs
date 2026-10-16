@@ -200,11 +200,10 @@ try {
           throw new Error(`${name} does not lead to ${href}`);
     },
   );
-  await step("the Changes tab: the prompt first, the forms folded, then the list", async () => {
+  await step("the Changes tab: the forms folded, then the list", async () => {
     await changesTab();
     const forms = page.locator("details", { hasText: "Change by form" });
     if ((await forms.getAttribute("open")) !== null) throw new Error("the forms are not folded");
-    await page.getByLabel("Describe a change").waitFor();
     await page.getByRole("tab", { name: "What it does" }).click();
     await last.waitFor();
   });
@@ -218,6 +217,31 @@ try {
     await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
     if (await alert.count()) throw new Error("the notice came back");
   });
+  await step(
+    "Ask is a panel under the preview, docked right of it from its corner, and kept so after a reload",
+    async () => {
+      // Unchosen, a 1440-pixel window has it under the preview.
+      const foot = page.getByRole("region", { name: "Ask" });
+      await foot.getByLabel("Describe a change").waitFor();
+      await foot
+        .getByRole("list", { name: "Thread" })
+        .or(foot.getByText("Nothing asked"))
+        .waitFor();
+      const [frame, box] = await Promise.all([
+        page.locator('iframe[title="App preview"]').boundingBox(),
+        foot.boundingBox(),
+      ]);
+      if (!frame || !box || box.y < frame.y + frame.height - 2)
+        throw new Error("Ask is not under the preview");
+      await foot.getByRole("button", { name: "Dock right of the preview" }).click();
+      const right = page.getByRole("complementary", { name: "Ask" });
+      await right.getByLabel("Describe a change").waitFor();
+      await page.reload();
+      await right.getByLabel("Describe a change").waitFor();
+      await right.getByRole("button", { name: "Dock under the preview" }).click();
+      await foot.getByLabel("Describe a change").waitFor();
+    },
+  );
   await step(
     "a note in What it does applies its advice with Apply, and undo takes it back",
     async () => {
@@ -1050,6 +1074,14 @@ try {
         { timeout: 5000 },
       );
       if (await panels.isVisible()) throw new Error("the panels show beside the Preview");
+      // Ask is a sheet over the preview: half its height, folded to a bar and opened again.
+      const sheet = page.getByRole("region", { name: "Ask" });
+      await sheet.getByLabel("Describe a change").waitFor();
+      const handle = sheet.getByRole("separator", { name: "Ask's height" });
+      await handle.focus();
+      await page.keyboard.press("ArrowDown");
+      await sheet.getByRole("button", { name: /^Ask ·/ }).click();
+      await sheet.getByLabel("Describe a change").waitFor();
       // Back to No code, as it was.
       await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
       await panels.getByRole("button", { name: "Details" }).click();
