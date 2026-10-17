@@ -16,7 +16,7 @@ import {
   themeFit,
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { setField, themeText } from "./theme-text";
+import { getField, setField, themeText } from "./theme-text";
 
 interface Start {
   preview: string;
@@ -75,6 +75,13 @@ export function App() {
     [name, text],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  // A theme the checks refuse (a primary too close to its background) has no IR, but the
+  // controls must stay so the person can change it back: they show the last theme that passed,
+  // with the refusal beside them; the frames keep that theme's CSS too. (Johan, 2026-10-17:
+  // choosing a colour made the controls disappear.)
+  const lastGood = useRef<ThemeIR | undefined>(undefined);
+  if (theme) lastGood.current = theme;
+  const shown = theme ?? lastGood.current;
   const css = useMemo(
     () =>
       theme
@@ -222,7 +229,7 @@ export function App() {
         </button>
         {saved && <span role="status">{saved}</span>}
       </header>
-      <aside>{theme && <Controls theme={theme} set={set} />}</aside>
+      <aside>{shown && <Controls theme={shown} text={text} set={set} />}</aside>
       <main>
         {start && !signedIn && (
           <iframe
@@ -278,8 +285,8 @@ export function App() {
               {d.message}
             </p>
           ))}
-          {theme &&
-            themeFit(theme).map((fit) => (
+          {shown &&
+            themeFit(shown).map((fit) => (
               <p key={fit.rule} className={fit.verdict} data-fit={fit.rule}>
                 {fit.text}
               </p>
@@ -304,9 +311,12 @@ export function App() {
 /** The fields, grouped as the file is. Each shows the theme's value and writes the file's. */
 function Controls({
   theme,
+  text,
   set,
 }: {
   theme: ThemeIR;
+  /** The file as it is: a colour the checks refused is shown as written, so it can be picked again. */
+  text: string;
   set: (path: (string | number)[], value: unknown) => void;
 }) {
   const choice = (label: string, path: string[], value: string, values: readonly string[]) => (
@@ -319,12 +329,16 @@ function Controls({
       </select>
     </label>
   );
+  const written = (mode: "light" | "dark", token: "primary" | "background") => {
+    const raw = getField(text, [mode, token]);
+    return typeof raw === "string" && /^(#[0-9a-f]{6}|oklch\()/i.test(raw) ? hexOf(raw) : undefined;
+  };
   const color = (mode: "light" | "dark", token: "primary" | "background") => (
     <label key={`${mode}.${token}`}>
       {mode} {token}
       <input
         type="color"
-        value={hexOf(theme[mode][token])}
+        value={written(mode, token) ?? hexOf(theme[mode][token])}
         onChange={(e) => set([mode, token], e.target.value)}
       />
     </label>

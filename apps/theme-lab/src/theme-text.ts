@@ -39,6 +39,13 @@ export function themeText(theme: ThemeIR): string {
 }
 
 /** The text with one field set; the body font where the file names it (`font` or `fonts.body`). */
+/** A field's value as the file has it (the body font under font or fonts.body); undefined when absent. */
+export function getField(text: string, path: (string | number)[]): unknown {
+  const doc = parseDocument(text);
+  const at = path.join(".") === "fonts.body" && doc.has("font") ? ["font"] : path;
+  return doc.getIn(at);
+}
+
 export function setField(text: string, path: (string | number)[], value: unknown): string {
   const doc = parseDocument(text);
   const at = path.join(".") === "fonts.body" && doc.has("font") ? ["font"] : path;

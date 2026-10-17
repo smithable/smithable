@@ -1,6 +1,6 @@
-import { BUILT_IN_THEMES, hexOf, parseTheme } from "@smithable/core";
+import { BUILT_IN_THEMES, hexOf, parseTheme, type ThemeIR } from "@smithable/core";
 import { expect, test } from "vitest";
-import { setField, themeText } from "./theme-text";
+import { getField, setField, themeText } from "./theme-text";
 
 test("every built-in theme, written as a file to start from, reads back as itself", () => {
   for (const theme of BUILT_IN_THEMES) {
@@ -35,4 +35,11 @@ test("a field is set where the file says it: the body font as font or fonts.body
   expect(
     setField("fonts:\n  body: Inter\n  heading: Fraunces\n", ["fonts", "heading"], undefined),
   ).toBe("fonts:\n  body: Inter\n");
+});
+
+test("a field reads back as the file has it, also one the checks would refuse", () => {
+  const text = setField(themeText(BUILT_IN_THEMES[0] as ThemeIR), ["dark", "primary"], "#151a28");
+  expect(getField(text, ["dark", "primary"])).toBe("#151a28");
+  expect(getField(text, ["fonts", "body"])).toBe("Inter");
+  expect(getField(text, ["dark", "nothing"])).toBeUndefined();
 });
