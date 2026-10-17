@@ -26,12 +26,34 @@ import { publicArticles } from "./articles.js";
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 /** Who may open each page. */
-export function pagesModule(ir: SpecIR, auth: AuthIR): string {
+export function pagesModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
   const entries = Object.fromEntries(ir.pages.map((p) => [p.id, pageAccess(p, auth)]));
+  const words = Object.fromEntries(ir.pages.map((p) => [p.id, t.page(p.id)]));
+  // The page at / has the app's name alone as its tab's title.
+  const home = ir.pages.filter((p) => p.route === "/").map((p) => p.id);
+  const read = (text: string) => (t.translated ? `tx(${text})` : text);
   return `${HEADER}import type { Rule } from "#/kit/access";
+import { app } from "#/generated/app";
 
 /** Who may open each page. */
 export const pageAccess = ${literal(entries)} satisfies Record<string, Rule>;
+
+interface PageUi {
+  title: string;
+  subtitle?: string;
+  description?: string;
+}
+
+/** Each page's words: the menus, its header and its tab read them here. */
+export const pageUi = ${literal(words)} satisfies Record<string, PageUi>;
+
+/** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
+export function pageHead(page: keyof typeof pageUi) {
+  const ui: PageUi = pageUi[page];
+  const title = ${home.length ? `${home.map((id) => `page === ${JSON.stringify(id)}`).join(" || ")} ? app.name : ` : ""}\`\${${read("ui.title")}} · \${app.name}\`;
+  const described = ui.description ? [{ name: "description", content: ${read("ui.description")} }] : [];
+  return { meta: [{ title }, ...described] };
+}
 `;
 }
 
@@ -95,7 +117,7 @@ export function rootRoute(
     `      {\n        to: ${JSON.stringify(to)},\n        label: ${label},\n        icon: ${icon},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`;
   const admin = team
     ? `  {\n    name: "admin",\n    label: w.admin,\n    items: [\n${[
-        item(team.route, JSON.stringify(t.pageTitle(team.id)), iconOf(team.id), team.id),
+        item(team.route, t.pageTitleOf(team.id), iconOf(team.id), team.id),
         ...(trash ? [item(join(team.route, "trash"), "w.trashView", "Trash2", team.id)] : []),
         item(join(team.route, "activity"), "w.activity", "History", team.id),
       ].join("\n")}\n    ],\n  },`
@@ -105,7 +127,7 @@ export function rootRoute(
     if (pages.length === 0) return [];
     const items = pages.map(
       (id) =>
-        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${JSON.stringify(t.pageTitle(id))},\n        icon: ${iconOf(id)},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
+        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${t.pageTitleOf(id)},\n        icon: ${iconOf(id)},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
     );
     const menuLabel = t.menuLabel(menu.name);
     const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;

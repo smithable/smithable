@@ -119,9 +119,12 @@ pages:
   expect(customer(withContent)).toContain('label: "Small business"');
   expect(customer(withContent)).toContain('pluralLabel: "Clients"');
   const list = withContent.find((f) => f.path === "src/routes/customers/index.tsx")?.content ?? "";
-  expect(list).toContain('title="Our clients"');
+  expect(list).toContain('title={pageUi["customers"].title}');
+  const pages = (files: typeof withContent) =>
+    files.find((f) => f.path === "src/generated/pages.ts")?.content;
+  expect(pages(withContent)).toContain('customers: { title: "Our clients" }');
   expect(list).toContain('w.newOne("client")');
-  // A text with quotes goes in braces: a JSX attribute string cannot escape them.
+  // A text with quotes is written as a string literal, escaped.
   const quoted = generateApp(spec, {
     ...options,
     content: {
@@ -133,9 +136,7 @@ pages:
       outgoing: {},
     },
   });
-  expect(quoted.find((f) => f.path === "src/routes/customers/index.tsx")?.content).toContain(
-    'title={"Our \\"best\\" clients"}',
-  );
+  expect(pages(quoted)).toContain('customers: { title: "Our \\"best\\" clients" }');
 });
 
 test("an app without sign-in has no sign-in page, auth client or owners", () => {
@@ -451,6 +452,10 @@ test("in an app of several languages each person's own is kept, and their mails 
   const files = generateApp(ir(path, examples[path] as string), { ...options, auth, content });
   const file = (p: string) => files.find((f) => f.path === p)?.content ?? "";
   expect(file("src/db/schema.ts")).toContain("  language: text(),\n  role:");
+  // A tab's title is read in the page's language, with tx imported where it is used.
+  const pages = file("src/generated/pages.ts");
+  expect(pages).toContain("${tx(ui.title)} · ${app.name}");
+  expect(pages).toContain('import { tx } from "#/kit/words";');
   const lib = file("src/lib/auth.ts");
   expect(lib).toContain('language: { type: "string", required: false, input: false }');
   expect(lib).toContain("language: OFFERED.others.includes(language()) ? language() : null");

@@ -318,7 +318,7 @@ function ReviewPage() {
   const router = useRouter();
   return (
     <>
-      <PageHeader title={${JSON.stringify(t.pageTitle(page.id))}} subtitle={w.reviewLead} />
+      <PageHeader title={${t.pageTitleOf(page.id)}} subtitle={w.reviewLead} />
       <Review
         app={app}
         waiting={waiting}

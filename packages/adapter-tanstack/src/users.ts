@@ -43,6 +43,13 @@ function usersPage(ir: SpecIR): string {
   return page.id;
 }
 
+/** src/generated/roles.ts: the roles' labels, for the pages and the server alike. */
+export function rolesModule(auth: AuthIR): string {
+  return `${HEADER}/** Each role as the app names it. */
+export const ROLE_LABELS: Record<string, string> = ${literal(roleLabels(auth))};
+`;
+}
+
 /**
  * src/generated/users.server.ts: the users, the open invitations and what an administrator (or
  * the users page's roles) does with them. Acceptance is by verified email address at sign-in
@@ -60,6 +67,7 @@ import { db } from "#/db";
 import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";${uses.length ? '\nimport * as schema from "#/db/schema";' : ""}
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
+import { ROLE_LABELS } from "#/generated/roles";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { sendMail } from "#/kit/mail";
@@ -67,7 +75,6 @@ import { w } from "#/kit/words";
 
 export const ROLES = ${literal(roles)} as const;
 export type Role = (typeof ROLES)[number];
-export const ROLE_LABELS: Record<string, string> = ${literal(roleLabels(auth))};
 /** How long an invitation can be accepted. */
 export const INVITATION_DAYS = 14;
 

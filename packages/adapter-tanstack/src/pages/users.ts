@@ -2,16 +2,14 @@
 import {
   type AuthIR,
   apiOffers,
-  humanize,
   kebab,
   type PageIR,
   pascal,
   plural,
   type SpecIR,
 } from "@smithable/core";
-import { roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
-import { attr, guard, HEADER, indexPath, literal, type Texts } from "../shared.js";
+import { attr, code, guard, HEADER, indexPath, literal, type Texts } from "../shared.js";
 
 /**
  * A users page: who has access, invited or active, with their role. Administrators (or the
@@ -26,15 +24,15 @@ export function usersRoute(page: PageIR, ir: SpecIR, t: Texts, auth: AuthIR): st
   // "Using a key": the first model the API offers, and whether assistants get tools.
   const first = apiOffers(auth, ir).models[0];
   const use = {
-    app: ir.app.name,
+    app: code("app.name"),
     ...(first ? { path: kebab(plural(first)) } : {}),
     tools: Boolean(auth.api?.assistants),
   };
-  const labels = roleLabels(auth);
   return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { pageAccess } from "#/generated/pages";
+${keys ? 'import { app } from "#/generated/app";\n' : ""}import { pageAccess } from "#/generated/pages";
+import { ROLE_LABELS } from "#/generated/roles";
 import {
   invite,
   listUsers,
@@ -57,7 +55,7 @@ import { currentViewer } from "#/lib/viewer.server";
 const ROLE_OPTIONS = ${literal(
     auth.roles.map((r) => ({
       value: r.name,
-      label: labels[r.name] ?? humanize(r.name),
+      label: code(`ROLE_LABELS[${JSON.stringify(r.name)}]`),
       ...(r.description ? { description: r.description } : {}),
     })),
   )};
@@ -138,7 +136,7 @@ function ${component}() {
   };
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}

@@ -119,7 +119,7 @@ function ${component}() {
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
       <ModelForm
         key={row?.id ?? "new"}
         ui={${n.ui}}
@@ -158,10 +158,11 @@ function ${component}() {
     .add("react", "useState")
     .add("#/kit/Onboarding", "OnboardingLayout")
     .add(n.module, `type ${n.values}`);
+  if (t.pageTitle(page.id) === humanize(page.id)) imports.add("#/generated/app", "app");
   const title =
     t.pageTitle(page.id) === humanize(page.id)
-      ? `{w.welcomeTo(${JSON.stringify(ir.app.name)})}`
-      : attr(t.pageTitle(page.id));
+      ? "{w.welcomeTo(app.name)}"
+      : `{${t.pageTitleOf(page.id)}}`;
   return `${HEADER}${imports.render()}${optionImports}${server}
 const steps = [
 ${steps.join("\n")}
@@ -823,7 +824,7 @@ ${lists
   .map(
     ({ model, page, n, fns }) => `      {rows.${camel(model.name)}.length > 0 && (
         <section data-model=${JSON.stringify(model.name)} className="space-y-3 pb-8">
-          <h2 className="text-lg font-semibold">{${JSON.stringify(n.pluralLabel)}}</h2>
+          <h2 className="text-lg font-semibold">{${n.ui}.pluralLabel}</h2>
           <TrashTable
             ui={${n.ui}}
             app={app}
@@ -870,7 +871,7 @@ function ${model.name}TrashPage() {
   const router = useRouter();
   return (
     <>
-      <PageHeader title={w.trashOf(${JSON.stringify(n.pluralLabel)})} subtitle={w.trashLead} />
+      <PageHeader title={w.trashOf(${n.ui}.pluralLabel)} subtitle={w.trashLead} />
       <TrashTable
         ui={${n.ui}}
         app={app}

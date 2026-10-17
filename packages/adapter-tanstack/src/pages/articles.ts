@@ -112,7 +112,7 @@ function listRoute(page: ArticlesPage, ctx: GenContext): string {
       .add("#/generated/app", "app")
       .add("#/generated/site", "site");
   else imports.add("#/kit/AppShell", "PageHeader");
-  const header = `<h1 className="mb-6 text-3xl font-bold">{${JSON.stringify(ctx.t.pageTitle(page.id))}}</h1>`;
+  const header = `<h1 className="mb-6 text-3xl font-bold">{${ctx.t.pageTitleOf(page.id)}}</h1>`;
   return `${HEADER}${imports.render()}${code}
 const getArticles = createServerFn()
   .validator(z.number().int().min(1))
@@ -157,7 +157,7 @@ function ArticlesPage() {
   );`
       : `(
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(ctx.t.pageTitle(page.id))}${ctx.t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${ctx.t.pageHeader(page.id)} />
       {list}
     </>
   );`

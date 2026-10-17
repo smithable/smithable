@@ -103,7 +103,7 @@ test("a hero's shortcut to a page behind sign-in shows only to those who may ope
     generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
       (f) => f.path === "src/routes/index.tsx",
     )?.content ?? "";
-  expect(home).toContain('{ to: "/open", label: "Open"');
+  expect(home).toContain('{ to: "/open", label: pageUi["open"].title');
   expect(home).toContain('...(allows(pageAccess["history"], viewer) ? [{ to: "/history"');
   expect(home).toMatch(/import \{ [^}]*\ballows\b[^}]*\} from "#\/kit\/access";/);
 });

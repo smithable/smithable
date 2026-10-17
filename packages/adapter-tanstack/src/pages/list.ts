@@ -130,12 +130,14 @@ function filterCode(
       conditions.push(
         `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").filter((v) => ${literal(values)}.includes(v)) as (${values.map((v) => JSON.stringify(v)).join(" | ")})[]) : undefined`,
       );
-      const labels = t.field(model, field).values ?? {};
+      // The choices' labels as the model's module has them.
       controls.push({
         name,
         label,
         kind: "chips",
-        options: values.map((v) => ({ value: v, label: labels[v] ?? humanize(v) })),
+        options: code(
+          `${n.ui}.fields.find((f) => f.name === ${JSON.stringify(dataKey(field))})?.choices`,
+        ),
       });
     } else if (
       field.type.kind === "relation" &&
@@ -541,6 +543,7 @@ export function listParts(
   const fits = (a: (typeof many)[number]) =>
     `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row)`;
   view.add("#/generated/app", "app").add(n.module, n.ui).add("#/kit/words", "w");
+  if (!within) view.add("#/generated/pages", "pageUi");
   if (actions.length) view.add("#/kit/access", "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (sort) view.add("#/kit/model", "sortRows");
@@ -633,7 +636,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
   return (
     <>
       <PageHeader${within ? "" : `\n        page=${attr(page.id)}`}
-        title=${attr(within ? n.pluralLabel : t.pageTitle(page.id))}${within ? "" : t.pageSubtitle(page.id)}
+        ${within ? `title={${n.ui}.pluralLabel}` : t.pageHeader(page.id)}
         actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
       />
 ${

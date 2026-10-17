@@ -18,6 +18,7 @@ import { hasKeys } from "../keys.js";
 import { outgoingOf } from "../outgoing.js";
 import {
   attr,
+  code,
   dataRoute,
   type GenContext,
   guard,
@@ -78,7 +79,7 @@ function overviewRoute(
   return `${HEADER}import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { pageAccess } from "#/generated/pages";
-${models.map(({ n }) => `import { ${n.data} } from "${n.module}.server";`).join("\n")}
+${models.map(({ n }) => `import { ${n.data} } from "${n.module}.server";\nimport { ${n.ui} } from "${n.module}";`).join("\n")}
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { w } from "#/kit/words";
@@ -98,7 +99,7 @@ ${models.map(({ key, n }) => `      ${JSON.stringify(key)}: ${n.data}.count(view
   };
 });
 
-const MODELS = ${literal(models.map(({ key, n, to }) => ({ key, label: n.pluralLabel, to })))} as const;
+const MODELS = ${literal(models.map(({ key, n, to }) => ({ key, label: code(`${n.ui}.pluralLabel`), to })))} as const;
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => getCounts(),
@@ -111,7 +112,7 @@ function ${component}() {
     <>
       <PageHeader
         page=${attr(page.id)}
-        title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
+        ${t.pageHeader(page.id)}
         actions={
           <>
 ${
@@ -274,7 +275,7 @@ import { db } from "#/db";
 import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
 ${models.length ? SCHEMA_IMPORT : ""}
 import { app } from "#/generated/app";
-import { pageAccess } from "#/generated/pages";
+${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -294,7 +295,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = ${literal(Object.fromEntries(models.map(({ model, n }) => [model.name, n.label])))};
+const LABELS: Record<string, string> = ${literal(Object.fromEntries(models.map(({ model, n }) => [model.name, code(`${n.ui}.label`)])))};
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()

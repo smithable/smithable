@@ -61,17 +61,17 @@ test("a root counts what points to it, directly and one join deep, and names the
   const customer = generate("trash: true")("src/generated/customer.server.ts");
   expect(customer).toContain("function usedBy(tx: Tx, id: number, title: string)");
   expect(customer).toContain(
-    '{ model: "Order", label: "Order", plural: "Orders", from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 }',
+    '{ model: "Order", label: orderUi.label, plural: orderUi.pluralLabel, from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 }',
   );
   expect(customer).toContain(
     "depth: 2, count: tx.select({ n: count() }).from(schema.orderLines).innerJoin(schema.orders, eq(schema.orderLines.orderId, schema.orders.id)).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt), isNull(schema.orderLines.deletedAt))).get()?.n ?? 0 }",
   );
   expect(customer).toContain('from: "OrderLine", depth: 3, count: null }');
   expect(customer).toContain(
-    '{ model: "Note", label: "Note", plural: "Notes", count: tx.select({ n: count() }).from(schema.notes).where(and(eq(schema.notes.customerId, id))).get()?.n ?? 0 }',
+    '{ model: "Note", label: noteUi.label, plural: noteUi.pluralLabel, count: tx.select({ n: count() }).from(schema.notes).where(and(eq(schema.notes.customerId, id))).get()?.n ?? 0 }',
   );
   expect(customer).toContain(
-    'return { id, title, model: "Customer", label: "Customer", with: with_, loose, together: true, missing: [] };',
+    'return { id, title, model: "Customer", label: customerUi.label, with: with_, loose, together: true, missing: [] };',
   );
 });
 
@@ -153,7 +153,7 @@ test("a member without a trash keeps the delete refused, with the facts and the 
   const file = generate("description: Sent by a carrier.");
   const customer = file("src/generated/customer.server.ts");
   expect(customer).toContain(
-    'return { id, title, model: "Customer", label: "Customer", with: with_, loose, together: false, missing: ["Shipment"] };',
+    'return { id, title, model: "Customer", label: customerUi.label, with: with_, loose, together: false, missing: [shipmentUi.label] };',
   );
   expect(customer).toContain("if (used) throw new Conflict(`in-use:${JSON.stringify(used)}`);");
   expect(customer).not.toContain("trashWith(");
@@ -162,7 +162,7 @@ test("a member without a trash keeps the delete refused, with the facts and the 
   expect(customer).toContain("orderLineData.erase(viewer,");
   // Without a trash of its own, the root is the missing one.
   const line = file("src/generated/order-line.server.ts");
-  expect(line).toContain('together: false, missing: ["Shipment"]');
+  expect(line).toContain("together: false, missing: [shipmentUi.label]");
   expect(line).toContain("async remove(viewer: Viewer | null, id: number, _together = false)");
   expect(file("src/generated/shipment.server.ts")).toContain("_together = false");
 });

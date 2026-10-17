@@ -137,7 +137,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: ${
 function ${component}() {
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
       <Calculator ui={${ui}} app={app}${results ? ` resultsTitle=${attr(results)}` : ""}${ux.pages[page.id]?.results === "below" ? ' layout="below"' : ""} />
     </>
   );

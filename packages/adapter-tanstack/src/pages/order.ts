@@ -99,7 +99,7 @@ function OrderRoute() {
   const menu = Route.useLoaderData();
   return (
     <OrderPage
-      title={${JSON.stringify(t.pageTitle(page.id))}}
+      title={${t.pageTitleOf(page.id)}}
       menu={menu}
       sections={${literal(sections)}}
       app={app}
