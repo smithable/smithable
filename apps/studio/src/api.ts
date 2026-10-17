@@ -109,21 +109,55 @@ export interface Result {
   change?: string;
 }
 
+/** A hosted workspace waking: starting, preparing its packages first, or every one busy. */
+export type Waking = "starting" | "preparing" | "busy" | undefined;
+let wakingNow: Waking;
+const wakingListeners = new Set<() => void>();
+export const waking = {
+  set(next: Waking) {
+    if (next === wakingNow) return;
+    wakingNow = next;
+    for (const listener of wakingListeners) listener();
+  },
+  get: () => wakingNow,
+  subscribe(listener: () => void) {
+    wakingListeners.add(listener);
+    return () => {
+      wakingListeners.delete(listener);
+    };
+  },
+};
+
 /**
  * Studio's own API. An answer that is not OK (a refusal, the workspace restarting, a proxy's
  * plain-text error) throws an Error with a readable message; callers show it.
  */
 async function call<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: body === undefined ? "GET" : "POST",
-    ...(body === undefined
-      ? {}
-      : {
-          // Studio's own header: the daemon takes changes only with it (a form elsewhere can't send it).
-          headers: { "Content-Type": "application/json", "X-Smithable": "1" },
-          body: JSON.stringify(body),
-        }),
-  });
+  const send = () =>
+    fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      ...(body === undefined
+        ? {}
+        : {
+            // Studio's own header: the daemon takes changes only with it (a form elsewhere can't send it).
+            headers: { "Content-Type": "application/json", "X-Smithable": "1" },
+            body: JSON.stringify(body),
+          }),
+    });
+  // A hosted workspace that is waking answers 503 with x-smithable-workspace (the service, B 58):
+  // the same request again after retry-after, with the bar at the top, never a reload; ten
+  // minutes at most.
+  let response = await send();
+  for (let tries = 0; response.status === 503 && tries < 300; tries++) {
+    const state = response.headers.get("x-smithable-workspace");
+    if (state !== "starting" && state !== "busy") break;
+    const answer = (await response.json().catch(() => ({}))) as { preparing?: boolean };
+    waking.set(state === "busy" ? "busy" : answer.preparing ? "preparing" : "starting");
+    const after = Number(response.headers.get("retry-after")) || 2;
+    await new Promise((r) => setTimeout(r, after * 1000));
+    response = await send();
+  }
+  waking.set(undefined);
   const text = await response.text();
   let parsed: unknown;
   try {

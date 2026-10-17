@@ -123,7 +123,8 @@ const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
   },
 });
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+// Wide enough that the preview, beside No code and Smith, shows lists as tables.
+const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 try {
   for (let i = 0; i < 120; i++) {
     try {
@@ -133,17 +134,47 @@ try {
   }
   const preview = page.frameLocator('iframe[title="App preview"]');
   const status = page.getByRole("status");
+  // The Changes window, with Smith above it in the third place (the test's layout).
   const trace = page.getByRole("list", { name: "Change trace" });
-  // Builder's newest change, under the panels; the list itself is in the Changes tab.
-  const last = page.getByRole("region", { name: "Last change" });
+  const last = trace;
   const changeCount = async () => (await (await fetch(`${base}/api/project`)).json()).trace.length;
-  const changesTab = () => page.getByRole("tab", { name: "Changes" }).click();
-  const change = async (label) => {
-    await changesTab();
-    const forms = page.locator("details", { hasText: "Change by form" });
-    if (!(await forms.getAttribute("open").then((v) => v !== null)))
-      await forms.locator("summary").click();
-    await page.getByLabel("What do you want to change?").selectOption({ label });
+  // A change made through Studio's own operation route, as MCP and Smith make theirs: Studio
+  // shows it at once.
+  const op = async (name, args) => {
+    const answer = await (
+      await fetch(`${base}/api/op`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-smithable": "1" },
+        body: JSON.stringify({ name, args }),
+      })
+    ).json();
+    if (!answer.ok) throw new Error(`${name}: ${answer.output}`);
+  };
+  // No code's sub views.
+  const sub = (name) => page.getByRole("tab", { name, exact: true }).click();
+  // Behavior's form: an area of the spec (models, pages…) and an entry in it, opened.
+  const area = async (key) => {
+    const found = page
+      .getByRole("region", { name: "What the app does" })
+      .locator(`details[data-key="${key}"]`)
+      .first();
+    if (!(await found.evaluate((d) => d.open))) await found.locator("summary").first().click();
+    return found;
+  };
+  const entry = async (scope, name) => {
+    const found = scope
+      .locator("details", { has: page.locator(`summary:text-is("${name}")`) })
+      .first();
+    if (!(await found.evaluate((d) => d.open)))
+      await found.locator(`summary:text-is("${name}")`).first().click();
+    return found;
+  };
+  // The window in the first place: No code or Code (the gear's dialog).
+  const firstWindow = async (value) => {
+    await page.getByRole("button", { name: "Which window goes where" }).click();
+    const dialog = page.getByRole("dialog", { name: "Which window goes where" });
+    await dialog.getByLabel("The first window").selectOption(value);
+    await dialog.getByRole("button", { name: "Done" }).click();
   };
   const openPreview = async (path) => {
     // A change from the step before reloads the preview a few seconds after it went through:
@@ -178,16 +209,41 @@ try {
     }
   };
 
-  console.log("Builder mode");
-  await step("the app is described in plain language", async () => {
+  console.log("No code");
+  await step("Studio opens on No code's Behavior beside the preview", async () => {
     await page.goto(`${base}/?guide=off`);
-    await page.getByRole("region", { name: "Customers" }).getByText("a name (required)").waitFor();
-    await page.getByText("an email (unique)", { exact: true }).waitFor();
+    await page.getByRole("tab", { name: "Behavior", selected: true }).waitFor();
+    await page.locator("iframe[title='App preview']").waitFor();
+    // The areas of the spec are closed at first.
+    const models = page.locator('details[data-key="models"]');
+    if ((await models.getAttribute("open")) !== null) throw new Error("the models area is open");
+    if (await page.getByRole("list", { name: "Change trace" }).count())
+      throw new Error("two windows show Changes");
     // A new app has no repository until its first change: its changes are none, not Git's
     // refusal.
     const { trace: made } = await (await fetch(`${base}/api/project`)).json();
     if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
   });
+  await step("a notice left for Studio is shown once, then gone", async () => {
+    const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
+    await alert.waitFor();
+    await alert.getByRole("button", { name: "Dismiss" }).click();
+    if (existsSync(join(dir, "data/.smithable/notice.txt")))
+      throw new Error("the notice file is still there");
+    await page.reload();
+    await page.getByRole("tab", { name: "Behavior" }).waitFor();
+    if (await alert.count()) throw new Error("the notice came back");
+  });
+  await step(
+    "the bar's three windows add Smith with Changes under it, kept after a reload",
+    async () => {
+      await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
+      await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
+      await page.reload();
+      await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
+      await page.getByText("No changes yet.").waitFor();
+    },
+  );
   await step(
     "the header has How to publish and Help, which open the docs (finding 14)",
     async () => {
@@ -200,86 +256,77 @@ try {
           throw new Error(`${name} does not lead to ${href}`);
     },
   );
-  await step("the Changes tab: the forms folded, then the list", async () => {
-    await changesTab();
-    const forms = page.locator("details", { hasText: "Change by form" });
-    if ((await forms.getAttribute("open")) !== null) throw new Error("the forms are not folded");
-    await page.getByRole("tab", { name: "What it does" }).click();
-    await last.waitFor();
-  });
-  await step("a notice left for Studio is shown once, then gone", async () => {
-    const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
-    await alert.waitFor();
-    await alert.getByRole("button", { name: "Dismiss" }).click();
-    if (existsSync(join(dir, "data/.smithable/notice.txt")))
-      throw new Error("the notice file is still there");
-    await page.reload();
-    await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
-    if (await alert.count()) throw new Error("the notice came back");
-  });
   await step(
-    "Ask is a panel under the preview, docked right of it from its corner, and kept so after a reload",
+    "the app in words tops Behavior, the rest behind Show all; a sentence opens the entry it was made from",
     async () => {
-      // Unchosen, a 1440-pixel window has it under the preview.
-      const foot = page.getByRole("region", { name: "Ask" });
-      await foot.getByLabel("Describe a change").waitFor();
-      await foot
-        .getByRole("list", { name: "Thread" })
-        .or(foot.getByText("Nothing asked"))
+      const words = page.getByRole("region", { name: "The app in words" });
+      await words.getByRole("button", { name: "Show all" }).click();
+      // The customers' email (the first kind of record that has one).
+      await words.getByRole("button", { name: "an email (unique)", exact: true }).first().click();
+      await page
+        .getByRole("region", { name: "What the app does" })
+        .locator("details[open]", { has: page.locator('summary:text-is("email")') })
+        .first()
         .waitFor();
-      const [frame, box] = await Promise.all([
-        page.locator('iframe[title="App preview"]').boundingBox(),
-        foot.boundingBox(),
-      ]);
-      if (!frame || !box || box.y < frame.y + frame.height - 2)
-        throw new Error("Ask is not under the preview");
-      await foot.getByRole("button", { name: "Dock right of the preview" }).click();
-      const right = page.getByRole("complementary", { name: "Ask" });
-      await right.getByLabel("Describe a change").waitFor();
-      await page.reload();
-      await right.getByLabel("Describe a change").waitFor();
-      await right.getByRole("button", { name: "Dock under the preview" }).click();
-      await foot.getByLabel("Describe a change").waitFor();
+      await words.getByRole("button", { name: "Show less" }).click();
     },
   );
   await step(
-    "a note in What it does applies its advice with Apply, and undo takes it back",
+    "the gear says which window goes where: Code in the first place, then No code again",
     async () => {
-      // The CRM took its own advice (filters on its orders): take them away for the note to show.
-      const op = (...args) => {
-        const done = spawnSync("node", [cli, "op", ...args, "--dir", dir], {
-          cwd: repo,
-          encoding: "utf8",
-        });
-        if (done.status !== 0) throw new Error(`${args[0]}: ${done.stdout}${done.stderr}`);
-      };
-      op("setFilters", "orders");
-      await page.reload();
-      const notes = page.getByRole("region", { name: "Worth considering" });
-      const orders = notes.getByRole("listitem").filter({ hasText: "orders lists orders" });
-      await orders.getByRole("button", { name: "Apply" }).click();
-      await orders.waitFor({ state: "detached", timeout: 30000 });
-      const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
-      if (!/ {2}orders:\n(?: {4}.*\n)*? {4}filters: \[status, shippingMethod\]/.test(spec()))
-        throw new Error("the orders page has no filters after Apply");
-      await page.getByRole("button", { name: "Undo", exact: true }).click();
-      await orders.waitFor({ timeout: 30000 });
-      if (/ {4}filters: \[status, shippingMethod\]/.test(spec()))
-        throw new Error("undo left the filters");
-      op("setFilters", "orders", "status");
-      await page.reload();
+      await page.getByRole("button", { name: "Which window goes where" }).click();
+      const dialog = page.getByRole("dialog", { name: "Which window goes where" });
+      await dialog.getByLabel("The first window").selectOption("code");
+      await dialog.getByRole("button", { name: "Done" }).click();
+      await page
+        .getByRole("region", { name: "Code" })
+        .getByLabel("File", { exact: true })
+        .waitFor();
+      if (await page.getByRole("tab", { name: "Behavior" }).count())
+        throw new Error("No code still shows");
+      await page.getByRole("button", { name: "Which window goes where" }).click();
+      await dialog.getByLabel("The first window").selectOption("nocode");
+      await dialog.getByRole("button", { name: "Done" }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
     },
   );
+  await step(
+    "the preview's arrow hides the window beside it for a while, and brings it back",
+    async () => {
+      await page.getByRole("button", { name: "Hide the window on the left" }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor({ state: "detached" });
+      await page.getByRole("button", { name: "Show the window on the left" }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+    },
+  );
+  await step("a note in Code applies its advice with Apply, and undo takes it back", async () => {
+    // The CRM took its own advice (filters on its orders): take them away for the note to show.
+    await op("setFilters", { page: "orders", fields: [] });
+    await firstWindow("code");
+    const notes = page.getByRole("list", { name: "Worth considering" });
+    const orders = notes.getByRole("listitem").filter({ hasText: "orders lists orders" });
+    await orders.getByRole("button", { name: "Apply" }).click({ timeout: 60000 });
+    await orders.waitFor({ state: "detached", timeout: 30000 });
+    const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+    if (!/ {2}orders:\n(?: {4}.*\n)*? {4}filters: \[status, shippingMethod\]/.test(spec()))
+      throw new Error("the orders page has no filters after Apply");
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await orders.waitFor({ timeout: 30000 });
+    if (/ {4}filters: \[status, shippingMethod\]/.test(spec()))
+      throw new Error("undo left the filters");
+    await op("setFilters", { page: "orders", fields: ["status"] });
+    await firstWindow("nocode");
+  });
   await step("the preview says its records are samples, until dismissed", async () => {
     const note = page.getByRole("note").filter({ hasText: "Your published app starts empty" });
     await note.waitFor();
     await note.getByRole("button", { name: "Dismiss" }).click();
     await page.reload();
-    await page.getByRole("region", { name: "Customers", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
-    "the guide asks No code or Code, walks the places once, Guide shows it again, its Code switches modes, a reload shows nothing",
+    "the guide asks No code or Code, walks the places once, Guide shows it again, its Code puts Code first, a reload shows nothing",
     async () => {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -297,16 +344,16 @@ try {
           const button = i === 0 ? "No code" : i === 6 ? "Done" : "Next";
           await card.getByRole("button", { name: button, exact: true }).click();
         }
-        if (seen.join() !== "mode,preview,summary,details,change,look,publish")
+        if (seen.join() !== "layout,preview,behavior,change,changes,look,publish")
           throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await card.waitFor();
-        // The first stop's Code switches to Code mode, which is remembered, and goes on with
-        // Code mode's own tour.
+        // The first stop's Code puts Code in the first place, which is remembered, and goes on
+        // with Code's own tour.
         await card.getByRole("button", { name: "Code", exact: true }).click();
         const code = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 2; i++) {
           await fresh.waitForFunction(
             (seen) => {
               const at = document
@@ -314,30 +361,27 @@ try {
                 ?.getAttribute("data-guide-card");
               return at && at !== seen;
             },
-            code.at(-1) ?? "mode",
+            code.at(-1) ?? "layout",
             { timeout: 20000 },
           );
           const at = await card.getAttribute("data-guide-card");
           code.push(at);
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the Code card for ${at} is beside nothing`);
-          await card.getByRole("button", { name: i === 4 ? "Done" : "Next", exact: true }).click();
+          await card.getByRole("button", { name: i === 1 ? "Done" : "Next", exact: true }).click();
         }
-        if (code.join() !== "files,problems,concepts,operation,changes")
-          throw new Error(`Code mode's tour: ${code.join()}`);
+        if (code.join() !== "files,problems") throw new Error(`Code's tour: ${code.join()}`);
         await card.waitFor({ state: "detached" });
-        if (!(await fresh.getByRole("radio", { name: "Code", exact: true }).isChecked()))
-          throw new Error("Code in the guide did not switch to Code mode");
-        // Guide in Code mode is Code mode's tour.
+        await fresh.getByRole("region", { name: "Code" }).waitFor();
+        // Guide with Code first is Code's tour.
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await card.waitFor();
         if ((await card.getAttribute("data-guide-card")) !== "files")
-          throw new Error("Guide in Code mode did not start Code mode's tour");
+          throw new Error("Guide with Code first did not start Code's tour");
         await fresh.keyboard.press("Escape");
         await card.waitFor({ state: "detached" });
-        await fresh.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
         await fresh.reload();
-        await fresh.getByRole("region", { name: "Customers", exact: true }).waitFor();
+        await fresh.getByRole("region", { name: "Code" }).waitFor();
         await fresh.waitForTimeout(1000);
         if (await card.count()) throw new Error("the guide came back after a reload");
       } finally {
@@ -362,7 +406,12 @@ try {
       await frame.evaluate(() => {
         window.__sameDocument = true;
       });
-      await preview.locator("main tbody tr").first().click();
+      // The table's row or a card's title: whichever the preview's width shows.
+      await preview
+        .getByRole("button", { name: "Arctic Outdoor Co" })
+        .filter({ visible: true })
+        .first()
+        .click();
       await frame.waitForURL(/\/customers\/\d+$/, { timeout: 30000 });
       // Studio's address follows the page; the frame must not be loaded again for it.
       await page.waitForFunction(() =>
@@ -378,37 +427,26 @@ try {
     },
   );
   await step(
-    "adding a field: the summary and the change trace follow at once, the form empties, and the preview follows and flashes what changed",
+    "adding a field in Behavior: Changes says so, the preview follows, and a rename there flashes what changed",
     async () => {
-      await change("Add a field");
-      await page.getByLabel("Name", { exact: true }).fill("website");
-      await page.getByLabel("Field type").selectOption({ label: "Web address" });
-      await page.getByRole("button", { name: "Add field" }).click();
-      // The field, then its column in the list (Show it in listings): the trace has both.
-      await last
-        .getByText("Customers: added a website (a web address)")
-        .waitFor({ timeout: 60000 });
-      // The left side has the change as soon as it is done, before the app has restarted with
-      // it (finding 12), and the form starts again empty rather than inviting a second click.
-      await last.getByText("Customers: added a website (a web address)").waitFor({ timeout: 3000 });
-      if ((await page.getByLabel("Name", { exact: true }).inputValue()) !== "")
-        throw new Error("The add-field form kept its values after the change went through");
-      await page.getByRole("tab", { name: "What it does" }).click();
-      await page.getByText("a web address").first().waitFor();
+      const customer = await entry(await area("models"), "Customer");
+      await customer.getByLabel("New entry in fields").fill("website");
+      await customer
+        .getByLabel("New entry in fields")
+        .locator("..")
+        .getByRole("button", { name: "Add" })
+        .click();
+      await last.getByText("Customers: added a website").first().waitFor({ timeout: 60000 });
       await openPreview("/customers/new");
       await preview.getByLabel("Website").waitFor({ timeout: 60000 });
-      // "Show it in listings" was on: the customers list has the column (its look names columns).
-      await openPreview("/customers");
-      await preview
-        .getByRole("columnheader", { name: "Website" })
-        .filter({ visible: true })
-        .waitFor({ timeout: 60000 });
       // Friendly names become spec names.
-      await change("Rename a field");
-      await page.getByLabel("Field", { exact: true }).selectOption({ label: "Website" });
-      await page.getByLabel("New name").fill("Web page");
-      await page.getByText("Customers: the website is now called web page").first().waitFor();
-      await page.getByRole("button", { name: "Rename field" }).click();
+      const website = await entry(customer, "website");
+      await website.getByLabel("New name for website").fill("webPage");
+      await website
+        .getByLabel("New name for website")
+        .locator("..")
+        .getByRole("button", { name: "Rename", exact: true })
+        .click();
       await status
         .getByText("Customers: the website is now called web page")
         .waitFor({ timeout: 60000 });
@@ -424,13 +462,12 @@ try {
   await step(
     "a choice field's values are changed in ordinary words, and the records holding one that goes get the one chosen",
     async () => {
-      await change("Change a field");
-      await page.getByLabel("Kind of record").selectOption("Customer");
-      // A value nothing else names (a formula naming one is refused, as its spec would break).
-      await page.getByLabel("Field", { exact: true }).selectOption({ label: "Segment" });
-      await page.getByLabel("Values").fill("smb, enterprise, public sector");
-      await page.getByLabel("Records with government get").selectOption("publicSector");
-      await page.getByRole("button", { name: "Change field" }).click();
+      const segment = await entry(await entry(await area("models"), "Customer"), "segment");
+      await segment.getByLabel("Values").fill("smb, enterprise, public sector");
+      await segment.getByLabel("Records with government get").selectOption("publicSector");
+      await segment.getByRole("button", { name: "Change field" }).click();
+      const apply = page.getByRole("button", { name: "Apply anyway" });
+      if (await apply.isVisible({ timeout: 5000 }).catch(() => false)) await apply.click();
       await last
         .getByText(/public sector/i)
         .first()
@@ -447,21 +484,14 @@ try {
     },
   );
   await step(
-    "an action is first a button that changes a record, in plain words: it appears on the records it fits and does what it says",
+    "an action that changes a record is a button on the records it fits, and does what it says",
     async () => {
-      await change("An action");
-      await page.getByLabel("The button says").fill("Cancel order");
-      await page.getByLabel("On each").selectOption("Order");
-      await page.getByLabel("It sets").selectOption({ label: "Status" });
-      await page.getByLabel("To", { exact: true }).selectOption("canceled");
-      await page.getByLabel("Only when").selectOption({ label: "Status" });
-      await page.getByLabel("Is", { exact: true }).selectOption("placed");
-      await page
-        .getByText(
-          'A "Cancel order" button on each order sets status to canceled, when status is placed.',
-        )
-        .waitFor();
-      await page.getByRole("button", { name: "Add button" }).click();
+      await op("addAction", {
+        action: "cancelOrder",
+        on: "Order",
+        set: { status: "canceled" },
+        when: { status: "placed" },
+      });
       await last
         .getByText(/cancel ?order/i)
         .first()
@@ -490,47 +520,29 @@ try {
     },
   );
   await step(
-    "removing a field asks first, with what data it loses; its notice's Undo brings it back",
+    "removing a field in Behavior asks first, with what data it loses; its notice's Undo brings it back",
     async () => {
-      await change("Remove a field");
-      await page.getByLabel("Kind of record").selectOption("Customer");
-      await page.getByLabel("Field").selectOption({ label: "Phone" });
-      await page.getByRole("button", { name: "Remove field" }).click();
+      const customer = await entry(await area("models"), "Customer");
+      const phone = await entry(customer, "phone");
+      await phone.getByRole("button", { name: "Remove phone", exact: true }).click();
       await page
         .getByRole("alert")
         .getByText("this deletes the phone column")
         .waitFor({ timeout: 60000 });
       await page.getByRole("button", { name: "Apply anyway" }).click();
-      await last.getByText("Customers: removed the phone").waitFor({ timeout: 60000 });
+      await last.getByText("Customers: removed the phone").first().waitFor({ timeout: 60000 });
       await status.getByRole("button", { name: "Undo this change" }).click();
       await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 });
-      await last.getByText("Undid: Customers: removed the phone").waitFor();
-    },
-  );
-  await step(
-    "an action's intent is changed from its own form, and Undo takes it back",
-    async () => {
-      await change("Change what an action says");
-      await page.getByLabel("Action").selectOption("mergeCustomers");
-      await page.getByLabel("Intent").fill("Fold a duplicate customer into the one to keep.");
-      await page.getByRole("button", { name: "Change action" }).click();
-      await last
-        .getByText(/mergeCustomers/)
-        .first()
-        .waitFor({ timeout: 60000 });
-      await status.getByRole("button", { name: "Undo this change" }).click();
-      await status.getByText(/^Undid: .*mergeCustomers/).waitFor({ timeout: 60000 });
+      await last.getByText("Undid: Customers: removed the phone").first().waitFor();
     },
   );
   await step("access: sales may add orders, and nothing else", async () => {
-    await change("Who can do what");
-    await page.getByLabel("Role", { exact: true }).selectOption("sales");
-    await page.getByLabel("What", { exact: true }).selectOption("create");
-    await page.getByRole("checkbox", { name: "Order" }).check();
-    await page.getByRole("button", { name: "Grant" }).click();
+    await sub("Who can");
+    const grid = page.getByRole("region", { name: "Who can" });
+    // Sales may add every kind of record (create: all): taking customers away leaves orders.
+    await grid.getByRole("checkbox", { name: "sales may add customers", exact: true }).click();
     await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 });
-    await page.getByRole("tab", { name: "What it does" }).click();
-    await page.getByText(/adds orders/).waitFor();
+    await sub("Behavior");
   });
 
   await step(
@@ -654,7 +666,7 @@ try {
         if (!undone.ok) throw new Error(`undo answered ${undone.status}`);
       }
       await waitAuth((t) => t === before, "the file as it was");
-      await page.getByRole("tab", { name: "What it does" }).click();
+      await sub("Behavior");
     },
   );
 
@@ -668,12 +680,16 @@ try {
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 });
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
-      await page.getByText("an email (unique)", { exact: true }).first().waitFor();
-      await page.getByRole("checkbox", { name: "Required" }).click();
+      // Behavior opens at the field picked.
+      const email = page
+        .getByRole("region", { name: "What the app does" })
+        .locator("details[open]", { has: page.locator('summary:text-is("email")') })
+        .first();
+      await email.getByRole("checkbox", { name: "Required" }).check();
+      await email.getByRole("button", { name: "Change field" }).click();
       await status
         .getByText("Customers: now an email (required, unique)")
         .waitFor({ timeout: 60000 });
-      await page.getByText("an email (required, unique)", { exact: true }).first().waitFor();
       if (!(await project()).files.spec.includes("      email: email! unique\n"))
         throw new Error("spec not changed");
       await preview
@@ -729,31 +745,8 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
     },
   );
-  await step("a kind of record is renamed everywhere in one change (finding 8)", async () => {
-    await page.getByRole("tab", { name: "What it does" }).click();
-    const orders = page.getByRole("region", { name: "Orders", exact: true });
-    await orders.getByRole("button", { name: "Orders", exact: true }).click();
-    await orders.getByLabel("Called, for one").fill("Job");
-    // The name for several follows until it is typed.
-    if ((await orders.getByLabel("Called, for several").inputValue()) !== "Jobs")
-      throw new Error("the name for several did not follow");
-    await orders.getByRole("button", { name: "Rename everywhere" }).click();
-    await last
-      .getByText("Order records are now called jobs (one job)")
-      .first()
-      .waitFor({ timeout: 60000 });
-    // The list page, and so its menu entry, is called Jobs too.
-    if (!(await project()).files.content.includes("title: Jobs"))
-      throw new Error("the orders page kept its title");
-    await page.locator("header").getByRole("button", { name: "Undo", exact: true }).click();
-    await last
-      .getByText("Undid: Order records are now called jobs (one job)")
-      .first()
-      .waitFor({ timeout: 60000 });
-  });
   await step("colors of a choice and a page's icon, from the Look tab", async () => {
-    await page.getByRole("button", { name: "Your app", exact: true }).first().click();
-    await page.getByRole("tab", { name: "Look" }).click();
+    await sub("Look");
     const choices = page.getByRole("region", { name: "Colors of choices" });
     await choices
       .getByRole("group", { name: "Status of Order" })
@@ -789,22 +782,6 @@ try {
         .getByRole("button", { name: /Forest/ })
         .getByText("themes/forest.yml", { exact: false })
         .waitFor();
-      // The edge between Builder and the preview gives the preview more room, and back.
-      const edge = page.getByRole("separator", { name: "Preview width" });
-      const width = Number(await edge.getAttribute("aria-valuenow"));
-      const frameWidth = async () =>
-        (await page.locator("[data-guide-view]").boundingBox())?.width ?? 0;
-      const narrower = await frameWidth();
-      await edge.focus();
-      await page.keyboard.press("ArrowLeft");
-      await page.keyboard.press("ArrowLeft");
-      if (
-        Number(await edge.getAttribute("aria-valuenow")) !== width + 4 ||
-        (await frameWidth()) <= narrower
-      )
-        throw new Error("the preview's edge does not widen it");
-      await page.keyboard.press("ArrowRight");
-      await page.keyboard.press("ArrowRight");
       // The theme swaps a font package, so the app's server restarts: the preview keeps the last
       // page on screen meanwhile (never an empty panel) and says Updating… from the start.
       await page.locator('iframe[title="App preview"]').waitFor();
@@ -916,33 +893,29 @@ try {
 
   await step("a question about the app is answered from the spec, not applied", async () => {
     const before = (await project()).files.spec;
-    await changesTab();
     await page.getByLabel("Describe a change").fill("Who can add orders?");
     await page.getByRole("button", { name: "Make the change" }).click();
     await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
     if ((await project()).files.spec !== before) throw new Error("the spec changed");
   });
   await step(
-    "a change that deletes data is proposed first, and opens in a form with its values filled in",
+    "a change that deletes data is proposed first, and Discard leaves it in Smith's thread",
     async () => {
-      await changesTab();
       await page.getByLabel("Describe a change").fill("Customers without notes");
       await page.getByRole("button", { name: "Make the change" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("(loses data)").waitFor({ timeout: 30000 });
-      await proposal.getByRole("button", { name: "Edit in a form" }).click();
-      const values = [
-        await page.getByLabel("What do you want to change?").inputValue(),
-        await page.getByLabel("Kind of record").inputValue(),
-        await page.getByLabel("Field", { exact: true }).inputValue(),
-      ];
-      if (values.join() !== "removeField,Customer,notes") throw new Error(values.join());
+      await proposal.getByRole("button", { name: "Discard" }).click();
+      await page
+        .getByRole("list", { name: "Thread" })
+        .getByText("Discarded.")
+        .last()
+        .waitFor({ timeout: 30000 });
     },
   );
   await step(
     "describe a change: one that loses no data is made at once, and traced with its model",
     async () => {
-      await changesTab();
       await page
         .getByLabel("Describe a change")
         .fill("A mobile number for every customer would help");
@@ -957,7 +930,7 @@ try {
       await shown.getByRole("button", { name: "Apply" }).click();
       await page
         .getByText(
-          // In No code: which model made it, in words; the trace keeps the tier and tokens.
+          // Which model made it, in words; the trace keeps the tier and tokens.
           /^Done: Customers: added a mobile \(a phone number\)\. Made with fake-model\./,
         )
         .waitFor({ timeout: 60000 });
@@ -965,7 +938,7 @@ try {
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 });
       await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
-      // Opened, it says what changed in the summary's words.
+      // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /Customers: added a mobile/ }).click();
       await trace
         .getByRole("region", { name: "What changed" })
@@ -973,98 +946,12 @@ try {
         .waitFor({ timeout: 60000 });
     },
   );
-
   await step(
-    "Your app is a map to its parts: a field's line opens its properties, Add a field opens the form for that record, and no sentence is a text to edit",
+    "a narrow window shows one window at a time, chosen in the header: the preview the window's width, Code too",
     async () => {
-      await page.getByRole("tab", { name: "What it does" }).click();
-      const customers = page.getByRole("region", { name: "Customers", exact: true });
-      await customers.getByRole("button", { name: "a phone", exact: true }).click();
-      // Its listing is a pointer to where the columns are set, not a second control for them.
-      await customers
-        .getByText(/in listings on \w+ ·/)
-        .first()
-        .waitFor();
-      if (await customers.getByRole("checkbox", { name: "Show it in listings" }).count())
-        throw new Error("a field's properties still have their own listing switch");
-      await customers.getByRole("textbox", { name: "Label" }).fill("Mobile phone");
-      await customers.getByRole("button", { name: "Save label" }).click();
-      await last.getByText("Mobile phone").first().waitFor({ timeout: 60000 });
-      // Who can: a record's properties say which roles may for everyone's, and under it the
-      // roles as the spec's form has them: a name added to a grant goes through grant (offered
-      // from the app's kinds of record), and taken away again.
-      await customers.getByRole("button", { name: "Customers", exact: true }).click();
-      const who = customers.getByRole("region", { name: "Who can" });
-      await who.getByText("only their own").first().waitFor();
-      await who.locator("summary", { hasText: /^sales$/ }).click();
-      await who
-        .locator("summary", { hasText: /^Not set/ })
-        .last()
-        .click();
-      await who.getByLabel("Add to delete").fill("Customer");
-      await who.getByLabel("Add to delete").press("Enter");
-      await last
-        .getByText(/sales may delete everyone's customers/i)
-        .first()
-        .waitFor({ timeout: 60000 });
-      await who.getByRole("button", { name: "Remove Customer" }).click();
-      await last
-        .getByText("sales may delete only their own records")
-        .first()
-        .waitFor({ timeout: 60000 });
-      // Adding a field: its form in place, under the customers (A 116), never the Changes tab;
-      // once added, the new field's own properties are open there.
-      const adding = page.getByRole("region", { name: "Customers", exact: true });
-      await adding.getByRole("button", { name: "Add a field" }).click();
-      if (await adding.getByLabel("Kind of record").count())
-        throw new Error("the form in place asks which kind of record");
-      await adding.getByLabel("Name", { exact: true }).fill("loyalty code");
-      await adding.getByRole("checkbox", { name: "Unique" }).check();
-      await adding.getByRole("button", { name: "Add field" }).click();
-      await last.getByText("Customers: added a loyalty code (unique)").waitFor({ timeout: 60000 });
-      await adding
-        .getByRole("button", { name: "a loyalty code (unique)", expanded: true })
-        .waitFor({ timeout: 30000 });
-      await adding.getByRole("button", { name: "Remove field" }).waitFor();
-      // A sentence is a way into its form, never a text to edit (what-it-does.md §2).
-      const again = page.getByRole("region", { name: "Customers", exact: true });
-      if (await again.getByRole("button", { name: "In my words" }).count())
-        throw new Error("In my words is still offered");
-      await again.getByRole("button", { name: "a loyalty code (unique)" }).waitFor();
-    },
-  );
-  await step(
-    "the panels snap: one at a time, picked above or with the arrow keys; very wide windows pair Your app and Details; the preview has its own column, and on a narrow window it is a panel",
-    async () => {
-      const panels = page.getByRole("navigation", { name: "Panels" });
-      const current = (name) =>
-        page.waitForFunction(
-          (label) =>
-            [...document.querySelectorAll("nav[aria-label=Panels] [aria-current=true]")]
-              .map((b) => b.textContent)
-              .join() === label,
-          name,
-          { timeout: 5000 },
-        );
-      await page.setViewportSize({ width: 1700, height: 900 });
-      await panels.getByLabel("Your app + Details").uncheck();
-      await panels.getByRole("button", { name: "Details" }).click();
-      await current("Details");
-      await page.keyboard.press("ArrowLeft");
-      await current("Your app");
-      // The newest change stays under every panel.
-      await last.waitFor();
-      await panels.getByLabel("Your app + Details").check();
-      await current("Your app,Details");
-      // A wide window has the preview's column: no Preview in the mode switch.
-      const viewPreview = page.getByRole("radio", { name: "Preview", exact: true });
-      if (await viewPreview.count()) throw new Error("Preview in the mode switch on a wide window");
-      // A narrow window: Preview is the mode switch's third choice, the frame the window's
-      // width, and the panels have no Preview of their own.
       await page.setViewportSize({ width: 800, height: 900 });
-      if (await panels.getByRole("button", { name: "Preview" }).count())
-        throw new Error("a Preview panel on a narrow window");
-      await viewPreview.check({ force: true });
+      const pick = (name) => page.getByRole("radio", { name, exact: true }).check({ force: true });
+      await pick("Preview");
       await page.waitForFunction(
         () => {
           const r = document.querySelector('iframe[title="App preview"]')?.getBoundingClientRect();
@@ -1073,50 +960,26 @@ try {
         null,
         { timeout: 5000 },
       );
-      if (await panels.isVisible()) throw new Error("the panels show beside the Preview");
-      // Ask is a sheet over the preview: half its height, folded to a bar and opened again.
-      const sheet = page.getByRole("region", { name: "Ask" });
-      await sheet.getByLabel("Describe a change").waitFor();
-      const handle = sheet.getByRole("separator", { name: "Ask's height" });
-      await handle.focus();
-      await page.keyboard.press("ArrowDown");
-      await sheet.getByRole("button", { name: /^Ask ·/ }).click();
-      await sheet.getByLabel("Describe a change").waitFor();
-      // Back to No code, as it was.
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await panels.getByRole("button", { name: "Details" }).click();
-      await current("Details");
-      // With nothing selected, Details shows the app's own details and how to see a part's.
-      // An earlier step's selection may still be open: closed, the app's own details show.
-      const selected = page
-        .locator('[data-panel="details"]')
-        .getByRole("button", { name: "Close" });
-      if (await selected.count()) await selected.click();
-      const app = page.getByRole("region", { name: "The app" });
-      await app.getByText("Choose Select above the preview").waitFor();
-      if (!(await app.getByLabel("App name").inputValue()))
-        throw new Error("no app name in Details");
-      await panels.getByRole("button", { name: "Your app" }).click();
-      await current("Your app");
-      // Code mode on a narrow window: the same snapping row, the editor the window's width.
-      await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
+      if (await page.getByRole("tab", { name: "Behavior" }).count())
+        throw new Error("No code shows beside the preview");
+      await pick("Code");
       await page.waitForFunction(
         () => {
-          const files = [...document.querySelectorAll('[role="tab"]')].find(
-            (t) => t.textContent === "Files",
-          );
-          const panel = files?.closest("section");
-          return panel && panel.getBoundingClientRect().width > 760;
+          const code = document.querySelector('section[aria-label="Code"]');
+          return code && code.getBoundingClientRect().width > 760;
         },
         null,
         { timeout: 10000 },
       );
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await page.setViewportSize({ width: 1440, height: 900 });
+      await pick("Smith");
+      await page.getByLabel("Describe a change").waitFor();
+      await pick("No code");
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await page.setViewportSize({ width: 1920, height: 1000 });
     },
   );
   await step(
-    "one preview for both modes: the address follows it, and a mode switch keeps its page",
+    "one preview whatever moves: the address follows it, and putting Code first keeps its page",
     async () => {
       await openPreview("/orders");
       await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
@@ -1144,37 +1007,33 @@ try {
         }
       }
       const opened = await page.getByLabel("Preview address").inputValue();
-      await page.locator("label", { hasText: /^Code$/ }).click();
-      await page.getByRole("navigation", { name: "Concepts" }).waitFor();
+      await firstWindow("code");
+      await page.getByRole("region", { name: "Code" }).waitFor();
       if ((await page.getByLabel("Preview address").inputValue()) !== opened)
-        throw new Error("the preview lost its page in Code mode");
+        throw new Error("the preview lost its page when Code came first");
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
-      await page.locator("label", { hasText: /^No code$/ }).click();
+      await page.getByRole("radio", { name: "One window" }).check({ force: true });
+      await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await firstWindow("nocode");
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
     },
   );
   await step(
-    "the place is remembered per mode: a field picked in the preview is the field in Code mode, and back",
+    "a field picked in the preview opens Behavior at it; Code keeps its file, cursor and unsaved edit across a window change and a reload",
     async () => {
       await openPreview("/customers/new");
       await page.getByRole("button", { name: "Select" }).click();
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
-      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+      const email = page
+        .getByRole("region", { name: "What the app does" })
+        .locator("details[open]", { has: page.locator('summary:text-is("email")') });
+      await email.first().waitFor({ timeout: 10000 });
       await page.getByRole("button", { name: "Select" }).click();
-      await page.locator("label", { hasText: /^Code$/ }).click();
-      await page
-        .getByRole("navigation", { name: "Concepts" })
-        .locator('[aria-current="true"]', { hasText: /^email/ })
-        .waitFor({ timeout: 10000 });
-      // A reload keeps both modes' places (the browser tab's session).
+      // A reload keeps the place (the browser tab's session).
       await page.reload();
-      await page
-        .getByRole("navigation", { name: "Concepts" })
-        .locator('[aria-current="true"]')
-        .waitFor({ timeout: 30000 });
-      // Code mode keeps the file open, its cursor and an unsaved edit across a switch to No code
-      // and back, and across a reload.
-      await page.getByRole("tab", { name: "Files" }).click();
+      await email.first().waitFor({ timeout: 30000 });
+      await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.ux.yml");
       // Beside the file, its part of the spec reference, following the file chosen.
       const howTo = await page
@@ -1182,8 +1041,6 @@ try {
         .getAttribute("href");
       if (!howTo?.endsWith("spec.html#smithableuxyml-how-the-app-looks"))
         throw new Error(`the ux file links to ${howTo}`);
-      // The ux file says where its choices have controls, with a way there.
-      await page.getByRole("button", { name: "Open Look" }).waitFor({ timeout: 10000 });
       const ux = page.getByLabel("smithable.ux.yml");
       const saved = await ux.evaluate((e) => e.value);
       await ux.focus();
@@ -1199,9 +1056,8 @@ try {
         if ((await editor.evaluate((e) => e.selectionStart)) !== 1)
           throw new Error(`${when}: the cursor moved`);
       };
-      await page.locator("label", { hasText: /^No code$/ }).click();
-      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
-      await page.locator("label", { hasText: /^Code$/ }).click();
+      await firstWindow("nocode");
+      await firstWindow("code");
       await kept("after No code and back");
       // The browser asks before a reload loses an unsaved edit; here it is kept, so leave.
       const leave = (dialog) => dialog.accept();
@@ -1213,15 +1069,19 @@ try {
       await page.getByLabel("smithable.ux.yml").evaluate((e, text) => {
         e.value = text;
       }, saved);
+      // The ux file says where its choices have controls, with a way there.
+      await page.getByRole("button", { name: "Open Look" }).click();
+      await page.getByRole("tab", { name: "Look", selected: true }).waitFor({ timeout: 10000 });
+      await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
-      await page.locator("label", { hasText: /^No code$/ }).click();
-      await page.getByText("Email of Customer").waitFor({ timeout: 10000 });
+      await firstWindow("nocode");
+      await sub("Behavior");
     },
   );
   await step(
-    "Select in Code mode: a text opens its line in the content file, a field its lines in smithable.yml",
+    "Select with Code first: a text opens its line in the content file, a field its lines in smithable.yml",
     async () => {
-      await page.locator("label", { hasText: /^Code$/ }).click();
+      await firstWindow("code");
       await openPreview("/customers");
       await page.getByRole("button", { name: "Select" }).click();
       // The page in the frame is in select mode before anything is clicked: a click before it is
@@ -1242,20 +1102,16 @@ try {
       const text = await editorText("smithable.content.yml");
       if (text !== "Keep every relationship in view.")
         throw new Error(`the content file shows "${text}", not the subtitle`);
-      // Not changed in place, as it is in No code.
+      // Not changed in place, as it is with No code shown.
       if (await subtitle.evaluate((e) => e.isContentEditable))
-        throw new Error("the text became editable in Code mode");
+        throw new Error("the text became editable with Code first");
       await openPreview("/customers/new");
       await selecting();
       await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
-      await page
-        .getByRole("navigation", { name: "Concepts" })
-        .locator('[aria-current="true"]', { hasText: /^email/ })
-        .waitFor({ timeout: 10000 });
       await page.getByRole("button", { name: "Select" }).click();
-      await page.locator("label", { hasText: /^No code$/ }).click();
+      await firstWindow("nocode");
     },
   );
   // The log's last line before the undo: the next step reads only what came after it, since a
@@ -1266,7 +1122,8 @@ try {
     await page.locator("header").first().click();
     await page.keyboard.press("Control+z");
     await last
-      .getByText("Undid: Customers: added a loyalty code (unique)")
+      .getByText("Undid: Customers: added a mobile (a phone number)")
+      .first()
       .waitFor({ timeout: 60000 });
   });
   // A start is 15 s in a hosted workspace: after an undo the preview opens the database that
@@ -1286,8 +1143,8 @@ try {
     // The button is off while Studio works too: first the change made again, then nothing left.
     let newest = "";
     for (const deadline = Date.now() + 90000; ; ) {
-      newest = await last.innerText();
-      if (newest.includes("loyalty code") && !newest.includes("Undid")) break;
+      newest = await last.locator("li").first().innerText();
+      if (newest.includes("a mobile") && !newest.includes("Undid")) break;
       if (Date.now() > deadline) throw new Error(`after Redo the newest change is ${newest}`);
       await new Promise((r) => setTimeout(r, 500));
     }
@@ -1298,8 +1155,7 @@ try {
   });
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
-    await page.getByRole("button", { name: "Your app", exact: true }).first().click();
-    await page.getByRole("tab", { name: "Look" }).click();
+    await sub("Look");
     const look = (name) => page.getByRole("region", { name });
     // The app's language: the content file says it, and English is saying nothing.
     const content = () => readFileSync(join(dir, "smithable.content.yml"), "utf8");
@@ -1404,56 +1260,70 @@ try {
       .first()
       .waitFor({ timeout: 60000 });
     if (/lists:/.test(ux())) throw new Error("a refused conversation changed smithable.ux.yml");
-    await page.getByRole("tab", { name: "What it does" }).click();
+    await sub("Behavior");
   });
 
+  await step("a refusal is said without the files' language (finding 7)", async () => {
+    // The shipping cost's formula names the shipping method: refused, in plain words.
+    const order = await entry(await area("models"), "Order");
+    const method = await entry(order, "shippingMethod");
+    await method.getByRole("button", { name: "Remove shippingMethod", exact: true }).click();
+    const alert = page.getByRole("alert").first();
+    await alert.waitFor({ timeout: 60000 });
+    const said = await alert.innerText();
+    if (/smithable\.yml|removeField|:\d+:\d+/.test(said))
+      throw new Error(`the refusal speaks the files' language: ${said}`);
+    await alert.getByRole("button", { name: "Dismiss" }).click();
+  });
   await step(
-    "Builder takes ordinary names, and says a refusal without the files' language (finding 7)",
+    "records from a CSV file, from a kind of record in Behavior: the preview shows them as they would land, Import adds them",
     async () => {
-      await change("Add a kind of record");
-      await page.getByLabel("Model name").fill("Order line");
-      await page.getByText("Saved as OrderLine").waitFor();
-      await page.getByLabel("First field").fill("product name");
-      await page.getByRole("button", { name: "Add", exact: true }).click();
-      await last
-        .getByText("Added a new kind of record: order lines")
-        .first()
+      const customer = await entry(await area("models"), "Customer");
+      await customer.getByRole("button", { name: "Import records from a file…" }).click();
+      await customer.getByLabel("CSV file").setInputFiles({
+        name: "customers.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+          'Name,E-mail,Credit limit\nÅland Fish AB,fish@example.ax,"25 000,00"\nMarina Café,cafe@example.ax,1200\n',
+        ),
+      });
+      await customer
+        .getByRole("status", { name: "Import preview" })
+        .getByText('"creditLimit":2500000')
         .waitFor({ timeout: 60000 });
-      if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("OrderLine:"))
-        throw new Error("Order line was not made OrderLine");
-      // The shipping cost's formula names the shipping method: refused, in plain words.
-      await change("Remove a field");
-      await page.getByLabel("Kind of record").selectOption("Order");
-      await page.getByLabel("Field", { exact: true }).selectOption("shippingMethod");
-      // The form's button (a selected field has one of its own).
-      await page.locator('button[type="submit"]', { hasText: "Remove field" }).click();
-      const alert = page.getByRole("alert").first();
-      await alert.waitFor({ timeout: 60000 });
-      const said = await alert.innerText();
-      if (/smithable\.yml|removeField|:\d+:\d+/.test(said))
-        throw new Error(`the refusal speaks the files' language: ${said}`);
-      await alert.getByRole("button", { name: "Dismiss" }).click();
+      await customer.getByRole("button", { name: "Import", exact: true }).click();
+      await status.getByText("2 added").waitFor({ timeout: 60000 });
     },
   );
+  await step("a page's code is made the person's own from its entry in Behavior", async () => {
+    const customers = await entry(await area("pages"), "customers");
+    await customers.getByRole("button", { name: "Make this page's code your own" }).click();
+    await customers
+      .getByText("the page is now src/custom/pages/customers.tsx")
+      .waitFor({ timeout: 60000 });
+    await page
+      .getByText("This page's code is your own: src/custom/pages/customers.tsx")
+      .waitFor({ timeout: 60000 });
+  });
   await step(
-    "a landing page and a contact section, made in Builder, show in the preview",
+    "a landing page and a contact section show in the preview, with a theme and background of their own from Look",
     async () => {
-      await change("Add a page");
-      await page.getByLabel("Page name").fill("home");
-      await page.getByLabel("Kind of page").selectOption({ label: "A landing page for visitors" });
-      await page.getByRole("button", { name: "Add page" }).click();
+      await op("addLandingPage", { page: "home" });
       await last
         .getByText("Added the Home page, a landing page for visitors")
+        .first()
         .waitFor({ timeout: 60000 });
-      await change("A section on a landing page");
-      await page.getByRole("button", { name: "Add section" }).click();
-      await last.getByText("Added a contact section to the Home page").waitFor({ timeout: 60000 });
+      await op("addSection", { page: "home", section: "contact" });
+      await last
+        .getByText("Added a contact section to the Home page")
+        .first()
+        .waitFor({ timeout: 60000 });
       await openPreview("/");
       await preview
         .getByRole("heading", { name: "Acme CRM", level: 1 })
         .waitFor({ timeout: 60000 });
       // Its own theme, from the Look tab (look.md §1.5).
-      await page.getByRole("tab", { name: "Look" }).click();
+      await sub("Look");
       await page.getByLabel("Theme of Home").selectOption("playful");
       await last
         .getByText(/theme on the home page/i)
@@ -1487,64 +1357,12 @@ try {
       for (let i = 0; i < 60 && (await down.isDisabled()); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
-      await page.getByRole("tab", { name: "What it does" }).click();
+      await sub("Behavior");
     },
   );
 
-  await step(
-    "records from a CSV file: the preview shows them as they would land, Import adds them",
-    async () => {
-      await change("Records from a CSV file");
-      await page.getByLabel("Kind of record").selectOption("Customer");
-      await page.getByLabel("CSV file").setInputFiles({
-        name: "customers.csv",
-        mimeType: "text/csv",
-        buffer: Buffer.from(
-          'Name,E-mail,Credit limit\nÅland Fish AB,fish@example.ax,"25 000,00"\nMarina Café,cafe@example.ax,1200\n',
-        ),
-      });
-      await page
-        .getByRole("status", { name: "Import preview" })
-        .getByText('"creditLimit":2500000')
-        .waitFor({ timeout: 60000 });
-      await page.getByRole("button", { name: "Import", exact: true }).click();
-      await status.getByText("2 added").waitFor({ timeout: 60000 });
-    },
-  );
-
-  console.log("Studio mode");
-  await step("the concept tree shows a concept with its rules and files", async () => {
-    await page.locator("label", { hasText: /^Code$/ }).click();
-    if (!(await page.getByRole("radio", { name: "Code", exact: true }).isChecked()))
-      throw new Error("not in Studio mode");
-    await page
-      .getByRole("navigation", { name: "Concepts" })
-      .getByRole("button", { name: /^mergeCustomers/ })
-      .click();
-    await page.getByText("src/generated/actions/merge-customers.ts").waitFor();
-    await page
-      .getByText("All orders of the duplicate move to the kept customer.")
-      .first()
-      .waitFor();
-  });
-  await step(
-    "a field's properties: its label changes, and it is shown in smithable.yml",
-    async () => {
-      const tree = page.getByRole("navigation", { name: "Concepts" });
-      await tree.getByRole("button", { name: "Open Customer" }).click();
-      await tree.getByRole("button", { name: /^email/ }).click();
-      await page.getByLabel("Label", { exact: true }).fill("E-mail address");
-      await page.getByLabel("Label", { exact: true }).press("Enter");
-      await status
-        .getByText('Change the text models.Customer.fields.email.label to "E-mail address"')
-        .waitFor({ timeout: 60000 });
-      await page.getByRole("button", { name: "Show in smithable.yml" }).click();
-      const selected = await page
-        .getByLabel("smithable.yml")
-        .evaluate((e) => e.value.slice(e.selectionStart, e.selectionEnd));
-      if (!/^\s+email:/.test(selected)) throw new Error(`selected: ${selected}`);
-    },
-  );
+  console.log("Code");
+  await firstWindow("code");
   await step(
     "the spec editor checks as you type, and saves a valid edit by itself, growing one change",
     async () => {
@@ -1767,86 +1585,44 @@ try {
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
   });
-  await step(
-    "the Changes tab: the prompt first; a change names its files and opens as their patch",
-    async () => {
-      await page.getByRole("tab", { name: "Changes" }).click();
-      await page.getByLabel("Describe a change").waitFor();
-      const entry = trace
-        .getByRole("button", { name: /Edit smithable\.auth\.yml.*smithable\.auth\.yml/ })
-        .first();
-      await entry.click();
-      const patch = trace.getByRole("region", { name: "The change's patch" });
-      await patch
-        .getByText("+  support: { description: Answers questions., pages: all }")
-        .waitFor();
-      if (/^diff --git a\/src\//m.test(await patch.innerText()))
-        throw new Error("the patch shows generated files");
-      await page.getByRole("tab", { name: "Files" }).click();
-    },
-  );
-  await step("any operation can be applied from a form built from its schema", async () => {
-    await page.getByRole("tab", { name: "Operation" }).click();
-    // A name is checked as it is typed, in the words the operation would refuse it with, and
-    // the operation waits (Johan's feedback).
-    await page.getByLabel("Operation").selectOption("addPage");
-    await page.getByLabel("page", { exact: true }).fill("Hello");
-    await page.getByText('Page name "Hello" must start with a lowercase letter').waitFor();
-    if (!(await page.getByRole("button", { name: "Apply addPage" }).isDisabled()))
-      throw new Error("addPage can be applied with a name that does not fit");
-    await page.getByLabel("page", { exact: true }).fill("hello");
-    await page.getByRole("button", { name: "Apply addPage", disabled: false }).waitFor();
-    // A list opens as the app has it (finding 13): the customers table's columns are ticked.
-    await page.getByLabel("Operation").selectOption("setColumns");
-    await page.getByLabel("page", { exact: true }).selectOption("customers");
-    const columns = page.getByRole("group", { name: "columns" });
-    if (
-      !(await columns.getByLabel("Email").isChecked()) ||
-      (await columns.getByLabel("Account manager", { exact: true }).isChecked())
-    )
-      throw new Error("setColumns does not open with the table's columns");
-    await page.getByLabel("Operation").selectOption("setSearch");
-    // Names in the spec are chosen, not typed: the page, then its model's fields.
-    await page.getByLabel("page", { exact: true }).selectOption("orders");
-    await page.getByRole("group", { name: "fields" }).getByLabel("Number").check();
-    await page.getByRole("button", { name: "Apply setSearch" }).click();
-    await status.getByText("Search orders by number").waitFor({ timeout: 60000 });
-  });
-  await step("a page can get its own component", async () => {
-    await page
-      .getByRole("navigation", { name: "Concepts" })
-      .getByRole("button", { name: /^customers/ })
-      .click();
-    await page.getByRole("button", { name: "Give this page its own component" }).click();
-    await status
-      .getByText("the page is now src/custom/pages/customers.tsx")
-      .waitFor({ timeout: 60000 });
-    await page.getByText("This page has its own component").waitFor();
+  await step("an edit in Code shows in Changes, naming its file", async () => {
+    await trace
+      .getByText(/smithable\.auth\.yml/)
+      .first()
+      .waitFor({ timeout: 30000 });
   });
   await step(
-    "the preview can be hidden for room: the details then sit beside the tree, and it stays hidden after a reload",
+    "a failure offers Troubleshoot: what went wrong, the log's last lines, Report, Undo and Reload",
     async () => {
-      const concepts = page.getByRole("navigation", { name: "Concepts" });
-      const details = page.getByRole("heading", { name: "Details" });
-      await page.getByRole("button", { name: "Hide", exact: true }).click();
-      await page.locator('iframe[title="App preview"]').waitFor({ state: "hidden" });
-      const beside = async () => {
-        const [a, b] = [await concepts.boundingBox(), await details.boundingBox()];
-        return a && b && b.x >= a.x + a.width - 2;
-      };
-      if (!(await beside())) throw new Error("the details are not beside the tree");
-      await page.reload();
-      await page.getByRole("button", { name: "Show preview" }).click();
-      await page.locator('iframe[title="App preview"]').waitFor();
-      if (await beside())
-        throw new Error("the details stay beside the tree with the preview shown");
+      // A package that does not exist cannot be installed: the change fails and is rolled back.
+      await page.getByLabel("File", { exact: true }).selectOption("smithable.context.yml");
+      await page.getByLabel("smithable.context.yml").evaluate((e) => {
+        e.value =
+          "smithableContext: 0.1\nplugins: [greeting]\npackages:\n  smithable-no-such-package: 9.9.9\n";
+      });
+      const save = page.getByRole("button", { name: "Save", exact: true });
+      if (await save.isEnabled()) await save.click();
+      const alert = page.getByRole("alert").filter({ hasText: "Nothing was changed." });
+      await alert.waitFor({ timeout: 120000 });
+      await alert.getByRole("button", { name: "Troubleshoot" }).click();
+      const dialog = page.getByRole("dialog", { name: "Troubleshoot" });
+      await dialog.getByRole("region", { name: "Logs" }).waitFor();
+      for (const name of ["Report", "Undo last change", "Reload Studio"])
+        await dialog.getByRole("button", { name, exact: true }).waitFor();
+      await dialog.getByRole("button", { name: "Close" }).click();
+      await alert.getByRole("button", { name: "Dismiss" }).click();
+      if (readFileSync(join(dir, "smithable.context.yml"), "utf8").includes("no-such-package"))
+        throw new Error("the context file kept the failed change");
+      page.once("dialog", (d) => d.accept());
+      await page.getByRole("button", { name: "Discard", exact: true }).click();
+      await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
     },
   );
-  await step("the preview shows the changes, and the logs are there", async () => {
-    // Beside Code mode from lg: no tab to open.
-    // Just shown again, the preview may still be loading, or restarting after the last change,
-    // on a slow runner; a page that failed to load is not retried by the frame. Go to the page
-    // again until it shows, for up to three minutes.
+  await step("the preview shows a change made elsewhere", async () => {
+    await op("setSearch", { page: "orders", fields: ["number"] });
+    // The preview may still be restarting after the last change on a slow runner; a page that
+    // failed to load is not retried by the frame. Go to the page again until it shows, for up
+    // to three minutes.
     const search = preview.getByRole("searchbox", { name: "Search by number" });
     for (const deadline = Date.now() + 180000; ; ) {
       await openPreview("/orders");
@@ -1857,9 +1633,6 @@ try {
         if (Date.now() > deadline) throw error;
       }
     }
-    await page.getByRole("tab", { name: "Logs" }).click();
-    // Every change logs what it generated (the panel may fill a moment after it opens).
-    await page.getByLabel("Logs").getByText("Generated").first().waitFor({ timeout: 30000 });
   });
   await step(
     "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one, and a page opened while it was down shows once it is up",
@@ -1927,7 +1700,6 @@ try {
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
     // An unsaved edit in the spec editor (one with a problem: a valid one saves itself) is kept
     // when the file changes under it.
-    await page.getByRole("tab", { name: "Files" }).click();
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
     const editor = page.getByLabel("smithable.yml");
     const typed = `${await editor.evaluate((e) => e.value)}unsaved: [broken\n`;
@@ -1996,13 +1768,14 @@ try {
     },
   );
   await step(
-    "the Languages tab adds a language, shows each text beside its words in it, saves one, and takes the language away",
+    "Content's Languages adds a language, shows each text beside its words in it, saves one, and takes the language away",
     async () => {
-      // Late in the run, so the steps before keep their last change; Builder's mode first.
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await page.getByRole("tab", { name: "Languages" }).click();
-      await page.getByLabel("Add a language").selectOption("sv");
-      await page.getByRole("button", { name: "Add", exact: true }).click();
+      // Late in the run, so the steps before keep their last change; No code first again.
+      await firstWindow("nocode");
+      await sub("Content");
+      const languages = page.getByRole("region", { name: "Languages" });
+      await languages.getByLabel("Add a language").selectOption("sv");
+      await languages.getByRole("button", { name: "Add", exact: true }).click();
       const texts = page.getByRole("region", { name: "Texts in Swedish" });
       await texts.waitFor({ timeout: 60000 });
       await texts.getByText(/texts have no Swedish words yet/).waitFor();
@@ -2019,36 +1792,17 @@ try {
       for (let i = 0; i < 60 && existsSync(file); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (existsSync(file)) throw new Error("removing Swedish left its file");
-      await page.getByRole("tab", { name: "What it does" }).click();
     },
   );
   await step(
-    "a kind of record's properties in What it does have All settings: its description changed there lands in smithable.yml",
+    "Content's form: a page's subtitle changed there lands in the content file",
     async () => {
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await page.getByRole("tab", { name: "What it does" }).click();
-      const customers = page.getByRole("region", { name: "Customers", exact: true });
-      await customers.getByRole("button", { name: "Customers", exact: true }).click();
-      await customers.getByText("All settings").click();
-      const box = customers.getByRole("textbox", { name: "description" }).first();
-      await box.fill("Everyone we sell to.");
-      await box.press("Enter");
-      const file = join(dir, "smithable.yml");
-      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Everyone we sell to."); i++)
-        await new Promise((r) => setTimeout(r, 1000));
-      if (!readFileSync(file, "utf8").includes("description: Everyone we sell to."))
-        throw new Error("the description did not reach smithable.yml");
-    },
-  );
-  await step(
-    "a page's properties are its parts of the spec, the content and the look: its subtitle changed under Texts lands in the content file",
-    async () => {
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await page.getByRole("tab", { name: "What it does" }).click();
-      const pages = page.getByRole("region", { name: "Pages", exact: true });
-      await pages.getByRole("button", { name: /^(Customers|Clients) \(lists customers/ }).click();
-      const texts = pages.getByRole("region", { name: "Texts" });
-      const box = texts.getByRole("textbox", { name: "subtitle" });
+      const texts = page.getByRole("region", { name: "The texts" });
+      const pagesArea = texts.locator('details[data-key="pages"]').first();
+      if (!(await pagesArea.evaluate((d) => d.open)))
+        await pagesArea.locator("summary").first().click();
+      const customers = await entry(pagesArea, "customers");
+      const box = customers.getByRole("textbox", { name: "subtitle" });
       await box.fill("Every client and their orders.");
       await box.press("Enter");
       const file = join(dir, "smithable.content.yml");
@@ -2060,16 +1814,36 @@ try {
         await new Promise((r) => setTimeout(r, 1000));
       if (!readFileSync(file, "utf8").includes("Every client and their orders."))
         throw new Error("the subtitle did not reach the content file");
-      if (await pages.getByLabel("Icon in the menu").count())
-        throw new Error("the hand-made icon control is still there");
+      await sub("Behavior");
     },
   );
   await step(
-    "the Every setting tab adds a kind of record and a field, renames the field and a page and changes the field's type, through their operations",
+    "Behavior: a kind of record's description changed there lands in smithable.yml",
     async () => {
-      await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
-      await page.getByRole("tab", { name: "Every setting" }).click();
+      const customer = await entry(await area("models"), "Customer");
+      let box = customer.getByRole("textbox", { name: "description" }).first();
+      if (!(await box.isVisible())) {
+        await customer
+          .locator("summary", { hasText: /^Not set/ })
+          .first()
+          .click();
+        box = customer.getByRole("textbox", { name: "description" }).first();
+      }
+      await box.fill("Everyone we sell to.");
+      await box.press("Enter");
+      const file = join(dir, "smithable.yml");
+      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Everyone we sell to."); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (!readFileSync(file, "utf8").includes("description: Everyone we sell to."))
+        throw new Error("the description did not reach smithable.yml");
+    },
+  );
+  await step(
+    "Behavior adds a kind of record and a field, renames the field and a page and changes the field's type, through their operations",
+    async () => {
+      await sub("Behavior");
       const app = page.getByRole("region", { name: "What the app does" });
+      await area("models");
       const file = join(dir, "smithable.yml");
       const waitFile = async (text) => {
         for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes(text); i++)
@@ -2084,13 +1858,7 @@ try {
         .getByRole("button", { name: "Add" })
         .click();
       await waitFile("Supplier:");
-      await app
-        .locator("summary", { hasText: /^Customer$/ })
-        .first()
-        .click();
-      const customer = app
-        .locator("details", { has: page.locator("summary", { hasText: /^Customer$/ }) })
-        .first();
+      const customer = await entry(await area("models"), "Customer");
       await customer.getByLabel("New entry in fields").fill("website");
       await customer
         .getByLabel("New entry in fields")
@@ -2120,18 +1888,18 @@ try {
       await waitFile("homepage: url");
       // A page is renamed through renamePage, its references following; and back again.
       // The pages' own entries, not a customer's list of orders.
-      const pages = app.locator('[data-key="pages"]').first();
-      const entry = (name) =>
+      const pages = await area("pages");
+      const pageEntry = (name) =>
         pages.locator("details", {
           has: page.locator(`summary:text-is("${name}")`),
         });
       const renameBox = (name) => pages.getByLabel(`New name for ${name}`, { exact: true });
-      await entry("orders").locator(`summary:text-is("orders")`).click();
+      await pageEntry("orders").locator(`summary:text-is("orders")`).click();
       await renameBox("orders").fill("sales");
       await renameBox("orders").locator("..").getByRole("button", { name: "Rename" }).click();
       await waitFile("  sales:");
       if (!(await renameBox("sales").isVisible()))
-        await entry("sales").locator(`summary:text-is("sales")`).click();
+        await pageEntry("sales").locator(`summary:text-is("sales")`).click();
       await renameBox("sales").fill("orders");
       await renameBox("sales").locator("..").getByRole("button", { name: "Rename" }).click();
       for (let i = 0; i < 60 && readFileSync(file, "utf8").includes("  sales:"); i++)
@@ -2598,24 +2366,15 @@ try {
             throw new Error("two suggestions cannot be chosen together");
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 });
-          // The request that waited is proposed once the app is there (the Changes tab opens
-          // for it), and waits for Apply.
+          // The request that waited is proposed once the app is there (Smith and Changes come
+          // into view for it), and waits for Apply.
           await watcher
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
             .click({ timeout: 90000 });
           // In place: the request that waited is made, and nothing waits any more.
-          const changesTab = watcher.getByRole("tab", { name: "Changes" });
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
-          for (let i = 0; i < 180 && !(await made.first().isVisible()); i++) {
-            if (
-              (await changesTab.isVisible()) &&
-              (await changesTab.getAttribute("aria-selected")) !== "true"
-            )
-              await changesTab.click();
-            await new Promise((r) => setTimeout(r, 500));
-          }
-          await made.first().waitFor({ timeout: 1000 });
+          await made.first().waitFor({ timeout: 90000 });
           const after = await (await fetch(`${other}/api/project`)).json();
           if (after.waiting?.length) throw new Error(`still waiting: ${after.waiting}`);
         } catch (error) {

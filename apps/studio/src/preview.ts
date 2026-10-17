@@ -25,27 +25,16 @@ export type PreviewMessage =
 export type Selection = Extract<PreviewMessage, { type: "select" }>;
 
 /**
- * Where someone was in each mode (docs/design/studio-v2.md §2), kept for the browser tab's
- * session: a mode switch or a reload comes back to it.
+ * Where someone was in each window (docs/design/studio-v3.md), kept for the browser tab's
+ * session: a reload comes back to it.
  */
 export interface Place {
-  builder: {
-    tab?: "app" | "spec" | "look" | "who" | "languages" | "changes";
-    selection?: Selection;
-  };
-  /** Code mode: its tab, the concept picked and the file open in the editor. */
-  studio: { tab?: string; concept?: string; file?: EditableFile };
-  /** The preview's column is hidden (wide windows), for more room for the mode. */
-  previewHidden?: boolean;
-  /** Preview is chosen in the mode switch (narrow windows): the preview alone, the mode hidden. */
-  viewing?: boolean;
-}
-
-/** A concept picked in either mode that the other can show too: a field or a model. */
-export function shared(concept: string): Selection | undefined {
-  return /^(field|model):/.test(concept)
-    ? { type: "select", concept, part: null, page: null, columns: null }
-    : undefined;
+  /** No code: its sub view, and the part last picked in the preview. */
+  nocode: { sub?: string; selection?: Selection };
+  /** Code: the file open in the editor. */
+  code: { file?: EditableFile };
+  /** A phone's one window (studio-v3.md §8). */
+  window?: string;
 }
 
 /** The preview's window and origin, set by the Preview panel: only they are listened to. */

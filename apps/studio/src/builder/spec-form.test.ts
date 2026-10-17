@@ -142,3 +142,21 @@ test("a field is renamed through renameField; other entries offer no rename", ()
   ]);
   expect(renameFor("smithable.ux.yml", ["pages", "home"], "start")).toBeUndefined();
 });
+
+test("a page and an action are taken away through their own operations", () => {
+  expect(operationFor("smithable.yml", ["pages", "team"], undefined)).toEqual([
+    "removePage",
+    { page: "team" },
+  ]);
+  expect(operationFor("smithable.yml", ["actions", "merge"], undefined)).toEqual([
+    "removeAction",
+    { action: "merge" },
+  ]);
+});
+
+test("a key's label is its schema title where core gives one, the first sentence otherwise", () => {
+  expect(labelOf("currency", { title: "Currency", description: "ISO 4217 currency code." })).toBe(
+    "Currency",
+  );
+  expect(labelOf("thing", { description: "What it holds. More words." })).toBe("What it holds");
+});

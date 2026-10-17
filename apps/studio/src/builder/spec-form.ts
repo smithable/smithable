@@ -120,6 +120,8 @@ const LABELS: Record<string, string> = {
 
 /** A key's label: its word in LABELS, the first sentence of its description, or its name made readable. */
 export function labelOf(key: string, schema: JsonSchema): string {
+  // The schema's own title where it gives one (core, Fable 46 (c)): "Currency", "Time zone".
+  if (typeof schema.title === "string" && schema.title) return schema.title;
   const known = LABELS[key];
   if (known) return known;
   const description = typeof schema.description === "string" ? schema.description : "";
@@ -220,6 +222,16 @@ export function operationFor(
     if (added) return ["addField", { model: name, field, type: "string" }];
     if (typeof value === "string") return ["changeField", { model: name, field, type: value }];
     if (value === undefined) return ["removeField", { model: name, field }];
+  }
+  // A page or an action taken away through its own operation, which follows its references.
+  if (
+    file === "smithable.yml" &&
+    path.length === 2 &&
+    typeof key === "string" &&
+    value === undefined
+  ) {
+    if (first === "pages") return ["removePage", { page: key }];
+    if (first === "actions") return ["removeAction", { action: key }];
   }
   // A page's icon in the menu.
   if (

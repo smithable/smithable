@@ -158,7 +158,7 @@ export function Making({
       )}
       {/* The words box from the start: what is typed is made once the app is in place. */}
       <div className="-mx-4 rounded-lg border border-line bg-panel">
-        <Ask making waiting={project.waiting} onEdit={() => {}} />
+        <Ask making waiting={project.waiting} />
       </div>
       {/* A place for an animation later (docs/design/while-it-is-made.md §7). */}
       <div data-slot="making-animation" />

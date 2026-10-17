@@ -1,28 +1,45 @@
-import { humanize } from "@smithable/core";
+import { humanize, pageModel, plural } from "@smithable/core";
 import { describeChange } from "@smithable/index";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, EXPECT_RELOAD, type Making as MakingState, type Project } from "./api";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { api, EXPECT_RELOAD, type Making as MakingState, type Project, waking } from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
-import { AskSheet, useAskPlace } from "./builder/AskDock";
-import { Builder } from "./builder/Builder";
+import { Ask } from "./builder/Ask";
+import { NoCode } from "./builder/NoCode";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
-import { isPreviewMessage, type Place, shared, touched, touchesPage } from "./preview";
+import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
-import { keptPage, Preview } from "./shared";
-import { Button, cx, useMedia } from "./ui";
+import { keptPage, Preview, Trace } from "./shared";
+import { TroubleshootDialog } from "./Troubleshoot";
+import { Button, cx, Panel, useMedia } from "./ui";
+import {
+  gridOf,
+  LayoutBar,
+  type SlotContent,
+  shownSlots,
+  useArrangement,
+  WINDOW_NAMES,
+  type WindowId,
+} from "./windows";
 
-// Code mode (its editor, CodeMirror and the operation forms) and the tour load when first
-// opened, so No code starts without them (the main chunk under Vite's 500 kB, backlog A 64).
-const Studio = lazy(() => import("./studio/Studio").then((m) => ({ default: m.Studio })));
+// The Code window (its editor, CodeMirror) and the tour load when first shown, so No code
+// starts without them (the main chunk under Vite's 500 kB, backlog A 64).
+const Code = lazy(() => import("./studio/Code").then((m) => ({ default: m.Code })));
 const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
-
-type Mode = "builder" | "studio";
 
 /** A change that stopped to ask, because it loses data. */
 interface Pending {
@@ -41,15 +58,20 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
 
 export function App() {
   const [project, setProject] = useState<Project>();
-  const [mode, setMode] = useState<Mode>(() => (localStorage.getItem("mode") as Mode) ?? "builder");
+  // Which windows are shown and where (studio-v3.md §8), kept in this browser.
+  const [arrangement, setArrangement] = useArrangement();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
   const [message, setMessage] = useState<{
     ok: boolean;
     text: string;
     change?: boolean;
     report?: "sent" | "offer";
+    /** Something went wrong (not a change refused): the bar offers Troubleshoot. */
+    failure?: boolean;
   }>();
   const [reporting, setReporting] = useState(false);
+  const [troubleshooting, setTroubleshooting] = useState(false);
+  const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
   const [holding, setHolding] = useState(false);
   useEffect(() => {
@@ -76,13 +98,14 @@ export function App() {
     };
   }, []);
   const [busy, setBusy] = useState(false);
-  // The preview: select mode, and the mode's slot it is placed over on narrow windows.
+  // The preview's Select, and where the person was in each window (kept for the tab's session).
   const [selecting, setSelecting] = useState(false);
   const [place, setPlace] = useState<Place>(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
+      const kept = JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
+      return kept.nocode && kept.code ? kept : { nocode: {}, code: {} };
     } catch {
-      return { builder: {}, studio: {} };
+      return { nocode: {}, code: {} };
     }
   });
   useEffect(() => {
@@ -90,20 +113,10 @@ export function App() {
       sessionStorage.setItem("smithable:place", JSON.stringify(place));
     } catch {}
   }, [place]);
-  // What one mode picks, the other opens at when it can show it.
-  const builderPlace = (next: Place["builder"]) =>
-    setPlace((p) => ({
-      builder: { ...p.builder, ...next },
-      studio: next.selection ? { ...p.studio, concept: next.selection.concept } : p.studio,
-    }));
-  const studioPlace = (next: Place["studio"]) =>
-    setPlace((p) => {
-      const selection = next.concept ? shared(next.concept) : undefined;
-      return {
-        studio: { ...p.studio, ...next },
-        builder: selection ? { ...p.builder, selection } : p.builder,
-      };
-    });
+  const nocodePlace = (next: Place["nocode"]) =>
+    setPlace((p) => ({ ...p, nocode: { ...p.nocode, ...next } }));
+  const codePlace = (next: Place["code"]) =>
+    setPlace((p) => ({ ...p, code: { ...p.code, ...next } }));
   // What the newest change touched (not an undo), for the preview to flash once it has it.
   const last = project?.trace[0];
   const changeKey = last && !last.isUndo && !last.undone ? `${last.at}:${last.description}` : "";
@@ -112,34 +125,49 @@ export function App() {
     () => (changeKey && concepts ? { key: changeKey, concepts: concepts.split("\n") } : undefined),
     [changeKey, concepts],
   );
-  // On a narrow window the preview is the mode switch's third choice, the window's width
-  // (Johan, 2026-10-09); from lg it is a column beside either mode.
+  // A phone shows one window at a time, chosen in the header (swipes come with step 6).
   const narrow = useMedia("(max-width: 1023px)");
-  // The Ask panel's slot (docs/design/ask-in-studio.md): right of the preview or under it, a
-  // sheet on a phone; No code fills it.
-  const { place: ask, setSlot: setAskSlot } = useAskPlace(narrow);
-  // The preview's share of a wide window, in percent: the edge between the two is dragged.
-  const room = useRef<HTMLElement>(null);
-  const [previewWidth, setPreviewWidth] = useState(() => {
-    try {
-      return clampWidth(Number(localStorage.getItem(PREVIEW_WIDTH)) || 55);
-    } catch {
-      return 55;
-    }
-  });
+  const phoneWindow = (
+    WINDOWS.includes(place.window as WindowId) ? place.window : "nocode"
+  ) as WindowId;
+  const showWindow = (window: WindowId) => setPlace((p) => ({ ...p, window }));
+  // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
+  const [hidden, setHidden] = useState({ left: false, right: false });
+  const layout = narrow ? "one" : arrangement.layout;
+  const slots: SlotContent[] = narrow ? [phoneWindow] : arrangement.slots;
+  const shown = shownSlots(layout, narrow ? { left: false, right: false } : hidden);
+  /** The slot a window is in among those shown (the first that names it), or none. */
+  const slotOf = (window: WindowId) =>
+    shown.find(
+      (s) =>
+        slots[s] === window ||
+        (slots[s] === "smith+changes" && (window === "smith" || window === "changes")),
+    );
+  // Requests typed while the app was made are taken by Smith: he comes into view for them.
+  const waitingNow = (project?.waiting?.length ?? 0) > 0 && !project?.making;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when requests start waiting
   useEffect(() => {
-    try {
-      localStorage.setItem(PREVIEW_WIDTH, String(previewWidth));
-    } catch {}
-  }, [previewWidth]);
-  const viewing = narrow && Boolean(place.viewing);
-  const view = (on: boolean) =>
-    setPlace((p) => (Boolean(p.viewing) === on ? p : { ...p, viewing: on }));
-  // A guide's stop brings its place on screen: the preview chosen (narrow) or shown (wide), any
-  // other the mode again.
+    if (waitingNow) guideStop("change");
+  }, [waitingNow]);
+  // A guide's stop brings its window on screen: the first window shows it when no slot does.
   const guideStop = (anchor: string) => {
-    if (anchor === "preview" && !narrow) setPlace((p) => ({ ...p, previewHidden: false }));
-    else view(anchor === "preview");
+    const window: WindowId | undefined =
+      anchor === "preview"
+        ? "preview"
+        : anchor === "change"
+          ? "smith"
+          : anchor === "changes"
+            ? "changes"
+            : ["behavior", "look"].includes(anchor)
+              ? "nocode"
+              : undefined;
+    if (!window || slotOf(window) !== undefined) return;
+    if (narrow) showWindow(window);
+    // Smith and Changes are the third place's by default: the layout with three shows them.
+    else if (arrangement.slots[2] === window || arrangement.slots[2] === "smith+changes")
+      setArrangement({ ...arrangement, layout: "three" });
+    else
+      setArrangement({ ...arrangement, slots: [window, ...arrangement.slots.slice(1)] as never });
   };
 
   // The spec the preview shows now, for what a change touches (refresh).
@@ -187,6 +215,22 @@ export function App() {
 
   const spec = useSpec(project);
   shownIR.current = spec.ir;
+  // A change in the words Changes and Smith use ("Customers: added a website").
+  const words = (op: string, args: Record<string, unknown>) =>
+    spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
+  // Smith's example in the app's own records (a booking app has no customers): the first listed
+  // on a page, and the last.
+  const example = useMemo(() => {
+    const ir = spec.ir;
+    if (!ir) return undefined;
+    const listed = ir.pages.flatMap((p) => (p.pattern.kind === "crud" ? [pageModel(p)] : []));
+    const models = ir.models.filter((m) => listed.includes(m.name));
+    const [first, last] = [models[0] ?? ir.models[0], models.at(-1) ?? ir.models.at(-1)];
+    if (!first || !last) return undefined;
+    const many = (name: string) => humanize(plural(name)).toLowerCase();
+    const field = first.fields.some((f) => f.name === "phone") ? "a website" : "a phone number";
+    return `For example: ${many(first.name)} should have ${field}. Or: who can delete ${many(last.name)}?`;
+  }, [spec]);
   // The pages the preview's address offers: each page's address and title, and sign-in.
   const pages = useMemo(
     (): [string, string][] => [
@@ -234,7 +278,7 @@ export function App() {
       try {
         result = await api.operation(name, args, confirm ?? false, file);
       } catch (error) {
-        setMessage({ ok: false, text: (error as Error).message });
+        setMessage({ ok: false, text: (error as Error).message, failure: true });
         return false;
       } finally {
         setBusy(false);
@@ -253,14 +297,10 @@ export function App() {
       const lines = result.output.split("\n").filter((l) => l.trim());
       const summary = result.ok
         ? (lines.at(-1) ?? "Done.").replace(/ Undo with: smithable undo$/, "")
-        : mode === "builder"
-          ? plainRefusal(result.output)
-          : result.output;
-      // Builder says it in the words of its summary.
+        : plainRefusal(result.output);
+      // Said in the words the Changes window uses.
       const plain =
-        result.ok && mode === "builder" && spec.ir
-          ? describeChange(name, args, spec.ir, spec.content)
-          : undefined;
+        result.ok && spec.ir ? describeChange(name, args, spec.ir, spec.content) : undefined;
       setMessage({
         ok: result.ok,
         text:
@@ -269,6 +309,7 @@ export function App() {
             : (plain ?? summary),
         change: result.ok,
         report: result.report,
+        failure: Boolean(result.report),
       });
       return result.ok;
     },
@@ -278,9 +319,7 @@ export function App() {
     // What is undone: the newest change that is still in place.
     const last = project?.trace.find((e) => !e.undone && !e.isUndo)?.operation;
     const plain =
-      mode === "builder" && last && spec.ir
-        ? describeChange(last.op, last.args, spec.ir, spec.content)
-        : undefined;
+      last && spec.ir ? describeChange(last.op, last.args, spec.ir, spec.content) : undefined;
     setBusy(true);
     const result = await api.undo().catch((e: Error) => ({ ok: false, output: e.message }));
     if (result.ok) await catchUp();
@@ -341,26 +380,12 @@ export function App() {
     };
   }, []);
 
-  const customize = async (page: string) => {
-    setBusy(true);
-    const result = await api
-      .customize(page)
-      .catch((e: Error) => ({ ok: false, output: e.message }));
-    setBusy(false);
-    const lines = result.output.split("\n").filter((l) => l.trim());
-    setMessage({ ok: result.ok, text: result.ok ? (lines.at(-1) ?? "") : result.output });
-  };
-
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    localStorage.setItem("mode", next);
-  };
-
-  // The guide, once per project in this browser (docs/design/studio-guide.md): in Builder, after
-  // the making screen, never with ?guide=off; Guide in the header shows it again.
+  // The guide, once per project in this browser (docs/design/studio-guide.md): after the making
+  // screen, never with ?guide=off; Guide in the header shows it again. Code's tour when Code is
+  // the first window.
   const [guiding, setGuiding] = useState(false);
-  const firstVisit =
-    project && !project.making && mode === "builder" && !guideOff() && !seenGuide(project.name);
+  const tour = arrangement.slots[0] === "code" && !narrow ? "code" : "nocode";
+  const firstVisit = project && !project.making && !guideOff() && !seenGuide(project.name);
   // The first tour waits for the preview's page (its second stop points at the running app),
   // or twenty seconds when the preview is slow to start.
   const [previewUp, setPreviewUp] = useState(false);
@@ -376,9 +401,17 @@ export function App() {
       window.removeEventListener("message", ready);
     };
   }, [previewUp]);
+  // The tour visits every window: one not shown as it starts would be left out of it, so the
+  // third window comes into view in the same render the tour starts in.
+  const startGuide = () => {
+    if (tour === "nocode") guideStop("change");
+    setGuiding(true);
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up
   useEffect(() => {
-    if (firstVisit && previewUp) setGuiding(true);
+    if (firstVisit && previewUp) startGuide();
   }, [firstVisit, previewUp]);
+
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   return (
     <div className="flex h-full flex-col">
@@ -396,48 +429,34 @@ export function App() {
         <span className="min-w-0 truncate text-sm text-quiet">
           {project.making ? "" : project.name}
         </span>
-        <fieldset data-guide="mode" className="flex rounded-md bg-subtle p-0.5 sm:ml-4">
-          <legend className="sr-only">Mode</legend>
-          {(narrow
-            ? (["builder", "preview", "studio"] as const)
-            : (["builder", "studio"] as const)
-          ).map((m) => {
-            const checked = viewing ? m === "preview" : mode === m;
-            return (
+        {project.making ? null : narrow ? (
+          // A phone: one window at a time.
+          <fieldset data-guide="layout" className="flex rounded-md bg-subtle p-0.5">
+            <legend className="sr-only">Window</legend>
+            {WINDOWS.map((w) => (
               <label
-                key={m}
+                key={w}
                 className={cx(
-                  "flex h-7 cursor-pointer items-center rounded px-3 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                  checked ? "bg-panel shadow-xs" : "text-muted",
+                  "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                  phoneWindow === w ? "bg-panel shadow-xs" : "text-muted",
                 )}
               >
                 <input
                   type="radio"
-                  name="mode"
+                  name="window"
                   className="sr-only"
-                  checked={checked}
-                  disabled={Boolean(project.making)}
-                  onChange={() => {
-                    view(m === "preview");
-                    if (m !== "preview") switchMode(m);
-                  }}
+                  checked={phoneWindow === w}
+                  onChange={() => showWindow(w)}
                 />
-                {{ builder: "No code", preview: "Preview", studio: "Code" }[m]}
+                {WINDOW_NAMES[w]}
               </label>
-            );
-          })}
-        </fieldset>
+            ))}
+          </fieldset>
+        ) : (
+          <LayoutBar arrangement={arrangement} onChange={setArrangement} />
+        )}
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-quiet">Working…</span>}
-          {place.previewHidden && (
-            <Button
-              variant="ghost"
-              className="max-lg:hidden"
-              onClick={() => setPlace((p) => ({ ...p, previewHidden: false }))}
-            >
-              Show preview
-            </Button>
-          )}
           {project.making ? null : project.home ? (
             <a
               href={project.home}
@@ -462,8 +481,8 @@ export function App() {
           {!project.making && !guideOff() && (
             <button
               type="button"
-              // The tour of the mode shown.
-              onClick={() => setGuiding(true)}
+              // The tour of the first window.
+              onClick={startGuide}
               className="text-xs font-medium text-muted hover:underline"
             >
               Guide
@@ -503,6 +522,19 @@ export function App() {
           </Button>
         </div>
       </header>
+      {wakingNow && (
+        // A hosted workspace waking (B 58): a bar that goes by itself once it answers.
+        <div role="status" className="border-b border-line bg-accent-soft px-4 py-1.5 text-xs">
+          <div className="mb-1 h-1 overflow-hidden rounded bg-panel">
+            <div className="h-full w-1/3 animate-pulse rounded bg-accent" />
+          </div>
+          {wakingNow === "busy"
+            ? "Every workspace is busy; yours starts as soon as one is free."
+            : wakingNow === "preparing"
+              ? "Your workspace is starting; its packages are installed first, which takes about half a minute."
+              : "Your workspace is starting…"}
+        </div>
+      )}
       {(message || pending) && (
         // Hovering or focusing the notice keeps it while it is read.
         // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
@@ -540,9 +572,9 @@ export function App() {
             </Button>
           ) : (
             <>
-              {message?.report === "offer" && (
-                <Button variant="ghost" onClick={() => setReporting(true)}>
-                  Report this
+              {message?.failure && (
+                <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
+                  Troubleshoot
                 </Button>
               )}
               <Button variant="ghost" onClick={() => setMessage(undefined)}>
@@ -553,162 +585,209 @@ export function App() {
         </div>
       )}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+      {troubleshooting && message && (
+        <TroubleshootDialog
+          error={message.text}
+          canUndo={project.trace.some((t) => !t.undone && !t.isUndo)}
+          onReport={() => setReporting(true)}
+          onUndo={() => void undo()}
+          onClose={() => setTroubleshooting(false)}
+        />
+      )}
       {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
       {guiding && !project.making && (
-        // Made again for the other mode's tour, which finds that mode's places.
+        // Made again for the other way's tour, which finds its own places.
         <Suspense fallback={null}>
           <Guide
-            key={mode}
+            key={tour}
             app={project.name}
-            stops={TOURS[mode]}
-            onEnd={() => {
-              setGuiding(false);
-              view(false);
-            }}
-            onCode={() => switchMode("studio")}
+            stops={TOURS[tour]}
+            onEnd={() => setGuiding(false)}
+            onCode={() =>
+              setArrangement({
+                ...arrangement,
+                slots: ["code", ...arrangement.slots.slice(1)] as typeof arrangement.slots,
+              })
+            }
             onStop={guideStop}
           />
         </Suspense>
       )}
-      {/* One preview for both modes (docs/design/studio-v2.md §1): the frame is made once and
-          never moves in the page, so switching modes keeps its page. Wide windows show it on
-          the right; narrow ones show it alone when Preview is chosen, the mode hidden (not
-          unmade, so it is as it was). */}
       {project.making ? (
         // Until the described app is in place: what is being made, not the placeholder.
         <main className="min-h-0 flex-1 overflow-auto">
           <Making making={project.making} project={project} />
         </main>
       ) : (
-        <main ref={room} className="relative flex min-h-0 flex-1">
-          <div className={cx("min-h-0 min-w-0 flex-1", viewing && "hidden")}>
-            {mode === "builder" ? (
-              <Builder
-                project={project}
-                spec={spec}
-                run={run}
-                place={place.builder}
-                onPlace={builderPlace}
-                undo={() => void undo()}
-                ask={ask}
-              />
-            ) : (
-              <Suspense fallback={<p className="p-3 text-sm text-quiet">Opening Code mode…</p>}>
-                <Studio
-                  project={project}
-                  spec={spec}
-                  run={run}
-                  onCustomize={customize}
-                  place={place.studio}
-                  onPlace={studioPlace}
-                  previewHidden={Boolean(place.previewHidden)}
-                  onLook={() => {
-                    builderPlace({ tab: "look" });
-                    switchMode("builder");
-                  }}
-                />
-              </Suspense>
-            )}
-          </div>
-          {!narrow && !place.previewHidden && (
-            <PreviewEdge
-              width={previewWidth}
-              onWidth={setPreviewWidth}
-              of={() => room.current?.getBoundingClientRect()}
-            />
-          )}
+        // The windows in one grid (studio-v3.md §1, §8). The preview is always its first child
+        // and only placed, so its frame is made once and keeps its page whatever moves; a window
+        // in no slot shown is not drawn, except the preview, hidden.
+        <main
+          className="grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0"
+          style={gridOf(layout, shown)}
+        >
           <div
+            key="preview"
             data-guide-view
             className={cx(
-              "flex min-h-0 flex-col bg-panel",
-              narrow
-                ? viewing
-                  ? "min-w-0 flex-1"
-                  : "hidden"
-                : place.previewHidden
-                  ? "hidden"
-                  : "",
+              "relative flex flex-col border-line bg-panel",
+              slotOf("preview") === undefined && "hidden",
             )}
-            style={narrow || place.previewHidden ? undefined : { width: `${previewWidth}%` }}
+            style={{ gridArea: area(slotOf("preview")) }}
           >
             <Preview
               url={project.preview}
               version={version}
               updating={updating || busy}
               selecting={selecting}
-              inCode={mode === "studio"}
+              inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
               onSelecting={setSelecting}
-              onHide={narrow ? undefined : () => setPlace((p) => ({ ...p, previewHidden: true }))}
               highlight={highlight}
               pages={pages}
             />
-            {mode === "builder" && !narrow && ask.dock === "foot" && !place.previewHidden && (
-              <section
-                aria-label="Ask"
-                ref={setAskSlot}
-                className="flex h-[40%] shrink-0 flex-col border-t border-line"
+            {!narrow && (
+              <PreviewArrows
+                left={
+                  layout !== "one" && slotOf("preview") !== 0
+                    ? {
+                        hidden: hidden.left,
+                        toggle: () => setHidden((h) => ({ ...h, left: !h.left })),
+                      }
+                    : undefined
+                }
+                right={
+                  layout === "three" && slotOf("preview") !== 2
+                    ? {
+                        hidden: hidden.right,
+                        toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
+                      }
+                    : undefined
+                }
               />
             )}
           </div>
-          {mode === "builder" && !narrow && (ask.dock === "right" || place.previewHidden) && (
-            <aside
-              aria-label="Ask"
-              ref={setAskSlot}
-              className="flex w-[22rem] shrink-0 flex-col border-l border-line bg-panel"
-            />
-          )}
-          {mode === "builder" && narrow && (
-            <AskSheet sheet={ask.sheet} onSheet={ask.onSheet} slotRef={setAskSlot} />
-          )}
+          {shown.map((s) => {
+            const content = slots[s] as SlotContent;
+            if (content === "preview" || slotOf(windowsIn(content)[0] as WindowId) !== s)
+              return null;
+            return (
+              <div
+                key={content}
+                className={cx(
+                  "flex flex-col border-line",
+                  s > 0 && "border-l",
+                  layout === "three-below" && s === 2 && "border-t border-l-0",
+                )}
+                style={{ gridArea: area(s) }}
+              >
+                {windowsIn(content).map((w) =>
+                  w === "nocode" ? (
+                    <NoCode
+                      key={w}
+                      project={project}
+                      spec={spec}
+                      run={run}
+                      place={place.nocode}
+                      onPlace={nocodePlace}
+                    />
+                  ) : w === "code" ? (
+                    <Suspense
+                      key={w}
+                      fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
+                    >
+                      <Code
+                        project={project}
+                        spec={spec}
+                        run={run}
+                        place={place.code}
+                        onPlace={codePlace}
+                        onLook={() => {
+                          nocodePlace({ sub: "look" });
+                          if (narrow) showWindow("nocode");
+                          else if (slotOf("nocode") === undefined)
+                            setArrangement({
+                              ...arrangement,
+                              slots: [
+                                "nocode",
+                                ...arrangement.slots.slice(1),
+                              ] as typeof arrangement.slots,
+                            });
+                        }}
+                      />
+                    </Suspense>
+                  ) : w === "smith" ? (
+                    <Panel key={w} title="Smith" className="min-h-0 flex-1">
+                      <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
+                        <Ask
+                          example={example}
+                          words={words}
+                          waiting={project.waiting}
+                          trace={project.trace}
+                        />
+                      </div>
+                    </Panel>
+                  ) : (
+                    <Panel
+                      key={w}
+                      title="Changes"
+                      className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
+                    >
+                      <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+                        <Trace entries={project.trace} words={words} plugins={spec.plugins} />
+                      </div>
+                    </Panel>
+                  ),
+                )}
+              </div>
+            );
+          })}
         </main>
       )}
     </div>
   );
 }
 
-/** Where the preview's width is kept, and how narrow or wide it may be. */
-const PREVIEW_WIDTH = "smithable:preview-width";
-const clampWidth = (percent: number) => Math.min(75, Math.max(30, Math.round(percent)));
+/** The windows of a phone's header, in its order. */
+const WINDOWS: WindowId[] = ["nocode", "preview", "smith", "changes", "code"];
 
-/**
- * The edge between the mode and the preview: dragged (or moved with the arrow keys) to give the
- * preview more or less of the window, so an app's page can be seen as wide as it needs.
- */
-function PreviewEdge({
-  width,
-  onWidth,
-  of,
+/** The windows a slot holds. */
+const windowsIn = (content: SlotContent): WindowId[] =>
+  content === "smith+changes" ? ["smith", "changes"] : [content];
+
+/** A slot's grid area. */
+const area = (slot: number | undefined) => (slot === undefined ? undefined : "abc"[slot]);
+
+/** The arrows at the preview's edges: hide the window beside it for a while, and bring it back. */
+function PreviewArrows({
+  left,
+  right,
 }: {
-  width: number;
-  onWidth: (percent: number) => void;
-  of: () => DOMRect | undefined;
+  left?: { hidden: boolean; toggle: () => void };
+  right?: { hidden: boolean; toggle: () => void };
 }) {
+  const arrow = (side: "left" | "right", state: { hidden: boolean; toggle: () => void }) => {
+    const points = (side === "left") !== state.hidden ? "‹" : "›";
+    const name = `${state.hidden ? "Show" : "Hide"} the window on the ${side}`;
+    return (
+      <button
+        type="button"
+        aria-label={name}
+        title={name}
+        onClick={state.toggle}
+        className={cx(
+          "absolute top-1/2 z-10 flex h-10 w-4 -translate-y-1/2 items-center justify-center border border-line bg-panel text-xs text-muted shadow-xs hover:text-fg",
+          side === "left" ? "left-0 rounded-r" : "right-0 rounded-l",
+        )}
+      >
+        {points}
+      </button>
+    );
+  };
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a window splitter has no element of its own
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Preview width"
-      aria-valuenow={width}
-      aria-valuemin={30}
-      aria-valuemax={75}
-      tabIndex={0}
-      title="Drag to make the preview wider or narrower"
-      // Kept on the edge while dragging, also over the preview's frame.
-      onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
-      onPointerMove={(e) => {
-        const box = of();
-        if (!box || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
-        onWidth(clampWidth(((box.right - e.clientX) / box.width) * 100));
-      }}
-      onKeyDown={(e) => {
-        const step = e.key === "ArrowLeft" ? 2 : e.key === "ArrowRight" ? -2 : 0;
-        if (!step) return;
-        e.preventDefault();
-        onWidth(clampWidth(width + step));
-      }}
-      className="w-1 shrink-0 cursor-col-resize border-l border-line outline-none hover:bg-accent/40 focus-visible:bg-accent"
-    />
+    <>
+      {left && arrow("left", left)}
+      {right && arrow("right", right)}
+    </>
   );
 }
 

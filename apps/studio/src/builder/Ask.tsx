@@ -8,7 +8,8 @@ import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
 
 /**
- * `onEdit` opens a proposed operation in the Change tab, with its values filled in. While the
+ * Smith's box and thread (docs/design/studio-v3.md §2). `onEdit`, where given, opens a proposed
+ * operation in a form with its values filled in. While the
  * app is being made (`making`), a request is kept for later instead (`waiting`, in Studio's
  * server); once the app is in place each is taken in turn, as if typed then.
  */
@@ -44,7 +45,7 @@ export function Ask({
   example?: string;
   /** A change was made. */
   onDone?: () => void;
-  onEdit: (prefill: Prefill) => void;
+  onEdit?: (prefill: Prefill) => void;
   words?: Words;
   making?: boolean;
   waiting?: string[];
@@ -252,7 +253,13 @@ function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; wor
       return {
         at: t.at,
         request: t.request,
-        reply: t.isUndo ? `Undid: ${what}` : t.undone ? `${what} (undone)` : `Done: ${what}`,
+        reply: t.isUndo
+          ? what.startsWith("Undid: ")
+            ? what
+            : `Undid: ${what}`
+          : t.undone
+            ? `${what} (undone)`
+            : `Done: ${what}`,
       };
     }),
     ...said,
