@@ -463,9 +463,9 @@ export function dataModule(
   // A model the API offers is listed a page at a time, counted and sliced in the query.
   // Finding, counting and adding up: for a model the API offers, and for every model when the
   // app has "Ask" (docs/design/assistant.md §6), which reads what its person may read.
-  const paged =
-    (hasKeys(ir, auth) && apiOffers(auth, ir).models.includes(model.name)) ||
-    Boolean(auth.assistant);
+  const isPaged = (m: ModelIR) =>
+    (hasKeys(ir, auth) && apiOffers(auth, ir).models.includes(m.name)) || Boolean(auth.assistant);
+  const paged = isPaged(model);
   // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
   // to its owner and to roles that read every record, never to a visitor or another member.
   const ownedAuto = signedIn && !model.ownedBy;
@@ -496,14 +496,13 @@ export function dataModule(
     if (f.type.kind === "relation") {
       const target = f.type.model;
       const table = target === USER_MODEL ? "schema.user" : tableRef(modelNamed(ir, target));
-      // By its record's title when that is a stored field of it (a user's name).
-      const title = relatedTitle(ir, target);
-      const titled =
-        target === USER_MODEL ||
-        modelNamed(ir, target).fields.some((t) => t.name === title && !t.formula);
-      const titleKey =
-        target === USER_MODEL ? title : titled ? keyOf(modelNamed(ir, target), title) : "";
-      return `${f.name}: { kind: "reference", column: ${column}${titled ? `, title: { table: ${table}, column: ${table}.${titleKey} }` : ""} }`;
+      // A person by their name, which a signed-in viewer sees anyway; a record of another kind by
+      // its title only through that kind's named(), among the records the viewer may read.
+      const title =
+        target === USER_MODEL
+          ? `, title: { table: ${table}, column: ${table}.${relatedTitle(ir, target)} }`
+          : "";
+      return `${f.name}: { kind: "reference", column: ${column}${title} }`;
     }
     const name = f.type.kind === "scalar" ? f.type.name : "string";
     const kind =
@@ -526,12 +525,11 @@ export function dataModule(
       ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
   );
   // A reference given by its record's title, resolved among the records the viewer may read
-  // (where that model is offered too, so it has named()).
-  const offeredModels = apiOffers(auth, ir).models;
+  // (where that model is read a page at a time too, so it has named()).
   const namedRefs = (paged ? stored : []).flatMap((f) => {
     if (f.type.kind !== "relation" || f.type.model === USER_MODEL) return [];
     const target = modelNamed(ir, f.type.model);
-    if (!offeredModels.includes(target.name) || titleField(target) === "id") return [];
+    if (!isPaged(target) || titleField(target) === "id") return [];
     const data = target.name === model.name ? self : names(target, t).data;
     return [
       `${f.name}: { find: (text: string) => ${data}.named(viewer, text), titles: () => ${data}.titles(viewer) }`,

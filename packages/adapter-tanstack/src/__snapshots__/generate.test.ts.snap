@@ -4414,7 +4414,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   title: { kind: "text", column: schema.notes.title },
-  project: { kind: "reference", column: schema.notes.projectId, title: { table: schema.projects, column: schema.projects.name } },
+  project: { kind: "reference", column: schema.notes.projectId },
   body: { kind: "text", column: schema.notes.body },
 };
 
@@ -5590,7 +5590,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   title: { kind: "text", column: schema.tasks.title },
-  project: { kind: "reference", column: schema.tasks.projectId, title: { table: schema.projects, column: schema.projects.name } },
+  project: { kind: "reference", column: schema.tasks.projectId },
   status: { kind: "choice", column: schema.tasks.status, values: ["todo","doing","done"] },
   dueDate: { kind: "date", column: schema.tasks.dueDate },
   assignee: { kind: "reference", column: schema.tasks.assigneeId, title: { table: schema.user, column: schema.user.name } },
@@ -9225,7 +9225,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "4a6ac0ad generated",
+  "src/generated/note.server.ts": "4aeaf6b4 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
@@ -9233,7 +9233,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "c7dbd192 generated",
+  "src/generated/task.server.ts": "8dd940bd generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "cfa2ff5a generated",
@@ -9284,7 +9284,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -14730,8 +14730,8 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
-  classType: { kind: "reference", column: schema.sessions.classTypeId, title: { table: schema.classTypes, column: schema.classTypes.name } },
-  instructor: { kind: "reference", column: schema.sessions.instructorId, title: { table: schema.instructors, column: schema.instructors.name } },
+  classType: { kind: "reference", column: schema.sessions.classTypeId },
+  instructor: { kind: "reference", column: schema.sessions.instructorId },
   startsAt: { kind: "instant", column: schema.sessions.startsAt },
   capacity: { kind: "number", column: schema.sessions.capacity },
 };
@@ -15020,7 +15020,7 @@ export const sessionData = {
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       sessionData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.sessions.ownerId, viewer.id) : undefined, viewer?.id, {}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.sessions.ownerId, viewer.id) : undefined, viewer?.id, {classType: { find: (text: string) => classTypeData.named(viewer, text), titles: () => classTypeData.titles(viewer) }, instructor: { find: (text: string) => instructorData.named(viewer, text), titles: () => instructorData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map(() => sql\`false\`),
     );
@@ -19808,7 +19808,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "5912917b generated",
+  "src/generated/session.server.ts": "c0a6cc74 generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19868,7 +19868,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -22367,7 +22367,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   number: { kind: "text", column: schema.orders.number },
-  customer: { kind: "reference", column: schema.orders.customerId, title: { table: schema.customers, column: schema.customers.name } },
+  customer: { kind: "reference", column: schema.orders.customerId },
   status: { kind: "choice", column: schema.orders.status, values: ["draft","placed","shipped","canceled"] },
   total: { kind: "money", column: schema.orders.total },
   shippingMethod: { kind: "choice", column: schema.orders.shippingMethod, values: ["standard","express"] },
@@ -22672,7 +22672,7 @@ export const orderData = {
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       orderData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.orders.ownerId, viewer.id) : undefined, viewer?.id, {}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.orders.ownerId, viewer.id) : undefined, viewer?.id, {customer: { find: (text: string) => customerData.named(viewer, text), titles: () => customerData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.orders.number], word)),
     );
@@ -25566,7 +25566,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "1bcfeff5 generated",
+  "src/generated/order.server.ts": "6e444399 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -25617,7 +25617,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -29027,7 +29027,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   number: { kind: "text", column: schema.invoices.number },
-  client: { kind: "reference", column: schema.invoices.clientId, title: { table: schema.clients, column: schema.clients.name } },
+  client: { kind: "reference", column: schema.invoices.clientId },
   issuedOn: { kind: "date", column: schema.invoices.issuedOn },
   dueOn: { kind: "date", column: schema.invoices.dueOn },
   status: { kind: "choice", column: schema.invoices.status, values: ["draft","sent","paid","overdue"] },
@@ -29347,7 +29347,7 @@ export const invoiceData = {
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       invoiceData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.invoices.ownerId, viewer.id) : undefined, viewer?.id, {}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.invoices.ownerId, viewer.id) : undefined, viewer?.id, {client: { find: (text: string) => clientData.named(viewer, text), titles: () => clientData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.invoices.number], word)),
     );
@@ -29741,7 +29741,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
-  invoice: { kind: "reference", column: schema.invoiceLines.invoiceId, title: { table: schema.invoices, column: schema.invoices.number } },
+  invoice: { kind: "reference", column: schema.invoiceLines.invoiceId },
   description: { kind: "text", column: schema.invoiceLines.description },
   quantity: { kind: "number", column: schema.invoiceLines.quantity },
   unitPrice: { kind: "money", column: schema.invoiceLines.unitPrice },
@@ -30036,7 +30036,7 @@ export const invoiceLineData = {
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       invoiceLineData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.invoiceLines.ownerId, viewer.id) : undefined, viewer?.id, {}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.invoiceLines.ownerId, viewer.id) : undefined, viewer?.id, {invoice: { find: (text: string) => invoiceData.named(viewer, text), titles: () => invoiceData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.invoiceLines.description], word)),
     );
@@ -32548,11 +32548,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "b87d2496 generated",
+  "src/generated/invoice-line.server.ts": "e0ebed11 generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "532e00b1 generated",
+  "src/generated/invoice.server.ts": "4ceff5d4 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -32611,7 +32611,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -43723,7 +43723,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -46795,7 +46795,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -50827,7 +50827,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 const FILTERABLE: Record<string, Filterable> = {
   title: { kind: "text", column: schema.incidents.title },
   status: { kind: "choice", column: schema.incidents.status, values: ["investigating","identified","monitoring","resolved"] },
-  component: { kind: "reference", column: schema.incidents.componentId, title: { table: schema.components, column: schema.components.name } },
+  component: { kind: "reference", column: schema.incidents.componentId },
   detectedAt: { kind: "instant", column: schema.incidents.detectedAt },
   resolvedAt: { kind: "instant", column: schema.incidents.resolvedAt },
   summary: { kind: "text", column: schema.incidents.summary },
@@ -51454,7 +51454,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
-  incident: { kind: "reference", column: schema.incidentUpdates.incidentId, title: { table: schema.incidents, column: schema.incidents.title } },
+  incident: { kind: "reference", column: schema.incidentUpdates.incidentId },
   at: { kind: "instant", column: schema.incidentUpdates.at },
   status: { kind: "choice", column: schema.incidentUpdates.status, values: ["investigating","identified","monitoring","resolved"] },
   message: { kind: "text", column: schema.incidentUpdates.message },
@@ -52184,7 +52184,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   title: { kind: "text", column: schema.maintenances.title },
-  component: { kind: "reference", column: schema.maintenances.componentId, title: { table: schema.components, column: schema.components.name } },
+  component: { kind: "reference", column: schema.maintenances.componentId },
   startsAt: { kind: "instant", column: schema.maintenances.startsAt },
   endsAt: { kind: "instant", column: schema.maintenances.endsAt },
   description: { kind: "text", column: schema.maintenances.description },
@@ -57219,15 +57219,15 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "4ffe24fe generated",
+  "src/generated/incident-update.server.ts": "ce6f6cde generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "f682f0fd generated",
+  "src/generated/incident.server.ts": "f9ea3dde generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "a3ed90d7 generated",
+  "src/generated/maintenance.server.ts": "ec5e0b2e generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -57286,7 +57286,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
@@ -59791,7 +59791,7 @@ const FILTERABLE: Record<string, Filterable> = {
   sender: { kind: "choice", column: schema.messages.sender, values: ["agent","customer"] },
   agent: { kind: "reference", column: schema.messages.agentId, title: { table: schema.user, column: schema.user.name } },
   fromEmail: { kind: "text", column: schema.messages.fromEmail },
-  supportCase: { kind: "reference", column: schema.messages.supportCaseId, title: { table: schema.supportCases, column: schema.supportCases.subject } },
+  supportCase: { kind: "reference", column: schema.messages.supportCaseId },
 };
 
 /** What the records can be sorted by. */
@@ -60076,7 +60076,7 @@ export const messageData = {
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       messageData.readable(viewer),
-      whereOf(FILTERABLE, where, viewer ? eq(schema.messages.ownerId, viewer.id) : undefined, viewer?.id, {}),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.messages.ownerId, viewer.id) : undefined, viewer?.id, {supportCase: { find: (text: string) => supportCaseData.named(viewer, text), titles: () => supportCaseData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map((word) => contains([schema.messages.content, schema.messages.fromEmail], word)),
     );
@@ -63474,7 +63474,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "b2fa9fa9 generated",
+  "src/generated/message.server.ts": "1f7ca367 generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
@@ -63535,7 +63535,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
-  "src/kit/where.ts": "0c8a1ed7 kit",
+  "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
