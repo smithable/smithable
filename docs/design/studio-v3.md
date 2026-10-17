@@ -86,8 +86,7 @@ The beta terms' line on diagnostics is B's to check against the first level (clo
 
 ## 10. Open with Johan
 
-- The round lists No code as "Behavior, Look and Content" and the phone's default as "Behavior + Look + Who can": this note keeps all four (Behavior, Look, Who can, Content). Say if Who can should fold into Behavior after all.
-- Content as a sub view is new here (the texts and pictures of the content file, Languages under it); the round only says Languages goes under Content.
+- Content as a sub view of No code: yes (Johan, 2026-10-17: "Content as a subview of no-code is probably the best. Coders can go there for looks and content changes."). Who can stays a sub view of its own beside Behavior, Look and Content; the round named it in the phone's default.
 - The first level of §6 (a failure record without content, always, hosted) needs the terms' line checked.
 
 ## 11. Gaps, as asked
