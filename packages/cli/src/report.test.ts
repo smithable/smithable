@@ -159,3 +159,22 @@ test("hosted, a failure's record goes without content: name, class, message, sta
   });
   expect(got[0]?.body).not.toContain("secret-package");
 });
+
+test("addresses are left out of every file, the error, the log and the arguments", () => {
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Shop }\noutgoing:\n  notify: { mail: ops@acme.example }\n",
+  );
+  recordFailure(
+    dir,
+    "setText",
+    { path: ["a"], text: "Write to help@acme.example" },
+    "Mail to ceo@acme.example failed.\n",
+  );
+  const report = buildReport(dir, ["sent to boss@acme.example"]);
+  expect(report?.files["smithable.yml"]).toContain("mail: (an email address)");
+  expect(report?.error).toBe("Mail to (an email address) failed.");
+  expect(report?.log).toEqual(["sent to (an email address)"]);
+  expect(report?.args.text).toBe("Write to (an email address)");
+  expect(JSON.stringify(report)).not.toMatch(/acme\.example/);
+});

@@ -84,6 +84,8 @@ const applied = (files: ProjectFiles, op: string, args: Record<string, string>) 
 };
 
 test("every model of every example renames and back, every file valid in between and identical after", () => {
+  // Thirty seconds: every example, every model, two renames each; under a gate's load the five-second
+  // default timed out twice on 2026-10-17 with the test itself fine.
   for (const { name, files } of examples) {
     const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
     if (!ir) throw new Error(`${name}: the example does not validate`);
@@ -95,7 +97,7 @@ test("every model of every example renames and back, every file valid in between
       expect(back, `${name}: ${model.name} round trip`).toEqual(files);
     }
   }
-});
+}, 30_000);
 
 test("every page of every example renames and back, every file valid in between and identical after", () => {
   for (const { name, files } of examples) {
@@ -109,7 +111,7 @@ test("every page of every example renames and back, every file valid in between 
       expect(back, `${name}: ${page.id} round trip`).toEqual(files);
     }
   }
-});
+}, 30_000);
 
 test("a renamed model is followed into relations, pages, grants, texts and tones; the effect names it", () => {
   const crm = examples.find((e) => e.name === "crm");

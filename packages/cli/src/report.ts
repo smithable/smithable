@@ -115,12 +115,19 @@ export async function sendFailure(failure: Failure): Promise<boolean> {
   }
 }
 
-/** Arguments as a report shows them: a whole file's text is only its size. */
+/** People's addresses are theirs, not the app's: left out of everything a report carries. */
+const EMAIL = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g;
+const redact = (text: string) => text.replace(EMAIL, "(an email address)");
+
+/** Arguments as a report shows them: a whole file's text is only its size, addresses left out. */
 function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(args).map(([key, value]) =>
-      typeof value === "string" && value.length > 2000
-        ? [key, `(${value.split("\n").length} lines left out)`]
+      typeof value === "string"
+        ? [
+            key,
+            value.length > 2000 ? `(${value.split("\n").length} lines left out)` : redact(value),
+          ]
         : [key, value],
     ),
   );
@@ -138,18 +145,17 @@ export function buildReport(dir: string, log: string[] = []): Report | undefined
   if (existsSync(themes))
     for (const name of readdirSync(themes).filter((f) => f.endsWith(".yml")))
       files[`themes/${name}`] = readFileSync(join(themes, name), "utf8");
-  // The admins' addresses are people's, not the app's: left out.
-  if (files["smithable.auth.yml"])
-    files["smithable.auth.yml"] = files["smithable.auth.yml"].replace(
-      /[\w.+-]+@[\w-]+(\.[\w-]+)+/g,
-      "(an email address)",
-    );
+  // Addresses are people's, not the app's: left out of every file (the admins' in the auth
+  // file, a sender's in the spec or the texts), the error, the log and the arguments.
+  for (const name of Object.keys(files)) files[name] = redact(files[name] as string);
   return {
     smithable: VERSION,
     node: process.version,
     platform: process.platform,
     ...failure,
-    log: log.slice(-50),
+    args: redactArgs(failure.args),
+    error: redact(failure.error),
+    log: log.slice(-50).map(redact),
     files,
   };
 }
