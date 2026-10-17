@@ -2,7 +2,7 @@
 // chooses a layout, small rectangles without names; which window goes in which slot is a
 // setting. Kept per device. The windows are drawn in one grid in a fixed order and only placed
 // by it, so moving one never makes another again (the preview's frame keeps its page).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, cx, Select } from "./ui";
 
 export type WindowId = "nocode" | "code" | "preview" | "smith" | "changes";
@@ -203,14 +203,19 @@ function WindowSettings({
   onClose: () => void;
 }) {
   const options = Object.entries(WINDOW_NAMES) as [SlotContent, string][];
+  // The browser's own modal dialog: Escape closes it and the focus stays inside.
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialog}
       aria-label="Which window goes where"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-24"
+      onClose={onClose}
+      className="m-auto mt-24 w-[min(24rem,92vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/30"
     >
-      <div className="w-full max-w-sm space-y-3 rounded-lg border border-line bg-panel p-4 shadow-lg">
+      <div className="space-y-3 p-4">
         <h2 className="text-sm font-semibold">Which window goes where</h2>
         <p className="text-xs text-muted">
           The bar at the top chooses how many windows are shown; here, which window is in each
@@ -235,6 +240,6 @@ function WindowSettings({
           <Button onClick={onClose}>Done</Button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

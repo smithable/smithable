@@ -147,17 +147,22 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   // A hosted workspace that is waking answers 503 with x-smithable-workspace (the service, B 58):
   // the same request again after retry-after, with the bar at the top, never a reload; ten
   // minutes at most.
-  let response = await send();
-  for (let tries = 0; response.status === 503 && tries < 300; tries++) {
-    const state = response.headers.get("x-smithable-workspace");
-    if (state !== "starting" && state !== "busy") break;
-    const answer = (await response.json().catch(() => ({}))) as { preparing?: boolean };
-    waking.set(state === "busy" ? "busy" : answer.preparing ? "preparing" : "starting");
-    const after = Number(response.headers.get("retry-after")) || 2;
-    await new Promise((r) => setTimeout(r, after * 1000));
+  let response: Response;
+  try {
     response = await send();
+    for (let tries = 0; response.status === 503 && tries < 300; tries++) {
+      const state = response.headers.get("x-smithable-workspace");
+      if (state !== "starting" && state !== "busy") break;
+      const answer = (await response.json().catch(() => ({}))) as { preparing?: boolean };
+      waking.set(state === "busy" ? "busy" : answer.preparing ? "preparing" : "starting");
+      const after = Number(response.headers.get("retry-after")) || 2;
+      await new Promise((r) => setTimeout(r, after * 1000));
+      response = await send();
+    }
+  } finally {
+    // A send that failed outright ends the wait too: the bar never stays.
+    waking.set(undefined);
   }
-  waking.set(undefined);
   const text = await response.text();
   let parsed: unknown;
   try {

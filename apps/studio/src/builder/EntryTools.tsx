@@ -35,15 +35,16 @@ export function ImportRecords({ model, run }: { model: string; run: Run }) {
           aria-label="CSV file"
           className="block text-sm"
           onChange={async (e) => {
-            const file = e.target.files?.[0];
+            const input = e.currentTarget;
+            const file = input.files?.[0];
             if (!file) return;
             const csv = await file.text();
+            // Read: the same file can be picked again (after fixing it).
+            input.value = "";
             setText(csv);
-            const result = await api.operation("importRecords", {
-              model,
-              text: csv,
-              dryRun: true,
-            });
+            const result = await api
+              .operation("importRecords", { model, text: csv, dryRun: true })
+              .catch((error: Error) => ({ ok: false, output: error.message }));
             setPreview({ ok: result.ok, output: result.output.trim() });
           }}
         />
