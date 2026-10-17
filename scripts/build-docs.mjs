@@ -309,7 +309,9 @@ nav.toc a:hover{color:var(--accent)}
 main{min-width:0;max-width:48rem}
 h1{font-size:2rem;line-height:1.2;margin-top:0}
 h2{margin-top:2.5rem;padding-top:.5rem;border-top:1px solid var(--line)}
-code{background:var(--code);padding:.1em .3em;border-radius:4px;font-size:.9em;overflow-wrap:anywhere}
+code{background:var(--code);padding:.1em .3em;border-radius:4px;font-size:.9em;white-space:nowrap}
+code.words{white-space:normal}code.words>span{white-space:nowrap}
+code .long{display:inline-block;max-width:calc(100% - 1em);white-space:normal}
 pre{background:var(--code);padding:1rem;border-radius:6px;overflow-x:auto;line-height:1.45}
 pre code{background:none;padding:0}
 table{border-collapse:collapse;display:block;overflow-x:auto;margin:1rem 0}
@@ -430,6 +432,19 @@ for (const page of PAGES) {
           copyFileSync(file, to);
         }
         return `<img src="${esc(href)}" alt="${esc(text)}" loading="lazy">`;
+      },
+      // Code never breaks inside a key, a flag or a path (Johan, 2026-10-17); a command or a
+      // phrase in code may break only between its words. A word longer than a whole line (a long
+      // path, address or key on a phone) breaks after a "/" or a ".", and nowhere else.
+      codespan({ text }) {
+        const word = (w) =>
+          w.length > 30
+            ? `<span class="long">${esc(w).replace(/([/.])(?=.)/g, "$1<wbr>")}</span>`
+            : esc(w);
+        const words = text.split(/\s+/).filter(Boolean);
+        return words.length > 1
+          ? `<code class="words">${words.map((w) => `<span>${word(w)}</span>`).join(" ")}</code>`
+          : `<code>${word(text)}</code>`;
       },
       link({ href, title, tokens }) {
         return `<a href="${esc(target(page, href))}"${title ? ` title="${esc(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;
