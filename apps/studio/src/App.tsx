@@ -349,10 +349,11 @@ export function App() {
     setMessage(undefined);
     let said = "";
     let ok = true;
-    for (const id of ids) {
+    for (const [at, id] of ids.entries()) {
       const entry = project?.trace.find((t) => t.id === id);
+      // The confirmation is for the change that asked (the first left), not the ones after it.
       const result = await api
-        .undoChange(id, confirm === true)
+        .undoChange(id, confirm === true && at === 0)
         .catch((e: Error) => ({ ok: false, output: e.message, needsConfirm: false }));
       if (result.needsConfirm) {
         setPending({
@@ -367,6 +368,7 @@ export function App() {
       if (!result.ok) {
         said = plainRefusal(result.output);
         ok = false;
+        setPending(undefined);
         break;
       }
       // In the Changes window's words: the operation's where it has them, else its own.
@@ -612,6 +614,7 @@ export function App() {
             <>
               <Button
                 variant="danger"
+                disabled={busy}
                 onClick={() =>
                   pending.undo
                     ? undoChanges(pending.undo, true)
