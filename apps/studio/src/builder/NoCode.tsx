@@ -8,6 +8,7 @@ import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
+import { swipe } from "../windows";
 import type { Run } from "./ChangeForms";
 import { ImportRecords, OwnCode } from "./EntryTools";
 import { Languages } from "./Languages";
@@ -211,16 +212,28 @@ export function NoCode({
     <Panel
       className="h-full"
       title={
-        <Tabs
-          tabs={[
-            ["behavior", "Behavior", "behavior"],
-            ["look", "Look", "look"],
-            ["who", "Who can"],
-            ["content", "Content"],
-          ]}
-          value={sub}
-          onChange={setSub}
-        />
+        // A swipe across the tabs goes to the next sub view (a phone, studio-v3.md §8).
+        <div
+          {...swipe(
+            () => setSub(SUB_VIEWS[(SUB_VIEWS.indexOf(sub) + 1) % SUB_VIEWS.length] ?? "behavior"),
+            () =>
+              setSub(
+                SUB_VIEWS[(SUB_VIEWS.indexOf(sub) + SUB_VIEWS.length - 1) % SUB_VIEWS.length] ??
+                  "behavior",
+              ),
+          )}
+        >
+          <Tabs
+            tabs={[
+              ["behavior", "Behavior", "behavior"],
+              ["look", "Look", "look"],
+              ["who", "Who can"],
+              ["content", "Content"],
+            ]}
+            value={sub}
+            onChange={setSub}
+          />
+        </div>
       }
     >
       {sub === "behavior" ? (

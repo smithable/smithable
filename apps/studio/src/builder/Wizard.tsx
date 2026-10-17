@@ -94,8 +94,8 @@ export function Wizard({
     setBusy(true);
     setRefused(undefined);
     const edited = JSON.stringify(operations) !== JSON.stringify(proposal.operations);
-    // As proposed, one change; edited, each operation as the form has it (the refusal of one
-    // is said in the notice at the top).
+    // As proposed, or as edited in the form, one change (a refusal of the edited one is said in
+    // the notice at the top).
     let ok = true;
     if (!edited) {
       const result = await api
@@ -103,7 +103,10 @@ export function Wizard({
         .catch((e: Error) => ({ ok: false, output: e.message }));
       ok = result.ok;
       if (!ok) setRefused(plainRefusal(result.output));
-    } else for (const o of operations) if (ok) ok = await run(o.op, o.args);
+    }
+    // Edited, still one change: the operations as the form has them, in one batch (#703).
+    else
+      ok = await run("batch", { operations: operations.map((o) => ({ op: o.op, args: o.args })) });
     setBusy(false);
     if (ok) onClose();
   };

@@ -989,6 +989,13 @@ try {
       );
       if (await page.getByRole("tab", { name: "Behavior" }).count())
         throw new Error("No code shows beside the preview");
+      // Code is offered on a phone once its settings say so.
+      if (await page.getByRole("radio", { name: "Code", exact: true }).count())
+        throw new Error("Code is offered on a phone by default");
+      await page.getByRole("button", { name: "Phone settings" }).click();
+      const settings = page.getByRole("dialog", { name: "Phone settings" });
+      await settings.getByLabel("Show Code among the windows").check();
+      await settings.getByRole("button", { name: "Done" }).click();
       await pick("Code");
       await page.waitForFunction(
         () => {
@@ -1000,6 +1007,10 @@ try {
       );
       await pick("Smith");
       await page.getByLabel("Describe a change").waitFor();
+      // Changes is under Smith on a phone: its tab beside his.
+      await page.getByRole("tab", { name: "Changes", exact: true }).click();
+      await page.getByRole("list", { name: "Change trace" }).waitFor();
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
       await pick("No code");
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
       await page.setViewportSize({ width: 1920, height: 1000 });
