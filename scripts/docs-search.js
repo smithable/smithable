@@ -1,7 +1,8 @@
 // docs.smithable.ai's search box (scripts/build-docs.mjs serves it as /search.js). The box is
 // hidden without script; on first use it loads search.json and lists the parts whose heading and
 // words hold every word typed, those with the words in the heading first. Arrows choose, Enter
-// opens, Escape clears, "/" anywhere goes to the box.
+// opens, Escape clears, "/" anywhere goes to the box. For a screen reader the box is a combobox
+// and the results its listbox.
 (() => {
   const form = document.querySelector("form.search");
   const input = form.querySelector("input");
@@ -9,22 +10,38 @@
   let index;
   let chosen = 0;
   form.hidden = false;
+  list.id = "search-results";
+  list.setAttribute("role", "listbox");
+  list.setAttribute("aria-label", "Search results");
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-controls", list.id);
+  input.setAttribute("aria-expanded", "false");
 
   const words = (q) => q.toLowerCase().split(/\s+/).filter(Boolean);
-  /** Appends `text` to `el` with each of `ws` marked. */
+  /** Appends `text` to `el` with each of `ws` marked, the longest first where they overlap. */
   const mark = (el, text, ws) => {
-    const re = new RegExp(
-      `(${ws.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
-      "gi",
-    );
-    text.split(re).forEach((s, i) => {
+    const alternatives = [...ws]
+      .sort((a, b) => b.length - a.length)
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    text.split(new RegExp(`(${alternatives.join("|")})`, "gi")).forEach((s, i) => {
       el.append(i % 2 ? Object.assign(document.createElement("mark"), { textContent: s }) : s);
     });
+  };
+  const select = (links) => {
+    links.forEach((a, j) => {
+      a.setAttribute("aria-selected", String(j === chosen));
+    });
+    if (links.length) input.setAttribute("aria-activedescendant", links[chosen].id);
+    else input.removeAttribute("aria-activedescendant");
   };
 
   const show = () => {
     const ws = words(input.value);
     list.replaceChildren();
+    chosen = 0;
+    input.setAttribute("aria-expanded", "false");
+    select([]);
     if (!ws.length || !index?.parts) return;
     const hits = [];
     for (const [p, h, id, t] of index.parts) {
@@ -40,7 +57,7 @@
       });
     }
     hits.sort((a, b) => b.score - a.score);
-    chosen = 0;
+    input.setAttribute("aria-expanded", "true");
     if (!hits.length) {
       list.append(
         Object.assign(document.createElement("li"), {
@@ -54,13 +71,18 @@
       const [url, page] = index.pages[hit.p];
       const a = Object.assign(document.createElement("a"), {
         href: `/${url}${hit.id ? `#${hit.id}` : ""}`,
+        id: `search-hit-${i}`,
       });
+      a.setAttribute("role", "option");
       const title = document.createElement("b");
       mark(title, page === hit.h ? page : `${page} › ${hit.h}`, ws);
-      // The line around the first word found in the part's text.
+      // The line around the first word found in the part's text, starting at a word when one
+      // starts shortly before the match.
       const lower = hit.t.toLowerCase();
-      const at = Math.max(0, lower.indexOf(ws.find((w) => lower.includes(w)) ?? "") - 40);
-      const from = at && hit.t.indexOf(" ", at) + 1;
+      const found = lower.indexOf(ws.find((w) => lower.includes(w)) ?? "");
+      const at = Math.max(0, found - 40);
+      const space = hit.t.indexOf(" ", at);
+      const from = at && space >= 0 && space < found ? space + 1 : at;
       const line = document.createElement("span");
       mark(
         line,
@@ -68,29 +90,33 @@
         ws,
       );
       a.append(title, line);
-      a.setAttribute("aria-selected", String(i === chosen));
       const li = document.createElement("li");
+      li.setAttribute("role", "presentation");
       li.append(a);
       list.append(li);
     }
+    select(list.querySelectorAll("a"));
   };
 
   const choose = (i) => {
     const links = list.querySelectorAll("a");
     if (!links.length) return;
     chosen = (i + links.length) % links.length;
-    links.forEach((a, j) => {
-      a.setAttribute("aria-selected", String(j === chosen));
-    });
+    select(links);
     links[chosen].scrollIntoView({ block: "nearest" });
   };
 
   input.addEventListener("focus", () => {
+    if (index?.parts) return show();
+    // A failed load leaves the index unset, so the next focus tries again.
     index ??= fetch("/search.json")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`search.json: ${r.status}`))))
       .then((data) => {
         index = data;
         show();
+      })
+      .catch(() => {
+        index = undefined;
       });
   });
   input.addEventListener("input", show);
@@ -111,12 +137,24 @@
     if (a) location.href = a.href;
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? "")) {
+    const active = document.activeElement;
+    if (
+      e.key === "/" &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      !active?.isContentEditable &&
+      !/^(INPUT|TEXTAREA|SELECT)$/.test(active?.tagName ?? "")
+    ) {
       e.preventDefault();
       input.focus();
     }
   });
   document.addEventListener("click", (e) => {
-    if (!form.contains(e.target)) list.replaceChildren();
+    if (!form.contains(e.target)) {
+      list.replaceChildren();
+      input.setAttribute("aria-expanded", "false");
+      select([]);
+    }
   });
 })();
