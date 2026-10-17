@@ -17,6 +17,7 @@ go-ahead for the keys.
 - **A signed-in person** chooses a language once (the switch, or the language of the page they
   signed in from) and keeps it: every page, every dialog, the mails the app sends them. The
   address does not change for them: `/requests` is `/requests`, in their language.
+- **English is not special** (Johan, 2026-10-17: the main language need not be English; then English is the optional one, on `/en`). The app's language is whatever `language:` says, with no prefix; every other listed language, English included, has its prefix and its file. Checked 2026-10-17: `setLanguage sv` then `addLanguage en` on the CRM gives `smithable.content.en.yml` and the English pages under `/en/` where the app has public pages. Only the kit's words limit the choice (English and Swedish today, `words/<language>.ts`); the two checks that look at English in core and the draft are rules about English itself (the plural rule, the untranslated fallback), not a default.
 - **The maker** writes the app's texts once, in the app's language, as today, then adds a
   language: `smithable op addLanguage sv` makes `smithable.content.sv.yml` with every text a person
   reads, to be filled in: the content file's own texts (page titles, landing sections, the
@@ -34,7 +35,7 @@ go-ahead for the keys.
 ```yaml
 # smithable.content.yml
 smithableContent: 0.1
-language: en                 # the app's language, as today
+language: en                 # the app's language, as today; any language the kit has words in (sv too)
 languages: [sv, fi]          # NEW: the other languages it is offered in, each with its own file
 pages:
   home:
