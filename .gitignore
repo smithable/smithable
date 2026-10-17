@@ -19,3 +19,5 @@ packages/*/LICENSE
 packages/*/NOTICE
 packages/cli/studio/
 packages/cli/theme-lab/
+# TanStack Router's own scratch files, made beside whatever it is run in.
+.tanstack/
