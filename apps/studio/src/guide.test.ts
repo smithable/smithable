@@ -17,23 +17,17 @@ const found = new Set(
 );
 
 test("every stop of the guides has its place in Studio, and every place has a stop", () => {
-  const stops = [...TOURS.builder, ...TOURS.studio].map((s) => s.anchor);
+  const stops = [...TOURS.nocode, ...TOURS.code].map((s) => s.anchor);
   expect(stops.filter((a) => !found.has(a))).toEqual([]);
   expect([...found].filter((a) => !stops.includes(a))).toEqual([]);
-  expect(TOURS.builder.map((s) => s.anchor)).toEqual([
-    "mode",
+  expect(TOURS.nocode.map((s) => s.anchor)).toEqual([
+    "layout",
     "preview",
-    "summary",
-    "details",
+    "behavior",
     "change",
+    "changes",
     "look",
     "publish",
   ]);
-  expect(TOURS.studio.map((s) => s.anchor)).toEqual([
-    "files",
-    "problems",
-    "concepts",
-    "operation",
-    "changes",
-  ]);
+  expect(TOURS.code.map((s) => s.anchor)).toEqual(["files", "problems"]);
 });

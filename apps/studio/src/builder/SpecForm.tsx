@@ -98,7 +98,35 @@ const choicesOf = (files: Project["files"], file: EditableFile) => {
   return (path: Path) => choicesFor(file, path, spec);
 };
 
-export function SpecForm({ files, run, ir }: { files: Project["files"]; run: Run; ir?: SpecIR }) {
+/** What an entry can do beyond its settings (EntryTools.tsx), by its path; nothing for most. */
+const Tools = createContext<(path: Path) => React.ReactNode>(() => undefined);
+
+/** The part asked to be shown (a kind of record, a field picked in the preview): open down to it. */
+const Opened = createContext<Path | undefined>(undefined);
+const leadsTo = (path: Path, target: Path | undefined) =>
+  target !== undefined && path.length <= target.length && path.every((p, i) => p === target[i]);
+
+/**
+ * The spec's files as a form from their schemas. `parts` are the files shown: Behavior shows
+ * the spec, Content the content file (docs/design/studio-v3.md §1, §5); `open` opens the form
+ * down to one part.
+ */
+export function SpecForm({
+  files,
+  run,
+  ir,
+  parts = ["spec"],
+  open,
+  tools,
+}: {
+  files: Project["files"];
+  run: Run;
+  ir?: SpecIR;
+  parts?: Exclude<keyof Project["files"], "translations">[];
+  open?: Path;
+  /** What an entry can do beyond its settings (an import, a page's own code). */
+  tools?: (path: Path) => React.ReactNode;
+}) {
   const schemas = useMemo(
     () =>
       ({ "smithable.yml": buildJsonSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
@@ -106,13 +134,10 @@ export function SpecForm({ files, run, ir }: { files: Project["files"]; run: Run
   );
   return (
     <div className="space-y-6 p-4 text-sm">
-      <p className="rounded-md border border-dashed border-line p-2 text-xs text-quiet">
-        Experimental: everything the spec can say, as a form. A change is checked like any other and
-        Undo takes it back.
-      </p>
       {FILES.map(([key, file, title]) => {
         const schema = schemas[file];
-        if (!schema || (key !== "spec" && files[key] === undefined)) return null;
+        if (!schema || !parts.includes(key) || (key !== "spec" && files[key] === undefined))
+          return null;
         const write = (path: Path, value: unknown) => writeKey(run, file, path, value);
         return (
           <section key={file} aria-label={title}>
@@ -123,7 +148,11 @@ export function SpecForm({ files, run, ir }: { files: Project["files"]; run: Run
               <Choices.Provider value={choicesOf(files, file)}>
                 <Renamer.Provider value={renamerOf(run, file)}>
                   <Shape.Provider value={shapeOf(run, file, ir)}>
-                    <Value schema={schema} value={read(files[key])} path={[]} />
+                    <Opened.Provider value={open}>
+                      <Tools.Provider value={tools ?? (() => undefined)}>
+                        <Value schema={schema} value={read(files[key])} path={[]} />
+                      </Tools.Provider>
+                    </Opened.Provider>
                   </Shape.Provider>
                 </Renamer.Provider>
               </Choices.Provider>
@@ -142,6 +171,8 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const write = useContext(Writer);
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
+  const opened = useContext(Opened);
+  const tools = useContext(Tools);
   const shaped = useContext(Shape)(path);
   if (shaped && (typeof value === "string" || value === undefined)) return shaped;
   const control = controlOf(schema);
@@ -205,6 +236,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
         <TextBox
           label={label}
           value={value}
+          placeholder={Array.isArray(schema.examples) ? String(schema.examples[0]) : undefined}
           numeric={control.kind === "number"}
           onCommit={(next) => write(path, next)}
         />
@@ -242,15 +274,33 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
       return (
         <div className="space-y-1">
           {entries.map(([name, v]) => (
-            <details key={name} className="rounded-md border border-line" open={path.length === 0}>
+            <details
+              key={name}
+              data-path={JSON.stringify([...path, name])}
+              className="rounded-md border border-line"
+              open={leadsTo([...path, name], opened) || undefined}
+            >
               <summary className="cursor-pointer px-2 py-1 font-medium">{name}</summary>
               <div className="space-y-2 border-t border-line p-2">
-                {renamer([...path, name]) && (
-                  <Rename
-                    name={name}
-                    onRename={renamer([...path, name]) as (to: string) => Promise<boolean>}
-                  />
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {renamer([...path, name]) && (
+                    <Rename
+                      name={name}
+                      onRename={renamer([...path, name]) as (to: string) => Promise<boolean>}
+                    />
+                  )}
+                  {/* Taken away through its own operation where it has one; a loss of data
+                      asks first, as every change does. */}
+                  {tools([...path, name])}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${name}`}
+                    className="ml-auto h-6 rounded-md border border-line px-2 text-xs text-muted hover:text-red-700"
+                    onClick={() => void write([...path, name], undefined)}
+                  >
+                    Remove
+                  </button>
+                </div>
                 <Value schema={control.entry} value={v} path={[...path, name]} />
               </div>
             </details>
@@ -261,8 +311,10 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
     }
     case "group": {
       const own = (value ?? {}) as Record<string, unknown>;
-      const set = control.keys.filter(([key]) => own[key] !== undefined);
-      const unset = control.keys.filter(([key]) => own[key] === undefined);
+      // A key the schema hides (the spec format version) is not shown.
+      const shown = control.keys.filter(([, s]) => s["x-hidden"] !== true);
+      const set = shown.filter(([key]) => own[key] !== undefined);
+      const unset = shown.filter(([key]) => own[key] === undefined);
       // A group of kinds (a page) names the kind it is: chosen when it was added, then fixed.
       const kind = control.kinds?.find((k) => own[k] !== undefined);
       return (
@@ -298,11 +350,14 @@ function TextBox({
   label,
   value,
   numeric,
+  placeholder,
   onCommit,
 }: {
   label: string;
   value: unknown;
   numeric: boolean;
+  /** An example from the schema, else "Not set". */
+  placeholder?: string;
   onCommit: (value: unknown) => Promise<boolean>;
 }) {
   const shown =
@@ -326,7 +381,7 @@ function TextBox({
       aria-label={label}
       className={box}
       value={text}
-      placeholder="Not set"
+      placeholder={placeholder ?? "Not set"}
       inputMode={numeric ? "numeric" : undefined}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
@@ -399,6 +454,7 @@ function Rename({ name, onRename }: { name: string; onRename: (to: string) => Pr
   const [to, setTo] = useState(name);
   return (
     <div className="flex items-center gap-1">
+      <span className="text-xs text-quiet">Its name in the files:</span>
       <input
         aria-label={`New name for ${name}`}
         className="h-6 w-40 rounded-md border border-line bg-panel px-1.5 text-xs"
@@ -454,13 +510,47 @@ function Key({
   path: Path;
 }) {
   const nested = ["group", "entries", "list"].includes(controlOf(schema)?.kind ?? "");
+  const opened = useContext(Opened);
+  // The areas of a file (the app, kinds of record, pages…) are closed at first, as their
+  // entries are.
+  if (nested && path.length === 1)
+    return (
+      <details
+        className="rounded-md border border-line"
+        data-key={name}
+        data-path={JSON.stringify(path)}
+        open={leadsTo(path, opened) || undefined}
+      >
+        <summary
+          className="cursor-pointer px-2 py-1 text-sm font-medium"
+          title={typeof schema.description === "string" ? schema.description : undefined}
+        >
+          {labelOf(name, schema)}
+        </summary>
+        <div className="border-t border-line p-2">
+          <Value schema={schema} value={value} path={path} />
+        </div>
+      </details>
+    );
   return (
     <div className={cx(nested && "rounded-md border border-line p-2")} data-key={name}>
+      {/* The label in words, the description as its tooltip, and where a text a model reads is
+          explained, the docs page (opens in a new tab). */}
       <p
         className="mb-1 text-xs font-medium"
-        title={`${name}: ${String(schema.description ?? "")}`}
+        title={typeof schema.description === "string" ? schema.description : undefined}
       >
         {labelOf(name, schema)}
+        {typeof schema["x-docs"] === "string" && (
+          <a
+            href={schema["x-docs"]}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-2 font-normal text-accent underline"
+          >
+            What this is for
+          </a>
+        )}
       </p>
       <Value schema={schema} value={value} path={path} />
     </div>

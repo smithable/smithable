@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { contentRange } from "./Studio";
+import { contentRange } from "./Code";
 
 const text = `pages:
   customers: { subtitle: Keep every relationship in view. }
