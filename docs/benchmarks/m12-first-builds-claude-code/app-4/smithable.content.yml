@@ -1,11 +1,24 @@
 smithableContent: 0.1
 pages:
+  loans:
+    subtitle: Keep track of the tools you have lent to neighbors.
   home:
     hero:
+      title: Borrow the tool, skip the store
+      subtitle: Find a drill, a ladder or a hedge trimmer from a neighbor nearby, and lend out the tools sitting in your shed.
+      button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
+    latest:
+      title: Available now
+  catalog:
+    title: Tools
+  myTools:
+    title: My tools
+  saved:
+    title: Saved tools
 logo:
   src: images/logo.webp
   alt: A toolbox

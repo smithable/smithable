@@ -1,11 +1,12 @@
 smithableUx: 0.1
+pages:
+  cases:
+    table:
+      columns: [subject, status, priority, assignee, customerEmail]
 tones:
-  Ticket.status:
+  SupportCase.status:
     open: warning
     closed: success
     reopened: danger
-  Ticket.priority:
-    high: warning
-    urgent: danger
 theme:
-  preset: modern
+  preset: corporate

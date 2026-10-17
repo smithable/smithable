@@ -1,34 +1,44 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: "Tickets for the IT team: their priorities and who handles them."
+  description: "Tickets for the IT team: their priorities, who handles them and the replies on each."
+  currency: EUR
   timezone: Europe/Stockholm
 models:
-  Ticket:
+  SupportCase:
     fields:
-      title: string!
-      description: text
+      subject: string!
+      customerEmail:
+        type: email!
+        locked: true
       status: open | inProgress | closed | reopened
-      priority: normal | low | high | urgent
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
       assignee:
         type: User
         required:
           status: [inProgress, closed]
+      body: text
       attachments: files
-      comments: Comment[]
-  Comment:
+      messages: Message[]
+  Message:
     fields:
       content: text!
-      author:
+      sender: agent | customer
+      agent:
         type: User
         by: app
         default: ME()
+      fromEmail: email
       attachments: files
-      ticket: Ticket!
+      supportCase: SupportCase!
 pages:
-  tickets:
-    crud: Ticket
-    search: [title]
+  cases:
+    crud: SupportCase
+    search: [subject, customerEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
     actions: [assignToMe, assignTo, startWork, close, reopen]
@@ -36,31 +46,31 @@ pages:
     users: manage
 actions:
   assignToMe:
-    on: Ticket
+    on: SupportCase
     set:
       assignee: ME()
     intent: "Take the ticket: you become its assignee."
   assignTo:
-    on: Ticket
+    on: SupportCase
     set:
       assignee:
     intent: Give the ticket to someone on the team.
   startWork:
-    on: Ticket
+    on: SupportCase
     when:
       status: [open, reopened]
     set:
       status: inProgress
     intent: Someone is working on the ticket now; it needs an assignee.
   close:
-    on: Ticket
+    on: SupportCase
     when:
       status: [open, inProgress, reopened]
     set:
       status: closed
-    intent: The problem is solved.
+    intent: The issue is solved.
   reopen:
-    on: Ticket
+    on: SupportCase
     when:
       status: closed
     set:

@@ -1,4 +1,22 @@
 smithableContent: 0.1
+models:
+  SupportCase:
+    label: Ticket
+    pluralLabel: Tickets
+    fields:
+      customerEmail:
+        label: Requester email
+      body:
+        label: Description
+  Message:
+    fields:
+      supportCase:
+        label: Ticket
+      sender:
+        values:
+          customer: Requester
+      fromEmail:
+        label: Requester email
 logo:
   src: images/logo.webp
   alt: A speech bubble

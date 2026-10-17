@@ -1,12 +1,12 @@
 smithableUx: 0.1
 pages:
-  catalog:
+  loans:
     table:
-      view: cards
-    icon: package
-  myTools:
-    icon: user
-  saved:
-    icon: star
+      columns: [tool, borrower, from, due, status]
+      sort: -from
+tones:
+  Loan.status:
+    out: warning
+    returned: success
 theme:
   preset: woodland

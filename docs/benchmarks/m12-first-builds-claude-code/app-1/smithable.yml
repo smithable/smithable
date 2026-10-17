@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Lotus Room Yoga
+  name: Lotus Flow Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
   currency: EUR
   timezone: Europe/Stockholm
@@ -39,8 +39,6 @@ pages:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, instructors]
-      footer:
       classes:
         records: ClassType
       teachers:
@@ -48,6 +46,7 @@ pages:
       faq:
       callToAction:
         button: schedule
+      footer:
   schedule:
     calendar: Session
   sessions:
