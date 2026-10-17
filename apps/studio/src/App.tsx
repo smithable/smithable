@@ -198,11 +198,16 @@ export function App() {
     const key = change && `${change.at}:${change.description}`;
     const fresh = key !== undefined && seen.current !== undefined && key !== seen.current;
     seen.current = key;
+    // An undo is reloaded as a change without an operation, unless it only changed words.
     if (
       !fresh ||
       !change ||
-      change.isUndo ||
-      touchesPage(change.operation, keptPage(), shownIR.current)
+      touchesPage(
+        change.isUndo ? undefined : change.operation,
+        keptPage(),
+        shownIR.current,
+        change.rewritten,
+      )
     )
       setVersion((v) => v + 1);
     setUpdating(false);

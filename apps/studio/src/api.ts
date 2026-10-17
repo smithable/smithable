@@ -19,6 +19,8 @@ export interface TraceEntry {
   operation?: { op: string; args: Record<string, unknown> };
   /** The files it changed that a person edits (the spec files, src/custom/**). */
   files: string[];
+  /** The generated files under src/ it rewrote. */
+  rewritten: string[];
   /** What the person asked a model, for a change it made. */
   request?: string;
 }

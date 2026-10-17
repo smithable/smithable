@@ -171,6 +171,13 @@ test("in Studio the dev server's hot updates for generated files are held back; 
   expect(studio.hotUpdate({ file: "/app/src/routeTree.gen.ts" })).toEqual([]);
   expect(studio.hotUpdate({ file: "/app/src/styles.css" })).toEqual([]);
   expect(studio.hotUpdate({ file: "/app/src/custom/pages/Hello.tsx" })).toBeUndefined();
+  // A words module's update reaches the components that read it: the text shows in place.
+  expect(studio.hotUpdate({ file: "/app/src/generated/pages.ts" })).toBeUndefined();
+  expect(studio.hotUpdate({ file: "/app/src/generated/customer.ts" })).toBeUndefined();
+  expect(studio.hotUpdate({ file: "/app/src/generated/app.ts" })).toBeUndefined();
+  expect(studio.hotUpdate({ file: "/app/src/generated/customer.server.ts" })).toEqual([]);
+  expect(studio.hotUpdate({ file: "/app/src/generated/customer.schema.ts" })).toEqual([]);
+  expect(studio.hotUpdate({ file: "/app/src/generated/actions/merge-customers.ts" })).toEqual([]);
   // The theme lab and anything else: the dev server's own updates, as always.
   expect(smithableEditor().hotUpdate({ file: "/app/src/routes/orders/index.tsx" })).toBeUndefined();
   expect(previewConfig(undefined, undefined, { holdUpdates: true })).toContain(
