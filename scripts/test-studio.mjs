@@ -738,7 +738,10 @@ try {
       }
       await page.keyboard.type("Clients");
       await page.keyboard.press("Enter");
-      await last.getByText("Changed the Customers page's title to “Clients”").first().waitFor({ timeout: 60000 });
+      await last
+        .getByText("Changed the Customers page's title to “Clients”")
+        .first()
+        .waitFor({ timeout: 60000 });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
