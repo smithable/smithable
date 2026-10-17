@@ -32,6 +32,7 @@ export default function SpecText({
   assist = false,
   ask,
   onNothing,
+  onLeave,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -50,6 +51,8 @@ export default function SpecText({
   ask?: number;
   /** "What goes here?" found nothing to offer at the cursor. */
   onNothing?: () => void;
+  /** The person left the text (it lost the focus) or asked to save (Ctrl+S). */
+  onLeave?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
@@ -57,6 +60,8 @@ export default function SpecText({
   changed.current = onChange;
   const knows = useRef(known);
   knows.current = known;
+  const left = useRef(onLeave);
+  left.current = onLeave;
   const nothing = useRef(onNothing);
   nothing.current = onNothing;
   const file = label as EditedFile;
@@ -135,7 +140,25 @@ export default function SpecText({
           keymap.of([{ key: "Tab", run: acceptCompletion }, indentWithTab]),
           // Enter after a key goes one level deeper, otherwise keeps the level (enter-indent.ts);
           // ahead of the default Enter, which guesses from the YAML grammar.
-          Prec.high(keymap.of([{ key: "Enter", run: enterKeepingLevel }])),
+          Prec.high(
+            keymap.of([
+              { key: "Enter", run: enterKeepingLevel },
+              // Ctrl+S saves, as leaving the editor does (studio-v3.md §7).
+              {
+                key: "Mod-s",
+                preventDefault: true,
+                run: () => {
+                  left.current?.();
+                  return true;
+                },
+              },
+            ]),
+          ),
+          EditorView.domEventHandlers({
+            blur: () => {
+              left.current?.();
+            },
+          }),
           yaml(),
           lintGutter(),
           // Studio's colours follow the system's light or dark setting, as it changes.

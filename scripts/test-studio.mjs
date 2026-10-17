@@ -1045,13 +1045,15 @@ try {
       const saved = await ux.evaluate((e) => e.value);
       await ux.focus();
       await ux.evaluate((e) => e.setSelectionRange(0));
-      await page.keyboard.type("#");
+      // An edit with a problem (a key the file does not know): leaving cannot save it, so it is
+      // kept as a draft.
+      await page.keyboard.type("x");
       const kept = async (when) => {
         const editor = page.getByLabel("smithable.ux.yml");
         await editor.waitFor({ timeout: 30000 });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== "smithable.ux.yml")
           throw new Error(`${when}: another file is open`);
-        if ((await editor.evaluate((e) => e.value)) !== `#${saved}`)
+        if ((await editor.evaluate((e) => e.value)) !== `x${saved}`)
           throw new Error(`${when}: the unsaved edit is gone`);
         if ((await editor.evaluate((e) => e.selectionStart)) !== 1)
           throw new Error(`${when}: the cursor moved`);
@@ -1364,7 +1366,7 @@ try {
   console.log("Code");
   await firstWindow("code");
   await step(
-    "the spec editor checks as you type, and saves a valid edit by itself, growing one change",
+    "the spec editor checks as you type, saves a valid edit when it is left (never on a pause), and a formatting-only edit is no change",
     async () => {
       // The editor's text element answers `value` like a text box (only the lines in view are in
       // the page), for reading and for setting the whole text.
@@ -1372,6 +1374,14 @@ try {
       const text = await editor.evaluate((e) => e.value);
       const startCount = await changeCount();
       const settled = () => page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
+      // Leaving the editor: the focus elsewhere.
+      const leave = async () => {
+        await editor.focus();
+        await page
+          .locator("header")
+          .first()
+          .click({ position: { x: 800, y: 10 } });
+      };
       const write = (to) =>
         editor.evaluate((e, value) => {
           e.value = value;
@@ -1396,10 +1406,14 @@ try {
       await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
       const rows = await page.getByRole("list", { name: "Problems" }).getByRole("listitem").count();
       if (rows !== 1) throw new Error(`the problems list has ${rows} rows beside "No problems."`);
-      // Valid, it is saved by itself after a pause: one change.
+      // Valid, it is not saved on a pause, only when the editor is left: one change.
+      await new Promise((r) => setTimeout(r, 2500));
+      if (readFileSync(join(dir, "smithable.yml"), "utf8").includes("      fax: phone\n"))
+        throw new Error("the edit was saved on a pause");
+      await leave();
       await settled();
       if (!readFileSync(join(dir, "smithable.yml"), "utf8").includes("      fax: phone\n"))
-        throw new Error("the valid edit was not saved by itself");
+        throw new Error("the valid edit was not saved on leaving");
       // What can be written at the cursor is offered as it is typed: one of the app's own pages
       // in the navigation, and at the start of a line the sections the spec does not have yet.
       const good = await editor.evaluate((e) => e.value);
@@ -1470,7 +1484,9 @@ try {
         .getByText(/list, view, create, edit and delete/)
         .waitFor();
       await page.mouse.move(0, 0);
-      // Every edit since went on in the same file: they grew the one change.
+      // The text back as saved, and whitespace only: leaving makes no change.
+      await write(`${good}\n\n`);
+      await leave();
       await settled();
       if ((await changeCount()) !== startCount + 1)
         throw new Error(`the edits made ${(await changeCount()) - startCount} changes, not one`);
@@ -1552,10 +1568,15 @@ try {
         .replace("admins:", "defaultRole: sales\nadmins:"),
     );
     await page.getByRole("list", { name: "Problems" }).getByText("No problems.").waitFor();
-    // Another file: saved by itself as a change of its own.
+    // Another file: saved on leaving, as a change of its own.
+    await auth.focus();
+    await page
+      .locator("header")
+      .first()
+      .click({ position: { x: 800, y: 10 } });
     await page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
     if (!readFileSync(join(dir, "smithable.auth.yml"), "utf8").includes("  support:"))
-      throw new Error("the auth file's edit was not saved by itself");
+      throw new Error("the auth file's edit was not saved on leaving");
     // A role's grant is completed with the spec's names: a kind of record for "create".
     const saved = await auth.evaluate((e) => e.value);
     // (sales may add orders since the access step: the grant is a list.)
@@ -1698,7 +1719,7 @@ try {
     },
   );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
-    // An unsaved edit in the spec editor (one with a problem: a valid one saves itself) is kept
+    // An unsaved edit in the spec editor (one with a problem, which leaving cannot save) is kept
     // when the file changes under it.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
     const editor = page.getByLabel("smithable.yml");

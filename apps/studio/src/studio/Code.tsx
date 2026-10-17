@@ -1,10 +1,17 @@
 // The Code window (docs/design/studio-v3.md §4): the spec files in the editor, nothing else.
 // A part picked in the preview in Select shows its lines: a text in the content file, anything
 // else in smithable.yml.
-import { EDITABLE_FILES, type EditableFile, emptyFile, validateSpec } from "@smithable/core";
+import {
+  EDITABLE_FILES,
+  type EditableFile,
+  emptyFile,
+  formatSpec,
+  sameContent,
+  validateSpec,
+} from "@smithable/core";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { isMap, isScalar, isSeq, type Node, parseDocument } from "yaml";
-import { lastChange, type Project } from "../api";
+import type { Project } from "../api";
 import type { Run } from "../builder/ChangeForms";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
@@ -86,7 +93,10 @@ function SpecEditor({
   const offered = (Object.keys(EDITABLE_FILES) as EditableFile[]).filter(
     (f) => project.files[EDITABLE_FILES[f]] !== undefined || emptyFile(f) !== undefined,
   );
-  const saved = project.files[EDITABLE_FILES[file]] ?? emptyFile(file) ?? "";
+  // The file as it is on disk, and as the editor shows it: formatted (studio-v3.md §7), so
+  // formatting is never a change of its own.
+  const onDisk = project.files[EDITABLE_FILES[file]] ?? emptyFile(file) ?? "";
+  const saved = useMemo(() => formatted(onDisk), [onDisk]);
   // Unsaved edits, by file, and each file as it was when its editing began: a change on disk
   // replaces the text only when it has not been edited, and is otherwise offered, so typing is
   // never lost. Kept for the browser tab's session, so a mode switch or a reload keeps them
@@ -142,8 +152,10 @@ function SpecEditor({
   // biome-ignore lint/correctness/useExhaustiveDependencies: a jump is asked by its time
   const select = useMemo(() => {
     if (!jump) return undefined;
+    // Found in the text as the editor shows it: the file formatted, or the draft.
     const text =
-      drafts[jump.file] ?? project.files[EDITABLE_FILES[jump.file]] ?? emptyFile(jump.file) ?? "";
+      drafts[jump.file] ??
+      formatted(project.files[EDITABLE_FILES[jump.file]] ?? emptyFile(jump.file) ?? "");
     const range = jump.concept.startsWith("text:")
       ? contentRange(text, jump.concept.slice(5))
       : specRange(text, jump.concept);
@@ -170,10 +182,10 @@ function SpecEditor({
   // Problems first; then notes, advice the app is fine without (docs/design/advice.md).
   const problems = shown.filter((d) => d.severity !== "note");
   const notes = shown.filter((d) => d.severity === "note");
-  // An edit saves itself after a pause (docs/design/studio-changes.md §4): when it is valid and
-  // removes no field (one that does keeps the Save button, which asks first). Going on in the
-  // same file grows the same change while it is still the newest; another file, another change
-  // made anywhere, leaving the editor or five minutes without a keystroke start a new one.
+  // An edit is saved when the person leaves the editor (it loses the focus, another window or
+  // file is chosen, Ctrl+S), never on a pause, and only after a keystroke in this page's life: a
+  // draft kept across a reload is not saved by itself (studio-v3.md §7, Johan's round 6 #6).
+  // One that removes a field keeps the Save button, which asks first.
   const fields = (t: string) =>
     (validateSpec({ path: "smithable.yml", text: t }, { plugins }).ir?.models ?? []).flatMap((m) =>
       m.fields.map((f) => `${m.name}.${f.name}`),
@@ -189,37 +201,32 @@ function SpecEditor({
     const now = fields(text);
     return savedFields.some((f) => !now.includes(f));
   }, [file, text, saved, savedFields]);
-  const head = project.trace[0]?.id;
-  const growing = useRef<{ file: EditableFile; id?: string; at: number } | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-  const save = async (by: "pause" | "button") => {
-    const kept = growing.current;
-    const grow =
-      by === "pause" && kept?.file === file && kept.id === head && Date.now() - kept.at < 5 * 60_000
-        ? kept.id
-        : undefined;
+  const typed = useRef(false);
+  const save = async () => {
+    // Formatted before it is compared and saved: an edit that only formats is no change.
+    let out = text;
+    try {
+      out = formatSpec(text);
+    } catch {}
+    if (sameContent(out, onDisk)) {
+      dropEdits();
+      return;
+    }
     setSaving(true);
-    const ok = await run("editSpec", {
-      text,
-      ...(file === "smithable.yml" ? {} : { file }),
-      ...(grow ? { grow } : {}),
-    });
+    const ok = await run("editSpec", { text: out, ...(file === "smithable.yml" ? {} : { file }) });
     setSaving(false);
-    // The server says which change the save made or grew: the next save grows that one.
-    const made = ok && by === "pause" ? lastChange() : undefined;
-    growing.current = made ? { file, id: made, at: Date.now() } : undefined;
+    // Saved formatted: the editor shows the file as it now is, the typed form gone with it.
+    if (ok) dropEdits();
   };
-  const ready = text !== saved && errors.length === 0 && !removes && !saving;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a pause after the last keystroke
-  useEffect(() => {
-    if (!ready) return;
-    const t = setTimeout(() => void save("pause"), 1500);
-    return () => clearTimeout(t);
-  }, [ready, text]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: another file is another change
-  useEffect(() => {
-    growing.current = undefined;
-  }, [file]);
+  const leave = () => {
+    if (!typed.current || text === saved || errors.length > 0 || removes || saving) return;
+    void save();
+  };
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  // The window closed is leaving too (another file is, where the file is chosen).
+  useEffect(() => () => leaveRef.current(), []);
   const state =
     text === saved
       ? "Saved"
@@ -229,7 +236,7 @@ function SpecEditor({
           ? "Not saved: fix the problems first"
           : removes
             ? "Not saved: it removes a field, so Save asks first"
-            : "Edited: it saves itself when you pause";
+            : "Edited: it saves when you leave the editor";
   // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
   // which has no Ctrl-Space.
   const [ask, setAsk] = useState(0);
@@ -261,12 +268,15 @@ function SpecEditor({
         <Select
           aria-label="File"
           value={file}
-          onChange={(e) => setFile(e.target.value as EditableFile)}
+          onChange={(e) => {
+            leave();
+            setFile(e.target.value as EditableFile);
+          }}
           className="text-xs"
           options={offered.map((f) => [
             f,
             drafts[f] !== undefined &&
-            drafts[f] !== (project.files[EDITABLE_FILES[f]] ?? emptyFile(f))
+            drafts[f] !== formatted(project.files[EDITABLE_FILES[f]] ?? emptyFile(f) ?? "")
               ? `${f} (edited)`
               : f,
           ])}
@@ -332,7 +342,11 @@ function SpecEditor({
           key={file}
           label={file}
           value={text}
-          onChange={setText}
+          onChange={(next) => {
+            typed.current = true;
+            setText(next);
+          }}
+          onLeave={leave}
           problems={shown.filter((d) => d.file === file)}
           select={jump?.file === file ? select : undefined}
           kept={`smithable:editor:${project.name}:${file}`}
@@ -431,7 +445,7 @@ function SpecEditor({
           </span>
           <Button
             disabled={errors.length > 0 || text === saved || saving}
-            onClick={() => void save("button")}
+            onClick={() => void save()}
           >
             Save
           </Button>
@@ -439,6 +453,15 @@ function SpecEditor({
       </div>
     </div>
   );
+}
+
+/** A file as the editor shows it: formatted (studio-v3.md §7), or as it is when it cannot be. */
+function formatted(text: string): string {
+  try {
+    return formatSpec(text);
+  } catch {
+    return text;
+  }
 }
 
 /** A problem's place and words: two alike are one. */
