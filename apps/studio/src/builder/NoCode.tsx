@@ -2,7 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
-import { type SummarySection, summarize } from "@smithable/index";
+import { describeChange, type SummarySection, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
@@ -14,6 +14,7 @@ import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { SpecForm } from "./SpecForm";
 import { WhoCan } from "./WhoCan";
+import { Wizard, type WizardKind } from "./Wizard";
 
 export type SubView = "behavior" | "look" | "who" | "content";
 const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content"];
@@ -107,6 +108,29 @@ function Summary({
   );
 }
 
+/** Behavior's Add for a kind of record, a page or an action: the creation wizard, not a name. */
+function AddByWizard({
+  kind,
+  run,
+  words,
+}: {
+  kind: WizardKind;
+  run: Run;
+  words: (op: string, args: Record<string, unknown>) => string | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = { model: "Add a kind of record…", page: "Add a page…", action: "Add an action…" }[
+    kind
+  ];
+  return open ? (
+    <Wizard kind={kind} run={run} words={words} onClose={() => setOpen(false)} />
+  ) : (
+    <button type="button" className="text-xs text-accent underline" onClick={() => setOpen(true)}>
+      {label}
+    </button>
+  );
+}
+
 export function NoCode({
   project,
   spec,
@@ -129,6 +153,8 @@ export function NoCode({
     onPlace({ sub: next });
   };
   const [opened, setOpened] = useState(() => placeOf(place.selection)?.path);
+  const words = (op: string, args: Record<string, unknown>) =>
+    spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
   const sections = useMemo(
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
     [spec],
@@ -193,6 +219,14 @@ export function NoCode({
             run={run}
             ir={spec.ir}
             open={opened}
+            adder={(path) => {
+              const kind = (
+                { models: "model", pages: "page", actions: "action" } as Record<string, WizardKind>
+              )[String(path[0])];
+              return path.length === 1 && kind ? (
+                <AddByWizard kind={kind} run={run} words={words} />
+              ) : undefined;
+            }}
             tools={(path) => {
               const [area, name] = path;
               if (path.length !== 2 || typeof name !== "string") return undefined;

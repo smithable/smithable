@@ -1460,13 +1460,24 @@ try {
       await cursor(good.indexOf(intent) + intent.length);
       await page.getByRole("button", { name: "What goes here?" }).click();
       await page.getByText("Nothing to suggest at the cursor").waitFor();
+      // Under models:, the creation wizard is offered first; Esc goes back to the text.
+      const models = "models:\n";
+      await write(good.replace(models, `${models}  \n`));
+      await editor.focus();
+      await cursor(good.indexOf(models) + models.length + 2);
+      await offered.getByText("Add a model…", { exact: true }).waitFor();
+      await accept();
+      const wizard = page.getByRole("region", { name: "Add a kind of record" });
+      await wizard.getByLabel("Add a kind of record, in your words").waitFor();
+      await page.keyboard.press("Escape");
+      await wizard.waitFor({ state: "detached" });
       // Under a map of names (the actions) a template entry is offered and fills in its keys.
       const actions = "actions:\n";
       await write(good.replace(actions, `${actions}  \n`));
       await editor.focus();
       await cursor(good.indexOf(actions) + actions.length + 2);
-      await offered.getByText("myEntry", { exact: true }).waitFor();
-      await accept();
+      // (The wizard comes first in that list: the template is chosen by its name.)
+      await offered.getByText("myEntry", { exact: true }).click();
       if (!/^actions:\n {2}myEntry:\n/m.test(await editor.evaluate((e) => e.value)))
         throw new Error("the template entry was not put in the text");
       // The first time, the editor says how to ask it; once seen, it stays quiet.
@@ -1872,13 +1883,27 @@ try {
         if (!readFileSync(file, "utf8").includes(text))
           throw new Error(`no ${text} in smithable.yml`);
       };
-      await app.getByLabel("New entry in models").fill("Supplier");
-      await app
-        .getByLabel("New entry in models")
-        .locator("..")
-        .getByRole("button", { name: "Add" })
-        .click();
-      await waitFile("Supplier:");
+      // A kind of record comes from the creation wizard: words, then the change as a form,
+      // nothing written before Create; Dismiss goes back to the words.
+      const models = await area("models");
+      await models.getByRole("button", { name: "Add a kind of record…" }).click();
+      const wizard = page.getByRole("region", { name: "Add a kind of record" });
+      const words = wizard.getByLabel("Add a kind of record, in your words");
+      await words.fill("suppliers with a name and an email");
+      await words.press("Enter");
+      const kind = wizard.getByLabel("Kind of record", { exact: true });
+      await kind.waitFor({ timeout: 60000 });
+      if (readFileSync(file, "utf8").includes("Supplier:"))
+        throw new Error("the wizard wrote before Create");
+      await wizard.getByRole("button", { name: "Dismiss" }).click();
+      if ((await words.inputValue()) !== "suppliers with a name and an email")
+        throw new Error("Dismiss did not keep the words");
+      await words.press("Enter");
+      // Edited in the form: the name given there is the one made.
+      await kind.fill("Vendor");
+      await wizard.getByRole("button", { name: "Create" }).click();
+      await waitFile("Vendor:");
+      await wizard.waitFor({ state: "detached" });
       const customer = await entry(await area("models"), "Customer");
       await customer.getByLabel("New entry in fields").fill("website");
       await customer
