@@ -84,17 +84,28 @@ export function touched(
 }
 
 /**
+ * A generated module without components, read by the pages for its words (`pages.ts`, a model's
+ * module, `app.ts`): the preview's dev server passes its hot update, and the components that
+ * read it show the new text in place (words-once.md §3), so a change that rewrote only such
+ * modules needs no reload. The same test as the preview plugin's.
+ */
+const WORDS_MODULE = /^src\/generated\/[a-z0-9-]+\.ts$/;
+
+/**
  * Whether a change touches the page the preview is on (`path`), so it is loaded again: false
- * only when sure it does not, a change to a field, a record's text or a page's text (not its
- * title, which the menu shows) of another kind of record or page than the ones it shows (with
- * those its links name). Everything else
- * (the menu, the look, access, an undo, a change made by hand) loads it again.
+ * only when sure it does not: a change that rewrote only words modules (`rewritten`, the
+ * generated files it changed), whichever page is shown; a change to a field, a record's text or
+ * a page's text of another kind of record or page than the ones it shows (with those its links
+ * name). Everything else (the menu, the look, access, an undo, a change made by hand) loads it
+ * again.
  */
 export function touchesPage(
   operation: { op: string; args: Record<string, unknown> } | undefined,
   path: string,
   ir: SpecIR | undefined,
+  rewritten?: string[],
 ): boolean {
+  if (rewritten?.length && rewritten.every((file) => WORDS_MODULE.test(file))) return false;
   if (!operation || !ir) return true;
   const { op, args } = operation;
   const bare = path.split(/[?#]/)[0] || "/";
