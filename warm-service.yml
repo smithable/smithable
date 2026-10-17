@@ -1,0 +1,41 @@
+smithableTheme: 0.1
+name: warm-service
+fonts: { body: DM Sans, heading: DM Sans }
+headings: { weight: 600, tracking: normal, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 10px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.12
+light:
+  background: "#F7F5F0"
+  foreground: "#24332F"
+  card: "#FFFFFF"
+  primary: "#21655B"
+  primary-foreground: "#FFFFFF"
+  muted: "#EDEFE9"
+  muted-foreground: "#59665F"
+  border: "#D9DED7"
+  input: "#7E8C83"
+  ring: "#21655B"
+  sidebar: "#F0F1EB"
+  accent: "#E2EEE8"
+  secondary: "#EDEFE9"
+dark:
+  background: "#141C1A"
+  foreground: "#E7EEE9"
+  card: "#1D2924"
+  primary: "#91C9BB"
+  primary-foreground: "#142C25"
+  muted: "#28362F"
+  muted-foreground: "#AABBB0"
+  border: "#34463C"
+  input: "#6E8577"
+  ring: "#91C9BB"
+  sidebar: "#18231E"
+  accent: "#2A4237"
+  secondary: "#28362F"

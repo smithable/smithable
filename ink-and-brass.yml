@@ -1,0 +1,49 @@
+smithableTheme: 0.1
+name: ink-and-brass
+fonts: { body: Source Sans 3, heading: Source Sans 3 }
+headings: { weight: 600, tracking: normal, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 8px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.10
+light:
+  background: "#F8F7F3"
+  foreground: "#172B40"
+  card: "#FFFFFF"
+  card-foreground: "#172B40"
+  primary: "#163B5C"
+  primary-foreground: "#FFFFFF"
+  muted: "#EEEFEA"
+  muted-foreground: "#596779"
+  border: "#DFE2E1"
+  input: "#7B8B98"
+  ring: "#163B5C"
+  sidebar: "#F0F1EE"
+  sidebar-foreground: "#172B40"
+  accent: "#E6EDF1"
+  accent-foreground: "#172B40"
+  secondary: "#EEEFEA"
+  secondary-foreground: "#172B40"
+dark:
+  background: "#101B2A"
+  foreground: "#E8EEF4"
+  card: "#1A293A"
+  card-foreground: "#E8EEF4"
+  primary: "#E9BD68"
+  primary-foreground: "#152A40"
+  muted: "#23364A"
+  muted-foreground: "#B1BECF"
+  border: "#34495E"
+  input: "#7790A8"
+  ring: "#E9BD68"
+  sidebar: "#142233"
+  sidebar-foreground: "#E8EEF4"
+  accent: "#3D3527"
+  accent-foreground: "#E8EEF4"
+  secondary: "#23364A"
+  secondary-foreground: "#E8EEF4"

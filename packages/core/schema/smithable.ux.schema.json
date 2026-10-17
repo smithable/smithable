@@ -23,7 +23,7 @@
       "properties": {
         "preset": {
           "type": "string",
-          "description": "A built-in theme (modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe) or one of the project's own (themes/<name>.yml)."
+          "description": "A built-in theme (modern, minimal, playful, corporate, warm-service, quiet-workspace, ink-and-brass, warm-service-public, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe) or one of the project's own (themes/<name>.yml)."
         },
         "brand": {
           "type": "object",

@@ -287,7 +287,12 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
 }  return (
     <html lang=${t.translated ? "{language()}" : JSON.stringify(t.language)}>
       <head>
-        <HeadContent />${t.translated ? "\n        <Alternates path={pathname} />" : ""}
+        <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}else{document.documentElement.classList.remove("dark")}}catch(e){}`
+          }}
+        />${t.translated ? "\n        <Alternates path={pathname} />" : ""}
       </head>
       <body data-page={pageOf(pathname)} data-hydrated={hydrated ? "true" : undefined}>
         {asOf && (

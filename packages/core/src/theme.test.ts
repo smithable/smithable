@@ -29,11 +29,11 @@ dark:
 `;
 const parse = (text: string) => parseTheme({ path: "themes/forest.yml", text });
 
-test("the sixteen built-in themes read in both modes, each under its own name", () => {
+test("the twenty built-in themes read in both modes, each under its own name", () => {
   const names = BUILT_IN_THEMES.map((t) => t.name);
   expect(names).toEqual([...THEME_PRESETS]);
-  expect(names).toHaveLength(16);
-  expect(new Set(names).size).toBe(16);
+  expect(names).toHaveLength(20);
+  expect(new Set(names).size).toBe(20);
   expect(names.slice(0, 4)).toEqual(["modern", "minimal", "playful", "corporate"]);
   for (const theme of BUILT_IN_THEMES) {
     expect(theme.source).toBe("built-in");
@@ -44,7 +44,7 @@ test("the sixteen built-in themes read in both modes, each under its own name", 
 });
 
 test("the theme library's twelve are theme files a project could have written", () => {
-  expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(4));
+  expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(8));
   for (const [name, text] of Object.entries(THEME_LIBRARY)) {
     const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
     expect(diagnostics, name).toEqual([]);

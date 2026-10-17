@@ -2,12 +2,13 @@
 smithableUx: 0.1
 
 theme:
-  preset: playful
+  preset: warm-service
 
 pages:
   home:
     sections:
-      hero: { layout: cover }          # the picture across the width, the text on the theme's color
+      hero: { layout: split }
+    theme: { preset: warm-service-public }          # the picture across the width, the text on the theme's color
   sessions:
     table:
       columns: [startsAt, classType, instructor, capacity]

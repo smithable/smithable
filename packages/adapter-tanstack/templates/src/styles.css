@@ -6,7 +6,7 @@
    rules win over the kit's without !important, wherever they are imported. */
 @import "./custom/styles.css";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-sans: var(--font-body);

@@ -74,7 +74,7 @@ test("the four presets carry their shapes as data", () => {
     tables: { numbers: "tabular" },
   });
   // The library's nine have the default shape, as before.
-  for (const t of BUILT_IN_THEMES.slice(4, 13)) expect(t.style, t.name).toEqual(DEFAULT_STYLE);
+  for (const t of BUILT_IN_THEMES.slice(8, 17)) expect(t.style, t.name).toEqual(DEFAULT_STYLE);
 });
 
 test("the theme lab's three styles (§6) read with their fields, and none has an avoid", () => {

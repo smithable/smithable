@@ -196,6 +196,7 @@ function Navigation({
           );
         })}
       </nav>
+      <AppearancePicker />
       <ConsentSettings className="mx-3 px-3 pb-2 text-left text-xs underline-offset-4 hover:underline" />
       {onSignOut && (
         <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
@@ -311,6 +312,41 @@ function YourName({
 }
 
 /** Shown while a page's data loads for longer than a moment: the shape of a page, no words. */
+
+export function AppearancePicker() {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("theme") || "system"; } catch { return "system"; }
+  });
+  const update = (t) => {
+    setTheme(t);
+    try {
+      if (t === "system") {
+        localStorage.removeItem("theme");
+        if (window.matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark");
+        else document.documentElement.classList.remove("dark");
+      } else {
+        localStorage.setItem("theme", t);
+        if (t === "dark") document.documentElement.classList.add("dark");
+        else document.documentElement.classList.remove("dark");
+      }
+    } catch {}
+  };
+  return (
+    <div className="mx-3 px-3 py-2 text-sm flex gap-2 items-center">
+      <span className="text-muted-foreground text-xs uppercase tracking-wide font-semibold">Theme</span>
+      <select
+        value={theme}
+        onChange={(e) => update(e.target.value)}
+        className="bg-transparent text-foreground outline-none cursor-pointer"
+      >
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+  );
+}
+
 export function Loading() {
   return (
     <div
