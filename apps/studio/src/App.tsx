@@ -47,6 +47,8 @@ interface Pending {
   name: string;
   args: Record<string, unknown>;
   impact: string;
+  /** An undo of these changes that loses data, asked first like any change. */
+  undo?: string[];
 }
 
 /**
@@ -339,6 +341,49 @@ export function App() {
     });
   });
 
+  // The Changes window's X: these changes undone, the newest first (studio-v3.md §3). An earlier
+  // change is reversed as a new change, or refused in the validator's words when a later one
+  // depends on it; one that loses data asks first.
+  const undoChanges = inTurn(async (ids: string[], confirm?: boolean) => {
+    setBusy(true);
+    setMessage(undefined);
+    let said = "";
+    let ok = true;
+    for (const [at, id] of ids.entries()) {
+      const entry = project?.trace.find((t) => t.id === id);
+      // The confirmation is for the change that asked (the first left), not the ones after it.
+      const result = await api
+        .undoChange(id, confirm === true && at === 0)
+        .catch((e: Error) => ({ ok: false, output: e.message, needsConfirm: false }));
+      if (result.needsConfirm) {
+        setPending({
+          name: "undo",
+          args: {},
+          impact: result.output.replace(/\n?Run again with --yes.*$/s, ""),
+          undo: ids.slice(ids.indexOf(id)),
+        });
+        ok = false;
+        break;
+      }
+      if (!result.ok) {
+        said = plainRefusal(result.output);
+        ok = false;
+        setPending(undefined);
+        break;
+      }
+      // In the Changes window's words: the operation's where it has them, else its own.
+      const plain =
+        (entry?.operation && spec.ir
+          ? describeChange(entry.operation.op, entry.operation.args, spec.ir, spec.content)
+          : undefined) ?? entry?.description;
+      said = `Undid: ${plain ?? "the change"}`;
+    }
+    if (ok) setPending(undefined);
+    await catchUp();
+    setBusy(false);
+    if (said) setMessage({ ok, text: said });
+  });
+
   const redo = inTurn(async () => {
     setBusy(true);
     const result = await api.redo().catch((e: Error) => ({ ok: false, output: e.message }));
@@ -567,7 +612,15 @@ export function App() {
           </span>
           {pending ? (
             <>
-              <Button variant="danger" onClick={() => run(pending.name, pending.args, true)}>
+              <Button
+                variant="danger"
+                disabled={busy}
+                onClick={() =>
+                  pending.undo
+                    ? undoChanges(pending.undo, true)
+                    : run(pending.name, pending.args, true)
+                }
+              >
                 Apply anyway
               </Button>
               <Button variant="ghost" onClick={() => setPending(undefined)}>
@@ -742,7 +795,12 @@ export function App() {
                       className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
                     >
                       <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                        <Trace entries={project.trace} words={words} plugins={spec.plugins} />
+                        <Trace
+                          entries={project.trace}
+                          words={words}
+                          plugins={spec.plugins}
+                          onUndo={(ids) => void undoChanges(ids)}
+                        />
                       </div>
                     </Panel>
                   ),

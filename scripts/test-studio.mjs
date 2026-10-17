@@ -939,7 +939,7 @@ try {
         .waitFor({ timeout: 60000 });
       await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
       // Opened, it says what changed in words.
-      await trace.getByRole("button", { name: /Customers: added a mobile/ }).click();
+      await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
       await trace
         .getByRole("region", { name: "What changed" })
         .getByText(/a mobile \(a phone number\)/)
@@ -1041,7 +1041,7 @@ try {
         .getAttribute("href");
       if (!howTo?.endsWith("spec.html#smithableuxyml-how-the-app-looks"))
         throw new Error(`the ux file links to ${howTo}`);
-      const ux = page.getByLabel("smithable.ux.yml");
+      const ux = page.getByLabel("smithable.ux.yml", { exact: true });
       const saved = await ux.evaluate((e) => e.value);
       await ux.focus();
       await ux.evaluate((e) => e.setSelectionRange(0));
@@ -1049,7 +1049,7 @@ try {
       // kept as a draft.
       await page.keyboard.type("x");
       const kept = async (when) => {
-        const editor = page.getByLabel("smithable.ux.yml");
+        const editor = page.getByLabel("smithable.ux.yml", { exact: true });
         await editor.waitFor({ timeout: 30000 });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== "smithable.ux.yml")
           throw new Error(`${when}: another file is open`);
@@ -1068,7 +1068,7 @@ try {
       page.off("dialog", leave);
       await kept("after a reload");
       // The edit taken back is no edit: nothing is kept.
-      await page.getByLabel("smithable.ux.yml").evaluate((e, text) => {
+      await page.getByLabel("smithable.ux.yml", { exact: true }).evaluate((e, text) => {
         e.value = text;
       }, saved);
       // The ux file says where its choices have controls, with a way there.
@@ -1092,11 +1092,11 @@ try {
         preview.locator("html[data-sm-selecting]").waitFor({ state: "attached", timeout: 60000 });
       await selecting();
       const editorText = async (file) => {
-        await page.getByLabel(file).waitFor({ timeout: 10000 });
+        await page.getByLabel(file, { exact: true }).waitFor({ timeout: 10000 });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== file)
           throw new Error(`another file is open than ${file}`);
         return page
-          .getByLabel(file)
+          .getByLabel(file, { exact: true })
           .evaluate((e) => e.value.slice(e.selectionStart, e.selectionEnd));
       };
       const subtitle = preview.locator('[data-sm-text="pages.customers.subtitle"]');
@@ -1155,6 +1155,27 @@ try {
       .getByRole("button", { name: "Redo", exact: true, disabled: true })
       .waitFor({ timeout: 30000 });
   });
+  await step(
+    "an earlier change is undone by its X as a new change; one a later change built on is refused, saying why",
+    async () => {
+      const count = await changeCount();
+      await trace
+        .getByRole("button", { name: /^Undo: .*in the customers table/ })
+        .first()
+        .click();
+      await status.getByText(/^Undid: .*customers table/).waitFor({ timeout: 60000 });
+      if (/columns: \[email, name/.test(readFileSync(join(dir, "smithable.ux.yml"), "utf8")))
+        throw new Error("the columns' change was not undone");
+      if ((await changeCount()) !== count + 1)
+        throw new Error("the earlier change was not undone as a change of its own");
+      // The website was renamed later: undoing its adding is refused, and nothing changes.
+      await trace.getByRole("button", { name: "Undo: Customers: added a website" }).click();
+      const refused = page.getByRole("alert").first();
+      await refused.waitFor({ timeout: 60000 });
+      await refused.getByRole("button", { name: "Dismiss" }).click();
+      if ((await changeCount()) !== count + 1) throw new Error("a refused undo changed something");
+    },
+  );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await sub("Look");
@@ -1370,7 +1391,7 @@ try {
     async () => {
       // The editor's text element answers `value` like a text box (only the lines in view are in
       // the page), for reading and for setting the whole text.
-      const editor = page.getByLabel("smithable.yml");
+      const editor = page.getByLabel("smithable.yml", { exact: true });
       const text = await editor.evaluate((e) => e.value);
       const startCount = await changeCount();
       const settled = () => page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
@@ -1539,7 +1560,7 @@ try {
   await step("the companion files are edited the same way, each with its own checks", async () => {
     // The auth file: a grant must name a model there is; a role added is saved as one change.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.auth.yml");
-    const auth = page.getByLabel("smithable.auth.yml");
+    const auth = page.getByLabel("smithable.auth.yml", { exact: true });
     const text = await auth.evaluate((e) => e.value);
     if (!text.includes("roles:")) throw new Error(`not the auth file: ${text.slice(0, 80)}`);
     const write = (to) =>
@@ -1603,7 +1624,7 @@ try {
     // The context file is offered too (the test project has one; a project without starts it
     // from its first line), with its own checks.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.context.yml");
-    const context = page.getByLabel("smithable.context.yml");
+    const context = page.getByLabel("smithable.context.yml", { exact: true });
     await context.evaluate((e) => {
       e.value = "smithableContext: 0.1\nplugins: [greeting]\nnonsense: true\n";
     });
@@ -1628,7 +1649,7 @@ try {
     async () => {
       // A package that does not exist cannot be installed: the change fails and is rolled back.
       await page.getByLabel("File", { exact: true }).selectOption("smithable.context.yml");
-      await page.getByLabel("smithable.context.yml").evaluate((e) => {
+      await page.getByLabel("smithable.context.yml", { exact: true }).evaluate((e) => {
         e.value =
           "smithableContext: 0.1\nplugins: [greeting]\npackages:\n  smithable-no-such-package: 9.9.9\n";
       });
@@ -1733,7 +1754,7 @@ try {
     // An unsaved edit in the spec editor (one with a problem, which leaving cannot save) is kept
     // when the file changes under it.
     await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
-    const editor = page.getByLabel("smithable.yml");
+    const editor = page.getByLabel("smithable.yml", { exact: true });
     const typed = `${await editor.evaluate((e) => e.value)}unsaved: [broken\n`;
     await editor.evaluate((e, value) => {
       e.value = value;
