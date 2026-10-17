@@ -14,17 +14,30 @@ export const appSection: SpecSection<"app"> = {
   operations: appOperations,
   schema: {
     type: "object",
-    description: "The application as a whole.",
+    title: "The app",
+    description: "The app's name, what it is for, its currency and its time zone.",
+    "x-docs": "https://docs.smithable.ai/spec.html#app",
     required: ["name"],
     additionalProperties: false,
     properties: {
-      name: { type: "string", minLength: 1, description: "The application's name." },
+      name: {
+        type: "string",
+        minLength: 1,
+        title: "Name",
+        description: "The app's name, shown in its header, its tab and its mails.",
+      },
       currency: {
         type: "string",
         enum: CURRENCIES,
-        description: "ISO 4217 currency code, e.g. EUR.",
+        title: "Currency",
+        description: "The currency of the app's amounts, as its ISO 4217 code, e.g. EUR.",
       },
-      timezone: { type: "string", description: "IANA time zone, e.g. Europe/Mariehamn." },
+      timezone: {
+        type: "string",
+        title: "Time zone",
+        description:
+          "The time zone dates and times are shown in, as its IANA name, e.g. Europe/Mariehamn.",
+      },
       ...textSchema,
     },
   },

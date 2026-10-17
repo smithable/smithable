@@ -11,7 +11,9 @@
   "additionalProperties": false,
   "properties": {
     "smithable": {
-      "description": "The spec format version.",
+      "title": "Spec format version",
+      "description": "The spec format version this file is written in.",
+      "x-hidden": true,
       "enum": [
         0.1,
         "0.1"
@@ -19,7 +21,9 @@
     },
     "app": {
       "type": "object",
-      "description": "The application as a whole.",
+      "title": "The app",
+      "description": "The app's name, what it is for, its currency and its time zone.",
+      "x-docs": "https://docs.smithable.ai/spec.html#app",
       "required": [
         "name"
       ],
@@ -28,7 +32,8 @@
         "name": {
           "type": "string",
           "minLength": 1,
-          "description": "The application's name."
+          "title": "Name",
+          "description": "The app's name, shown in its header, its tab and its mails."
         },
         "currency": {
           "type": "string",
@@ -191,23 +196,39 @@
             "ZMW",
             "ZWG"
           ],
-          "description": "ISO 4217 currency code, e.g. EUR."
+          "title": "Currency",
+          "description": "The currency of the app's amounts, as its ISO 4217 code, e.g. EUR."
         },
         "timezone": {
           "type": "string",
-          "description": "IANA time zone, e.g. Europe/Mariehamn."
+          "title": "Time zone",
+          "description": "The time zone dates and times are shown in, as its IANA name, e.g. Europe/Mariehamn."
         },
         "description": {
           "type": "string",
-          "description": "What this is. Meaning for AI and developers; not shown to visitors."
+          "title": "What it is for",
+          "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+          "x-semantic": true,
+          "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
         },
         "intent": {
           "type": "string",
-          "description": "The outcome or experience this should achieve."
+          "title": "What it should achieve",
+          "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+          "x-semantic": true,
+          "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
         },
         "rules": {
           "type": "array",
-          "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+          "title": "Rules",
+          "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+          "examples": [
+            [
+              "An order over 1000 needs a manager's approval before it ships."
+            ]
+          ],
+          "x-semantic": true,
+          "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
           "items": {
             "oneOf": [
               {
@@ -385,15 +406,29 @@
                     },
                     "description": {
                       "type": "string",
-                      "description": "What this is. Meaning for AI and developers; not shown to visitors."
+                      "title": "What it is for",
+                      "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+                      "x-semantic": true,
+                      "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
                     },
                     "intent": {
                       "type": "string",
-                      "description": "The outcome or experience this should achieve."
+                      "title": "What it should achieve",
+                      "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+                      "x-semantic": true,
+                      "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
                     },
                     "rules": {
                       "type": "array",
-                      "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+                      "title": "Rules",
+                      "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+                      "examples": [
+                        [
+                          "An order over 1000 needs a manager's approval before it ships."
+                        ]
+                      ],
+                      "x-semantic": true,
+                      "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
                       "items": {
                         "oneOf": [
                           {
@@ -483,15 +518,29 @@
           },
           "description": {
             "type": "string",
-            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+            "title": "What it is for",
+            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "intent": {
             "type": "string",
-            "description": "The outcome or experience this should achieve."
+            "title": "What it should achieve",
+            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "rules": {
             "type": "array",
-            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "title": "Rules",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+            "examples": [
+              [
+                "An order over 1000 needs a manager's approval before it ships."
+              ]
+            ],
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
             "items": {
               "oneOf": [
                 {
@@ -663,15 +712,29 @@
           },
           "description": {
             "type": "string",
-            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+            "title": "What it is for",
+            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "intent": {
             "type": "string",
-            "description": "The outcome or experience this should achieve."
+            "title": "What it should achieve",
+            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "rules": {
             "type": "array",
-            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "title": "Rules",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+            "examples": [
+              [
+                "An order over 1000 needs a manager's approval before it ships."
+              ]
+            ],
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
             "items": {
               "oneOf": [
                 {
@@ -908,15 +971,29 @@
           },
           "description": {
             "type": "string",
-            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+            "title": "What it is for",
+            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "intent": {
             "type": "string",
-            "description": "The outcome or experience this should achieve."
+            "title": "What it should achieve",
+            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "rules": {
             "type": "array",
-            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "title": "Rules",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+            "examples": [
+              [
+                "An order over 1000 needs a manager's approval before it ships."
+              ]
+            ],
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
             "items": {
               "oneOf": [
                 {
@@ -1496,15 +1573,29 @@
           },
           "description": {
             "type": "string",
-            "description": "What this is. Meaning for AI and developers; not shown to visitors."
+            "title": "What it is for",
+            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "intent": {
             "type": "string",
-            "description": "The outcome or experience this should achieve."
+            "title": "What it should achieve",
+            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
           },
           "rules": {
             "type": "array",
-            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it.",
+            "title": "Rules",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+            "examples": [
+              [
+                "An order over 1000 needs a manager's approval before it ships."
+              ]
+            ],
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
             "items": {
               "oneOf": [
                 {
