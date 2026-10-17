@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
+  applyOperations,
   type Effect,
   editAsRename,
   findOperation,
@@ -193,8 +194,15 @@ async function applyAndCheckpoint(
   const started = Date.now();
   lapFrom();
   const plugins = loadPlugins(dir);
-  let operation = plan ? undefined : findOperation(name, plugins);
-  if (!plan && !operation) {
+  // "batch": a list of operations as one change (args.operations), the wizard's edited proposal.
+  const batch =
+    name === "batch" ? (args.operations as { op: string; args: OperationArgs }[]) : undefined;
+  if (batch !== undefined && !Array.isArray(batch)) {
+    io.err("batch needs operations: a list of { op, args }.\n");
+    return 2;
+  }
+  let operation = plan || batch ? undefined : findOperation(name, plugins);
+  if (!plan && !batch && !operation) {
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
@@ -234,7 +242,9 @@ async function applyAndCheckpoint(
   }
   const result = plan
     ? planResult(files, plan)
-    : applyOperation(files, operation?.name ?? name, args);
+    : batch
+      ? applyOperations(files, batch)
+      : applyOperation(files, operation?.name ?? name, args);
   if (!result.ok) {
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);

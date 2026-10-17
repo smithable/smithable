@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { changeDetail, foldGrow, refusal, studio, trace, unchangedEdit } from "./studio.js";
+import { changeDetail, refusal, studio, trace, unchangedEdit } from "./studio.js";
 import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
@@ -92,52 +92,6 @@ test("the trace has each change's id, the person's files it changed and a model'
     expect(detail?.after.spec).toContain("models: {}");
     expect(changeDetail(dir, added?.id ?? "", true)?.patch).toContain("src/generated/schema.ts");
     expect(changeDetail(dir, "0".repeat(40))).toBeUndefined();
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-test("an edit of the same file right after the editor's last grows that change; one after another change does not", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-grow-"));
-  const git = (...args: string[]) =>
-    spawnSync("git", ["-c", "user.name=T", "-c", "user.email=t@t.invalid", ...args], {
-      cwd: dir,
-      encoding: "utf8",
-    }).stdout.trim();
-  let snapshots = 0;
-  const edit = (text: string, file = "smithable.yml") => {
-    writeFileSync(join(dir, file), text);
-    git("add", "-A");
-    git(
-      "commit",
-      "-qm",
-      `smithable: Edit ${file}\n\nSmithable-Op: ${JSON.stringify({ op: "editSpec", args: { text, ...(file === "smithable.yml" ? {} : { file }) } })}\nSmithable-Snapshot: snap-${++snapshots}`,
-    );
-    return git("rev-parse", "HEAD");
-  };
-  try {
-    git("init", "-q");
-    edit("smithable: 0.1\n");
-    const first = edit("smithable: 0.1\n# a\n");
-    edit("smithable: 0.1\n# a\n# b\n");
-    const grown = foldGrow(dir, first);
-    expect(git("rev-list", "--count", "HEAD")).toBe("2");
-    expect(git("show", "HEAD:smithable.yml")).toBe("smithable: 0.1\n# a\n# b");
-    expect(git("log", "-1", "--format=%B", grown)).toContain('"text":"smithable: 0.1\\n# a\\n"');
-    // The first change's database snapshot stays: undo goes back to before the typing began.
-    expect(git("log", "-1", "--format=%(trailers:key=Smithable-Snapshot,valueonly)", grown)).toBe(
-      "snap-2",
-    );
-    // Another file's edit in between: the next save is a change of its own.
-    edit("smithableUx: 0.1\n", "smithable.ux.yml");
-    edit("smithable: 0.1\n# c\n");
-    expect(foldGrow(dir, grown)).toBe(git("rev-parse", "HEAD"));
-    expect(git("rev-list", "--count", "HEAD")).toBe("4");
-    // Typed back to where it began: the grown change is gone.
-    const again = git("rev-parse", "HEAD");
-    edit("smithable: 0.1\n# a\n# b\n");
-    foldGrow(dir, again);
-    expect(git("rev-list", "--count", "HEAD")).toBe("3");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

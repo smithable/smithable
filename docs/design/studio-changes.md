@@ -72,6 +72,8 @@ The server gains `GET /api/change/<id>`: the patch of the person's files, the wh
 
 ## 4. Edits that save themselves
 
+Superseded 2026-10-17 by studio-v3.md §7: the editor saves when the person leaves it, after a keystroke, never on a pause, and nothing grows a change any more; `editSpec`'s `grow` argument and the daemon's folding are removed. Kept as the record of what was built on 2026-10-11.
+
 Code mode's editor saves a valid edit by itself, and an edit that continues in the same place
 grows the same change rather than making a new one.
 

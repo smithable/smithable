@@ -57,7 +57,6 @@ const editSpec: Operation<{
   file?: EditableFile;
   path?: (string | number)[];
   value?: unknown;
-  grow?: string;
 }> = {
   name: "editSpec",
   summary:
@@ -80,12 +79,6 @@ const editSpec: Operation<{
       file: {
         enum: Object.keys(EDITABLE_FILES),
         description: "Which file; smithable.yml when not said.",
-      },
-      grow: {
-        type: "string",
-        pattern: "^[0-9a-f]{40}$",
-        description:
-          "Studio's editor: the change its editing of this file made. When that is still the newest change, the host folds the two into one (docs/design/studio-changes.md §4); the engine does nothing with it.",
       },
     },
   },
