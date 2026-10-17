@@ -33,12 +33,6 @@ export function roleLabels(auth: AuthIR): Record<string, string> {
   return Object.fromEntries(auth.roles.map((r) => [r.name, humanize(r.name)]));
 }
 
-/** A record of role names (identifiers) to texts, as code. */
-const record = (o: Record<string, string>) =>
-  `{ ${Object.entries(o)
-    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-    .join(", ")} }`;
-
 /** Better Auth's configuration: providers, the Drizzle tables, roles and sign-up rules. */
 export function authModule(auth: AuthIR, ir: SpecIR): string {
   if (auth.signIn === "none") throw new Error("No sign-in");
@@ -75,7 +69,7 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
   )
     return invited
       ? "Your invitation has expired. Ask an administrator for a new one."
-      : \`Only invited people can sign in to \${APP_NAME}. Ask an administrator for an invitation.\`;`
+      : \`Only invited people can sign in to \${app.name}. Ask an administrator for an invitation.\`;`
     : "";
   const refuses = Boolean(domainCheck || invitationCheck);
   const role = invitations ? `openInvitation(email)?.role ?? ${defaultRole}` : defaultRole;
@@ -104,7 +98,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 ${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
-import { ${tables} } from "#/db/schema";
+import { ${tables} } from "#/db/schema";${closed || email ? '\nimport { app } from "#/generated/app";' : ""}
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 import { w } from "#/kit/words";
@@ -118,7 +112,7 @@ function signedInAs(userId: string) {
 }
 ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins)};
-${closed || email ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
+
 const socialProviders = {
 ${providers
   .filter((p) => p !== "email")
@@ -291,8 +285,8 @@ ${
 }        // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
-          subject: w.codeSubject(APP_NAME),
-          text: w.codeText(APP_NAME, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
+          subject: w.codeSubject(app.name),
+          text: w.codeText(app.name, \`\${otp.slice(0, 3)} \${otp.slice(3)}\`),
         }).catch((error) => log.error("A sign-in code could not be sent", { error }));
       },
     }),
@@ -392,14 +386,14 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { oneOf, optional, type Search, shaped${invitations ? ", text" : ""} } from "#/kit/params";
-import { app } from "#/generated/app";
+import { app } from "#/generated/app";${invitations ? '\nimport { ROLE_LABELS } from "#/generated/users.server";' : ""}
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
 import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, ${email ? "mailKept, " : ""}PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
-${invitations ? `const ROLE_LABELS: Record<string, string> = ${record(roleLabels(auth))};\n` : ""}${options}
+${options}
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {

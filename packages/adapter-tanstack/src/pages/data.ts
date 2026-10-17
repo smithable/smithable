@@ -111,7 +111,7 @@ function ${component}() {
     <>
       <PageHeader
         page=${attr(page.id)}
-        title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)}
+        ${t.pageHeader(page.id)}
         actions={
           <>
 ${

@@ -157,7 +157,7 @@ function ${component}() {
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
       <Calendar
         search={search}
         items={items}

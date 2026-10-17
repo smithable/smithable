@@ -49,7 +49,7 @@ test("the routes inside are guarded by the data page's rule, titled by the model
   const list = file("src/routes/admin/orders/index.tsx");
   expect(list).toContain('createFileRoute("/admin/orders/")');
   expect(list).toContain('pageAccess["admin"]');
-  expect(list).toContain('title="Orders"');
+  expect(list).toContain("title={orderUi.pluralLabel}");
   // No text marker points at the data page's own title from a model's list.
   expect(list).not.toContain('page="admin"');
   expect(list).toContain("orderData.list(viewer, where, 501)");

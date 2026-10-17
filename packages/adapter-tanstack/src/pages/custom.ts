@@ -32,7 +32,7 @@ export function customPageFromEdit(
   options: GenerateOptions,
   edited: string,
 ): { ok: true; source: string } | { ok: false; reason: string } {
-  const t = texts(options.content ?? emptyContent(), ir.app.name);
+  const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
   const p = listParts(
@@ -100,7 +100,7 @@ ${code.replace(/\n{3,}/g, "\n\n")}`,
 
 /** The starting point of a custom page: exactly what was generated, now yours to change. */
 export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOptions): string {
-  const t = texts(options.content ?? emptyContent(), ir.app.name);
+  const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
   const p = listParts(
@@ -140,7 +140,7 @@ export function customRoute(
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: () => (
-    <${c} page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id, 6)} />
+    <${c} page=${attr(page.id)} ${t.pageHeader(page.id, 6)} />
   ),
 });
 `;

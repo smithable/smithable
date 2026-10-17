@@ -94,7 +94,7 @@ function wordsIfUsed(content: string): string {
 export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
   const ctx: GenContext = {
     ir,
-    t: texts(options.content ?? emptyContent(), ir.app.name),
+    t: texts(options.content ?? emptyContent()),
     auth: options.auth,
     ux: options.ux ?? emptyUx(),
     options,
@@ -129,8 +129,27 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   );
   for (const generator of SECTION_GENERATORS)
     files.push(...generator.files(ctx).map((f) => ({ ...f, content: wordsIfUsed(f.content) })));
+  for (const file of files)
+    if (file.zone === "generated") file.content = pagesImported(file.content);
   if (content?.languages?.length) translatedApp(files, ctx);
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+const PAGES_IMPORT = /^import \{ ([^}]*) \} from "#\/generated\/pages";$/m;
+
+/** A file that reads a page's words (`pageUi`, `pageHead`) imports them from src/generated/pages.ts. */
+function pagesImported(content: string): string {
+  const used = ["pageUi", "pageHead"].filter((name) => new RegExp(`\\b${name}\\b`).test(content));
+  if (!used.length || content.includes("export const pageUi")) return content;
+  const line = content.match(PAGES_IMPORT);
+  if (!line)
+    return content.replace(
+      /^import /m,
+      `import { ${used.join(", ")} } from "#/generated/pages";\nimport `,
+    );
+  const names = (line[1] as string).split(", ");
+  const all = [...names, ...used.filter((name) => !names.includes(name))];
+  return content.replace(PAGES_IMPORT, `import { ${all.join(", ")} } from "#/generated/pages";`);
 }
 
 /** Whether a file's imports from the kit's words name tx (one import a line, as generated). */
@@ -621,7 +640,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
-      generated("src/generated/pages.ts", pagesModule(ir, auth)),
+      generated("src/generated/pages.ts", pagesModule(ir, t, auth)),
       // The public site's menu and contact details, for its landing pages and public blogs.
       ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),

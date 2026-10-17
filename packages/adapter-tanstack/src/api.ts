@@ -833,21 +833,21 @@ function toolsModule(
       return ${c}ToApi(${action.copy ? `(await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any>` : ran});
     }`;
   });
-  // Each caller's kinds of record in the words people use, for the wording rules (only what they read).
-  const words = Object.fromEntries(
-    callers.map((caller) => [
-      caller === "visitor" ? "visitor" : caller.role,
-      assistantOffer(ir, auth, caller, { scope, content }).kinds.map((k) => ({
-        model: k.model,
-        label: k.label,
-        pluralLabel: k.pluralLabel,
-        fields: k.fields,
-        filters: k.filters,
-        numbers: k.numbers,
-        by: k.by,
-      })),
-    ]),
-  );
+  // Each caller's kinds of record in the words people use, for the wording rules (only what they
+  // read): the words themselves read from each kind's module, which has them once.
+  const worded = new Set<string>();
+  const words = (app ? callers : [])
+    .map((caller) => {
+      const kinds = assistantOffer(ir, auth, caller, { scope, content }).kinds.map((k) => {
+        const n = models.find((m) => m.model.name === k.model)?.n;
+        const filters = k.filters.map((f) => (f.by === "value" ? { ...f, labels: undefined } : f));
+        if (!n) return JSON.stringify({ ...k, description: undefined });
+        worded.add(`import { ${n.ui} } from "./${n.module.slice("#/generated/".length)}";`);
+        return `kindWords(${n.ui}, ${JSON.stringify(k.fields.map((f) => f.name))}, ${JSON.stringify(filters)}, ${JSON.stringify(k.numbers)}, ${JSON.stringify(k.by)})`;
+      });
+      return `  ${JSON.stringify(caller === "visitor" ? "visitor" : caller.role)}: () => [${kinds.map((k) => `\n    ${k},`).join("")}\n  ],`;
+    })
+    .join("\n");
   const asks = Object.fromEntries(
     callers.map((caller) => [
       caller === "visitor" ? "visitor" : caller.role,
@@ -865,7 +865,7 @@ function toolsModule(
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
 ${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
-${app ? `import type { AskKind } from "#/kit/ask";\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${app ? `import type { AskFilter, AskKind } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
@@ -879,7 +879,7 @@ ${
         .sort()
         .join(", ")} } from "./api.server";`
 }
-${models.map(({ model, n }) => `import { ${confirms ? `${n.access}, ` : ""}${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}
+${models.map(({ model, n }) => `import { ${confirms ? `${n.access}, ` : ""}${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}${worded.size ? `\n${[...worded].sort().join("\n")}` : ""}
 ${actions
   .map((a) => {
     const fromModule = [
@@ -1107,8 +1107,28 @@ ${
 /** How each caller is answered: the rules, then the host's model; a visitor by the rules only. */
 const ASKS: Record<string, string> = ${JSON.stringify(asks)};
 
-/** Each caller's kinds of record in the words people use, for the wording rules. */
-const WORDS: Record<string, AskKind[]> = ${JSON.stringify(words)};
+/** A kind's words for the wording rules, read from its module: the fields the caller reads. */
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+  const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
+  return {
+    model: ui.model,
+    label: ui.label,
+    pluralLabel: ui.pluralLabel,
+    fields: fields.map((name) => ({ name, label: field(name)?.label ?? name })),
+    filters: filters.map((f) =>
+      f.by === "value"
+        ? { ...f, labels: Object.fromEntries((field(f.field)?.choices ?? []).map((c) => [c.value, c.label])) }
+        : f,
+    ),
+    numbers,
+    by,
+  };
+}
+
+/** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
+const WORDS: Record<string, () => AskKind[]> = {
+${words}
+};
 
 /** Whether the viewer gets "Ask": a role the assistant block names, or a visitor when it says anyone. */
 export function asks(viewer: Viewer | null): boolean {
@@ -1121,7 +1141,7 @@ export async function ask(viewer: Viewer | null, question: string): Promise<Answ
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller],
+    kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
@@ -1149,7 +1169,7 @@ const KEPT_EACH = 5;
 
 /** A field's label in the person's words, for a card. */
 function labelOf(viewer: Viewer, kind: string, field: string): string {
-  return WORDS[viewer.role]?.find((k) => k.model === kind)?.fields.find((f) => f.name === field)?.label ?? field;
+  return WORDS[viewer.role]?.().find((k) => k.model === kind)?.fields.find((f) => f.name === field)?.label ?? field;
 }
 
 /** A value as a card shows it: a referenced record by its title. */

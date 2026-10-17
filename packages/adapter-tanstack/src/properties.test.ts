@@ -202,5 +202,7 @@ test("a hero shortcut to the review page gets its shield icon (found by this tes
   } as never);
   if (!result.ok) throw new Error(result.message);
   const made = generate({ ...files, ...result.files });
-  expect(made.some((f) => f.content.includes('label: "Review", icon: Shield }'))).toBe(true);
+  expect(
+    made.some((f) => f.content.includes('label: pageUi["review"].title, icon: Shield }')),
+  ).toBe(true);
 });

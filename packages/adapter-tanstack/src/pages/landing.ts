@@ -19,6 +19,7 @@ import { hasSignIn } from "../auth.js";
 import { calculatorModel } from "../calculators.js";
 import {
   attr,
+  code,
   guard,
   HEADER,
   importList,
@@ -106,7 +107,7 @@ export function landingRoute(
               const target = ir.pages.find((p) => p.id === id) as PageIR;
               const icon = LUCIDE[pageIcon(ux, target)];
               imports.add("lucide-react", icon);
-              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${JSON.stringify(t.pageTitle(id))}, icon: ${icon} }`;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${t.pageTitleOf(id)}, icon: ${icon} }`;
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");
@@ -189,15 +190,8 @@ export function landingRoute(
           !article && listPage && auth.public.pages.includes(listPage.id)
             ? listPage.route
             : undefined;
-        const labels =
-          choice?.type.kind === "choice"
-            ? Object.fromEntries(
-                choice.type.values.map((v) => [
-                  v,
-                  t.field(model, choice).values?.[v] ?? humanize(v),
-                ]),
-              )
-            : undefined;
+        // The badge's words as the model's module has them.
+        if (choice) imports.add(n.module, n.ui);
         // The badge's color by meaning, as in the model's tables.
         const tones =
           choice &&
@@ -241,9 +235,9 @@ export function landingRoute(
             text: row.${summary.name} ?? undefined,`
                 : ""
             }${
-              labels && choice
+              choice
                 ? `
-            badge: (${literal(labels)} as Record<string, string>)[row.${choice.name}],`
+            badge: ${n.ui}.fields.find((f) => f.name === ${JSON.stringify(choice.name)})?.choices?.find((c) => c.value === row.${choice.name})?.label,`
                 : ""
             }${
               money
@@ -391,8 +385,9 @@ export function landingRoute(
       })}}`
     : "";
   const header = hasSignIn(auth)
-    ? `viewer ? ${link(appPage?.route, `w.openApp(${JSON.stringify(ir.app.name)})`, true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
-    : link(appPage?.route, `w.openApp(${JSON.stringify(ir.app.name)})`, true).slice(1, -1);
+    ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
+    : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
+  imports.add("#/generated/app", "app");
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
@@ -400,7 +395,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.lengt
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName=${attr(ir.app.name)}${t.logo} link={${header}}${footer} site={site}>
+    <LandingLayout appName={app.name}${t.logo} link={${header}}${footer} site={site}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );
@@ -424,11 +419,11 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
         p.pattern.kind !== "legal" &&
         !p.route.includes("$"),
     )
-    .map((p) => ({ to: p.route, label: t.pageTitle(p.id) }));
+    .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
   // The privacy page: a footer line, beside the cookie settings.
   const legal = ir.pages
     .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
-    .map((p) => ({ to: p.route, label: t.pageTitle(p.id) }));
+    .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
   const section =
     home?.pattern.kind === "landing"
       ? home.pattern.sections.find((s) => s.kind === "contact")

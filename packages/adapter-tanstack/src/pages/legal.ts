@@ -10,7 +10,7 @@ import {
   USER_MODEL,
 } from "@smithable/core";
 import type { GenContext } from "../shared.js";
-import { guard, HEADER, importList, indexPath, literal, type Texts } from "../shared.js";
+import { code, guard, HEADER, importList, indexPath, literal, type Texts } from "../shared.js";
 
 const ANALYTICS_NAMES: Record<string, string> = {
   plausible: "Plausible",
@@ -53,7 +53,7 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
           invitedOnly: !auth.signIn.selfSignUp,
         };
   return {
-    app: ir.app.name,
+    app: code("app.name"),
     ...(ir.app.description ? { purpose: ir.app.description } : {}),
     ...(signIn ? { signIn } : {}),
     records,
@@ -92,11 +92,12 @@ export function legalRoute(
   // the app's shell (root.ts, visitorRoutes): the page renders itself alone.
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
+    .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "guardPage")
     .add("#/kit/LegalPage", "LegalPage", "type LegalFacts");
   const given = Object.fromEntries(Object.entries(operator).filter(([, v]) => v));
-  const page_ = `<LegalPage title=${JSON.stringify(t.pageTitle(page.id))} facts={facts} />`;
+  const page_ = `<LegalPage title={${t.pageTitleOf(page.id)}} facts={facts} />`;
   return `${HEADER}${imports.render()}
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = ${literal({

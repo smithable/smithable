@@ -30,8 +30,9 @@ test("a page and a section of your own: a generated route around a component cre
   const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
   const file = (path: string) => files.find((f) => f.path === path);
   expect(file("src/routes/planner/index.tsx")?.content).toContain(
-    '<Planner page="planner" title="Plan your week" />',
+    '<Planner page="planner" title={pageUi["planner"].title} />',
   );
+  expect(file("src/generated/pages.ts")?.content).toContain('planner: { title: "Plan your week" }');
   expect(file("src/routes/index.tsx")?.content).toContain(
     '<RepaymentChart\n          name="repayment"\n          texts="pages.home.repayment"\n          title="Your repayments"',
   );

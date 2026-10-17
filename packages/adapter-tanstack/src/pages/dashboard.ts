@@ -161,7 +161,7 @@ function ${component}() {
   const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
   return (
     <>
-      <PageHeader page=${attr(page.id)} title=${attr(t.pageTitle(page.id))}${t.pageSubtitle(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
       <div data-kit="dashboard" className="space-y-6">
       ${blocks.join("\n      ")}
       </div>
