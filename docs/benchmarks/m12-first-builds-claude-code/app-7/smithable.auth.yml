@@ -6,11 +6,11 @@ roles:
   admin: all
   member:
     description: Follows the club; only administrators add teams, players and matches.
-    pages: [home, matches, teams, players]
+    pages: [home, teams, players, matches, privacy]
 assistant:
   for: signed-in
 public:
-  pages: [home, matches, teams, players, privacy]
+  pages: [home, teams, players, matches, privacy]
   read: [Team, Player, Match]
 defaultRole: member
 admins: [johan@smithable.ai]

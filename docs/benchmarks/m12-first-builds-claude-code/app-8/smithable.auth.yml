@@ -11,7 +11,7 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, speakers, talks, privacy]
+  pages: [home, schedule, speakers, privacy]
   read: [Talk, Speaker]
   create: [Message]
 defaultRole: member

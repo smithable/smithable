@@ -1,16 +1,17 @@
 smithableUx: 0.1
-theme:
-  preset: modern
-  brand:
-    primary: "#2563eb"
 pages:
+  payments:
+    table:
+      sort: -paidOn
+      columns: [invoice, amount, paidOn, method]
   invoices:
     table:
       columns: [number, client, issuedOn, dueOn, status, total, balance]
       sort: -issuedOn
-  payments:
-    table:
-      sort: -paidOn
+theme:
+  preset: modern
+  brand:
+    primary: "#0f766e"
 tones:
   Invoice.status:
     sent: warning

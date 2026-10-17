@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Union Jobs
-  description: Job posts from our local union, and a simple way for members to apply.
+  description: Job posts from our local union, where members find work and apply.
   currency: USD
 models:
   Job:
@@ -11,37 +11,37 @@ models:
       description: text!
       location: string
       trade: string
-      pay: string
       jobType: fullTime | partTime | temporary | apprenticeship
+      pay: string
+      startDate: date
       deadline: date
-      status: open | closed
+      status: open | filled | closed
       applications: Application[]
   Application:
     fields:
-      job: Job! unique
-      name: string!
-      email: email!
+      job: Job!
+      fullName: string!
       phone: phone
+      memberNumber: string
       coverLetter: text
       resume: file
       status:
         type: submitted | reviewing | accepted | rejected
         by: app
+      staffNotes: text
 pages:
   jobs:
     route: /
     crud: Job
     search: [title, employer, description, location, trade]
     filters: [jobType, status, deadline]
-    sortable: [deadline, createdAt]
-    actions: [closeJob, reopenJob]
-  myApplications:
-    crud: Application
-    mine: true
+    sortable: [deadline, startDate, createdAt]
+    actions: [markFilled, closeJob]
   applications:
     crud: Application
     filters: [job, status]
-    search: [name, email]
+    search: [fullName, memberNumber]
+    actions: [startReview, accept, reject]
   home:
     route: /welcome
     landing:
@@ -51,31 +51,32 @@ pages:
         records: Job
         where:
           status: open
+      faq:
   privacy:
     route: /privacy
     legal: privacy
 actions:
+  markFilled:
+    on: Job
+    when:
+      status: open
+    set:
+      status: filled
+    intent: Mark a job as filled once someone has been hired.
   closeJob:
     on: Job
     when:
       status: open
     set:
       status: closed
-    intent: Stop taking applications for a job.
-  reopenJob:
-    on: Job
-    when:
-      status: closed
-    set:
-      status: open
-    intent: Take applications for a job again.
+    intent: Close a job post without filling it.
   startReview:
     on: Application
     when:
       status: submitted
     set:
       status: reviewing
-    intent: Mark an application as being reviewed.
+    intent: Start reviewing an application.
   accept:
     on: Application
     when:
@@ -89,5 +90,4 @@ actions:
       status: [submitted, reviewing]
     set:
       status: rejected
-    intent: Turn down an application.
-navigation: [jobs, myApplications, applications]
+    intent: Reject an application.

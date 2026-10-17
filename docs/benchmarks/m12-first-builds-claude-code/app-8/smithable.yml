@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
-  name: Summit Days
-  description: Programme, speakers and registration for a conference.
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: Conference Hub
+  description: "Registration for a conference: browse the talks and speakers, and sign up for the talks you want to attend."
 models:
   Speaker:
     fields:
@@ -16,12 +14,12 @@ models:
   Talk:
     fields:
       title: string!
-      summary: text
+      abstract: markdown
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      track: keynote | talk | workshop | panel
+      track: general | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -39,6 +37,25 @@ models:
       email: email!
       message: text!
 pages:
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, speakers]
+      footer:
+      programme:
+        records: Talk
+      lineup:
+        records: Speaker
+      faq:
+      callToAction:
+        button: schedule
+      contact:
+        form: Message
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
   talks:
     crud: Talk
     filters: [track, speaker]
@@ -48,21 +65,6 @@ pages:
     crud: Registration
   messages:
     crud: Message
-  schedule:
-    calendar: Talk
-  home:
-    route: /
-    landing:
-      hero:
-        shortcuts: [schedule, speakers]
-      footer:
-      lineup:
-        records: Speaker
-      faq:
-      callToAction:
-        button: schedule
-      contact:
-        form: Message
   privacy:
     route: /privacy
     legal: privacy

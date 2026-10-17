@@ -3,12 +3,14 @@ pages:
   recipes:
     table:
       view: cards
+    icon: book
   shoppingLists:
     table:
-      columns: [name, shopOn, status]
-      sort: -shopOn
+      columns: [name, forDate, status]
+      sort: -forDate
+    icon: cart
 tones:
   ShoppingList.status:
     done: success
 theme:
-  preset: craft
+  preset: cafe

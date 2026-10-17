@@ -1,16 +1,9 @@
 smithable: 0.1
 app:
-  name: Billfold
-  description: "Simple invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
+  name: Billable
+  description: "Simple invoicing for freelancers: keep your clients, send invoices and record the payments you receive."
   currency: EUR
 models:
-  BusinessProfile:
-    fields:
-      businessName: string!
-      vatNumber: string
-      iban: string
-      paymentTermDays: int! = 30
-      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -27,6 +20,13 @@ models:
         type: money
         formula: quantity * unitPrice
       invoice: Invoice!
+  Payment:
+    fields:
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      note: string
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -39,46 +39,23 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-      paidAmount:
+      paid:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: total - paidAmount
-  Payment:
-    fields:
-      invoice: Invoice!
-      amount: money!
-      paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
-      note: string
+        formula: total - paid
 pages:
   clients:
     crud: Client
     search: [name, email]
-  settings:
-    crud: BusinessProfile
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      features:
-      faq:
-      callToAction:
-        button: invoices
-  privacy:
-    route: /privacy
-    legal: privacy
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markPaid]
   payments:
     crud: Payment
-    filters: [invoice, method, paidOn]
   overview:
     dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
       outstanding:
         sum: Invoice.balance
         where:
@@ -87,12 +64,25 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
-      received:
-        sum: Payment.amount
-        by: paidOn
       latest:
         list: Invoice
         limit: 5
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      features:
+      faq:
+      callToAction:
+        button: overview
+  privacy:
+    route: /privacy
+    legal: privacy
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid]
 actions:
   markSent:
     on: Invoice

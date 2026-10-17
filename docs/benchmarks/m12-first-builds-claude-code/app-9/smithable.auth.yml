@@ -7,7 +7,7 @@ roles:
   admin: all
   agent:
     description: "Handles tickets: takes them, works on them and passes them on."
-    pages: [tickets]
+    pages: [cases]
     create: all
     write: all
     actions: all

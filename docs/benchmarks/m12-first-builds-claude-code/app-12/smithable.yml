@@ -2,7 +2,6 @@ smithable: 0.1
 app:
   name: Shop Status
   description: Is the shop working? The state of our web shop's services, outages and their updates, live.
-  timezone: Europe/Stockholm
 models:
   Component:
     fields:
@@ -38,6 +37,7 @@ pages:
     route: /
     landing:
       hero:
+      footer:
       services:
         records: Component
       open:
@@ -48,7 +48,6 @@ pages:
         records: Incident
         where:
           status: resolved
-      footer:
   privacy:
     route: /privacy
     legal: privacy
@@ -103,5 +102,5 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    intent: The incident is over, with an update saying so.
+    intent: The outage is over, with an update saying so.
 navigation: [overview, incidents, updates, components, team]

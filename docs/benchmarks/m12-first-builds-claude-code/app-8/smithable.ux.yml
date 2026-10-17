@@ -6,10 +6,5 @@ pages:
   speakers:
     table:
       view: cards
-tones:
-  Talk.track:
-    keynote: success
 theme:
   preset: modern
-  brand:
-    primary: "#4f46e5"
