@@ -32,6 +32,9 @@ function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | u
   return undefined;
 }
 
+/** The event that opens a part of the app in Behavior (Smith's answer leads there). */
+export const OPEN_PART = "smithable:open-part";
+
 /** Where a summary's part is set: its entry in Behavior, or Who can for sign-in and access. */
 function entryOf(concept: string): { sub: SubView; path: string[] } | undefined {
   const [kind = "", name = ""] = concept.split(/:(.*)/s);
@@ -181,6 +184,17 @@ export function NoCode({
     setOpened(at.path);
     onPlace({ sub: at.sub, selection: s });
   };
+  // A part named elsewhere (Smith's "What does this app do?") opens here.
+  const jumpRef = useRef(jumpTo);
+  jumpRef.current = jumpTo;
+  useEffect(() => {
+    const open = (e: Event) => {
+      const at = entryOf((e as CustomEvent<string>).detail);
+      if (at) jumpRef.current(at);
+    };
+    window.addEventListener(OPEN_PART, open);
+    return () => window.removeEventListener(OPEN_PART, open);
+  }, []);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e)) return;
