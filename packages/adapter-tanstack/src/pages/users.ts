@@ -32,6 +32,7 @@ export function usersRoute(page: PageIR, ir: SpecIR, t: Texts, auth: AuthIR): st
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 ${keys ? 'import { app } from "#/generated/app";\n' : ""}import { pageAccess } from "#/generated/pages";
+import { ROLE_LABELS } from "#/generated/roles";
 import {
   invite,
   listUsers,
@@ -39,7 +40,6 @@ import {
   removeUser,
   resendInvitation,
   type Role,
-  ROLE_LABELS,
   ROLES,
   setRole,
   usesOf,

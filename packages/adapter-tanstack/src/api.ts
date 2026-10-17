@@ -1111,7 +1111,7 @@ const ASKS: Record<string, string> = ${JSON.stringify(asks)};
 function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
-    model: ui.model,
+    model: ui.model ?? "",
     label: ui.label,
     pluralLabel: ui.pluralLabel,
     fields: fields.map((name) => ({ name, label: field(name)?.label ?? name })),

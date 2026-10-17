@@ -63,7 +63,7 @@ import { smokeTests } from "./smoke.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
 import { themeCss } from "./themes.js";
-import { usersReadme, usersServerModule, usersTestSource } from "./users.js";
+import { rolesModule, usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
 const SCAFFOLD = new Set([
   "pnpm-workspace.yaml",
@@ -686,6 +686,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         ir.actions.some((a) => userFields(a.input).length);
       return [
         generated("src/lib/auth.ts", authModule(auth, ir)),
+        generated("src/generated/roles.ts", rolesModule(auth)),
         generated(
           "src/routes/sign-in.tsx",
           signInRoute(auth, onboarding?.route, hasInvitations(ir, auth)),

@@ -386,7 +386,7 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${invitations ? "invitation, user" : "user"} } from "#/db/schema";
 import { oneOf, optional, type Search, shaped${invitations ? ", text" : ""} } from "#/kit/params";
-import { app } from "#/generated/app";${invitations ? '\nimport { ROLE_LABELS } from "#/generated/users.server";' : ""}
+import { app } from "#/generated/app";${invitations ? '\nimport { ROLE_LABELS } from "#/generated/roles";' : ""}
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
 import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, ${email ? "mailKept, " : ""}PROVIDERS } from "#/lib/auth";
