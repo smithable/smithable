@@ -26,13 +26,17 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { keptPage, Preview, Trace } from "./shared";
 import { TroubleshootDialog } from "./Troubleshoot";
-import { Button, cx, Panel, useMedia } from "./ui";
+import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import {
   gridOf,
   LayoutBar,
+  PhoneSettingsButton,
+  phoneWindows,
   type SlotContent,
   shownSlots,
+  swipe,
   useArrangement,
+  usePhoneSettings,
   WINDOW_NAMES,
   type WindowId,
 } from "./windows";
@@ -128,16 +132,36 @@ export function App() {
     () => (changeKey && concepts ? { key: changeKey, concepts: concepts.split("\n") } : undefined),
     [changeKey, concepts],
   );
-  // A phone shows one window at a time, chosen in the header (swipes come with step 6).
+  // A phone shows one window at a time (studio-v3.md §8), chosen in the header or by a swipe
+  // across it; No code, Preview and Smith by default, Changes and Code as its settings say.
   const narrow = useMedia("(max-width: 1023px)");
+  const [phone, setPhone] = usePhoneSettings();
+  const phoneList = phoneWindows(phone);
   const phoneWindow = (
-    WINDOWS.includes(place.window as WindowId) ? place.window : "nocode"
+    phoneList.includes(place.window as WindowId)
+      ? place.window
+      : place.window === "changes" && phone.changesUnderSmith
+        ? "smith"
+        : "nocode"
   ) as WindowId;
-  const showWindow = (window: WindowId) => setPlace((p) => ({ ...p, window }));
+  const showWindow = (window: WindowId) =>
+    setPlace((p) => ({
+      ...p,
+      window: window === "changes" && phone.changesUnderSmith ? "smith" : window,
+    }));
+  const stepWindow = (by: number) =>
+    showWindow(
+      phoneList[(phoneList.indexOf(phoneWindow) + by + phoneList.length) % phoneList.length] ??
+        "nocode",
+    );
+  // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
+  const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
   const [hidden, setHidden] = useState({ left: false, right: false });
   const layout = narrow ? "one" : arrangement.layout;
-  const slots: SlotContent[] = narrow ? [phoneWindow] : arrangement.slots;
+  const slots: SlotContent[] = narrow
+    ? [phoneWindow === "smith" && phone.changesUnderSmith ? "smith+changes" : phoneWindow]
+    : arrangement.slots;
   const shown = shownSlots(layout, narrow ? { left: false, right: false } : hidden);
   /** The slot a window is in among those shown (the first that names it), or none. */
   const slotOf = (window: WindowId) =>
@@ -490,9 +514,16 @@ export function App() {
         </span>
         {project.making ? null : narrow ? (
           // A phone: one window at a time.
-          <fieldset data-guide="layout" className="flex rounded-md bg-subtle p-0.5">
+          <fieldset
+            data-guide="layout"
+            className="flex rounded-md bg-subtle p-0.5"
+            {...swipe(
+              () => stepWindow(1),
+              () => stepWindow(-1),
+            )}
+          >
             <legend className="sr-only">Window</legend>
-            {WINDOWS.map((w) => (
+            {phoneList.map((w) => (
               <label
                 key={w}
                 className={cx(
@@ -514,6 +545,7 @@ export function App() {
         ) : (
           <LayoutBar arrangement={arrangement} onChange={setArrangement} />
         )}
+        {narrow && !project.making && <PhoneSettingsButton settings={phone} onChange={setPhone} />}
         <div className="ml-auto flex items-center gap-3">
           {busy && <span className="text-xs text-quiet">Working…</span>}
           {project.making ? null : project.home ? (
@@ -747,83 +779,103 @@ export function App() {
                 )}
                 style={{ gridArea: area(s) }}
               >
-                {windowsIn(content).map((w) =>
-                  w === "nocode" ? (
-                    <NoCode
-                      key={w}
-                      project={project}
-                      spec={spec}
-                      run={run}
-                      place={place.nocode}
-                      onPlace={nocodePlace}
+                {narrow && content === "smith+changes" && (
+                  // A phone: Smith or Changes, by these tabs or a swipe across them.
+                  <div
+                    className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
+                    {...swipe(
+                      () => setPhoneSub("changes"),
+                      () => setPhoneSub("smith"),
+                    )}
+                  >
+                    <Tabs
+                      tabs={[
+                        ["smith", "Smith"],
+                        ["changes", "Changes"],
+                      ]}
+                      value={phoneSub}
+                      onChange={setPhoneSub}
                     />
-                  ) : w === "code" ? (
-                    <Suspense
-                      key={w}
-                      fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
-                    >
-                      <Code
+                  </div>
+                )}
+                {(narrow && content === "smith+changes" ? [phoneSub] : windowsIn(content)).map(
+                  (w) =>
+                    w === "nocode" ? (
+                      <NoCode
+                        key={w}
                         project={project}
                         spec={spec}
                         run={run}
-                        place={place.code}
-                        onPlace={codePlace}
-                        onLook={() => {
-                          nocodePlace({ sub: "look" });
-                          if (narrow) showWindow("nocode");
-                          else if (slotOf("nocode") === undefined)
-                            setArrangement({
-                              ...arrangement,
-                              slots: [
-                                "nocode",
-                                ...arrangement.slots.slice(1),
-                              ] as typeof arrangement.slots,
-                            });
-                        }}
+                        place={place.nocode}
+                        onPlace={nocodePlace}
                       />
-                    </Suspense>
-                  ) : w === "smith" ? (
-                    <Panel key={w} title="Smith" className="min-h-0 flex-1">
-                      <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
-                        <Ask
-                          example={example}
-                          words={words}
-                          waiting={project.waiting}
-                          trace={project.trace}
-                          ready={{
-                            sections,
-                            notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
-                            ...(project.home ? { home: project.home } : {}),
-                            apply: (op, args) => void run(op, args),
-                            onJump: (concept) => {
-                              guideStop("behavior");
-                              // After No code is on screen to hear it.
-                              setTimeout(() =>
-                                window.dispatchEvent(
-                                  new CustomEvent(OPEN_PART, { detail: concept }),
-                                ),
-                              );
-                            },
+                    ) : w === "code" ? (
+                      <Suspense
+                        key={w}
+                        fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
+                      >
+                        <Code
+                          project={project}
+                          spec={spec}
+                          run={run}
+                          place={place.code}
+                          onPlace={codePlace}
+                          onLook={() => {
+                            nocodePlace({ sub: "look" });
+                            if (narrow) showWindow("nocode");
+                            else if (slotOf("nocode") === undefined)
+                              setArrangement({
+                                ...arrangement,
+                                slots: [
+                                  "nocode",
+                                  ...arrangement.slots.slice(1),
+                                ] as typeof arrangement.slots,
+                              });
                           }}
                         />
-                      </div>
-                    </Panel>
-                  ) : (
-                    <Panel
-                      key={w}
-                      title="Changes"
-                      className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
-                    >
-                      <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                        <Trace
-                          entries={project.trace}
-                          words={words}
-                          plugins={spec.plugins}
-                          onUndo={(ids) => void undoChanges(ids)}
-                        />
-                      </div>
-                    </Panel>
-                  ),
+                      </Suspense>
+                    ) : w === "smith" ? (
+                      <Panel key={w} title="Smith" className="min-h-0 flex-1">
+                        <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
+                          <Ask
+                            example={example}
+                            words={words}
+                            waiting={project.waiting}
+                            trace={project.trace}
+                            ready={{
+                              sections,
+                              notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
+                              ...(project.home ? { home: project.home } : {}),
+                              apply: (op, args) => void run(op, args),
+                              onJump: (concept) => {
+                                guideStop("behavior");
+                                // After No code is on screen to hear it.
+                                setTimeout(() =>
+                                  window.dispatchEvent(
+                                    new CustomEvent(OPEN_PART, { detail: concept }),
+                                  ),
+                                );
+                              },
+                            }}
+                          />
+                        </div>
+                      </Panel>
+                    ) : (
+                      <Panel
+                        key={w}
+                        title="Changes"
+                        className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
+                      >
+                        <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+                          <Trace
+                            entries={project.trace}
+                            words={words}
+                            plugins={spec.plugins}
+                            onUndo={(ids) => void undoChanges(ids)}
+                          />
+                        </div>
+                      </Panel>
+                    ),
                 )}
               </div>
             );
@@ -833,9 +885,6 @@ export function App() {
     </div>
   );
 }
-
-/** The windows of a phone's header, in its order. */
-const WINDOWS: WindowId[] = ["nocode", "preview", "smith", "changes", "code"];
 
 /** The windows a slot holds. */
 const windowsIn = (content: SlotContent): WindowId[] =>

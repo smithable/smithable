@@ -243,3 +243,122 @@ function WindowSettings({
     </dialog>
   );
 }
+
+/** A phone's choices (studio-v3.md §8): whether Code is offered, whether Changes is Smith's. */
+export interface PhoneSettings {
+  code: boolean;
+  changesUnderSmith: boolean;
+}
+const PHONE = "smithable:phone";
+
+export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => void] {
+  const [settings, setSettings] = useState<PhoneSettings>(() => {
+    try {
+      return {
+        code: false,
+        changesUnderSmith: true,
+        ...JSON.parse(localStorage.getItem(PHONE) ?? "{}"),
+      };
+    } catch {
+      return { code: false, changesUnderSmith: true };
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(PHONE, JSON.stringify(settings));
+    } catch {}
+  }, [settings]);
+  return [settings, setSettings];
+}
+
+/** A phone's main windows, in their order: No code, Preview, Smith, then Changes and Code if set. */
+export const phoneWindows = (s: PhoneSettings): WindowId[] => [
+  "nocode",
+  "preview",
+  "smith",
+  ...(s.changesUnderSmith ? [] : (["changes"] as const)),
+  ...(s.code ? (["code"] as const) : []),
+];
+
+/**
+ * A sideways swipe on an element (a phone's header switches the window, a tab bar the sub view):
+ * a finger moved mostly sideways by 50 pixels or more.
+ */
+export function swipe(onNext: () => void, onPrevious: () => void) {
+  let start: { x: number; y: number } | undefined;
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      start = t ? { x: t.clientX, y: t.clientY } : undefined;
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const t = e.changedTouches[0];
+      if (!start || !t) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      start = undefined;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0) onNext();
+      else onPrevious();
+    },
+  };
+}
+
+/** The gear on a phone: whether Code is offered, whether Changes goes under Smith. */
+export function PhoneSettingsButton({
+  settings,
+  onChange,
+}: {
+  settings: PhoneSettings;
+  onChange: (next: PhoneSettings) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (open) dialog.current?.showModal();
+  }, [open]);
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Phone settings"
+        title="Phone settings"
+        onClick={() => setOpen(true)}
+        className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-subtle"
+      >
+        ⚙
+      </button>
+      {open && (
+        <dialog
+          ref={dialog}
+          aria-label="Phone settings"
+          onClose={() => setOpen(false)}
+          className="m-auto w-[min(24rem,92vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/30"
+        >
+          <div className="space-y-3 p-4 text-sm">
+            <h2 className="font-semibold">On a phone</h2>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={settings.code}
+                onChange={(e) => onChange({ ...settings, code: e.target.checked })}
+              />
+              Show Code among the windows
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={settings.changesUnderSmith}
+                onChange={(e) => onChange({ ...settings, changesUnderSmith: e.target.checked })}
+              />
+              Changes under Smith (swipe below to switch)
+            </label>
+            <div className="flex justify-end">
+              <Button onClick={() => setOpen(false)}>Done</Button>
+            </div>
+          </div>
+        </dialog>
+      )}
+    </>
+  );
+}
