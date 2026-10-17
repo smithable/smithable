@@ -8,6 +8,7 @@ import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
   expect(refusal({ host: "localhost:4321" }, undefined, undefined)).toBeUndefined();
+  expect(refusal({ host: "[::1]:4321" }, undefined, undefined)).toBeUndefined();
   expect(refusal({ host: "evil.example:4321" }, undefined, undefined)?.status).toBe(403);
 });
 

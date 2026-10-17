@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
@@ -247,16 +247,16 @@ export function refusal(
   }
   if (!host) {
     const name = (headers.host ?? "").replace(/:\d+$/, "");
-    return ["localhost", "127.0.0.1"].includes(name)
+    return ["localhost", "127.0.0.1", "[::1]"].includes(name)
       ? undefined
       : { status: 403, message: "Unknown host." };
   }
   if (!token) return undefined;
   const given = headers["x-smithable-studio-token"];
-  const ok =
-    typeof given === "string" &&
-    given.length === token.length &&
-    timingSafeEqual(Buffer.from(given), Buffer.from(token));
+  // Both hashed first, so the compare takes the same time whatever the length given: a length
+  // check before it would say how long the token is (a second reviewer, 2026-10-17).
+  const digest = (text: string) => createHash("sha256").update(text).digest();
+  const ok = typeof given === "string" && timingSafeEqual(digest(given), digest(token));
   return ok ? undefined : { status: 401, message: "Studio needs its token." };
 }
 
