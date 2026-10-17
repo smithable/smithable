@@ -204,7 +204,20 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   db.transaction((tx) => {
     tx.update(user).set({ role }).where(eq(user.id, userId)).run();
     // What touches security keeps its values: who, what they were and what they became.
-    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });${
+      hasKeys(ir, auth)
+        ? `
+    // The keys they made were made at the role they had: a new role ends them.
+    if (role !== target.role)
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker's role changed" } });`
+        : ""
+    }
   });
 }
 

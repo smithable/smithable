@@ -152,7 +152,7 @@ export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): strin
   const usesF = [...lines, ...(reply?.code ? [reply.code] : [])].some((l) => l.includes("F."));
   return `${HEADER}// Incoming call "${incoming.name}" (smithable.yml incoming): another service calls this address
 // with its secret${incoming.signed ? " (a sha256 signature of the body)" : ""}; the secret is the setting ${incomingSecret(incoming)}.
-import { ${incoming.signed ? "createHmac, " : ""}timingSafeEqual } from "node:crypto";
+import { createHash, ${incoming.signed ? "createHmac, " : ""}timingSafeEqual } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { and, ${reply ? "desc, " : ""}eq, gt${reply ? ", inArray" : ""} } from "drizzle-orm";
 import { db } from "#/db";
@@ -172,17 +172,16 @@ const caller: Viewer = { id: "key:incoming-${incoming.name}", name: NAME, email:
 
 const answer = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const same = (a: string, b: string) => {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-};
+// Both sides hashed first: the same length whatever was sent, so the compare tells nothing of it.
+const digest = (s: string) => createHash("sha256").update(s).digest();
+const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 ${
   usesFill
     ? `/** A value of the call's JSON by its path ("check.name", "items.0.id"), as text; missing is "". */
 const at = (body: unknown, path: string): string => {
   let v: unknown = body;
-  for (const part of path.split(".")) v = v !== null && typeof v === "object" ? (v as Record<string, unknown>)[part] : undefined;
+  // The call's own keys only, never what objects inherit ("constructor", "__proto__").
+  for (const part of path.split(".")) v = v !== null && typeof v === "object" && Object.hasOwn(v, part) ? (v as Record<string, unknown>)[part] : undefined;
   return v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
 };
 const fill = (template: string, body: unknown) =>

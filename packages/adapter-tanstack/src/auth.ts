@@ -116,8 +116,8 @@ export const PROVIDERS = ${JSON.stringify(providers)};
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
-const ADMINS: string[] = ${JSON.stringify(auth.admins)};
+${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains.map((d) => d.toLowerCase()))};\n` : ""}/** These addresses become admins when they first sign in. */
+const ADMINS: string[] = ${JSON.stringify(auth.admins.map((a) => a.toLowerCase()))};
 ${closed || email ? `const APP_NAME = ${JSON.stringify(ir.app.name)};\n` : ""}
 const socialProviders = {
 ${providers

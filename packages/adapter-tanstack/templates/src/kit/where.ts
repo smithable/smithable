@@ -131,7 +131,9 @@ export function whereOf(
           ids.push(oneNamed(lookup.find(text), text, name, lookup.titles).id);
         titles = [];
       }
-      if (titles.length && !field.title)
+      // Only a person's name is matched here, and only for a viewer signed in, who sees
+      // people's names anyway; any other record is named through `named` above.
+      if (titles.length && (!field.title || me === undefined))
         throw new BadInput(`"${name}" is given by the record's id, a whole number.`);
       const title = field.title;
       parts.push(
