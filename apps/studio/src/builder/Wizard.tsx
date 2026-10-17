@@ -5,6 +5,7 @@
 // words. Esc closes it; Dismiss goes back to the words; Ask Smith for help hands them to Smith.
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal } from "../api";
+import { plainRefusal } from "../refusal";
 import { Button } from "../ui";
 import type { Words } from "./Ask";
 import type { Run } from "./ChangeForms";
@@ -62,31 +63,47 @@ export function Wizard({
   const [proposal, setProposal] = useState<Proposal>();
   // The operations as the person has edited them in the form.
   const [operations, setOperations] = useState<Operation[]>([]);
+  // Why the form cannot be made as it stands (two fields of one name), or why Create was refused.
+  const [problem, setProblem] = useState<string>();
+  const [refused, setRefused] = useState<string>();
+  // The newest request: an answer to an older one (Enter, then Next) is left.
+  const asking = useRef(0);
   const box = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     box.current?.focus();
   }, []);
   const propose = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
+    const n = ++asking.current;
     setBusy(true);
+    setRefused(undefined);
+    setProblem(undefined);
+    let next: Proposal;
     try {
-      const next = await api.ask(`${asked}${text.trim()}`);
-      setProposal(next);
-      setOperations(next.kind === "change" ? next.operations : []);
+      next = await api.ask(`${asked}${text.trim()}`);
     } catch (error) {
-      setProposal({ kind: "failed", message: (error as Error).message, usage: "", id: "" });
-    } finally {
-      setBusy(false);
+      next = { kind: "failed", message: (error as Error).message, usage: "", id: "" };
     }
+    if (n !== asking.current) return;
+    setProposal(next);
+    setOperations(next.kind === "change" ? next.operations : []);
+    setBusy(false);
   };
   const create = async () => {
-    if (proposal?.kind !== "change") return;
+    if (proposal?.kind !== "change" || problem || busy) return;
     setBusy(true);
+    setRefused(undefined);
     const edited = JSON.stringify(operations) !== JSON.stringify(proposal.operations);
-    // As proposed, one change; edited, each operation as the form has it.
+    // As proposed, one change; edited, each operation as the form has it (the refusal of one
+    // is said in the notice at the top).
     let ok = true;
-    if (!edited) ok = (await api.applyProposal(proposal.id).catch(() => ({ ok: false }))).ok;
-    else for (const o of operations) if (ok) ok = await run(o.op, o.args);
+    if (!edited) {
+      const result = await api
+        .applyProposal(proposal.id)
+        .catch((e: Error) => ({ ok: false, output: e.message }));
+      ok = result.ok;
+      if (!ok) setRefused(plainRefusal(result.output));
+    } else for (const o of operations) if (ok) ok = await run(o.op, o.args);
     setBusy(false);
     if (ok) onClose();
   };
@@ -152,6 +169,7 @@ export function Wizard({
                 key={i}
                 args={o.args}
                 onArgs={(args) => setArgs(i, args)}
+                onProblem={setProblem}
               />
             ) : (
               // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
@@ -161,8 +179,13 @@ export function Wizard({
               </p>
             ),
           )}
+          {(problem || refused) && (
+            <p role="status" className="text-sm text-red-700">
+              {problem ?? refused}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={() => void create()}>
+            <Button disabled={busy || Boolean(problem)} onClick={() => void create()}>
               Create
             </Button>
             <Button variant="ghost" onClick={() => setProposal(undefined)}>
@@ -182,13 +205,24 @@ export function Wizard({
 function ModelForm({
   args,
   onArgs,
+  onProblem,
 }: {
   args: Record<string, unknown>;
   onArgs: (args: Record<string, unknown>) => void;
+  /** Two fields of one name would merge into one: said, and Create waits. */
+  onProblem: (problem: string | undefined) => void;
 }) {
-  const fields = Object.entries((args.fields ?? {}) as Record<string, unknown>);
-  const setFields = (next: [string, unknown][]) =>
+  // The rows as the person has them, two of one name included, so nothing merges unseen.
+  const [rows, setRows] = useState(() =>
+    Object.entries((args.fields ?? {}) as Record<string, unknown>),
+  );
+  const change = (next: [string, unknown][]) => {
+    setRows(next);
+    const names = next.map(([name]) => name.trim()).filter(Boolean);
+    const twice = names.find((name, at) => names.indexOf(name) !== at);
+    onProblem(twice ? `Two fields are called ${twice}: give one of them another name.` : undefined);
     onArgs({ ...args, fields: Object.fromEntries(next.filter(([name]) => name.trim())) });
+  };
   return (
     <div className="space-y-1 rounded-md border border-line bg-panel p-2">
       <label className="flex items-center gap-2 text-xs">
@@ -200,34 +234,27 @@ function ModelForm({
           className="h-7 flex-1 rounded-md border border-line px-2 text-sm"
         />
       </label>
-      {fields.map(([name, type], i) => (
-        // A field by its name, which a row's own box changes: the row is made again with it.
-        <div key={name} className="flex items-center gap-2 text-xs">
+      {rows.map(([name, type], i) => (
+        // By place: a row keeps its boxes (and the focus) while its name is typed.
+        // biome-ignore lint/suspicious/noArrayIndexKey: the rows by their place
+        <div key={i} className="flex items-center gap-2 text-xs">
           <input
             aria-label={`Field ${i + 1}`}
-            defaultValue={name}
-            onBlur={(e) =>
-              setFields(fields.map((f, at) => (at === i ? [e.target.value, f[1]] : f)))
-            }
+            value={name}
+            onChange={(e) => change(rows.map((f, at) => (at === i ? [e.target.value, f[1]] : f)))}
             className="h-7 w-28 rounded-md border border-line px-2 text-sm"
           />
           <input
-            aria-label={`Type of ${name}`}
-            defaultValue={typeof type === "string" ? type : JSON.stringify(type)}
-            onBlur={(e) =>
-              setFields(
-                fields.map((f, at) =>
-                  at === i ? [f[0], typeof type === "string" ? e.target.value : type] : f,
-                ),
-              )
-            }
+            aria-label={`Type of field ${i + 1}`}
+            value={typeof type === "string" ? type : JSON.stringify(type)}
+            onChange={(e) => change(rows.map((f, at) => (at === i ? [f[0], e.target.value] : f)))}
             disabled={typeof type !== "string"}
             className="h-7 flex-1 rounded-md border border-line px-2 font-mono text-xs"
           />
           <button
             type="button"
-            aria-label={`Leave out ${name}`}
-            onClick={() => setFields(fields.filter((_, at) => at !== i))}
+            aria-label={`Leave out field ${i + 1}`}
+            onClick={() => change(rows.filter((_, at) => at !== i))}
             className="text-quiet hover:text-red-700"
           >
             ×

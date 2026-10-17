@@ -109,12 +109,14 @@ export function Ask({
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, and when the making ends
   useEffect(() => {
     const take = () => {
+      // While the app is made the words wait for this panel's next turn.
+      if (making) return;
       let text: string | null = null;
       try {
         text = sessionStorage.getItem(HANDED);
         sessionStorage.removeItem(HANDED);
       } catch {}
-      if (!text || making) return;
+      if (!text) return;
       setRequest(text);
       proposeRef.current(text);
     };
