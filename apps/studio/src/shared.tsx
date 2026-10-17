@@ -455,11 +455,14 @@ export function Trace({
   entries,
   words,
   plugins = [],
+  onUndo,
 }: {
   entries: TraceEntry[];
   /** Builder's wording of an operation: given, an opened change says what changed in the summary's words; not, it shows the files' patch. */
   words?: (op: string, args: Record<string, unknown>) => string | undefined;
   plugins?: SpecPlugin[];
+  /** Undoes a change by its id (studio-v3.md §3): the X on each entry still in place. */
+  onUndo?: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState<string>();
   const text = (e: TraceEntry) => {
@@ -473,12 +476,24 @@ export function Trace({
         const [e] = group as [TraceEntry, ...TraceEntry[]];
         const opened = open === e.id;
         return (
-          <li key={e.id} className={cx("px-3 py-2", e.undone && "opacity-50")}>
+          <li key={e.id} className={cx("relative px-3 py-2", e.undone && "opacity-50")}>
+            {onUndo && !e.undone && !e.isUndo && (
+              // A request's changes are undone together, the newest first.
+              <button
+                type="button"
+                aria-label={`Undo: ${group.length > 1 && e.request ? e.request : text(e)}`}
+                title="Undo this change"
+                onClick={() => onUndo(group.map((g) => g.id))}
+                className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-quiet hover:bg-subtle hover:text-red-700"
+              >
+                ×
+              </button>
+            )}
             <button
               type="button"
               aria-expanded={opened}
               onClick={() => setOpen(opened ? undefined : e.id)}
-              className="block w-full text-left"
+              className="block w-full pr-6 text-left"
             >
               <span className={cx("block text-sm", e.undone && "line-through")}>
                 {group.length > 1 && e.request ? `You asked: ${e.request}` : text(e)}
@@ -508,7 +523,15 @@ export function Trace({
                   </ul>
                 )}
                 {words ? (
-                  <PlainChange newest={e} oldest={group.at(-1) ?? e} plugins={plugins} />
+                  <>
+                    <PlainChange newest={e} oldest={group.at(-1) ?? e} plugins={plugins} />
+                    <details>
+                      <summary className="cursor-pointer text-xs text-accent">
+                        Show the files
+                      </summary>
+                      <FilesChange entry={e} />
+                    </details>
+                  </>
                 ) : (
                   <FilesChange entry={e} />
                 )}

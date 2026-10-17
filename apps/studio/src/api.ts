@@ -218,6 +218,9 @@ export const api = {
   /** The language's empty texts drafted by the configured model (smithable translate). */
   translate: (language: string) => changing(call<Result>("/api/translate", { language })),
   undo: () => changing(call<Result>("/api/undo", {})),
+  /** One change undone by its id (studio-v3.md §3): an earlier one as a new change, or refused. */
+  undoChange: (change: string, confirm = false) =>
+    changing(call<Result>("/api/undo", { change, confirm })),
   redo: () => changing(call<Result>("/api/redo", {})),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
