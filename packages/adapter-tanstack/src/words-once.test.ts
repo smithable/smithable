@@ -35,7 +35,7 @@ function literals(code: string): Set<string> {
 }
 
 test.each(["crm", "booking"])(
-  "the %s starter writes each page title, the app's name, a role's label and a choice's label in one file",
+  "the %s starter writes each page title, the app's name, a role's, a choice's and a kind's label in one file",
   (starter) => {
     const ir = validateSpec({ path: "smithable.yml", text: read(starter, "smithable.yml") })
       .ir as SpecIR;
@@ -83,7 +83,10 @@ test.each(["crm", "booking"])(
               },
             ]),
           );
-          return [m.name, { ...own, fields }];
+          return [
+            m.name,
+            { ...own, label: `Kind ${m.name}`, pluralLabel: `Kinds ${m.name}`, fields },
+          ];
         }),
       ),
     };
@@ -101,6 +104,7 @@ test.each(["crm", "booking"])(
       ...pages.map((id) => `Page title ${id}`),
       ...Object.values(roleLabels(auth)),
       ...choices.map(([m, f, v]) => `Choice ${m}.${f}.${v}`),
+      ...ir.models.flatMap((m) => [`Kind ${m.name}`, `Kinds ${m.name}`]),
     ];
     expect(choices.length).toBeGreaterThan(0);
     const twice = values

@@ -4394,7 +4394,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import type { NoteValues } from "./note";
+import { type NoteValues } from "./note";
 
 /** Who may read, create, change and delete notes. */
 export const noteAccess: ModelAccess = {
@@ -4996,7 +4996,9 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { taskData } from "./task.server";
 import { noteData } from "./note.server";
-import type { ProjectValues } from "./project";
+import { taskUi } from "./task";
+import { noteUi } from "./note";
+import { projectUi, type ProjectValues } from "./project";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -5007,8 +5009,8 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Task", label: "Task", plural: "Tasks", from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, id))).get()?.n ?? 0 },
-    { model: "Note", label: "Note", plural: "Notes", from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.notes).where(and(eq(schema.notes.projectId, id))).get()?.n ?? 0 },
+    { model: "Task", label: taskUi.label, plural: taskUi.pluralLabel, from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, id))).get()?.n ?? 0 },
+    { model: "Note", label: noteUi.label, plural: noteUi.pluralLabel, from: "Project", depth: 1, count: tx.select({ n: count() }).from(schema.notes).where(and(eq(schema.notes.projectId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -5016,7 +5018,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Project", label: "Project", with: with_, loose, together: false, missing: ["Project","Task","Note"] };
+  return { id, title, model: "Project", label: projectUi.label, with: with_, loose, together: false, missing: [projectUi.label, taskUi.label, noteUi.label] };
 }
 
 /** Who may read, create, change and delete projects. */
@@ -5568,7 +5570,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import type { TaskValues } from "./task";
+import { type TaskValues } from "./task";
 
 /** Who may read, create, change and delete tasks. */
 export const taskAccess: ModelAccess = {
@@ -6906,6 +6908,9 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { projectUi } from "#/generated/project";
+import { taskUi } from "#/generated/task";
+import { noteUi } from "#/generated/note";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -6926,7 +6931,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { Project: "Project", Task: "Task", Note: "Note" };
+const LABELS: Record<string, string> = { Project: projectUi.label, Task: taskUi.label, Note: noteUi.label };
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -7146,8 +7151,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { projectData } from "#/generated/project.server";
+import { projectUi } from "#/generated/project";
 import { taskData } from "#/generated/task.server";
+import { taskUi } from "#/generated/task";
 import { noteData } from "#/generated/note.server";
+import { noteUi } from "#/generated/note";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { w } from "#/kit/words";
@@ -7171,9 +7179,9 @@ const getCounts = createServerFn().handler(async () => {
 });
 
 const MODELS = [
-  { key: "projects", label: "Projects", to: "/admin/projects" },
-  { key: "tasks", label: "Tasks", to: "/admin/tasks" },
-  { key: "notes", label: "Notes", to: "/admin/notes" },
+  { key: "projects", label: projectUi.pluralLabel, to: "/admin/projects" },
+  { key: "tasks", label: taskUi.pluralLabel, to: "/admin/tasks" },
+  { key: "notes", label: noteUi.pluralLabel, to: "/admin/notes" },
 ] as const;
 
 export const Route = createFileRoute("/admin/")({
@@ -8447,6 +8455,9 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { projectUi } from "#/generated/project";
+import { taskUi } from "#/generated/task";
+import { noteUi } from "#/generated/note";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -8467,7 +8478,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { Project: "Project", Task: "Task", Note: "Note" };
+const LABELS: Record<string, string> = { Project: projectUi.label, Task: taskUi.label, Note: noteUi.label };
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -9214,15 +9225,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "91339c5f generated",
+  "src/generated/note.server.ts": "4a6ac0ad generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "73201590 generated",
+  "src/generated/project.server.ts": "dae61335 generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "967f0e98 generated",
+  "src/generated/task.server.ts": "c7dbd192 generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "cfa2ff5a generated",
@@ -9283,9 +9294,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "f3199843 generated",
-  "src/routes/admin/activity.tsx": "c5154348 generated",
+  "src/routes/admin/activity.tsx": "0f07d2d4 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
-  "src/routes/admin/index.tsx": "c3964a6b generated",
+  "src/routes/admin/index.tsx": "e9662e56 generated",
   "src/routes/admin/notes/$id.tsx": "5ec1a6f3 generated",
   "src/routes/admin/notes/index.tsx": "7ae5902e generated",
   "src/routes/admin/notes/new.tsx": "adafdcf0 generated",
@@ -9316,7 +9327,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "105e9502 generated",
-  "src/routes/team/activity.tsx": "9b327b8e generated",
+  "src/routes/team/activity.tsx": "f5cfba7a generated",
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "19116c27 kit",
@@ -11383,7 +11394,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
-import type { BookingValues } from "./booking";
+import { type BookingValues } from "./booking";
 
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
@@ -11951,7 +11962,9 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
-import type { ClassTypeValues } from "./class-type";
+import { sessionUi } from "./session";
+import { bookingUi } from "./booking";
+import { classTypeUi, type ClassTypeValues } from "./class-type";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -11962,8 +11975,8 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Session", label: "Session", plural: "Sessions", from: "ClassType", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
-    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
+    { model: "Session", label: sessionUi.label, plural: sessionUi.pluralLabel, from: "ClassType", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
+    { model: "Booking", label: bookingUi.label, plural: bookingUi.pluralLabel, from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.classTypeId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -11971,7 +11984,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "ClassType", label: "Class type", with: with_, loose, together: false, missing: ["Class type","Session","Booking"] };
+  return { id, title, model: "ClassType", label: classTypeUi.label, with: with_, loose, together: false, missing: [classTypeUi.label, sessionUi.label, bookingUi.label] };
 }
 
 /** Who may read, create, change and delete class types. */
@@ -12765,7 +12778,9 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
-import type { InstructorValues } from "./instructor";
+import { sessionUi } from "./session";
+import { bookingUi } from "./booking";
+import { instructorUi, type InstructorValues } from "./instructor";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -12776,8 +12791,8 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Session", label: "Session", plural: "Sessions", from: "Instructor", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
-    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
+    { model: "Session", label: sessionUi.label, plural: sessionUi.pluralLabel, from: "Instructor", depth: 1, count: tx.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
+    { model: "Booking", label: bookingUi.label, plural: bookingUi.pluralLabel, from: "Session", depth: 2, count: tx.select({ n: count() }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(eq(schema.sessions.instructorId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -12785,7 +12800,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Instructor", label: "Instructor", with: with_, loose, together: false, missing: ["Instructor","Session","Booking"] };
+  return { id, title, model: "Instructor", label: instructorUi.label, with: with_, loose, together: false, missing: [instructorUi.label, sessionUi.label, bookingUi.label] };
 }
 
 /** Who may read, create, change and delete instructors. */
@@ -13380,7 +13395,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import type { MessageValues } from "./message";
+import { type MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -14054,7 +14069,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
-import type { PostValues } from "./post";
+import { type PostValues } from "./post";
 
 /** Who may read, create, change and delete posts. */
 export const postAccess: ModelAccess = {
@@ -14674,7 +14689,8 @@ import { afterChange, afterDelete } from "./hooks";
 import { bookingData } from "./booking.server";
 import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
-import type { SessionValues } from "./session";
+import { bookingUi } from "./booking";
+import { sessionUi, type SessionValues } from "./session";
 import { withSessionFormulas } from "./session.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -14686,7 +14702,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Booking", label: "Booking", plural: "Bookings", from: "Session", depth: 1, count: tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0 },
+    { model: "Booking", label: bookingUi.label, plural: bookingUi.pluralLabel, from: "Session", depth: 1, count: tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -14694,7 +14710,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Session", label: "Session", with: with_, loose, together: false, missing: ["Session","Booking"] };
+  return { id, title, model: "Session", label: sessionUi.label, with: with_, loose, together: false, missing: [sessionUi.label, bookingUi.label] };
 }
 
 /** Who may read, create, change and delete sessions. */
@@ -15715,6 +15731,12 @@ import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { classTypeUi } from "#/generated/class-type";
+import { instructorUi } from "#/generated/instructor";
+import { sessionUi } from "#/generated/session";
+import { bookingUi } from "#/generated/booking";
+import { postUi } from "#/generated/post";
+import { messageUi } from "#/generated/message";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -15737,12 +15759,12 @@ const filters = (s: Search) => optional({
 
 /** Each model's label, for the filter and the lines. */
 const LABELS: Record<string, string> = {
-  ClassType: "Class type",
-  Instructor: "Instructor",
-  Session: "Session",
-  Booking: "Booking",
-  Post: "Post",
-  Message: "Message",
+  ClassType: classTypeUi.label,
+  Instructor: instructorUi.label,
+  Session: sessionUi.label,
+  Booking: bookingUi.label,
+  Post: postUi.label,
+  Message: messageUi.label,
 };
 
 /** The newest lines that match, named for people (administrators only). */
@@ -16304,11 +16326,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { classTypeData } from "#/generated/class-type.server";
+import { classTypeUi } from "#/generated/class-type";
 import { instructorData } from "#/generated/instructor.server";
+import { instructorUi } from "#/generated/instructor";
 import { sessionData } from "#/generated/session.server";
+import { sessionUi } from "#/generated/session";
 import { bookingData } from "#/generated/booking.server";
+import { bookingUi } from "#/generated/booking";
 import { postData } from "#/generated/post.server";
+import { postUi } from "#/generated/post";
 import { messageData } from "#/generated/message.server";
+import { messageUi } from "#/generated/message";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { w } from "#/kit/words";
@@ -16334,12 +16362,16 @@ const getCounts = createServerFn().handler(async () => {
 });
 
 const MODELS = [
-  { key: "class-types", label: "Class types", to: "/admin/class-types" },
-  { key: "instructors", label: "Instructors", to: "/admin/instructors" },
-  { key: "sessions", label: "Sessions", to: "/admin/sessions" },
-  { key: "bookings", label: "Bookings", to: "/admin/bookings" },
-  { key: "posts", label: "Posts", to: "/admin/posts" },
-  { key: "messages", label: "Messages", to: "/admin/messages" },
+  { key: "class-types", label: classTypeUi.pluralLabel, to: "/admin/class-types" },
+  {
+    key: "instructors",
+    label: instructorUi.pluralLabel,
+    to: "/admin/instructors",
+  },
+  { key: "sessions", label: sessionUi.pluralLabel, to: "/admin/sessions" },
+  { key: "bookings", label: bookingUi.pluralLabel, to: "/admin/bookings" },
+  { key: "posts", label: postUi.pluralLabel, to: "/admin/posts" },
+  { key: "messages", label: messageUi.pluralLabel, to: "/admin/messages" },
 ] as const;
 
 export const Route = createFileRoute("/admin/")({
@@ -17663,7 +17695,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.classes"
           id="classes"
-          title="Class types"
+          title={classTypeUi.pluralLabel}
           cards={data.classTypes.slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.name),
@@ -17686,7 +17718,7 @@ function HomePage() {
           texts="pages.home.news"
           id="news"
           icon={BookOpen}
-          title="Posts"
+          title={postUi.pluralLabel}
           cards={data.posts.slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.title),
@@ -18707,13 +18739,14 @@ import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { LegalPage, type LegalFacts } from "#/kit/LegalPage";
+import { messageUi } from "#/generated/message";
 
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = {
   app: app.name,
   purpose: "Class schedule and online booking for a small yoga studio.",
   signIn: { email: true, google: false, invitedOnly: false },
-  records: [{ label: "Messages", fields: ["email"], readers: ["admin"] }],
+  records: [{ label: messageUi.pluralLabel, fields: ["email"], readers: ["admin"] }],
   uploads: true,
   mailAbout: ["bookings"],
 };
@@ -19751,10 +19784,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "8fbccc7f generated",
+  "src/generated/booking.server.ts": "a2aa8951 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "7bbb7115 generated",
+  "src/generated/class-type.server.ts": "4f64fbdb generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19762,20 +19795,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "0621d46a generated",
+  "src/generated/instructor.server.ts": "2847f203 generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "600a4ca7 generated",
+  "src/generated/message.server.ts": "5927af3d generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "e012eabf generated",
+  "src/generated/post.server.ts": "af04753d generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "bfca51db generated",
+  "src/generated/session.server.ts": "5912917b generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19845,14 +19878,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "4278fcb6 generated",
-  "src/routes/admin/activity.tsx": "2660647c generated",
+  "src/routes/admin/activity.tsx": "62617d51 generated",
   "src/routes/admin/bookings/$id.tsx": "af2974cc generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "c45f372b generated",
   "src/routes/admin/class-types/$id.tsx": "5e020c24 generated",
   "src/routes/admin/class-types/index.tsx": "76538182 generated",
   "src/routes/admin/class-types/new.tsx": "6e14f136 generated",
-  "src/routes/admin/index.tsx": "cc98dd84 generated",
+  "src/routes/admin/index.tsx": "b061311b generated",
   "src/routes/admin/instructors/$id.tsx": "a9481ac8 generated",
   "src/routes/admin/instructors/index.tsx": "f388203e generated",
   "src/routes/admin/instructors/new.tsx": "fc2015a8 generated",
@@ -19875,7 +19908,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "b698d8dc generated",
+  "src/routes/index.tsx": "8a4728fe generated",
   "src/routes/instructors/$id.tsx": "92fb8703 generated",
   "src/routes/instructors/index.tsx": "dfac8649 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
@@ -19888,7 +19921,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/$id.tsx": "12fdcf66 generated",
   "src/routes/posts/index.tsx": "759433b7 generated",
   "src/routes/posts/new.tsx": "92730a59 generated",
-  "src/routes/privacy/index.tsx": "dde27a4b generated",
+  "src/routes/privacy/index.tsx": "5e55ca3c generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "e15d829e generated",
   "src/routes/sessions/$id.tsx": "2511b5a6 generated",
@@ -21384,7 +21417,8 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
-import type { CustomerValues } from "./customer";
+import { orderUi } from "./order";
+import { customerUi, type CustomerValues } from "./customer";
 import "./trash.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -21396,7 +21430,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Order", label: "Order", plural: "Orders", from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 },
+    { model: "Order", label: orderUi.label, plural: orderUi.pluralLabel, from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -21404,7 +21438,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Customer", label: "Customer", with: with_, loose, together: true, missing: [] };
+  return { id, title, model: "Customer", label: customerUi.label, with: with_, loose, together: true, missing: [] };
 }
 
 /** Who may read, create, change and delete customers. */
@@ -22295,7 +22329,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
-import type { OrderValues } from "./order";
+import { type OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import "./trash.server";
 
@@ -24771,6 +24805,8 @@ import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { customerUi } from "#/generated/customer";
+import { orderUi } from "#/generated/order";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -24791,7 +24827,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { Customer: "Customer", Order: "Order" };
+const LABELS: Record<string, string> = { Customer: customerUi.label, Order: orderUi.label };
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -25524,13 +25560,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "0c6951c5 generated",
+  "src/generated/customer.server.ts": "6f93a267 generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "1fd8435b generated",
+  "src/generated/order.server.ts": "1bcfeff5 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -25605,7 +25641,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "64dfa537 generated",
-  "src/routes/team/activity.tsx": "d271c9df generated",
+  "src/routes/team/activity.tsx": "d04540a5 generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
   "src/start.ts": "b45a0afb kit",
@@ -27689,7 +27725,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import type { BusinessProfileValues } from "./business-profile";
+import { type BusinessProfileValues } from "./business-profile";
 
 /** Who may read, create, change and delete business profiles. */
 export const businessProfileAccess: ModelAccess = {
@@ -28217,7 +28253,9 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
-import type { ClientValues } from "./client";
+import { invoiceUi } from "./invoice";
+import { invoiceLineUi } from "./invoice-line";
+import { clientUi, type ClientValues } from "./client";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -28228,8 +28266,8 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Invoice", label: "Invoice", plural: "Invoices", from: "Client", depth: 1, count: tx.select({ n: count() }).from(schema.invoices).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
-    { model: "InvoiceLine", label: "Invoice line", plural: "Invoice lines", from: "Invoice", depth: 2, count: tx.select({ n: count() }).from(schema.invoiceLines).innerJoin(schema.invoices, eq(schema.invoiceLines.invoiceId, schema.invoices.id)).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
+    { model: "Invoice", label: invoiceUi.label, plural: invoiceUi.pluralLabel, from: "Client", depth: 1, count: tx.select({ n: count() }).from(schema.invoices).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
+    { model: "InvoiceLine", label: invoiceLineUi.label, plural: invoiceLineUi.pluralLabel, from: "Invoice", depth: 2, count: tx.select({ n: count() }).from(schema.invoiceLines).innerJoin(schema.invoices, eq(schema.invoiceLines.invoiceId, schema.invoices.id)).where(and(eq(schema.invoices.clientId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -28237,7 +28275,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Client", label: "Client", with: with_, loose, together: false, missing: ["Client","Invoice","Invoice line"] };
+  return { id, title, model: "Client", label: clientUi.label, with: with_, loose, together: false, missing: [clientUi.label, invoiceUi.label, invoiceLineUi.label] };
 }
 
 /** Who may read, create, change and delete clients. */
@@ -28947,7 +28985,8 @@ import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceLineData } from "./invoice-line.server";
 import { clientData } from "./client.server";
-import type { InvoiceValues } from "./invoice";
+import { invoiceLineUi } from "./invoice-line";
+import { invoiceUi, type InvoiceValues } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -28959,7 +28998,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "InvoiceLine", label: "Invoice line", plural: "Invoice lines", from: "Invoice", depth: 1, count: tx.select({ n: count() }).from(schema.invoiceLines).where(and(eq(schema.invoiceLines.invoiceId, id))).get()?.n ?? 0 },
+    { model: "InvoiceLine", label: invoiceLineUi.label, plural: invoiceLineUi.pluralLabel, from: "Invoice", depth: 1, count: tx.select({ n: count() }).from(schema.invoiceLines).where(and(eq(schema.invoiceLines.invoiceId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -28967,7 +29006,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Invoice", label: "Invoice", with: with_, loose, together: false, missing: ["Invoice","Invoice line"] };
+  return { id, title, model: "Invoice", label: invoiceUi.label, with: with_, loose, together: false, missing: [invoiceUi.label, invoiceLineUi.label] };
 }
 
 /** Who may read, create, change and delete invoices. */
@@ -29682,7 +29721,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
-import type { InvoiceLineValues } from "./invoice-line";
+import { type InvoiceLineValues } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
 
 /** Who may read, create, change and delete invoice lines. */
@@ -32499,21 +32538,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "f64e76c9 generated",
+  "src/generated/business-profile.server.ts": "51ccb907 generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "b46c956f generated",
+  "src/generated/client.server.ts": "f8cae38d generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "76d7d490 generated",
+  "src/generated/invoice-line.server.ts": "b87d2496 generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "2dd816b7 generated",
+  "src/generated/invoice.server.ts": "532e00b1 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -34632,7 +34671,8 @@ import { contains } from "#/kit/search";
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
-import type { DishValues } from "./dish";
+import { orderLineUi } from "./order-line";
+import { dishUi, type DishValues } from "./dish";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -34643,7 +34683,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "OrderLine", label: "Order line", plural: "Order lines", from: "Dish", depth: 1, count: tx.select({ n: count() }).from(schema.orderLines).where(and(eq(schema.orderLines.dishId, id))).get()?.n ?? 0 },
+    { model: "OrderLine", label: orderLineUi.label, plural: orderLineUi.pluralLabel, from: "Dish", depth: 1, count: tx.select({ n: count() }).from(schema.orderLines).where(and(eq(schema.orderLines.dishId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -34651,7 +34691,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Dish", label: "Dish", with: with_, loose, together: false, missing: ["Dish","Order line"] };
+  return { id, title, model: "Dish", label: dishUi.label, with: with_, loose, together: false, missing: [dishUi.label, orderLineUi.label] };
 }
 
 /** Who may read, create, change and delete dishes. */
@@ -35169,7 +35209,8 @@ import { BadInput } from "#/kit/refusal";
 import { afterChange, afterDelete } from "./hooks";
 import { dishData } from "./dish.server";
 import { orderLineData } from "./order-line.server";
-import type { OrderValues } from "./order";
+import { orderLineUi } from "./order-line";
+import { orderUi, type OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -35181,7 +35222,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "OrderLine", label: "Order line", plural: "Order lines", from: "Order", depth: 1, count: tx.select({ n: count() }).from(schema.orderLines).where(and(eq(schema.orderLines.orderId, id))).get()?.n ?? 0 },
+    { model: "OrderLine", label: orderLineUi.label, plural: orderLineUi.pluralLabel, from: "Order", depth: 1, count: tx.select({ n: count() }).from(schema.orderLines).where(and(eq(schema.orderLines.orderId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -35189,7 +35230,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Order", label: "Order", with: with_, loose, together: false, missing: ["Order","Order line"] };
+  return { id, title, model: "Order", label: orderUi.label, with: with_, loose, together: false, missing: [orderUi.label, orderLineUi.label] };
 }
 
 /** Who may read, create, change and delete orders. */
@@ -35624,7 +35665,7 @@ import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import { dishData } from "./dish.server";
-import type { OrderLineValues } from "./order-line";
+import { type OrderLineValues } from "./order-line";
 import { withOrderLineFormulas } from "./order-line.formulas";
 
 /** Who may read, create, change and delete order lines. */
@@ -36151,7 +36192,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
-import type { StopValues } from "./stop";
+import { type StopValues } from "./stop";
 
 /** Who may read, create, change and delete stops. */
 export const stopAccess: ModelAccess = {
@@ -38453,6 +38494,10 @@ import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { dishUi } from "#/generated/dish";
+import { orderUi } from "#/generated/order";
+import { orderLineUi } from "#/generated/order-line";
+import { stopUi } from "#/generated/stop";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -38475,7 +38520,12 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { Dish: "Dish", Order: "Order", OrderLine: "Order line", Stop: "Stop" };
+const LABELS: Record<string, string> = {
+  Dish: dishUi.label,
+  Order: orderUi.label,
+  OrderLine: orderLineUi.label,
+  Stop: stopUi.label,
+};
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -38766,7 +38816,7 @@ import { guardPage } from "#/kit/access";
 import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
 import { w } from "#/kit/words";
 import { site } from "#/generated/site";
-import { listStops } from "#/generated/stop";
+import { listStops, stopUi } from "#/generated/stop";
 import { app } from "#/generated/app";
 
 export const Route = createFileRoute("/where/")({
@@ -38791,7 +38841,7 @@ function WherePage() {
       <RecordCards
           texts="pages.where.stops"
           id="stops"
-          title="Stops"
+          title={stopUi.pluralLabel}
           cards={data.stops.slice(0, 7).map((row) => ({
             key: row.id,
             title: String(row.place),
@@ -39276,23 +39326,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "c49587a4 generated",
-  "src/generated/dish.server.ts": "07f58f28 generated",
+  "src/generated/dish.server.ts": "1716209d generated",
   "src/generated/dish.ts": "abeae023 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "eff1b2f5 generated",
-  "src/generated/order-line.server.ts": "ec91b963 generated",
+  "src/generated/order-line.server.ts": "fdaa343d generated",
   "src/generated/order-line.ts": "14bf7a22 generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "a91500ad generated",
+  "src/generated/order.server.ts": "ad63c778 generated",
   "src/generated/order.ts": "e9a3c2e6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "cc18f1e6 generated",
-  "src/generated/stop.server.ts": "06b306f7 generated",
+  "src/generated/stop.server.ts": "ba8ff2f1 generated",
   "src/generated/stop.ts": "f17c58ca generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -39370,9 +39420,9 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/$id.tsx": "40e092f5 generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
-  "src/routes/team/activity.tsx": "3123dc82 generated",
+  "src/routes/team/activity.tsx": "0f6eab93 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
-  "src/routes/where/index.tsx": "aced9210 generated",
+  "src/routes/where/index.tsx": "61898dc7 generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
@@ -40689,7 +40739,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
-import type { ItemValues } from "./item";
+import { type ItemValues } from "./item";
 
 /**
  * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
@@ -43167,7 +43217,7 @@ function HomePage() {
     },
   ],
 }}
-          title="Items"
+          title={itemUi.pluralLabel}
           cards={data.items.slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.title),
@@ -43616,7 +43666,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "1648b931 generated",
+  "src/generated/item.server.ts": "a0987167 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -43702,7 +43752,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
-  "src/routes/welcome/index.tsx": "ce2b56c5 generated",
+  "src/routes/welcome/index.tsx": "7c4525c4 generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
@@ -44959,7 +45009,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import type { ItemValues } from "./item";
+import { type ItemValues } from "./item";
 import { withItemFormulas } from "./item.formulas";
 
 /** Who may read, create, change and delete items. */
@@ -45888,7 +45938,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.items"
           id="items"
-          title="Items"
+          title={itemUi.pluralLabel}
           cards={data.items.slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.name),
@@ -46698,7 +46748,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "66be9d1b generated",
+  "src/generated/item.server.ts": "f4c1a1ed generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -46757,7 +46807,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "520e9b4b generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "7f8abf15 generated",
+  "src/routes/index.tsx": "c2353742 generated",
   "src/routes/items/$id.tsx": "15aad64f generated",
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
@@ -50054,7 +50104,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import { maintenanceData } from "./maintenance.server";
-import type { ComponentValues } from "./component";
+import { type ComponentValues } from "./component";
 
 /** Who may read, create, change and delete components. */
 export const componentAccess: ModelAccess = {
@@ -50730,7 +50780,8 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
 import { componentData } from "./component.server";
-import type { IncidentValues } from "./incident";
+import { incidentUpdateUi } from "./incident-update";
+import { incidentUi, type IncidentValues } from "./incident";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -50741,7 +50792,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "IncidentUpdate", label: "Incident update", plural: "Incident updates", from: "Incident", depth: 1, count: tx.select({ n: count() }).from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.incidentId, id))).get()?.n ?? 0 },
+    { model: "IncidentUpdate", label: incidentUpdateUi.label, plural: incidentUpdateUi.pluralLabel, from: "Incident", depth: 1, count: tx.select({ n: count() }).from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.incidentId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -50749,7 +50800,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "Incident", label: "Incident", with: with_, loose, together: false, missing: ["Incident","Incident update"] };
+  return { id, title, model: "Incident", label: incidentUi.label, with: with_, loose, together: false, missing: [incidentUi.label, incidentUpdateUi.label] };
 }
 
 /** Who may read, create, change and delete incidents. */
@@ -51384,7 +51435,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
-import type { IncidentUpdateValues } from "./incident-update";
+import { type IncidentUpdateValues } from "./incident-update";
 
 /** Who may read, create, change and delete incident updates. */
 export const incidentUpdateAccess: ModelAccess = {
@@ -52113,7 +52164,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
-import type { MaintenanceValues } from "./maintenance";
+import { type MaintenanceValues } from "./maintenance";
 
 /** Who may read, create, change and delete maintenances. */
 export const maintenanceAccess: ModelAccess = {
@@ -55520,7 +55571,7 @@ import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listComponents, componentUi } from "#/generated/component";
 import { listIncidents, incidentUi } from "#/generated/incident";
-import { listMaintenances } from "#/generated/maintenance";
+import { listMaintenances, maintenanceUi } from "#/generated/maintenance";
 import { Uptime } from "#/custom/sections/Uptime";
 import { app } from "#/generated/app";
 
@@ -55546,7 +55597,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.services"
           id="services"
-          title="Components"
+          title={componentUi.pluralLabel}
           cards={data.components.slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.name),
@@ -55561,7 +55612,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.open"
           id="open"
-          title="Incidents"
+          title={incidentUi.pluralLabel}
           cards={data.incidents.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6).map((row) => ({
             key: row.id,
             title: String(row.title),
@@ -55572,7 +55623,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.recent"
           id="recent"
-          title="Incidents"
+          title={incidentUi.pluralLabel}
           cards={data.incidents.filter((row) => row.status === "resolved").slice(0, 5).map((row) => ({
             key: row.id,
             title: String(row.title),
@@ -55583,7 +55634,7 @@ function HomePage() {
       <RecordCards
           texts="pages.home.planned"
           id="planned"
-          title="Maintenances"
+          title={maintenanceUi.pluralLabel}
           cards={data.maintenances.slice(0, 3).map((row) => ({
             key: row.id,
             title: String(row.title),
@@ -56096,6 +56147,10 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { componentUi } from "#/generated/component";
+import { incidentUi } from "#/generated/incident";
+import { incidentUpdateUi } from "#/generated/incident-update";
+import { maintenanceUi } from "#/generated/maintenance";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -56117,10 +56172,10 @@ const filters = (s: Search) => optional({
 
 /** Each model's label, for the filter and the lines. */
 const LABELS: Record<string, string> = {
-  Component: "Component",
-  Incident: "Incident",
-  IncidentUpdate: "Incident update",
-  Maintenance: "Maintenance",
+  Component: componentUi.label,
+  Incident: incidentUi.label,
+  IncidentUpdate: incidentUpdateUi.label,
+  Maintenance: maintenanceUi.label,
 };
 
 /** The newest lines that match, named for people (administrators only). */
@@ -57159,20 +57214,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "db7ebc1f generated",
+  "src/generated/component.server.ts": "184e0759 generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "7498c4b0 generated",
+  "src/generated/incident-update.server.ts": "4ffe24fe generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "5a1574c8 generated",
+  "src/generated/incident.server.ts": "f682f0fd generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "65a8b8d9 generated",
+  "src/generated/maintenance.server.ts": "a3ed90d7 generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -57259,7 +57314,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "96aceca6 generated",
   "src/routes/incidents/index.tsx": "5697fa30 generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
-  "src/routes/index.tsx": "915304cd generated",
+  "src/routes/index.tsx": "98dbe74c generated",
   "src/routes/maintenance/$id.tsx": "1a54ed4d generated",
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
@@ -57268,7 +57323,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "66d1c612 generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
-  "src/routes/team/activity.tsx": "22056d84 generated",
+  "src/routes/team/activity.tsx": "916ddbdb generated",
   "src/routes/team/index.tsx": "f53943cc generated",
   "src/routes/updates/$id.tsx": "f63d4a31 generated",
   "src/routes/updates/index.tsx": "544b43a8 generated",
@@ -59713,7 +59768,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { supportCaseData } from "./support-case.server";
-import type { MessageValues } from "./message";
+import { type MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -60506,7 +60561,8 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { messageData } from "./message.server";
-import type { SupportCaseValues } from "./support-case";
+import { messageUi } from "./message";
+import { supportCaseUi, type SupportCaseValues } from "./support-case";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -60517,7 +60573,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
-    { model: "Message", label: "Message", plural: "Messages", from: "SupportCase", depth: 1, count: tx.select({ n: count() }).from(schema.messages).where(and(eq(schema.messages.supportCaseId, id))).get()?.n ?? 0 },
+    { model: "Message", label: messageUi.label, plural: messageUi.pluralLabel, from: "SupportCase", depth: 1, count: tx.select({ n: count() }).from(schema.messages).where(and(eq(schema.messages.supportCaseId, id))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -60525,7 +60581,7 @@ function usedBy(tx: Tx, id: number, title: string) {
     if (e.count === null ? with_.some((p) => p.model === e.from) : e.count > 0) with_.push(e);
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
-  return { id, title, model: "SupportCase", label: "Support case", with: with_, loose, together: false, missing: ["Support case","Message"] };
+  return { id, title, model: "SupportCase", label: supportCaseUi.label, with: with_, loose, together: false, missing: [supportCaseUi.label, messageUi.label] };
 }
 
 /** Who may read, create, change and delete support cases. */
@@ -62704,6 +62760,8 @@ import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { supportCaseUi } from "#/generated/support-case";
+import { messageUi } from "#/generated/message";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -62725,7 +62783,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { SupportCase: "Support case", Message: "Message" };
+const LABELS: Record<string, string> = { SupportCase: supportCaseUi.label, Message: messageUi.label };
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -63416,13 +63474,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "3ac35cdb generated",
+  "src/generated/message.server.ts": "b2fa9fa9 generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "380912eb generated",
-  "src/generated/support-case.server.ts": "76b62a22 generated",
+  "src/generated/support-case.server.ts": "cec1d381 generated",
   "src/generated/support-case.ts": "29922f74 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
@@ -63499,7 +63557,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "6a89e0fa generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "8b2b934d generated",
-  "src/routes/team/activity.tsx": "0e6d01ba generated",
+  "src/routes/team/activity.tsx": "85ed449b generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "b45a0afb kit",
   "src/styles.css": "19116c27 kit",

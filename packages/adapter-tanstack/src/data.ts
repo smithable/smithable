@@ -893,9 +893,16 @@ export function dataModule(
   const members = [...new Set(group.map((e) => e.model))].map((m) => modelNamed(ir, m));
   const loose = looseReferrers(ir, model.name).map((r) => modelNamed(ir, r.model));
   const together = trashing && members.every((m) => m.trash);
-  const missing = [...(trashing ? [] : [model]), ...members.filter((m) => !m.trash)].map(
-    (m) => names(m, t).label,
-  );
+  // The kinds' words, read from their modules (each written once, words-once.md).
+  const labelledKinds = new Set<ModelIR>();
+  const uiOf = (m: ModelIR) => {
+    labelledKinds.add(m);
+    return names(m, t).ui;
+  };
+  const missing = () =>
+    [...(trashing ? [] : [model]), ...members.filter((m) => !m.trash)].map(
+      (m) => `${uiOf(m)}.label`,
+    );
   // The roots whose group this model is in: a member comes back with its root, not alone.
   const roots = trashing
     ? ir.models.filter((r) => {
@@ -922,7 +929,7 @@ export function dataModule(
   // Only live records count: a condition to add for a model with a trash.
   const liveIn = (m: ModelIR) => (m.trash ? `, isNull(${tableRef(m)}.deletedAt)` : "");
   const labelled = (m: ModelIR) =>
-    `model: ${JSON.stringify(m.name)}, label: ${JSON.stringify(names(m, t).label)}, plural: ${JSON.stringify(names(m, t).pluralLabel)}`;
+    `model: ${JSON.stringify(m.name)}, label: ${uiOf(m)}.label, plural: ${uiOf(m)}.pluralLabel`;
   // How many live records of a member point to the root: directly, or through their parent
   // (one join); deeper members are only named.
   const countIn = (m: ModelIR) => {
@@ -971,7 +978,7 @@ ${loose
   ].filter((e) => e.count > 0)`
       : "] as { model: string; label: string; plural: string; count: number }[]"
   };
-  return { id, title, ${labelled(model).replace(/, plural: .*$/, "")}, with: with_, loose, together: ${together}, missing: ${JSON.stringify(missing)} };
+  return { id, title, ${labelled(model).replace(/, plural: .*$/, "")}, with: with_, loose, together: ${together}, missing: [${missing().join(", ")}] };
 }
 `
     : "";
@@ -1297,7 +1304,12 @@ import { refusal } from "#/kit/log.server";
 ${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
-  .join("\n")}${others.size ? "\n" : ""}import type { ${n.values} } from "./${kebab(model.name)}";
+  .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
+  .filter((m) => m !== model)
+  .map((m) => `import { ${names(m, t).ui} } from "./${kebab(m.name)}";\n`)
+  .join(
+    "",
+  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.values} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${trashing ? 'import "./trash.server";\n' : ""}${
   group.length || roots.length
     ? `

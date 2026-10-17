@@ -190,8 +190,8 @@ export function landingRoute(
           !article && listPage && auth.public.pages.includes(listPage.id)
             ? listPage.route
             : undefined;
-        // The badge's words as the model's module has them.
-        if (choice) imports.add(n.module, n.ui);
+        // The badge's words and the plural title as the model's module has them.
+        if (choice || !own.title) imports.add(n.module, n.ui);
         // The badge's color by meaning, as in the model's tables.
         const tones =
           choice &&
@@ -203,7 +203,7 @@ export function landingRoute(
         return [
           `${open("RecordCards")}
           id=${attr(section.name)}${icon ? `\n          icon={${icon}}` : ""}${door ? `\n          door={${literal(door)}}` : ""}
-          title=${attr(own.title ?? n.pluralLabel)}${
+          title=${own.title ? attr(own.title) : `{${n.ui}.pluralLabel}`}${
             own.text
               ? `
           text=${attr(own.text)}`
