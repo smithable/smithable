@@ -362,6 +362,8 @@ Plugins ──────────────┘
 - Generation is **deterministic and idempotent**: the same manifest and the same Smithable version produce byte-identical output. This is tested.
 - **Templates are real, checked code.** The app kit and generator templates are real TypeScript that is linted and type-checked, and the sample apps in `examples/` are generated, type-checked and tested on every `pnpm check`.
 
+**Every value once (2026-10-17, [design/words-once.md](design/words-once.md)).** A value the generated app uses in more than one file (a page's title, the app's name, a role's or a choice's label) is exported once from a generated module (`src/generated/app.ts`, `pages.ts`, the model modules) and imported where it is used; a literal is written only where a value is used in one file, and a scaffold file, written once, never copies a value that can change. A text change then touches one file, and Studio's preview updates it in place.
+
 ### 5.1 Plugins
 
 Smithable is extensible through **plugins**: npm packages, or folders inside a project (`smithable/plugins/<name>/`). A plugin can contribute:
