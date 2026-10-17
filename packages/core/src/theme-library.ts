@@ -1,5 +1,6 @@
-// The nine themes added to the built-in presets on 2026-10-04 (and the theme lab's three styles,
-// docs/design/theme-lab.md §6, at the end): rule-made candidates
+// The nine themes added to the built-in presets on 2026-10-04 (the theme lab's three styles,
+// docs/design/theme-lab.md §6, after them, and at the end the three candidates of 2026-10-18 from
+// a tester's report, warm-service, quiet-workspace and ink-and-brass): rule-made candidates
 // (scripts/theme-candidates.mjs) that Johan picked from their sheets. Each is a theme file as a
 // project would write one (docs/spec/v0.1.md, Themes), with seven colors per mode; theme.ts
 // parses them with the same parser and checks as a project's own, and derives the rest. To
@@ -322,5 +323,131 @@ dark:
   muted: "oklch(0.310 0.025 50.0)"
   border: "oklch(0.580 0.030 50.0)"
   accent: "oklch(0.360 0.050 140.0)"
+`,
+  "warm-service": `smithableTheme: 0.1
+name: warm-service
+fonts: { body: DM Sans, heading: DM Sans }
+headings: { weight: 600, tracking: normal, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 10px
+shadow: small
+density: comfortable
+motion: subtle
+chroma: 0.12
+light:
+  background: "#F7F5F0"
+  foreground: "#24332F"
+  card: "#FFFFFF"
+  primary: "#21655B"
+  primary-foreground: "#FFFFFF"
+  muted: "#EDEFE9"
+  muted-foreground: "#59665F"
+  border: "#D9DED7"
+  input: "#7E8C83"
+  ring: "#21655B"
+  sidebar: "#F0F1EB"
+  accent: "#E2EEE8"
+  secondary: "#EDEFE9"
+dark:
+  background: "#141C1A"
+  foreground: "#E7EEE9"
+  card: "#1D2924"
+  primary: "#91C9BB"
+  primary-foreground: "#142C25"
+  muted: "#28362F"
+  muted-foreground: "#AABBB0"
+  border: "#34463C"
+  input: "#6E8577"
+  ring: "#91C9BB"
+  sidebar: "#18231E"
+  accent: "#2A4237"
+  secondary: "#28362F"
+`,
+  "quiet-workspace": `smithableTheme: 0.1
+name: quiet-workspace
+fonts: { body: Inter, heading: Inter }
+headings: { weight: 600, tracking: tight, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 8px
+shadow: small
+density: compact
+motion: subtle
+chroma: 0.14
+light:
+  background: "#F5F7FA"
+  foreground: "#1B2B3F"
+  card: "#FFFFFF"
+  primary: "#2657A7"
+  primary-foreground: "#FFFFFF"
+  muted: "#EDF1F6"
+  muted-foreground: "#5E6E82"
+  border: "#DFE5EC"
+  input: "#8190A3"
+  ring: "#2657A7"
+  sidebar: "#F0F3F8"
+  accent: "#E8EFFB"
+  secondary: "#EDF1F6"
+dark:
+  background: "#121A25"
+  foreground: "#E7EDF5"
+  card: "#1B2534"
+  primary: "#9BBEF9"
+  primary-foreground: "#14243A"
+  muted: "#263448"
+  muted-foreground: "#AFBDD0"
+  border: "#344356"
+  input: "#74849B"
+  ring: "#9BBEF9"
+  sidebar: "#151F2D"
+  accent: "#283F5F"
+  secondary: "#263448"
+`,
+  "ink-and-brass": `smithableTheme: 0.1
+name: ink-and-brass
+fonts: { body: Source Sans 3, heading: Source Sans 3 }
+headings: { weight: 600, tracking: normal, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 8px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.10
+light:
+  background: "#F8F7F3"
+  foreground: "#172B40"
+  card: "#FFFFFF"
+  primary: "#163B5C"
+  primary-foreground: "#FFFFFF"
+  muted: "#EEEFEA"
+  muted-foreground: "#596779"
+  border: "#DFE2E1"
+  input: "#7B8B98"
+  ring: "#163B5C"
+  sidebar: "#F0F1EE"
+  accent: "#E6EDF1"
+  secondary: "#EEEFEA"
+dark:
+  background: "#101B2A"
+  foreground: "#E8EEF4"
+  card: "#1A293A"
+  primary: "#E9BD68"
+  primary-foreground: "#152A40"
+  muted: "#23364A"
+  muted-foreground: "#B1BECF"
+  border: "#34495E"
+  input: "#7790A8"
+  ring: "#E9BD68"
+  sidebar: "#142233"
+  accent: "#3D3527"
+  secondary: "#23364A"
 `,
 };
