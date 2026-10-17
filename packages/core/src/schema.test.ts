@@ -24,7 +24,10 @@ const valid = {
   }),
 };
 
-const validate = new Ajv({ allErrors: true }).compile(buildJsonSchema());
+// The schema's own keywords for Studio's forms (schema.ts); Ajv's strict mode wants them declared.
+const validate = new Ajv({ allErrors: true })
+  .addVocabulary(["x-hidden", "x-semantic", "x-docs"])
+  .compile(buildJsonSchema());
 
 test("the committed schema file is up to date (run `pnpm schema` to regenerate)", () => {
   expect(JSON.parse(schemaText)).toEqual(buildJsonSchema());
