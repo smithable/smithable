@@ -124,6 +124,10 @@ test("an id that is not a change is refused; the newest change is the plain undo
 
 test("a change to a companion file alone is undone too, and checked against the spec as it is", async () => {
   const auth = (sells: string, pages: string) => `smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: shared
+defaultRole: sales
 roles:
   admin: all
   sales:
