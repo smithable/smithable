@@ -1,4 +1,4 @@
-// docs.smithable.ai's search box (scripts/build-docs.mjs inlines it on every page). The box is
+// docs.smithable.ai's search box (scripts/build-docs.mjs serves it as /search.js). The box is
 // hidden without script; on first use it loads search.json and lists the parts whose heading and
 // words hold every word typed, those with the words in the heading first. Arrows choose, Enter
 // opens, Escape clears, "/" anywhere goes to the box.

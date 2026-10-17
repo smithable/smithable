@@ -331,8 +331,6 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 @media (max-width:40rem){header{flex-wrap:wrap;row-gap:.6rem}header .gh{display:none}.search{order:9;width:100%}.search input{width:100%;padding:.35rem .85rem}.search ol{left:1rem;right:1rem;width:auto}}
 `;
 
-// The search box's script (scripts/docs-search.js), inlined on every page.
-const SEARCH = readFileSync(join(import.meta.dirname, "docs-search.js"), "utf8");
 // The visit counter (scripts/docs-count.js, served as /count.js), and for a visitor without
 // script a picture that counts the page without where they came from.
 const counter = (path) =>
@@ -392,6 +390,7 @@ const html = (page, body) => {
 <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <script src="/count.js" defer></script>
+<script src="/search.js" defer></script>
 <style>${CSS}</style>
 </head>
 <body>
@@ -399,7 +398,6 @@ const html = (page, body) => {
 <div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
-<script>${SEARCH}</script>
 ${counter(page.out ? `/${page.out === "index.html" ? "" : page.out}` : "/404.html")}
 </body>
 </html>
@@ -490,7 +488,9 @@ for (const page of PAGES) {
   flush();
 }
 writeFileSync(join(out, "search.json"), JSON.stringify(index));
+// The page scripts are files, not inline, so the site's CSP can stay at script-src 'self'.
 copyFileSync(join(root, "scripts/docs-count.js"), join(out, "count.js"));
+copyFileSync(join(root, "scripts/docs-search.js"), join(out, "search.js"));
 for (const [i, each] of schemas.entries())
   writeFileSync(join(out, schemaPaths[i]), `${JSON.stringify(each, null, 2)}\n`);
 writeFileSync(
