@@ -18,7 +18,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * key sets differ by one name each way, that entry's value is the same, and so is everything
  * else, in the same order.
  */
-function renamedKey(before: Obj, after: Obj): { from: string; to: string } | undefined {
+export function renamedKey(before: Obj, after: Obj): { from: string; to: string } | undefined {
   const b = Object.keys(before);
   const a = Object.keys(after);
   if (b.length !== a.length) return undefined;
