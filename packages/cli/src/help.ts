@@ -217,9 +217,13 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "undo",
-    usage: "undo",
-    text: ["Undo the last operation, including the dev database"],
-    options: ["dir"],
+    usage: "undo [--change <id> [--check] [--yes]]",
+    text: [
+      "Undo the last operation, including the dev database",
+      "--change <id> undoes that change (an id from the history) as a new change, unless a later",
+      "change depends on it or edited the same part; --check only says whether it is safe",
+    ],
+    options: ["change", "check", "yes", "dir"],
   },
   {
     name: "redo",

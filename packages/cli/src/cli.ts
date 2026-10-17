@@ -30,7 +30,7 @@ import { themeFrom } from "./theme-from.js";
 import { themeLab } from "./theme-lab.js";
 import { themes } from "./themes.js";
 import { translate } from "./translate.js";
-import { undo } from "./undo.js";
+import { undo, undoChange } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -103,7 +103,13 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       yes: values.yes === true,
       ...(values.setup ? { setup: true } : {}),
     });
-  if (command === "undo") return undo(values.dir ?? ".", io);
+  if (command === "undo")
+    return values.change
+      ? undoChange(values.dir ?? ".", io, values.change, {
+          check: values.check === true,
+          yes: values.yes === true,
+        })
+      : undo(values.dir ?? ".", io);
   if (command === "redo") return redo(values.dir ?? ".", io);
   if (command === "report")
     return report(values.dir ?? ".", io, {
@@ -311,6 +317,8 @@ const CONFIG = {
     url: { type: "string" },
     yes: { type: "boolean" },
     setup: { type: "boolean" },
+    change: { type: "string" },
+    check: { type: "boolean" },
     dir: { type: "string" },
     json: { type: "boolean" },
     implementation: { type: "boolean" },

@@ -41,7 +41,7 @@ import {
 } from "./report.js";
 import { projectIndex } from "./rules.js";
 import { translate } from "./translate.js";
-import { undo } from "./undo.js";
+import { undo, undoChange } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 import { warmPreview } from "./warm.js";
 
@@ -987,7 +987,18 @@ export async function studio(
         return json({ ok: true, accepted: true }, 202);
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
+        const { change, check, confirm } = await body();
         const packages = installed();
+        // One change by its id (studio-v3.md §3): the newest as before, an earlier one reversed
+        // as a new change, or refused; `check` only asks.
+        if (typeof change === "string") {
+          const result = await capture((io) =>
+            undoChange(dir, io, change, { check: check === true, yes: confirm === true }),
+          );
+          const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
+          if (result.ok && !check) changed({ description: result.output });
+          return json({ ...result, needsConfirm });
+        }
         const result = await capture((io) => undo(dir, io));
         // The database went back to its snapshot: the preview reopens it.
         if (result.ok) restored(packages);

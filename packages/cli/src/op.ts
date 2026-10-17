@@ -127,12 +127,40 @@ const FAILED = -1;
  * Applies an operation given its arguments, for the CLI and the MCP server alike: checks,
  * edits the spec, regenerates, migrates, and commits a checkpoint that `undo` reverts.
  */
+/**
+ * A change given as the files it ends with, not as an operation: the undo of an earlier change
+ * (undo.ts), whose files are the change's commit reverted. It goes through the same pipeline as
+ * an operation: validated, written, regenerated, migrated forward and committed, with a data
+ * loss asking first.
+ */
+export interface FilesPlan {
+  /** Each editable file's new text, or null for one the change takes away. */
+  files: Partial<Record<"spec" | "auth" | "content" | "ux" | "context", string | null>>;
+  /** The commit's subject (the trace reads it) and the lines of its body before the trailers. */
+  subject: string;
+  body: string;
+  /** What the change is, for the log and the answer ("Undid: …"). */
+  description: string;
+  /** The operation recorded for the change, in the Smithable-Op trailer. */
+  recorded: { op: string; args: Record<string, unknown> };
+}
+
+export async function runFilesChange(
+  dir: string,
+  io: Io,
+  plan: FilesPlan,
+  flags: OpFlags,
+): Promise<number> {
+  return runOperation(dir, io, plan.recorded.op, plan.recorded.args, flags, plan);
+}
+
 export async function runOperation(
   dir: string,
   io: Io,
   name: string,
   args: OperationArgs,
   flags: OpFlags,
+  plan?: FilesPlan,
 ): Promise<number> {
   // What it says is kept, so that a failure can be reported (report.ts).
   const said: string[] = [];
@@ -146,7 +174,7 @@ export async function runOperation(
       io.err(text);
     },
   };
-  const code = await applyAndCheckpoint(dir, kept, name, args, flags);
+  const code = await applyAndCheckpoint(dir, kept, name, args, flags, plan);
   if (code !== FAILED) return code;
   recordFailure(dir, name, args, said.join(""), flags.trace);
   if (!flags.reportLater) await afterFailure(dir, io);
@@ -159,12 +187,13 @@ async function applyAndCheckpoint(
   name: string,
   args: OperationArgs,
   flags: OpFlags,
+  plan?: FilesPlan,
 ): Promise<number> {
   const started = Date.now();
   lapFrom();
   const plugins = loadPlugins(dir);
-  const operation = findOperation(name, plugins);
-  if (!operation) {
+  const operation = plan ? undefined : findOperation(name, plugins);
+  if (!plan && !operation) {
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
@@ -192,7 +221,9 @@ async function applyAndCheckpoint(
     themes: projectThemes(dir),
     translations: projectTranslations(dir),
   };
-  const result = applyOperation(files, operation.name, args);
+  const result = plan
+    ? planResult(files, plan)
+    : applyOperation(files, operation?.name ?? name, args);
   if (!result.ok) {
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
@@ -204,6 +235,9 @@ async function applyAndCheckpoint(
     .ir as SpecIR;
 
   lap("apply and validate");
+  // A plan's data loss: the stored fields the files no longer have.
+  const lost = plan ? lostFields(before, after) : [];
+  const destructive = plan ? lost.length > 0 : result.destructive;
   const blocker =
     requiredButEmpty(dir, before, after, result.effects) ??
     choicesInUse(dir, before, after, result.effects);
@@ -242,9 +276,9 @@ async function applyAndCheckpoint(
       return prepared.refusals.length ? 1 : 0;
     }
   }
-  if (result.destructive && !flags.yes) {
+  if (destructive && !flags.yes) {
     io.err(
-      `${result.description}: ${dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
+      `${result.description}: ${plan ? `this deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}.` : dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
     );
     return 1;
   }
@@ -276,16 +310,18 @@ async function applyAndCheckpoint(
     }
     followInSamples(dir, result.effects);
     // The imported file is kept beside the checkpoint; the log names it instead of holding it.
-    const recordedArgs =
-      prepared && operation.name === "importRecords"
+    const recordedArgs = plan
+      ? plan.recorded.args
+      : prepared && operation?.name === "importRecords"
         ? { ...args, text: undefined, from: keepImport(dir, id, prepared.text) }
-        : operation.name === "editSpec"
+        : operation?.name === "editSpec"
           ? { ...(args.file ? { file: args.file } : {}) }
           : args;
+    const recordedName = plan ? plan.recorded.op : (operation?.name ?? name);
     mkdirSync(join(dir, ".smithable"), { recursive: true });
     appendFileSync(
       join(dir, OPLOG),
-      `${JSON.stringify({ id, op: operation.name, args: recordedArgs, description: result.description })}\n`,
+      `${JSON.stringify({ id, op: recordedName, args: recordedArgs, description: result.description })}\n`,
     );
     // Only stored fields have a column to rename; a list of related records stores nothing.
     // A renamed model keeps its rows: its tables are renamed, never dropped and made anew.
@@ -324,7 +360,7 @@ async function applyAndCheckpoint(
     git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
     const recorded = recordedArgs;
-    const message = `smithable: ${result.description}\n\nSmithable-Op: ${JSON.stringify({ op: operation.name, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
+    const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
     lap("commit");
@@ -346,7 +382,7 @@ async function applyAndCheckpoint(
     io.out(
       `${result.description}${prepared ? `: ${prepared.rows.length} added` : ""}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
-    if (operation.name === "addAction" && !args.on) io.out(actionNote(String(args.action)));
+    if (operation?.name === "addAction" && !args.on) io.out(actionNote(String(args.action)));
     return 0;
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
@@ -354,6 +390,50 @@ async function applyAndCheckpoint(
       `The change stopped halfway (${why}), so it was rolled back${snapshot ? ` to the database snapshot ${id}` : ""}.`,
     );
   }
+}
+
+/** A plan's files as an operation's result: the texts given over the project's, a removed one out. */
+function planResult(
+  files: Parameters<typeof applyOperation>[0],
+  plan: FilesPlan,
+): ReturnType<typeof applyOperation> {
+  const next = { ...files };
+  const removed: string[] = [];
+  const paths = {
+    spec: SPEC,
+    auth: AUTH,
+    content: CONTENT,
+    ux: UX,
+    context: "smithable.context.yml",
+  } as const;
+  for (const [key, text] of Object.entries(plan.files) as [keyof typeof paths, string | null][]) {
+    if (text === null) {
+      if (key !== "spec") delete next[key];
+      removed.push(paths[key]);
+    } else next[key] = text;
+  }
+  return {
+    ok: true,
+    files: next,
+    added: [],
+    removed,
+    description: plan.description,
+    destructive: false,
+    effects: [],
+  };
+}
+
+/** The stored fields `before` has and `after` has not: columns a change from files drops. */
+export function lostFields(before: SpecIR, after: SpecIR): string[] {
+  return before.models.flatMap((model) =>
+    model.fields
+      .filter((f) => storageOf(f) !== "none")
+      .filter(
+        (f) =>
+          !after.models.find((m) => m.name === model.name)?.fields.some((g) => g.name === f.name),
+      )
+      .map((f) => `${model.name}.${f.name}`),
+  );
 }
 
 /** A new custom action does nothing until its code is written: where, and what it can look like. */

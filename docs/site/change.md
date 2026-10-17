@@ -68,7 +68,7 @@ Undid: Set the theme: primary #0f766e. The dev database is back as it was before
 Restart the dev server if it is running.
 ```
 
-Each change is a Git commit, so `git log` lists them, and `smithable undo` takes back the last one, database included. Run it again to go further back.
+Each change is a Git commit, so `git log` lists them, and `smithable undo` takes back the last one, database included. Run it again to go further back. `smithable undo --change <id>` takes back an earlier change by its id (from `git log`, or the X on a change in Studio) as a new change, as long as no later change depends on it: a page that shows a kind of record the change added, say, is named, and that later change is undone first. `--check` only tells you whether it is safe.
 
 ## In your own words
 
