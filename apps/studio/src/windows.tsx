@@ -280,23 +280,26 @@ export const phoneWindows = (s: PhoneSettings): WindowId[] => [
   ...(s.code ? (["code"] as const) : []),
 ];
 
+/** Where a touch began, by the element it began on: kept across renders (a status poll re-renders mid-swipe). */
+const starts = new WeakMap<EventTarget, { x: number; y: number }>();
+
 /**
  * A sideways swipe on an element (a phone's header switches the window, a tab bar the sub view):
  * a finger moved mostly sideways by 50 pixels or more.
  */
 export function swipe(onNext: () => void, onPrevious: () => void) {
-  let start: { x: number; y: number } | undefined;
   return {
     onTouchStart: (e: React.TouchEvent) => {
       const t = e.touches[0];
-      start = t ? { x: t.clientX, y: t.clientY } : undefined;
+      if (t) starts.set(e.currentTarget, { x: t.clientX, y: t.clientY });
     },
     onTouchEnd: (e: React.TouchEvent) => {
       const t = e.changedTouches[0];
+      const start = starts.get(e.currentTarget);
+      starts.delete(e.currentTarget);
       if (!start || !t) return;
       const dx = t.clientX - start.x;
       const dy = t.clientY - start.y;
-      start = undefined;
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       if (dx < 0) onNext();
       else onPrevious();
