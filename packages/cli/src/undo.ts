@@ -112,7 +112,7 @@ export async function undoChange(
     return 1;
   }
   const files = reverted.files;
-  if (files.spec === null || files.spec === undefined) {
+  if (files.spec === null) {
     io.err(`Cannot undo "${target.subject}": it made the app itself.\n`);
     return 1;
   }
@@ -124,7 +124,7 @@ export async function undoChange(
     );
     return 1;
   }
-  const lost = lostFieldsOf(dir, files.spec);
+  const lost = files.spec === undefined ? [] : lostFieldsOf(dir, files.spec);
   if (flags.check) {
     io.out(
       `Safe to undo "${target.subject}".${lost.length ? ` It deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}, so it asks first.` : ""}\n`,
@@ -157,7 +157,11 @@ export function revertedFiles(
 ): { files: FilesPlan["files"] } | { conflict: string } {
   const files: FilesPlan["files"] = {};
   const show = (rev: string, path: string) => {
-    const r = spawnSync("git", ["show", `${rev}:${path}`], { cwd: dir, encoding: "utf8" });
+    const r = spawnSync("git", ["show", `${rev}:${path}`], {
+      cwd: dir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
     return r.status === 0 ? r.stdout : null;
   };
   for (const { key, path } of EDITABLE) {
@@ -171,9 +175,10 @@ export function revertedFiles(
       continue;
     }
     if (base === null || other === null || ours === null) return { conflict: path };
-    const scratch = mkdtempSync(join(tmpdir(), "smithable-undo-"));
+    let scratch: string | undefined;
     try {
-      const names = ["ours", "base", "other"].map((n) => join(scratch, n));
+      scratch = mkdtempSync(join(tmpdir(), "smithable-undo-"));
+      const names = ["ours", "base", "other"].map((n) => join(scratch as string, n));
       writeFileSync(names[0] as string, ours);
       writeFileSync(names[1] as string, base);
       writeFileSync(names[2] as string, other);
@@ -184,42 +189,53 @@ export function revertedFiles(
       if (merged.status !== 0) return { conflict: path };
       files[key] = merged.stdout;
     } finally {
-      rmSync(scratch, { recursive: true, force: true });
+      if (scratch) rmSync(scratch, { recursive: true, force: true });
     }
   }
   return { files };
 }
 
-/** The errors the spec files would have with the change taken out, each as a line. */
+/**
+ * The errors the spec files would have with the change taken out, each as a line. Every file is
+ * checked, the reverted text where the change touched it and the file as it is otherwise: a
+ * later change to another file may still need what goes (a grant on a kind of record).
+ */
 function check(dir: string, files: FilesPlan["files"]): string[] {
   const plugins = loadPlugins(dir);
   const errors = (ds: Diagnostic[]) =>
     ds.filter((d) => d.severity === "error").map((d) => formatDiagnostic(d));
-  const spec = validateSpec({ path: "smithable.yml", text: files.spec ?? "" }, { plugins });
+  const text = (key: keyof FilesPlan["files"], path: string): string | undefined => {
+    if (key in files) return files[key] ?? undefined;
+    const at = join(dir, path);
+    return existsSync(at) ? readFileSync(at, "utf8") : undefined;
+  };
+  const spec = validateSpec(
+    { path: "smithable.yml", text: text("spec", "smithable.yml") ?? "" },
+    { plugins },
+  );
   const problems = errors(spec.diagnostics);
   const ir = spec.ir as SpecIR | undefined;
   if (!ir) return problems;
-  if (files.auth)
+  const auth = text("auth", "smithable.auth.yml");
+  if (auth !== undefined)
     problems.push(
-      ...errors(validateAuth({ path: "smithable.auth.yml", text: files.auth }, ir).diagnostics),
+      ...errors(validateAuth({ path: "smithable.auth.yml", text: auth }, ir).diagnostics),
     );
-  if (files.content)
+  const content = text("content", "smithable.content.yml");
+  if (content !== undefined)
+    problems.push(
+      ...errors(validateContent({ path: "smithable.content.yml", text: content }, ir).diagnostics),
+    );
+  const ux = text("ux", "smithable.ux.yml");
+  if (ux !== undefined)
     problems.push(
       ...errors(
-        validateContent({ path: "smithable.content.yml", text: files.content }, ir).diagnostics,
+        validateUx({ path: "smithable.ux.yml", text: ux }, ir, projectThemes(dir)).diagnostics,
       ),
     );
-  if (files.ux)
-    problems.push(
-      ...errors(
-        validateUx({ path: "smithable.ux.yml", text: files.ux }, ir, projectThemes(dir))
-          .diagnostics,
-      ),
-    );
-  if (files.context)
-    problems.push(
-      ...errors(validateContext({ path: "smithable.context.yml", text: files.context })),
-    );
+  const context = text("context", "smithable.context.yml");
+  if (context !== undefined)
+    problems.push(...errors(validateContext({ path: "smithable.context.yml", text: context })));
   return problems;
 }
 

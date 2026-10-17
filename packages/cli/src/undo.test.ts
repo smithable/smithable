@@ -6,18 +6,22 @@ import { git } from "./git.js";
 import { captureIo } from "./test-io.js";
 import { undoableChanges, undoChange } from "./undo.js";
 
-/** A project's history made of spec texts, each committed as a change, oldest first. */
-function history(specs: string[]): { dir: string; shas: string[] } {
+/** A project's history of spec texts (or files by name), each committed as a change, oldest first. */
+function history(specs: (string | Record<string, string>)[]): { dir: string; shas: string[] } {
   const dir = mkdtempSync(join(tmpdir(), "smithable-undo-"));
   git(dir, ["init", "-q"]);
   git(dir, ["config", "user.email", "test@example.com"]);
   git(dir, ["config", "user.name", "Test"]);
-  writeFileSync(join(dir, "smithable.yml"), specs[0] ?? "");
+  const write = (state: string | Record<string, string>) => {
+    const files = typeof state === "string" ? { "smithable.yml": state } : state;
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+  };
+  write(specs[0] ?? "");
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "-m", "smithable: start of history"]);
   const shas: string[] = [];
-  specs.slice(1).forEach((text, i) => {
-    writeFileSync(join(dir, "smithable.yml"), text);
+  specs.slice(1).forEach((state, i) => {
+    write(state);
     git(dir, ["add", "-A"]);
     git(dir, [
       "commit",
@@ -116,4 +120,30 @@ test("an id that is not a change is refused; the newest change is the plain undo
   const newest = captureIo();
   expect(await undoChange(dir, newest, shas[0] ?? "", { check: true })).toBe(0);
   expect(newest.stdout).toContain("it is the newest change");
+});
+
+test("a change to a companion file alone is undone too, and checked against the spec as it is", async () => {
+  const auth = (sells: string, pages: string) => `smithableAuth: 0.1
+roles:
+  admin: all
+  sales:
+    description: ${sells}
+    pages: [customers]
+  support:
+    description: Helps.
+    pages: [products]
+public:
+  pages: [${pages}]
+`;
+  const { dir, shas } = history([
+    { "smithable.yml": base, "smithable.auth.yml": auth("Sells.", "") },
+    { "smithable.auth.yml": auth("Sells things.", "") },
+    { "smithable.auth.yml": auth("Sells things.", "customers") },
+  ]);
+  dirs.push(dir);
+  const io = captureIo();
+  const code = await undoChange(dir, io, shas[0] ?? "", { check: true });
+  expect(io.stderr).toBe("");
+  expect(code).toBe(0);
+  expect(io.stdout).toContain('Safe to undo "Change 1".');
 });
