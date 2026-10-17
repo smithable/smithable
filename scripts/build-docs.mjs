@@ -453,6 +453,12 @@ for (const page of PAGES) {
 }
 // The search index (search.json): every page cut at its headings, each part's words as plain
 // text, which the header's search box loads on first use and searches in the browser.
+// It is also an interface: Studio's Smith reads docs.smithable.ai/search.json to answer from
+// the docs with links (A 124 step 5). Its shape, kept stable (tell A before changing it):
+//   { pages: [[url, name], …], parts: [[page, heading, id, text], …] }
+// url is the page's path without the leading slash ("" for the home page), name its menu name,
+// page an index into pages, id the heading's anchor ("" for the page's top), and heading and
+// text plain words.
 /** Markdown as the words a reader sees: no link targets, pictures, marks or table rules. */
 const plain = (md) =>
   md
