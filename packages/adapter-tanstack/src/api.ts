@@ -865,7 +865,7 @@ function toolsModule(
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
 ${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
-${app ? `import type { AskFilter, AskKind } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${app ? `${worded.size ? 'import type { AskFilter, AskKind } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
@@ -1107,7 +1107,9 @@ ${
 /** How each caller is answered: the rules, then the host's model; a visitor by the rules only. */
 const ASKS: Record<string, string> = ${JSON.stringify(asks)};
 
-/** A kind's words for the wording rules, read from its module: the fields the caller reads. */
+${
+  worded.size
+    ? `/** A kind's words for the wording rules, read from its module: the fields the caller reads. */
 function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
@@ -1125,7 +1127,9 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
   };
 }
 
-/** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
+`
+    : ""
+}/** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
 ${words}
 };
