@@ -95,6 +95,45 @@ export function findOperation(
  * Applies an operation to the project's files. Pure: returns the edited texts, or why the
  * operation cannot be applied. The result is always a valid spec and content file.
  */
+/**
+ * Several operations as one change (the creation wizard's edited proposal, studio-v3.md §4):
+ * applied one after the other on the same files, the first refusal failing the whole; the
+ * descriptions joined, the effects and the files added or removed gathered, destructive when
+ * any is.
+ */
+export function applyOperations(
+  files: ProjectFiles,
+  steps: { op: string; args: OperationArgs }[],
+): OperationResult {
+  if (steps.length === 0)
+    return { ok: false, message: "A change needs at least one operation.", diagnostics: [] };
+  let current = files;
+  const descriptions: string[] = [];
+  const added: { path: string; text: string }[] = [];
+  const removed: string[] = [];
+  const effects: Effect[] = [];
+  let destructive = false;
+  for (const step of steps) {
+    const result = applyOperation(current, step.op, step.args);
+    if (!result.ok) return result;
+    current = result.files;
+    descriptions.push(result.description);
+    added.push(...result.added);
+    removed.push(...result.removed);
+    effects.push(...result.effects);
+    destructive ||= result.destructive;
+  }
+  return {
+    ok: true,
+    files: current,
+    added,
+    removed,
+    description: descriptions.join("; "),
+    destructive,
+    effects,
+  };
+}
+
 export function applyOperation(
   files: ProjectFiles,
   name: string,

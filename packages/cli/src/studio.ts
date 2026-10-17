@@ -189,34 +189,6 @@ function readTrace(dir: string): TraceEntry[] {
   });
 }
 
-/** A change's operation and file, from its Smithable-Op trailer, for editSpec only. */
-function editOf(dir: string, rev: string): string | undefined {
-  const op = trailer(git(dir, ["log", "-1", "--format=%B", rev]).out, "Smithable-Op");
-  if (!op) return undefined;
-  const { op: name, args } = JSON.parse(op) as { op: string; args: { file?: string } };
-  return name === "editSpec" ? (args.file ?? "smithable.yml") : undefined;
-}
-
-/**
- * An edit that goes on in the same file grows the same change (docs/design/studio-changes.md
- * §4): when the change just made is an editSpec of the file `grow` (the editor's previous save)
- * edited, and `grow` is right before it, the two become one with the first's message and
- * database snapshot and the second's files. Otherwise (the head moved in between) nothing is
- * folded. The newest change's id, either way.
- */
-export function foldGrow(dir: string, grow: string): string {
-  const head = git(dir, ["rev-parse", "HEAD"]).out;
-  const parent = git(dir, ["rev-parse", "--verify", "--quiet", "HEAD~1"]);
-  const file = editOf(dir, head);
-  if (!parent.ok || parent.out !== grow || !file || editOf(dir, grow) !== file) return head;
-  const message = git(dir, ["log", "-1", "--format=%B", grow]).out;
-  git(dir, ["reset", "-q", "--soft", `${grow}~1`]);
-  // Typed back to where it began: no change at all.
-  if (git(dir, ["diff", "--cached", "--quiet"]).ok) return git(dir, ["rev-parse", "HEAD"]).out;
-  git(dir, ["commit", "-q", "-m", message]);
-  return git(dir, ["rev-parse", "HEAD"]).out;
-}
-
 /**
  * One change opened (GET /api/change/<id>): the patch of the person's files (all of it with
  * `all`), the number of other files it changed, and the editable files before and after it.
@@ -841,22 +813,9 @@ export async function studio(
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
-        // An edit in Code mode that goes on grows its change; the editor keeps the id. An edit
-        // that was a rename (core applies it as the rename operation) is a change of its own.
-        const grow = (args as { grow?: unknown } | undefined)?.grow;
-        const edited = args as { text?: unknown; file?: unknown } | undefined;
-        const wasRename =
-          name === "editSpec" &&
-          typeof edited?.text === "string" &&
-          !edited.file &&
-          existsSync(join(dir, "smithable.yml")) &&
-          editAsRename(readFileSync(join(dir, "smithable.yml"), "utf8"), edited.text) !== undefined;
+        // The change the edit made, for the Changes window to open at.
         const change =
-          result.ok && name === "editSpec" && !wasRename
-            ? typeof grow === "string" && /^[0-9a-f]{40}$/.test(grow)
-              ? foldGrow(dir, grow)
-              : git(dir, ["rev-parse", "HEAD"]).out
-            : undefined;
+          result.ok && name === "editSpec" ? git(dir, ["rev-parse", "HEAD"]).out : undefined;
         if (result.ok) changed({ description: result.output });
         // A change that failed halfway was rolled back, its database included: the preview
         // reopens it, as after an undo.

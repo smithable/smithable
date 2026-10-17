@@ -289,7 +289,7 @@ export function undo(dir: string, io: Io): number {
   if (!revert.ok) {
     git(dir, ["revert", "--abort"]);
     io.err(
-      `Could not undo "${target.subject.slice(11)}": later changes touch the same files.\n${revert.out}\n`,
+      `Cannot undo "${target.subject.slice(11)}": a later change edited the same part. Undo that one first.\n`,
     );
     return 1;
   }

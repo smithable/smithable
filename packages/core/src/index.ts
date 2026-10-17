@@ -3,6 +3,7 @@ export { actionAccess, modelAccess, pageAccess, reviewRoles, uniquePerOwner } fr
 export type { OperationResult, ProjectFiles } from "./apply.js";
 export {
   applyOperation,
+  applyOperations,
   findOperation,
   OPERATIONS,
   operationsFor,

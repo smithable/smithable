@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   applyOperation,
+  applyOperations,
   findOperation,
   OPERATIONS,
   type ProjectFiles,
@@ -1581,4 +1582,30 @@ test("editSpec with a path sets one part of a file, checked as a whole; null tak
   });
   if (!content.ok) throw new Error(content.message);
   expect(content.files.content).toContain("subtitle: Everyone we sell to.");
+});
+
+test("applyOperations makes one change of several operations, or refuses as a whole", () => {
+  const spec = `smithable: 0.1
+app: { name: Shop }
+models:
+  Customer: { fields: { name: string! } }
+pages:
+  customers: { crud: Customer }
+`;
+  const result = applyOperations({ spec }, [
+    { op: "addModel", args: { model: "Supplier", fields: { name: "string!" } } },
+    { op: "addPage", args: { page: "suppliers", model: "Supplier" } },
+  ]);
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.description).toBe("Add model Supplier with name; Add page suppliers for Supplier");
+  expect(result.files.spec).toContain("Supplier");
+  expect(result.files.spec).toContain("suppliers");
+  expect(result.destructive).toBe(false);
+  const refused = applyOperations({ spec }, [
+    { op: "addModel", args: { model: "Supplier", fields: { name: "string!" } } },
+    { op: "addPage", args: { page: "customers", model: "Supplier" } },
+  ]);
+  expect(refused.ok).toBe(false);
+  expect(applyOperations({ spec }, []).ok).toBe(false);
 });
