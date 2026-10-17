@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { changeDetail, foldGrow, refusal, studio, trace } from "./studio.js";
+import { changeDetail, foldGrow, refusal, studio, trace, unchangedEdit } from "./studio.js";
 import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
@@ -184,4 +184,20 @@ test("the dev server's last word about a replaced app's modules is not the new a
   expect(oldAppEcho(line("item.ts"), dir, 0, now)).toBe(false);
   // Any other line: kept.
   expect(oldAppEcho("[vite] page reload src/routes/index.tsx", dir, now - 2000, now)).toBe(false);
+});
+
+test("an edit of a whole file that only formats it is no change; a different file or part is", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-unchanged-"));
+  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: Shop }\n");
+  const formatted = "smithable: 0.1\napp:\n  name: Shop\n";
+  expect(unchangedEdit(dir, "editSpec", { text: formatted })).toBe(true);
+  expect(unchangedEdit(dir, "editSpec", { text: formatted, file: "smithable.yml" })).toBe(true);
+  expect(unchangedEdit(dir, "editSpec", { text: "smithable: 0.1\napp:\n  name: Store\n" })).toBe(
+    false,
+  );
+  // A part, another file that is not there, or another operation: not this rule's.
+  expect(unchangedEdit(dir, "editSpec", { path: ["app", "name"], value: "Shop" })).toBe(false);
+  expect(unchangedEdit(dir, "editSpec", { text: "", file: "smithable.ux.yml" })).toBe(false);
+  expect(unchangedEdit(dir, "addField", { text: formatted })).toBe(false);
+  rmSync(dir, { recursive: true, force: true });
 });

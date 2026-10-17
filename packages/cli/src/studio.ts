@@ -9,6 +9,7 @@ import {
   BUILT_IN_THEMES,
   EDITABLE_FILES,
   type OperationArgs,
+  sameContent,
   themeThumbnail,
 } from "@smithable/core";
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
@@ -87,6 +88,19 @@ export interface TraceEntry {
 
 /** A file a person edits, as opposed to the generated ones (docs/design/studio-changes.md §3). */
 export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWith("src/custom/");
+
+/**
+ * An editSpec of a whole file whose text says the same as the file (formatting, whitespace or
+ * comments apart): formatting is never a change (docs/design/studio-v3.md §7), so the daemon
+ * answers as if done and writes nothing; the formatted text reaches the file with the next edit.
+ */
+export function unchangedEdit(dir: string, name: string, args: Record<string, unknown>): boolean {
+  if (name !== "editSpec" || typeof args.text !== "string" || args.path) return false;
+  const file = typeof args.file === "string" ? args.file : "smithable.yml";
+  if (!(file in EDITABLE_FILES)) return false;
+  const path = join(dir, file);
+  return existsSync(path) && sameContent(readFileSync(path, "utf8"), args.text);
+}
 
 const ENGINES = {
   generator: "generator",
@@ -792,6 +806,9 @@ export async function studio(
         );
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm, file } = await body();
+        // The editor's text that only formats the file (studio-v3.md §7): no change, silently.
+        if (unchangedEdit(dir, String(name), (args ?? {}) as Record<string, unknown>))
+          return json({ ok: true, output: "Nothing to change.", unchanged: true });
         // A picture the change brings (the Look tab's logo): under public/images/, at most 2 MB.
         const given = file as { path?: unknown; data?: unknown } | undefined;
         const bytes =
