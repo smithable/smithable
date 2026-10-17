@@ -495,12 +495,11 @@ export function dataModule(
       return `${f.name}: { kind: "choice", column: ${column}, values: ${JSON.stringify(f.type.values)} }`;
     if (f.type.kind === "relation") {
       const target = f.type.model;
-      const table = target === USER_MODEL ? "schema.user" : tableRef(modelNamed(ir, target));
       // A person by their name, which a signed-in viewer sees anyway; a record of another kind by
       // its title only through that kind's named(), among the records the viewer may read.
       const title =
         target === USER_MODEL
-          ? `, title: { table: ${table}, column: ${table}.${relatedTitle(ir, target)} }`
+          ? `, title: { table: schema.user, column: schema.user.${relatedTitle(ir, target)} }`
           : "";
       return `${f.name}: { kind: "reference", column: ${column}${title} }`;
     }
