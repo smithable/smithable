@@ -1,5 +1,5 @@
 import { humanize, pageModel, plural } from "@smithable/core";
-import { describeChange } from "@smithable/index";
+import { describeChange, summarize } from "@smithable/index";
 import {
   lazy,
   Suspense,
@@ -14,7 +14,7 @@ import { api, EXPECT_RELOAD, type Making as MakingState, type Project, waking } 
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask } from "./builder/Ask";
-import { NoCode } from "./builder/NoCode";
+import { NoCode, OPEN_PART } from "./builder/NoCode";
 import { ASK_SMITH } from "./builder/Wizard";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
@@ -226,6 +226,11 @@ export function App() {
 
   const spec = useSpec(project);
   shownIR.current = spec.ir;
+  // The app in words, for Smith's "What does this app do?".
+  const sections = useMemo(
+    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
+    [spec],
+  );
   // A change in the words Changes and Smith use ("Customers: added a website").
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
@@ -785,6 +790,21 @@ export function App() {
                           words={words}
                           waiting={project.waiting}
                           trace={project.trace}
+                          ready={{
+                            sections,
+                            notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
+                            ...(project.home ? { home: project.home } : {}),
+                            apply: (op, args) => void run(op, args),
+                            onJump: (concept) => {
+                              guideStop("behavior");
+                              // After No code is on screen to hear it.
+                              setTimeout(() =>
+                                window.dispatchEvent(
+                                  new CustomEvent(OPEN_PART, { detail: concept }),
+                                ),
+                              );
+                            },
+                          }}
                         />
                       </div>
                     </Panel>

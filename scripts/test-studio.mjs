@@ -896,6 +896,8 @@ try {
     await page.getByLabel("Describe a change").fill("Who can add orders?");
     await page.getByRole("button", { name: "Make the change" }).click();
     await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
+    // A question is looked up in the docs too: what they say, or that they cannot be reached.
+    await page.getByRole("region", { name: "From the docs" }).waitFor({ timeout: 30000 });
     if ((await project()).files.spec !== before) throw new Error("the spec changed");
   });
   await step(
@@ -944,6 +946,31 @@ try {
         .getByRole("region", { name: "What changed" })
         .getByText(/a mobile \(a phone number\)/)
         .waitFor({ timeout: 60000 });
+    },
+  );
+  await step(
+    "Smith's ready prompts are answered by Studio: the app in short with a way to each part, how to publish",
+    async () => {
+      const prompts = page.getByRole("group", { name: "Ready prompts" });
+      await prompts.getByRole("button", { name: "How do I publish?" }).click();
+      const how = page.getByRole("region", { name: "How to publish" });
+      if (
+        (await how.getByRole("link", { name: "Self-hosting" }).getAttribute("href")) !==
+        "https://docs.smithable.ai/self-host.html"
+      )
+        throw new Error("How do I publish? does not lead to the self-hosting page");
+      await prompts.getByRole("button", { name: "What does this app do?" }).click();
+      const short = page.getByRole("region", { name: "What the app does, in short" });
+      await short.getByRole("button", { name: "Customers", exact: true }).click();
+      await page
+        .getByRole("region", { name: "What the app does" })
+        .locator("details[open]", { has: page.locator('summary:text-is("Customer")') })
+        .first()
+        .waitFor({ timeout: 10000 });
+      await prompts.getByRole("button", { name: "Help me add…" }).click();
+      if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")
+        throw new Error("Help me add did not start the request");
+      await page.getByLabel("Describe a change").fill("");
     },
   );
   await step(

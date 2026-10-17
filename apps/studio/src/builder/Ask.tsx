@@ -1,11 +1,15 @@
 // Describe a change in your own words: a model proposes operations, and every proposal is shown
 // first, in the summary's words, and waits for Apply (Johan, 2026-10-11: one click more is the
 // design); Discard, Change it in the forms, or Refine it in a few more words (ARCHITECTURE §9.4).
+
+import type { Diagnostic } from "@smithable/core";
+import type { SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal, type TraceEntry } from "../api";
 import { Button, Input, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
+import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search";
 import { ASK_SMITH, HANDED } from "./Wizard";
 
 /**
@@ -41,6 +45,7 @@ export function Ask({
   making = false,
   waiting = [],
   trace,
+  ready,
 }: {
   /** The box's example, in the app's own words. */
   example?: string;
@@ -55,6 +60,11 @@ export function Ask({
    * left no change (docs/design/ask-in-studio.md §3); without it, only the box.
    */
   trace?: TraceEntry[];
+  /**
+   * The ready prompts' answers, made by Studio itself (studio-v3.md §2): the app in words with
+   * a way to each part, the advice notes with their fixes, where the app is published.
+   */
+  ready?: Ready;
 }) {
   // A request half written stays when the person looks elsewhere (another tab, a mode) and
   // comes back: kept for the browser tab's session.
@@ -73,6 +83,13 @@ export function Ask({
     } catch {}
   };
   const [proposal, setProposal] = useState<Proposal>();
+  // A ready prompt's answer, shown until another request.
+  const [local, setLocal] = useState<"next" | "what" | "publish">();
+  // A question's answer from the docs: the parts found, or that the docs cannot be reached.
+  const [docs, setDocs] = useState<DocsHit[] | "unreachable">();
+  // The last request and when, for the follow-up rule: a short line or one that leans on it
+  // ("yes", "the second one", "also for orders") goes with it; anything else stands alone.
+  const last = useRef<{ text: string; at: number; question: boolean }>(undefined);
   const [said, setSaidState] = useState(readSaid);
   const say = (request: string, reply: string) => {
     const next = [...said, { at: new Date().toISOString(), request, reply }].slice(-40);
@@ -127,8 +144,17 @@ export function Ask({
   const propose = async (text: string) => {
     setBusy(true);
     setOutput("");
+    setLocal(undefined);
+    setDocs(undefined);
+    // Smith looks in the docs too for a question (studio-v3.md §2), beside the app's answer.
+    if (trace && asksTheDocs(text))
+      void docsIndex().then(
+        (index) => setDocs(searchDocs(index, text)),
+        () => setDocs("unreachable"),
+      );
     try {
       const next = await api.ask(text);
+      last.current = { text, at: Date.now(), question: next.kind === "question" };
       setProposal(next);
       // An answer or a refusal is the end of that request: it goes into the thread.
       const reply =
@@ -190,7 +216,7 @@ export function Ask({
               () => setRequest(""),
               (error: Error) => setOutput(error.message),
             );
-          else void propose(request.trim());
+          else void propose(followUp(request.trim(), last.current));
         }}
       >
         <Label
@@ -215,6 +241,19 @@ export function Ask({
               : "Make the change"}
         </Button>
       </form>
+      {ready && !making && !proposal && !request.trim() && (
+        <ReadyPrompts
+          shown={local}
+          ready={ready}
+          onPick={(prompt) => {
+            if (prompt === "add") {
+              setRequest("Help me add ");
+              return;
+            }
+            setLocal(prompt);
+          }}
+        />
+      )}
       {waiting.length > 0 && (
         <ul aria-label="Waiting" className="space-y-1">
           {waiting.map((text, i) => (
@@ -259,6 +298,32 @@ export function Ask({
           }}
         />
       )}
+      {docs && (
+        <section aria-label="From the docs" className="space-y-1 text-sm">
+          <h3 className="text-xs font-semibold tracking-wide text-quiet uppercase">
+            From the docs
+          </h3>
+          {docs === "unreachable" ? (
+            <p className="text-muted">The docs are not reachable right now.</p>
+          ) : docs.length === 0 ? (
+            <p className="text-muted">The docs say nothing on this.</p>
+          ) : (
+            docs.map((hit) => (
+              <p key={hit.url}>
+                <a
+                  href={hit.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent underline"
+                >
+                  {hit.title}
+                </a>
+                <span className="block text-xs text-muted">{hit.line}</span>
+              </p>
+            ))
+          )}
+        </section>
+      )}
       {output && <p className="text-sm text-muted">{output}</p>}
     </div>
   );
@@ -297,6 +362,140 @@ function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; wor
         </li>
       ))}
     </ol>
+  );
+}
+
+/** What Smith answers by himself (studio-v3.md §2), from the app and its checks. */
+export interface Ready {
+  sections: SummarySection[];
+  /** The validator's notes: advice with its fix. */
+  notes: Diagnostic[];
+  /** Hosted: where the app is published and shared. */
+  home?: string;
+  /** Applies a note's fix through the operation path, as any change. */
+  apply: (op: string, args: Record<string, unknown>) => void;
+  /** Opens the part of the app a sentence is about (No code's Behavior). */
+  onJump: (concept: string) => void;
+}
+
+/**
+ * The words that lean on the last request go with it (studio-v3.md §2): an answer to Smith's
+ * question, a short line ("yes", "the second one"), one that begins with a word that needs
+ * what came before, or one within a minute of it. By pattern, no model.
+ */
+export function followUp(
+  text: string,
+  last: { text: string; at: number; question: boolean } | undefined,
+): string {
+  if (!last) return text;
+  const short = text.split(/\s+/).length <= 3;
+  const leaning =
+    /^(yes|no|ok|also|and|but|it|that|this|them|those|the (first|second|third|last|other)( one)?)\b/i.test(
+      text,
+    );
+  const soon = Date.now() - last.at < 60_000;
+  return last.question || leaning || (short && soon) ? `${last.text} (${text})` : text;
+}
+
+/** The ready prompts, while no discussion is going on, and the answer to the one picked. */
+function ReadyPrompts({
+  shown,
+  ready,
+  onPick,
+}: {
+  shown?: "next" | "what" | "publish";
+  ready: Ready;
+  onPick: (prompt: "next" | "what" | "publish" | "add") => void;
+}) {
+  const chips: ["next" | "what" | "publish" | "add", string][] = [
+    ["next", "What should I do next?"],
+    ["add", "Help me add…"],
+    ["what", "What does this app do?"],
+    ["publish", "How do I publish?"],
+  ];
+  return (
+    <div className="space-y-3">
+      <fieldset aria-label="Ready prompts" className="flex flex-wrap gap-1.5">
+        <legend className="sr-only">Ready prompts</legend>
+        {chips.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onPick(id)}
+            className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+          >
+            {label}
+          </button>
+        ))}
+      </fieldset>
+      {shown === "next" && (
+        <section aria-label="What to do next" className="space-y-1 text-sm">
+          {ready.notes.length === 0 ? (
+            <p>Nothing stands out: the app's checks have no advice. Try it in the preview.</p>
+          ) : (
+            ready.notes.slice(0, 5).map((n) => (
+              <p key={`${n.line}:${n.message}`} className="flex items-baseline gap-2">
+                <span className="flex-1">{n.message}</span>
+                {n.fix && (
+                  <Button
+                    variant="ghost"
+                    className="h-6 shrink-0"
+                    onClick={() => n.fix && ready.apply(n.fix.op, n.fix.args)}
+                  >
+                    Apply
+                  </Button>
+                )}
+              </p>
+            ))
+          )}
+        </section>
+      )}
+      {shown === "what" && (
+        <section aria-label="What the app does, in short" className="space-y-2 text-sm">
+          {ready.sections.slice(0, 4).map((section) => (
+            <div key={section.concept}>
+              <button
+                type="button"
+                className="font-medium hover:text-accent hover:underline"
+                onClick={() => ready.onJump(section.concept)}
+              >
+                {section.title}
+              </button>
+              {section.sentences.slice(0, 3).map((sentence, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences by their place
+                <p key={i}>{sentence.replace(/^- /, "")}</p>
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
+      {shown === "publish" && (
+        <section aria-label="How to publish" className="text-sm">
+          {ready.home ? (
+            <p>
+              On smithable.ai it is one step:{" "}
+              <a href={ready.home} className="text-accent underline">
+                Publish and share
+              </a>{" "}
+              gives the app its address, with sign-in and backups.
+            </p>
+          ) : (
+            <p>
+              On your own machine an app is published as a container:{" "}
+              <a
+                href="https://docs.smithable.ai/self-host.html"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent underline"
+              >
+                Self-hosting
+              </a>{" "}
+              says how, with its Release checks.
+            </p>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
 
