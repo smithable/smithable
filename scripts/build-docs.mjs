@@ -331,6 +331,10 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 
 // The search box's script (scripts/docs-search.js), inlined on every page.
 const SEARCH = readFileSync(join(import.meta.dirname, "docs-search.js"), "utf8");
+// The visit counter (scripts/docs-count.js, served as /count.js), and for a visitor without
+// script a picture that counts the page without where they came from.
+const counter = (path) =>
+  `<noscript><img src="https://smithable.ai/v?site=docs&amp;p=${encodeURIComponent(path)}" alt="" width="1" height="1"></noscript>`;
 
 // Before the public release the site is reachable but kept out of search engines.
 const PRERELEASE =
@@ -385,6 +389,7 @@ const html = (page, body) => {
 <meta property="og:type" content="website">${where}
 <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<script src="/count.js" defer></script>
 <style>${CSS}</style>
 </head>
 <body>
@@ -393,6 +398,7 @@ const html = (page, body) => {
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
 <script>${SEARCH}</script>
+${counter(page.out ? `/${page.out === "index.html" ? "" : page.out}` : "/404.html")}
 </body>
 </html>
 `;
@@ -469,6 +475,7 @@ for (const page of PAGES) {
   flush();
 }
 writeFileSync(join(out, "search.json"), JSON.stringify(index));
+copyFileSync(join(root, "scripts/docs-count.js"), join(out, "count.js"));
 for (const [i, each] of schemas.entries())
   writeFileSync(join(out, schemaPaths[i]), `${JSON.stringify(each, null, 2)}\n`);
 writeFileSync(
@@ -516,6 +523,14 @@ const lab = spawnSync(
 );
 if (lab.status !== 0) process.exit(lab.status ?? 1);
 cpSync(join(root, "docs/site/theme-lab"), join(out, "theme-lab"), { recursive: true });
+// The lab's own page counts its visits too (the app pages it frames do not).
+const labPage = join(out, "theme-lab/index.html");
+writeFileSync(
+  labPage,
+  readFileSync(labPage, "utf8")
+    .replace("</head>", '<script src="/count.js" defer></script>\n</head>')
+    .replace("</body>", `${counter("/theme-lab/")}\n</body>`),
+);
 
 writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}sitemap.xml\n`);
 
