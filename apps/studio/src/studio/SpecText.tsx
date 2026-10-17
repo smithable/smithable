@@ -33,6 +33,7 @@ export default function SpecText({
   ask,
   onNothing,
   onLeave,
+  onWizard,
 }: {
   /** What the text is, for assistive tools and tests: the file's name. */
   label: string;
@@ -53,6 +54,8 @@ export default function SpecText({
   onNothing?: () => void;
   /** The person left the text (it lost the focus) or asked to save (Ctrl+S). */
   onLeave?: () => void;
+  /** "Add a model…" (a page, an action) chosen from the suggestions: the creation wizard. */
+  onWizard?: (kind: "model" | "page" | "action") => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | undefined>(undefined);
@@ -62,6 +65,8 @@ export default function SpecText({
   knows.current = known;
   const left = useRef(onLeave);
   left.current = onLeave;
+  const wizard = useRef(onWizard);
+  wizard.current = onWizard;
   const nothing = useRef(onNothing);
   nothing.current = onNothing;
   const file = label as EditedFile;
@@ -88,6 +93,33 @@ export default function SpecText({
     // (where a key goes) opens it when the cursor lands there, below; elsewhere, Ctrl-Space or the
     // toolbar's "What goes here?".
     const sources = [
+      // Where a new kind of record, page or action goes (a line under models:, pages: or
+      // actions:), the wizard is offered first (studio-v3.md §4).
+      {
+        autocomplete: (context: { state: EditorState; pos: number }) => {
+          if (file !== "smithable.yml" || !wizard.current) return null;
+          const line = context.state.doc.lineAt(context.pos);
+          if (!/^ {2}\w*$/.test(line.text.slice(0, context.pos - line.from))) return null;
+          let at = line.number - 1;
+          while (at > 0 && !/^\S/.test(context.state.doc.line(at).text)) at--;
+          const kind = { "models:": "model", "pages:": "page", "actions:": "action" }[
+            at > 0 ? context.state.doc.line(at).text.trim() : ""
+          ] as "model" | "page" | "action" | undefined;
+          if (!kind) return null;
+          return {
+            from: line.from + 2,
+            options: [
+              {
+                label: `Add a ${kind}…`,
+                boost: 99,
+                type: "keyword",
+                info: "Describe it in a few words; the form shows what will be made.",
+                apply: () => wizard.current?.(kind),
+              },
+            ],
+          };
+        },
+      },
       {
         autocomplete: (context: { state: EditorState; pos: number; explicit: boolean }) => {
           const found = completeSpec(

@@ -9,10 +9,12 @@ import {
   sameContent,
   validateSpec,
 } from "@smithable/core";
+import { describeChange } from "@smithable/index";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { isMap, isScalar, isSeq, type Node, parseDocument } from "yaml";
 import type { Project } from "../api";
 import type { Run } from "../builder/ChangeForms";
+import { Wizard, type WizardKind } from "../builder/Wizard";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
 import { isPreviewMessage, type Place } from "../preview";
@@ -56,6 +58,7 @@ export function Code({
     <section aria-label="Code" data-guide="files" className="flex h-full min-h-0 flex-col bg-panel">
       <SpecEditor
         project={project}
+        spec={spec}
         plugins={spec.plugins}
         run={run}
         jump={jump}
@@ -74,6 +77,7 @@ export function Code({
  */
 function SpecEditor({
   project,
+  spec,
   plugins,
   run,
   jump,
@@ -82,6 +86,7 @@ function SpecEditor({
   onLook,
 }: {
   project: Project;
+  spec: Spec;
   plugins: Spec["plugins"];
   run: Run;
   jump?: Jump;
@@ -236,10 +241,14 @@ function SpecEditor({
           ? "Not saved: fix the problems first"
           : removes
             ? "Not saved: it removes a field, so Save asks first"
-            : "Edited: it saves when you leave the editor";
+            : typed.current
+              ? "Edited: it saves when you leave the editor"
+              : "Edited earlier: Save to keep it, or keep typing";
   // "What goes here?": the editor's list of what can be written at the cursor, for a phone,
   // which has no Ctrl-Space.
   const [ask, setAsk] = useState(0);
+  // The creation wizard, opened from the editor's suggestions.
+  const [wizard, setWizard] = useState<WizardKind>();
   // "What goes here?" with nothing to offer says so for a moment, instead of doing nothing.
   const [nothing, setNothing] = useState(false);
   useEffect(() => {
@@ -337,6 +346,16 @@ function SpecEditor({
           </Button>
         </p>
       )}
+      {wizard && (
+        <Wizard
+          kind={wizard}
+          run={run}
+          words={(op, args) =>
+            spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined
+          }
+          onClose={() => setWizard(undefined)}
+        />
+      )}
       <Suspense fallback={<p className="flex-1 p-3 text-xs text-quiet">Opening the editor…</p>}>
         <SpecText
           key={file}
@@ -347,6 +366,7 @@ function SpecEditor({
             setText(next);
           }}
           onLeave={leave}
+          onWizard={setWizard}
           problems={shown.filter((d) => d.file === file)}
           select={jump?.file === file ? select : undefined}
           kept={`smithable:editor:${project.name}:${file}`}

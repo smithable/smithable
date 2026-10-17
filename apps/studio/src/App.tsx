@@ -15,6 +15,7 @@ import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask } from "./builder/Ask";
 import { NoCode } from "./builder/NoCode";
+import { ASK_SMITH } from "./builder/Wizard";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
 import { logStore } from "./logs";
@@ -143,6 +144,14 @@ export function App() {
         slots[s] === window ||
         (slots[s] === "smith+changes" && (window === "smith" || window === "changes")),
     );
+  // The creation wizard's "Ask Smith for help": Smith comes into view to take the words.
+  const smithRef = useRef(() => {});
+  smithRef.current = () => guideStop("change");
+  useEffect(() => {
+    const handed = () => smithRef.current();
+    window.addEventListener(ASK_SMITH, handed);
+    return () => window.removeEventListener(ASK_SMITH, handed);
+  }, []);
   // Requests typed while the app was made are taken by Smith: he comes into view for them.
   const waitingNow = (project?.waiting?.length ?? 0) > 0 && !project?.making;
   // biome-ignore lint/correctness/useExhaustiveDependencies: when requests start waiting

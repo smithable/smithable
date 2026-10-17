@@ -6,6 +6,7 @@ import { api, type Proposal, type TraceEntry } from "../api";
 import { Button, Input, Label } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
+import { ASK_SMITH, HANDED } from "./Wizard";
 
 /**
  * Smith's box and thread (docs/design/studio-v3.md §2). `onEdit`, where given, opens a proposed
@@ -102,6 +103,27 @@ export function Ask({
       });
   });
 
+  // Words handed over by the creation wizard's "Ask Smith for help": said now, or kept until
+  // this panel is on screen to take them.
+  const proposeRef = useRef<(text: string) => void>(() => {});
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, and when the making ends
+  useEffect(() => {
+    const take = () => {
+      // While the app is made the words wait for this panel's next turn.
+      if (making) return;
+      let text: string | null = null;
+      try {
+        text = sessionStorage.getItem(HANDED);
+        sessionStorage.removeItem(HANDED);
+      } catch {}
+      if (!text) return;
+      setRequest(text);
+      proposeRef.current(text);
+    };
+    take();
+    window.addEventListener(ASK_SMITH, take);
+    return () => window.removeEventListener(ASK_SMITH, take);
+  }, [making]);
   const propose = async (text: string) => {
     setBusy(true);
     setOutput("");
@@ -128,6 +150,7 @@ export function Ask({
       setBusy(false);
     }
   };
+  proposeRef.current = (text) => void propose(text);
   const apply = async () => {
     if (!proposal) return;
     setBusy(true);

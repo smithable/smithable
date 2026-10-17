@@ -22,6 +22,18 @@ function draft() {
 
 const ANSWERS = [
   [
+    /suppliers with a name/i,
+    {
+      kind: "operations",
+      operations: [
+        {
+          op: "addModel",
+          args: { model: "Supplier", fields: { name: "string!", email: "email" } },
+        },
+      ],
+    },
+  ],
+  [
     /mobile number/i,
     {
       kind: "operations",

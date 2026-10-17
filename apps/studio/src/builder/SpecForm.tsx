@@ -98,6 +98,8 @@ const choicesOf = (files: Project["files"], file: EditableFile) => {
   return (path: Path) => choicesFor(file, path, spec);
 };
 
+/** An area's own way of adding (the creation wizard), by its path; the plain name box for most. */
+const Adder = createContext<(path: Path) => React.ReactNode>(() => undefined);
 /** What an entry can do beyond its settings (EntryTools.tsx), by its path; nothing for most. */
 const Tools = createContext<(path: Path) => React.ReactNode>(() => undefined);
 
@@ -118,6 +120,7 @@ export function SpecForm({
   parts = ["spec"],
   open,
   tools,
+  adder,
 }: {
   files: Project["files"];
   run: Run;
@@ -126,6 +129,8 @@ export function SpecForm({
   open?: Path;
   /** What an entry can do beyond its settings (an import, a page's own code). */
   tools?: (path: Path) => React.ReactNode;
+  /** An area's own way of adding instead of the name box (the creation wizard). */
+  adder?: (path: Path) => React.ReactNode;
 }) {
   const schemas = useMemo(
     () =>
@@ -150,7 +155,9 @@ export function SpecForm({
                   <Shape.Provider value={shapeOf(run, file, ir)}>
                     <Opened.Provider value={open}>
                       <Tools.Provider value={tools ?? (() => undefined)}>
-                        <Value schema={schema} value={read(files[key])} path={[]} />
+                        <Adder.Provider value={adder ?? (() => undefined)}>
+                          <Value schema={schema} value={read(files[key])} path={[]} />
+                        </Adder.Provider>
                       </Tools.Provider>
                     </Opened.Provider>
                   </Shape.Provider>
@@ -173,6 +180,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const renamer = useContext(Renamer);
   const opened = useContext(Opened);
   const tools = useContext(Tools);
+  const adder = useContext(Adder);
   const shaped = useContext(Shape)(path);
   if (shaped && (typeof value === "string" || value === undefined)) return shaped;
   const control = controlOf(schema);
@@ -305,7 +313,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
               </div>
             </details>
           ))}
-          <AddEntry label={label} onAdd={(name) => write([...path, name], {})} />
+          {adder(path) ?? <AddEntry label={label} onAdd={(name) => write([...path, name], {})} />}
         </div>
       );
     }
