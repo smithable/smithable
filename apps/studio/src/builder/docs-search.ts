@@ -21,7 +21,9 @@ let loading: Promise<DocsIndex> | undefined;
 
 /** The index, fetched once for the tab; a failure is tried again on the next question. */
 export function docsIndex(): Promise<DocsIndex> {
-  loading ??= fetch(`${DOCS}/search.json`).then((r) => {
+  // A plain GET (no preflight, which the docs' host does not answer), given up after ten
+  // seconds so a stalled connection does not hold the tab's promise for good.
+  loading ??= fetch(`${DOCS}/search.json`, { signal: AbortSignal.timeout(10_000) }).then((r) => {
     if (!r.ok) throw new Error(`The docs answered ${r.status}.`);
     return r.json() as Promise<DocsIndex>;
   });

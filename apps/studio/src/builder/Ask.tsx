@@ -87,6 +87,7 @@ export function Ask({
   const [local, setLocal] = useState<"next" | "what" | "publish">();
   // A question's answer from the docs: the parts found, or that the docs cannot be reached.
   const [docs, setDocs] = useState<DocsHit[] | "unreachable">();
+  const docsAsked = useRef(0);
   // The last request and when, for the follow-up rule: a short line or one that leans on it
   // ("yes", "the second one", "also for orders") goes with it; anything else stands alone.
   const last = useRef<{ text: string; at: number; question: boolean }>(undefined);
@@ -147,10 +148,12 @@ export function Ask({
     setLocal(undefined);
     setDocs(undefined);
     // Smith looks in the docs too for a question (studio-v3.md §2), beside the app's answer.
+    // Only the latest question's hits are shown, however the index's loading falls.
+    const asked = ++docsAsked.current;
     if (trace && asksTheDocs(text))
       void docsIndex().then(
-        (index) => setDocs(searchDocs(index, text)),
-        () => setDocs("unreachable"),
+        (index) => asked === docsAsked.current && setDocs(searchDocs(index, text)),
+        () => asked === docsAsked.current && setDocs("unreachable"),
       );
     try {
       const next = await api.ask(text);
@@ -379,9 +382,10 @@ export interface Ready {
 }
 
 /**
- * The words that lean on the last request go with it (studio-v3.md §2): an answer to Smith's
- * question, a short line ("yes", "the second one"), one that begins with a word that needs
- * what came before, or one within a minute of it. By pattern, no model.
+ * The words that lean on the last request go with it (studio-v3.md §2): a short line ("yes",
+ * "the second one") or one that begins with a word that needs what came before, within a
+ * minute of it, or within five when Smith had asked a question. A longer line that does not
+ * lean stands alone, even after a question. By pattern, no model.
  */
 export function followUp(
   text: string,
@@ -393,8 +397,9 @@ export function followUp(
     /^(yes|no|ok|also|and|but|it|that|this|them|those|the (first|second|third|last|other)( one)?)\b/i.test(
       text,
     );
-  const soon = Date.now() - last.at < 60_000;
-  return last.question || leaning || (short && soon) ? `${last.text} (${text})` : text;
+  const age = Date.now() - last.at;
+  const recent = age < 60_000 || (last.question && age < 5 * 60_000);
+  return (short || leaning) && recent ? `${last.text} (${text})` : text;
 }
 
 /** The ready prompts, while no discussion is going on, and the answer to the one picked. */
