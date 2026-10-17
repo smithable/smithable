@@ -161,7 +161,7 @@ Otherwise leave it as free text plus custom code. Review recurring `rules` perio
 - A JSON Schema for the manifest is published (at its `$id`, https://docs.smithable.ai/schema/smithable-0.1.json, with the spec reference on docs.smithable.ai, built by `pnpm site`) and used for validation, editor autocomplete and operation validation.
 - Validation errors carry file, line and column positions.
 - Hand edits are first-class: users may edit `smithable.yml` directly, and Smithable validates and recompiles on save.
-- Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing).
+- Programmatic writes preserve comments, ordering and formatting (CST-level YAML editing). Studio shows the files formatted (`formatSpec`: objects as block mappings, never `{ }`; everything else as written) and a save that changes only formatting is no change (studio-v3.md §7).
 - Splitting the manifest across several files for large apps is an open question (§15).
 - **Why YAML, not a TypeScript config?** The spec must be edited by deterministic operations, read by non-developers and small models, and stay technology-neutral.
 - **The in-string grammar stays small and familiar.** It covers:

@@ -87,6 +87,7 @@ export type { Diagnostic, Fix, Severity } from "./diagnostics.js";
 export { fixCommand, formatDiagnostic, hasErrors } from "./diagnostics.js";
 export type { YamlValue } from "./edit.js";
 export { EditError, YamlEditor } from "./edit.js";
+export { formatSpec, sameContent } from "./format.js";
 export type { Expr } from "./formula.js";
 export { formatFormula, parseFormula } from "./formula.js";
 export {
