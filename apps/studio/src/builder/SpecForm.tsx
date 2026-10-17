@@ -66,7 +66,7 @@ const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path:
     return undefined;
   return (
     <FieldShapeForm
-      key={JSON.stringify(field)}
+      key={`${String(model)}.${String(name)}`}
       field={field}
       models={ir.models.map((m) => m.name)}
       run={(type, renames) =>
@@ -133,8 +133,7 @@ export function SpecForm({
   adder?: (path: Path) => React.ReactNode;
 }) {
   const schemas = useMemo(
-    () =>
-      ({ "smithable.yml": buildJsonSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
+    () => ({ "smithable.yml": specSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
     [],
   );
   return (
@@ -589,6 +588,13 @@ function schemaAt(root: JsonSchema, value: unknown, path: Path): JsonSchema | un
   return schema;
 }
 
+/** The spec's JSON Schema: the same for every part, so made once. */
+let builtSchema: JsonSchema | undefined;
+const specSchema = () => {
+  builtSchema ??= buildJsonSchema() as JsonSchema;
+  return builtSchema;
+};
+
 /**
  * One part of a file as its form (what-it-does.md §5 step 3): a field, a kind of record, a page or
  * an action, shown in its properties under "All settings", each key writing as in the tab.
@@ -607,8 +613,10 @@ export function SpecPart({
   ir?: SpecIR;
 }) {
   const entry = FILES.find(([, name]) => name === file);
-  const root = file === "smithable.yml" ? buildJsonSchema() : COMPANION_SCHEMAS[file];
-  const whole = entry ? read(files[entry[0]]) : undefined;
+  const root = file === "smithable.yml" ? specSchema() : COMPANION_SCHEMAS[file];
+  const text = entry ? files[entry[0]] : undefined;
+  // Read again only when the file's text changes, not on every render.
+  const whole = useMemo(() => (entry ? read(text) : undefined), [entry, text]);
   const schema = root && schemaAt(root, whole, path);
   if (!schema) return null;
   let value = whole;
