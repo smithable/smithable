@@ -8,6 +8,7 @@ import { describedWith, type Proposal } from "@smithable/ai";
 import {
   BUILT_IN_THEMES,
   EDITABLE_FILES,
+  editAsRename,
   type OperationArgs,
   sameContent,
   themeThumbnail,
@@ -840,10 +841,18 @@ export async function studio(
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.
         const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
-        // An edit in Code mode that goes on grows its change; the editor keeps the id.
+        // An edit in Code mode that goes on grows its change; the editor keeps the id. An edit
+        // that was a rename (core applies it as the rename operation) is a change of its own.
         const grow = (args as { grow?: unknown } | undefined)?.grow;
+        const edited = args as { text?: unknown; file?: unknown } | undefined;
+        const wasRename =
+          name === "editSpec" &&
+          typeof edited?.text === "string" &&
+          !edited.file &&
+          existsSync(join(dir, "smithable.yml")) &&
+          editAsRename(readFileSync(join(dir, "smithable.yml"), "utf8"), edited.text) !== undefined;
         const change =
-          result.ok && name === "editSpec"
+          result.ok && name === "editSpec" && !wasRename
             ? typeof grow === "string" && /^[0-9a-f]{40}$/.test(grow)
               ? foldGrow(dir, grow)
               : git(dir, ["rev-parse", "HEAD"]).out
