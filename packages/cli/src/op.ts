@@ -13,6 +13,7 @@ import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
   type Effect,
+  editAsRename,
   findOperation,
   formatDiagnostic,
   kebab,
@@ -192,7 +193,7 @@ async function applyAndCheckpoint(
   const started = Date.now();
   lapFrom();
   const plugins = loadPlugins(dir);
-  const operation = plan ? undefined : findOperation(name, plugins);
+  let operation = plan ? undefined : findOperation(name, plugins);
   if (!plan && !operation) {
     io.err(`Unknown operation "${name}".\n`);
     return 2;
@@ -221,6 +222,16 @@ async function applyAndCheckpoint(
     themes: projectThemes(dir),
     translations: projectTranslations(dir),
   };
+  // An edit of the whole spec that only renames a key is the rename operation (core does the
+  // same inside applyOperation); recorded as that, so the history says what happened.
+  if (operation?.name === "editSpec" && typeof args.text === "string" && !args.file) {
+    const rename = editAsRename(files.spec, args.text);
+    const renamer = rename && findOperation(rename.op, plugins);
+    if (rename && renamer) {
+      operation = renamer;
+      args = rename.args;
+    }
+  }
   const result = plan
     ? planResult(files, plan)
     : applyOperation(files, operation?.name ?? name, args);

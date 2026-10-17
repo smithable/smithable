@@ -3,6 +3,7 @@ import { COMPANIONS } from "./companion.js";
 import { type Language, validateContent } from "./content.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
+import { editAsRename } from "./edit-rename.js";
 import {
   type AnyOperation,
   type Editors,
@@ -107,6 +108,19 @@ export function applyOperation(
   // A model may send anything as the name: say so, so a retry can mend it.
   if (typeof name !== "string")
     return fail(`An operation's name must be text, like "addModel"; got ${JSON.stringify(name)}.`);
+  // Code's editor renaming a key: the rename operation, which keeps the records and follows the
+  // references, instead of a whole-file edit that would drop and remake (edit-rename.ts).
+  if (
+    name === "editSpec" &&
+    typeof args.text === "string" &&
+    (args.file === undefined || args.file === "smithable.yml")
+  ) {
+    const rename = editAsRename(files.spec, args.text);
+    if (rename) {
+      name = rename.op;
+      args = rename.args;
+    }
+  }
   const op = findOperation(name, files.plugins);
   if (!op) {
     const names = operationsFor(files.plugins).map((o) => o.name);
