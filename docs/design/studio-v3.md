@@ -6,7 +6,7 @@ Design, 2026-10-17 (Fable), from Johan's sixth testing round (2026-10-17): his l
 
 Studio is five windows and nothing else: **No code**, **Preview**, **Code**, **Changes** and **Smith**. The mode switch, the tabs inside the modes and the panels that moved between them (Your app, Details, Change by form, the Changes trace, Logs, Operation, the concepts tree) go. Each window has one job:
 
-- **No code**: three sub views, **Behavior** (every setting of the spec, §5), **Look** (the ux file, as today) and **Who can** (the auth file, as today), and a fourth, **Content** (the content file's texts and pictures, with Languages under it). "What it does", the summary read aloud, is no longer shown; its sentences live on in two places: the words of each change (§3) and Smith's answer to "What does this app do?" (§2), both from the same `summarize()`.
+- **No code**: three sub views, **Behavior** (every setting of the spec, §5), **Look** (the ux file, as today) and **Who can** (the auth file, as today), and a fourth, **Content** (the content file's texts and pictures, with Languages under it). "What it does" as a tab of sentences with controls behind them goes; the summary itself stays, half collapsed at the top of Behavior with each sentence a link to its entry (§5), and its sentences are also the words of each change (§3) and Smith's answer to "What does this app do?" (§2), all from the same `summarize()`.
 - **Preview**: the app, as today (studio-v2.md §1: one frame, kept across everything else; one reload per change, #684).
 - **Code**: the files, nothing else: the spec files in the editor (§4). No concepts, no logs, no operation forms, no changes.
 - **Changes**: what was done, in plain language, the same window whichever way the change was made (§3).
@@ -45,6 +45,7 @@ The same wizard is No code's "Add" (§5): one flow, one look, the same words in 
 
 "Every setting" becomes **Behavior**: the form built from the spec's schema (what-it-does.md §2 and §4, built as #657–#679), with these rules:
 
+- **The summary at the top, half collapsed** (Johan, 2026-10-17: "the summary could … be shown half collapsed in top of Behavior, with the option to see all … Yes, that's a good plan"). The app read as prose, from the same `summarize()` as before: the first paragraph shows (what the app is, its kinds of record, who signs in and what visitors see) and "Show all" opens the rest (the pages, the actions, the rules). Every sentence is a link to the entry in Behavior it was generated from: clicking it expands that entry and scrolls to it. Reading and jumping only: the text is never edited in place ("In my own words" stays gone). Smith's answer to "What does this app do?" is the same sentences with the same links, and a part picked in the preview's Select mode lights its sentence as it lights its control. Not a sub view: a tab of its own is a place nobody opens; a separate document comes only if the summary grows a second reader (the app card, Fable 25).
 - **Collapsed first.** The areas (the app, kinds of record, pages, actions, queries, navigation, integrations) are closed at first, and inside them every entry, as the pages are today.
 - **No look, no permissions.** Look and Who can are their own sub views; the ux and auth files' keys are not in Behavior.
 - **Friendly names only.** A kind of record, a page, an action is shown by its label (the content file's, else its name in words); its spec name is not shown and not editable here. Renaming the label is `setText`; renaming the identifier is Code's (renameModel/renamePage/renameField stay as operations, and the identifier shows in Code).
@@ -77,7 +78,7 @@ The beta terms' line on diagnostics is B's to check against the first level (clo
 
 ## 9. Steps (A, each a PR; core parts by Fable first where named)
 
-1. **Names and windows:** Smith for Ask; Behavior for Every setting; Content with Languages; the five windows with the layout bar and the settings for slots, arrows instead of dragging; Code reduced to the files; Changes as the one window; Logs gone, the error bar with Troubleshoot (Report, Undo, Reload). What it does removed. (Core first: schema titles, the version key hidden, the `app` description text; Fable 46 (c).)
+1. **Names and windows:** Smith for Ask; Behavior for Every setting, with the summary half collapsed at its top and each sentence a link to its entry; Content with Languages; the five windows with the layout bar and the settings for slots, arrows instead of dragging; Code reduced to the files; Changes as the one window; Logs gone, the error bar with Troubleshoot (Report, Undo, Reload). What it does removed. (Core first: schema titles, the version key hidden, the `app` description text; Fable 46 (c).)
 2. **No change until done:** Code saves on leaving with a keystroke; Behavior's Add opens the wizard; formatting on leave with core's `formatSpec` and the daemon's no-change drop (Fable 46 (b)).
 3. **The wizard** in Code and Behavior, with Ask Smith for help.
 4. **Changes expanded** in words, and undo of any change by X (core first: `undo --change <id>` with the check, Fable 46 (a)).
