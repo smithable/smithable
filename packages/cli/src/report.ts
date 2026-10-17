@@ -2,6 +2,9 @@
 // lines) and the spec files, shown in full before anything leaves, never the data, uploads or
 // custom code. Hosted, the service collects them (SMITHABLE_REPORT_URL); self-hosted, they open
 // a prefilled GitHub issue. "Always" or "never" is remembered for the person, not the project.
+// Apart from them, a hosted workspace sends every failure's record without the person's
+// content (SMITHABLE_FAILURE_URL, studio-v3.md §6): the version, the operation's name, the
+// error's class, message and stack, and the trace id; never the arguments, files or records.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -32,7 +35,7 @@ export interface Report {
   files: Record<string, string>;
 }
 
-interface Failure {
+export interface Failure {
   at: string;
   operation: string;
   args: Record<string, unknown>;
@@ -72,6 +75,44 @@ export function recordFailure(
   };
   mkdirSync(dirname(join(dir, FAILURE)), { recursive: true });
   writeFileSync(join(dir, FAILURE), `${JSON.stringify(failure, null, 2)}\n`);
+  void sendFailure(failure);
+}
+
+/**
+ * The failure's record without content, as the service takes it (cloud #234): its name, the
+ * error's class, the message (the service takes quoted values out) and the stack lines (it keeps
+ * Smithable's own frames). Nothing when not hosted; a refused or failed send is let go.
+ */
+export async function sendFailure(failure: Failure): Promise<boolean> {
+  const target = process.env.SMITHABLE_FAILURE_URL;
+  if (!target) return false;
+  const lines = failure.error.split("\n");
+  const stack = lines.filter((l) => /^\s+at /.test(l));
+  const message =
+    lines
+      .filter((l) => l.trim() && !/^\s+at /.test(l))
+      .at(-1)
+      ?.trim() ?? "";
+  const record = {
+    version: VERSION.replace(/[^0-9A-Za-z.+-]/g, "").slice(0, 40),
+    operation: /^[A-Za-z][A-Za-z0-9_.:-]{0,79}$/.test(failure.operation)
+      ? failure.operation
+      : "unknown",
+    errorClass: /\b([A-Z][A-Za-z0-9_$]*Error)\b/.exec(failure.error)?.[1] ?? "OperationFailed",
+    message: message.slice(0, 500),
+    stack: stack.join("\n").slice(0, 4000),
+    ...(failure.trace ? { traceId: failure.trace } : {}),
+  };
+  try {
+    const response = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-smithable-failure": "1" },
+      body: JSON.stringify(record),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /** Arguments as a report shows them: a whole file's text is only its size. */

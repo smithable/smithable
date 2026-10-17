@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, expect, test } from "vitest";
@@ -6,6 +7,7 @@ import {
   buildReport,
   recordFailure,
   reportChoice,
+  sendFailure,
   sendReport,
   setReportChoice,
   traceIdOf,
@@ -16,6 +18,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "report-"));
   process.env.XDG_CONFIG_HOME = mkdtempSync(join(tmpdir(), "report-config-"));
   delete process.env.SMITHABLE_REPORT_URL;
+  delete process.env.SMITHABLE_FAILURE_URL;
   writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: CRM }\n");
   writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nadmins: [owner@acme.com]\n");
   // What a report never holds: records, uploads, custom code.
@@ -114,4 +117,45 @@ test("a report carries the trace id of the request that failed, from its tracepa
   expect(buildReport(dir)?.trace).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
   recordFailure(dir, "addField", { model: "Customer" }, "It failed again.");
   expect(buildReport(dir)?.trace).toBeUndefined();
+});
+
+test("hosted, a failure's record goes without content: name, class, message, stack, trace; never the arguments", async () => {
+  const failure = {
+    at: "2026-10-17T12:00:00Z",
+    operation: "setPackage",
+    args: { name: "secret-package", version: "9.9.9" },
+    error:
+      'Generating failed.\nTypeError: cannot read "x"\n    at run (/app/node_modules/@smithable/cli/dist/op.js:1:2)',
+    trace: "0af7651916cd43dd8448eb211c80319c",
+  };
+  expect(await sendFailure(failure)).toBe(false);
+  const got: { headers: Record<string, unknown>; body: string }[] = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => {
+      body += c;
+    });
+    req.on("end", () => {
+      got.push({ headers: req.headers, body });
+      res.writeHead(204).end();
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, r));
+  const { port } = server.address() as { port: number };
+  process.env.SMITHABLE_FAILURE_URL = `http://localhost:${port}/failures/p1?key=k`;
+  try {
+    expect(await sendFailure(failure)).toBe(true);
+  } finally {
+    server.close();
+  }
+  expect(got[0]?.headers["x-smithable-failure"]).toBe("1");
+  const record = JSON.parse(got[0]?.body ?? "{}");
+  expect(record).toMatchObject({
+    operation: "setPackage",
+    errorClass: "TypeError",
+    message: 'TypeError: cannot read "x"',
+    stack: "    at run (/app/node_modules/@smithable/cli/dist/op.js:1:2)",
+    traceId: "0af7651916cd43dd8448eb211c80319c",
+  });
+  expect(got[0]?.body).not.toContain("secret-package");
 });
