@@ -14805,13 +14805,13 @@ export const sessionData = {
     return found !== undefined;
   },
 
-  /** The sessions the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page). */
-  async list(viewer: Viewer | null, where?: SQL, limit?: number) {
+  /** The sessions the viewer may read; \`where\` narrows them, e.g. to a search; \`limit\` keeps the newest (a data page); \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, limit?: number, order?: SQL) {
     if (readScope(sessionAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = sessionData.shownRefs(viewer, await db.query.sessions.findMany({
       where: and(sessionData.readable(viewer), where),
       with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: true },
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit,
     }));
     const rows = found.map((row) => shownTo(viewer, row));
@@ -15521,7 +15521,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { createRootRoute, HeadContent, Scripts, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { BookOpen, Calendar, Layers, Mail, Users } from "lucide-react";
+import { BookOpen, Calendar, House, Layers, Mail, Users } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -15539,7 +15539,7 @@ import appCss from "#/styles.css?url";
 
 const menus: MenuUi[] = [
   {
-    name: "main",
+    name: "schedule", label: "Schedule",
     items: [
       {
         to: "/schedule",
@@ -15553,6 +15553,22 @@ const menus: MenuUi[] = [
         icon: Calendar,
         access: pageAccess["sessions"],
       },
+    ],
+  },
+  {
+    name: "messages", label: "Messages",
+    items: [
+      {
+        to: "/messages",
+        label: pageUi["messages"].title,
+        icon: Mail,
+        access: pageAccess["messages"],
+      },
+    ],
+  },
+  {
+    name: "studioSetup", label: "Studio setup",
+    items: [
       {
         to: "/class-types",
         label: pageUi["class-types"].title,
@@ -15565,18 +15581,11 @@ const menus: MenuUi[] = [
         icon: Users,
         access: pageAccess["instructors"],
       },
-      {
-        to: "/messages",
-        label: pageUi["messages"].title,
-        icon: Mail,
-        access: pageAccess["messages"],
-      },
-      {
-        to: "/blog",
-        label: pageUi["blog"].title,
-        icon: BookOpen,
-        access: pageAccess["blog"],
-      },
+    ],
+  },
+  {
+    name: "website", label: "Website",
+    items: [
       {
         to: "/posts",
         label: pageUi["posts"].title,
@@ -15584,11 +15593,16 @@ const menus: MenuUi[] = [
         access: pageAccess["posts"],
       },
       {
-        to: "/my-bookings",
-        label: pageUi["my-bookings"].title,
-        icon: Calendar,
-        access: pageAccess["my-bookings"],
+        to: "/",
+        label: pageUi["home"].title,
+        icon: House,
+        access: pageAccess["home"],
       },
+    ],
+  },
+  {
+    name: "admin", label: "Admin",
+    items: [
       {
         to: "/admin",
         label: pageUi["admin"].title,
@@ -18999,9 +19013,14 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage, allows } from "#/kit/access";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { sessionAccess, sessionData } from "#/generated/session.server";
+import { inArray, and } from "drizzle-orm";
+import { inRange, orderOf } from "#/kit/filter";
+import { classTypeData } from "#/generated/class-type.server";
+import { instructorData } from "#/generated/instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
@@ -19011,26 +19030,43 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { Filters } from "#/kit/Filters";
 
-/** A page of the sessions the viewer may read. */
-const listSessions = createServerFn()
+/** The sessions matching the search and the filters, among those the viewer may read. */
+const searchSessions = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await sessionData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(sessionAccess.create, viewer) };
+    const where = and(
+      undefined,
+      data.f?.classType ? inArray(schema.sessions.classTypeId, data.f?.classType.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      data.f?.instructor ? inArray(schema.sessions.instructorId, data.f?.instructor.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      data.f?.startsAt ? inRange(schema.sessions.startsAt, data.f?.startsAt, "instant") : undefined,
+    );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ startsAt: schema.sessions.startsAt, capacity: schema.sessions.capacity }, data.sort);
+    return {
+      ...(await sessionData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(sessionAccess.create, viewer),
+      options: { classType: (await classTypeData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), instructor: (await instructorData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })) },
+    };
   });
 
 export const Route = createFileRoute("/sessions/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
   head: () => pageHead("sessions"),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listSessions({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), classType: text(s.classType), instructor: text(s.instructor), startsAt: text(s.startsAt), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchSessions({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: SessionsPage,
 });
 
 function SessionsPage() {
-  const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { rows, canCreate, total, page: at, size, options } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/sessions/" });
   const router = useRouter();
@@ -19049,6 +19085,32 @@ function SessionsPage() {
         page="sessions"
         title={pageUi["sessions"].title}
         actions={newButton}
+      />
+      <Filters
+        filters={[
+  {
+    name: "classType",
+    label: "Class type",
+    kind: "chips",
+    options: options.classType,
+  },
+  {
+    name: "instructor",
+    label: "Instructor",
+    kind: "chips",
+    options: options.instructor,
+  },
+  { name: "startsAt", label: "Starts at", kind: "range", input: "date" },
+]}
+        values={values}
+        sorts={[
+  { value: "startsAt", label: "Starts at, oldest first" },
+  { value: "-startsAt", label: "Starts at, newest first" },
+  { value: "capacity", label: "Capacity, low to high" },
+  { value: "-capacity", label: "Capacity, high to low" },
+]}
+        sort={sort}
+        onChange={(next) => navigate({ to: "/sessions", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -19071,9 +19133,11 @@ function SessionsPage() {
         page="sessions"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listSessions({ data: { all: true } })).rows}
+        exportRows={async () => (await searchSessions({ data: { q, sort, f: values, all: true } })).rows}
         rows={rows}
+        sorting={{ keys: { startsAt: "startsAt", capacity: "capacity" }, value: sort, onChange: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No sessions match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/sessions/$id", params: { id: String(row.id) } })}
       />
@@ -19808,7 +19872,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "5912917b generated",
+  "src/generated/session.server.ts": "6c435313 generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19877,7 +19941,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "4278fcb6 generated",
+  "src/routes/__root.tsx": "aec90594 generated",
   "src/routes/admin/activity.tsx": "62617d51 generated",
   "src/routes/admin/bookings/$id.tsx": "af2974cc generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
@@ -19925,7 +19989,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "e15d829e generated",
   "src/routes/sessions/$id.tsx": "2511b5a6 generated",
-  "src/routes/sessions/index.tsx": "bfba6f07 generated",
+  "src/routes/sessions/index.tsx": "1a15b581 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
