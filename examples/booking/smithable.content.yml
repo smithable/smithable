@@ -7,7 +7,7 @@ models:
     fields:
       level: { values: { allLevels: All levels } }
   Booking:
-    reserve: { book: Book a mat, cancel: Cancel my booking, full: No mats left }
+    reserve: { book: Book a mat, cancel: Cancel booking, full: No mats left }
 
 outgoing:
   bookingMade:
@@ -19,6 +19,13 @@ outgoing:
   bookingCancelled:
     subject: Your booking was cancelled
     text: Your booking was cancelled. Here it is as it was.
+
+menus:
+  schedule: { label: Schedule }
+  messages: { label: Messages }
+  studioSetup: { label: Studio setup }
+  website: { label: Website }
+  admin: { label: Administration }
 
 pages:
   privacy:

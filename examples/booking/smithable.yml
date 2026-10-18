@@ -103,6 +103,8 @@ pages:
     calendar: { model: Session, duration: classType.durationMinutes }
   sessions:                           # the staff's list of sessions
     crud: Session
+    filters: [classType, instructor, startsAt]
+    sortable: [startsAt, capacity]
   class-types:
     crud: ClassType
     filters: [level]
@@ -122,3 +124,10 @@ pages:
     crud: Booking
   admin:
     data: all                      # every model, for administrators
+
+navigation:
+  schedule: [schedule, sessions]
+  messages: [messages]
+  studioSetup: [class-types, instructors]
+  website: [posts, home]
+  admin: [admin]
