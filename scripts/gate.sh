@@ -27,9 +27,12 @@ set -u
 {
 # Night hours, 23:30–07:00 in Mariehamn (Johan, 2026-10-12: a quieter machine at night): a gate
 # started then runs itself again, once, on at most four cores at the lowest priority (systemd-run,
-# else nice). The runner's own service (SESSION=ci) is capped by its timer instead. GATE_CLOCK
+# else nice). Only while the file $home/night-cap exists (Johan, 2026-10-18: off for now, since a
+# capped gate beside any other load ran out of its one-minute waits; `touch` the file to have the
+# quiet nights again, remove it to stop). The runner's own service (SESSION=ci) is capped by its
+# timer instead (smithable-runner-cap.timer, enabled and disabled with systemctl). GATE_CLOCK
 # (HHMM) stands for the time, for a test.
-if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ]; then
+if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ] && [ -e "${GATE_HOME:-/var/lib/smithable-gate}/night-cap" ]; then
   now=$((10#${GATE_CLOCK:-$(TZ=Europe/Mariehamn date +%H%M)}))
   if [ "$now" -ge 2330 ] || [ "$now" -lt 700 ]; then
     export GATE_NIGHT_CAPPED=1
