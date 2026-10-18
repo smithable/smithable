@@ -80,7 +80,19 @@ test("the trace has each change's id, the person's files it changed and a model'
       'smithable: Add field website to Customer\n\nSmithable-AI: {"request":"customers need a website","tier":"frontier","model":"m","tokens":10,"cost":0.01}',
       { "smithable.yml": "smithable: 0.1\nmodels: { A: {} }\n" },
     );
-    const [asked, added] = trace(dir);
+    // An edit made in Code: the file before and after read as what it did.
+    const was =
+      "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Customer:\n    fields: { name: string! }\npages:\n  customers: { crud: Customer }\n";
+    const is = was
+      .replace("name: string!", "name: string!, phone: phone")
+      .replace("name: Shop", "name: Store");
+    commit("smithable: Edit smithable.yml", { "smithable.yml": was });
+    commit(
+      `smithable: Edit smithable.yml\n\nSmithable-Op: ${JSON.stringify({ op: "editSpec", args: { text: is } })}`,
+      { "smithable.yml": is },
+    );
+    const [edited, , asked, added] = trace(dir);
+    expect(edited?.description).toBe("Customers: added a phone; Edited the app");
     expect(asked).toMatchObject({ files: ["smithable.yml"], request: "customers need a website" });
     expect(added?.id).toMatch(/^[0-9a-f]{40}$/);
     expect(added?.files).toEqual(["smithable.yml", "src/custom/actions/merge.ts"]);

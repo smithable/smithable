@@ -8,11 +8,16 @@ import { describedWith, type Proposal } from "@smithable/ai";
 import {
   BUILT_IN_THEMES,
   EDITABLE_FILES,
+  editAsOperations,
   editAsRename,
+  findOperation,
   type OperationArgs,
   sameContent,
   themeThumbnail,
+  validateContent,
+  validateSpec,
 } from "@smithable/core";
+import { describeChange } from "@smithable/index";
 import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
@@ -125,6 +130,51 @@ export function trace(dir: string): TraceEntry[] {
   return entries;
 }
 
+/**
+ * An edit of a file's whole text (Code mode), in the words of a change made in No code (studio-v3.md
+ * §3): the file before and after the commit read as operations (core's editAsOperations), each
+ * worded like the Changes window words it, the parts it cannot read named; undefined when the
+ * edit reads as nothing, or the operation is another.
+ */
+export function editWords(
+  dir: string,
+  sha: string,
+  operation: TraceEntry["operation"] | undefined,
+): string | undefined {
+  if (
+    operation?.op !== "editSpec" ||
+    operation.args.path ||
+    typeof operation.args.text !== "string"
+  )
+    return undefined;
+  const file = typeof operation.args.file === "string" ? operation.args.file : "smithable.yml";
+  const before = git(dir, ["show", `${sha}^:${file}`]);
+  const after = git(dir, ["show", `${sha}:${file}`]);
+  if (!before.ok || !after.ok) return undefined;
+  const read = editAsOperations(before.out, after.out, file);
+  if (!read) return undefined;
+  const spec = file === "smithable.yml" ? after : git(dir, ["show", `${sha}:smithable.yml`]);
+  const ir = spec.ok ? validateSpec({ path: "smithable.yml", text: spec.out }).ir : undefined;
+  const content =
+    ir && file === "smithable.content.yml"
+      ? validateContent({ path: file, text: after.out }, ir).content
+      : undefined;
+  const words = read.operations.map(
+    (o) =>
+      (ir && describeChange(o.op, o.args, ir, content)) ??
+      findOperation(o.op)?.describe(o.args as never, ir as never) ??
+      o.op,
+  );
+  const list = (items: string[]) =>
+    items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+  const parts = [...words, ...(read.other.length ? [`edited ${list(read.other)}`] : [])];
+  if (parts.length === 0) return undefined;
+  const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+  return parts.length <= 3
+    ? parts.map(sentence).join("; ")
+    : `${parts.length} changes in ${file}: ${parts.slice(0, 2).map(sentence).join("; ")}; and ${parts.length - 2} more`;
+}
+
 function readTrace(dir: string): TraceEntry[] {
   // Each commit's fields, then (after \x1d) the files it changed, one a line.
   const log = git(dir, ["log", "--name-only", "--format=%x1e%H%x1f%s%x1f%aI%x1f%b%x1d"]);
@@ -158,9 +208,10 @@ function readTrace(dir: string): TraceEntry[] {
     // A change that set the project up for its owner (op --setup) is not one of the owner's.
     if (trailer(body, "Smithable-Setup")) return [];
     const ms = /^(\d+) ms$/.exec(trailer(body, "Smithable-Duration") ?? "")?.[1];
-    const operation = operations.get(
-      isUndo ? (/This reverts commit ([0-9a-f]{40})/.exec(body)?.[1] ?? "") : sha,
-    );
+    const undone = isUndo ? (/This reverts commit ([0-9a-f]{40})/.exec(body)?.[1] ?? "") : sha;
+    const operation = operations.get(undone);
+    // An edit made in Code, in the words of what it did.
+    const edited = editWords(dir, undone, operation);
     const ai = trailer(body, "Smithable-AI");
     const model = ai
       ? (JSON.parse(ai) as {
@@ -175,7 +226,9 @@ function readTrace(dir: string): TraceEntry[] {
     return [
       {
         id: sha,
-        description: isUndo ? `Undid: ${subject.slice(19, -1)}` : subject.slice(11),
+        description: isUndo
+          ? `Undid: ${edited ?? subject.slice(19, -1)}`
+          : (edited ?? subject.slice(11)),
         at,
         // A change a wording rule read, or none a model made: the generator's (tier 0).
         engine: model?.tier ? ENGINES[model.tier] : ("generator" as const),

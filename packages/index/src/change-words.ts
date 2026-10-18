@@ -108,8 +108,26 @@ export function describeChange(
       const several = str("several").trim() || plural(one);
       return `${humanize(str("model"))} records are now called ${several.toLowerCase()} (one ${one.toLowerCase()})`;
     }
-    case "setText":
-      return str("text") ? `Changed a text to “${str("text")}”` : "Put back a text's default";
+    case "setText": {
+      // Which text, from its path: a page's title, a field's label, a kind of record's name.
+      const path = Array.isArray(args.path) ? (args.path as string[]).map(String) : [];
+      const [area, name, key, field, fieldKey] = path;
+      const named = name ? ir.models.find((m) => m.name === name) : undefined;
+      const records = named
+        ? w.pluralLabel(named).toLowerCase()
+        : humanize(name ?? "").toLowerCase();
+      const where =
+        area === "pages" && name && key
+          ? `the ${humanize(name)} page's ${humanize(key).toLowerCase()}`
+          : area === "models" && name && key === "fields" && field
+            ? `the ${humanize(fieldKey ?? "label").toLowerCase()} of the ${records}' ${humanize(field).toLowerCase()}`
+            : area === "models" && name && key
+              ? `the ${records}' ${humanize(key).toLowerCase()}`
+              : "a text";
+      return str("text")
+        ? `Changed ${where} to “${str("text")}”`
+        : `Put back ${where === "a text" ? "a text's" : `${where}'s`} default`;
+    }
   }
   return undefined;
 }
