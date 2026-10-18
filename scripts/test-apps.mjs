@@ -29,6 +29,11 @@ import { validateSpec } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
 
+// How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
+// a check that waits a minute on a quiet machine waits three under load, so a slow answer is
+// not read as a failure.
+const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
+
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const examples = process.argv.slice(2).length
@@ -88,7 +93,7 @@ function run(command, args, cwd, env) {
 }
 
 async function waitFor(url) {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 60 * P; i++) {
     try {
       // Each try is bounded: a server that takes the connection and never answers would
       // otherwise hold the run forever.
@@ -172,7 +177,9 @@ async function screenshot(page) {
  * but nothing reacts (a search that never filters), which load made a flake.
  */
 async function hydrated(page) {
-  await page.locator('body[data-hydrated="true"]').waitFor({ state: "attached", timeout: 60_000 });
+  await page
+    .locator('body[data-hydrated="true"]')
+    .waitFor({ state: "attached", timeout: 60_000 * P });
 }
 
 /** Opens a page and waits until it is interactive: the dev server loads code on demand. */
@@ -196,7 +203,7 @@ async function signInAs(page, base, role) {
     await page.getByRole("button", { name: `Sign in as ${role}` }).click();
     try {
       // Signed in: on to the app, or first to its onboarding.
-      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 });
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 * P });
       return;
     } catch (error) {
       if (attempt === 3) throw error;
@@ -320,18 +327,21 @@ async function calendarFlow(base) {
     const week = page.getByRole("heading", { level: 2 }).first();
     const shown = await week.innerText();
     const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 });
+    await session.waitFor({ timeout: 10000 * P });
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/week.png`, fullPage: true });
     // A visitor gets the session's details in a panel.
     const title = (await session.locator("span").first().innerText()).trim();
     await session.click();
-    await page.getByRole("dialog").getByRole("heading", { name: title }).waitFor({ timeout: 5000 });
+    await page
+      .getByRole("dialog")
+      .getByRole("heading", { name: title })
+      .waitFor({ timeout: 5000 * P });
     // Its places, and for a visitor a way to sign in and book.
     await page
       .getByRole("dialog")
       .getByText(/^\d+ of \d+ places? left$/)
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).waitFor();
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
     // Next and Previous: another week, in the address too.
@@ -340,13 +350,13 @@ async function calendarFlow(base) {
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].every((h) => h.textContent !== text),
       shown,
-      { timeout: 10000 },
+      { timeout: 10000 * P },
     );
     await page.getByRole("button", { name: "Previous" }).click();
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
       shown,
-      { timeout: 10000 },
+      { timeout: 10000 * P },
     );
     await page.getByRole("button", { name: "Month" }).click();
     await page.waitForURL(/\?month=\d{4}-\d{2}/);
@@ -368,7 +378,7 @@ async function calendarFlow(base) {
     await signInAs(page, base, "admin");
     await open(page, `${base}/schedule`);
     // Signed in, the same page is in the app's frame.
-    await page.locator('[data-kit="app-shell"]').waitFor({ timeout: 10000 });
+    await page.locator('[data-kit="app-shell"]').waitFor({ timeout: 10000 * P });
     const slot = page.getByRole("button", { name: /^New session, .* at 07:00$/ }).first();
     const label = await slot.getAttribute("aria-label");
     await slot.click();
@@ -403,15 +413,18 @@ async function bookingFlow(dir, base) {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 });
+    await session.waitFor({ timeout: 10000 * P });
     const title = (await session.locator("span").first().innerText()).trim();
     await session.click();
-    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).click();
-    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
     await panel.getByText(/^No mats left$/).waitFor();
     await open(page, `${base}/my-bookings`);
-    await page.locator("main tbody tr").first().waitFor({ timeout: 10000 });
+    await page
+      .locator("main tbody tr")
+      .first()
+      .waitFor({ timeout: 10000 * P });
     if ((await page.locator("main tbody tr").count()) !== 1)
       throw new Error("not one booking in My bookings");
     // The admin opens the same session on its page: full, and its places cannot go below one.
@@ -419,28 +432,28 @@ async function bookingFlow(dir, base) {
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
     await page.waitForURL(/\/sessions\/\d+$/);
-    await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 });
+    await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
     if (await page.getByRole("button", { name: "Book a mat" }).count())
       throw new Error("a full session offers a place");
     await page.getByLabel("Capacity").fill("0");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page
       .getByText("1 is already taken; the number cannot go below that.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     // The member cancels; the place is free again.
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
     await panel.getByRole("button", { name: "Cancel my booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
-    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     // Bookings have a trash here: the cancelled one holds no place, and the same session can be
     // booked again (a unique value holds among live records only).
     await panel.getByRole("button", { name: "Book a mat" }).click();
-    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Cancel my booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
-    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 });
+    await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
     console.log(
       "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place)",
@@ -470,7 +483,7 @@ async function outgoingFlow(dir, base) {
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
   /** The next mail after `count`, with its To, Subject and body. */
   const next = async (count, what) => {
-    for (let i = 0; i < 100 && mails().length <= count; i++) await page.waitForTimeout(100);
+    for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const all = mails();
     if (all.length !== count + 1) throw new Error(`${what}: ${all.length - count} mails, not one`);
     return readFileSync(join(outbox, all.at(-1)), "utf8").replace(/=\r?\n/g, "");
@@ -481,7 +494,7 @@ async function outgoingFlow(dir, base) {
     let count = mails().length;
     await page.locator("section ol button").first().click();
     await panel.getByRole("button", { name: "Book a mat" }).click();
-    await panel.getByText("You're booked").waitFor({ timeout: 10000 });
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
     const made = await next(count, "the booking");
     for (const part of [
       /^To: dev-member@/m,
@@ -580,8 +593,11 @@ async function visitorMailFlow(dir, base) {
     await page.getByRole("textbox", { name: "Email *" }).fill("victim@example.com");
     await page.getByRole("textbox", { name: "Message *" }).fill("Click this link");
     await page.getByRole("button", { name: "Send message" }).click();
-    await page.getByText("Thank you!").first().waitFor({ timeout: 15000 });
-    for (let i = 0; i < 100 && mails().length === before; i++) await page.waitForTimeout(100);
+    await page
+      .getByText("Thank you!")
+      .first()
+      .waitFor({ timeout: 15000 * P });
+    for (let i = 0; i < 100 * P && mails().length === before; i++) await page.waitForTimeout(100);
     await page.waitForTimeout(500);
     const sent = mails()
       .slice(before)
@@ -696,7 +712,7 @@ async function kioskFlow(dir, base) {
       .slice(before)
       .map((m) => /^Subject: (.*)$/im.exec(read(m))?.[1] ?? "");
   const waitFor = async (what, ok) => {
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 150 * P; i++) {
       if (await ok()) return;
       await new Promise((r) => setTimeout(r, 200));
     }
@@ -730,7 +746,7 @@ async function kioskFlow(dir, base) {
     await page.getByLabel(/^Phone/).fill("+358 40 111 2222");
     await page.getByLabel(/^Email/).fill("pia@archipelago.example");
     await page.getByRole("button", { name: "Send the order" }).click();
-    await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 });
+    await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 * P });
     await waitFor("mail to staff", () => subjects(before).includes("A new order"));
     // Sold out while in the basket: the server refuses it in words.
     await open(page, `${base}/`);
@@ -740,7 +756,10 @@ async function kioskFlow(dir, base) {
     await page.getByLabel(/^Name/).fill("Mats Holm");
     await page.getByLabel(/^Phone/).fill("+358 40 333 4444");
     await page.getByRole("button", { name: "Send the order" }).click();
-    await page.getByRole("alert").getByText("Sold out: Coffee").waitFor({ timeout: 15000 });
+    await page
+      .getByRole("alert")
+      .getByText("Sold out: Coffee")
+      .waitFor({ timeout: 15000 * P });
     write(dir, "update dishes set available = 1 where name = 'Coffee'");
     // Staff accept it, and the customer is mailed.
     before = mails().length;
@@ -778,7 +797,7 @@ async function supportFlow(dir, base) {
       ?.replace(/\s+/g, " ")
       .trim() ?? "";
   const to = async (address, before) => {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 100 * P; i++) {
       const found = mails()
         .slice(before)
         .map(read)
@@ -789,7 +808,7 @@ async function supportFlow(dir, base) {
     throw new Error(`no mail to ${address}`);
   };
   const post = async (mail) => {
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       const answer = await fetch(`${base}/incoming/support`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer support-secret" },
@@ -834,7 +853,7 @@ async function supportFlow(dir, base) {
     await thread.getByRole("button", { name: "Send" }).click();
     await thread
       .locator('[data-part="message"]', { hasText: "restarting the access point" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     const answer = await to("lena@archipelago.example", before);
     if (!header(answer, "Subject").endsWith(`#${id}]`))
       throw new Error(`the answer's subject: ${header(answer, "Subject")}`);
@@ -856,7 +875,7 @@ async function supportFlow(dir, base) {
     await page.reload();
     await thread
       .locator('[data-part="message"]', { hasText: "It works again" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ support: a mail becomes a case and is acknowledged with its number; an agent's reply from the conversation reaches the customer alone, in the thread; the customer's answer joins the case",
     );
@@ -902,7 +921,7 @@ async function languagesFlow(dir, base) {
     );
     // The dev server takes the new router and start a moment after the change.
     let html = "";
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       html = await (await fetch(`${base}/sv`)).text();
       if (html.includes("Hitta ditt lugn")) break;
       await new Promise((r) => setTimeout(r, 500));
@@ -920,22 +939,22 @@ async function languagesFlow(dir, base) {
       throw new Error("the sitemap does not list both versions");
     // The switch, in a browser: from Swedish to English and back.
     await open(page, `${base}/sv`);
-    await page.getByRole("heading", { name: "Hitta ditt lugn" }).waitFor({ timeout: 15000 });
+    await page.getByRole("heading", { name: "Hitta ditt lugn" }).waitFor({ timeout: 15000 * P });
     await page.locator('[data-kit="languages"]').getByRole("link", { name: "English" }).click();
-    await page.getByRole("heading", { name: "Find your calm" }).waitFor({ timeout: 15000 });
+    await page.getByRole("heading", { name: "Find your calm" }).waitFor({ timeout: 15000 * P });
     if (new URL(page.url()).pathname !== "/") throw new Error(`the switch went to ${page.url()}`);
     // Signed in, the switch keeps the choice with the person (languages.md §3.2): another
     // browser of theirs, with no choice of its own, opens their pages in it.
     await signInAs(page, base, "admin");
     await open(page, `${base}/my-bookings`);
     await page.locator('[data-kit="languages"]').getByRole("link", { name: "Svenska" }).click();
-    await page.locator('html[lang="sv"]').waitFor({ timeout: 15000 });
+    await page.locator('html[lang="sv"]').waitFor({ timeout: 15000 * P });
     if (new URL(page.url()).pathname !== "/my-bookings")
       throw new Error(`the signed-in switch went to ${page.url()}`);
     const other = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await signInAs(other, base, "admin");
     await open(other, `${base}/my-bookings`);
-    await other.locator('html[lang="sv"]').waitFor({ timeout: 15000 });
+    await other.locator('html[lang="sv"]').waitFor({ timeout: 15000 * P });
     console.log(
       "  ✓ languages: /sv is the home page in Swedish with the kit's Swedish words and its English version named; / stays English; the sitemap lists both; the switch goes between them; signed in, the choice is kept with the person and another browser of theirs opens in it",
     );
@@ -968,14 +987,14 @@ async function mailThreadFlow(dir, base) {
       ?.replace(/\s+/g, " ")
       .trim() ?? "";
   const sentSince = async (before, count) => {
-    for (let i = 0; i < 100 && mails().length < before + count; i++)
+    for (let i = 0; i < 100 * P && mails().length < before + count; i++)
       await new Promise((r) => setTimeout(r, 100));
     return mails()
       .slice(before)
       .map((f) => readFileSync(join(outbox, f), "utf8"));
   };
   const post = async (mail) => {
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       const answer = await fetch(`${base}/incoming/threads`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer threads-secret" },
@@ -1144,7 +1163,7 @@ async function incomingMailFlow(dir, base) {
     );
     if (added.code !== 0) throw new Error(added.out);
     let answer;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       answer = await fetch(`${base}/incoming/support`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer support-secret" },
@@ -1216,7 +1235,7 @@ async function incomingFlow(dir, base) {
       });
     // The dev server finds the new route a moment after the change.
     let answer;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       answer = await call("incoming-secret", "call-1");
       if (answer.status !== 404) break;
       await new Promise((r) => setTimeout(r, 500));
@@ -1283,7 +1302,7 @@ async function callFlow(dir, base, receiver) {
       .first()
       .selectOption("resolved");
     await page.getByRole("button", { name: "Save changes" }).click();
-    for (let i = 0; i < 100 && receiver.calls.length === 0; i++) await page.waitForTimeout(100);
+    for (let i = 0; i < 100 * P && receiver.calls.length === 0; i++) await page.waitForTimeout(100);
     const call = receiver.calls.at(-1);
     if (!call) throw new Error("no call arrived");
     if (!call.signed) throw new Error("the signature does not match the secret");
@@ -1312,7 +1331,7 @@ async function callFlow(dir, base, receiver) {
       throw new Error(`the call: ${call.body.slice(0, 300)}`);
     for (
       let i = 0;
-      i < 50 && !query(dir, "select id from audit_log where action = 'called'").length;
+      i < 50 * P && !query(dir, "select id from audit_log where action = 'called'").length;
       i++
     )
       await page.waitForTimeout(100);
@@ -1334,7 +1353,10 @@ async function callFlow(dir, base, receiver) {
     )
       throw new Error(`the summary says ${await summary.innerText()}`);
     const delivered = page.locator('[data-kit="activity-log"] [data-part="line"]');
-    await delivered.filter({ hasText: "called" }).first().waitFor({ timeout: 10000 });
+    await delivered
+      .filter({ hasText: "called" })
+      .first()
+      .waitFor({ timeout: 10000 * P });
     if ((await delivered.filter({ hasText: /changed|created/ }).count()) > 0)
       throw new Error("the target's deliveries show other lines");
     console.log(
@@ -1370,7 +1392,7 @@ async function apiTrashFlow(base) {
       await keys.getByLabel("Role").selectOption(role);
       await keys.getByRole("button", { name: "Make a key" }).click();
       const shown = keys.locator('[data-part="key"]');
-      await shown.waitFor({ timeout: 10000 });
+      await shown.waitFor({ timeout: 10000 * P });
       const key = await shown.textContent();
       await open(page, `${base}/team`);
       return key;
@@ -1512,7 +1534,7 @@ async function pagingFlow(dir, base) {
     const total = number(first[3]);
     await page.getByRole("button", { name: "Next" }).click();
     await page.waitForURL(/page=2/);
-    await page.getByText(`51–100 of ${first[3]}`).waitFor({ timeout: 10000 });
+    await page.getByText(`51–100 of ${first[3]}`).waitFor({ timeout: 10000 * P });
     // Past the end: the last page, with what is left.
     await open(page, `${base}/customers?page=999`);
     const last = await counted();
@@ -1568,7 +1590,7 @@ async function filtersFlow(base) {
             .map((e) => e.textContent?.trim())
             .join() === "Nordic Timber Oy,Helios Energy",
         undefined,
-        { timeout: 10000 },
+        { timeout: 10000 * P },
       )
       .catch(() => {});
     const shown = await names();
@@ -1615,7 +1637,9 @@ async function filtersFlow(base) {
     // The box follows the address, which changes a moment after the click.
     await page.getByRole("checkbox", { name: "Mine" }).click();
     await page.waitForURL(/owner=mine/);
-    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    await page
+      .getByText("No customers match the search and filters.")
+      .waitFor({ timeout: 10000 * P });
     // A range removed by its chip stays removed: what was typed in it goes too, or the typed
     // range came back with the next render.
     await page.getByRole("button", { name: "Remove the credit limit filter" }).click();
@@ -1635,13 +1659,13 @@ async function filtersFlow(base) {
     // Each click goes by the order the header shows, so the next waits for it.
     await page
       .locator("th[aria-sort=none]", { hasText: "Credit limit" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await header.click();
     await page.waitForURL(/sort=creditLimit(&|$)/);
     // The address changes first; the header follows when the list's data arrives.
     await page
       .locator("th[aria-sort=ascending]", { hasText: "Credit limit" })
-      .waitFor({ timeout: 10000 })
+      .waitFor({ timeout: 10000 * P })
       .catch(() => {
         throw new Error("the sorted column does not say it is ascending");
       });
@@ -1683,7 +1707,7 @@ async function rulesFlow(base) {
     // Shipping makes the tracking code required: the action asks for it, marked so.
     await row.getByRole("button", { name: "Ship" }).click();
     const dialog = page.getByRole("dialog", { name: "Ship" });
-    await dialog.getByText("Tracking code").waitFor({ timeout: 10000 });
+    await dialog.getByText("Tracking code").waitFor({ timeout: 10000 * P });
     if (
       (
         await dialog.locator('[data-part="label"]', { hasText: "Tracking code" }).textContent()
@@ -1691,10 +1715,13 @@ async function rulesFlow(base) {
     )
       throw new Error("the tracking code is not marked required");
     await dialog.getByRole("button", { name: "Ship" }).click();
-    await dialog.locator('[data-part="error"]').first().waitFor({ timeout: 5000 });
+    await dialog
+      .locator('[data-part="error"]')
+      .first()
+      .waitFor({ timeout: 5000 * P });
     await dialog.getByRole("textbox", { name: /Tracking code/ }).fill("TRK-1");
     await dialog.getByRole("button", { name: "Ship" }).click();
-    await row.getByText("Shipped").waitFor({ timeout: 10000 });
+    await row.getByText("Shipped").waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: the form leaves out a field the app fills; an action asks for the field its change makes required, and refuses it empty",
     );
@@ -1704,7 +1731,7 @@ async function rulesFlow(base) {
       .getByText("TRK-1")
       .or(page.getByRole("textbox", { name: /Tracking code/ }))
       .first()
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (!(await page.getByRole("textbox", { name: /^Total/ }).isDisabled()))
       throw new Error("the shipped order's total can be changed");
     // An action that asks for a person offers the people to choose from.
@@ -1716,7 +1743,7 @@ async function rulesFlow(base) {
     const assign = page.getByRole("dialog", { name: "Assign packer" });
     await chooseRecord(assign, "Packed by", "Dev admin");
     await assign.getByRole("button", { name: "Assign packer" }).click();
-    await assign.waitFor({ state: "hidden", timeout: 10000 });
+    await assign.waitFor({ state: "hidden", timeout: 10000 * P });
     console.log(
       "  ✓ browser: a locked field cannot be changed once its condition holds; an action asks for a person from the people who may be chosen",
     );
@@ -1724,11 +1751,11 @@ async function rulesFlow(base) {
     await open(page, `${base}/orders`);
     await page.getByRole("button", { name: "Mine", exact: true }).click();
     await page.waitForURL(/handledBy=me/);
-    await page.locator("tr", { hasText: "ORD-3001" }).waitFor({ timeout: 10000 });
+    await page.locator("tr", { hasText: "ORD-3001" }).waitFor({ timeout: 10000 * P });
     // The chip is on before the next is added to it (the page keeps its state while it loads).
     await page
       .getByRole("button", { name: "Mine", exact: true, pressed: true })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page.getByRole("button", { name: "Unassigned", exact: true }).click();
     await page.waitForURL(/handledBy=me%2Cnone|handledBy=me,none/);
     // The newest order of the customer has shipped: an action whose condition is on that is
@@ -1738,7 +1765,7 @@ async function rulesFlow(base) {
     await page.getByRole("button", { name: "Thank" }).click();
     await page
       .getByRole("checkbox", { name: "Thanked", checked: true })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     // A change keeps an empty owner field empty: the action does not make whoever pressed it the
     // account manager.
     if ((await page.getByRole("combobox", { name: "Account manager" }).inputValue()) !== "")
@@ -1768,12 +1795,12 @@ async function threadFlow(base) {
     await open(page, `${base}/customers`);
     await page.getByRole("button", { name: "Helios Energy" }).first().click();
     const thread = page.locator('[data-kit="thread"]');
-    await thread.getByText("No comments yet").waitFor({ timeout: 10000 });
+    await thread.getByText("No comments yet").waitFor({ timeout: 10000 * P });
     await thread.getByRole("textbox", { name: "Reply" }).fill("Called them about the renewal.");
     await thread.getByRole("button", { name: "Send" }).click();
     await thread
       .locator('[data-part="message"]', { hasText: "Called them about the renewal." })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if ((await thread.getByRole("textbox", { name: "Reply" }).inputValue()) !== "")
       throw new Error("the reply box keeps what was sent");
     console.log(
@@ -1784,12 +1811,14 @@ async function threadFlow(base) {
     await signInAs(page, base, "sales");
     await open(page, `${base}/customers`);
     const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
-    await helios.locator('[data-part="thread"]', { hasText: "1 new" }).waitFor({ timeout: 10000 });
+    await helios
+      .locator('[data-part="thread"]', { hasText: "1 new" })
+      .waitFor({ timeout: 10000 * P });
     await page.getByRole("checkbox", { name: "Unread" }).click();
-    await page.waitForURL(/unread=/, { timeout: 10000 });
+    await page.waitForURL(/unread=/, { timeout: 10000 * P });
     await page
       .waitForFunction(() => document.querySelectorAll('tr[data-part="row"]').length === 1, null, {
-        timeout: 10000,
+        timeout: 10000 * P,
       })
       .catch(() => {
         throw new Error("the Unread toggle keeps only the customer with a new comment");
@@ -1797,7 +1826,9 @@ async function threadFlow(base) {
     await helios.getByRole("button", { name: "Helios Energy" }).first().click();
     await page.locator('[data-kit="thread"]').getByText("Called them about the renewal.").waitFor();
     await open(page, `${base}/customers?unread=1`);
-    await page.getByText("No customers match the search and filters.").waitFor({ timeout: 10000 });
+    await page
+      .getByText("No customers match the search and filters.")
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: another person sees the comment unread, with a badge and the Unread toggle, until they open it",
     );
@@ -1847,7 +1878,7 @@ async function favoritesFlow(base) {
     await open(other, `${base}/customers?view=saved`);
     await other
       .getByText("No saved customers yet: the heart on one saves it.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page
       .getByRole("button", { name: "Open Nordic Timber Oy" })
       .or(page.getByRole("button", { name: "Nordic Timber Oy", exact: true }))
@@ -1866,7 +1897,7 @@ async function favoritesFlow(base) {
     await open(page, `${base}/customers?view=saved`);
     await page
       .getByText("No saved customers yet: the heart on one saves it.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: a heart saves a customer; the Saved view and the record page show it, another person's Saved view does not, and unsaving empties it",
     );
@@ -1910,7 +1941,7 @@ async function contactFlow(dir, base) {
     await page.locator('[data-kit="contact-owner"]').getByRole("button", { name: "Send" }).click();
     await page
       .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if ((await page.content()).includes("dev-admin@"))
       throw new Error("the page shows the owner's address");
     const mails = readdirSync(outbox).sort();
@@ -1966,7 +1997,7 @@ async function reviewFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const addPhoto = async (name) => {
     // A file chosen before the page's handlers are attached is lost (body[data-hydrated]).
-    await seller.locator("body[data-hydrated]").waitFor({ timeout: 30000 });
+    await seller.locator("body[data-hydrated]").waitFor({ timeout: 30000 * P });
     const form = seller.locator('[data-kit="model-form"]');
     const before = await form.locator('[data-part="picture"]').count();
     await form.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
@@ -1979,7 +2010,7 @@ async function reviewFlow(dir, base) {
         (n) =>
           document.querySelectorAll('[data-kit="model-form"] [data-part="picture"]').length > n,
         before,
-        { timeout: 20000 },
+        { timeout: 20000 * P },
       )
       .catch(async (error) => {
         const said = await form.getByRole("alert").allInnerTexts();
@@ -2010,7 +2041,9 @@ async function reviewFlow(dir, base) {
       .click();
     await seller.waitForURL(/\/my-items\/\d+$/);
     const id = seller.url().match(/(\d+)$/)?.[1];
-    await notice().getByText("Awaiting review").waitFor({ timeout: 10000 });
+    await notice()
+      .getByText("Awaiting review")
+      .waitFor({ timeout: 10000 * P });
     if ((await photo(id)) !== 404) throw new Error("a visitor gets the waiting photo");
     // Photos are required: until they are approved the item is not there for anyone else.
     const listed = async () =>
@@ -2026,7 +2059,7 @@ async function reviewFlow(dir, base) {
 
     await open(admin, `${base}/`);
     const count = admin.locator('[data-part="count"]').filter({ visible: true }).first();
-    await count.waitFor({ timeout: 10000 });
+    await count.waitFor({ timeout: 10000 * P });
     if (Number(await count.innerText()) < 1)
       throw new Error(`the menu says ${await count.innerText()} wait`);
     for (let i = 0; ; i++) {
@@ -2036,7 +2069,7 @@ async function reviewFlow(dir, base) {
           /await(s)? review in Torget/.test(readFileSync(join(outbox, f), "utf8")),
         );
       if (told) break;
-      if (i === 50) throw new Error("no reviewer was told by mail");
+      if (i === 50 * P) throw new Error("no reviewer was told by mail");
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
     await open(admin, `${base}/review`);
@@ -2044,14 +2077,14 @@ async function reviewFlow(dir, base) {
     await card.getByRole("button", { name: "Reject" }).click();
     await card.getByLabel(/Why/).fill("Too dark to see the lamp.");
     await card.getByRole("button", { name: "Reject" }).click();
-    await card.waitFor({ state: "detached", timeout: 10000 });
+    await card.waitFor({ state: "detached", timeout: 10000 * P });
     await admin
       .locator('[data-part="decided"]', { hasText: "Too dark to see the lamp." })
       .waitFor();
     await seller.reload();
     await notice()
       .getByText("Rejected by a reviewer: Too dark to see the lamp.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (await seller.locator('[data-kit="model-form"] [data-part="picture"]').count())
       throw new Error("the rejected photo is still on the item");
     console.log(
@@ -2069,7 +2102,7 @@ async function reviewFlow(dir, base) {
     await admin
       .locator('[data-part="decided"]', { hasText: "Approved" })
       .first()
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if ((await photo(id)) !== 200) throw new Error("a visitor does not get the approved photo");
     if (!(await listed())) throw new Error("a visitor does not find the approved item");
     console.log(
@@ -2100,7 +2133,10 @@ async function marketplaceFlow(dir, base) {
     await page.waitForURL(/\/\?q=bike/);
     if (await page.locator('[data-kit="app-shell"]').count())
       throw new Error("a visitor sees the catalog in the app's frame");
-    await page.getByText("City bike, seven gears").first().waitFor({ timeout: 10000 });
+    await page
+      .getByText("City bike, seven gears")
+      .first()
+      .waitFor({ timeout: 10000 * P });
     await open(page, `${base}/?category=bikes&price=100..400&sort=-price`);
     const shown = await titles();
     if (shown.join() !== "Road bike, 56 cm frame,City bike, seven gears")
@@ -2116,7 +2152,10 @@ async function marketplaceFlow(dir, base) {
     // A visitor who may only read gets the item as a page, not a disabled form.
     await open(page, `${base}/1`);
     const record = page.locator('[data-kit="model-form"]');
-    await record.locator('[data-part="pictures"] img').first().waitFor({ timeout: 10000 });
+    await record
+      .locator('[data-part="pictures"] img')
+      .first()
+      .waitFor({ timeout: 10000 * P });
     const controls = await record
       .locator("input, textarea, select, button:not([type=button])")
       .count();
@@ -2130,7 +2169,7 @@ async function marketplaceFlow(dir, base) {
     await page.getByRole("textbox", { name: "Title *" }).fill("Test lamp");
     await page.getByRole("textbox", { name: "Description *" }).fill("A lamp for the test.");
     // Photos are required and reviewed (reviewFlow tests the review): one, approved at once.
-    await page.locator("body[data-hydrated]").waitFor({ timeout: 30000 });
+    await page.locator("body[data-hydrated]").waitFor({ timeout: 30000 * P });
     const samples = join(dir, "public", "images", "samples");
     await page
       .locator('[data-kit="model-form"] input[type="file"][accept="image/*"]')
@@ -2148,7 +2187,7 @@ async function marketplaceFlow(dir, base) {
     await page
       .locator('[data-kit="model-form"] [data-part="picture"]')
       .first()
-      .waitFor({ timeout: 20000 });
+      .waitFor({ timeout: 20000 * P });
     await page.getByRole("button", { name: "Create item" }).click();
     await page.waitForURL(`${base}/`);
     write(dir, "update file_reviews set state = 'approved', decided_at = 0");
@@ -2173,7 +2212,7 @@ async function marketplaceFlow(dir, base) {
     if ((await titles()).join() !== "Turntable")
       throw new Error(`Saved shows ${(await titles()).join()}`);
     await page.getByRole("button", { name: "Save Turntable" }).filter({ visible: true }).click();
-    await page.getByText("No saved items yet.").waitFor({ timeout: 10000 });
+    await page.getByText("No saved items yet.").waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: a member sells an item and sees only it under My items, a visitor is not told who sells it, and saves and unsaves another",
     );
@@ -2187,7 +2226,7 @@ async function marketplaceFlow(dir, base) {
     await page.getByRole("button", { name: "Send" }).click();
     await page
       .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     const mails = readdirSync(outbox).sort();
     if (mails.length !== before + 1) throw new Error("no mail was sent");
     const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
@@ -2217,13 +2256,13 @@ async function statusFlow(base) {
   try {
     await open(page, `${base}/`);
     const services = page.locator('[data-section="services"]');
-    await services.getByText("Payments", { exact: true }).waitFor({ timeout: 10000 });
+    await services.getByText("Payments", { exact: true }).waitFor({ timeout: 10000 * P });
     await services.getByText("Degraded").waitFor();
     // The starter's own section (src/custom/sections/Uptime.tsx): 90 days of each service.
     await page
       .locator('[data-section="uptime"]')
       .getByRole("img", { name: /^Payments: \d+\.\d\d% up over the last 90 days$/ })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     // What is still going on, apart from what was resolved.
     await page
       .locator('[data-section="open"]')
@@ -2235,7 +2274,10 @@ async function statusFlow(base) {
       .waitFor();
     await open(page, `${base}/history`);
     await page.getByRole("link", { name: "Website unreachable for twenty minutes" }).click();
-    await page.getByText("A certificate renewal failed").first().waitFor({ timeout: 10000 });
+    await page
+      .getByText("A certificate renewal failed")
+      .first()
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: a visitor sees the services with their state and 90 days of uptime (the starter's own section), what is going on now, what was resolved and an incident's story, without signing in",
     );
@@ -2248,7 +2290,7 @@ async function statusFlow(base) {
     const more = card.locator('[data-part="more-actions"] summary');
     if (await more.count()) await more.click();
     await card.getByRole("button", { name: "Resolve" }).click();
-    await card.getByText("Resolved").waitFor({ timeout: 10000 });
+    await card.getByText("Resolved").waitFor({ timeout: 10000 * P });
     // Signed out again, the public page shows it.
     await page.context().clearCookies();
     await open(page, `${base}/`);
@@ -2256,7 +2298,7 @@ async function statusFlow(base) {
     await page
       .locator('[data-section="recent"]')
       .getByText("Card payments slow at checkout")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (
       await page
         .locator('[data-section="open"]')
@@ -2277,7 +2319,7 @@ async function statusFlow(base) {
     const dialog = page.getByRole("dialog", { name: "Reopen" });
     await dialog.getByLabel("Message").fill("The errors are back; we are looking again.");
     await dialog.getByRole("button", { name: "Reopen" }).click();
-    await row.getByText("Investigating").waitFor({ timeout: 10000 });
+    await row.getByText("Investigating").waitFor({ timeout: 10000 * P });
     await row.getByRole("button", { name: "Reopen" }).waitFor({ state: "detached" });
     const fits = await page
       .locator("tr", { hasText: "Website unreachable" })
@@ -2292,7 +2334,7 @@ async function statusFlow(base) {
     await page
       .getByText("The errors are back; we are looking again.")
       .first()
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: a standard action's button is on the rows it fits; it asks for a message, reopens the incident and adds the update",
     );
@@ -2307,11 +2349,11 @@ async function statusFlow(base) {
     const bar = page.locator('[data-kit="selection-bar"]');
     await bar.getByText("2 selected").waitFor();
     await bar.getByRole("button", { name: "Resolve (1)" }).click();
-    await bar.getByText("Resolve: 1 incident changed, 1 skipped.").waitFor({ timeout: 10000 });
+    await bar.getByText("Resolve: 1 incident changed, 1 skipped.").waitFor({ timeout: 10000 * P });
     await page
       .locator("tr", { hasText: "Card payments slow at checkout" })
       .getByText("Resolved")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (await page.locator("tbody").getByRole("checkbox", { checked: true }).count())
       throw new Error("the selection was not cleared after the run");
     console.log(
@@ -2325,10 +2367,10 @@ async function statusFlow(base) {
     await keys
       .locator('[data-part="preview-note"]')
       .getByText("once it is published")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await keys.getByLabel("What it is for").fill("Uptime monitor");
     await keys.getByRole("button", { name: "Make a key" }).click();
-    const shown = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });
+    const shown = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 * P });
     if (!/^smk_[A-Za-z0-9_-]{20,}$/.test(shown ?? "")) throw new Error(`the key shown is ${shown}`);
     const keyRow = keys.locator('[data-part="key-row"]', { hasText: "Uptime monitor" });
     await keyRow.getByText(`${shown?.slice(0, 10)}…`).waitFor();
@@ -2433,7 +2475,7 @@ async function statusFlow(base) {
       .locator('[data-kit="activity-log"]')
       .getByText('key "Uptime monitor"')
       .first()
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await open(page, `${base}/team`);
     if ((await api("/maintenances")).status !== 404)
       throw new Error("a model not offered answered");
@@ -2537,7 +2579,7 @@ async function statusFlow(base) {
     await apiSecurityChecks(base, shown);
     page.once("dialog", (d) => d.accept());
     await keyRow.getByRole("button", { name: "Revoke" }).click();
-    await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 });
+    await keyRow.getByText(/^Revoked/).waitFor({ timeout: 10000 * P });
     if ((await api("/incidents")).status !== 401) throw new Error("a revoked key still answers");
     console.log(
       "  ✓ browser: an admin makes an API key on the team page and gets a call to copy that works and an assistant's lines; with it a program lists, filters, searches and sorts incidents, adds one and resolves it, a model not offered is not there, the description says what is, and an assistant finds, counts and describes incidents with the seven tools at /mcp (no delete tool); without a key a program or assistant reads only what anyone may, is refused the rest and held to ten writes a minute; revoked, it stops",
@@ -2569,7 +2611,7 @@ async function apiFlow(base) {
     if ((await keys.getByLabel("Role").inputValue()) !== "assistant")
       throw new Error("a key does not start with the assistant role");
     await keys.getByRole("button", { name: "Make a key" }).click();
-    const key = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 });
+    const key = await keys.locator('[data-part="key"]').textContent({ timeout: 10000 * P });
     const api = (path, init = {}) =>
       fetch(`${base}/api/v1${path}`, {
         ...init,
@@ -2669,7 +2711,7 @@ async function apiFlow(base) {
     await page.getByLabel("Question").fill("how many tasks");
     await page.getByRole("button", { name: "Ask", exact: true }).click();
     const answered = page.locator("[data-answer]").first();
-    await answered.getByText("From your records").waitFor({ timeout: 10000 });
+    await answered.getByText("From your records").waitFor({ timeout: 10000 * P });
     const number = await answered.locator(".text-2xl").textContent();
     if (!/^\d+$/.test(number ?? "")) throw new Error(`the inspector answered ${number}`);
     if (!(await page.getByText("Answers may come from an AI and can be wrong.").isVisible()))
@@ -2728,7 +2770,7 @@ async function picturesFlow(dir, base) {
     // A click before the page's scripts are ready opens nothing: try again, a few times.
     let chooser;
     for (let attempt = 1; !chooser; attempt++) {
-      const opened = page.waitForEvent("filechooser", { timeout: 5000 });
+      const opened = page.waitForEvent("filechooser", { timeout: 5000 * P });
       await page.getByRole("button", { name: "Choose pictures" }).click();
       chooser = await opened.catch((error) => {
         if (attempt === 5) throw error;
@@ -2738,7 +2780,10 @@ async function picturesFlow(dir, base) {
       join(dir, "public", "images", "hero.webp"),
       join(dir, "public", "images", "gallery", "coast.webp"),
     ]);
-    await page.locator('[data-part="picture"]').nth(1).waitFor({ timeout: 20000 });
+    await page
+      .locator('[data-part="picture"]')
+      .nth(1)
+      .waitFor({ timeout: 20000 * P });
     await page.getByLabel("Description of picture 1").fill("The studio");
     await page.getByLabel("Description of picture 2").fill("The coast");
     await page.getByRole("button", { name: "Move picture 2 earlier" }).click();
@@ -2803,19 +2848,19 @@ async function pictureFlow(dir, base) {
     // The list is a table on a wide screen and cards on a phone: both carry the picture.
     await page
       .locator('img[src="/files/instructor/1/portrait"]:visible')
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await open(page, `${base}/instructors/1`);
     const before = new Set(readdirSync(uploads));
     const chooser = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Replace" }).click();
     await (await chooser).setFiles(join(dir, "public", "images", "hero.webp"));
     // Uploaded: the form shows the browser's copy of the new picture.
-    await page.locator('img[src^="blob:"]').waitFor({ timeout: 15000 });
+    await page.locator('img[src^="blob:"]').waitFor({ timeout: 15000 * P });
     await page.getByLabel("Description (for those who cannot see it)").fill("Emma at the studio");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(/\/instructors$/);
     await open(page, `${base}/instructors/1`);
-    await page.getByRole("img", { name: "Emma at the studio" }).waitFor({ timeout: 10000 });
+    await page.getByRole("img", { name: "Emma at the studio" }).waitFor({ timeout: 10000 * P });
     // The new file is kept and the old one, no other record's, is gone; the new one goes when
     // removed.
     const after = readdirSync(uploads);
@@ -2856,7 +2901,7 @@ async function markdownFlow(base) {
     await page.getByRole("button", { name: "Preview" }).click();
     await page
       .getByRole("heading", { level: 2, name: "Teaching since 2010" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page.locator("strong", { hasText: "Yin" }).waitFor();
     await page.getByText("<b>Hatha</b>", { exact: false }).waitFor();
     if (await page.locator("main b").count()) throw new Error("raw HTML was run");
@@ -3260,11 +3305,11 @@ async function inputSecurityFlow(dir, base) {
       await page.getByRole("textbox", { name: "Email *" }).fill("mallory@example.com");
       await page.getByRole("textbox", { name: "Message *" }).fill(`Hello ${attack}`);
       await page.getByRole("button", { name: "Send message" }).click();
-      await page.getByText("Thank you!", { exact: false }).waitFor({ timeout: 10000 });
+      await page.getByText("Thank you!", { exact: false }).waitFor({ timeout: 10000 * P });
       await signInAs(page, base, "admin");
       await open(page, `${base}/messages`);
       const row = page.getByRole("cell", { name: /^Mallory/ }).first();
-      await row.waitFor({ timeout: 10000 });
+      await row.waitFor({ timeout: 10000 * P });
       if (!(await row.innerText()).includes("<img src=x"))
         throw new Error("the message's name is not shown as the text it is");
       await row.click();
@@ -3278,7 +3323,10 @@ async function inputSecurityFlow(dir, base) {
         .getByLabel("Bio")
         .fill("[Book now](javascript:window.__ran=1) and [here](JaVaScRiPt:alert(1))");
       await page.getByRole("button", { name: "Preview" }).click();
-      await page.getByText("Book now").first().waitFor({ timeout: 10000 });
+      await page
+        .getByText("Book now")
+        .first()
+        .waitFor({ timeout: 10000 * P });
       const hrefs = await page
         .locator("main a")
         .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
@@ -3305,7 +3353,7 @@ async function inputSecurityFlow(dir, base) {
           .locator('[data-part="row"]')
           .filter({ visible: true })
           .first()
-          .waitFor({ timeout: 10000 });
+          .waitFor({ timeout: 10000 * P });
       },
     );
     await check(
@@ -3331,7 +3379,7 @@ async function inputSecurityFlow(dir, base) {
           await open(visitor, `${base}/sign-in?redirect=${encodeURIComponent(target)}`);
           await visitor.getByRole("button", { name: "Sign in as member" }).click();
           await visitor
-            .waitForURL((url) => url.pathname !== "/sign-in", { timeout: 10000 })
+            .waitForURL((url) => url.pathname !== "/sign-in", { timeout: 10000 * P })
             .catch(() => {});
           await visitor.waitForTimeout(500);
           if (new URL(visitor.url()).pathname === "/sign-in")
@@ -3358,7 +3406,7 @@ async function inputSecurityFlow(dir, base) {
           const sent = await post("/email-otp/send-verification-otp", { email, type: "sign-in" });
           if (!sent.ok) throw new Error(`asking for a code gave ${sent.status}`);
           let code;
-          for (let i = 0; !code && i < 50; i++) {
+          for (let i = 0; !code && i < 50 * P * P; i++) {
             const mails = existsSync(outbox) ? readdirSync(outbox).sort() : [];
             if (mails.length > mailed)
               code = /\b(\d{3}) ?(\d{3})\b/
@@ -3478,7 +3526,7 @@ async function sessionFlow(base) {
       await adminPage.getByRole("button", { name: "Remove user" }).click();
       await adminPage
         .locator("tr", { hasText: "Dev staff" })
-        .waitFor({ state: "detached", timeout: 10000 });
+        .waitFor({ state: "detached", timeout: 10000 * P });
       if (await who(cookie)) throw new Error("the removed person is still signed in");
     });
   } finally {
@@ -3536,7 +3584,7 @@ async function askPanelFlow(dir, base) {
     await sheet.getByLabel("Question").fill("how many tasks");
     await sheet.getByRole("button", { name: "Ask", exact: true }).click();
     const answered = sheet.locator("[data-answer]").first();
-    await answered.getByText("From your records").waitFor({ timeout: 10000 });
+    await answered.getByText("From your records").waitFor({ timeout: 10000 * P });
     const number = await answered.locator(".text-2xl").textContent();
     if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
     if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
@@ -3545,13 +3593,13 @@ async function askPanelFlow(dir, base) {
     await sheet.getByLabel("Question").fill("start the newsletter draft");
     await sheet.getByRole("button", { name: "Ask", exact: true }).click();
     const card = sheet.locator("[data-proposal]").first();
-    await card.getByText("Draft the newsletter").waitFor({ timeout: 10000 });
+    await card.getByText("Draft the newsletter").waitFor({ timeout: 10000 * P });
     await card.getByText("Status:").waitFor();
     const before = query(dir, "select status from tasks where title = 'Draft the newsletter'")[0]
       ?.status;
     if (before !== "todo") throw new Error(`the task was ${before} before confirming`);
     await card.getByRole("button", { name: "Confirm" }).click();
-    await card.getByText("Done.").waitFor({ timeout: 10000 });
+    await card.getByText("Done.").waitFor({ timeout: 10000 * P });
     const after = query(dir, "select status from tasks where title = 'Draft the newsletter'")[0]
       ?.status;
     if (after !== "doing") throw new Error(`after confirming the task is ${after}`);
@@ -3595,7 +3643,7 @@ async function articlesFlow(dir, base) {
         "UPDATE posts SET title = 'Secret plans', address = 'secret-plans' WHERE id = 2;",
     );
     await open(page, `${base}/blog`);
-    await page.getByRole("link", { name: "Morning practice" }).waitFor({ timeout: 10000 });
+    await page.getByRole("link", { name: "Morning practice" }).waitFor({ timeout: 10000 * P });
     if (await page.getByText("Secret plans").count()) throw new Error("a draft is listed");
     // The article opens through the router: the same document, no white page between (a mark
     // on the window survives only that).
@@ -3605,7 +3653,7 @@ async function articlesFlow(dir, base) {
     await page.getByRole("link", { name: "Morning practice" }).click();
     await page
       .getByRole("heading", { level: 1, name: "Morning practice" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (!(await page.evaluate(() => window.__sameDocument === true)))
       throw new Error("opening an article loaded a new document");
     if (
@@ -3617,7 +3665,10 @@ async function articlesFlow(dir, base) {
     if (draft.status !== 404 && !(await draft.text()).includes("does not exist"))
       throw new Error(`a draft opens: ${draft.status}`);
     await open(page, `${base}/`);
-    await page.getByRole("link", { name: "Morning practice" }).first().waitFor({ timeout: 10000 });
+    await page
+      .getByRole("link", { name: "Morning practice" })
+      .first()
+      .waitFor({ timeout: 10000 * P });
     if (await page.getByText("Secret plans").count())
       throw new Error("a draft is a card on the home page");
     // An admin writes one: its address is made from its title.
@@ -3631,7 +3682,7 @@ async function articlesFlow(dir, base) {
     await open(page, `${base}/blog/yin-for-beginners`);
     await page
       .getByRole("heading", { level: 1, name: "Yin for beginners" })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page.locator("strong", { hasText: "deep" }).waitFor();
     console.log(
       "  ✓ browser: visitors see only published articles (list, home cards, article with head tags; a draft is not found); a new article's address comes from its title",
@@ -3655,8 +3706,8 @@ async function calculatorFlow(base) {
     const calculator = page.locator('[data-kit="calculator"]');
     await calculator.getByLabel("Classes a month").fill("10");
     // 10 classes at €16 is €160; the €99 pass saves €61.
-    await calculator.getByText("€160.00").waitFor({ timeout: 10000 });
-    await calculator.getByText("€61.00").waitFor({ timeout: 10000 });
+    await calculator.getByText("€160.00").waitFor({ timeout: 10000 * P });
+    await calculator.getByText("€61.00").waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: the landing page's calculator works its results out as a visitor types",
     );
@@ -3677,7 +3728,7 @@ async function landingFlow(base) {
     await open(page, base);
     // The cover hero's shortcuts: round links to the schedule and the blog over its edge.
     const shortcuts = page.getByRole("navigation", { name: "Shortcuts" });
-    await shortcuts.getByRole("link", { name: "Blog" }).waitFor({ timeout: 5000 });
+    await shortcuts.getByRole("link", { name: "Blog" }).waitFor({ timeout: 5000 * P });
     await shortcuts.getByRole("link", { name: "Schedule" }).click();
     await page.waitForURL(`${base}/schedule`);
     console.log("  ✓ browser: the hero's shortcuts lead to their pages");
@@ -3687,7 +3738,7 @@ async function landingFlow(base) {
       .locator('[data-section="classes"]')
       .getByText("Foundations")
       .first()
-      .waitFor({ timeout: 5000 });
+      .waitFor({ timeout: 5000 * P });
     if (await page.locator('[data-section="classes"] [data-part="placeholder"]').count())
       throw new Error("cards of a model without pictures show placeholders");
     console.log("  ✓ browser: cards of a model without pictures stay text cards");
@@ -3696,11 +3747,11 @@ async function landingFlow(base) {
       .getByRole("banner")
       .getByRole("navigation", { name: "Site" })
       .getByRole("link", { name: "Blog" })
-      .waitFor({ timeout: 5000 });
+      .waitFor({ timeout: 5000 * P });
     await page
       .getByRole("contentinfo")
       .getByRole("link", { name: "+358 18 123 456" })
-      .waitFor({ timeout: 5000 });
+      .waitFor({ timeout: 5000 * P });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("button", { name: "Menu" }).click();
     await page.locator("#site-menu").getByRole("link", { name: "Blog" }).click();
@@ -3712,11 +3763,13 @@ async function landingFlow(base) {
     await open(page, base);
     await page.getByRole("button", { name: /^Open A rolled-up yoga mat/ }).click();
     const lightbox = page.getByRole("dialog");
-    await lightbox.getByRole("img", { name: /yoga mat/ }).waitFor({ timeout: 5000 });
+    await lightbox.getByRole("img", { name: /yoga mat/ }).waitFor({ timeout: 5000 * P });
     await page.keyboard.press("ArrowRight");
-    await lightbox.getByRole("img", { name: /Three people stretching/ }).waitFor({ timeout: 5000 });
+    await lightbox
+      .getByRole("img", { name: /Three people stretching/ })
+      .waitFor({ timeout: 5000 * P });
     await page.keyboard.press("Escape");
-    await lightbox.waitFor({ state: "hidden", timeout: 5000 });
+    await lightbox.waitFor({ state: "hidden", timeout: 5000 * P });
     console.log(
       "  ✓ browser: a gallery picture opens large; the arrow keys move on, Escape closes",
     );
@@ -3727,10 +3780,12 @@ async function landingFlow(base) {
     await page.getByRole("button", { name: "Send message" }).click();
     await page
       .getByText("Thank you! We will get back to you within a day.")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await signInAs(page, base, "admin");
     await open(page, `${base}/messages`);
-    await page.getByRole("cell", { name: "Aino Visitor", exact: true }).waitFor({ timeout: 10000 });
+    await page
+      .getByRole("cell", { name: "Aino Visitor", exact: true })
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: a visitor sends the contact form without an account; an admin reads it",
     );
@@ -3748,34 +3803,34 @@ async function landingFlow(base) {
     await page.waitForURL(/\/admin\/messages\/?$/);
     await page
       .getByRole("cell", { name: "Aino Visitor", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 });
+      .waitFor({ state: "detached", timeout: 10000 * P });
     // Activity: the visitor's message and the admin's delete are in the audit log; the deleted
     // message keeps its name on its delete line until it is forgotten in the log.
     await open(page, `${base}/admin/activity?model=Message`);
     const deleted = page.locator('[data-part="line"]', { hasText: "deleted" }).first();
-    await deleted.getByText('Message "Aino Visitor" (deleted)').waitFor({ timeout: 10000 });
+    await deleted.getByText('Message "Aino Visitor" (deleted)').waitFor({ timeout: 10000 * P });
     await page.locator('[data-part="line"]', { hasText: "visitor" }).first().waitFor();
     await deleted.getByRole("button", { name: "Forget in the log" }).click();
     await page
       .locator('[data-part="line"]', { hasText: "deleted" })
       .first()
       .getByText(/a deleted message \(#\d+\)/)
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     if (await page.getByText("Aino Visitor").count())
       throw new Error("the forgotten name is still in the activity");
     // Signing out is in the log (only a sign-out request, not a session that expired).
     await page.getByRole("button", { name: "Sign out" }).first().click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/admin"), { timeout: 10000 });
+    await page.waitForURL((url) => !url.pathname.startsWith("/admin"), { timeout: 10000 * P });
     await signInAs(page, base, "admin");
     await open(page, `${base}/admin/activity?action=signed%20out`);
     await page
       .locator('[data-part="line"]', { hasText: "signed out" })
       .first()
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     // A member may not open it.
     await signInAs(page, base, "member");
     await open(page, `${base}/admin`);
-    await page.getByText("You are not allowed to do this.").waitFor({ timeout: 10000 });
+    await page.getByText("You are not allowed to do this.").waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: the data page lists every model; an admin opens a message and deletes it, sees it in Activity and forgets it in the log, and signing out is there too; a member is refused",
     );
@@ -3807,7 +3862,7 @@ async function documentFlow(dir, base) {
     await page
       .getByRole("row", { name: /2026-001/ })
       .getByText("€1,700.00")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page.getByRole("cell", { name: "2026-005", exact: true }).click();
     await page.waitForURL(/\/invoices\/\d+$/);
     const id = page.url().match(/\/invoices\/(\d+)$/)?.[1];
@@ -3817,18 +3872,27 @@ async function documentFlow(dir, base) {
       mimeType: "application/pdf",
       buffer: Buffer.from("not a pdf"),
     });
-    await page.getByRole("alert").filter({ hasText: "Choose a PDF" }).waitFor({ timeout: 10000 });
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "Choose a PDF" })
+      .waitFor({ timeout: 10000 * P });
     await contract().setInputFiles({
       name: "Contract 2026.pdf",
       mimeType: "application/pdf",
       buffer: pdf,
     });
-    await page.getByText("Contract 2026.pdf").first().waitFor({ timeout: 10000 });
+    await page
+      .getByText("Contract 2026.pdf")
+      .first()
+      .waitFor({ timeout: 10000 * P });
     await page.getByRole("button", { name: "Save changes" }).click();
     // Saved, the list opens; the invoice's page shows the contract as a link.
     await page.waitForURL(/\/invoices$/);
     await open(page, `${base}/invoices/${id}`);
-    await page.getByRole("link", { name: "Contract 2026.pdf" }).first().waitFor({ timeout: 10000 });
+    await page
+      .getByRole("link", { name: "Contract 2026.pdf" })
+      .first()
+      .waitFor({ timeout: 10000 * P });
     const served = await page.request.get(`${base}/files/invoice/${id}/contract`);
     const headers = served.headers();
     if (
@@ -3854,7 +3918,7 @@ async function documentFlow(dir, base) {
     await page.getByRole("button", { name: "Remove" }).first().click();
     await page.getByRole("button", { name: "Save changes" }).click();
     for (let i = 0; existsSync(join(dir, "data", "uploads", stored)); i++) {
-      if (i === 50) throw new Error("the removed contract's file is still there");
+      if (i === 50 * P) throw new Error("the removed contract's file is still there");
       await page.waitForTimeout(100);
     }
     console.log(
@@ -3888,12 +3952,12 @@ async function copyFlow(base) {
     await page
       .getByLabel("Number")
       .and(page.locator('[value="COPY-900"]'))
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await page
       .locator("section", { hasText: "Lines" })
       .locator("tbody tr")
       .first()
-      .waitFor({ timeout: 10000 })
+      .waitFor({ timeout: 10000 * P })
       .catch(() => {
         throw new Error("the copy has no lines");
       });
@@ -3907,16 +3971,16 @@ async function copyFlow(base) {
     await page.getByRole("heading", { name: "2026-006", exact: true }).waitFor();
     const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
     await markSent.click();
-    await markSent.waitFor({ state: "detached", timeout: 10000 });
+    await markSent.waitFor({ state: "detached", timeout: 10000 * P });
     for (let i = 0; (await page.getByLabel("Status").inputValue()) !== "sent"; i++) {
-      if (i === 50) throw new Error("the form still shows the status from before the action");
+      if (i === 50 * P) throw new Error("the form still shows the status from before the action");
       await page.waitForTimeout(100);
     }
     // The record's own history, for administrators: the action, with the field it changed.
     await page
       .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
       .getByText("(status)")
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: after an action on its page, the record's form shows the new values, and its history the action",
     );
@@ -3947,7 +4011,7 @@ async function formulaFlow(base) {
     await open(page, `${base}/invoice-lines/new`);
     await page.getByRole("textbox", { name: "Quantity *" }).fill("2");
     await page.getByRole("textbox", { name: "Unit price *" }).fill("12.50");
-    await page.getByText("€25.00").waitFor({ timeout: 5000 });
+    await page.getByText("€25.00").waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: a computed amount follows the inputs live");
   } catch (error) {
     console.log(
@@ -3977,7 +4041,9 @@ async function addChildFlow(base) {
     await page.getByRole("textbox", { name: "Unit price *" }).fill("40");
     await page.getByRole("button", { name: "Create invoice line" }).click();
     await page.waitForURL(`${base}/invoices/1`);
-    await page.getByRole("cell", { name: "Added from the invoice" }).waitFor({ timeout: 10000 });
+    await page
+      .getByRole("cell", { name: "Added from the invoice" })
+      .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: Add invoice line on an invoice opens the new line with the invoice fixed, and the line is on the invoice after",
     );
@@ -4383,7 +4449,7 @@ async function isolationFlow(dir, base) {
     await page.getByRole("textbox", { name: "Email *" }).fill("me@client.example.com");
     await page.getByRole("button", { name: "Create client" }).click();
     await page.waitForURL(`${base}/clients`);
-    await page.getByRole("cell", { name: "My Client", exact: true }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "My Client", exact: true }).waitFor({ timeout: 5000 * P });
     if (await page.getByText("Other Client").count())
       throw new Error("another user's client is listed");
     // Export CSV takes what the member may read, nothing more.
@@ -4399,7 +4465,7 @@ async function isolationFlow(dir, base) {
     if (await page.getByText("OTHER-001").count())
       throw new Error("another user's invoice is listed");
     await open(page, `${base}/invoices/${id}`);
-    await page.getByRole("heading", { name: "Not found" }).waitFor({ timeout: 5000 });
+    await page.getByRole("heading", { name: "Not found" }).waitFor({ timeout: 5000 * P });
     await open(page, `${base}/invoices/new`);
     const clients = await page.getByLabel("Client *").locator("option").allTextContents();
     if (clients.includes("Other Client")) throw new Error("another user's client can be chosen");
@@ -5045,7 +5111,11 @@ async function browserFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const expectText = async (name, text) => {
-    await page.getByText(text).filter({ visible: true }).first().waitFor({ timeout: 5000 });
+    await page
+      .getByText(text)
+      .filter({ visible: true })
+      .first()
+      .waitFor({ timeout: 5000 * P });
     console.log(`  ✓ browser: ${name}`);
   };
   try {
@@ -5104,7 +5174,7 @@ async function browserFlow(dir, base) {
     await page.waitForURL(/q=NORDIC/);
     await page
       .getByRole("cell", { name: "Baltic Freight AB", exact: true })
-      .waitFor({ state: "detached", timeout: 5000 });
+      .waitFor({ state: "detached", timeout: 5000 * P });
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
     console.log(
       "  ✓ browser: searching customers by name ignores case and keeps the search in the URL",
@@ -5150,7 +5220,7 @@ async function browserFlow(dir, base) {
     await notice.getByRole("button", { name: "Undo" }).click();
     await page
       .getByRole("cell", { name: "Mariehamn Marine AB", exact: true })
-      .waitFor({ timeout: 10000 });
+      .waitFor({ timeout: 10000 * P });
     await trashIt();
     // A unique value holds among live records only: the email is free again, and restoring the
     // trashed customer is refused while another has it.
@@ -5195,7 +5265,7 @@ async function browserFlow(dir, base) {
     await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
     await page
       .getByRole("cell", { name: "Mariehamn Marine AB", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 });
+      .waitFor({ state: "detached", timeout: 10000 * P });
     const kept = query(
       dir,
       "select count(*) as n from customers where name = 'Mariehamn Marine AB'",
@@ -5223,7 +5293,7 @@ async function browserFlow(dir, base) {
       .click();
     await customersTrash
       .getByRole("cell", { name: "Mariehamn Marine Again", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 });
+      .waitFor({ state: "detached", timeout: 10000 * P });
     await open(page, `${base}/customers`);
     await page.getByRole("cell", { name: "Mariehamn Marine Again", exact: true }).waitFor();
     await open(page, `${base}/team/activity`);
@@ -5287,7 +5357,7 @@ async function browserFlow(dir, base) {
     await removeDialog.getByRole("button", { name: "Remove user" }).click();
     await page
       .locator("tr", { hasText: "Dev sales" })
-      .waitFor({ state: "detached", timeout: 10000 });
+      .waitFor({ state: "detached", timeout: 10000 * P });
     const managed = query(
       dir,
       "select u.name from customers c join user u on u.id = c.account_manager_id where c.name = 'Arctic Outdoor Co'",
@@ -5308,12 +5378,14 @@ async function browserFlow(dir, base) {
     await page.getByRole("textbox", { name: "Total *" }).fill("99");
     await page.getByRole("button", { name: "Create order" }).click();
     await page.waitForURL(`${base}/orders`);
-    await page.getByRole("row", { name: /ORD-2001.*Skerry Software/ }).waitFor({ timeout: 5000 });
+    await page
+      .getByRole("row", { name: /ORD-2001.*Skerry Software/ })
+      .waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: an order is created for a customer chosen from a list");
 
     await open(page, `${base}/customers`);
     await page.getByRole("cell", { name: "Skerry Software", exact: true }).click();
-    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: the customer's page lists its orders");
 
     // Deleting a record that others point to (docs/design/delete-together.md): the dialog says
@@ -5351,9 +5423,11 @@ async function browserFlow(dir, base) {
       .click();
     await page
       .getByRole("cell", { name: "Skerry Software", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 });
+      .waitFor({ state: "detached", timeout: 10000 * P });
     await open(page, `${base}/orders`);
-    await page.getByRole("row", { name: /ORD-2001.*Skerry Software/ }).waitFor({ timeout: 5000 });
+    await page
+      .getByRole("row", { name: /ORD-2001.*Skerry Software/ })
+      .waitFor({ timeout: 5000 * P });
     const withLines = query(
       dir,
       "select action, details from audit_log where model = 'Order' and action in ('trashed', 'restored') order by id",
@@ -5373,8 +5447,8 @@ async function browserFlow(dir, base) {
     await page
       .getByRole("cell", { name: "Nordic Timber Oy", exact: true })
       .first()
-      .waitFor({ state: "detached", timeout: 5000 });
-    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
+      .waitFor({ state: "detached", timeout: 5000 * P });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: orders are found by their customer's name");
 
     await open(page, `${base}/customers`);
@@ -5394,12 +5468,12 @@ async function browserFlow(dir, base) {
     // The list refreshes after the action; the duplicate must disappear from it.
     await page
       .getByRole("cell", { name: "Skerry Software", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 })
+      .waitFor({ state: "detached", timeout: 10000 * P })
       .catch(() => {
         throw new Error("the duplicate is still there");
       });
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
-    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 });
+    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: the custom action merges customers and moves their orders");
 
     await page.getByRole("button", { name: "Sign out" }).click();
@@ -5509,7 +5583,7 @@ for (const [index, example] of examples.entries()) {
               exited.then((code) => `exited ${code}`),
               (async () => {
                 // Any answer at all: an app that refuses to run answers every request with 500.
-                for (let i = 0; i < 120; i++) {
+                for (let i = 0; i < 120 * P; i++) {
                   const answer = await fetch(
                     `http://localhost:${port + 300}/api/auth/get-session`,
                   ).catch(() => undefined);
@@ -5650,7 +5724,7 @@ for (const [index, example] of examples.entries()) {
             throw new Error(`answered with traceparent ${answer.headers.get("traceparent")}`);
           // The line is written as the answer goes out: wait for it.
           let line;
-          for (let i = 0; !line && i < 50; i++) {
+          for (let i = 0; !line && i < 50 * P * P; i++) {
             line = stop
               .output()
               .split("\n")

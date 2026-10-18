@@ -24,6 +24,11 @@ import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@mod
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
 
+// How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
+// a check that waits a minute on a quiet machine waits three under load, so a slow answer is
+// not read as a failure.
+const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
+
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
@@ -67,7 +72,7 @@ async function step(name, fn) {
     // What Code mode's Problems list said, for a failure the picture alone cannot explain (CI).
     const problems = await page
       .getByRole("list", { name: "Problems" })
-      .innerText({ timeout: 1000 })
+      .innerText({ timeout: 1000 * P })
       .catch(() => "");
     console.log(
       `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}${problems ? `\n    Problems: ${problems.replace(/\n+/g, " | ")}` : ""}`,
@@ -126,7 +131,7 @@ const browser = await chromium.launch();
 // Wide enough that the preview, beside No code and Smith, shows lists as tables.
 const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 try {
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 120 * P; i++) {
     try {
       if ((await fetch(`http://localhost:${port + 1}/health`)).ok) break;
     } catch {}
@@ -182,14 +187,14 @@ try {
     // replaced under us.
     await page
       .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
-      .waitFor({ state: "detached", timeout: 60000 });
+      .waitFor({ state: "detached", timeout: 60000 * P });
     await page.getByLabel("Preview address").fill(path);
     await page.getByRole("button", { name: "Go", exact: true }).click();
     // Go makes a new frame; until it has loaded the page, select mode sent would reach the old
     // one (marking it, so a test sees the mark) and a click would land on the new one, unmarked.
     // The old frame, on the same page, may be found in the moment before it is removed: then the
     // next one is waited for.
-    const deadline = Date.now() + 60000;
+    const deadline = Date.now() + 60000 * P;
     for (;;) {
       const frame = page.frames().find((f) => {
         if (f === page.mainFrame() || f.isDetached()) return false;
@@ -305,13 +310,13 @@ try {
     await firstWindow("code");
     const notes = page.getByRole("list", { name: "Worth considering" });
     const orders = notes.getByRole("listitem").filter({ hasText: "orders lists orders" });
-    await orders.getByRole("button", { name: "Apply" }).click({ timeout: 60000 });
-    await orders.waitFor({ state: "detached", timeout: 30000 });
+    await orders.getByRole("button", { name: "Apply" }).click({ timeout: 60000 * P });
+    await orders.waitFor({ state: "detached", timeout: 30000 * P });
     const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
     if (!/ {2}orders:\n(?: {4}.*\n)*? {4}filters: \[status, shippingMethod\]/.test(spec()))
       throw new Error("the orders page has no filters after Apply");
     await page.getByRole("button", { name: "Undo", exact: true }).click();
-    await orders.waitFor({ timeout: 30000 });
+    await orders.waitFor({ timeout: 30000 * P });
     if (/ {4}filters: \[status, shippingMethod\]/.test(spec()))
       throw new Error("undo left the filters");
     await op("setFilters", { page: "orders", fields: ["status"] });
@@ -335,7 +340,7 @@ try {
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
         for (let i = 0; i < 7; i++) {
-          await card.waitFor({ timeout: 20000 });
+          await card.waitFor({ timeout: 20000 * P });
           const at = await card.getAttribute("data-guide-card");
           seen.push(at);
           // Beside a place that is on the screen.
@@ -362,7 +367,7 @@ try {
               return at && at !== seen;
             },
             code.at(-1) ?? "layout",
-            { timeout: 20000 },
+            { timeout: 20000 * P },
           );
           const at = await card.getAttribute("data-guide-card");
           code.push(at);
@@ -393,7 +398,7 @@ try {
     "the preview opens with the owner signed in as an administrator (finding 15)",
     async () => {
       // Signed in by Studio, without a click: the customers page, which needs sign-in, opens.
-      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 120000 });
+      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 120000 * P });
     },
   );
   await step(
@@ -412,7 +417,7 @@ try {
         .filter({ visible: true })
         .first()
         .click();
-      await frame.waitForURL(/\/customers\/\d+$/, { timeout: 30000 });
+      await frame.waitForURL(/\/customers\/\d+$/, { timeout: 30000 * P });
       // Studio's address follows the page; the frame must not be loaded again for it.
       await page.waitForFunction(() =>
         document
@@ -423,7 +428,7 @@ try {
       if (!(await frame.evaluate(() => window.__sameDocument === true)))
         throw new Error("the preview loaded a new document");
       await frame.evaluate(() => history.back());
-      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 30000 });
+      await preview.getByRole("heading", { name: "Customers" }).waitFor({ timeout: 30000 * P });
     },
   );
   await step(
@@ -436,9 +441,12 @@ try {
         .locator("..")
         .getByRole("button", { name: "Add" })
         .click();
-      await last.getByText("Customers: added a website").first().waitFor({ timeout: 60000 });
+      await last
+        .getByText("Customers: added a website")
+        .first()
+        .waitFor({ timeout: 60000 * P });
       await openPreview("/customers/new");
-      await preview.getByLabel("Website").waitFor({ timeout: 60000 });
+      await preview.getByLabel("Website").waitFor({ timeout: 60000 * P });
       // Friendly names become spec names.
       const website = await entry(customer, "website");
       await website.getByLabel("New name for website").fill("webPage");
@@ -449,13 +457,13 @@ try {
         .click();
       await status
         .getByText("Customers: the website is now called web page")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       // The preview flashes what the change touched once it shows it (motion 9a), and says so:
       // the flash is over in 1.6 s, so the test reads what Studio heard, which stays on the
       // frame. The page shows the field under its new name.
       await page
         .locator('iframe[title="App preview"][data-flashed~="field:Customer.webPage"]')
-        .waitFor({ state: "attached", timeout: 90000 });
+        .waitFor({ state: "attached", timeout: 90000 * P });
       await preview.locator('[data-sm-concept="field:Customer.webPage"]').first().waitFor();
     },
   );
@@ -467,18 +475,18 @@ try {
       await segment.getByLabel("Records with government get").selectOption("publicSector");
       await segment.getByRole("button", { name: "Change field" }).click();
       const apply = page.getByRole("button", { name: "Apply anyway" });
-      if (await apply.isVisible({ timeout: 5000 }).catch(() => false)) await apply.click();
+      if (await apply.isVisible({ timeout: 5000 * P }).catch(() => false)) await apply.click();
       await last
         .getByText(/public sector/i)
         .first()
-        .waitFor({ timeout: 90000 });
+        .waitFor({ timeout: 90000 * P });
       await openPreview("/customers");
       // A migration restarts the preview, which takes longer than a plain change.
       await preview
         .getByText("Public sector")
         .filter({ visible: true })
         .first()
-        .waitFor({ timeout: 120000 });
+        .waitFor({ timeout: 120000 * P });
       if (await preview.getByText("Government", { exact: true }).filter({ visible: true }).count())
         throw new Error("a customer still shows Government");
     },
@@ -495,16 +503,16 @@ try {
       await last
         .getByText(/cancel ?order/i)
         .first()
-        .waitFor({ timeout: 90000 });
+        .waitFor({ timeout: 90000 * P });
       await openPreview("/orders");
       // The button is on the placed orders only, and does what it says.
       const row = preview.locator("tr", { hasText: "ORD-1007" }).filter({ visible: true });
       // The page answers clicks once React has taken it over; a press made earlier is lost.
-      await preview.locator("body[data-hydrated]").waitFor({ timeout: 60000 });
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 60000 * P });
       for (let attempt = 1; ; attempt++) {
-        await row.getByRole("button", { name: "Cancel order" }).click({ timeout: 60000 });
+        await row.getByRole("button", { name: "Cancel order" }).click({ timeout: 60000 * P });
         try {
-          await row.getByText("Canceled").waitFor({ timeout: 10000 });
+          await row.getByText("Canceled").waitFor({ timeout: 10000 * P });
           break;
         } catch (error) {
           if (attempt === 3) throw error;
@@ -528,11 +536,14 @@ try {
       await page
         .getByRole("alert")
         .getByText("this deletes the phone column")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await page.getByRole("button", { name: "Apply anyway" }).click();
-      await last.getByText("Customers: removed the phone").first().waitFor({ timeout: 60000 });
+      await last
+        .getByText("Customers: removed the phone")
+        .first()
+        .waitFor({ timeout: 60000 * P });
       await status.getByRole("button", { name: "Undo this change" }).click();
-      await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 });
+      await status.getByText("Undid: Customers: removed the phone").waitFor({ timeout: 60000 * P });
       await last.getByText("Undid: Customers: removed the phone").first().waitFor();
     },
   );
@@ -541,7 +552,7 @@ try {
     const grid = page.getByRole("region", { name: "Who can" });
     // Sales may add every kind of record (create: all): taking customers away leaves orders.
     await grid.getByRole("checkbox", { name: "sales may add customers", exact: true }).click();
-    await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 });
+    await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 * P });
     await sub("Behavior");
   });
 
@@ -551,12 +562,12 @@ try {
       const authFile = join(dir, "smithable.auth.yml");
       const before = readFileSync(authFile, "utf8");
       const waitAuth = async (fits, what) => {
-        for (let i = 0; i < 60 && !fits(readFileSync(authFile, "utf8")); i++)
+        for (let i = 0; i < 60 * P && !fits(readFileSync(authFile, "utf8")); i++)
           await new Promise((r) => setTimeout(r, 1000));
         if (!fits(readFileSync(authFile, "utf8")))
           throw new Error(`no ${what} in smithable.auth.yml:\n${readFileSync(authFile, "utf8")}`);
         // A change made while another runs is dropped: the next waits for Studio to be done.
-        await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
+        await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 * P });
       };
       await page.getByRole("tab", { name: "Who can" }).click();
       const grid = page.getByRole("region", { name: "Who can" });
@@ -570,7 +581,7 @@ try {
         await box(name).click();
         changes++;
         await waitAuth(fits, what);
-        for (let i = 0; i < 60 && (await box(name).isChecked()) === was; i++)
+        for (let i = 0; i < 60 * P && (await box(name).isChecked()) === was; i++)
           await new Promise((r) => setTimeout(r, 500));
         if ((await box(name).isChecked()) === was)
           throw new Error(`${name} did not follow the file`);
@@ -582,7 +593,7 @@ try {
         (t) => /create: \[Customer, Order\]/.test(t),
         "create: [Customer, Order]",
       );
-      await status.getByText("sales may add customers, orders").waitFor({ timeout: 60000 });
+      await status.getByText("sales may add customers, orders").waitFor({ timeout: 60000 * P });
       // Under "pages: all" an untick writes the rest; the header writes all again.
       await tick("sales may open the customers page", (t) => !/pages: all/.test(t), "a page list");
       await tick(
@@ -597,13 +608,13 @@ try {
       const unseen = grid.getByText(
         "Tick See too, or sales cannot open the customers they may change.",
       );
-      await unseen.waitFor({ state: "attached", timeout: 60000 });
+      await unseen.waitFor({ state: "attached", timeout: 60000 * P });
       await tick(
         "sales may see everyone's customers",
         (t) => /read: \[Customer\]/.test(t),
         "read: [Customer]",
       );
-      await unseen.waitFor({ state: "detached", timeout: 60000 });
+      await unseen.waitFor({ state: "detached", timeout: 60000 * P });
       // Anyone reading customers is told they hold personal data.
       await tick(
         "Anyone may read customers",
@@ -612,7 +623,7 @@ try {
       );
       await grid
         .getByText(/Anyone on the internet can read .*email/)
-        .waitFor({ state: "attached", timeout: 60000 });
+        .waitFor({ state: "attached", timeout: 60000 * P });
       // A new role starts empty, with the note to tick its pages; new users may get it.
       const roles = page.getByRole("region", { name: "Roles" });
       await roles.getByLabel("New role's name").fill("teacher");
@@ -625,7 +636,7 @@ try {
       );
       await grid
         .getByText("teacher opens no page yet: tick the pages they use.")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await roles.getByLabel("New users get").selectOption("teacher");
       changes++;
       await waitAuth((t) => /defaultRole: teacher/.test(t), "defaultRole: teacher");
@@ -635,24 +646,28 @@ try {
       await asking.getByLabel("Who gets Ask").selectOption("signed-in");
       changes++;
       await waitAuth((t) => /assistant:\n {2}for: signed-in/.test(t), "assistant for signed-in");
-      await preview.getByRole("button", { name: "Ask", exact: true }).waitFor({ timeout: 90000 });
+      await preview
+        .getByRole("button", { name: "Ask", exact: true })
+        .waitFor({ timeout: 90000 * P });
       // Its name from the content file, shown on its button; its voice in the ux file.
       await asking.getByLabel("Ask's name").fill("Nova");
       await asking.getByLabel("Ask's name").blur();
       changes++;
       const contentFile = join(dir, "smithable.content.yml");
-      for (let i = 0; i < 60 && !/name: Nova/.test(readFileSync(contentFile, "utf8")); i++)
+      for (let i = 0; i < 60 * P && !/name: Nova/.test(readFileSync(contentFile, "utf8")); i++)
         await new Promise((r) => setTimeout(r, 1000));
-      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
-      await preview.getByRole("button", { name: "Nova", exact: true }).waitFor({ timeout: 90000 });
+      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 * P });
+      await preview
+        .getByRole("button", { name: "Nova", exact: true })
+        .waitFor({ timeout: 90000 * P });
       await asking.getByLabel("Ask's voice").selectOption("friendly");
       changes++;
       const uxFile = join(dir, "smithable.ux.yml");
-      for (let i = 0; i < 60 && !/voice: friendly/.test(readFileSync(uxFile, "utf8")); i++)
+      for (let i = 0; i < 60 * P && !/voice: friendly/.test(readFileSync(uxFile, "utf8")); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (!/voice: friendly/.test(readFileSync(uxFile, "utf8")))
         throw new Error("no voice in the ux file");
-      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 });
+      await page.getByText("Working…").waitFor({ state: "detached", timeout: 60000 * P });
       await asking.getByLabel("Who gets Ask").selectOption("off");
       changes++;
       await waitAuth((t) => !/^assistant:/m.test(t), "no assistant");
@@ -678,8 +693,10 @@ try {
       await page.getByRole("button", { name: "Select" }).click();
       await preview
         .locator("html[data-sm-selecting]")
-        .waitFor({ state: "attached", timeout: 60000 });
-      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+        .waitFor({ state: "attached", timeout: 60000 * P });
+      await preview
+        .locator('[data-sm-concept="field:Customer.email"]')
+        .click({ timeout: 60000 * P });
       // Behavior opens at the field picked.
       const email = page
         .getByRole("region", { name: "What the app does" })
@@ -689,13 +706,13 @@ try {
       await email.getByRole("button", { name: "Change field" }).click();
       await status
         .getByText("Customers: now an email (required, unique)")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       if (!(await project()).files.spec.includes("      email: email! unique\n"))
         throw new Error("spec not changed");
       await preview
         .locator('[data-sm-concept="field:Customer.email"]')
         .getByText("*")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
     },
   );
   await step(
@@ -705,10 +722,13 @@ try {
       await openPreview("/customers");
       await preview
         .locator("html[data-sm-selecting]")
-        .waitFor({ state: "attached", timeout: 60000 });
+        .waitFor({ state: "attached", timeout: 60000 * P });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
-      await header("email").dragTo(header("name"), { timeout: 60000 });
-      await last.getByText("in the customers table").first().waitFor({ timeout: 60000 });
+      await header("email").dragTo(header("name"), { timeout: 60000 * P });
+      await last
+        .getByText("in the customers table")
+        .first()
+        .waitFor({ timeout: 60000 * P });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
@@ -727,10 +747,10 @@ try {
         await openPreview("/customers");
         await preview
           .locator("html[data-sm-selecting]")
-          .waitFor({ state: "attached", timeout: 60000 });
-        await title.click({ timeout: 60000 });
+          .waitFor({ state: "attached", timeout: 60000 * P });
+        await title.click({ timeout: 60000 * P });
         try {
-          await title.and(preview.locator("[contenteditable=true]")).waitFor({ timeout: 5000 });
+          await title.and(preview.locator("[contenteditable=true]")).waitFor({ timeout: 5000 * P });
           break;
         } catch (error) {
           if (attempt === 3) throw error;
@@ -741,11 +761,11 @@ try {
       await last
         .getByText("Changed the Customers page's title to “Clients”")
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();
-      await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 });
+      await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 * P });
     },
   );
   await step("colors of a choice and a page's icon, from the Look tab", async () => {
@@ -758,12 +778,15 @@ try {
     await last
       .getByText("Show Order.status shipped as success")
       .first()
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     await page
       .getByRole("region", { name: "Pages" })
       .getByLabel("Icon of Orders")
       .selectOption("truck");
-    await last.getByText(/truck/i).first().waitFor({ timeout: 60000 });
+    await last
+      .getByText(/truck/i)
+      .first()
+      .waitFor({ timeout: 60000 * P });
     const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     if (!ux.includes("shipped: success") || !ux.includes("truck")) throw new Error(ux);
   });
@@ -774,11 +797,11 @@ try {
       await theme.getByRole("button", { name: "Compact" }).click();
       await theme
         .getByRole("button", { name: "Compact", pressed: true })
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await theme.getByRole("button", { name: "Lively" }).click();
       await theme
         .getByRole("button", { name: "Lively", pressed: true })
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       const themes = page.getByRole("list", { name: "Themes" });
       // The project's own theme has its card, named with its file.
       await themes
@@ -802,11 +825,14 @@ try {
         }, 50);
       });
       await themes.getByRole("button", { name: /Playful/ }).click();
-      await last.getByText("Use the Playful theme").first().waitFor({ timeout: 60000 });
+      await last
+        .getByText("Use the Playful theme")
+        .first()
+        .waitFor({ timeout: 60000 * P });
       await themes
         .getByRole("button", { name: /Playful/, pressed: true })
-        .waitFor({ timeout: 60000 });
-      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
+        .waitFor({ timeout: 60000 * P });
+      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       const watch = await page.evaluate(() => {
         clearInterval(window.__previewTimer);
         return window.__previewWatch;
@@ -821,7 +847,7 @@ try {
   await step("a theme and its undo change no package: its font was installed already", async () => {
     const before = readFileSync(join(dir, "package.json"), "utf8");
     await page.getByRole("button", { name: "Undo", exact: true }).click();
-    await status.getByText(/Undid: Use the Playful theme/).waitFor({ timeout: 60000 });
+    await status.getByText(/Undid: Use the Playful theme/).waitFor({ timeout: 60000 * P });
     if (readFileSync(join(dir, "package.json"), "utf8") !== before)
       throw new Error("the theme changed package.json");
     const after = JSON.parse(before).dependencies;
@@ -850,15 +876,15 @@ try {
       // The undo before reloads the preview (without a restart, a second later): until Studio
       // has had its "changed" the undo is the change under way, and a frame still loading is
       // about:blank, whose messages carry Studio's own origin and are rightly not the preview's.
-      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 });
-      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
+      await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
       await say();
-      for (const deadline = Date.now() + 30000; (await unstyled()) === before; ) {
+      for (const deadline = Date.now() + 30000 * P; (await unstyled()) === before; ) {
         if (Date.now() > deadline) throw new Error("the preview was not started again");
         await new Promise((r) => setTimeout(r, 500));
       }
       // It comes back; said again without a change in between, it is not started again.
-      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 });
+      await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
       await say();
       await new Promise((r) => setTimeout(r, 2000));
       if ((await unstyled()) !== before + 1) throw new Error("the preview was started again twice");
@@ -876,20 +902,23 @@ try {
       await page
         .getByText(/The theme is refused/)
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       const forest = readFileSync(join(dir, "themes/forest.yml"), "utf8");
       await look
         .getByLabel("Theme", { exact: true })
         .fill(forest.replace("name: forest", "name: moss"));
       await look.getByRole("button", { name: "Add and use" }).click();
-      await last.getByText("Add theme moss and use it").first().waitFor({ timeout: 60000 });
+      await last
+        .getByText("Add theme moss and use it")
+        .first()
+        .waitFor({ timeout: 60000 * P });
       if (!existsSync(join(dir, "themes/moss.yml"))) throw new Error("no themes/moss.yml");
       await page
         .getByRole("list", { name: "Themes" })
         .getByRole("button", { name: /Moss/, pressed: true })
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await page.getByRole("button", { name: "Undo", exact: true }).click();
-      await status.getByText(/Undid: Add theme moss/).waitFor({ timeout: 60000 });
+      await status.getByText(/Undid: Add theme moss/).waitFor({ timeout: 60000 * P });
       if (existsSync(join(dir, "themes/moss.yml"))) throw new Error("undo left themes/moss.yml");
     },
   );
@@ -898,9 +927,9 @@ try {
     const before = (await project()).files.spec;
     await page.getByLabel("Describe a change").fill("Who can add orders?");
     await page.getByRole("button", { name: "Make the change" }).click();
-    await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 });
+    await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 * P });
     // A question is looked up in the docs too: what they say, or that they cannot be reached.
-    await page.getByRole("region", { name: "From the docs" }).waitFor({ timeout: 30000 });
+    await page.getByRole("region", { name: "From the docs" }).waitFor({ timeout: 30000 * P });
     if ((await project()).files.spec !== before) throw new Error("the spec changed");
   });
   await step(
@@ -909,13 +938,13 @@ try {
       await page.getByLabel("Describe a change").fill("Customers without notes");
       await page.getByRole("button", { name: "Make the change" }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
-      await proposal.getByText("(loses data)").waitFor({ timeout: 30000 });
+      await proposal.getByText("(loses data)").waitFor({ timeout: 30000 * P });
       await proposal.getByRole("button", { name: "Discard" }).click();
       await page
         .getByRole("list", { name: "Thread" })
         .getByText("Discarded.")
         .last()
-        .waitFor({ timeout: 30000 });
+        .waitFor({ timeout: 30000 * P });
     },
   );
   await step(
@@ -929,7 +958,7 @@ try {
       const shown = page.getByRole("region", { name: "Proposal" });
       await shown
         .getByText("Customers: added a mobile (a phone number)")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await shown.getByRole("button", { name: "Discard" }).waitFor();
       await shown.getByLabel("Refine the proposal").waitFor();
       await shown.getByRole("button", { name: "Apply" }).click();
@@ -938,17 +967,17 @@ try {
           // Which model made it, in words; the trace keeps the tier and tokens.
           /^Done: Customers: added a mobile \(a phone number\)\. Made with fake-model\./,
         )
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await trace
         .getByText("Customers: added a mobile (a phone number)")
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
       await trace
         .getByRole("region", { name: "What changed" })
         .getByText(/a mobile \(a phone number\)/)
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
     },
   );
   await step(
@@ -969,7 +998,7 @@ try {
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("Customer")') })
         .first()
-        .waitFor({ timeout: 10000 });
+        .waitFor({ timeout: 10000 * P });
       await prompts.getByRole("button", { name: "Help me add…" }).click();
       if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")
         throw new Error("Help me add did not start the request");
@@ -988,7 +1017,7 @@ try {
           return r && Math.abs(r.left) < 2 && r.width > 700;
         },
         null,
-        { timeout: 5000 },
+        { timeout: 5000 * P },
       );
       if (await page.getByRole("tab", { name: "Behavior" }).count())
         throw new Error("No code shows beside the preview");
@@ -1006,7 +1035,7 @@ try {
           return code && code.getBoundingClientRect().width > 760;
         },
         null,
-        { timeout: 10000 },
+        { timeout: 10000 * P },
       );
       await pick("Smith");
       await page.getByLabel("Describe a change").waitFor();
@@ -1023,7 +1052,7 @@ try {
     "one preview whatever moves: the address follows it, and putting Code first keeps its page",
     async () => {
       await openPreview("/orders");
-      await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 });
+      await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 * P });
       // Navigating inside the app (opening an order) shows in the address.
       // A click before the reloaded page is ready does nothing: try again, a few times.
       for (let attempt = 1; ; attempt++) {
@@ -1040,7 +1069,7 @@ try {
                 document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
               ),
             null,
-            { timeout: 5000 },
+            { timeout: 5000 * P },
           );
           break;
         } catch (error) {
@@ -1052,12 +1081,12 @@ try {
       await page.getByRole("region", { name: "Code" }).waitFor();
       if ((await page.getByLabel("Preview address").inputValue()) !== opened)
         throw new Error("the preview lost its page when Code came first");
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
       await page.getByRole("radio", { name: "One window" }).check({ force: true });
       await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
       await firstWindow("nocode");
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 });
+      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
     },
   );
   await step(
@@ -1065,15 +1094,17 @@ try {
     async () => {
       await openPreview("/customers/new");
       await page.getByRole("button", { name: "Select" }).click();
-      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      await preview
+        .locator('[data-sm-concept="field:Customer.email"]')
+        .click({ timeout: 60000 * P });
       const email = page
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("email")') });
-      await email.first().waitFor({ timeout: 10000 });
+      await email.first().waitFor({ timeout: 10000 * P });
       await page.getByRole("button", { name: "Select" }).click();
       // A reload keeps the place (the browser tab's session).
       await page.reload();
-      await email.first().waitFor({ timeout: 30000 });
+      await email.first().waitFor({ timeout: 30000 * P });
       await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.ux.yml");
       // Beside the file, its part of the spec reference, following the file chosen.
@@ -1091,7 +1122,7 @@ try {
       await page.keyboard.type("x");
       const kept = async (when) => {
         const editor = page.getByLabel("smithable.ux.yml", { exact: true });
-        await editor.waitFor({ timeout: 30000 });
+        await editor.waitFor({ timeout: 30000 * P });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== "smithable.ux.yml")
           throw new Error(`${when}: another file is open`);
         if ((await editor.evaluate((e) => e.value)) !== `x${saved}`)
@@ -1114,7 +1145,7 @@ try {
       }, saved);
       // The ux file says where its choices have controls, with a way there.
       await page.getByRole("button", { name: "Open Look" }).click();
-      await page.getByRole("tab", { name: "Look", selected: true }).waitFor({ timeout: 10000 });
+      await page.getByRole("tab", { name: "Look", selected: true }).waitFor({ timeout: 10000 * P });
       await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
       await firstWindow("nocode");
@@ -1130,10 +1161,12 @@ try {
       // The page in the frame is in select mode before anything is clicked: a click before it is
       // the app's own (a new frame after Go hears of select mode only once it has loaded).
       const selecting = () =>
-        preview.locator("html[data-sm-selecting]").waitFor({ state: "attached", timeout: 60000 });
+        preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 * P });
       await selecting();
       const editorText = async (file) => {
-        await page.getByLabel(file, { exact: true }).waitFor({ timeout: 10000 });
+        await page.getByLabel(file, { exact: true }).waitFor({ timeout: 10000 * P });
         if ((await page.getByLabel("File", { exact: true }).inputValue()) !== file)
           throw new Error(`another file is open than ${file}`);
         return page
@@ -1141,7 +1174,7 @@ try {
           .evaluate((e) => e.value.slice(e.selectionStart, e.selectionEnd));
       };
       const subtitle = preview.locator('[data-sm-text="pages.customers.subtitle"]');
-      await subtitle.click({ timeout: 60000 });
+      await subtitle.click({ timeout: 60000 * P });
       const text = await editorText("smithable.content.yml");
       if (text !== "Keep every relationship in view.")
         throw new Error(`the content file shows "${text}", not the subtitle`);
@@ -1150,7 +1183,9 @@ try {
         throw new Error("the text became editable with Code first");
       await openPreview("/customers/new");
       await selecting();
-      await preview.locator('[data-sm-concept="field:Customer.email"]').click({ timeout: 60000 });
+      await preview
+        .locator('[data-sm-concept="field:Customer.email"]')
+        .click({ timeout: 60000 * P });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
       await page.getByRole("button", { name: "Select" }).click();
@@ -1167,7 +1202,7 @@ try {
     await last
       .getByText("Undid: Customers: added a mobile (a phone number)")
       .first()
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
   });
   // A start is 15 s in a hosted workspace: after an undo the preview opens the database that
   // was put back, in the process it runs in, and is not started again.
@@ -1185,7 +1220,7 @@ try {
     await redo.click();
     // The button is off while Studio works too: first the change made again, then nothing left.
     let newest = "";
-    for (const deadline = Date.now() + 90000; ; ) {
+    for (const deadline = Date.now() + 90000 * P; ; ) {
       newest = await last.locator("li").first().innerText();
       if (newest.includes("a mobile") && !newest.includes("Undid")) break;
       if (Date.now() > deadline) throw new Error(`after Redo the newest change is ${newest}`);
@@ -1194,7 +1229,7 @@ try {
     await page
       .locator("header")
       .getByRole("button", { name: "Redo", exact: true, disabled: true })
-      .waitFor({ timeout: 30000 });
+      .waitFor({ timeout: 30000 * P });
   });
   await step(
     "an earlier change is undone by its X as a new change; one a later change built on is refused, saying why",
@@ -1204,7 +1239,7 @@ try {
         .getByRole("button", { name: /^Undo: .*in the customers table/ })
         .first()
         .click();
-      await status.getByText(/^Undid: .*customers table/).waitFor({ timeout: 60000 });
+      await status.getByText(/^Undid: .*customers table/).waitFor({ timeout: 60000 * P });
       if (/columns: \[email, name/.test(readFileSync(join(dir, "smithable.ux.yml"), "utf8")))
         throw new Error("the columns' change was not undone");
       if ((await changeCount()) !== count + 1)
@@ -1212,7 +1247,7 @@ try {
       // The website was renamed later: undoing its adding is refused, and nothing changes.
       await trace.getByRole("button", { name: "Undo: Customers: added a website" }).click();
       const refused = page.getByRole("alert").first();
-      await refused.waitFor({ timeout: 60000 });
+      await refused.waitFor({ timeout: 60000 * P });
       await refused.getByRole("button", { name: "Dismiss" }).click();
       if ((await changeCount()) !== count + 1) throw new Error("a refused undo changed something");
     },
@@ -1225,12 +1260,12 @@ try {
     const content = () => readFileSync(join(dir, "smithable.content.yml"), "utf8");
     await look("Language").getByLabel("The app's language").selectOption("sv");
     for (let i = 0; !/^language: sv$/m.test(content()); i++) {
-      if (i === 60) throw new Error("the language was not set");
+      if (i === 60 * P) throw new Error("the language was not set");
       await new Promise((r) => setTimeout(r, 1000));
     }
     await look("Language").getByLabel("The app's language").selectOption("en");
     for (let i = 0; /^language:/m.test(content()); i++) {
-      if (i === 60) throw new Error("English did not take the language line away");
+      if (i === 60 * P) throw new Error("English did not take the language line away");
       await new Promise((r) => setTimeout(r, 1000));
     }
     // The app's logo (app-logo.md §5): a file from the computer, shown in the preview's frame,
@@ -1243,7 +1278,7 @@ try {
     writeFileSync(mark, png(64, 64));
     await look("Logo").locator('input[type="file"]').setInputFiles(mark);
     for (let i = 0; !/src: images\/logo\.png/.test(content()); i++) {
-      if (i === 60) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
+      if (i === 60 * P) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
       await new Promise((r) => setTimeout(r, 1000));
     }
     if (!existsSync(join(dir, "public", "images", "logo.png")))
@@ -1251,28 +1286,33 @@ try {
     await preview
       .locator('img[data-part="logo"][src="/images/logo.png"] >> visible=true')
       .first()
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     await look("Logo").getByRole("button", { name: "Remove" }).click();
     for (let i = 0; /^logo:/m.test(content()); i++) {
-      if (i === 60) throw new Error("Remove did not take the logo away");
+      if (i === 60 * P) throw new Error("Remove did not take the logo away");
       await new Promise((r) => setTimeout(r, 1000));
     }
-    await look("Logo").getByText("Add a logo").waitFor({ timeout: 60000 });
+    await look("Logo")
+      .getByText("Add a logo")
+      .waitFor({ timeout: 60000 * P });
     await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
     await look("Font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
-    await last.getByText(/draft/i).first().waitFor({ timeout: 60000 });
+    await last
+      .getByText(/draft/i)
+      .first()
+      .waitFor({ timeout: 60000 * P });
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
-    for (let i = 0; i < 60 && !/email: phone/.test(ux()); i++)
+    for (let i = 0; i < 60 * P && !/email: phone/.test(ux()); i++)
       await new Promise((r) => setTimeout(r, 1000));
     if (!/email: phone/.test(ux())) throw new Error(`no second line in smithable.ux.yml:\n${ux()}`);
     // A change made while another runs is dropped: wait for the trace.
     await last
       .getByText("Show phone under email in the customers table")
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     const columns = look("Pages").getByRole("list", { name: "Columns of Customers" });
     const before = await changeCount();
     await columns
@@ -1282,15 +1322,16 @@ try {
     await columns
       .getByRole("button", { name: /^Show / })
       .first()
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     // The last change is done before the next (a change while one runs is not made).
     // (Which columns depends on the fields added before: one change more is enough.)
-    for (let i = 0; i < 60 && (await changeCount()) === before; i++)
+    for (let i = 0; i < 60 * P && (await changeCount()) === before; i++)
       await new Promise((r) => setTimeout(r, 1000));
     if ((await changeCount()) === before) throw new Error("hiding a column made no change");
     // A list page's view and order, and its form's columns and sections (look.md §1.1–1.3).
     const waitUx = async (re) => {
-      for (let i = 0; i < 60 && !re.test(ux()); i++) await new Promise((r) => setTimeout(r, 1000));
+      for (let i = 0; i < 60 * P && !re.test(ux()); i++)
+        await new Promise((r) => setTimeout(r, 1000));
       if (!re.test(ux())) throw new Error(`no ${re} in smithable.ux.yml:\n${ux()}`);
     };
     const pages = look("Pages");
@@ -1322,7 +1363,7 @@ try {
     await page
       .getByText(/Order cannot be a thread: it has no long text field/)
       .first()
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     if (/lists:/.test(ux())) throw new Error("a refused conversation changed smithable.ux.yml");
     await sub("Behavior");
   });
@@ -1333,7 +1374,7 @@ try {
     const method = await entry(order, "shippingMethod");
     await method.getByRole("button", { name: "Remove shippingMethod", exact: true }).click();
     const alert = page.getByRole("alert").first();
-    await alert.waitFor({ timeout: 60000 });
+    await alert.waitFor({ timeout: 60000 * P });
     const said = await alert.innerText();
     if (/smithable\.yml|removeField|:\d+:\d+/.test(said))
       throw new Error(`the refusal speaks the files' language: ${said}`);
@@ -1354,9 +1395,9 @@ try {
       await customer
         .getByRole("status", { name: "Import preview" })
         .getByText('"creditLimit":2500000')
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await customer.getByRole("button", { name: "Import", exact: true }).click();
-      await status.getByText("2 added").waitFor({ timeout: 60000 });
+      await status.getByText("2 added").waitFor({ timeout: 60000 * P });
     },
   );
   await step("a page's code is made the person's own from its entry in Behavior", async () => {
@@ -1364,10 +1405,10 @@ try {
     await customers.getByRole("button", { name: "Make this page's code your own" }).click();
     await customers
       .getByText("the page is now src/custom/pages/customers.tsx")
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     await page
       .getByText("This page's code is your own: src/custom/pages/customers.tsx")
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
   });
   await step(
     "a landing page and a contact section show in the preview, with a theme and background of their own from Look",
@@ -1376,30 +1417,30 @@ try {
       await last
         .getByText("Added the Home page, a landing page for visitors")
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await op("addSection", { page: "home", section: "contact" });
       await last
         .getByText("Added a contact section to the Home page")
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       await openPreview("/");
       await preview
         .getByRole("heading", { name: "Acme CRM", level: 1 })
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await sub("Look");
       await page.getByLabel("Theme of Home").selectOption("playful");
       await last
         .getByText(/theme on the home page/i)
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       // A background of the owner's: picked, applied when the picker closes, in the CSS.
       await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
       await page.getByLabel("Background", { exact: true }).blur();
       await last
         .getByText(/background #f5efe6/i)
         .first()
-        .waitFor({ timeout: 60000 });
+        .waitFor({ timeout: 60000 * P });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
       // The contact section, added last, moved above the footer with its arrow.
@@ -1412,13 +1453,13 @@ try {
         const home = spec.slice(spec.indexOf("\n  home:"));
         return home.indexOf("contact:") < home.indexOf("footer:");
       };
-      for (let i = 0; i < 60 && !above(); i++) await new Promise((r) => setTimeout(r, 1000));
+      for (let i = 0; i < 60 * P && !above(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (!above()) throw new Error("the contact section was not moved above the footer");
       // The panel follows: the contact section is no longer last.
       const down = page
         .getByRole("list", { name: "Sections of Home" })
         .getByRole("button", { name: "Move Contact down" });
-      for (let i = 0; i < 60 && (await down.isDisabled()); i++)
+      for (let i = 0; i < 60 * P && (await down.isDisabled()); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
       await sub("Behavior");
@@ -1435,7 +1476,8 @@ try {
       const editor = page.getByLabel("smithable.yml", { exact: true });
       const text = await editor.evaluate((e) => e.value);
       const startCount = await changeCount();
-      const settled = () => page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
+      const settled = () =>
+        page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 * P });
       // Leaving the editor: the focus elsewhere.
       const leave = async () => {
         await editor.focus();
@@ -1585,7 +1627,7 @@ try {
       await page.keyboard.type("\nmodels: [broken");
       const save = page.getByRole("button", { name: "Save", exact: true });
       const until = async (done, what) => {
-        for (let i = 0; i < 100 && !(await done()); i++)
+        for (let i = 0; i < 100 * P && !(await done()); i++)
           await new Promise((r) => setTimeout(r, 100));
         if (!(await done())) throw new Error(what);
       };
@@ -1647,7 +1689,7 @@ try {
       .locator("header")
       .first()
       .click({ position: { x: 800, y: 10 } });
-    await page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 });
+    await page.getByText("Saved", { exact: true }).waitFor({ timeout: 60000 * P });
     if (!readFileSync(join(dir, "smithable.auth.yml"), "utf8").includes("  support:"))
       throw new Error("the auth file's edit was not saved on leaving");
     // A role's grant is completed with the spec's names: a kind of record for "create".
@@ -1683,7 +1725,7 @@ try {
     await trace
       .getByText(/smithable\.auth\.yml/)
       .first()
-      .waitFor({ timeout: 30000 });
+      .waitFor({ timeout: 30000 * P });
   });
   await step(
     "a failure offers Troubleshoot: what went wrong, the log's last lines, Report, Undo and Reload",
@@ -1697,7 +1739,7 @@ try {
       const save = page.getByRole("button", { name: "Save", exact: true });
       if (await save.isEnabled()) await save.click();
       const alert = page.getByRole("alert").filter({ hasText: "Nothing was changed." });
-      await alert.waitFor({ timeout: 120000 });
+      await alert.waitFor({ timeout: 120000 * P });
       await alert.getByRole("button", { name: "Troubleshoot" }).click();
       const dialog = page.getByRole("dialog", { name: "Troubleshoot" });
       await dialog.getByRole("region", { name: "Logs" }).waitFor();
@@ -1718,10 +1760,10 @@ try {
     // failed to load is not retried by the frame. Go to the page again until it shows, for up
     // to three minutes.
     const search = preview.getByRole("searchbox", { name: "Search by number" });
-    for (const deadline = Date.now() + 180000; ; ) {
+    for (const deadline = Date.now() + 180000 * P; ; ) {
       await openPreview("/orders");
       try {
-        await search.waitFor({ timeout: 30000 });
+        await search.waitFor({ timeout: 30000 * P });
         break;
       } catch (error) {
         if (Date.now() > deadline) throw error;
@@ -1732,7 +1774,7 @@ try {
     "a change whose regeneration fails is rolled back, and the preview comes back; so does a crashed one, and a page opened while it was down shows once it is up",
     async () => {
       const health = async () => {
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 60 * P; i++) {
           try {
             if ((await fetch(`http://localhost:${port + 1}/health`)).ok) return;
           } catch {}
@@ -1788,7 +1830,9 @@ try {
       // ("Starting…") and opens the page once the server answers again, without a reload.
       await openPreview("/customers");
       await health();
-      await preview.getByRole("heading", { name: "Clients", level: 1 }).waitFor({ timeout: 60000 });
+      await preview
+        .getByRole("heading", { name: "Clients", level: 1 })
+        .waitFor({ timeout: 60000 * P });
     },
   );
   await step("an agent changes the app over MCP (HTTP), and Studio shows it", async () => {
@@ -1810,16 +1854,16 @@ try {
     });
     await client.close();
     if (result.isError) throw new Error(result.content[0].text);
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * P; i++) {
       const { trace: made } = await (await fetch(`${base}/api/project`)).json();
       if (made[0]?.description === "Add field vatNumber (text) to Customer") break;
-      if (i === 59)
+      if (i === 60 * P - 1)
         throw new Error(`the agent's change is not the newest: ${made[0]?.description}`);
       await new Promise((r) => setTimeout(r, 500));
     }
     await page
       .getByText("smithable.yml changed on disk while you were editing.")
-      .waitFor({ timeout: 30000 });
+      .waitFor({ timeout: 30000 * P });
     if ((await editor.evaluate((e) => e.value)) !== typed)
       throw new Error("the unsaved edit was replaced");
     await page.getByRole("button", { name: "Use the file on disk" }).click();
@@ -1871,19 +1915,19 @@ try {
       await languages.getByLabel("Add a language").selectOption("sv");
       await languages.getByRole("button", { name: "Add", exact: true }).click();
       const texts = page.getByRole("region", { name: "Texts in Swedish" });
-      await texts.waitFor({ timeout: 60000 });
+      await texts.waitFor({ timeout: 60000 * P });
       await texts.getByText(/texts have no Swedish words yet/).waitFor();
       const file = join(dir, "smithable.content.sv.yml");
       const box = texts.getByLabel("Customers in Swedish").first();
       await box.fill("Kunder");
       await box.press("Enter");
-      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Kunder"); i++)
+      for (let i = 0; i < 60 * P && !readFileSync(file, "utf8").includes("Kunder"); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (!readFileSync(file, "utf8").includes("Kunder"))
         throw new Error(`the Swedish file has no Kunder:\n${readFileSync(file, "utf8")}`);
       await texts.getByRole("button", { name: "Remove Swedish" }).click();
-      await page.getByRole("button", { name: "Apply anyway" }).click({ timeout: 30000 });
-      for (let i = 0; i < 60 && existsSync(file); i++)
+      await page.getByRole("button", { name: "Apply anyway" }).click({ timeout: 30000 * P });
+      for (let i = 0; i < 60 * P && existsSync(file); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (existsSync(file)) throw new Error("removing Swedish left its file");
     },
@@ -1902,7 +1946,7 @@ try {
       const file = join(dir, "smithable.content.yml");
       for (
         let i = 0;
-        i < 60 && !readFileSync(file, "utf8").includes("Every client and their orders.");
+        i < 60 * P && !readFileSync(file, "utf8").includes("Every client and their orders.");
         i++
       )
         await new Promise((r) => setTimeout(r, 1000));
@@ -1926,7 +1970,11 @@ try {
       await box.fill("Everyone we sell to.");
       await box.press("Enter");
       const file = join(dir, "smithable.yml");
-      for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes("Everyone we sell to."); i++)
+      for (
+        let i = 0;
+        i < 60 * P && !readFileSync(file, "utf8").includes("Everyone we sell to.");
+        i++
+      )
         await new Promise((r) => setTimeout(r, 1000));
       if (!readFileSync(file, "utf8").includes("description: Everyone we sell to."))
         throw new Error("the description did not reach smithable.yml");
@@ -1940,7 +1988,7 @@ try {
       await area("models");
       const file = join(dir, "smithable.yml");
       const waitFile = async (text) => {
-        for (let i = 0; i < 60 && !readFileSync(file, "utf8").includes(text); i++)
+        for (let i = 0; i < 60 * P && !readFileSync(file, "utf8").includes(text); i++)
           await new Promise((r) => setTimeout(r, 1000));
         if (!readFileSync(file, "utf8").includes(text))
           throw new Error(`no ${text} in smithable.yml`);
@@ -1954,7 +2002,7 @@ try {
       await words.fill("suppliers with a name and an email");
       await words.press("Enter");
       const kind = wizard.getByLabel("Kind of record", { exact: true });
-      await kind.waitFor({ timeout: 60000 });
+      await kind.waitFor({ timeout: 60000 * P });
       if (readFileSync(file, "utf8").includes("Supplier:"))
         throw new Error("the wizard wrote before Create");
       await wizard.getByRole("button", { name: "Dismiss" }).click();
@@ -2010,7 +2058,7 @@ try {
         await pageEntry("sales").locator(`summary:text-is("sales")`).click();
       await renameBox("sales").fill("orders");
       await renameBox("sales").locator("..").getByRole("button", { name: "Rename" }).click();
-      for (let i = 0; i < 60 && readFileSync(file, "utf8").includes("  sales:"); i++)
+      for (let i = 0; i < 60 * P && readFileSync(file, "utf8").includes("  sales:"); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (readFileSync(file, "utf8").includes("  sales:"))
         throw new Error("sales was not renamed back");
@@ -2079,7 +2127,7 @@ try {
   // The preview answers on the app that came in, in the process it was running in: a start
   // would say so in Studio's log, which begins anew with the app.
   const previewUp = async (at) => {
-    for (let i = 0; i < 480; i++) {
+    for (let i = 0; i < 480 * P; i++) {
       const up = await fetch(`http://localhost:${at}/health`).then(
         (r) => r.ok,
         () => false,
@@ -2091,7 +2139,7 @@ try {
   };
   const notStartedAgain = async (studio) => {
     const at = Number(new URL(studio).port) + 1;
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 240 * P; i++) {
       if (
         await fetch(`http://localhost:${at}/health`).then(
           (r) => r.ok,
@@ -2099,7 +2147,7 @@ try {
         )
       )
         break;
-      if (i === 239) throw new Error("the preview did not answer on the new app");
+      if (i === 240 * P - 1) throw new Error("the preview did not answer on the new app");
       await new Promise((r) => setTimeout(r, 250));
     }
     await new Promise((r) => setTimeout(r, 2000));
@@ -2289,25 +2337,30 @@ try {
         // Builder with the app (docs/design/while-it-is-made.md stage one).
         const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         await watcher.goto(`${other}/?guide=off`);
-        await watcher.locator("header").first().waitFor({ timeout: 60000 });
+        await watcher
+          .locator("header")
+          .first()
+          .waitFor({ timeout: 60000 * P });
         const seen = (async () => {
           const screen = watcher.getByRole("region", { name: "Your app is being made" });
-          await screen.getByText("A booking site for a pilates studio").waitFor({ timeout: 15000 });
+          await screen
+            .getByText("A booking site for a pilates studio")
+            .waitFor({ timeout: 15000 * P });
           await screen.getByRole("progressbar").waitFor();
           if (!(await watcher.getByRole("button", { name: "Undo", exact: true }).isDisabled()))
             throw new Error("Undo is on while the app is being made");
           // Once drafted: the app's name, and one line of what it does, not the whole summary.
           await screen
             .getByRole("heading", { name: "Preparing Studio for Lotus Pilates" })
-            .waitFor({ timeout: 15000 });
+            .waitFor({ timeout: 15000 * P });
           if ((await screen.getByRole("region", { name: "What it does" }).locator("p").count()) > 1)
             throw new Error("the making page shows more than one line of what the app does");
-          await screen.waitFor({ state: "detached", timeout: 60000 });
+          await screen.waitFor({ state: "detached", timeout: 60000 * P });
           await watcher
             .locator("header")
             .first()
             .getByText("Lotus Pilates")
-            .waitFor({ timeout: 30000 });
+            .waitFor({ timeout: 30000 * P });
         })();
         // Awaited after the making: a failure meanwhile is held for then, not thrown unhandled.
         seen.catch(() => {});
@@ -2384,7 +2437,7 @@ try {
             body: JSON.stringify(body),
           });
         const until = async (done, what) => {
-          for (let i = 0; i < 600; i++) {
+          for (let i = 0; i < 600 * P; i++) {
             const project = await (await fetch(`${other}/api/project`)).json();
             if (project.making?.stage === "failed")
               throw new Error(`the making failed: ${project.making.error}`);
@@ -2447,7 +2500,10 @@ try {
         const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         try {
           await watcher.goto(`${other}/?guide=off`);
-          await watcher.locator("header").first().waitFor({ timeout: 60000 });
+          await watcher
+            .locator("header")
+            .first()
+            .waitFor({ timeout: 60000 * P });
           const again2 = await replace(port + 2, {
             describe: "A status page for our services",
             ask: true,
@@ -2455,7 +2511,7 @@ try {
           });
           if (again2.status !== 202) throw new Error(JSON.stringify(again2));
           const form = watcher.getByRole("form", { name: "Questions" });
-          await form.waitFor({ timeout: 15000 });
+          await form.waitFor({ timeout: 15000 * P });
           const box = watcher.getByLabel("Describe a change, or ask a question");
           await box.fill("not this one");
           await watcher.getByRole("button", { name: "Make it once the app is there" }).click();
@@ -2473,16 +2529,16 @@ try {
           if ((await form.locator("button[aria-pressed=true]").count()) !== 2)
             throw new Error("two suggestions cannot be chosen together");
           await form.getByRole("button", { name: "Make it" }).click();
-          await form.waitFor({ state: "detached", timeout: 15000 });
+          await form.waitFor({ state: "detached", timeout: 15000 * P });
           // The request that waited is proposed once the app is there (Smith and Changes come
           // into view for it), and waits for Apply.
           await watcher
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
-            .click({ timeout: 90000 });
+            .click({ timeout: 90000 * P });
           // In place: the request that waited is made, and nothing waits any more.
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
-          await made.first().waitFor({ timeout: 90000 });
+          await made.first().waitFor({ timeout: 90000 * P });
           const after = await (await fetch(`${other}/api/project`)).json();
           if (after.waiting?.length) throw new Error(`still waiting: ${after.waiting}`);
         } catch (error) {
@@ -2522,7 +2578,7 @@ if (!failed) {
     await step(
       "the theme lab: a field changes its frames' CSS, and Save adds the theme",
       async () => {
-        for (let i = 0; i < 120; i++) {
+        for (let i = 0; i < 120 * P; i++) {
           if (
             await fetch(`${labUrl}/api/start`).then(
               (r) => r.ok,
@@ -2535,14 +2591,14 @@ if (!failed) {
         await labPage.goto(labUrl);
         // The frames open once the app has signed the lab in; the landing page in light first.
         const frame = labPage.frameLocator('[data-frame="Landing-light"]');
-        await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 });
+        await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 * P });
         // Signed in (no sign-in form in the list), and the record frame shows a record.
         const list = labPage.frameLocator('[data-frame="List-light"]');
-        await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await list.getByText(/^Sign in to /).count())
           throw new Error("the lab's frames are not signed in");
         const record = labPage.frameLocator('[data-frame="Record-light"]');
-        await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+        await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await record.getByText("does not exist, or you cannot see it").count())
           throw new Error("the record frame shows no record");
         await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
