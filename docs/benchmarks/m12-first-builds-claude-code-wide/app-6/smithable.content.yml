@@ -3,16 +3,6 @@ models:
   Client:
     label: Household
     pluralLabel: Households
-  Invoice:
-    fields:
-      client:
-        label: Household
-pages:
-  clients:
-    title: Households
-actions:
-  nextMonth:
-    label: Copy for next month
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

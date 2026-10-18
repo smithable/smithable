@@ -4,7 +4,8 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  itStaff:
-    description: Handles and resolves IT support tickets.
-defaultRole: itStaff
+  admin: all
+  member: { pages: all, create: all }
+assistant:
+  for: signed-in
 admins: [johan@smithable.ai]

@@ -4,7 +4,7 @@
   "wordStarter": "marketplace",
   "questions": [
     "Who adds and edits the objects?",
-    "Besides its story, what should each object record hold?",
-    "Should objects be grouped into something visitors can browse?"
+    "Is each object's story part of the object, or a separate record?",
+    "Besides the objects, should the collection be grouped in some way?"
   ]
 }

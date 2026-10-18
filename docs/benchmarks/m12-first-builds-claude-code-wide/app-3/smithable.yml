@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Cut & Comb
-  description: Online booking for a hair salon, where customers pick a stylist and a free time themselves.
+  name: Shear Studio
+  description: "Online booking for a hair salon: customers pick a stylist and a free time themselves."
   currency: EUR
+  timezone: Europe/Stockholm
 models:
   Service:
     fields:
@@ -15,42 +16,48 @@ models:
       name: string!
       bio: markdown
       portrait: picture
+      slots: Slot[]
   Slot:
     fields:
       stylist: Stylist!
       startsAt: datetime!
       durationMinutes: int! = 45
-      capacity: int! = 1
       bookings: Booking[]
       placesLeft:
         type: int
-        formula: capacity - COUNT(bookings)
+        formula: 1 - COUNT(bookings)
   Booking:
     fields:
       slot: Slot! unique
-      service: Service
+      service: Service!
+      phone: phone
       note: text
     capacity:
       per: slot
-      max: slot.capacity
+      max: 1
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule]
-      ourServices:
-        records: Service
-      ourStylists:
+        shortcuts: [schedule, stylists]
+      footer:
+      stylists:
         records: Stylist
+      services:
+        records: Service
       faq:
       callToAction:
         button: schedule
-      footer:
+      contact:
+        form: Message
   schedule:
-    calendar:
-      model: Slot
-      starts: startsAt
+    calendar: Slot
   my-bookings:
     crud: Booking
   slots:
@@ -60,8 +67,10 @@ pages:
     crud: Stylist
   services:
     crud: Service
-  admin:
-    data: all
+  messages:
+    crud: Message
   privacy:
     route: /privacy
     legal: privacy
+  admin:
+    data: all

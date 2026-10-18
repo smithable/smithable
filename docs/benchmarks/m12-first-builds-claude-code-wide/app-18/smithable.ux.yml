@@ -1,4 +1,6 @@
 smithableUx: 0.1
+theme:
+  preset: corporate
 tones:
   Quote.status:
     accepted: success
@@ -6,14 +8,3 @@ tones:
   Invoice.status:
     paid: success
     overdue: danger
-pages:
-  offerter:
-    icon: clipboard
-  fakturor:
-    icon: receipt
-  kunder:
-    icon: users
-theme:
-  preset: corporate
-  brand:
-    primary: "#d97706"

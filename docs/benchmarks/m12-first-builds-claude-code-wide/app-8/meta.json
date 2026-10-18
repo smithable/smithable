@@ -3,8 +3,7 @@
   "starter": "marketplace",
   "wordStarter": "invoicing",
   "questions": [
-    "Can people see the shelf without signing in?",
     "How does claiming work?",
-    "What should an offered item include?"
+    "What should an offered item hold?"
   ]
 }

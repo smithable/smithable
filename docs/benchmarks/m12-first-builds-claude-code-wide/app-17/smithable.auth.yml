@@ -8,9 +8,10 @@ roles:
     description: En kund som bokar tid i salongen.
     pages: [mina-bokningar]
     create: [Booking]
+assistant:
+  for: signed-in
 public:
-  pages: [home, tider, integritet]
+  pages: [hem, boka, integritet]
   read: [Service, Stylist, Slot]
-  create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

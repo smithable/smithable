@@ -1,64 +1,12 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Find your balance at Harmony Yoga Studio
-    subtitle: Join us for mindful movement and breath in the heart of the city
     hero:
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
-  schedule:
-    title: Schedule
-  sessions:
-    title: Sessions
-  class-types:
-    title: Class types
-  instructors:
-    title: Instructors
-  blog:
-    title: Blog
-  posts:
-    title: Posts
-  my-bookings:
-    title: My bookings
-models:
-  ClassType:
-    label: Class type
-    pluralLabel: Class types
-    fields:
-      name:
-        label: Name
-      summary:
-        label: Summary
-      level:
-        label: Level
-      durationMinutes:
-        label: Duration (minutes)
-  Instructor:
-    label: Instructor
-    pluralLabel: Instructors
-    fields:
-      name:
-        label: Name
-      bio:
-        label: Biography
-      portrait:
-        label: Portrait
-  Session:
-    label: Session
-    pluralLabel: Sessions
-    fields:
-      classType:
-        label: Class type
-      instructor:
-        label: Instructor
-      startsAt:
-        label: Starts at
-      capacity:
-        label: Capacity
-  Booking:
-    label: Booking
-    pluralLabel: Bookings
-    fields:
-      session:
-        label: Session
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A calendar page
+  generated: true

@@ -2,5 +2,5 @@ smithableUx: 0.1
 pages:
   ingredients:
     table:
-      columns: [name, stock, minimumStock, unit, supplier]
+      columns: [name, quantity, unit, supplier, lastUpdated]
       sort: name

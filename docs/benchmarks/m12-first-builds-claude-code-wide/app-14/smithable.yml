@@ -1,65 +1,48 @@
 smithable: 0.1
 app:
-  name: Wedding Guests
+  name: Our Wedding
   description: The guest list and seating plan for our wedding, with who has answered and their meal choices.
-  timezone: Europe/Mariehamn
 models:
   Table:
     fields:
       name: string!
-      seats: int! = 8
+      seats:
+        type: int!
+        min: 1
+        max: 30
+        default: 8
       notes: text
       guests: Guest[]
   Guest:
     fields:
       name: string!
-      group: family | friends | colleagues | other
+      household: string
       email: email
       phone: phone
       rsvp: waiting | attending | declined
-      meal: undecided | meat | fish | vegetarian | vegan | children
+      meal: undecided | meat | fish | vegetarian | vegan | kids
       dietaryNotes: text
       table: Table
-      notes: text
 pages:
   guests:
     crud: Guest
-    search: [name, email, phone]
-    filters: [rsvp, meal, group, table]
-    actions: [attending, declined]
+    search: [name, household, email]
+    filters: [rsvp, meal, table]
+    actions: [markAttending, markDeclined]
   tables:
     crud: Table
-  overview:
-    dashboard:
-      attending:
-        count: Guest
-        where:
-          rsvp: attending
-      waiting:
-        count: Guest
-        where:
-          rsvp: waiting
-      declined:
-        count: Guest
-        where:
-          rsvp: declined
-      vegetarianMeals:
-        count: Guest
-        where:
-          rsvp: attending
-          meal: [vegetarian, vegan]
   team:
     users: manage
 actions:
-  attending:
+  markAttending:
     on: Guest
     when:
       rsvp: [waiting, declined]
     set:
       rsvp: attending
       meal:
-    intent: Record that the guest is coming and their meal choice.
-  declined:
+    intent: Record that the guest is coming, with their meal choice.
+  markDeclined:
     on: Guest
     when:
       rsvp: [waiting, attending]

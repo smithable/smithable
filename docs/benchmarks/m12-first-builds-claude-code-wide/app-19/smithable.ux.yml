@@ -5,6 +5,3 @@ pages:
       view: cards
 theme:
   preset: craft
-  brand:
-    primary: "#c2410c"
-    font: Nunito Sans

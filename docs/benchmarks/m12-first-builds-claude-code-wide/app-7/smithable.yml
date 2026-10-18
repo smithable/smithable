@@ -2,7 +2,6 @@ smithable: 0.1
 app:
   name: Town Flea Market
   description: A town flea market where anyone can post things to sell, with photos and a price.
-  currency: EUR
 models:
   Item:
     fields:
@@ -10,7 +9,7 @@ models:
       photos: pictures!
       description: text!
       price: money
-      category: furniture | clothing | books | electronics | kids | sports | household | other
+      category: furniture | clothing | books | electronics | sports | kids | household | other
       condition: likeNew | good | worn
       place: string
       available: bool = true

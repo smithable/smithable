@@ -1,10 +1,6 @@
 {
   "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
-  "starter": "crm",
+  "starter": "?",
   "wordStarter": "crm",
-  "questions": [
-    "Who can see the deals and follow-ups?",
-    "What can visitors see without signing in?"
-  ],
-  "dropped": "advanceDealStage"
+  "questions": []
 }

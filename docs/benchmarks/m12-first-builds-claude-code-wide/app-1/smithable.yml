@@ -1,29 +1,30 @@
 smithable: 0.1
 app:
-  name: Lingua Ledger
-  description: A freelance translator's record of clients, the quotes sent to them and the payments received.
+  name: Translator's Ledger
+  description: Keep track of my translation clients, the quotes I send them and the payments they make.
   currency: EUR
 models:
   Client:
     fields:
       name: string!
+      company: string
       email: email
       phone: phone
-      company: string
       address: text
       notes: text
       quotes: Quote[]
       payments: Payment[]
   Quote:
     fields:
-      title: string!
+      number: string! unique
       client: Client!
+      title: string!
       sourceLanguage: string
       targetLanguage: string
       wordCount: int
-      amount: money!
       quotedOn: date! = TODAY()
       deadline: date
+      amount: money!
       status: draft | sent | accepted | declined
       notes: text
       payments: Payment[]
@@ -36,19 +37,19 @@ models:
       quote: Quote
       amount: money!
       paidOn: date! = TODAY()
-      method: bankTransfer | card | paypal | cash | other
+      method: bankTransfer | card | cash | other
       note: string
 pages:
   clients:
     crud: Client
-    search: [name, email, company]
+    search: [name, company, email]
   quotes:
     crud: Quote
-    filters: [client, status, quotedOn]
-    actions: [markSent, markAccepted, markDeclined]
+    filters: [client, status]
+    actions: [markSent, accept, decline]
   overview:
     dashboard:
-      awaitingAnswer:
+      quotedOpen:
         sum: Quote.amount
         where:
           status: sent
@@ -64,7 +65,7 @@ pages:
         by: paidOn
   payments:
     crud: Payment
-    filters: [client, quote, paidOn]
+    filters: [client, method, paidOn]
 actions:
   markSent:
     on: Quote
@@ -73,14 +74,14 @@ actions:
     set:
       status: sent
     intent: The quote went to the client.
-  markAccepted:
+  accept:
     on: Quote
     when:
       status: sent
     set:
       status: accepted
     intent: The client accepted the quote.
-  markDeclined:
+  decline:
     on: Quote
     when:
       status: sent

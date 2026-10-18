@@ -6,9 +6,12 @@ roles:
   admin: all
   member:
     description: Looks at the collection; only administrators add to it.
-    pages: [home, items]
+    pages: all
+    create: all
+assistant:
+  for: signed-in
 public:
-  pages: [home, privacy, items]
+  pages: [home, items, privacy]
   read: [Item]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -1,57 +1,60 @@
 smithable: 0.1
 app:
   name: Car Log
-  description: A log of my car's fuel fill-ups, service visits and other costs.
-  currency: EUR
+  description: A log of my car's fuel, service visits and costs.
 models:
-  FuelFill:
+  FuelEntry:
     fields:
       date: date! = TODAY()
       odometer: int
       liters: decimal!
-      pricePerLiter: money!
-      total:
+      cost: money!
+      pricePerLiter:
         type: money
-        formula: liters * pricePerLiter
+        formula: cost / liters
       fullTank: bool = true
       station: string
-      notes: text
+      note: text
   ServiceVisit:
     fields:
       date: date! = TODAY()
       odometer: int
-      kind: maintenance | repair | inspection | tires | other
       workshop: string
+      kind: regular | repair | tires | inspection | other
       work: text
       cost: money
-  Cost:
+      receipt: file
+      nextServiceDue: date
+  Expense:
     fields:
       date: date! = TODAY()
-      category: insurance | tax | parking | tolls | washing | parts | other
-      description: string
+      category: insurance | tax | parking | toll | washing | accessories | other
       amount: money!
+      note: text
+      receipt: file
 pages:
   fuel:
-    crud: FuelFill
+    crud: FuelEntry
     filters: [date]
   services:
     crud: ServiceVisit
     filters: [kind, date]
-  costs:
-    crud: Cost
+    search: [workshop, work]
+  expenses:
+    crud: Expense
     filters: [category, date]
   overview:
     dashboard:
-      fuelSpend:
-        sum: FuelFill.total
+      fuelCosts:
+        sum: FuelEntry.cost
         by: date
-      serviceSpend:
+      serviceCosts:
         sum: ServiceVisit.cost
         by: date
       otherCosts:
-        sum: Cost.amount
+        sum: Expense.amount
         by: date
-      latestServices:
-        list: ServiceVisit
+      latestFillUps:
+        list: FuelEntry
         limit: 5
-navigation: [fuel, services, costs, overview]
+navigation: [fuel, services, expenses, overview]

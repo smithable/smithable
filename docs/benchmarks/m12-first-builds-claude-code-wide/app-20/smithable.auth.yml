@@ -5,11 +5,13 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Oppilas, joka varaa paikkoja tunneille.
+    description: Joogaaja, joka varaa paikkoja tunneille.
     pages: [omat-varaukset]
     create: [Booking]
+assistant:
+  for: signed-in
 public:
-  pages: [home, aikataulu, privacy]
+  pages: [etusivu, lukujarjestys, ohjaajat, tietosuoja]
   read: [ClassType, Instructor, Session]
 defaultRole: member
 admins: [johan@smithable.ai]

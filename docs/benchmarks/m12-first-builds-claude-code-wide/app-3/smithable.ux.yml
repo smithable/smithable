@@ -6,4 +6,5 @@ pages:
 theme:
   preset: editorial
   brand:
-    primary: "#b5446e"
+    primary: "#9d4b6e"
+    font: DM Sans

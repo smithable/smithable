@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Vår loppis
-  description: Lägg upp saker du vill sälja med bilder och pris, och fynda bland grannarnas saker.
+  name: Loppisen
+  description: "Vår loppis på nätet: lägg upp saker du vill sälja, med bilder och pris."
   currency: SEK
   timezone: Europe/Stockholm
 models:
@@ -11,7 +11,7 @@ models:
       photos: pictures!
       description: text!
       price: money
-      category: furniture | clothes | books | kitchen | electronics | kids | other
+      category: furniture | clothes | books | electronics | kids | kitchen | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -37,11 +37,11 @@ pages:
     route: /welcome
     landing:
       hero:
-      footer:
       latest:
         records: Item
         where:
           available: true
+      footer:
   privacy:
     route: /privacy
     legal: privacy

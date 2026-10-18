@@ -11,7 +11,7 @@ models:
       email: email
       phone: phone
       website: url
-      source: referral | website | event | outreach | other
+      source: referral | website | outreach | event | other
       status: new | contacted | qualified | disqualified
       notes: text
       accountManager: User
@@ -24,8 +24,13 @@ models:
       title: string!
       lead: Lead!
       stage: proposal | negotiation | won | lost
-      value: money
+      value:
+        type: money
+        min: 0
       expectedClose: date
+      closedOn:
+        type: date
+        by: app
       notes: text
       accountManager: User
     ownedBy: accountManager
@@ -33,24 +38,33 @@ models:
   FollowUp:
     fields:
       lead: Lead!
-      dueOn: date!
+      deal: Deal
+      due: date!
       assignee: User!
-      note: string!
+      note: string
       status: open | done
+      doneOn:
+        type: date
+        by: app
     ownedBy: assignee
 pages:
-  leads:
-    crud: Lead
-    search: [company, contactName, email]
   deals:
     crud: Deal
     search: [title]
+    filters: [stage, lead, accountManager]
     actions: [markWon, markLost]
-  follow-ups:
+  leads:
+    crud: Lead
+    search: [company, contactName, email]
+    filters: [status, source, accountManager]
+  followUps:
     crud: FollowUp
+    filters: [status, assignee, due]
     actions: [markDone]
   schedule:
-    calendar: FollowUp
+    calendar:
+      model: FollowUp
+      starts: due
   team:
     users: manage
 actions:
@@ -60,18 +74,18 @@ actions:
       stage: [proposal, negotiation]
     set:
       stage: won
-    intent: Mark a deal as won.
+      closedOn: TODAY()
   markLost:
     on: Deal
     when:
       stage: [proposal, negotiation]
     set:
       stage: lost
-    intent: Mark a deal as lost.
+      closedOn: TODAY()
   markDone:
     on: FollowUp
     when:
       status: open
     set:
       status: done
-    intent: Mark a follow-up as done.
+      doneOn: TODAY()

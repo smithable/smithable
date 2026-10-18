@@ -2,10 +2,8 @@ smithableUx: 0.1
 pages:
   guests:
     table:
-      columns: [name, group, rsvp, meal, table]
+      columns: [name, household, rsvp, meal, table]
       sort: name
-    form:
-      sections: [{ name: guest, fields: [name, group, email, phone] }, { name: answer, fields: [rsvp, meal, dietaryNotes] }, { name: seating, fields: [table, notes] }]
     icon: users
   tables:
     table:
@@ -19,4 +17,4 @@ tones:
 theme:
   preset: pastel
   brand:
-    font: Nunito Sans
+    font: Fraunces

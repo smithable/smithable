@@ -4,7 +4,6 @@
   "wordStarter": "crm",
   "questions": [
     "How do leads and deals relate?",
-    "What should a deal hold besides its stage?",
-    "How should follow-ups work?"
+    "What should a deal track besides its follow-up date and owner?"
   ]
 }

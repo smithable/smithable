@@ -1,11 +1,4 @@
 smithableContent: 0.1
-models:
-  FollowUp:
-    label: Follow-up
-    pluralLabel: Follow-ups
-pages:
-  follow-ups:
-    title: Follow-ups
 logo:
   src: images/logo.webp
   alt: Two interlinked rings

@@ -7,31 +7,33 @@ models:
   Supplier:
     fields:
       name: string!
-      contact: string
+      contact: string!
       email: email
       phone: phone
       address: text
-    access:
-      create: [manager]
-      write: [manager]
-      delete: [manager]
   Ingredient:
     fields:
       name: string!
-      description: text
-      supplier: Supplier
-      unit: string! = kg
-      stock: decimal!
-      minimumStock: decimal = 5
-      costPerUnit: money
+      summary: text
+      quantity: decimal!
+      unit: string!
+      minimumStock: decimal!
+      supplier: Supplier!
+      lastUpdated: date! = TODAY()
 pages:
-  ingredients:
-    crud: Ingredient
-    search: [name, description]
-    filters: [supplier]
-    sortable: [name, stock, costPerUnit]
   suppliers:
     crud: Supplier
   team:
     users: manage
-navigation: [ingredients, suppliers, team]
+  ingredients:
+    crud: Ingredient
+    filters: [supplier]
+    actions: [restock]
+navigation: [ingredients, suppliers]
+actions:
+  restock:
+    on: Ingredient
+    set:
+      quantity:
+      lastUpdated: TODAY()
+    intent: Update the stock level when restocking an ingredient.

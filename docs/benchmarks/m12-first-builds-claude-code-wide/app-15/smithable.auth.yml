@@ -6,8 +6,10 @@ defaultAccess: shared
 roles:
   admin: all
   member:
-    description: "A club member: logs sightings and sees everyone's."
-    pages: [sightings]
-    create: [Sighting]
+    description: A club member who logs sightings and species.
+    pages: all
+    create: all
+assistant:
+  for: signed-in
 defaultRole: member
 admins: [johan@smithable.ai]

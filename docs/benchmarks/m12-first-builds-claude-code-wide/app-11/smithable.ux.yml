@@ -5,7 +5,7 @@ pages:
       columns: [name, status, description]
   incidents:
     table:
-      columns: [title, component, status, detectedAt, expectedBackAt, resolvedAt]
+      columns: [title, status, component, detectedAt, expectedBackAt, resolvedAt]
       sort: -detectedAt
   maintenance:
     table:

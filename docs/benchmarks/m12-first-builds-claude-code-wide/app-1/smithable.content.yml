@@ -5,8 +5,7 @@ models:
       method:
         values:
           bankTransfer: Bank transfer
-          paypal: PayPal
 logo:
   src: images/logo.webp
-  alt: A receipt with a torn edge and a coin
+  alt: Two interlinked rings
   generated: true

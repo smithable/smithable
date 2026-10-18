@@ -1,10 +1,5 @@
 smithableUx: 0.1
 theme:
   preset: minimal
-tones:
-  Component.status:
-    operational: success
-    degraded: warning
-    down: danger
-  Incident.status:
-    resolved: success
+  brand:
+    primary: "#2563eb"

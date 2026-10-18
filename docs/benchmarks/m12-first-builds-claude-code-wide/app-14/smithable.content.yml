@@ -1,9 +1,9 @@
 smithableContent: 0.1
 actions:
-  attending:
-    label: Coming
-  declined:
-    label: Not coming
+  markAttending:
+    label: Attending
+  markDeclined:
+    label: Declined
 logo:
   src: images/logo.webp
   alt: A tulip

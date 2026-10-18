@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Municipal Services Status
-  description: The live status of the municipality's online services, so residents can check for outages and planned maintenance.
+  name: Town Services Status
+  description: Check whether the municipality's online services are working, what is being fixed and what maintenance is planned.
 models:
   Component:
     fields:
@@ -9,6 +9,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -16,7 +17,7 @@ models:
       component: Component
       detectedAt: datetime!
       resolvedAt: datetime
-      summary: text
+      summary: markdown
       updates: IncidentUpdate[]
   IncidentUpdate:
     fields:
@@ -34,6 +35,7 @@ models:
 pages:
   incidents:
     crud: Incident
+    filters: [status, component]
     actions: [identified, monitoring, resolve]
   updates:
     crud: IncidentUpdate
@@ -98,7 +100,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix has been applied. We are monitoring the service before closing this incident.
+        message: A fix is in place. We are keeping an eye on it before closing this.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -111,6 +113,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved and the service is working normally.
+        message: This incident is resolved.
     intent: The incident is over, with an update saying so.
 navigation: [overview, incidents, updates, maintenance, components, team]

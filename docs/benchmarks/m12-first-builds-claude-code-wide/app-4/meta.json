@@ -4,7 +4,7 @@
   "wordStarter": "booking",
   "questions": [
     "Who will use the app?",
-    "What should each pupil's practice hold?",
-    "How should lessons be kept?"
+    "How should practice be recorded?",
+    "Is each pupil's weekly time a single fixed slot?"
   ]
 }

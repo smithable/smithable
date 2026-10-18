@@ -1,1 +1,27 @@
 smithableContent: 0.1
+models:
+  Ingredient:
+    label: Ingredient
+    pluralLabel: Ingredients
+    fields:
+      name:
+        label: Name
+      summary:
+        label: Description
+      quantity:
+        label: Quantity
+      unit:
+        label: Unit
+      minimumStock:
+        label: Minimum Stock
+      supplier:
+        label: Supplier
+      lastUpdated:
+        label: Last Updated
+pages:
+  ingredients:
+    title: Ingredients
+logo:
+  src: images/logo.webp
+  alt: An ear of wheat
+  generated: true

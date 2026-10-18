@@ -6,8 +6,6 @@ defaultAccess: shared
 roles:
   admin: all
   member: { pages: all, create: all }
-public:
-  pages: [home, plots, privacy]
-  read: [Plot]
-  create: [WaitingListEntry]
+assistant:
+  for: signed-in
 admins: [johan@smithable.ai]

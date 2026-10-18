@@ -1,60 +1,95 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: A place for the IT team to track and resolve support tickets.
+  description: Tickets from users, assigned and tracked by the IT team.
 models:
   Ticket:
     fields:
-      title: string!
-      description: text!
-      priority: low | normal | high | critical
-      status: new | assigned | inProgress | resolved | closed
-      assignee: User
-      createdBy: User!
-      resolvedAt: datetime
-    access:
-      create: [itStaff]
-      write: [owner]
-      delete: [itStaff]
-    ownedBy: assignee
+      subject: string!
+      requesterEmail:
+        type: email!
+        locked: true
+      status: open | inProgress | resolved | closed | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+      assignee:
+        type: User
+        required:
+          status: [inProgress, resolved, closed]
+      body: text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      sender: agent | requester
+      agent:
+        type: User
+        by: app
+        default: ME()
+      fromEmail: email
+      attachments: files
+      ticket: Ticket!
 pages:
   tickets:
     crud: Ticket
-    search: [title, description]
-    actions: [assign, startProgress, resolve, close]
-  admin:
-    data: all
+    search: [subject, requesterEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, resolve, close, reopen]
   team:
     users: manage
+navigation: [tickets, team]
 actions:
-  assign:
+  assignToMe:
     on: Ticket
-    when:
-      status: [new, assigned]
     set:
-      status: assigned
       assignee: ME()
-    intent: Assign the ticket to yourself.
-  startProgress:
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: Ticket
+    set:
+      assignee:
+    intent: Give the ticket to an agent, chosen from the team.
+  startWork:
     on: Ticket
     when:
-      status: [assigned, inProgress]
+      status: [open, reopened]
     set:
       status: inProgress
-    intent: Mark the ticket as in progress.
+    intent: Someone is working on the ticket now; it needs an assignee.
   resolve:
     on: Ticket
     when:
-      status: inProgress
+      status: [open, inProgress, reopened]
     set:
       status: resolved
-      resolvedAt: NOW()
-    intent: Mark the ticket as resolved.
+    intent: The issue is fixed; the requester can confirm.
   close:
     on: Ticket
     when:
-      status: resolved
+      status: [resolved]
     set:
       status: closed
-    intent: Close the ticket.
-navigation: [tickets, team, admin]
+    intent: The requester is satisfied; the ticket is closed.
+  reopen:
+    on: Ticket
+    when:
+      status: [resolved, closed]
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.
+outgoing:
+  ticketReceived:
+    when: Ticket created
+    to: mail
+    recipient: requesterEmail
+  replySent:
+    when: Message created
+    where:
+      sender: agent
+    to: mail
+    recipient: ticket.requesterEmail

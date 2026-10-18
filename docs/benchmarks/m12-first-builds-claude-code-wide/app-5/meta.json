@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
-    "Should clients be able to open and view their own invoices, or is the app only for you?",
-    "What should a shoot hold?",
-    "How do clients pay what's still owed?"
+    "How do shoots and invoices relate?",
+    "How should payments be tracked?",
+    "Can clients see anything without signing in?"
   ]
 }

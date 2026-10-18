@@ -2,52 +2,61 @@ smithableContent: 0.1
 pages:
   home:
     title: Family Recipes
-    subtitle: A collection of our favorite recipes and shopping lists.
+    subtitle: A collection of cherished family recipes and shopping lists.
     hero:
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-  recipes:
-    title: Recipes
-  shopping-lists:
-    title: Shopping Lists
+        alt: A home kitchen with a wooden table, open shelves and herbs on the windowsill
+        generated: true
 models:
   Recipe:
     label: Recipe
     pluralLabel: Recipes
     fields:
       name:
-        label: Recipe Name
+        label: Name
       description:
         label: Description
+      ingredients:
+        label: Ingredients
+      instructions:
+        label: Instructions
+      prepTime:
+        label: Prep Time (minutes)
+      cookTime:
+        label: Cook Time (minutes)
       servings:
         label: Servings
-      prepTime:
-        label: Preparation Time (minutes)
-      cookTime:
-        label: Cooking Time (minutes)
+      category:
+        label: Category
+        values:
+          starter: Starter
+          main: Main Course
+          dessert: Dessert
+          side: Side Dish
+          snack: Snack
+          drink: Drink
       difficulty:
         label: Difficulty
         values:
           easy: Easy
           medium: Medium
           hard: Hard
-      category:
-        label: Category
-        values:
-          breakfast: Breakfast
-          lunch: Lunch
-          dinner: Dinner
-          dessert: Dessert
-          snack: Snack
-          drink: Drink
-      ingredients:
-        label: Ingredients
-      instructions:
-        label: Instructions
-      notes:
-        label: Notes
-      isFavorite:
+      favorite:
         label: Favorite
-      image:
-        label: Image URL
+      tags:
+        label: Tags
+  ShoppingList:
+    label: Shopping List
+    pluralLabel: Shopping Lists
+    fields:
+      name:
+        label: Name
+      items:
+        label: Items
+      completed:
+        label: Completed
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

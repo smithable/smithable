@@ -1,10 +1,10 @@
 {
   "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
   "starter": "invoicing",
-  "wordStarter": "crm",
+  "wordStarter": "booking",
   "questions": [
-    "How do you price a quote?",
-    "Should a quote record the job details too?",
-    "How do payments relate to quotes?"
+    "How do you price a translation job in a quote?",
+    "How should payments be tracked?",
+    "Besides contact details, what should a client record hold?"
   ]
 }

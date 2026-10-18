@@ -1,3 +1,5 @@
 smithableUx: 0.1
 theme:
-  preset: editorial
+  preset: pastel
+  brand:
+    font: Fraunces

@@ -4,6 +4,4 @@ pages:
     table:
       view: cards
 theme:
-  preset: playful
-  brand:
-    primary: "#e8590c"
+  preset: craft

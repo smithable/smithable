@@ -5,11 +5,13 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Lägger upp saker till försäljning och sparar favoriter.
+    description: Säljer och sparar saker.
     pages: all
     create: all
+assistant:
+  for: signed-in
 public:
-  pages: [home, catalog, privacy]
+  pages: [home, catalog]
   read: [Item]
 defaultRole: member
 admins: [johan@smithable.ai]

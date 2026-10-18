@@ -5,17 +5,13 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member:
-    description: Someone who works with the tasks and notes.
-    pages: [admin]
-    create: all
-    write: all
-    delete: all
   assistant:
     description: "The AI assistant's key: reads everything, adds and changes tasks and notes, never deletes."
     create: [Task, Note]
     write: [Task, Note]
-defaultRole: member
+assistant:
+  for: signed-in
+defaultRole: assistant
 api:
   models: all
   actions: all

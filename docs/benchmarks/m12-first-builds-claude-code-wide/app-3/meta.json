@@ -4,7 +4,7 @@
   "wordStarter": "booking",
   "questions": [
     "Do customers need an account to book?",
-    "Do customers also pick a service, such as a cut, colour or beard trim, with its own length and price?",
-    "Who manages stylists' working hours and appointments?"
+    "Do customers also pick a service (like a cut or colour) that sets how long the appointment is?",
+    "Who manages stylists' schedules and appointments?"
   ]
 }

@@ -5,7 +5,8 @@ defaultAccess: private
 roles:
   admin: all
   member: { pages: all, create: all }
+assistant:
+  for: signed-in
 api:
   models: [Habit, CheckIn]
-  actions: all
 admins: [johan@smithable.ai]

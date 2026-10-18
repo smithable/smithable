@@ -1,12 +1,28 @@
+# Who signs in, the roles and the default access. Technology-neutral.
 smithableAuth: 0.1
+
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
-roles:
-  admin:
-    description: Sales management. Full access.
+  selfSignUp: false                # and only colleagues invited from the team page
+
+defaultAccess: shared              # an internal tool: colleagues see each other's data
+
+roles:                             # what each role may do, beyond their own records
+  admin: all
   sales:
-    description: Works with companies, contacts, and deals.
-defaultRole: sales
-admins: [johan@smithable.ai]
+    description: Works with customers and orders.
+    pages: all                       # every page but the team page, which is the administrators'
+    create: all
+    write: all                       # anyone's customers and orders; deleting them stays each one's own, and admins'
+
+
+admins: [johan@smithable.ai]           # become admin when they first sign in
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: []                        # an internal tool: nothing is public
+
+# Ask, the assistant in the app, for everyone who signs in (setAssistant).
+assistant:
+  for: signed-in

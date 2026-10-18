@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "marketplace",
   "questions": [
-    "Can visitors browse listings without signing in?",
-    "How should a buyer reach a seller?",
-    "What should a listing hold besides photos and price?"
+    "What can visitors do without signing in?",
+    "How do buyers get in touch with a seller?",
+    "Besides photos and price, what should a listing hold?"
   ]
 }

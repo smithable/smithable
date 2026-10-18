@@ -5,5 +5,12 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  staff:
+    description: "Korjaamon työntekijä: asiakkaat, autot, huoltotyöt ja laskut."
+    pages: [huoltotyot, asiakkaat, autot, laskut]
+    create: all
+    write: all
+assistant:
+  for: signed-in
+defaultRole: staff
 admins: [johan@smithable.ai]
