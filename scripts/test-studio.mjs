@@ -74,8 +74,10 @@ async function step(name, fn) {
       .getByRole("list", { name: "Problems" })
       .innerText({ timeout: 1000 * P })
       .catch(() => "");
+    // A fetch that failed says only "fetch failed": its cause (the socket's error) is the clue.
+    const cause = error.cause ? ` (${error.cause.code ?? error.cause.message ?? error.cause})` : "";
     console.log(
-      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}\n    see ${shot}${problems ? `\n    Problems: ${problems.replace(/\n+/g, " | ")}` : ""}`,
+      `  ✗ ${name}\n    ${String(error.message).split("\n").slice(0, 3).join("\n    ")}${cause}\n    see ${shot}${problems ? `\n    Problems: ${problems.replace(/\n+/g, " | ")}` : ""}`,
     );
     failed = true;
     throw error;
@@ -2117,10 +2119,18 @@ try {
   // docs/design/fast-start.md: a hosted workspace waits with Studio running and gets its app
   // when someone claims it. Never a person's own project.
   const replace = async (at, body) => {
-    const answer = await fetch(`http://localhost:${at}/api/project/replace`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-smithable": "1" },
-      body: JSON.stringify(body),
+    const ask = () =>
+      fetch(`http://localhost:${at}/api/project/replace`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-smithable": "1" },
+        body: JSON.stringify(body),
+      });
+    // One more try after a second when the request itself failed (a pooled connection the
+    // server had closed meanwhile: the answer is the same either way); a server that is down
+    // fails the second time too, and the cause is printed.
+    const answer = await ask().catch(async () => {
+      await new Promise((r) => setTimeout(r, 1000));
+      return ask();
     });
     return { status: answer.status, ...(await answer.json()) };
   };
