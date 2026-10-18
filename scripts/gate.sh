@@ -125,14 +125,15 @@ echo "$session in $(pwd) since $(date +%H:%M)" > "$lock.who"
 umask "$umask_was"
 
 # How patient the checks are: their waits (a minute for a page in Studio's check, the apps'
-# health) are multiplied by TEST_PATIENCE, set here from the machine's load unless given: 1 on a
-# quiet machine, 2 when the load is near the cores, 3 above; a capped night gate at least 2. A
+# health) are multiplied by TEST_PATIENCE, set here unless given: 2 as a rule, since the gate's
+# own checks load the machine whatever it was doing at the start (CI's run with patience 1 ran
+# out of a thirty-second wait on a quiet start), 3 when the load is already above the cores. A
 # slow answer under load is then not read as a failure (Johan, 2026-10-18).
 if [ -z "${TEST_PATIENCE:-}" ]; then
   load=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0); cores=$(nproc 2>/dev/null || echo 8)
-  TEST_PATIENCE=$(awk -v l="$load" -v c="$cores" -v n="${GATE_NIGHT_CAPPED:-}" 'BEGIN { p = (l < c / 2) ? 1 : (l < c * 1.5) ? 2 : 3; if (n != "" && p < 2) p = 2; print p }')
+  TEST_PATIENCE=$(awk -v l="$load" -v c="$cores" -v n="${GATE_NIGHT_CAPPED:-}" 'BEGIN { p = (l < c) ? 2 : 3; print p }')
   export TEST_PATIENCE
-  [ "$TEST_PATIENCE" -gt 1 ] && echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
+  echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
 # What the change touches, against main: committed on the branch, uncommitted, and new files.
