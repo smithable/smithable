@@ -1,16 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Join us for the conference
-    subtitle: Discover inspiring talks, meet the speakers and register for the sessions you want to attend.
+    title: Join Us at Conference Connect
+    subtitle: Discover insightful talks, connect with speakers, and register for your favorite sessions.
     hero:
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
+        generated: true
   talks:
     title: Talks
   speakers:
     title: Speakers
+  attendees:
+    title: Attendees
 models:
   Talk:
     label: Talk
@@ -19,5 +22,12 @@ models:
     label: Speaker
     pluralLabel: Speakers
   Attendee:
-    label: Attendee
     pluralLabel: Attendees
+    label: Attendee
+  Message:
+    label: Message
+    pluralLabel: Messages
+logo:
+  src: images/logo.webp
+  alt: A ticket
+  generated: true

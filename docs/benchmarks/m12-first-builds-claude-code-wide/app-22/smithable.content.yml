@@ -1,97 +1,11 @@
 smithableContent: 0.1
 pages:
-  vorbestellungen:
-    title: Vorbestellungen
-  abholzeiten:
-    title: Abholzeiten
-  produkte:
-    title: Produkte
-  kunden:
-    title: Kunden
-  team:
-    title: Team
-models:
-  Product:
-    label: Produkt
-    pluralLabel: Produkte
-    fields:
-      name:
-        label: Name
-      description:
-        label: Beschreibung
-      unit:
-        label: Einheit
-        values:
-          piece: Stück
-          kg: kg
-          bunch: Bund
-          liter: Liter
-      price:
-        label: Preis
-      available:
-        label: Verfügbar
-  Customer:
-    label: Kunde
-    pluralLabel: Kunden
-    fields:
-      name:
-        label: Name
-      email:
-        label: E-Mail
-      phone:
-        label: Telefon
-      notes:
-        label: Notizen
-  PickupSlot:
-    label: Abholzeit
-    pluralLabel: Abholzeiten
-    fields:
-      startsAt:
-        label: Beginn
-      endsAt:
-        label: Ende
-      capacity:
-        label: Plätze
-      notes:
-        label: Notizen
-  Preorder:
-    label: Vorbestellung
-    pluralLabel: Vorbestellungen
-    fields:
-      customer:
-        label: Kunde
-      pickupSlot:
-        label: Abholzeit
-      status:
-        label: Status
-        values:
-          open: Offen
-          ready: Abholbereit
-          collected: Abgeholt
-          canceled: Storniert
-      notes:
-        label: Notizen
-  PreorderLine:
-    label: Position
-    pluralLabel: Positionen
-    fields:
-      preorder:
-        label: Vorbestellung
-      product:
-        label: Produkt
-      quantity:
-        label: Menge
-      unitPrice:
-        label: Einzelpreis
-      amount:
-        label: Betrag
-actions:
-  markReady:
-    label: Abholbereit
-  markCollected:
-    label: Abgeholt
-  cancel:
-    label: Stornieren
+  abholung:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
 logo:
   src: images/logo.webp
   alt: A single wave line

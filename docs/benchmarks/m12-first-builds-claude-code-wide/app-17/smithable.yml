@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
-  name: Salongen
-  description: Tidsbokning på nätet för en frisörsalong, där kunderna själva bokar sin tid.
+  name: Frisörsalongen
+  description: Onlinebokning för en frisörsalong där kunderna själva bokar tid hos sin frisör.
   currency: SEK
   timezone: Europe/Stockholm
 models:
   Service:
     fields:
       name: string!
-      summary: text
+      description: text
       durationMinutes: int! = 45
       price: money
   Stylist:
@@ -16,6 +16,7 @@ models:
       name: string!
       bio: markdown
       portrait: picture
+      slots: Slot[]
   Slot:
     fields:
       stylist: Stylist!
@@ -34,37 +35,30 @@ models:
     capacity:
       per: slot
       max: slot.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
 pages:
-  tider:
+  hem:
+    route: /
+    landing:
+      hero:
+      behandlingar:
+        records: Service
+      frisorer:
+        records: Stylist
+      callToAction:
+        button: boka
+      footer:
+  boka:
     calendar:
       model: Slot
       starts: startsAt
-  mina-bokningar:
-    crud: Booking
-  tidsluckor:
+  tider:
     crud: Slot
   behandlingar:
     crud: Service
   frisorer:
     crud: Stylist
-  meddelanden:
-    crud: Message
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      tjanster:
-        records: Service
-      callToAction:
-        button: tider
-      contact:
-        form: Message
+  mina-bokningar:
+    crud: Booking
   integritet:
     route: /integritet
     legal: privacy

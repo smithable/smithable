@@ -1,71 +1,65 @@
 smithable: 0.1
 app:
-  name: Conference Central
-  description: Register for talks, meet the speakers and see who's coming.
+  name: Conference Connect
+  description: "Event registration for a conference: talks, speakers and attendees."
 models:
-  Speaker:
-    fields:
-      name: string!
-      bio: text
-      photo: url
-      website: url
-    access:
-      write: [admin]
-      delete: [admin]
   Talk:
     fields:
       title: string!
-      description: text
-      speaker: Speaker!
+      description: markdown
       startsAt: datetime!
       endsAt: datetime!
-      room: string
-      capacity: int
-      status: draft | scheduled | canceled
-    access:
-      write: [admin]
-      delete: [admin]
+      location: string!
+      capacity: int! = 100
+      attendees: Attendee[]
+      spotsLeft:
+        type: int
+        formula: capacity - COUNT(attendees)
+  Speaker:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
   Attendee:
     fields:
       name: string!
-      email: email! unique
+      email: email!
       company: string
-    access:
-      write: [owner]
-      delete: [owner]
-  Registration:
-    fields:
-      attendee: Attendee!
       talk: Talk!
-  UserRegistration:
+      registeredAt:
+        type: datetime
+        by: app
+        default: NOW()
+    capacity:
+      per: talk
+      max: talk.capacity
+  Message:
     fields:
-      user: User!
-      talk: Talk!
+      name: string!
+      email: email!
+      message: text!
 pages:
   talks:
     crud: Talk
-    actions: [register]
   speakers:
     crud: Speaker
+  attendees:
+    crud: Attendee
   home:
     route: /
     landing:
       hero:
       footer:
-      talks:
-        records: Talk
-        where:
-          status: scheduled
-      speakers:
+      featured-speakers:
         records: Speaker
-  team:
-    users: manage
-actions:
-  register:
-    on: Talk
-    when:
-      status: scheduled
-    add:
-      UserRegistration:
-        user: ME()
-    intent: Register the signed-in person for this talk.
+      faq:
+      contact:
+        form: Message
+  privacy:
+    route: /privacy
+    legal: privacy
+outgoing:
+  registrationConfirmed:
+    when: Attendee created
+    to: mail
+    recipient: email

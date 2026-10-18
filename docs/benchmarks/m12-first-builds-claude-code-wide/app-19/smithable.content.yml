@@ -19,9 +19,9 @@ models:
           furniture: Möbler
           clothes: Kläder
           books: Böcker
-          kitchen: Kök
           electronics: Elektronik
           kids: Barn
+          kitchen: Kök
           other: Övrigt
       condition:
         label: Skick
@@ -35,7 +35,7 @@ models:
         label: Till salu
 pages:
   catalog:
-    title: Loppisen
+    title: Alla saker
   myItems:
     title: Mina saker
   saved:
@@ -45,9 +45,9 @@ pages:
   home:
     title: Välkommen
     hero:
-      title: Fynda och sälj på vår loppis
-      subtitle: Lägg upp det du inte längre behöver med bilder och pris, och hitta nya favoriter bland grannarnas saker.
-      button: Titta bland sakerna
+      title: Fynda på vår loppis
+      subtitle: Bläddra bland begagnade saker från grannar och vänner – eller lägg upp det du själv vill sälja, med bilder och pris.
+      button: Se alla saker
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
@@ -55,10 +55,10 @@ pages:
     latest:
       title: Senast upplagt
     footer:
-      text: Vår loppis – en mötesplats för begagnade fynd.
+      text: Loppisen – köp och sälj begagnat i närheten.
   privacy:
     title: Integritet
 logo:
   src: images/logo.webp
-  alt: Two offset rounded squares
+  alt: A flower of five round petals
   generated: true

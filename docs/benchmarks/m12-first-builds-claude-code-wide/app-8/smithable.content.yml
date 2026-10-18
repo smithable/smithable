@@ -4,9 +4,6 @@ pages:
     title: Shelf
   myItems:
     title: My items
-actions:
-  handOver:
-    label: Mark picked up
 logo:
   src: images/logo.webp
   alt: A loop forming a simple knot

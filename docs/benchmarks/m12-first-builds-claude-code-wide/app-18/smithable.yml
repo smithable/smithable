@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Byggkoll
-  description: Håll koll på kunder, offerter och fakturor i en liten byggfirma.
+  description: Offerter, kunder och fakturor för en liten byggfirma.
   currency: SEK
   timezone: Europe/Stockholm
 models:
@@ -11,51 +11,58 @@ models:
       email: email
       phone: phone
       address: text
+      orgNumber: string
       quotes: Quote[]
       invoices: Invoice[]
+  QuoteLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unit: string
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      quote: Quote!
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unit: string
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
   Quote:
     fields:
       number: string! unique
       customer: Customer!
       title: string!
       issuedOn: date! = TODAY()
-      validUntil: date = DATEADD(issuedOn, 30, "day")
+      validUntil: date
       status: draft | sent | accepted | declined
+      notes: text
       lines: QuoteLine[]
       total:
         type: money
         formula: SUM(lines.amount)
-  QuoteLine:
-    fields:
-      quote: Quote!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
       quote: Quote
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
       lines: InvoiceLine[]
       total:
         type: money
         formula: SUM(lines.amount)
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
 pages:
+  kunder:
+    crud: Customer
+    search: [name, email, phone]
   offerter:
     crud: Quote
     filters: [customer, status]
@@ -64,13 +71,23 @@ pages:
     crud: Invoice
     filters: [customer, status]
     actions: [sendInvoice, markPaid]
-  kunder:
-    crud: Customer
-    search: [name, email, phone]
-  offertrader:
-    crud: QuoteLine
-  fakturarader:
-    crud: InvoiceLine
+  oversikt:
+    dashboard:
+      openQuotes:
+        sum: Quote.total
+        where:
+          status: sent
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
   team:
     users: manage
 actions:
@@ -87,7 +104,7 @@ actions:
       status: sent
     set:
       status: accepted
-    intent: Kunden har tackat ja till offerten.
+    intent: Kunden har accepterat offerten.
   declineQuote:
     on: Quote
     when:

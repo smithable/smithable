@@ -3,20 +3,6 @@ models:
   WaitingListEntry:
     label: Waiting list entry
     pluralLabel: Waiting list
-pages:
-  home:
-    hero:
-      title: Grow your own with us
-      subtitle: Our allotment society rents garden plots to members. See the plots and join the waiting list.
-      button: See the plots
-      image:
-        src: images/hero.webp
-        alt: A green garden with vegetable beds, a greenhouse and fruit trees
-        generated: true
-    availablePlots:
-      title: Plots available now
-    contact:
-      title: Join the waiting list
 logo:
   src: images/logo.webp
   alt: A sprout

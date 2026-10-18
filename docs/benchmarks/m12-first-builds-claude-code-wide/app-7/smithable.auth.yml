@@ -5,9 +5,11 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Posts things to sell and saves items they like.
-    pages: [catalog, myItems, saved]
-    create: [Item]
+    description: Sells and saves items.
+    pages: all
+    create: all
+assistant:
+  for: signed-in
 public:
   pages: [home, catalog, privacy]
   read: [Item]

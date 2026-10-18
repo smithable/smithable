@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "status",
   "questions": [
-    "Is this just for one car, or should it handle several vehicles?",
-    "Who will use the log?",
-    "What should a fuel entry record?"
+    "Is this log for one car or for several vehicles?",
+    "What should a fuel entry record?",
+    "Besides fuel and service visits, are there other costs to log?"
   ]
 }

@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
   name: Vinyl Shelf
-  description: "A personal catalogue of my vinyl records: the albums, their artists, their condition and what I paid."
+  description: "A private catalogue of my vinyl records: albums, artists, condition and what I paid."
   currency: EUR
+  timezone: Europe/Mariehamn
 models:
   Artist:
     fields:
       name: string! unique
       country: string
-      genre: string
       notes: text
       albums: Album[]
   Album:
@@ -18,18 +18,19 @@ models:
       year: int
       label: string
       genre: string
-      format: lp | ep | single | doubleLp | boxSet
-      condition: nearMint | mint | veryGoodPlus | veryGood | good | fair | poor
+      cover: picture
+      condition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
+      sleeveCondition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
       pricePaid: money
-      purchasedOn: date
-      purchasedFrom: string
+      boughtOn: date
+      boughtFrom: string
       notes: text
 pages:
   albums:
     crud: Album
     search: [title, label, genre, notes]
-    filters: [artist, format, condition, year]
-    sortable: [title, year, pricePaid, purchasedOn]
+    filters: [artist, condition, year]
+    sortable: [title, year, pricePaid, boughtOn]
   artists:
     crud: Artist
-    search: [name, country, genre]
+    search: [name, country]

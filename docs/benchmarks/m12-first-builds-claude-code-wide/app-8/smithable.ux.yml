@@ -3,9 +3,12 @@ pages:
   shelf:
     table:
       view: cards
+    icon: package
+  myItems:
+    icon: user
 tones:
   Item.status:
     available: success
     claimed: warning
 theme:
-  preset: playful
+  preset: modern

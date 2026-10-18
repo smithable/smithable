@@ -1,9 +1,11 @@
 smithableUx: 0.1
 pages:
+  species:
+    table:
+      sort: name
   sightings:
     table:
-      sort: -seenOn
       columns: [species, place, seenOn, observer, count]
-    icon: star
+      sort: -seenOn
 theme:
   preset: woodland

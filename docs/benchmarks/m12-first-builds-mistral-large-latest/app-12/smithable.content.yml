@@ -1,50 +1,12 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Is our web shop working?
-    subtitle: The state of our services, live.
-    services:
-      title: Services
-    open:
-      title: Open incidents
-    recent:
-      title: Recently resolved
-  history:
-    title: Incident history
-models:
-  Component:
-    label: Service
-    pluralLabel: Services
-    fields:
-      name:
-        label: Name
-      status:
-        label: Status
-        values:
-          operational: Operational
-          degraded: Degraded
-          down: Down
-          maintenance: Maintenance
-      description:
-        label: Description
-  Incident:
-    label: Incident
-    pluralLabel: Incidents
-    fields:
-      title:
-        label: Title
-      status:
-        label: Status
-        values:
-          investigating: Investigating
-          identified: Identified
-          monitoring: Monitoring
-          resolved: Resolved
-      component:
-        label: Service
-      detectedAt:
-        label: Detected at
-      resolvedAt:
-        label: Resolved at
-      summary:
-        label: Summary
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

@@ -1,17 +1,25 @@
 smithableUx: 0.1
-tones:
-  Job.status:
-    inProgress: warning
-    done: success
-  Invoice.status:
-    unpaid: warning
-    paid: success
 pages:
   huoltotyot:
+    table:
+      sort: -date
+      columns: [date, car, description, status, mechanic, total]
     icon: clipboard
+  laskut:
+    table:
+      columns: [number, customer, amount, status, dueDate]
+    icon: receipt
   asiakkaat:
     icon: users
   autot:
     icon: truck
-  laskut:
-    icon: receipt
+tones:
+  ServiceJob.status:
+    inProgress: warning
+    done: success
+    canceled: danger
+  Invoice.status:
+    sent: warning
+    paid: success
+theme:
+  preset: corporate

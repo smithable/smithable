@@ -1,8 +1,22 @@
 smithable: 0.1
 app:
   name: Museum Collection
-  description: Our local museum's collection online, where visitors browse the objects and the stories behind them.
+  description: Our local museum's collection online, where visitors browse the objects and their stories.
   timezone: Europe/Mariehamn
+models:
+  Item:
+    fields:
+      name: string!
+      accessionNumber: string unique
+      summary: text
+      story: markdown
+      pictures: pictures
+      category: history | art | archaeology | naturalHistory | textiles | tools | other
+      period: string
+      origin: string
+      material: string
+      onDisplay: bool
+      addedOn: date! = TODAY()
 pages:
   home:
     route: /
@@ -13,21 +27,10 @@ pages:
         records: Item
         where:
           onDisplay: true
+  items:
+    crud: Item
+    search: [name, summary, period, origin, material]
+    filters: [category, onDisplay]
   privacy:
     route: /privacy
     legal: privacy
-  items:
-    crud: Item
-    search: [name, summary, story, origin]
-    filters: [category, onDisplay]
-models:
-  Item:
-    fields:
-      name: string!
-      summary: text
-      story: text
-      category: everydayLife | toolsAndCrafts | art | maritime | documentsAndPhotographs | other
-      dateMade: string
-      origin: string
-      onDisplay: bool
-      addedOn: date! = TODAY()

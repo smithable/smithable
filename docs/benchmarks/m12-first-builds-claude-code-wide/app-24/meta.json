@@ -3,6 +3,7 @@
   "starter": "api",
   "wordStarter": "api",
   "questions": [
-    "Besides a title, what should a task hold?"
+    "Who will use the app besides your AI assistant?",
+    "What can people see without signing in?"
   ]
 }

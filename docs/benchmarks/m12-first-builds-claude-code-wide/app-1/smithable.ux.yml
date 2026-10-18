@@ -1,14 +1,12 @@
 smithableUx: 0.1
 pages:
-  clients:
-    table:
-      columns: [name, company, email, phone]
-    icon: users
   quotes:
     table:
       sort: -quotedOn
-      columns: [title, client, amount, paid, status, quotedOn, deadline]
+      columns: [number, client, title, quotedOn, amount, paid, status]
     icon: file
+  clients:
+    icon: users
   overview:
     icon: chart
   payments:
@@ -21,5 +19,3 @@ tones:
     accepted: success
     sent: warning
     declined: danger
-theme:
-  preset: editorial

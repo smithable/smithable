@@ -3,21 +3,28 @@ pages:
   home:
     hero:
       title: Borrow tools from your neighbors
-      subtitle: Find what you need for your next project, and lend your tools to help others.
+      subtitle: Find what you need, lend what you have, and build community together.
+      button: Browse tools
+      image:
+        src: images/hero.webp
+        alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
+        generated: true
     latest:
       title: Recently added tools
-  tools:
-    title: Tools
-    subtitle: Browse tools available for borrowing
+  catalog:
+    title: Tool catalog
+    subtitle: Browse tools available to borrow in your neighborhood
+  myTools:
+    title: My tools
+    subtitle: Tools I've added to the library
 models:
   Tool:
     label: Tool
-    pluralLabel: Tools
     fields:
       name:
-        label: Name
-      photo:
-        label: Photo
+        label: Tool name
+      photos:
+        label: Photos
       description:
         label: Description
       category:
@@ -25,6 +32,7 @@ models:
         values:
           gardening: Gardening
           woodworking: Woodworking
+          automotive: Automotive
           cleaning: Cleaning
           power: Power tools
           hand: Hand tools
@@ -33,24 +41,18 @@ models:
         label: Condition
         values:
           new: New
+          likeNew: Like new
           good: Good
           worn: Worn
-          broken: Broken
       location:
         label: Location
       available:
         label: Available
-  Borrowing:
-    label: Borrowing
-    pluralLabel: Borrowings
-    fields:
-      tool:
-        label: Tool
       borrower:
         label: Borrower
-      borrowedAt:
-        label: Borrowed at
-      dueAt:
-        label: Due at
-      returnedAt:
-        label: Returned at
+      dueBack:
+        label: Due back
+logo:
+  src: images/logo.webp
+  alt: A toolbox
+  generated: true

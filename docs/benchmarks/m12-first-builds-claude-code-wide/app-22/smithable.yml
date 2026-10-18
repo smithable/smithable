@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Hofladen
-  description: Produkte, Vorbestellungen der Kunden und Abholzeiten für einen kleinen Hofladen.
+  description: Unsere Produkte, Vorbestellungen der Kunden und die Abholzeiten des Hofladens.
   currency: EUR
   timezone: Europe/Berlin
 models:
@@ -9,78 +9,104 @@ models:
     fields:
       name: string!
       description: text
-      unit: piece | kg | bunch | liter
       price: money!
+      unit: string
+      category: vegetables | fruit | eggs | dairy | meat | bakery | preserves
+      picture: picture
       available: bool = true
-  Customer:
-    fields:
-      name: string!
-      email: email
-      phone: phone
-      notes: text
-      preorders: Preorder[]
   PickupSlot:
     fields:
-      startsAt: datetime!
-      endsAt: datetime
-      capacity: int! = 10
-      notes: text
-      preorders: Preorder[]
-  Preorder:
+      day: date!
+      hours: string!
+      note: text
+  Order:
     fields:
-      customer: Customer!
-      pickupSlot: PickupSlot!
-      status: open | ready | collected | canceled
-      notes: text
-      lines: PreorderLine[]
-    capacity:
-      per: pickupSlot
-      max: pickupSlot.capacity
-      where:
-        status: [open, ready, collected]
-  PreorderLine:
+      name: string!
+      phone: phone!
+      email: email
+      pickup: PickupSlot
+      note: text
+      status: new | accepted | ready | collected | declined
+      reason: text
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  OrderLine:
     fields:
-      preorder: Preorder!
+      order: Order!
       product: Product!
-      quantity: decimal! = 1
+      quantity: int! = 1
       unitPrice: money!
       amount:
         type: money
         formula: quantity * unitPrice
 pages:
-  vorbestellungen:
-    crud: Preorder
-    filters: [status, pickupSlot, customer]
-    actions: [markReady, markCollected, cancel]
-  abholzeiten:
-    crud: PickupSlot
+  bestellungen:
+    crud: Order
+    filters: [status, pickup]
+    sortable: [createdAt]
+    actions: [accept, ready, collected, decline]
   produkte:
     crud: Product
-    search: [name]
-  kunden:
-    crud: Customer
-    search: [name, email, phone]
+    filters: [category, available]
+    actions: [soldOut, backOn]
+  abholzeiten:
+    crud: PickupSlot
+  abholung:
+    route: /abholung
+    landing:
+      hero:
+      footer:
+      slots:
+        records: PickupSlot
+  datenschutz:
+    route: /datenschutz
+    legal: privacy
   team:
     users: manage
 actions:
-  markReady:
-    on: Preorder
+  soldOut:
+    on: Product
     when:
-      status: open
+      available: true
+    set:
+      available: false
+    intent: Heute nichts mehr davon.
+  backOn:
+    on: Product
+    when:
+      available: false
+    set:
+      available: true
+    intent: Kann wieder bestellt werden.
+  accept:
+    on: Order
+    when:
+      status: new
+    set:
+      status: accepted
+    intent: Wir nehmen die Bestellung an.
+  ready:
+    on: Order
+    when:
+      status: accepted
     set:
       status: ready
-    intent: Die Vorbestellung ist gepackt und liegt zur Abholung bereit.
-  markCollected:
-    on: Preorder
+    intent: Die Bestellung liegt zur Abholung bereit.
+  collected:
+    on: Order
     when:
-      status: [open, ready]
+      status: ready
     set:
       status: collected
-    intent: Der Kunde hat die Vorbestellung abgeholt.
-  cancel:
-    on: Preorder
+    intent: Der Kunde hat sie abgeholt.
+  decline:
+    on: Order
     when:
-      status: [open, ready]
+      status: [new, accepted]
     set:
-      status: canceled
-    intent: Die Vorbestellung wird storniert.
+      status: declined
+      reason:
+    intent: "Die Bestellung geht nicht: sag warum."
+navigation: [bestellungen, produkte, abholzeiten, team]

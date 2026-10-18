@@ -8,44 +8,56 @@ models:
   Customer:
     fields:
       name: string!
-      email: email
+      email: email unique
       phone: phone
+      address: string
       notes: text
       cars: Car[]
+      invoices: Invoice[]
     trash: true
   Car:
     fields:
       registration: string! unique
-      make: string
+      make: string!
       carModel: string
       year: int
       mileage: int
       customer: Customer!
-      jobs: Job[]
-  Job:
+      jobs: ServiceJob[]
+  ServiceJob:
     fields:
       car: Car!
       description: text!
-      status: booked | inProgress | done
-      scheduledOn: date
-      labor: money
-      parts: money
+      status: booked | inProgress | done | canceled
+      date: date!
+      mechanic: User
+      hours:
+        type: decimal
+        min: 0
+      laborCost:
+        type: money
+        min: 0
+      partsCost:
+        type: money
+        min: 0
       total:
         type: money
-        formula: labor + parts
+        formula: laborCost + partsCost
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
-      job: Job
+      job: ServiceJob
+      status: draft | sent | paid
       amount: money!
+      issuedOn: date = TODAY()
       dueDate: date
-      status: unpaid | paid
       paidOn: date
+    trash: true
 pages:
   huoltotyot:
-    crud: Job
-    filters: [status, scheduledOn]
+    crud: ServiceJob
+    filters: [status, mechanic, date]
     actions: [startJob, completeJob]
   asiakkaat:
     crud: Customer
@@ -56,30 +68,34 @@ pages:
   laskut:
     crud: Invoice
     search: [number]
-    filters: [status, dueDate]
-    actions: [markPaid]
-  kayttajat:
+    filters: [status, customer, dueDate]
+    actions: [sendInvoice, markPaid]
+  tiimi:
     users: manage
 actions:
   startJob:
-    on: Job
+    on: ServiceJob
     when:
       status: booked
     set:
       status: inProgress
-    intent: Aloita varattu huoltotyö.
+      mechanic: ME()
   completeJob:
-    on: Job
+    on: ServiceJob
     when:
-      status: [booked, inProgress]
+      status: inProgress
     set:
       status: done
-    intent: Merkitse huoltotyö valmiiksi.
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
   markPaid:
     on: Invoice
     when:
-      status: unpaid
+      status: sent
     set:
       status: paid
       paidOn: TODAY()
-    intent: Merkitse lasku maksetuksi.

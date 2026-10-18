@@ -1,12 +1,10 @@
 smithableUx: 0.1
-theme:
-  preset: editorial
 pages:
   items:
     table:
       view: cards
-      sort: name
-      columns: [name, category, dateMade, origin, onDisplay]
+      columns: [pictures, name, category, period, onDisplay]
     form:
-      sections: [{ name: object, fields: [name, category, dateMade, origin, onDisplay] }, { name: story, fields: [summary, story] }]
-    icon: layers
+      sections: [{ name: object, fields: [name, accessionNumber, category, pictures] }, { name: details, fields: [period, origin, material, onDisplay, addedOn] }, { name: story, fields: [summary, story] }]
+theme:
+  preset: editorial

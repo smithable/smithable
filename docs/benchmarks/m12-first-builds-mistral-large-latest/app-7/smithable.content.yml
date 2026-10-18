@@ -1,77 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Welcome to Greenfield FC
-    subtitle: The teams, players, matches and results of Greenfield Football Club.
     hero:
+      title: Welcome to Football Club
+      subtitle: Follow our teams, players and match results.
+      button: View Teams
       image:
         src: images/hero.webp
-        alt: A team standing at a whiteboard by a window over the harbour
-models:
-  Team:
-    label: Team
-    pluralLabel: Teams
-    fields:
-      name:
-        label: Team name
-      ageGroup:
-        label: Age group
-        values:
-          u7: Under 7s
-          u9: Under 9s
-          u11: Under 11s
-          u13: Under 13s
-          u15: Under 15s
-          u18: Under 18s
-          senior: Senior
-          veterans: Veterans
-      coach:
-        label: Coach
-  Player:
-    label: Player
-    pluralLabel: Players
-    fields:
-      firstName:
-        label: First name
-      lastName:
-        label: Last name
-      dateOfBirth:
-        label: Date of birth
-      position:
-        label: Position
-        values:
-          goalkeeper: Goalkeeper
-          defender: Defender
-          midfielder: Midfielder
-          forward: Forward
-      team:
-        label: Team
-      number:
-        label: Squad number
-      joinedOn:
-        label: Joined on
-  Match:
-    label: Match
-    pluralLabel: Matches
-    fields:
-      date:
-        label: Date and time
-      opponent:
-        label: Opponent
-      home:
-        label: Home match
-      venue:
-        label: Venue
-      team:
-        label: Team
-      result:
-        label: Result
-        values:
-          win: Win
-          draw: Draw
-          loss: Loss
-          upcoming: Upcoming
-      score:
-        label: Score
-      report:
-        label: Match report
+        alt: People playing badminton and stretching in a sports hall with a wooden floor
+        generated: true
+    upcomingMatches:
+      title: Upcoming Matches
+    recentResults:
+      title: Recent Results
+logo:
+  src: images/logo.webp
+  alt: A football
+  generated: true

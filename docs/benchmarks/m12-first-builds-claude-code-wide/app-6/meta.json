@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "booking",
   "questions": [
-    "Should households be able to see their invoices in the app?",
-    "What should an invoice list?",
-    "Should the app record payments?"
+    "Should households be able to see their own invoices in the app?",
+    "What goes on a monthly invoice?",
+    "Do you need to track payments in the app?"
   ]
 }

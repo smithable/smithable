@@ -7,8 +7,10 @@ roles:
   admin: all
   sales:
     description: Works with leads, deals and follow-ups.
-    pages: [leads, deals, follow-ups, schedule]
+    pages: [deals, leads, followUps, schedule]
     create: all
     write: all
+assistant:
+  for: signed-in
 defaultRole: sales
 admins: [johan@smithable.ai]

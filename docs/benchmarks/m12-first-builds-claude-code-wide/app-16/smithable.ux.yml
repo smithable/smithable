@@ -1,13 +1,34 @@
 smithableUx: 0.1
 pages:
-  waiting-list:
+  plots:
     table:
+      columns: [number, size, status, holder, since]
+      sort: number
+    icon: home
+  members:
+    table:
+      columns: [name, email, phone, joinedOn]
+      sort: name
+    icon: users
+  waitingList:
+    table:
+      columns: [name, email, phone, addedOn, status]
       sort: addedOn
+    icon: list
+  fees:
+    table:
+      columns: [member, year, amount, status, paidOn]
+      sort: -year
+    icon: receipt
 tones:
   Plot.status:
-    available: success
+    vacant: success
+    reserved: warning
   Fee.status:
-    paid: success
     unpaid: warning
+    paid: success
+  WaitingListEntry.status:
+    offered: warning
+    allocated: success
 theme:
   preset: woodland

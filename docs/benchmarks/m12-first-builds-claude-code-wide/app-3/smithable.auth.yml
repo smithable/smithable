@@ -8,8 +8,11 @@ roles:
     description: A customer who books appointments.
     pages: [my-bookings]
     create: [Booking]
+assistant:
+  for: signed-in
 public:
-  pages: [home, schedule, privacy]
+  pages: [home, schedule, stylists, privacy]
   read: [Service, Stylist, Slot]
+  create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

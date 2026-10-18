@@ -4,15 +4,13 @@ pages:
     table:
       sort: -date
     icon: calendar
-  invoices:
-    icon: receipt
 tones:
+  Shoot.status:
+    done: success
+    canceled: danger
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
-  Shoot.status:
-    done: success
-    canceled: danger
 theme:
   preset: minimal

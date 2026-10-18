@@ -7,14 +7,12 @@ pages:
     icon: layers
   artists:
     table:
-      columns: [name, country, genre]
       sort: name
     icon: users
 tones:
   Album.condition:
     mint: success
     nearMint: success
-    good: warning
     fair: warning
     poor: danger
 theme:

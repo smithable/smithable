@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shutter Ledger
-  description: "Invoicing for a photographer: clients, shoots and what is still unpaid."
+  description: "Invoices for photography work: clients, shoots and what is still unpaid."
   currency: EUR
 models:
   Client:
@@ -20,55 +20,79 @@ models:
       date: date!
       location: string
       kind: portrait | wedding | event | commercial | product | other
-      status: planned | done | invoiced | canceled
+      status: booked | done | canceled
       fee: money
       notes: text
-  Invoice:
-    fields:
-      number: string! unique
-      client: Client!
-      shoot: Shoot
-      issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
-      status: draft | sent | paid | overdue
-      paidOn: date
-      lines: InvoiceLine[]
-      total:
-        type: money
-        formula: SUM(lines.amount)
+      invoices: Invoice[]
   InvoiceLine:
     fields:
-      invoice: Invoice!
       description: string!
       quantity: decimal! = 1
       unitPrice: money!
       amount:
         type: money
         formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      shoot: Shoot
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
 pages:
   overview:
     dashboard:
-      latest:
-        list: Invoice
+      upcomingShoots:
+        list: Shoot
+        where:
+          status: booked
         limit: 5
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      paid:
+        sum: Invoice.total
+        where:
+          status: paid
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+      unpaid:
+        list: Invoice
+        where:
+          status: [sent, overdue]
+        limit: 10
+  shoots:
+    crud: Shoot
+    filters: [client, status, kind, date]
+    actions: [markDone]
+  clients:
+    crud: Client
+  invoice-lines:
+    crud: InvoiceLine
   invoices:
     crud: Invoice
     filters: [client, status]
     actions: [markSent, markPaid]
-  shoots:
-    crud: Shoot
-    filters: [client, kind, status, date]
-    actions: [markDone]
-  clients:
-    crud: Client
-    search: [name, email]
-  invoice-lines:
-    crud: InvoiceLine
-  calendar:
-    calendar:
-      model: Shoot
-      starts: date
 actions:
+  markDone:
+    on: Shoot
+    when:
+      status: booked
+    set:
+      status: done
+    intent: The shoot has taken place.
   markSent:
     on: Invoice
     when:
@@ -82,12 +106,4 @@ actions:
       status: [sent, overdue]
     set:
       status: paid
-      paidOn: TODAY()
     intent: The client paid the invoice.
-  markDone:
-    on: Shoot
-    when:
-      status: planned
-    set:
-      status: done
-    intent: The shoot took place.

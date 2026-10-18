@@ -1,3 +1,12 @@
 smithableUx: 0.1
 theme:
   preset: corporate
+pages:
+  talks:
+    table:
+      columns: [title, startsAt, location, spotsLeft]
+      below:
+        title: description
+        startsAt: endsAt
+    form:
+      fieldOrder: [title, description, startsAt, endsAt, location, capacity]

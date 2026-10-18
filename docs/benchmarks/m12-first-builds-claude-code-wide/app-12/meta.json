@@ -3,7 +3,7 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who posts and updates outages and incidents?",
-    "Can residents do anything besides view the status page?"
+    "Should residents be able to do more than just view the status page?",
+    "Who at the municipality posts incidents and updates?"
   ]
 }

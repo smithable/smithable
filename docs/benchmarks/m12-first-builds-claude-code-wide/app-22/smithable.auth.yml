@@ -5,5 +5,17 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  staff:
+    description: Nimmt Bestellungen an und pflegt Produkte und Abholzeiten.
+    pages: [bestellungen, produkte, abholzeiten]
+    create: all
+    write: all
+    actions: all
+assistant:
+  for: signed-in
+public:
+  pages: [abholung, datenschutz]
+  read: [Product, PickupSlot]
+  create: [Order]
+defaultRole: staff
 admins: [johan@smithable.ai]

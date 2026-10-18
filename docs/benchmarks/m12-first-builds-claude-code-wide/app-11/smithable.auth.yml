@@ -5,13 +5,15 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  staff:
-    description: Sees which systems are down and when they are back.
-    pages: [components, incidents, maintenance, updates, overview]
   it:
-    description: "The IT team: writes incidents, their updates and planned maintenance."
-    pages: [components, incidents, maintenance, updates, overview]
+    description: "The IT team: writes incidents, their updates and planned maintenance, and keeps the systems' status."
+    pages: [components, incidents, maintenance, overview]
     create: all
     write: all
+  staff:
+    description: Sees what is down and when it is back.
+    pages: [components, incidents, maintenance, overview]
+assistant:
+  for: signed-in
 defaultRole: staff
 admins: [johan@smithable.ai]

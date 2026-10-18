@@ -1,76 +1,12 @@
 smithableContent: 0.1
 pages:
-  home:
+  etusivu:
     hero:
-      title: Löydä oma tuntisi ja varaa paikkasi
-      subtitle: Katso viikon joogatunnit, tutustu ohjaajiimme ja varaa paikkasi verkossa muutamalla klikkauksella.
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
         generated: true
-    callToAction:
-      title: Valmis matolle?
-    title: Etusivu
-  tunnit:
-    title: Tunnit
-  tuntityypit:
-    title: Tuntityypit
-  ohjaajat:
-    title: Ohjaajat
-  omat-varaukset:
-    title: Omat varaukset
-  aikataulu:
-    title: Aikataulu
-  privacy:
-    title: Tietosuoja
-  admin:
-    title: Ylläpito
-models:
-  ClassType:
-    label: Tuntityyppi
-    pluralLabel: Tuntityypit
-    fields:
-      name:
-        label: Nimi
-      summary:
-        label: Kuvaus
-      level:
-        label: Taso
-        values:
-          allLevels: Kaikki tasot
-          beginner: Aloittelijat
-          advanced: Edistyneet
-      durationMinutes:
-        label: Kesto (min)
-  Instructor:
-    label: Ohjaaja
-    pluralLabel: Ohjaajat
-    fields:
-      name:
-        label: Nimi
-      bio:
-        label: Esittely
-      portrait:
-        label: Kuva
-  Session:
-    label: Tunti
-    pluralLabel: Tunnit
-    fields:
-      classType:
-        label: Tuntityyppi
-      instructor:
-        label: Ohjaaja
-      startsAt:
-        label: Alkaa
-      capacity:
-        label: Paikkoja
-  Booking:
-    label: Varaus
-    pluralLabel: Varaukset
-    fields:
-      session:
-        label: Tunti
 logo:
   src: images/logo.webp
-  alt: A flower of five round petals
+  alt: Three nested arcs
   generated: true

@@ -2,11 +2,12 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
-public:
-  pages: [home, tools]
-  read: [Tool]
 roles:
-  member:
-    description: Lends and borrows tools.
-defaultRole: member
+  admin: all
+  member: { pages: all, create: all }
+assistant:
+  for: signed-in
+public:
+  pages: [home, catalog]
+  read: [Tool]
 admins: [johan@smithable.ai]

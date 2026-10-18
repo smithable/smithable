@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: The state of our web shop's services, live.
+  description: The uptime of our web shop and its services, live.
 models:
   Component:
     fields:
@@ -9,6 +9,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -35,6 +36,7 @@ pages:
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
+    filters: [status]
   updates:
     crud: IncidentUpdate
   components:
@@ -60,9 +62,11 @@ pages:
         records: Maintenance
   team:
     users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
   history:
     custom: IncidentHistory
-navigation: [incidents, updates, components, maintenance, team, history]
 actions:
   identified:
     on: Incident
@@ -75,7 +79,6 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -88,7 +91,6 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -102,5 +104,4 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    allow: [admin, staff]
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.

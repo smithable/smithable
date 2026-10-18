@@ -1,39 +1,5 @@
 smithableContent: 0.1
 language: sv
-pages:
-  home:
-    hero:
-      title: Boka din tid hos oss
-      subtitle: Välj behandling, frisör och en tid som passar dig – direkt på nätet, när det passar dig.
-      button: Se lediga tider
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-        generated: true
-    tjanster:
-      title: Våra behandlingar
-    callToAction:
-      title: Dags för en ny frisyr?
-      button: Boka tid
-    contact:
-      title: Har du en fråga? Skriv till oss
-    title: Startsida
-  tider:
-    title: Lediga tider
-  mina-bokningar:
-    title: Mina bokningar
-  tidsluckor:
-    title: Tider
-  behandlingar:
-    title: Behandlingar
-  frisorer:
-    title: Frisörer
-  meddelanden:
-    title: Meddelanden
-  admin:
-    title: Administration
-  integritet:
-    title: Integritet
 models:
   Service:
     label: Behandling
@@ -41,10 +7,10 @@ models:
     fields:
       name:
         label: Namn
-      summary:
+      description:
         label: Beskrivning
       durationMinutes:
-        label: Längd (minuter)
+        label: Tid (minuter)
       price:
         label: Pris
   Stylist:
@@ -54,9 +20,11 @@ models:
       name:
         label: Namn
       bio:
-        label: Om frisören
+        label: Om mig
       portrait:
         label: Porträtt
+      slots:
+        label: Tider
   Slot:
     label: Tid
     pluralLabel: Tider
@@ -64,7 +32,7 @@ models:
       stylist:
         label: Frisör
       startsAt:
-        label: Starttid
+        label: Börjar
       capacity:
         label: Platser
       bookings:
@@ -82,18 +50,30 @@ models:
       phone:
         label: Telefon
       note:
-        label: Meddelande till frisören
-  Message:
-    label: Meddelande
-    pluralLabel: Meddelanden
-    fields:
-      name:
-        label: Namn
-      email:
-        label: E-post
-      message:
         label: Meddelande
+pages:
+  hem:
+    title: Hem
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  boka:
+    title: Boka tid
+  tider:
+    title: Tider
+  behandlingar:
+    title: Behandlingar
+  frisorer:
+    title: Frisörer
+  mina-bokningar:
+    title: Mina bokningar
+  integritet:
+    title: Integritet
+  admin:
+    title: Administration
 logo:
   src: images/logo.webp
-  alt: Two triangles as mountains
+  alt: A water drop
   generated: true

@@ -1,13 +1,16 @@
 smithableUx: 0.1
 theme:
-  preset: navy
+  preset: corporate
   brand:
     primary: "#006633"
-tones:
-  Match.result:
-    win: success
-    loss: danger
 pages:
   matches:
     table:
-      sort: date
+      columns: [homeTeam, awayTeam, date, venue, result, homeScore, awayScore]
+      sort: -date
+  teams:
+    table:
+      view: cards
+  players:
+    table:
+      view: cards

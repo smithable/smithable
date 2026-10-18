@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
   name: IT Status Board
-  description: See which of our IT systems are down, what is being fixed and when they are back.
-  timezone: Europe/Stockholm
+  description: What is down in our IT systems, what is being fixed, and when it is back.
 models:
   Component:
     fields:
@@ -10,6 +9,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -18,7 +18,7 @@ models:
       detectedAt: datetime!
       expectedBackAt: datetime
       resolvedAt: datetime
-      summary: text
+      summary: markdown
       updates: IncidentUpdate[]
   IncidentUpdate:
     fields:
@@ -36,30 +36,29 @@ models:
 pages:
   components:
     crud: Component
+    filters: [status]
   incidents:
     crud: Incident
     filters: [status, component]
     actions: [identified, monitoring, resolve]
   maintenance:
     crud: Maintenance
-  updates:
-    crud: IncidentUpdate
   overview:
     dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
       down:
         count: Component
         where:
           status: [down, degraded]
-      perMonth:
+      open:
         count: Incident
-        by: detectedAt
+        where:
+          status: [investigating, identified, monitoring]
       latest:
         list: Incident
         limit: 5
+      perMonth:
+        count: Incident
+        by: detectedAt
   team:
     users: manage
 actions:
@@ -98,6 +97,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This system is back. The incident is resolved.
-    intent: The system is back; the incident is resolved, with an update saying so.
-navigation: [components, incidents, maintenance, updates, overview, team]
+        message: This incident is resolved. The system is back.
+    intent: The incident is over and the system is back, with an update saying so.
+navigation: [components, incidents, maintenance, overview, team]

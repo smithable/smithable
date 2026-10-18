@@ -3,7 +3,8 @@
   "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Who can add or edit recipes in the collection?",
-    "What can visitors see without signing in?"
+    "Who can add or edit recipes in the app?",
+    "What can visitors see without signing in?",
+    "What details does each recipe hold?"
   ]
 }
