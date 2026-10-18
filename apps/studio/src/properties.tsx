@@ -87,6 +87,14 @@ function RecordNames({
   const [many, setMany] = useState(several);
   // The plural follows the name for one until it is typed.
   const [own, setOwn] = useState(false);
+  // New names saved (here or elsewhere): shown in place, without making the form again (A 121).
+  const [seen, setSeen] = useState(`${one}/${several}`);
+  if (`${one}/${several}` !== seen) {
+    setSeen(`${one}/${several}`);
+    setSingle(one);
+    setMany(several);
+    setOwn(false);
+  }
   return (
     <form
       className="space-y-2"
@@ -382,7 +390,7 @@ export function Properties({
       <div className="space-y-3 border-b border-line p-3 text-sm">
         {heading}
         <RecordNames
-          key={`${texts?.label}/${texts?.pluralLabel}`}
+          key={name}
           model={name}
           one={texts?.label ?? humanize(name)}
           several={

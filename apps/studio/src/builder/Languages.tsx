@@ -150,7 +150,7 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
                 .filter(([path]) => !onlyEmpty || !said.get(path)?.trim())
                 .map(([path, text]) => (
                   <Row
-                    key={`${shown}:${path}:${said.get(path) ?? ""}`}
+                    key={`${shown}:${path}`}
                     path={path}
                     text={text}
                     said={said.get(path) ?? ""}
@@ -181,6 +181,12 @@ function Row({
   run: Run;
 }) {
   const [value, setValue] = useState(said);
+  // A translation saved (here or elsewhere): shown in place, the row kept (A 121).
+  const [seen, setSeen] = useState(said);
+  if (said !== seen) {
+    setSeen(said);
+    setValue(said);
+  }
   const save = () => {
     if (value.trim() !== said.trim())
       void run("setText", { path: path.split("."), text: value.trim(), language });
