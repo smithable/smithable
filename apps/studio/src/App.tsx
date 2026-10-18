@@ -58,9 +58,22 @@ interface Pending {
 /**
  * A project fetched again, with the waiting requests as the page has them: those follow the
  * "waiting" events, and a fetch answered just before a request was taken would put it back.
+ * What has not changed keeps its object, and a project that has not changed at all is the one
+ * shown: the spec is not read again and nothing re-renders for a fetch that brought nothing new
+ * (a change is fetched when it is made and again when the app has it, A 121).
  */
 function keepWaiting(shown: Project | undefined, next: Project): Project {
-  return shown ? { ...next, waiting: shown.waiting } : next;
+  if (!shown) return next;
+  const merged = { ...next, waiting: shown.waiting } as Record<string, unknown>;
+  const before = shown as unknown as Record<string, unknown>;
+  // Over both projects' keys: one missing on a side is undefined there (the first project has no
+  // waiting key yet), which compares like any value.
+  let same = true;
+  for (const key of new Set([...Object.keys(merged), ...Object.keys(before)])) {
+    if (JSON.stringify(merged[key]) === JSON.stringify(before[key])) merged[key] = before[key];
+    else same = false;
+  }
+  return same ? shown : (merged as unknown as Project);
 }
 
 export function App() {
@@ -219,8 +232,10 @@ export function App() {
     // The preview loads again only when the change touches the page it shows (studio-v2 §2):
     // another kind of record's field leaves it, and the person's place in it, as it is.
     const change = next.trace[0];
-    const key = change && `${change.at}:${change.description}`;
-    const fresh = key !== undefined && seen.current !== undefined && key !== seen.current;
+    // A project without changes yet has "" as its newest, so its first change is a new one too
+    // and reloads the preview only when it touches the page shown (A 121).
+    const key = change ? `${change.at}:${change.description}` : "";
+    const fresh = seen.current !== undefined && key !== seen.current;
     seen.current = key;
     // An undo is reloaded as a change without an operation, unless it only changed words.
     if (

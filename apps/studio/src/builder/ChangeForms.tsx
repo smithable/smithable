@@ -636,6 +636,16 @@ export function FieldShapeForm({
   const [shape, setShape] = useState(() =>
     proposed ? parseShape(proposed, models) : shapeOf(field),
   );
+  const [becomes, setBecomes] = useState<Record<string, string>>({});
+  // The field changed (this change, an undo, another window): start again from it, in place, so
+  // the form keeps its spot and focus instead of being made again (A 121).
+  const now = JSON.stringify(field);
+  const [seen, setSeen] = useState(now);
+  if (now !== seen) {
+    setSeen(now);
+    setShape(proposed ? parseShape(proposed, models) : shapeOf(field));
+    setBecomes({});
+  }
   const type = shorthand(shape, field);
   // A choice value that goes: the records and samples holding it get one of the new ones.
   const values = shape.kind === "choice" ? choiceValues(shape, field) : [];
@@ -643,7 +653,6 @@ export function FieldShapeForm({
     shape.kind === "choice" && field.type.kind === "choice"
       ? field.type.values.filter((v) => !values.includes(v))
       : [];
-  const [becomes, setBecomes] = useState<Record<string, string>>({});
   const renames = gone.map(
     (v) => `${v}=${becomes[v] ?? (field.required ? (values[0] ?? "") : "")}`,
   );
