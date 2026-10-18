@@ -66,8 +66,10 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
   if (!shown) return next;
   const merged = { ...next, waiting: shown.waiting } as Record<string, unknown>;
   const before = shown as unknown as Record<string, unknown>;
-  let same = Object.keys(merged).length === Object.keys(before).length;
-  for (const key of Object.keys(merged)) {
+  // Over both projects' keys: one missing on a side is undefined there (the first project has no
+  // waiting key yet), which compares like any value.
+  let same = true;
+  for (const key of new Set([...Object.keys(merged), ...Object.keys(before)])) {
     if (JSON.stringify(merged[key]) === JSON.stringify(before[key])) merged[key] = before[key];
     else same = false;
   }
