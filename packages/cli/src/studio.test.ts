@@ -84,6 +84,7 @@ test("the trace has each change's id, the person's files it changed and a model'
     expect(asked).toMatchObject({ files: ["smithable.yml"], request: "customers need a website" });
     expect(added?.id).toMatch(/^[0-9a-f]{40}$/);
     expect(added?.files).toEqual(["smithable.yml", "src/custom/actions/merge.ts"]);
+    expect(added?.rewritten).toEqual(["src/generated/schema.ts"]);
     expect(added?.request).toBeUndefined();
     const detail = changeDetail(dir, added?.id ?? "");
     expect(detail?.patch).toContain("+models: {}");

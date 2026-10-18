@@ -29,6 +29,8 @@ What is already right: a kind of record's words live once in its generated modul
 
 ## 3. The preview updates in place (Fable)
 
+Built 2026-10-17 (Fable): the plugin passes the hot updates of `src/generated/<name>.ts` (one segment: `pages.ts`, `app.ts`, `roles.ts`, `site.ts`, a model's module; not `.server.ts`, a schema or an action), each change in the trace names the generated files it rewrote (`rewritten`), and Studio's `touchesPage` reloads nothing for a change that rewrote only such modules, an undo of one included. Measured on the CRM: a page title's change gives 0 reloads, the header, the menu and the tab title showing the new words in place; a model's label still rewrites its list route (`w.newOne("client")`) and server module, so that change reloads as before until those words move too.
+
 With the words in data modules, a text change touches `pages.ts`, a model module or `app.ts`, modules without components. Studio's preview plugin (`packages/cli/src/preview-editor.ts`, `holdUpdates`) holds every hot update today and Studio makes one reload. For those modules it lets the hot update through: Vite propagates it to the importers (the root route, the page components), React Refresh re-renders them, and the new text shows in place with no reload, menu and tab title included. Studio's `touchesPage` then says a text change touches no page, since the preview updates itself; the measurement of 2026-10-16 (frame reloads and React commits per change) is the yardstick: a text change should give 0 reloads. Everything else stays held, and a change that touches the schema or the routes still gets Studio's one reload.
 
 ## 4. To revisit: navigation and the page header as choices, more layouts

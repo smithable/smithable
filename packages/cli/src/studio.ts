@@ -83,6 +83,8 @@ export interface TraceEntry {
   operation?: { op: string; args: Record<string, unknown> };
   /** The files it changed that a person edits: the spec files and src/custom/** (Code mode). */
   files: string[];
+  /** The generated files under src/ it rewrote: Studio reloads the preview for none of them when all are words modules. */
+  rewritten: string[];
   /** What the person asked a model, for a change it made (several changes may share one). */
   request?: string;
 }
@@ -129,12 +131,15 @@ function readTrace(dir: string): TraceEntry[] {
   if (!log.ok) return [];
   const records = log.out.split("\x1e").filter((e) => e.trim());
   const entries = records.map((r) => r.split("\x1d")[0] ?? "");
-  const changed = new Map(
+  const named = new Map(
     records.map((r) => {
       const [head = "", names = ""] = r.split("\x1d");
-      return [head.trim().split("\x1f")[0] ?? "", names.split("\n").filter((n) => n && ownFile(n))];
+      return [head.trim().split("\x1f")[0] ?? "", names.split("\n").filter(Boolean)];
     }),
   );
+  const changed = (sha: string) => (named.get(sha) ?? []).filter(ownFile);
+  const rewritten = (sha: string) =>
+    (named.get(sha) ?? []).filter((n) => n.startsWith("src/") && !ownFile(n));
   const reverted = new Set(
     entries.flatMap((e) => [...e.matchAll(/This reverts commit ([0-9a-f]{40})/g)].map((m) => m[1])),
   );
@@ -182,7 +187,8 @@ function readTrace(dir: string): TraceEntry[] {
         undone: reverted.has(sha),
         isUndo,
         ...(operation ? { operation } : {}),
-        files: changed.get(sha) ?? [],
+        files: changed(sha),
+        rewritten: rewritten(sha),
         ...(model?.request ? { request: model.request } : {}),
       },
     ];

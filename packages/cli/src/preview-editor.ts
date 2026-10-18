@@ -366,6 +366,13 @@ interface DevServer {
   };
 }
 
+/**
+ * A generated module without components, read by the pages for its words: `pages.ts`, `app.ts`,
+ * `roles.ts`, `site.ts`, a model's module (`customer.ts`); not a server module (`.server.ts`),
+ * a schema or the actions' files.
+ */
+export const WORDS_MODULE = /\/src\/generated\/[a-z0-9-]+\.ts$/;
+
 export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
   return {
     name: "smithable-editor",
@@ -377,10 +384,17 @@ export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
      * before the change was whole, the last with a stale client module meeting the new server
      * HTML. Studio reloads the preview itself, once, when the daemon says the app has taken the
      * change in, and only when the change touches the page shown. Code the app's maker writes
-     * (`src/custom/`) keeps hot reload; so does everything in the theme lab.
+     * (`src/custom/`) keeps hot reload; so does everything in the theme lab. So do the app's
+     * words modules (words-once.md §3): a text change rewrites `src/generated/pages.ts`, a
+     * model's module or `app.ts`, modules without components, and their hot update reaches the
+     * components that read them, which show the new text in place; Studio then reloads nothing.
      */
     hotUpdate(update: { file: string }) {
-      return options.holdUpdates && !/\/src\/custom\//.test(update.file) ? [] : undefined;
+      return options.holdUpdates &&
+        !/\/src\/custom\//.test(update.file) &&
+        !WORDS_MODULE.test(update.file)
+        ? []
+        : undefined;
     },
     /**
      * /__smithable/settled answers once the dev server has taken in the latest file changes:
