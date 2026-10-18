@@ -2,11 +2,13 @@
 // ports, and prints each example's lines as they come, prefixed with its name, so a run that
 // stops shows where. Same checks as scripts/test-apps.mjs, which this runs; about as long as
 // the slowest example. Stopping this stops them, and they stop their servers.
-// TEST_APPS_CONCURRENCY limits how many run at once (default: all): the self-hosted CI runner
-// shares the machine with the sessions' own work, and a browser step waiting for a page to
-// hydrate times out when every example builds and serves at the same time beside them.
+// TEST_APPS_CONCURRENCY limits how many run at once (default: half the cores, at least two): all
+// ten at once on eight cores put the load at nine to twelve, and a server's health or a page's
+// hydration waited past its time (2026-10-18); the self-hosted CI runner runs three, since it
+// shares the machine with the sessions' own work.
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
+import { cpus } from "node:os";
 import { join } from "node:path";
 import { refused } from "./ports.mjs";
 
@@ -33,7 +35,10 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
     process.exit(130);
   });
 const width = Math.max(...examples.map((e) => e.length));
-const atOnce = Math.max(1, Number(process.env.TEST_APPS_CONCURRENCY) || examples.length);
+const atOnce = Math.max(
+  1,
+  Number(process.env.TEST_APPS_CONCURRENCY) || Math.max(2, Math.floor(cpus().length / 2)),
+);
 /** Runs `tasks` with at most `atOnce` in flight, keeping their order in the results. */
 async function limited(tasks) {
   const results = new Array(tasks.length);

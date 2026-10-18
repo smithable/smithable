@@ -6,6 +6,11 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+// How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
+// a check that waits a minute on a quiet machine waits three under load, so a slow answer is
+// not read as a failure.
+const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
+
 export const repo = new URL("..", import.meta.url).pathname;
 export const cli = join(repo, "packages/cli/dist/bin.js");
 
@@ -49,7 +54,7 @@ export async function serveDev(dir, port) {
   server.stderr.on("data", (d) => (log += d));
   const stop = () => killTree(server.pid);
   process.on("exit", stop);
-  for (let i = 0; i < 240; i++) {
+  for (let i = 0; i < 240 * P; i++) {
     try {
       if (
         (await fetch(`http://localhost:${port}/health`, { signal: AbortSignal.timeout(2000) })).ok
@@ -74,7 +79,7 @@ export async function signIn(page, base, role) {
     await open(page, `${base}/sign-in`);
     await page.getByRole("button", { name: `Sign in as ${role}` }).click();
     try {
-      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 });
+      await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 5000 * P });
       return;
     } catch (error) {
       if (attempt === 3) throw error;
