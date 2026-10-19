@@ -1,7 +1,8 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
 // To customize a form, copy this file into src/custom/components/ and edit the copy.
+import { useBlocker } from "@tanstack/react-router";
 import { Calculator, CircleAlert } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -76,7 +77,30 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const [inputs, setInputs] = useState(() =>
     initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
   );
+  const initialInputsRef = useRef(inputs);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const isDirty =
+    !readOnly && Object.keys(inputs).some((key) => inputs[key] !== initialInputsRef.current[key]);
+
+  useEffect(() => {
+    if (!isDirty || submitting) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty, submitting]);
+
+  useBlocker({
+    shouldBlockFn: () => {
+      if (submitting || !isDirty) return false;
+      return !window.confirm(w.warnDirtyEdits);
+    },
+  });
+
   // Computed fields follow what has been entered so far.
   // The record comes first so values that are not inputs (like related lines) are included.
   const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs, app.timeZone) }) ?? {};
@@ -125,9 +149,22 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    setSubmitAttempted(true);
     const { result, messages, ok } = problems(storedValues(ui, inputs, app.timeZone));
     setErrors(messages);
-    if (ok && result.success) await run(() => onSubmit(result.data));
+    if (ok && result.success) {
+      setSubmitting(true);
+      await run(() => onSubmit(result.data));
+      setSubmitting(false); // In case of error caught by run(), we are no longer submitting
+    } else {
+      const firstErrorField = ui.fields.find((f) => messages[f.name]);
+      if (firstErrorField) {
+        setTimeout(() => {
+          const id = `${formId}field-${firstErrorField.name}`;
+          document.getElementById(id)?.focus();
+        }, 0);
+      }
+    }
   }
 
   /**
@@ -307,128 +344,148 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     );
   }
 
+  const errorCount = Object.keys(errors).length;
+
   return (
-    <Card data-kit="model-form" className="max-w-3xl">
-      <form
-        onSubmit={submit}
-        noValidate
-        className="space-y-6 p-card"
-        onBlur={(event) => {
-          // Leaving a field, not moving within it (the parts of a choice list). Not for one of
-          // the form's buttons: saving checks everything, and a message appearing now would move
-          // the button from under the click.
-          const box = (event.target as Element).closest("[data-field]");
-          const to = event.relatedTarget as HTMLElement | null;
-          const field = ui.fields.find((f) => f.name === box?.getAttribute("data-field"));
-          if (field && !box?.contains(to) && !to?.closest("[data-part=actions]")) check(field);
-        }}
-      >
-        {!readOnly && ui.fields.some((f) => (f.required || f.requiredWhen) && !f.computed) && (
-          <p className="text-sm text-muted-foreground">
-            {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}
-          </p>
-        )}
-        <fieldset disabled={readOnly} className="space-y-6">
-          {groups(ui).map((group) => (
-            <div key={group.name ?? ""} data-part="section" className="space-y-4">
-              {group.title && (
-                <h2 className="text-base font-semibold" data-part="title">
-                  {group.title}
-                </h2>
-              )}
-              <div className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-6"}>
-                {group.fields.map((field) => renderField(field))}
+    <div className="max-w-3xl space-y-8">
+      <Card data-kit="model-form" className="overflow-hidden">
+        <form
+          onSubmit={submit}
+          noValidate
+          className="relative flex flex-col pt-6"
+          onBlur={(event) => {
+            // Leaving a field, not moving within it (the parts of a choice list). Not for one of
+            // the form's buttons: saving checks everything, and a message appearing now would move
+            // the button from under the click.
+            const box = (event.target as Element).closest("[data-field]");
+            const to = event.relatedTarget as HTMLElement | null;
+            const field = ui.fields.find((f) => f.name === box?.getAttribute("data-field"));
+            if (field && !box?.contains(to) && !to?.closest("[data-part=actions]")) check(field);
+          }}
+        >
+          <div className="space-y-6 px-card">
+            {submitAttempted && errorCount > 0 && (
+              <div
+                role="alert"
+                className="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive outline-none"
+              >
+                <h2 className="mb-2 text-sm font-semibold">{w.errorTitle}</h2>
+                <p className="text-sm">{w.formHasErrors(errorCount)}</p>
               </div>
-            </div>
-          ))}
-        </fieldset>
-        {failure && (
-          <p
-            role="alert"
-            className="flex items-start gap-2 rounded-md border border-destructive p-3 text-sm text-destructive"
+            )}
+            {!readOnly && ui.fields.some((f) => (f.required || f.requiredWhen) && !f.computed) && (
+              <p className="text-sm text-muted-foreground">
+                {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}
+              </p>
+            )}
+            <fieldset disabled={readOnly} className="space-y-6">
+              {groups(ui).map((group) => (
+                <div key={group.name ?? ""} data-part="section" className="space-y-4">
+                  {group.title && (
+                    <h2 className="text-base font-semibold" data-part="title">
+                      {group.title}
+                    </h2>
+                  )}
+                  <div className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-6"}>
+                    {group.fields.map((field) => renderField(field))}
+                  </div>
+                </div>
+              ))}
+            </fieldset>
+            {failure && (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-destructive p-3 text-sm text-destructive"
+              >
+                <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+                {failure}
+              </p>
+            )}
+          </div>
+          <div
+            data-part="actions"
+            className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center gap-3 border-t bg-card/95 p-card backdrop-blur"
           >
-            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-            {failure}
-          </p>
-        )}
-        <div data-part="actions" className="flex flex-wrap items-center gap-3 border-t pt-6">
-          {!readOnly && (
-            <Button type="submit" disabled={busy}>
-              {busy ? w.saving : submitLabel}
-            </Button>
-          )}
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-              {cancelLabel ?? (readOnly ? "Back" : "Cancel")}
-            </Button>
-          )}
-          {onDelete && (
+            {!readOnly && (
+              <Button type="submit" disabled={busy}>
+                {busy ? w.saving : submitLabel}
+              </Button>
+            )}
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
+                {cancelLabel ?? (readOnly ? "Back" : "Cancel")}
+              </Button>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {onDelete && (
+        <Card data-kit="model-form-danger" className="border-destructive/50">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-card">
+            <div>
+              <h3 className="font-semibold text-destructive">{trash ? w.moveToTrash : w.delete}</h3>
+              <p className="text-sm text-muted-foreground">{w.cannotBeUndone}</p>
+            </div>
             <Button
               type="button"
               variant="outline"
-              className="ml-auto border-destructive text-destructive"
+              className="border-destructive text-destructive"
               disabled={busy}
               onClick={() => (trash ? run(() => onDelete()) : confirmDelete.current?.showModal())}
             >
               {trash ? w.moveToTrash : w.delete}
             </Button>
-          )}
-          {onDelete && inUse && (
-            <TogetherDialog
-              facts={inUse}
-              what={
-                typeof recordName === "string" && recordName
-                  ? `“${recordName}”`
-                  : w.thisOne(ui.label)
-              }
-              rootLabel={ui.label}
-              busy={busy}
-              onTogether={() => {
-                setInUse(undefined);
-                run(() => onDelete(true));
+          </div>
+        </Card>
+      )}
+
+      {onDelete && inUse && (
+        <TogetherDialog
+          facts={inUse}
+          what={
+            typeof recordName === "string" && recordName ? `“${recordName}”` : w.thisOne(ui.label)
+          }
+          rootLabel={ui.label}
+          busy={busy}
+          onTogether={() => {
+            setInUse(undefined);
+            run(() => onDelete(true));
+          }}
+          onClose={() => setInUse(undefined)}
+        />
+      )}
+      {onDelete && !trash && (
+        // Opening it focuses Cancel, the first button; Escape closes it.
+        <dialog
+          ref={confirmDelete}
+          aria-labelledby="delete-title"
+          className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+        >
+          <h2 id="delete-title" className="text-lg font-semibold">
+            {w.delete}{" "}
+            {typeof recordName === "string" && recordName ? `“${recordName}”` : w.thisOne(ui.label)}
+            ?
+          </h2>
+          <p className="mt-2 text-muted-foreground">{w.cannotBeUndone}</p>
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => confirmDelete.current?.close()}>
+              {w.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                confirmDelete.current?.close();
+                run(() => onDelete());
               }}
-              onClose={() => setInUse(undefined)}
-            />
-          )}
-          {onDelete && !trash && (
-            // Opening it focuses Cancel, the first button; Escape closes it.
-            <dialog
-              ref={confirmDelete}
-              aria-labelledby="delete-title"
-              className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
             >
-              <h2 id="delete-title" className="text-lg font-semibold">
-                {w.delete}{" "}
-                {typeof recordName === "string" && recordName
-                  ? `“${recordName}”`
-                  : w.thisOne(ui.label)}
-                ?
-              </h2>
-              <p className="mt-2 text-muted-foreground">{w.cannotBeUndone}</p>
-              <div className="mt-6 flex flex-wrap justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => confirmDelete.current?.close()}
-                >
-                  {w.cancel}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    confirmDelete.current?.close();
-                    run(() => onDelete());
-                  }}
-                >
-                  {w.deleteIt(ui.label.toLowerCase())}
-                </Button>
-              </div>
-            </dialog>
-          )}
-        </div>
-      </form>
-    </Card>
+              {w.deleteIt(ui.label.toLowerCase())}
+            </Button>
+          </div>
+        </dialog>
+      )}
+    </div>
   );
 }
 

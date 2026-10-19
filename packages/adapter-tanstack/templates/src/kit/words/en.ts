@@ -93,6 +93,8 @@ export const w = {
   enterValidUrl: "Enter a valid web address",
   enterWholeNumber: "Enter a whole number",
   errorTitle: "Something went wrong",
+  warnDirtyEdits: "You have unsaved changes. Are you sure you want to leave?",
+  formHasErrors: (n: number) => n === 1 ? "The form has 1 error. Please fix it." : `The form has ${n} errors. Please fix them.`,
   everyone: "Everyone",
   exportCsv: "Export CSV",
   fieldsMarked: "Fields marked",

@@ -98,6 +98,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="title"",
     "data-part="actions"",
     "data-part=actions]")) check(field);",
+    "data-kit="model-form-danger"",
     "data-part="pictures"",
     "data-part="files"",
   ],

@@ -93,6 +93,8 @@ export const w = {
   enterValidUrl: "Ange en giltig webbadress",
   enterWholeNumber: "Ange ett heltal",
   errorTitle: "Något gick fel",
+  warnDirtyEdits: "Du har osparade ändringar. Är du säker på att du vill lämna sidan?",
+  formHasErrors: (n: number) => n === 1 ? "Formuläret har 1 fel. Vänligen åtgärda det." : `Formuläret har ${n} fel. Vänligen åtgärda dem.`,
   everyone: "Alla",
   exportCsv: "Exportera CSV",
   fieldsMarked: "Fält märkta med",
