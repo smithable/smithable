@@ -190,7 +190,7 @@ test("a rule twice, a number counting up in a rule, or a unique list of records 
   expect(
     codes(
       spec(
-        "  Invoice:\n    fields:\n      name: string!\n      lines: { type: \"Line[]\", unique: true }\n  Line:\n    fields:\n      invoice: Invoice!\n",
+        '  Invoice:\n    fields:\n      name: string!\n      lines: { type: "Line[]", unique: true }\n  Line:\n    fields:\n      invoice: Invoice!\n',
       ),
     ),
   ).toContain("error:invalid-field");
