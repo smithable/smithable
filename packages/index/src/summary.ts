@@ -226,6 +226,15 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
+    for (const u of model.unique ?? []) {
+      const named = u.fields.map((n) => {
+        const f = model.fields.find((x) => x.name === n);
+        return f ? fieldLabel(model, f) : humanize(n).toLowerCase();
+      });
+      const where =
+        u.scope === "owner" ? " for one owner" : u.scope === "app" ? " in the whole app" : "";
+      sentences.push(`No two ${many(model)} have the same ${named.join(" and ")}${where}.`);
+    }
     if (model.review) {
       // "Photos of listings are reviewed before others see them; a listing waits until its photo is."
       const reviewed = model.review.flatMap((n) => model.fields.find((f) => f.name === n) ?? []);
@@ -499,7 +508,9 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
       notes.push(KINDS[f.type.name] as string);
     }
     if (f.required && f.type.kind !== "choice") notes.push("required");
-    if (f.unique) notes.push("unique");
+    if (f.unique === "owner") notes.push("unique per owner");
+    else if (f.unique === "app") notes.push("unique in the whole app");
+    else if (f.unique) notes.push("unique");
     if (f.default !== undefined && f.type.kind !== "choice") notes.push(`${f.default} by default`);
     if (f.defaultFormula) notes.push(`${words(model, f.defaultFormula)} by default`);
     notes.push(...ruleNotes(f));

@@ -638,10 +638,11 @@ const setFieldRules: Operation<{
   locked?: Record<string, string | boolean | string[]>;
   once?: boolean;
   required?: Record<string, string | boolean | string[]>;
+  unique?: "true" | "false" | "owner" | "app";
 }> = {
   name: "setFieldRules",
   summary:
-    "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds.",
+    "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds; and whether it is unique, and where (owner or app).",
   schema: {
     type: "object",
     required: ["model", "field"],
@@ -669,11 +670,23 @@ const setFieldRules: Operation<{
         description:
           'Required while the record fits the condition, e.g. { status: "inProgress | closed" }; {} removes it. Always required is "!" in the type (changeField).',
       },
+      unique: {
+        enum: ["true", "false", "owner", "app"],
+        description:
+          "No two records hold the same value: true (per owner or in the app as the access says), owner (among one owner's records), app (in the whole app); false removes it.",
+      },
     },
   },
   positional: ["model", "field"],
-  describe: ({ model, field, by, locked, once, required }) =>
+  describe: ({ model, field, by, locked, once, required, unique }) =>
     `Set ${model}.${field}'s rules: ${[
+      unique !== undefined &&
+        {
+          true: "unique",
+          false: "not unique",
+          owner: "unique per owner",
+          app: "unique in the whole app",
+        }[unique],
       by !== undefined && (by ? "filled by the app" : "filled in the form"),
       once !== undefined && (once ? "locked once made" : "not locked once made"),
       locked !== undefined &&
@@ -688,12 +701,29 @@ const setFieldRules: Operation<{
       .filter(Boolean)
       .join(", ")}`,
   destructive: () => false,
-  apply({ spec }, { model: m, field: f, by, locked, once, required }, ir) {
+  apply({ spec }, { model: m, field: f, by, locked, once, required, unique }, ir) {
     const found = field(ir, m, f);
     if (found.formula)
       throw new OperationError(`${m}.${f} is computed by its formula: nobody fills it in.`);
-    if (by === undefined && locked === undefined && once === undefined && required === undefined)
-      throw new OperationError("Say what to set: --by, --locked, --once or --required.");
+    if (
+      by === undefined &&
+      locked === undefined &&
+      once === undefined &&
+      required === undefined &&
+      unique === undefined
+    )
+      throw new OperationError("Say what to set: --by, --locked, --once, --required or --unique.");
+    if (unique !== undefined && unique !== "false" && isUpload(found))
+      throw new OperationError(
+        `${m}.${f} is a ${found.type.kind === "scalar" ? found.type.name : "file"}: it cannot be unique.`,
+      );
+    if (
+      unique !== undefined &&
+      unique !== "false" &&
+      found.type.kind === "relation" &&
+      found.type.many
+    )
+      throw new OperationError(`${m}.${f} is a list of records: it cannot be unique.`);
     if (once && locked && Object.keys(locked).length)
       throw new OperationError("A field is locked once made or while a condition holds, not both.");
     const path = fieldPath(m, f, ir);
@@ -708,6 +738,11 @@ const setFieldRules: Operation<{
       else long[key] = value;
     };
     if (by !== undefined) keep("by", by || undefined);
+    if (unique !== undefined) {
+      // The shorthand's "unique" moves to the key, which says where.
+      long.type = String(long.type).replace(/\s+unique\b/, "");
+      keep("unique", unique === "false" ? undefined : unique === "true" ? true : unique);
+    }
     if (once !== undefined) keep("locked", once || undefined);
     if (locked !== undefined)
       keep("locked", Object.keys(locked).length ? (conditionArgs(locked) as YamlValue) : undefined);
@@ -716,7 +751,11 @@ const setFieldRules: Operation<{
         "required",
         Object.keys(required).length ? (conditionArgs(required) as YamlValue) : undefined,
       );
-    // Back to the shorthand when nothing but the type (and a default) is left.
+    // Back to the shorthand when nothing but the type (and a default, and a plain unique) is left.
+    if (long.unique === true) {
+      long.type = `${String(long.type)} unique`;
+      delete long.unique;
+    }
     const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
     spec.set(
       path,
@@ -731,7 +770,7 @@ const setFieldRules: Operation<{
 };
 
 /** A field's shorthand as the long form: its type, and its default as its own key. */
-function longForm(shorthand: string): Record<string, YamlValue> {
+export function longForm(shorthand: string): Record<string, YamlValue> {
   const at = shorthand.indexOf("=");
   if (at < 0) return { type: shorthand.trim() };
   const raw = shorthand.slice(at + 1).trim();
@@ -744,7 +783,88 @@ function longForm(shorthand: string): Record<string, YamlValue> {
   return { type: shorthand.slice(0, at).trim(), default: value };
 }
 
+/**
+ * Fields unique together (docs/design/uniqueness.md): no two records of the model hold the same
+ * values in all of them, among one owner's records or in the whole app. One rule per set of fields;
+ * naming the same set again changes where, --remove takes it away.
+ */
+const setUnique: Operation<{
+  model: string;
+  fields: string[];
+  scope?: "owner" | "app";
+  remove?: boolean;
+}> = {
+  name: "setUnique",
+  summary:
+    "Make two or more fields of a model unique together: no two records hold the same values in all of them, among one owner's records (owner), in the whole app (app), or as the access says; --remove takes the rule away. One field alone is unique through setFieldRules.",
+  schema: {
+    type: "object",
+    required: ["model", "fields"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      fields: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 2,
+        description: "Two or more of the model's stored fields.",
+      },
+      scope: {
+        enum: ["owner", "app"],
+        description:
+          "owner: among one owner's records; app: in the whole app. Left out: as the access says, like a field's unique: true.",
+      },
+      remove: { type: "boolean", description: "true removes the rule for these fields." },
+    },
+  },
+  positional: ["model", "fields"],
+  describe: ({ model, fields, scope, remove }) =>
+    remove
+      ? `Let ${model} records share the same ${fields.join(" and ")}`
+      : `No two ${model} records with the same ${fields.join(" and ")}${scope === "owner" ? " for one owner" : scope === "app" ? " in the whole app" : ""}`,
+  destructive: () => false,
+  apply({ spec }, { model, fields, scope, remove }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found) throw new OperationError(`There is no model named "${model}".`);
+    const names = [...new Set(fields)];
+    if (names.length < 2) throw new OperationError("Name two or more different fields.");
+    for (const name of names) {
+      const f = found.fields.find((x) => x.name === name);
+      if (!f) throw new OperationError(`${model} has no field "${name}".`);
+      if (remove) continue;
+      if (f.formula || isUpload(f) || (f.type.kind === "relation" && f.type.many))
+        throw new OperationError(
+          `${model}.${name} cannot be part of the rule: a computed field, a picture, a file or a list of records is not stored as one value.`,
+        );
+      if (f.unique)
+        throw new OperationError(
+          `${model}.${name} is unique by itself already; remove that first.`,
+        );
+    }
+    const same = (a: string[]) => a.length === names.length && a.every((n) => names.includes(n));
+    const path = ["models", model, "unique"];
+    const current = spec.has(path) ? spec.get(path) : [];
+    const entries: { fields: string[]; scope?: string }[] = (
+      Array.isArray(current) ? current : []
+    ).map((e) =>
+      Array.isArray(e) ? { fields: e.map(String) } : (e as { fields: string[]; scope?: string }),
+    );
+    const at = entries.findIndex((e) => same(e.fields));
+    if (remove) {
+      if (at < 0) throw new OperationError(`${model} has no such rule for ${names.join(" and ")}.`);
+      entries.splice(at, 1);
+    } else if (at < 0) entries.push({ fields: names, scope });
+    else entries[at] = { fields: names, scope };
+    const value = entries.map((e) => (e.scope ? { fields: e.fields, scope: e.scope } : e.fields));
+    if (value.length === 0) spec.remove(path);
+    else if (spec.has(path)) spec.set(path, value as YamlValue);
+    else spec.add(["models", model], "unique", value as YamlValue);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
+  setUnique,
   addModel,
   addField,
   changeField,

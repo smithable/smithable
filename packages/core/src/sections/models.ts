@@ -30,6 +30,8 @@ import {
   type ModelIR,
   SCALAR_TYPES,
   type SpecIR,
+  type UniqueIR,
+  type UniqueScope,
   USER_MODEL,
 } from "../ir.js";
 import { capitalize } from "../naming.js";
@@ -99,7 +101,11 @@ const fieldSchema: JsonSchema = {
             "true: set when the record is made, never changed after; or a condition, e.g. { status: closed }: read-only while the record fits it. An action's set may still change it.",
           additionalProperties: conditionValueSchema,
         },
-        unique: { type: "boolean", description: "No two records may hold the same value." },
+        unique: {
+          oneOf: [{ type: "boolean" }, { type: "string", enum: ["owner", "app"] }],
+          description:
+            "No two records may hold the same value: true (among one owner's records when records are read by their owners only, else in the whole app), owner or app to say which outright.",
+        },
         default: {
           type: ["string", "number", "boolean"],
           description: `For choices, "none" means no default. ME() on a field that refers to User: who makes the record.`,
@@ -278,6 +284,36 @@ export const modelsSection: SpecSection<"models"> = {
           description:
             "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good.",
         },
+        unique: {
+          type: "array",
+          minItems: 1,
+          items: {
+            oneOf: [
+              { type: "array", items: { type: "string" }, minItems: 2 },
+              {
+                type: "object",
+                required: ["fields"],
+                additionalProperties: false,
+                properties: {
+                  fields: {
+                    type: "array",
+                    items: { type: "string" },
+                    minItems: 2,
+                    description: "Two or more of the model's stored fields, unique together.",
+                  },
+                  scope: {
+                    type: "string",
+                    enum: ["owner", "app"],
+                    description:
+                      "owner: among one owner's records; app: in the whole app. Left out, as the access says, like a field's unique: true.",
+                  },
+                },
+              },
+            ],
+          },
+          description:
+            "Fields unique together, e.g. [[customer, number]]: no two records hold the same values in all of them; { fields: [customer, number], scope: app } says where (owner: among one owner's records; app: in the whole app).",
+        },
         capacity: {
           type: "object",
           description:
@@ -341,8 +377,8 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "capacity", "trash", "review", ...TEXT_KEYS],
-    later: ["unique", "examples"],
+    allowed: ["fields", "ownedBy", "capacity", "trash", "review", "unique", ...TEXT_KEYS],
+    later: ["examples"],
     content: ["label", "title"],
     moved: {
       access: `who may read, add, change and delete ${name} records is said by the roles in smithable.auth.yml (roles.<role>.write: [${name}], and so on).`,
@@ -395,6 +431,8 @@ function readModel(
   for (const read of pending) read(model);
   const review = known.find((e) => e.key === "review");
   if (review) readReview(ctx, model, review);
+  const unique = known.find((e) => e.key === "unique");
+  if (unique) readUniqueTogether(ctx, model, unique);
   return model;
 }
 
@@ -566,7 +604,7 @@ function readLongField(
     requiredEntry && !requiredWhen
       ? readBoolean(ctx, requiredEntry.value, `"required"`)
       : undefined;
-  const unique = uniqueEntry && readBoolean(ctx, uniqueEntry.value, `"unique"`);
+  const unique = uniqueEntry && readUniqueScope(ctx, uniqueEntry.value, `"unique" of ${where}`);
   if (unique !== undefined) shorthand.unique = unique;
 
   const field = buildField(ctx, name, shorthand, typeEntry.value, where, byKey.get("default"));
@@ -1181,4 +1219,104 @@ function dependsOn(
   return fieldsUsed(formula).some(
     (used) => used === target || dependsOn(target, used, computed, seen),
   );
+}
+
+/** A field's `unique`: true or false, or where it is unique, `owner` or `app` (docs/design/uniqueness.md). */
+function readUniqueScope(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  what: string,
+): boolean | UniqueScope | undefined {
+  if (isScalar(node) && typeof node.value === "boolean") return node.value;
+  if (isScalar(node) && (node.value === "owner" || node.value === "app")) return node.value;
+  ctx.error(
+    node,
+    "expected-boolean",
+    `${capitalize(what)} is true or false, or where the value is unique: owner (among one owner's records) or app (in the whole app).`,
+  );
+  return undefined;
+}
+
+/**
+ * A model's `unique`: lists of two or more stored fields that are unique together, each a list
+ * of names or `{ fields, scope }` (docs/design/uniqueness.md). A field already unique by itself
+ * makes the pair pointless, so that is refused.
+ */
+function readUniqueTogether(ctx: ParseContext, model: ModelIR, { value, keyNode }: Entry): void {
+  const where = `"unique" of "${model.name}"`;
+  if (!isSeq(value)) {
+    ctx.error(
+      value ?? keyNode,
+      "invalid-value",
+      `${capitalize(where)} is a list of field lists, e.g. [[customer, number]].`,
+    );
+    return;
+  }
+  const storable = (f: FieldIR) =>
+    !f.formula && !isUpload(f) && !(f.type.kind === "relation" && f.type.many);
+  const together: UniqueIR[] = [];
+  for (const item of value.items) {
+    let names: ParsedNode | null | undefined;
+    let scope: true | UniqueScope = true;
+    if (isSeq(item)) names = item as ParsedNode;
+    else if (isMap(item)) {
+      const entries = mapEntries(ctx, item as ParsedNode, where) ?? [];
+      const known = checkKeys(ctx, entries, where, { allowed: ["fields", "scope"] });
+      names = known.find((e) => e.key === "fields")?.value;
+      const scopeEntry = known.find((e) => e.key === "scope");
+      if (scopeEntry) {
+        const read = readString(ctx, scopeEntry.value, `"scope" of ${where}`);
+        if (read === "owner" || read === "app") scope = read;
+        else if (read !== undefined) {
+          ctx.error(scopeEntry.value, "invalid-value", `"scope" of ${where} is owner or app.`);
+          continue;
+        }
+      }
+      if (!names) {
+        ctx.error(item as ParsedNode, "missing-key", `Each entry of ${where} needs "fields".`);
+        continue;
+      }
+    } else {
+      ctx.error(
+        item as ParsedNode,
+        "invalid-value",
+        `${capitalize(where)} is a list of field lists, e.g. [[customer, number]].`,
+      );
+      continue;
+    }
+    const named = readNameList(ctx, names, `a list of ${where}`);
+    if (!named.length) continue;
+    const fields = named.map((n) => n.name);
+    if (new Set(fields).size < 2) {
+      ctx.error(names, "invalid-value", `A list of ${where} names two or more different fields.`);
+      continue;
+    }
+    let ok = true;
+    for (const name of fields) {
+      const field = model.fields.find((f) => f.name === name);
+      if (!field) {
+        ctx.error(names, "unknown-field", `${model.name} has no field "${name}" (in ${where}).`);
+        ok = false;
+      } else if (!storable(field)) {
+        ctx.error(
+          names,
+          "invalid-value",
+          `${model.name}.${name} cannot be part of ${where}: a computed field, a picture, a file or a list of records is not stored as one value.`,
+        );
+        ok = false;
+      } else if (field.unique) {
+        ctx.error(
+          names,
+          "invalid-value",
+          `${model.name}.${name} is unique by itself, so ${fields.join(" and ")} together add nothing; remove one.`,
+        );
+        ok = false;
+      }
+    }
+    if (ok) together.push({ fields, scope });
+  }
+  if (together.length) {
+    model.unique = together;
+    ctx.mark(`unique:${model.name}`, keyNode);
+  }
 }

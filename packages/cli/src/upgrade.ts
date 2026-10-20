@@ -2,10 +2,11 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
-import { migrateSpec } from "@smithable/core";
+import { migrateSpec, writeUniqueScopes } from "@smithable/core";
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
+import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
 /**
@@ -31,6 +32,14 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     return 1;
   }
   if (migrated.applied.length) writeFileSync(specPath, migrated.text);
+  // Where each unique value is unique, written out once (docs/design/uniqueness.md), so a later
+  // change of roles never moves an index.
+  const loaded = loadSpec(dir, io);
+  const scopes =
+    loaded.ir && loaded.auth
+      ? writeUniqueScopes(readFileSync(specPath, "utf8"), loaded.ir, loaded.auth)
+      : { text: "", written: [] as string[] };
+  if (scopes.written.length) writeFileSync(specPath, scopes.text);
   if ((await generate(dir, io, { tools: true, force: false, upgrade: true })) !== 0) {
     discardChanges(dir);
     io.err("The upgrade was undone.\n");
@@ -64,7 +73,7 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     "commit",
     "-q",
     "-m",
-    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied })}\n`,
+    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, unique: scopes.written })}\n`,
   ]);
   io.out(
     `Upgraded from stack profile ${from} to ${STACK_PROFILE.id}; the type check and tests pass. Undo with: smithable undo\n`,
