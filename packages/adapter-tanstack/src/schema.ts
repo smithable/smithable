@@ -47,6 +47,8 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
     const perOwner = uniquePerOwner(model, auth);
+    // A number counting up is unique by its nature (orders.md §4): an index says so.
+    const unique = (f: FieldIR) => Boolean(f.unique || f.sequence);
     // With a trash, a unique value is unique among the live records (docs/design/trash.md §2):
     // an index over them, not the column's own constraint.
     const indexed = perOwner || Boolean(model.trash);
@@ -54,7 +56,7 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
       const onDelete = field.required ? "restrict" : "set null";
       let expr = `${type}()`;
       if (field.required) expr += ".notNull()";
-      if (field.unique && !indexed) expr += ".unique()";
+      if (unique(field) && !indexed) expr += ".unique()";
       // Tables that refer to each other (or to themselves) need the column's type said, as
       // Drizzle's docs show, or TypeScript cannot infer either table.
       const cycle =
@@ -72,7 +74,9 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
         const target = isUser ? "user" : tableNames(modelNamed(ir, field.type.model)).table;
         return [`  ${field.name}Id: ${reference(field, target, isUser ? "text" : "integer")},`];
       }
-      const { expr, uses } = column(indexed ? { ...field, unique: false } : field);
+      const { expr, uses } = column(
+        indexed ? { ...field, unique: false } : unique(field) ? { ...field, unique: true } : field,
+      );
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
@@ -82,13 +86,13 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
       perOwner ? `t.${ownerKey(model)}, t.${dataKey(f)}` : `t.${dataKey(f)}`;
     const uniques = model.trash
       ? model.fields
-          .filter((f) => f.unique && !(f.type.kind === "relation" && f.type.many))
+          .filter((f) => unique(f) && !(f.type.kind === "relation" && f.type.many))
           .map(
             (f) =>
               `uniqueIndex(${JSON.stringify(`${n.sqlTable}_${snake(dataKey(f))}_unique`)}).on(${uniqueOn(f)}).where(sql\`\${t.deletedAt} is null\`)`,
           )
       : perOwner
-        ? model.fields.filter((f) => f.unique).map((f) => `unique().on(${uniqueOn(f)})`)
+        ? model.fields.filter(unique).map((f) => `unique().on(${uniqueOn(f)})`)
         : [];
     if (uniques.length) imports.add(model.trash ? "uniqueIndex" : "unique");
     // The trash (docs/design/trash.md): when and by whom a record was deleted, and with which
@@ -199,7 +203,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -207,6 +211,18 @@ ${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW
  * Who changed what (docs/design/logging.md §3.3), in every app: written by src/kit/audit.server.ts
  * in the change's own transaction, never edited by the app.
  */
+/**
+ * The counters of the numbers counting up (`sequence: true`, docs/design/orders.md §4): one row per
+ * field, or per field and owner where it is unique per owner, advanced by src/kit/sequence.server.ts
+ * in the record's own transaction; a number is never given twice.
+ */
+const SEQUENCES_TABLE = `export const sequences = sqliteTable("sequences", {
+  /** "Order.number", or "Order.number:<owner id>" where the number is unique per owner. */
+  key: text().primaryKey(),
+  /** The last number given. */
+  last: integer().notNull(),
+});`;
+
 const AUDIT_TABLE = `export const auditLog = sqliteTable(
   "audit_log",
   {

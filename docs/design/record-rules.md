@@ -58,7 +58,9 @@ models:
   action's `set` may still change it: `reopenCase` sets the status, which is how a closed case
   comes back. **`locked: true`**: set when the record is made, never changed after.
 - The lock reads the record as it is before the change, so an edit that both closes a case
-  and changes its priority is refused; the action that closes it is the way.
+  and changes its priority is refused; the action that closes it is the way. A `required`
+  condition reads the record as it would be after the change (on a create, the new record), so
+  the status that needs an assignee cannot be chosen without one.
 - A model-level shorthand (`locked: { when: { status: closed }, except: [status] }`) only if
   the field form proves wordy in real apps; the portal's four fields do not need it.
 

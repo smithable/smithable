@@ -185,7 +185,7 @@ number and the mail.
 | The kitchen screen or register | an outgoing target with the signed call, nothing new; A 103's deliveries page shows each call |
 | The staff page on a phone | the crud page as it is; the order's lines are its list, shown on the record page; the visual pass (A 102) says where rows are too wide |
 | Where the truck stands | `Stop` records in a landing section, nothing new |
-| The number counting up | new, small: a model's `int!` field may be `sequence: true` (set by the app, next after the highest, never entered); the order page requires one on `into`; useful for invoices and tickets too, so it is a field key, not an order-page key |
+| The number counting up | new, small: a model's `int!` field may be `sequence: true` (set by the app from a counter that never gives a number twice, kept ahead of the records' highest; never entered; unique); the order page requires one on `into`; useful for invoices and tickets too, so it is a field key, not an order-page key |
 
 ## 5. ARCHITECTURE §2.4
 
