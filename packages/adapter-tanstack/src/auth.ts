@@ -428,7 +428,7 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
       try {
-        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true });
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
         await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: hash, userId: created.id });
       } catch (error) {
         if (!made()) throw error;
