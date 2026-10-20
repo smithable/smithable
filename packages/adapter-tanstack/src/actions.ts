@@ -465,12 +465,11 @@ ${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}.schema";\nimp
 ${asked ? 'import type { z } from "zod";\n' : ""}
 type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
 
-/** The ${label}'s new values${adds.length ? " and the records it adds" : ""}, worked out on it as it was${asked ? ", the asked ones as given" : ""}. */
+/** The ${label}'s new values (only the fields the action sets${asked ? " and asks for" : ""})${adds.length ? " and the records it adds" : ""}, worked out on it as it was. */
 function plan(${all.some((v) => v.includes("viewer")) ? "viewer" : "_viewer"}: Viewer | null, row: Row${askedParam}) {
   return {
     id: row.id,
-    values: ${n.schema}.parse({
-      ...row,
+    values: ${n.schema}.partial().parse({
 ${values.map((v) => `      ${v}`).join("\n")}
     }),
 ${adds
@@ -497,7 +496,7 @@ ${
   const written = db.transaction((tx) => ${writes("one")});
 ${hooks("written")}
   return written.changed;`
-    : `  return ${n.data}.update(viewer, id, one.values, ${JSON.stringify(action.name)});`
+    : `  return ${n.data}.update(viewer, id, one.values, ${JSON.stringify(action.name)}, ${JSON.stringify(action.set.map((v) => v.field))});`
 }
 }
 

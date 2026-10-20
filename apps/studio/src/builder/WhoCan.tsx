@@ -550,7 +550,7 @@ function Grid({ ir, auth, run, marked }: { ir: SpecIR; auth: AuthIR; run: Run; m
                   "Custom actions",
                   "Standard actions (edit, archive…) follow Change on their records.",
                 )}
-                {roles.length > 0 && headerRow("actions", "Every custom action")}
+                {roles.length > 0 && headerRow("actions", "Every action")}
                 {actions.map((name) => (
                   <tr key={name} className="border-t border-line">
                     <th className="sticky left-0 bg-panel px-2 py-1 text-left font-normal">

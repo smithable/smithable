@@ -115,7 +115,9 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
 
 /**
  * A custom action is run by the roles whose `actions` grant names it. A standard action
- * follows its model's write access (ARCHITECTURE §3), by role or as the record's owner; one
+ * follows its model's write access (ARCHITECTURE §3), by role or as the record's owner, and
+ * is run too by the roles whose `actions` grant names it, as a page is opened by the roles whose
+ * `pages` grant names it (docs/design/actions.md, 2026-10-21); one
  * that adds a related record also needs the right to create one (§7), and a copy that of its
  * lists' records (§8).
  */
@@ -125,7 +127,10 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
   if (!model || action.custom)
     return { public: false, roles: granted(auth, "actions", action.name), owner: false };
   const write = modelAccess(model, auth).write;
-  let roles = write.roles;
+  const named = granted(auth, "actions", action.name);
+  let roles = auth.roles
+    .map((r) => r.name)
+    .filter((r) => write.roles.includes(r) || named.includes(r));
   const lists = (action.with ?? []).map(
     (l) => (model.fields.find((f) => f.name === l)?.type as { model?: string } | undefined)?.model,
   );

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { actionAccess, modelAccess, pageAccess } from "./access.js";
 import type { AuthIR } from "./auth.js";
 import { validateAuth } from "./auth.js";
-import type { SpecIR, StandardActionIR } from "./ir.js";
+import type { ActionIR, SpecIR, StandardActionIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 
 const examples = import.meta.glob("../../../examples/*/smithable*.yml", {
@@ -203,7 +203,7 @@ public: { pages: [customer], read: [Customers], write: [Note] }
     ]);
   });
 
-  test("a role's grants name pages, models and custom actions that exist", () => {
+  test("a role's grants name pages, models and actions that exist", () => {
     const { auth } = load(
       `${SPEC}actions:\n  archive: { on: Customer, set: { name: x } }\n`,
       `smithableAuth: 0.1
@@ -224,8 +224,7 @@ defaultRole: sales
       ],
       ["error", "unknown-page", 'Did you mean "customers"?'],
       ["error", "unknown-model", 'Did you mean "Customer"?'],
-      ["error", "standard-action-grant", 'Grant sales "write" on its model instead.'],
-      ["error", "unknown-custom-action", undefined],
+      ["error", "unknown-action", undefined],
       [
         "warning",
         "read-with-shared",
@@ -553,4 +552,44 @@ test("a role for keys opens no page without a warning; write without read under 
   );
   expect(codes(roles("  sales: { pages: all, read: all, delete: all }\n"))).toEqual([]);
   expect(codes(roles("  sales: { pages: all, create: [Customer] }\n"))).toEqual([]);
+});
+
+test("a standard action is run too by the roles whose actions grant names it, without write on its model", () => {
+  const spec = `smithable: 0.1
+app: { name: Gym }
+models:
+  Booking:
+    fields:
+      title: string!
+      status: confirmed | canceled
+actions:
+  cancel: { on: Booking, set: { status: canceled } }
+pages:
+  bookings: { crud: Booking, actions: [cancel] }
+`;
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+  const checked = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: `smithableAuth: 0.1
+signIn: { providers: [google] }
+defaultAccess: private
+roles:
+  admin: all
+  staff: { pages: all, read: [Booking], write: [Booking] }
+  customer: { pages: all, actions: [cancel] }
+  viewer: { pages: all, actions: all }
+defaultRole: customer
+`,
+    },
+    ir,
+  );
+  expect(checked.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  const auth = checked.auth as AuthIR;
+  const cancel = ir.actions[0] as ActionIR;
+  expect(actionAccess(cancel, auth, ir.models)).toEqual({
+    public: false,
+    roles: ["admin", "staff", "customer", "viewer"],
+    owner: true,
+  });
 });

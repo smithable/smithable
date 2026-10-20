@@ -774,13 +774,14 @@ export function dataModule(
       ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`
       : `{ ...values, ownerId: personOf(viewer)${set} }`;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
-  // API or Ask (an action's set may change a locked field, which is how a case is reopened), and
+  // API or Ask (an action's set may change a locked field it names, which is how a case is
+  // reopened; `frees` lists them), and
   // a value required while the record fits a condition, on any change.
   const label = (f: FieldIR) => JSON.stringify(t.field(model, f).label ?? humanize(f.name));
   const locks = model.fields.flatMap((f) =>
     f.locked
       ? [
-          `          if (${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, was)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
+          `          if ((what === "changed" || !frees.includes(${JSON.stringify(dataKey(f))})) && ${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, was)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
         ]
       : [],
   );
@@ -814,7 +815,7 @@ export function dataModule(
     ? `
         if (before) {
           const given: Record<string, unknown> = updated;
-          const was: Record<string, unknown> = ${loadComputed ? "{ ...before, ...loaded }" : "before"};${locks.length ? `\n          if (what === "changed") {\n  ${locks.join("\n  ")}\n          }` : ""}
+          const was: Record<string, unknown> = ${loadComputed ? "{ ...before, ...loaded }" : "before"};${locks.length ? `\n${locks.join("\n")}` : ""}
           const next: Record<string, unknown> = { ...was, ...given };${needs("next")
             .map((l) => `\n          ${l}`)
             .join("")}
@@ -1488,7 +1489,7 @@ ${
   uploadFields.length
     ? `
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles(viewer: Viewer | null, values: ${n.values}, before?: Record<string, unknown>): ${n.values} {
+function checkFiles<V extends Partial<${n.values}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
 ${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}
@@ -1500,7 +1501,7 @@ ${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: 
   refs.length
     ? `
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: ${n.values}): void {
+function checkReferences(viewer: Viewer | null, values: Partial<${n.values}>): void {
 ${referenceChecks.join("\n")}
 }
 `
@@ -2004,7 +2005,8 @@ ${
   },
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
-  async update(viewer: Viewer | null, id: number, values: ${n.values}, what = "changed") {
+  /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
+  async update(viewer: Viewer | null, id: number, values: Partial<${n.values}>, what = "changed", frees: readonly string[] = []) {
     const row = db
       .select(${selectOwner})
       .from(${n.table})

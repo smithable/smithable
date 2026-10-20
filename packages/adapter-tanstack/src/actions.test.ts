@@ -78,3 +78,11 @@ test("a copy run by Ask or through the API answers with the new record, read by 
   );
   expect(route).toContain('import { taskData } from "#/generated/task.server";');
 });
+
+test("a standard action writes only the fields it sets, and frees only those from their locks", () => {
+  const close = generate("close", "{ on: Task, set: { status: done } }");
+  const server = close("src/generated/actions/close.server.ts");
+  expect(server).toContain('values: taskSchema.partial().parse({\n      status: "done",\n    }),');
+  expect(server).not.toContain("...row,");
+  expect(server).toContain('return taskData.update(viewer, id, one.values, "close", ["status"]);');
+});
