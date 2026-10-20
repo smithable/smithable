@@ -7,8 +7,8 @@ export const STACK_PROFILE = {
   packageManager: "pnpm@12.6.0",
   dependencies: {
     "@tailwindcss/vite": "4.3.3",
-    "@tanstack/react-router": "1.170.42",
-    "@tanstack/react-start": "1.168.61",
+    "@tanstack/react-router": "1.170.45",
+    "@tanstack/react-start": "1.169.3",
     "better-auth": "1.7.12",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
@@ -64,7 +64,7 @@ export const STACK_PROFILE = {
   retiredOverrides: ["@esbuild-kit/core-utils>esbuild"],
   devDependencies: {
     "@playwright/test": "1.63.0",
-    "@tanstack/router-cli": "1.167.41",
+    "@tanstack/router-cli": "1.167.45",
     "@types/better-sqlite3": "9.6.0",
     "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.2",
