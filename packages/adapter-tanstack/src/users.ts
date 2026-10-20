@@ -349,11 +349,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@${domain}", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
