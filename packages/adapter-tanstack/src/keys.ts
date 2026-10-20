@@ -74,6 +74,8 @@ export function makeKey(
   until?: Date,
 ): string {
   const by = admin(viewer);
+  // Its own check, not only the route's: a key stands for a role the app has.
+  if (!(KEY_ROLES as readonly string[]).includes(role)) throw new Error("No such role.");
   if (until && until.getTime() < Date.now()) throw new Error("The end date is in the past.");
   const key = \`smk_\${randomBytes(24).toString("base64url")}\`;
   db.transaction((tx) => {
@@ -159,6 +161,7 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer("Bearer smk_madeup")).toBeNull();
   expect(keyViewer(null)).toBeNull();
 ${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSON.stringify(other)} }, "Mine", ${JSON.stringify(other)})).toThrow(AccessDenied);\n` : ""}  // A key cannot make keys, whatever its role.
+  expect(() => makeKey(admin, "Made up", "superuser" as never)).toThrow("No such role.");
   const adminKey = makeKey(admin, "Admin key", "admin");
   expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
   revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);

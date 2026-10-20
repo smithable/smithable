@@ -3392,7 +3392,7 @@ async function inputSecurityFlow(dir, base) {
       }
     });
     await check(
-      "guessing a sign-in code stops after five tries, even before the right one",
+      "guessing a sign-in code stops after five tries, even before the right one; a code past the limit leaves the last one working; no password sign-up",
       async () => {
         const post = (path, body) =>
           fetch(`${base}/api/auth${path}`, {
@@ -3433,6 +3433,35 @@ async function inputSecurityFlow(dir, base) {
         }
         const right = await post("/sign-in/email-otp", { email, otp: code });
         if (right.ok) throw new Error("the right code still worked after five wrong guesses");
+        // A code asked for past the address's limit (five an hour) is refused before one is made:
+        // the same answer, no mail, and the code mailed before it still signs in.
+        const limited = "limited@example.com";
+        let last;
+        for (let i = 0; i < 5; i++) {
+          // Better Auth's own limit allows three of these in ten seconds.
+          if (i) await new Promise((r) => setTimeout(r, 4000));
+          last = await codeFor(limited);
+        }
+        await new Promise((r) => setTimeout(r, 4000));
+        const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+        const refused = await post("/email-otp/send-verification-otp", {
+          email: limited,
+          type: "sign-in",
+        });
+        if (!refused.ok) throw new Error(`a code past the limit was answered ${refused.status}`);
+        await new Promise((r) => setTimeout(r, 2000 * P));
+        if ((existsSync(outbox) ? readdirSync(outbox).length : 0) !== before)
+          throw new Error("a code past the limit was mailed");
+        const kept = await post("/sign-in/email-otp", { email: limited, otp: last });
+        if (!kept.ok)
+          throw new Error(`the code mailed before the limit stopped working (${kept.status})`);
+        // The development sign-in makes its users on the server: nobody signs up with a password.
+        const signedUp = await post("/sign-up/email", {
+          email: "dev-admin@example.com",
+          password: "a-password-of-my-own",
+          name: "Anyone",
+        });
+        if (signedUp.ok) throw new Error("a password sign-up was taken");
       },
     );
     await check("no file path climbs out of the pictures", async () => {
@@ -4176,6 +4205,12 @@ async function sitemapCheck(dir, base) {
       problems.push(`${response.status} ${response.headers.get("content-type")}`);
     if (!robots.includes(`Sitemap: ${base}/sitemap.xml`))
       problems.push("robots.txt does not name the sitemap");
+    // Without TRUST_PROXY a forwarded host is anyone's word: the links keep the site's own.
+    const forged = await (
+      await fetch(`${base}/sitemap.xml`, { headers: { "X-Forwarded-Host": "elsewhere.example" } })
+    ).text();
+    if (forged.includes("elsewhere.example"))
+      problems.push("a made-up X-Forwarded-Host went into the sitemap");
     const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
     for (const id of publicPages
       .split(",")

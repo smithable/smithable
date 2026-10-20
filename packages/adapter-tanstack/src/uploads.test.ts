@@ -9,6 +9,29 @@ const kit = (await import(path)) as {
   fileHeaders(stored: { file: string; name: string; type: string }): Record<string, string>;
 };
 
+/** A ZIP archive of stored entries (no compression), with its central directory and end record. */
+function zipOf(entries: [string, string][]): Uint8Array {
+  const out: number[] = [];
+  const u16 = (n: number) => [n & 255, (n >> 8) & 255];
+  const u32 = (n: number) => [...u16(n & 0xffff), ...u16(n >>> 16)];
+  const chars = (t: string) => [...t].map((c) => c.charCodeAt(0));
+  const central: number[] = [];
+  for (const [name, content] of entries) {
+    const offset = out.length;
+    const sizes = [...u32(0), ...u32(content.length), ...u32(content.length)];
+    out.push(...chars("PK\x03\x04"), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0));
+    out.push(...sizes, ...u16(name.length), ...u16(0), ...chars(name), ...chars(content));
+    central.push(...chars("PK\x01\x02"), ...u16(20), ...u16(20), ...u16(0), ...u16(0));
+    central.push(...u16(0), ...u16(0), ...sizes, ...u16(name.length), ...u16(0), ...u16(0));
+    central.push(...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...chars(name));
+  }
+  const start = out.length;
+  out.push(...central, ...chars("PK\x05\x06"), ...u16(0), ...u16(0));
+  out.push(...u16(entries.length), ...u16(entries.length), ...u32(central.length), ...u32(start));
+  out.push(...u16(0));
+  return new Uint8Array(out);
+}
+
 /** A WebP file's header: RIFF, then one chunk of the given kind with its bytes. */
 function webp(kind: string, payload: number[]): Uint8Array {
   const chunk = [...kind].map((c) => c.charCodeAt(0));
@@ -83,9 +106,30 @@ test("a document's kind is read from its own first bytes, not only its name", ()
   // Text is text when it reads as UTF-8 without the NUL bytes of a binary file.
   expect(kit.fileKind(bytes("a,b\n1,2\n"), "rows.csv")?.ext).toBe("csv");
   expect(kit.fileKind(new Uint8Array([97, 0, 98]), "rows.csv")).toBeUndefined();
-  // An Office file is a ZIP that names its content types.
-  expect(kit.fileKind(bytes("PK\x03\x04…[Content_Types].xml…"), "cv.docx")?.ext).toBe("docx");
-  expect(kit.fileKind(bytes("PK\x03\x04…nothing…"), "cv.docx")).toBeUndefined();
+  // An Office file is a ZIP with a [Content_Types].xml entry; the name as content is not one.
+  expect(kit.fileKind(zipOf([["[Content_Types].xml", "<Types/>"]]), "cv.docx")?.ext).toBe("docx");
+  expect(kit.fileKind(zipOf([["a.txt", "[Content_Types].xml"]]), "cv.docx")).toBeUndefined();
+  expect(kit.fileKind(bytes("PK\x03\x04…[Content_Types].xml…"), "cv.docx")).toBeUndefined();
+  // An OpenDocument file's first entry is "mimetype", holding its type.
+  const odt = "application/vnd.oasis.opendocument.text";
+  expect(
+    kit.fileKind(
+      zipOf([
+        ["mimetype", odt],
+        ["content.xml", "<x/>"],
+      ]),
+      "a.odt",
+    )?.ext,
+  ).toBe("odt");
+  expect(
+    kit.fileKind(
+      zipOf([
+        ["content.xml", odt],
+        ["mimetype", odt],
+      ]),
+      "a.odt",
+    ),
+  ).toBeUndefined();
   expect(kit.fileKind(bytes("\xff\xd8\xff…"), "receipt.jpeg")?.ext).toBe("jpg");
 });
 

@@ -37,6 +37,8 @@ export function count(
   now = Date.now(),
 ): void {
   if (counts.size > 10_000) for (const [k, v] of counts) if (v.until <= now) counts.delete(k);
+  // Bounded even under a flood of new addresses within the hour: the oldest counts go first.
+  if (counts.size > 50_000) for (const k of [...counts.keys()].slice(0, 10_000)) counts.delete(k);
   const entry = counts.get(key);
   if (!entry || entry.until <= now) {
     counts.set(key, { n: 1, until: now + seconds * 1000 });
@@ -74,6 +76,7 @@ export function inviteAllowed(viewer: { id: string } | null): void {
 
 /** Counts a sign-in code mailed to the address, asked for from the request's network address. */
 export function codeAllowed(email: string, headers: Headers): void {
-  count(`code:${email}`, LIMITS.codes, w.signInCodes);
+  // The network address first: one past its own limit spends none of an email's codes.
   count(`code-from:${address(headers)}`, LIMITS.codesFromAddress, "sign-in codes");
+  count(`code:${email}`, LIMITS.codes, w.signInCodes);
 }

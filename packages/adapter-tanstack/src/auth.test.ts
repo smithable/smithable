@@ -55,10 +55,15 @@ test("the demo sign-in is gated by DEMO_SIGN_IN at run time, beside the developm
   const files = crm();
   const lib = files("src/lib/auth.ts");
   expect(lib).toContain('export const demoSignIn = process.env.DEMO_SIGN_IN === "1";');
-  expect(lib).toContain("emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn }");
+  // Nobody signs up with a password; the role buttons make their users with a new one each time.
+  expect(lib).toContain(
+    "emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true }",
+  );
   expect(lib).toContain('!(demoSignIn && email.startsWith("demo-"))');
   const route = files("src/routes/sign-in.tsx");
   expect(route).toContain("if (!import.meta.env.DEV && !demoSignIn)");
+  expect(route).toContain("const password = crypto.randomUUID() + crypto.randomUUID();");
+  expect(route).not.toContain("-password");
   expect(route).toContain("devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}");
   expect(files("src/routes/__root.tsx")).toContain('demo: process.env.DEMO_SIGN_IN === "1"');
 });

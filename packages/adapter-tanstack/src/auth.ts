@@ -95,7 +95,7 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
     : "account, session, user, verification";
   return `${HEADER}import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
+${refuses || email ? `import { ${[...(refuses ? ["APIError"] : []), ...(email ? ["createAuthMiddleware"] : [])].join(", ")} } from "better-auth/api";\n` : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${tables} } from "#/db/schema";${closed || email ? '\nimport { app } from "#/generated/app";' : ""}
@@ -187,7 +187,23 @@ export const auth = betterAuth({
   // In development the app may run on any local port (the preview, the tests).
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
-  socialProviders,
+  socialProviders,${
+    email
+      ? `
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },`
+      : ""
+  }
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -198,11 +214,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -210,8 +227,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: ${JSON.stringify(auth.defaultRole)}, input: false },
@@ -220,18 +238,21 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
-          const email = newUser.email.toLowerCase();${
+        before: async (newUser, ctx) => {
+          const email = newUser.email.toLowerCase();
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !ctx?.path?.startsWith("/callback/") || newUser.emailVerified === true;${
             refuses
               ? `
-          const refused = joinRefusal(email);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }`
               : ""
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? ${role} : ${defaultRole} } };
         },${afterCreate}
       },
     },
@@ -263,17 +284,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
 ${
   refuses
     ? `        // Who may not join gets no mail, and the page says the same either way.
@@ -404,16 +419,23 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
-    const password = \`\${prefix}-password\`;
+    // A new password for each sign-in, never a known one: whoever signed in as this user before
+    // and changed it locks nobody out, and nobody can sign in as them without this button.
+    const password = crypto.randomUUID() + crypto.randomUUID();
+    const context = await auth.$context;
+    const hash = await context.password.hash(password);
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: hash, userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
+    const id = made()?.id as string;
+    await context.internalAdapter.updatePassword(id, hash);
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
   });
