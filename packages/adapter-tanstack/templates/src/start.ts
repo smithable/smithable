@@ -27,7 +27,8 @@ const ownPages = createCsrfMiddleware({
     const https =
       new URL(request.url).protocol === "https:" ||
       (process.env.TRUST_PROXY === "1" &&
-        request.headers.get("x-forwarded-proto")?.split(",").at(-1)?.trim() === "https");
+        request.headers.get("x-forwarded-proto")?.split(",").at(-1)?.trim().toLowerCase() ===
+          "https");
     return page?.host === request.headers.get("host") && (!https || page.protocol === "https:");
   },
 });

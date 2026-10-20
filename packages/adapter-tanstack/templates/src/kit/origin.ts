@@ -8,7 +8,8 @@ export function originOf(request: Request): string {
   const last = (name: string) => request.headers.get(name)?.split(",").at(-1)?.trim();
   const forwardedHost = process.env.TRUST_PROXY === "1" ? last("x-forwarded-host") : undefined;
   if (forwardedHost) {
-    const proto = last("x-forwarded-proto") ?? url.protocol.replace(":", "");
+    const said = last("x-forwarded-proto")?.toLowerCase();
+    const proto = said === "http" || said === "https" ? said : url.protocol.replace(":", "");
     return `${proto}://${forwardedHost}`;
   }
   return url.origin;

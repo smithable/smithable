@@ -82,6 +82,9 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
           const email = created.email.toLowerCase();
           // Only an invitation still open was accepted (under open sign-up an expired one is not).
           const used = openInvitation(email);
+          // An invitation whose role was not given (an address the provider has not confirmed)
+          // stays for whoever does own the address.
+          if (used && used.role !== who.role) return audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
           if (used)
             audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
           // The invitation is used up: the user is the record from now on.
@@ -196,7 +199,7 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
       try {
-        codeAllowed(String(ctx.body?.email ?? "").toLowerCase(), ctx.headers ?? new Headers());
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
       } catch {
         return ctx.json({ success: true });
       }
@@ -242,7 +245,8 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           // A provider's sign-in proves the address only when the provider confirmed it (a code by
           // mail proves it by itself): unconfirmed, it gets no role beyond the default.
-          const proven = !ctx?.path?.startsWith("/callback/") || newUser.emailVerified === true;${
+          const byProvider = /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(ctx?.path ?? "");
+          const proven = !byProvider || newUser.emailVerified === true;${
             refuses
               ? `
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
@@ -408,6 +412,9 @@ import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
 ${options}
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -419,25 +426,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
-    // A new password for each sign-in, never a known one: whoever signed in as this user before
-    // and changed it locks nobody out, and nobody can sign in as them without this button.
-    const password = crypto.randomUUID() + crypto.randomUUID();
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
     const context = await auth.$context;
-    const hash = await context.password.hash(password);
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
       try {
         const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
-        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: hash, userId: created.id });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
       } catch (error) {
         if (!made()) throw error;
       }
     }
-    const id = made()?.id as string;
-    await context.internalAdapter.updatePassword(id, hash);
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({

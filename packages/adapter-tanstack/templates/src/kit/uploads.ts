@@ -152,7 +152,7 @@ function zipEntries(bytes: Uint8Array, text: string): string[] {
   if (end < 0 || end < bytes.length - 22 - 65_535) return [];
   const names: string[] = [];
   let at = u32(bytes, end + 16);
-  for (let i = u16(bytes, end + 10); i > 0 && text.startsWith("PK\x01\x02", at); i--) {
+  for (let i = u16(bytes, end + 10); i > 0 && at < end && text.startsWith("PK\x01\x02", at); i--) {
     const name = u16(bytes, at + 28);
     names.push(text.slice(at + 46, at + 46 + name));
     at += 46 + name + u16(bytes, at + 30) + u16(bytes, at + 32);

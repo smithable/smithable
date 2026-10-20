@@ -62,7 +62,9 @@ test("the demo sign-in is gated by DEMO_SIGN_IN at run time, beside the developm
   expect(lib).toContain('!(demoSignIn && email.startsWith("demo-"))');
   const route = files("src/routes/sign-in.tsx");
   expect(route).toContain("if (!import.meta.env.DEV && !demoSignIn)");
-  expect(route).toContain("const password = crypto.randomUUID() + crypto.randomUUID();");
+  expect(route).toContain(
+    "const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();",
+  );
   expect(route).not.toContain("-password");
   expect(route).toContain("devRoles={import.meta.env.DEV || demo ? [...ROLES] : undefined}");
   expect(files("src/routes/__root.tsx")).toContain('demo: process.env.DEMO_SIGN_IN === "1"');
