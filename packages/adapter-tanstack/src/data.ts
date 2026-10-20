@@ -29,7 +29,6 @@ import {
   trashGroup,
   USER_MODEL,
   type UxIR,
-  uniquePerOwner,
 } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
@@ -54,6 +53,7 @@ import {
   references,
   relatedTitle,
   SCHEMA_IMPORT,
+  sequenceEntries,
   shownFields,
   shownTitle,
   storedFields,
@@ -763,17 +763,8 @@ export function dataModule(
   // A number counting up (`sequence: true`, orders.md §4): from the field's counter (per owner
   // where the number is unique per owner), kept ahead of the records' highest, in the change's
   // own transaction, so two records made at once never share one and a number is never given twice.
-  const perOwner = signedIn && uniquePerOwner(model, auth);
   const ownerValue = model.ownedBy ? `ownerFor(viewer, values.${owner})` : "personOf(viewer)";
-  const counted = model.fields
-    .filter((f) => f.sequence)
-    .map((f) => {
-      const key = perOwner
-        ? `\`${model.name}.${f.name}:\${${ownerValue}}\``
-        : JSON.stringify(`${model.name}.${f.name}`);
-      const top = `tx.select({ n: max(${n.table}.${dataKey(f)}) }).from(${n.table})${perOwner ? `.where(eq(${n.table}.${owner}, ${ownerValue}))` : ""}.get()?.n ?? 0`;
-      return `${dataKey(f)}: nextInSequence(tx, ${key}, ${top})`;
-    });
+  const counted = sequenceEntries(model, auth, n.table, ownerValue);
   const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const createValues = !signedIn
     ? counted.length

@@ -69,3 +69,46 @@ test("an app without a sequence has neither the table nor the helper", () => {
   expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("sequences");
   expect(files.some((f) => f.path === "src/kit/sequence.server.ts")).toBe(false);
 });
+
+test("a copy, and a record an action adds, take their own numbers from the counter", () => {
+  const withActions = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Kiosk }
+models:
+  Order:
+    fields:
+      number: { type: int!, sequence: true }
+      name: string!
+      status: open | done
+      receipts: Receipt[]
+  Receipt:
+    fields:
+      number: { type: int!, sequence: true }
+      order: Order!
+actions:
+  duplicate: { on: Order, copy: { status: open } }
+  close: { on: Order, set: { status: done }, add: { Receipt: {} } }
+pages:
+  orders: { crud: Order, actions: [duplicate, close] }
+`,
+  }).ir as SpecIR;
+  const files = generateApp(withActions, {
+    smithableVersion: "0.0.0",
+    auth: authOf("smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n"),
+    content: emptyContent(),
+  });
+  const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+  const copy = file("src/generated/actions/duplicate.server.ts");
+  expect(copy).toContain(
+    'ownerId: personOf(viewer), number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) })',
+  );
+  expect(copy).toContain('import { max } from "drizzle-orm";');
+  expect(copy).toContain('import { nextInSequence } from "#/kit/sequence.server";');
+  expect(copy).not.toContain("number: row.number");
+  const close = file("src/generated/actions/close.server.ts");
+  expect(close).toContain(
+    'ownerId: personOf(viewer), number: nextInSequence(tx, "Receipt.number", tx.select({ n: max(schema.receipts.number) }).from(schema.receipts).get()?.n ?? 0) })',
+  );
+  expect(close).toContain('import { eq, max } from "drizzle-orm";');
+});

@@ -912,7 +912,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
               generated(
                 `src/generated/actions/${kebab(action.name)}.server.ts`,
-                standardActionServer(action, ir, t),
+                standardActionServer(action, ir, auth, t),
               ),
             ],
       ),

@@ -39,7 +39,9 @@ test("a required condition on a computed field is read on the new record with it
 });
 
 test("on a change, the condition is read on the stored record with its formulas, then the change laid over it", () => {
-  expect(data).toContain("const loaded: Record<string, unknown> = (await orderData.get(viewer, id)) ?? {};");
+  expect(data).toContain(
+    "const loaded: Record<string, unknown> = (await orderData.get(viewer, id)) ?? {};",
+  );
   expect(data).toContain("const was: Record<string, unknown> = { ...before, ...loaded };");
   expect(data).toContain("const next: Record<string, unknown> = { ...was, ...given };");
 });
