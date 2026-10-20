@@ -748,6 +748,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ),
       },
       {
+        // Numbers counting up (orders.md §4): the counter a record's number is taken from.
+        files: ["src/kit/sequence.server.ts"],
+        used: ({ ir }) => ir.models.some((m) => m.fields.some((f) => f.sequence)),
+      },
+      {
         // Outgoing mail (integrations.md §4.1b): the outbox and its sender.
         files: ["src/kit/outgoing.ts", "src/kit/outgoing.server.ts", "src/kit/call.server.ts"],
         used: ({ ir }) => outgoingOf(ir).length > 0,
@@ -907,7 +912,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
               generated(
                 `src/generated/actions/${kebab(action.name)}.server.ts`,
-                standardActionServer(action, ir, t),
+                standardActionServer(action, ir, auth, t),
               ),
             ],
       ),

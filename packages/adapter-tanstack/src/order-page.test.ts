@@ -45,5 +45,7 @@ test("the order and its lines are one write: each chosen record read as the view
   expect(data).toMatch(
     /tx\.insert\(schema\.orderLines\)\.values\(\{ orderId: made\.id, dishId: item\.id, quantity: chosen\.quantity, unitPrice: item\.price/,
   );
-  expect(data).toContain("number: (tx.select({ n: max(schema.orders.number) })");
+  expect(data).toContain(
+    'number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) })',
+  );
 });

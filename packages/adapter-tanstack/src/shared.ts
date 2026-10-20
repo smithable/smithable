@@ -20,6 +20,7 @@ import {
   type ThemeIR,
   USER_MODEL,
   type UxIR,
+  uniquePerOwner,
 } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
 
@@ -559,4 +560,29 @@ export function standardActions(page: PageIR, ir: SpecIR): StandardActionIR[] {
   return (page.actions ?? []).flatMap((name) =>
     ir.actions.filter((a): a is StandardActionIR => a.name === name && !a.custom),
   );
+}
+
+/**
+ * A new record's numbers counting up (`sequence: true`, orders.md §4), as entries of its insert:
+ * each from its counter through the kit's nextInSequence, in the change's transaction (`tx`), kept
+ * ahead of the records' highest; one counter per owner where unique fields are per owner, `owner`
+ * being the code of the record's owner. The module needs `max` (and `eq` per owner) from
+ * drizzle-orm and nextInSequence from the kit when the list is not empty.
+ */
+export function sequenceEntries(
+  model: ModelIR,
+  auth: AuthIR,
+  table: string,
+  owner: string,
+): string[] {
+  const perOwner = hasSignIn(auth) && uniquePerOwner(model, auth);
+  return model.fields
+    .filter((f) => f.sequence)
+    .map((f) => {
+      const key = perOwner
+        ? `\`${model.name}.${f.name}:\${${owner}}\``
+        : JSON.stringify(`${model.name}.${f.name}`);
+      const top = `tx.select({ n: max(${table}.${dataKey(f)}) }).from(${table})${perOwner ? `.where(eq(${table}.${ownerKey(model)}, ${owner}))` : ""}.get()?.n ?? 0`;
+      return `${dataKey(f)}: nextInSequence(tx, ${key}, ${top})`;
+    });
 }

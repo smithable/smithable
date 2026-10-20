@@ -444,6 +444,7 @@ function readStandardAction(
         f.required &&
         f.name !== reference &&
         !f.formula &&
+        !f.sequence &&
         f.default === undefined &&
         !f.defaultFormula &&
         !(f.type.kind === "relation" && f.type.many) &&

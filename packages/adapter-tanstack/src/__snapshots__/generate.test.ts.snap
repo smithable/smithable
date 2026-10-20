@@ -32992,6 +32992,13 @@ export const outgoingCall = sqliteTable(
   (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
+export const sequences = sqliteTable("sequences", {
+  /** "Order.number", or "Order.number:<owner id>" where the number is unique per owner. */
+  key: text().primaryKey(),
+  /** The last number given. */
+  last: integer().notNull(),
+});
+
 export const dishes = sqliteTable("dishes", {
   id: integer().primaryKey({ autoIncrement: true }),
   name: text().notNull(),
@@ -33012,7 +33019,7 @@ export const dishes = sqliteTable("dishes", {
 
 export const orders = sqliteTable("orders", {
   id: integer().primaryKey({ autoIncrement: true }),
-  number: integer().notNull(),
+  number: integer().notNull().unique(),
   name: text().notNull(),
   phone: text().notNull(),
   email: text(),
@@ -35212,6 +35219,7 @@ import { orderLineData } from "./order-line.server";
 import { orderLineUi } from "./order-line";
 import { orderUi, type OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
+import { nextInSequence } from "#/kit/sequence.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -35330,7 +35338,7 @@ export const orderData = {
     let row: typeof schema.orders.$inferSelect;
     try {
       row = db.transaction((tx) => {
-        const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer), number: (tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) + 1 }).returning().get();
+        const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer), number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) }).returning().get();
         for (const chosen of lines ?? []) {
           const item = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, chosen.id), dishData.readable(viewer))).get();
           if (!item) throw new BadInput("order-item");
@@ -39239,6 +39247,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
+  "kit: src/kit/sequence.server.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/words.ts",
@@ -39308,7 +39317,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "9727925d generated",
+  "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "cf2bd0ff generated",
   "src/generated/actions/accept.server.ts": "964b82d4 generated",
@@ -39335,7 +39344,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order-line.ts": "14bf7a22 generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "ad63c778 generated",
+  "src/generated/order.server.ts": "3b459fda generated",
   "src/generated/order.ts": "e9a3c2e6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
@@ -39391,6 +39400,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "efede7b4 kit",
   "src/kit/words.ts": "dd75b285 kit",

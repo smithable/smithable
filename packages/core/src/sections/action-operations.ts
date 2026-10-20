@@ -215,7 +215,7 @@ const setAction: Operation<{
 }> = {
   name: "setAction",
   summary:
-    "Change an action: its intent, the records it is for (--when) or the values it sets (--set). Each replaces what was there; an empty one removes it. Who may run it is setAccess action:<name>.",
+    "Change an action: its intent, the records it is for (--when) or the values it sets (--set). Each replaces what was there; an empty one removes it. Who may run it is grant <role> actions <name>.",
   schema: {
     type: "object",
     required: ["action"],

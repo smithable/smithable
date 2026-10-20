@@ -30,6 +30,7 @@ import {
   ownerKey,
   relatedTitle,
   SCHEMA_IMPORT,
+  sequenceEntries,
   type Texts,
 } from "./shared.js";
 
@@ -368,7 +369,12 @@ export const ${a.many} = createServerFn({ method: "POST" })
  * values on the record as it was (the asked ones as given) and saves them: with the edit's
  * update, or, when it adds related records, in one transaction with their inserts.
  */
-export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Texts): string {
+export function standardActionServer(
+  action: StandardActionIR,
+  ir: SpecIR,
+  auth: AuthIR,
+  t: Texts,
+): string {
   const a = actionNames(action);
   const model = modelNamed(ir, action.on);
   const n = names(model, t);
@@ -392,7 +398,7 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     // A date and time is stored as a Date; formulas and literals give its ISO text.
     return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
   };
-  if (action.copy) return copyActionServer(action, ir, t, valueCode, imports);
+  if (action.copy) return copyActionServer(action, ir, auth, t, valueCode, imports);
   const values = [
     ...action.set.map((v) => valueCode(model, v, v.field)),
     // What the change makes required, as the person gave it in the dialog (record-rules.md §3).
@@ -427,13 +433,19 @@ export function standardActionServer(action: StandardActionIR, ir: SpecIR, t: Te
     toldAbout(ir, m)
       ? `\n      outgoing(tx, viewer, ${JSON.stringify(m)}, ${what}, ${record}${before && `, ${before}`});`
       : "";
+  // A record an action adds gets its numbers counting up as a create does (orders.md §4).
+  const numbered = (m: ModelIR, table: string) =>
+    sequenceEntries(m, auth, table, "personOf(viewer)")
+      .map((e) => `, ${e}`)
+      .join("");
+  const sequenced = adds.map(({ target, tn }) => numbered(target, tn.table)).join("");
   const writes = (
     p: string,
   ) => `{${toldAbout(ir, model.name) ? `\n      const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();` : ""}
       const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
-${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer) }).returning().get(),`).join("\n")}
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer)${numbered(target, tn.table)} }).returning().get(),`).join("\n")}
       ] as const;
 ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });${tell(target.name, '"created"', `inserted[${i}]`)}`).join("\n")}
       return { changed, inserted };
@@ -441,12 +453,12 @@ ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", mode
   const hooks = (w: string) =>
     `  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, ${w}.changed, viewer);
 ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, ${w}.inserted[${i}], viewer);`).join("\n")}`;
-  return `${HEADER}import { eq } from "drizzle-orm";
+  return `${HEADER}import { eq${sequenced ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
-${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
 ${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}.schema";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
@@ -632,13 +644,14 @@ ${options.length ? "        options={options}\n" : ""}        submitLabel=${attr
 `;
 }
 
-/** What a copy carries over: stored fields, not computed, unique, pictures or lists (§8). */
+/** What a copy carries over: stored fields, not computed, unique, counting up, pictures or lists (§8). */
 function copied(model: ModelIR, except: string[] = []): string[] {
   return model.fields
     .filter(
       (f) =>
         !f.formula &&
         !f.unique &&
+        !f.sequence &&
         !(f.type.kind === "scalar" && (f.type.name === "picture" || f.type.name === "pictures")) &&
         !(f.type.kind === "relation" && f.type.many) &&
         !except.includes(f.name),
@@ -654,6 +667,7 @@ function copied(model: ModelIR, except: string[] = []): string[] {
 function copyActionServer(
   action: StandardActionIR,
   ir: SpecIR,
+  auth: AuthIR,
   t: Texts,
   valueCode: (target: ModelIR, v: StandardActionIR["set"][number], key: string) => string,
   imports: Set<ModelIR>,
@@ -673,11 +687,21 @@ function copyActionServer(
   const asked = askedFields(action).length > 0;
   const usesF = values.some((v) => v.includes("F."));
   const pick = (from: string, keys: string[]) => keys.map((k) => `${k}: ${from}.${k}`).join(", ");
-  return `${HEADER}import { db } from "#/db";
+  // The copy, and its lists' copies, get their own numbers counting up (orders.md §4).
+  const numbered = (m: ModelIR, table: string) =>
+    sequenceEntries(m, auth, table, "personOf(viewer)")
+      .map((e) => `, ${e}`)
+      .join("");
+  const sequenced = [
+    numbered(model, n.table),
+    ...lists.map((l) => numbered(l.listed, l.ln.table)),
+  ].join("");
+  const orm = [...(sequenced.includes("eq(") ? ["eq"] : []), ...(sequenced ? ["max"] : [])];
+  return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
-${[model.name, ...lists.map((l) => l.listed.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
+${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...lists.map((l) => l.listed.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
 ${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}.schema";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
@@ -708,12 +732,12 @@ ${lists
   .join("\n")}
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
-    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: personOf(viewer) }).returning().get();
+    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: personOf(viewer)${numbered(model, n.table)} }).returning().get();
     audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });${toldAbout(ir, model.name) ? `\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, "created", created);\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, ${JSON.stringify(action.name)}, created);` : ""}
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
-      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer) }).returning().get();
+      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer)${numbered(l.listed, l.ln.table)} }).returning().get();
       audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });${toldAbout(ir, l.listed.name) ? `\n      outgoing(tx, viewer, ${JSON.stringify(l.listed.name)}, "created", copy);` : ""}
       return copy;
     });`,

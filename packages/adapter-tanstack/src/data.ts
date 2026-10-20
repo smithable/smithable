@@ -53,6 +53,7 @@ import {
   references,
   relatedTitle,
   SCHEMA_IMPORT,
+  sequenceEntries,
   shownFields,
   shownTitle,
   storedFields,
@@ -759,14 +760,11 @@ export function dataModule(
         ? `${dataKey(f)}: personOf(viewer)`
         : `${dataKey(f)}: values.${dataKey(f)} ?? personOf(viewer)`,
     );
-  // A number counting up (`sequence: true`, orders.md §4): the next after the highest, read in
-  // the change's own transaction, so two records made at once never share one.
-  const counted = model.fields
-    .filter((f) => f.sequence)
-    .map(
-      (f) =>
-        `${dataKey(f)}: (tx.select({ n: max(${n.table}.${dataKey(f)}) }).from(${n.table}).get()?.n ?? 0) + 1`,
-    );
+  // A number counting up (`sequence: true`, orders.md §4): from the field's counter (per owner
+  // where the number is unique per owner), kept ahead of the records' highest, in the change's
+  // own transaction, so two records made at once never share one and a number is never given twice.
+  const ownerValue = model.ownedBy ? `ownerFor(viewer, values.${owner})` : "personOf(viewer)";
+  const counted = sequenceEntries(model, auth, n.table, ownerValue);
   const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const createValues = !signedIn
     ? counted.length
@@ -822,8 +820,11 @@ export function dataModule(
             .join("")}
         }`
     : "";
+  // On a create the record is not stored yet: its formulas are worked out on the values given.
   const createRules = needs("next").length
-    ? `    const next: Record<string, unknown> = { ${choiceDefaults}...values };\n${needs("next")
+    ? `    const next: Record<string, unknown> = ${namesComputed ? `${withFormulasName(model)}({ ${choiceDefaults}...values })` : `{ ${choiceDefaults}...values }`};\n${needs(
+        "next",
+      )
         .map((l) => `    ${l}\n`)
         .join("")}`
     : "";
@@ -1307,7 +1308,7 @@ ${[...others]
   .join(
     "",
   )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.values} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${trashing ? 'import "./trash.server";\n' : ""}${
+${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${
   group.length || roots.length
     ? `
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
