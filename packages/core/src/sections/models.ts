@@ -10,7 +10,7 @@ import {
   readNumber,
   readString,
 } from "../context.js";
-import type { YamlEditor } from "../edit.js";
+import type { YamlEditor, YamlValue } from "../edit.js";
 import {
   checkFormula,
   type Expr,
@@ -159,6 +159,7 @@ export const modelsSection: SpecSection<"models"> = {
           refusal: `${effect.model}.${named.field} is ${named.rule} when ${conditionText(named.condition)}; change its rules first.`,
         };
       followReview(spec, effect.model, effect.field);
+      followUnique(spec, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
         if (!c) continue;
@@ -226,6 +227,7 @@ export const modelsSection: SpecSection<"models"> = {
           effect.to,
         );
     followReview(spec, effect.model, effect.from, effect.to);
+    followUnique(spec, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
@@ -440,6 +442,27 @@ function readModel(
  * A field named in a model's `review` list that is renamed (to) or removed (no to): the list
  * follows, and goes when it is left empty. `review: all` names no field and needs nothing.
  */
+/**
+ * A field named in a model's `unique` rules (docs/design/uniqueness.md) that is renamed (to) or
+ * removed (no to): the rules follow; a rule left with one field goes, and the key when none is left.
+ */
+function followUnique(spec: YamlEditor, model: string, field: string, to?: string): void {
+  const path = ["models", model, "unique"];
+  const rules = spec.get(path);
+  if (!Array.isArray(rules)) return;
+  const names = (rule: unknown): string[] =>
+    Array.isArray(rule) ? rule.map(String) : ((rule as { fields?: string[] })?.fields ?? []);
+  if (!rules.some((rule) => names(rule).includes(field))) return;
+  const next = rules.flatMap((rule) => {
+    const fields = names(rule).flatMap((f) => (f === field ? (to ? [to] : []) : [f]));
+    if (fields.length < 2) return [];
+    const scope = Array.isArray(rule) ? undefined : (rule as { scope?: string }).scope;
+    return [scope ? { fields, scope } : fields];
+  });
+  if (next.length) spec.set(path, next as YamlValue);
+  else spec.remove(path);
+}
+
 function followReview(spec: YamlEditor, model: string, field: string, to?: string): void {
   const path = ["models", model, "review"];
   const listed = spec.get(path);
@@ -887,6 +910,10 @@ function buildField(
       return undefined;
     }
   }
+  if (field.unique && field.type.kind === "relation" && field.type.many) {
+    ctx.error(at, "invalid-field", `${capitalize(where)}: a list of records cannot be unique.`);
+    return undefined;
+  }
   if (defaultEntry) {
     rawAt = defaultEntry.value;
     const v = isScalar(defaultEntry.value) ? defaultEntry.value.value : undefined;
@@ -1292,6 +1319,13 @@ function readUniqueTogether(ctx: ParseContext, model: ModelIR, { value, keyNode 
       continue;
     }
     let ok = true;
+    const sameSet = together.find(
+      (u) => u.fields.length === fields.length && u.fields.every((f) => fields.includes(f)),
+    );
+    if (sameSet) {
+      ctx.error(names, "invalid-value", `${fields.join(" and ")} are listed twice in ${where}.`);
+      continue;
+    }
     for (const name of fields) {
       const field = model.fields.find((f) => f.name === name);
       if (!field) {
@@ -1304,11 +1338,11 @@ function readUniqueTogether(ctx: ParseContext, model: ModelIR, { value, keyNode 
           `${model.name}.${name} cannot be part of ${where}: a computed field, a picture, a file or a list of records is not stored as one value.`,
         );
         ok = false;
-      } else if (field.unique) {
+      } else if (field.unique || field.sequence) {
         ctx.error(
           names,
           "invalid-value",
-          `${model.name}.${name} is unique by itself, so ${fields.join(" and ")} together add nothing; remove one.`,
+          `${model.name}.${name} is unique by itself${field.sequence ? " (a number counting up)" : ""}, so ${fields.join(" and ")} together add nothing; remove one.`,
         );
         ok = false;
       }

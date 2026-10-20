@@ -84,10 +84,14 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
     });
     if (hasSignIn(auth) && !model.ownedBy)
       columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
+    // The owner's column first for a per-owner value, once when the rule names it itself (ownedBy).
     const on = (fields: FieldIR[], owner: boolean) =>
-      [...(owner ? [`t.${ownerKey(model)}`] : []), ...fields.map((f) => `t.${dataKey(f)}`)].join(
-        ", ",
-      );
+      [
+        ...new Set([
+          ...(owner ? [`t.${ownerKey(model)}`] : []),
+          ...fields.map((f) => `t.${dataKey(f)}`),
+        ]),
+      ].join(", ");
     const constraint = (fields: FieldIR[], owner: boolean) =>
       model.trash
         ? `uniqueIndex(${JSON.stringify(`${n.sqlTable}_${fields.map((f) => snake(dataKey(f))).join("_")}_unique`)}).on(${on(fields, owner)}).where(sql\`\${t.deletedAt} is null\`)`

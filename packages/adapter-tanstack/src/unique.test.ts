@@ -72,3 +72,21 @@ test("with a trash every unique value is an index over the live records, the own
     'uniqueIndex("invoices_customer_id_number_unique").on(t.ownerId, t.customerId, t.number).where(sql`${t.deletedAt} is null`)',
   );
 });
+
+test("a per-owner rule that names the owner field itself lists the column once", () => {
+  const owned = `smithable: 0.1
+app: { name: Shop }
+models:
+  Invoice:
+    fields:
+      seller: User!
+      number: int!
+    ownedBy: seller
+    unique: [{ fields: [seller, number], scope: owner }]
+pages:
+  invoices: { crud: Invoice }
+`;
+  const schema = schemaOf(owned, sharedApp);
+  expect(schema).toContain("unique().on(t.sellerId, t.number)");
+  expect(schema).not.toContain("t.sellerId, t.sellerId");
+});

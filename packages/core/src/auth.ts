@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { modelAccess, uniquePerOwner } from "./access.js";
+import { modelAccess, uniqueScope } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -916,7 +916,7 @@ function checkAgainstSpec(
   for (const model of ir.models) {
     const capacity = model.capacity;
     const per = capacity && model.fields.find((f) => f.name === capacity.per);
-    if (!capacity || !per?.unique || uniquePerOwner(model, auth)) continue;
+    if (!capacity || !per?.unique || uniqueScope(per.unique, model, auth) !== "app") continue;
     if (typeof capacity.max === "number" && capacity.max <= 1) continue;
     const one = model.name.toLowerCase();
     ctx.warning(

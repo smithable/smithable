@@ -171,3 +171,85 @@ test("setUnique adds, changes and removes a rule for fields unique together", ()
   });
   expect(one.ok ? "" : one.message).toContain("two or more");
 });
+
+test("a rule twice, a number counting up in a rule, or a unique list of records is refused", () => {
+  expect(
+    codes(
+      spec(
+        "  Invoice:\n    fields:\n      customer: string!\n      number: int!\n    unique: [[customer, number], [number, customer]]\n",
+      ),
+    ),
+  ).toContain("error:invalid-value");
+  expect(
+    codes(
+      spec(
+        "  Invoice:\n    fields:\n      customer: string!\n      number: { type: int!, sequence: true }\n    unique: [[customer, number]]\n",
+      ),
+    ),
+  ).toContain("error:invalid-value");
+  expect(
+    codes(
+      spec(
+        "  Invoice:\n    fields:\n      name: string!\n      lines: { type: \"Line[]\", unique: true }\n  Line:\n    fields:\n      invoice: Invoice!\n",
+      ),
+    ),
+  ).toContain("error:invalid-field");
+});
+
+test("setFieldRules refuses to make a field in a rule unique by itself, and a sequence not unique", () => {
+  const ruled = applyOperation(files, "setUnique", {
+    model: "Invoice",
+    fields: ["customer", "number"],
+  });
+  if (!ruled.ok) throw new Error(ruled.message);
+  const alone = applyOperation(ruled.files, "setFieldRules", {
+    model: "Invoice",
+    field: "number",
+    unique: "app",
+  });
+  expect(alone.ok ? "" : alone.message).toContain("unique together with customer");
+  const counting = {
+    ...files,
+    spec: spec(
+      "  Invoice:\n    fields:\n      number: { type: int!, sequence: true }\n      name: string!\n",
+    ),
+  };
+  const off = applyOperation(counting, "setFieldRules", {
+    model: "Invoice",
+    field: "number",
+    unique: "false",
+  });
+  expect(off.ok ? "" : off.message).toContain("unique by its nature");
+  // A plain unique beside another key stays a key, not the shorthand.
+  const lockedToo = applyOperation(files, "setFieldRules", {
+    model: "Invoice",
+    field: "slug",
+    once: true,
+    unique: "true",
+  });
+  if (!lockedToo.ok) throw new Error(lockedToo.message);
+  expect(lockedToo.files.spec).toContain(
+    "      slug:\n        type: string\n        unique: true\n        locked: true\n",
+  );
+});
+
+test("renaming or removing a field follows into the rules; a rule left with one field goes", () => {
+  const ruled = applyOperation(files, "setUnique", {
+    model: "Invoice",
+    fields: ["customer", "number"],
+  });
+  if (!ruled.ok) throw new Error(ruled.message);
+  const renamed = applyOperation(ruled.files, "renameField", {
+    model: "Invoice",
+    from: "number",
+    to: "serial",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toContain("    unique: [[customer, serial]]\n");
+  const removed = applyOperation(renamed.files, "removeField", {
+    model: "Invoice",
+    field: "serial",
+  });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.files.spec).not.toContain("unique:");
+});

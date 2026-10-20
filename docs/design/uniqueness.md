@@ -26,6 +26,9 @@ Status: decided 2026-10-21 (Phase 1 of the spec plan); built in core and the ada
 
 - **Duplicates on a scope change.** Narrowing nothing, widening a scope (owner → app) or adding a rule can find existing duplicates; today the next `smithable generate` runs the index migration and the database refuses it with its own message. A check that reads the records before the change and names the duplicates belongs with the other data-aware refusals (changeField's values) when the operation layer can read records; until then the spec reference says to check first.
 - A per-role scope or a conditional uniqueness: no app has asked.
+- The form's "taken" message names one field; for fields unique together it is the last of them (the kit reads the database's constraint message), which is right often enough until a form shows the pair.
+- `smithable upgrade` rewrites a model's whole `unique` list when any rule lacks a scope, so a comment inside that list does not survive it; comments on the fields do.
+- An index's name is the table's and the fields' names joined; two rules whose joined names collide (a field `customer_number` beside the pair `[customer, number]`, with a trash) would clash in SQLite, which the migration reports.
 
 ## 6. ARCHITECTURE §2.4
 

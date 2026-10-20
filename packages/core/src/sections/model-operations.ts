@@ -724,6 +724,13 @@ const setFieldRules: Operation<{
       found.type.many
     )
       throw new OperationError(`${m}.${f} is a list of records: it cannot be unique.`);
+    if (unique === "false" && found.sequence)
+      throw new OperationError(`${m}.${f} is a number counting up, unique by its nature.`);
+    const inRule = ir.models.find((x) => x.name === m)?.unique?.find((u) => u.fields.includes(f));
+    if (unique !== undefined && unique !== "false" && inRule)
+      throw new OperationError(
+        `${m}.${f} is unique together with ${inRule.fields.filter((x) => x !== f).join(" and ")}; remove that rule first (setUnique --remove).`,
+      );
     if (once && locked && Object.keys(locked).length)
       throw new OperationError("A field is locked once made or while a condition holds, not both.");
     const path = fieldPath(m, f, ir);
@@ -752,7 +759,10 @@ const setFieldRules: Operation<{
         Object.keys(required).length ? (conditionArgs(required) as YamlValue) : undefined,
       );
     // Back to the shorthand when nothing but the type (and a default, and a plain unique) is left.
-    if (long.unique === true) {
+    if (
+      long.unique === true &&
+      Object.keys(long).every((k) => ["type", "default", "unique"].includes(k))
+    ) {
       long.type = `${String(long.type)} unique`;
       delete long.unique;
     }
