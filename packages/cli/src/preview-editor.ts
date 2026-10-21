@@ -2,6 +2,7 @@
 // app's own Vite config for the preview only. It injects a small runtime into the page that,
 // in select mode, outlines the part of the spec under the pointer, reports a click to Studio,
 // and lets table columns be dragged. The app's own builds never include it.
+import { createHash, timingSafeEqual } from "node:crypto";
 
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
@@ -356,6 +357,8 @@ const ID = "virtual:smithable-editor";
 /** The parts of Vite's dev server the plugin uses. */
 interface DevServer {
   watcher: { on(event: string, listener: () => void): void };
+  /** Node's HTTP server under the dev server; none in middleware mode. */
+  httpServer?: UpgradeServer | null;
   /** Vite's environments (client, ssr), each with the channel to its hot-reload clients. */
   environments?: Record<string, { hot: { send: (...args: unknown[]) => void } }>;
   middlewares: {
@@ -363,7 +366,93 @@ interface DevServer {
       path: string,
       handler: (req: unknown, res: { end(body: string): void }) => void | Promise<void>,
     ): void;
+    use(handler: Middleware): void;
   };
+}
+
+/** A connect middleware, as Vite's dev server takes them: every request, before Vite's own. */
+export type Middleware = (
+  req: { headers: Record<string, string | string[] | undefined> },
+  res: {
+    statusCode: number;
+    setHeader(name: string, value: string): void;
+    end(body: string): void;
+  },
+  next: () => void,
+) => void;
+
+/** The setting the preview's process gets: the token's SHA-256 as hex, never the token itself. */
+export const PREVIEW_TOKEN_DIGEST = "SMITHABLE_PREVIEW_TOKEN_SHA256";
+
+/** The token's SHA-256, as the preview compares it. */
+export const tokenDigest = (token: string) => createHash("sha256").update(token).digest("hex");
+
+/**
+ * Whether a request carries Studio's token. The preview knows only the token's digest (the
+ * daemon gives it `SMITHABLE_PREVIEW_TOKEN_SHA256`), so the app's own code running in the preview
+ * cannot read the token and use it on Studio; both sides are compared as digests, so the compare
+ * takes the same time whatever is given.
+ */
+function carriesToken(
+  headers: Record<string, string | string[] | undefined>,
+  digestHex: string | undefined,
+): boolean {
+  if (!digestHex) return false;
+  const given = headers["x-smithable-studio-token"];
+  if (typeof given !== "string") return false;
+  const wanted = Buffer.from(digestHex, "hex");
+  const got = Buffer.from(tokenDigest(given), "hex");
+  return wanted.length === got.length && timingSafeEqual(wanted, got);
+}
+
+/**
+ * Behind a proxy (`smithable studio --host` with SMITHABLE_STUDIO_TOKEN) the preview's dev server
+ * listens on the host's interface like Studio does, so it takes the same token on every request:
+ * the proxy adds it, and nothing else on the network reaches the app's pages or its data. Without
+ * the digest to compare with, nothing is served at all (closed, never open by mistake).
+ */
+export function tokenGuard(digestHex: string | undefined): Middleware {
+  return (req, res, next) => {
+    if (carriesToken(req.headers, digestHex)) return next();
+    res.statusCode = digestHex ? 401 : 503;
+    res.setHeader("content-type", "text/plain");
+    res.end(digestHex ? "The preview needs Studio's token." : "The preview has no token to check.");
+  };
+}
+
+/** What the guard needs of the dev server's HTTP server: its upgrade listeners, to wrap. */
+export interface UpgradeServer {
+  listeners(event: string): ((...args: unknown[]) => void)[];
+  removeAllListeners(event: string): void;
+  on(event: string, listener: (...args: unknown[]) => void): void;
+  once(event: string, listener: () => void): void;
+}
+
+/**
+ * WebSocket upgrades (hot reload, and what a client may ask the dev server over it) do not pass
+ * the middlewares: once the server listens, its upgrade listeners are wrapped so an upgrade
+ * without the token is refused before any of them sees it. The proxy sends the token on
+ * upgrades as on requests.
+ */
+export function guardUpgrades(server: UpgradeServer, digestHex: string | undefined): void {
+  server.once("listening", () => {
+    const inner = server.listeners("upgrade");
+    server.removeAllListeners("upgrade");
+    server.on("upgrade", (...args: unknown[]) => {
+      const [req, socket] = args as [
+        { headers: Record<string, string | string[] | undefined> },
+        { write(text: string): void; destroy(): void },
+      ];
+      if (carriesToken(req.headers, digestHex)) {
+        for (const listener of inner) listener(...args);
+        return;
+      }
+      socket.write(
+        `HTTP/1.1 ${digestHex ? "401 Unauthorized" : "503 Service Unavailable"}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`,
+      );
+      socket.destroy();
+    });
+  });
 }
 
 /**
@@ -373,7 +462,7 @@ interface DevServer {
  */
 export const WORDS_MODULE = /\/src\/generated\/[a-z0-9-]+\.ts$/;
 
-export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
+export function smithableEditor(options: { holdUpdates?: boolean; token?: boolean } = {}) {
   return {
     name: "smithable-editor",
     apply: "serve",
@@ -407,6 +496,12 @@ export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
      * can leave the request hanging.
      */
     configureServer(server: DevServer) {
+      // First, before Vite's own middlewares: nothing is served without the token.
+      if (options.token) {
+        const digest = process.env[PREVIEW_TOKEN_DIGEST] || undefined;
+        server.middlewares.use(tokenGuard(digest));
+        if (server.httpServer) guardUpgrades(server.httpServer, digest);
+      }
       if (options.holdUpdates) holdFullReloads(server);
       let changed = 0;
       for (const event of ["add", "change", "unlink"])
@@ -454,8 +549,10 @@ export function holdFullReloads(server: Pick<DevServer, "environments">) {
 export function previewConfig(
   publicUrl?: string,
   allow?: string[],
-  options: { holdUpdates?: boolean } = {},
+  options: { holdUpdates?: boolean; token?: boolean } = {},
 ): string {
+  const given = (["holdUpdates", "token"] as const).filter((key) => options[key]);
+  const pluginOptions = given.length ? `{ ${given.map((key) => `${key}: true`).join(", ")} }` : "";
   const plugin = new URL("./preview-editor.js", import.meta.url).pathname;
   const server: Record<string, unknown> = {};
   // Behind a proxy on its own public address, the dev server accepts that host and its
@@ -478,6 +575,6 @@ import { mergeConfig } from "vite";
 import app from "../../vite.config.ts";
 import { smithableEditor } from ${JSON.stringify(plugin)};
 
-export default mergeConfig(app, { plugins: [smithableEditor(${options.holdUpdates ? "{ holdUpdates: true }" : ""})]${extra} });
+export default mergeConfig(app, { plugins: [smithableEditor(${pluginOptions})]${extra} });
 `;
 }

@@ -28,7 +28,7 @@ import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
-import { previewConfig } from "./preview-editor.js";
+import { PREVIEW_TOKEN_DIGEST, previewConfig, tokenDigest } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
 import {
   type AskingStage,
@@ -399,6 +399,15 @@ export async function studio(
   }
   const previewPort = port + 1;
   const preview = options.previewUrl ?? `http://localhost:${previewPort}`;
+  // Behind a proxy the preview takes Studio's token on every request (the editor plugin's guard):
+  // the daemon's own requests to it carry it too. The preview's process gets the token's digest
+  // only, so the app's code running in it cannot use the token on Studio.
+  const previewToken = options.host ? process.env.SMITHABLE_STUDIO_TOKEN : undefined;
+  const previewHeaders: Record<string, string> = previewToken
+    ? { "x-smithable-studio-token": previewToken }
+    : {};
+  const { SMITHABLE_STUDIO_TOKEN: _studioToken, ...previewEnv } = process.env;
+  if (previewToken) previewEnv[PREVIEW_TOKEN_DIGEST] = tokenDigest(previewToken);
   const logs: string[] = [];
   const clients = new Set<ServerResponse>();
   const send = (event: string, data: unknown) => {
@@ -421,7 +430,10 @@ export async function studio(
   /** The preview's failure to answer, recorded once until it answers (and its report sent once). */
   let stuck: { report?: "sent" | "offer" } | undefined;
   const previewAnswers = () =>
-    fetch(`http://localhost:${previewPort}/health`, { signal: AbortSignal.timeout(2000) }).then(
+    fetch(`http://localhost:${previewPort}/health`, {
+      headers: previewHeaders,
+      signal: AbortSignal.timeout(2000),
+    }).then(
       (answer) => answer.ok,
       () => false,
     );
@@ -436,6 +448,7 @@ export async function studio(
     new Promise((r) => setTimeout(r, 800))
       .then(() =>
         fetch(`http://127.0.0.1:${previewPort}/__smithable/settled`, {
+          headers: previewHeaders,
           signal: AbortSignal.timeout(5000),
         }),
       )
@@ -453,8 +466,9 @@ export async function studio(
     const text = previewConfig(
       options.previewUrl,
       store ? [resolve(dir), resolve(store)] : undefined,
-      // Studio reloads the preview itself after a change (one reload, when the daemon says so).
-      { holdUpdates: true },
+      // Studio reloads the preview itself after a change (one reload, when the daemon says so);
+      // on a host, the preview takes Studio's token on every request.
+      { holdUpdates: true, token: Boolean(previewToken) },
     );
     const path = join(dir, config);
     if (existsSync(path) && readFileSync(path, "utf8") === text) return;
@@ -479,7 +493,7 @@ export async function studio(
       ]),
       {
         cwd: dir,
-        env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
+        env: { ...previewEnv, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
         detached: true,
       },
     );
@@ -498,7 +512,7 @@ export async function studio(
       setTimeout(startApp, delay);
     });
     // Once it answers, a preview that is stuck again later is a new failure to report.
-    void warmPreview(previewPort, log).then(async () => {
+    void warmPreview(previewPort, log, undefined, previewHeaders).then(async () => {
       if (await previewAnswers()) stuck = undefined;
     });
   };

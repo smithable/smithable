@@ -1,5 +1,15 @@
 import { expect, test } from "vitest";
-import { holdFullReloads, previewConfig, RUNTIME, smithableEditor } from "./preview-editor.js";
+import {
+  guardUpgrades,
+  holdFullReloads,
+  type Middleware,
+  previewConfig,
+  RUNTIME,
+  smithableEditor,
+  tokenDigest,
+  tokenGuard,
+  type UpgradeServer,
+} from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page(at = "/", storage: Record<string, string> = {}) {
@@ -189,21 +199,106 @@ test("in Studio the dev server's hot updates for generated files are held back; 
     "smithableEditor({ holdUpdates: true })",
   );
   expect(previewConfig()).toContain("smithableEditor()");
+  expect(previewConfig(undefined, undefined, { holdUpdates: true, token: true })).toContain(
+    "smithableEditor({ holdUpdates: true, token: true })",
+  );
 });
 
-test("full reloads a plugin sends itself are dropped, except for custom code", () => {
-  const sent: unknown[] = [];
-  const server = {
-    environments: { client: { hot: { send: (...args: unknown[]) => sent.push(args[0]) } } },
+test("on a host the preview takes Studio's token on every request, requests and upgrades alike; without a digest nothing is served", () => {
+  const call = (guard: Middleware, token?: string) => {
+    const res = { statusCode: 200, headers: {} as Record<string, string>, body: "" };
+    let passed = false;
+    guard(
+      { headers: token === undefined ? {} : { "x-smithable-studio-token": token } },
+      {
+        get statusCode() {
+          return res.statusCode;
+        },
+        set statusCode(code: number) {
+          res.statusCode = code;
+        },
+        setHeader: (name, value) => {
+          res.headers[name] = value;
+        },
+        end: (body) => {
+          res.body = body;
+        },
+      },
+      () => {
+        passed = true;
+      },
+    );
+    return passed ? "passed" : `${res.statusCode} ${res.body}`;
   };
-  holdFullReloads(server);
-  const hot = server.environments.client.hot;
-  hot.send({ type: "full-reload", path: "*" });
-  hot.send({ type: "full-reload", triggeredBy: "/app/src/routes/orders/index.tsx" });
-  hot.send({ type: "full-reload", triggeredBy: "/app/src/custom/pages/Hello.tsx" });
-  hot.send({ type: "update", updates: [] });
-  expect(sent).toEqual([
-    { type: "full-reload", triggeredBy: "/app/src/custom/pages/Hello.tsx" },
-    { type: "update", updates: [] },
-  ]);
+  const digest = tokenDigest("secret-token");
+  expect(digest).toMatch(/^[0-9a-f]{64}$/);
+  const guard = tokenGuard(digest);
+  expect(call(guard, "secret-token")).toBe("passed");
+  expect(call(guard, "wrong")).toBe("401 The preview needs Studio's token.");
+  expect(call(guard)).toBe("401 The preview needs Studio's token.");
+  expect(call(guard, "secret-token-longer")).toBe("401 The preview needs Studio's token.");
+  // Asked to guard without a digest: closed, not open.
+  expect(call(tokenGuard(undefined), "secret-token")).toBe(
+    "503 The preview has no token to check.",
+  );
+  // Upgrades: the server's own listeners run only for an upgrade with the token.
+  const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
+  const server: UpgradeServer = {
+    listeners: (event) => listeners.get(event) ?? [],
+    removeAllListeners: (event) => void listeners.delete(event),
+    on: (event, listener) => void listeners.set(event, [...(listeners.get(event) ?? []), listener]),
+    once: (event, listener) =>
+      void listeners.set(event, [...(listeners.get(event) ?? []), listener]),
+  };
+  const seen: string[] = [];
+  server.on("upgrade", (req) => seen.push((req as { url: string }).url));
+  guardUpgrades(server, digest);
+  for (const l of listeners.get("listening") ?? []) l();
+  const upgrade = (token: string | undefined, url: string) => {
+    const written: string[] = [];
+    let destroyed = false;
+    for (const l of listeners.get("upgrade") ?? [])
+      l(
+        { url, headers: token === undefined ? {} : { "x-smithable-studio-token": token } },
+        {
+          write: (t: string) => void written.push(t),
+          destroy: () => {
+            destroyed = true;
+          },
+        },
+        Buffer.alloc(0),
+      );
+    return { written, destroyed };
+  };
+  expect(upgrade("secret-token", "/ok")).toEqual({ written: [], destroyed: false });
+  const refused = upgrade("wrong", "/no");
+  expect(refused.destroyed).toBe(true);
+  expect(refused.written[0]).toContain("401 Unauthorized");
+  expect(upgrade(undefined, "/none").destroyed).toBe(true);
+  expect(seen).toEqual(["/ok"]);
+  // The plugin adds the guards only when asked; the digest comes from the preview's setting.
+  const registered: unknown[] = [];
+  const dev = {
+    watcher: { on: () => undefined },
+    middlewares: { use: (...args: unknown[]) => registered.push(args[0]) },
+    httpServer: server,
+  };
+  const saved = process.env.SMITHABLE_PREVIEW_TOKEN_SHA256;
+  try {
+    process.env.SMITHABLE_PREVIEW_TOKEN_SHA256 = digest;
+    smithableEditor({ token: true }).configureServer(dev);
+    expect(registered.length).toBe(2);
+    expect(typeof registered[0]).toBe("function");
+    registered.length = 0;
+    smithableEditor().configureServer(dev);
+    expect(registered).toEqual(["/__smithable/settled"]);
+    registered.length = 0;
+    delete process.env.SMITHABLE_PREVIEW_TOKEN_SHA256;
+    smithableEditor({ token: true }).configureServer(dev);
+    expect(typeof registered[0]).toBe("function");
+    expect(call(registered[0] as Middleware, "secret-token")).toContain("503");
+  } finally {
+    if (saved !== undefined) process.env.SMITHABLE_PREVIEW_TOKEN_SHA256 = saved;
+    else delete process.env.SMITHABLE_PREVIEW_TOKEN_SHA256;
+  }
 });
