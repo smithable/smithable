@@ -1,11 +1,19 @@
-// The runtime of a page the theme lab's public mode frames (scripts/theme-lab-export.mjs): what
-// the preview editor's runtime does for the local lab (packages/cli/src/preview-editor.ts), for
-// a static page on the lab's own origin. It takes a theme's CSS, shows one color scheme, plays
-// the landing page's motion, and keeps the page where it is (its links and forms lead nowhere).
-(() => {
+// The runtime of a saved page (static.ts; the theme lab's public mode frames the same files,
+// scripts/theme-lab-export.mjs): what the preview editor's runtime does for the local lab
+// (preview-editor.ts), for a static page on the viewer's own origin. It shows a saved dialog as a
+// modal again, takes a theme's CSS, shows one color scheme, plays the landing page's motion, and
+// keeps the page where it is (its links and forms lead nowhere). Written as frames/frame.js.
+export const FRAME_RUNTIME = String.raw`(() => {
+  // A dialog saved while open is a modal again (the saved page keeps only its open attribute).
+  for (const dialog of document.querySelectorAll("dialog[open]")) {
+    dialog.removeAttribute("open");
+    dialog.showModal();
+  }
   if (window.parent === window) return;
+  // A folder opened from a file has the origin "null", which postMessage refuses as a target.
+  const origin = location.origin === "null" ? "*" : location.origin;
   const post = (message) =>
-    window.parent.postMessage({ source: "smithable-preview", ...message }, location.origin);
+    window.parent.postMessage({ source: "smithable-preview", ...message }, origin);
   let scheme = "";
   const applyScheme = () => {
     const walk = (rules) => {
@@ -35,7 +43,7 @@
       }
       // The fonts' bare imports become the lab's copies.
       sheet.textContent = css.replace(
-        /@import "@fontsource-variable\/([a-z0-9-]+)";/g,
+        /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
         '@import "../fonts/$1/index.css";',
       );
       document.head.append(sheet);
@@ -61,3 +69,4 @@
   document.addEventListener("submit", (event) => event.preventDefault());
   post({ type: "ready" });
 })();
+`;

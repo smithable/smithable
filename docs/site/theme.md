@@ -98,6 +98,18 @@ The lab opens in the browser beside a real app: a booking app with a field for e
 - Under the pages, a line for each look the app can ask for says whether the theme suits it ("flat cards on this background have no edge"), and the check's errors are shown in red.
 - **Save** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Without `--project`, inside a project folder the lab saves to that project, and anywhere else it writes `themes/<name>.yml` into the current folder.
 
+### The pages as files
+
+For a look at an app's pages with nothing running (a folder to send a tester, pictures in seconds), `smithable static` saves them: every page without its scripts, the kit's CSS as one sheet, the pictures and fonts beside it, signed in as a role (`--as visitor` for the public pages), and an index page that shows them in light and dark at a desktop's, a laptop's, a tablet's and a phone's width:
+
+```console
+$ smithable static . --states
+Starting the app at http://localhost:41283…
+Saved 22 pages and 14 files into …/data/static (as admin). Open …/data/static/index.html.
+```
+
+`--states` adds a list with nothing found, a form with its errors and a record's delete dialog. The pages are the look only: their links and forms lead nowhere. The command needs Playwright, which the app's own smoke test has.
+
 ## 5. A theme for the landing page alone
 
 The landing page has a frame of its own, so it may look different from the rest of the app:

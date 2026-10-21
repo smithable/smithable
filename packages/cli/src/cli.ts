@@ -24,6 +24,7 @@ import { loadPlugins } from "./plugins.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
 import { type Level, security, updateSecurity } from "./security.js";
+import { staticPages } from "./static.js";
 import { studio } from "./studio.js";
 import { teach } from "./teach.js";
 import { themeFrom } from "./theme-from.js";
@@ -278,6 +279,12 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return detach(values.dir ?? dir, io);
     case "mcp":
       return mcp(values.dir ?? dir);
+    case "static":
+      return staticPages(args[0] ?? values.dir ?? dir, io, {
+        ...(values.out ? { out: values.out } : {}),
+        ...(values.as ? { as: values.as } : {}),
+        ...(values.states ? { states: true } : {}),
+      });
     case "studio":
       return studio(values.dir ?? dir, io, Number(values.port ?? 4321), {
         ...(values.host ? { host: values.host } : {}),
@@ -333,6 +340,9 @@ const CONFIG = {
     implementation: { type: "boolean" },
     port: { type: "string" },
     project: { type: "string" },
+    out: { type: "string" },
+    as: { type: "string" },
+    states: { type: "boolean" },
     /** The app the theme lab shows instead of making its own (the tests' app). */
     app: { type: "string" },
     host: { type: "string" },
