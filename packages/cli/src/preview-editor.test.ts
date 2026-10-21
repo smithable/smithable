@@ -1,5 +1,12 @@
 import { expect, test } from "vitest";
-import { holdFullReloads, previewConfig, RUNTIME, smithableEditor } from "./preview-editor.js";
+import {
+  holdFullReloads,
+  type Middleware,
+  previewConfig,
+  RUNTIME,
+  smithableEditor,
+  tokenGuard,
+} from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page(at = "/", storage: Record<string, string> = {}) {
@@ -189,6 +196,64 @@ test("in Studio the dev server's hot updates for generated files are held back; 
     "smithableEditor({ holdUpdates: true })",
   );
   expect(previewConfig()).toContain("smithableEditor()");
+  expect(previewConfig(undefined, undefined, { holdUpdates: true, token: true })).toContain(
+    "smithableEditor({ holdUpdates: true, token: true })",
+  );
+});
+
+test("on a host the preview takes Studio's token on every request; without one, or on this machine alone, nothing changes", () => {
+  const call = (guard: Middleware, token?: string) => {
+    const res = { statusCode: 200, headers: {} as Record<string, string>, body: "" };
+    let passed = false;
+    guard(
+      { headers: token === undefined ? {} : { "x-smithable-studio-token": token } },
+      {
+        get statusCode() {
+          return res.statusCode;
+        },
+        set statusCode(code: number) {
+          res.statusCode = code;
+        },
+        setHeader: (name, value) => {
+          res.headers[name] = value;
+        },
+        end: (body) => {
+          res.body = body;
+        },
+      },
+      () => {
+        passed = true;
+      },
+    );
+    return passed ? "passed" : `${res.statusCode} ${res.body}`;
+  };
+  const guard = tokenGuard("secret-token");
+  expect(call(guard, "secret-token")).toBe("passed");
+  expect(call(guard, "wrong")).toBe("401 The preview needs Studio's token.");
+  expect(call(guard)).toBe("401 The preview needs Studio's token.");
+  expect(call(guard, "secret-token-longer")).toBe("401 The preview needs Studio's token.");
+  // The plugin adds the guard first, only when it is asked to and a token is set.
+  const registered: unknown[] = [];
+  const server = {
+    watcher: { on: () => undefined },
+    middlewares: { use: (...args: unknown[]) => registered.push(args[0]) },
+  };
+  const saved = process.env.SMITHABLE_STUDIO_TOKEN;
+  try {
+    process.env.SMITHABLE_STUDIO_TOKEN = "secret-token";
+    smithableEditor({ token: true }).configureServer(server);
+    expect(registered.length).toBe(2);
+    expect(typeof registered[0]).toBe("function");
+    registered.length = 0;
+    smithableEditor().configureServer(server);
+    expect(registered).toEqual(["/__smithable/settled"]);
+    delete process.env.SMITHABLE_STUDIO_TOKEN;
+    smithableEditor({ token: true }).configureServer(server);
+    expect(registered).toEqual(["/__smithable/settled", "/__smithable/settled"]);
+  } finally {
+    if (saved !== undefined) process.env.SMITHABLE_STUDIO_TOKEN = saved;
+    else delete process.env.SMITHABLE_STUDIO_TOKEN;
+  }
 });
 
 test("full reloads a plugin sends itself are dropped, except for custom code", () => {

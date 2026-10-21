@@ -11,13 +11,15 @@ export async function warmPreview(
   port: number,
   log: (text: string) => void,
   attempts = 240,
+  /** Studio's token, when the preview takes one (behind a proxy). */
+  headers: Record<string, string> = {},
 ): Promise<number> {
   const started = Date.now();
   const seconds = () => Math.round((Date.now() - started) / 100) / 10;
   const base = `http://127.0.0.1:${port}`;
   const get = async (path: string) => {
     try {
-      const answer = await fetch(`${base}${path}`, { redirect: "manual" });
+      const answer = await fetch(`${base}${path}`, { headers, redirect: "manual" });
       return {
         status: answer.status,
         location: answer.headers.get("location"),
