@@ -452,7 +452,30 @@ export async function studio(
           signal: AbortSignal.timeout(5000),
         }),
       )
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .then(renders);
+  /**
+   * The watcher being quiet is not the server being whole: under load, TanStack Start writes
+   * the route tree and rebuilds its modules for seconds after, and a page loaded then met a
+   * loader or a server function mid-rebuild (the sign-in page without its data, crashed).
+   * So the preview reloads only once the server renders a page cleanly: the sign-in page,
+   * public and small, asked for until it answers without the error page's mark, up to twenty
+   * seconds. The first answer also warms the page the preview loads next.
+   */
+  const renders = async () => {
+    const until = Date.now() + 20000;
+    while (Date.now() < until) {
+      const clean = await fetch(`http://127.0.0.1:${previewPort}/sign-in`, {
+        headers: previewHeaders,
+        signal: AbortSignal.timeout(5000),
+      }).then(
+        async (answer) => answer.ok && !(await answer.text()).includes('data-kit="error"'),
+        () => false,
+      );
+      if (clean) return;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  };
   const changed = (data: unknown) => void settled().then(() => send("changed", data));
   // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
   // which Git ignores: the app's own config and builds stay as they are.

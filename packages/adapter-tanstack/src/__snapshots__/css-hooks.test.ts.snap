@@ -24,6 +24,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="nav"",
     "data-part="count"",
     "data-part="sign-out"",
+    "data-kit={kind}",
     "data-part="title"",
     "data-part="actions"",
     "data-part=save])]:flex-1"",

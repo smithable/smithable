@@ -26,11 +26,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-flash]{outline:3px solid #e8590c!important;outline-offset:3px;animation:sm-flash 1.6s ease-out forwards}" +
     "@media (prefers-reduced-motion:reduce){[data-sm-flash]{animation:none}}";
   document.head.append(style);
-  // Studio's origin, learned from its first message; until then only "ready" (which carries
-  // nothing) goes out, to any origin.
+  // Studio's origin, learned from its first message; until then only "ready" and "errored"
+  // (which carry nothing of the app) go out, to any origin.
   let studio = null;
   const post = (message) => {
-    const target = studio ?? (message.type === "ready" ? "*" : null);
+    const target = studio ?? (message.type === "ready" || message.type === "errored" ? "*" : null);
     if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
   };
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
@@ -347,7 +347,45 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   if (document.readyState === "complete") styled();
   else window.addEventListener("load", styled, { once: true });
-  post({ type: "ready" });
+  // A page that crashed while the app was taking in a change (the root's error page: a loader
+  // or a server function met the dev server mid-rebuild) is loaded again once the server
+  // answers, up to three times for an address, and does not say it is ready, so Studio keeps
+  // the last good page on screen meanwhile; the fourth time the error is shown as it is.
+  const CRASHES = "smithable:crashes";
+  const crashes = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem(CRASHES) || "{}");
+    } catch {
+      return {};
+    }
+  };
+  const crashed = document.querySelectorAll("[data-kit=error]").length > 0;
+  const tries = crashed ? (crashes()[location.pathname] || 0) + 1 : 0;
+  if (crashed) {
+    try {
+      sessionStorage.setItem(CRASHES, JSON.stringify({ ...crashes(), [location.pathname]: tries }));
+    } catch {}
+    post({ type: "errored", tries });
+  } else if (crashes()[location.pathname]) {
+    try {
+      const { [location.pathname]: _, ...rest } = crashes();
+      sessionStorage.setItem(CRASHES, JSON.stringify(rest));
+    } catch {}
+  }
+  if (crashed && tries <= 3) {
+    let asking = false;
+    const retry = setInterval(() => {
+      if (asking) return;
+      asking = true;
+      const answers = window.fetch ? window.fetch("/health").then((r) => r.ok, () => false) : Promise.resolve(true);
+      answers.then((ok) => {
+        asking = false;
+        if (!ok) return;
+        clearInterval(retry);
+        location.reload();
+      });
+    }, 1500);
+  } else post({ type: "ready" });
 }
 `;
 

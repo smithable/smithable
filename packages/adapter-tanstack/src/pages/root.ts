@@ -281,7 +281,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 

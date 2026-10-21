@@ -12,7 +12,7 @@ import {
 } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
-function page(at = "/", storage: Record<string, string> = {}) {
+function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   // One rule for the dark color scheme, as the app's styles have; and the development sign-in's buttons.
   const darkRule = { media: { mediaText: "(prefers-color-scheme: dark)" } };
   const clicked: string[] = [];
@@ -28,10 +28,14 @@ function page(at = "/", storage: Record<string, string> = {}) {
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
-  const parent = { postMessage() {} };
+  const posted: { type: string }[] = [];
+  const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
+  const reloads: number[] = [];
   const window = {
     parent,
+    // The app's server answers; a crashed page asks it before loading itself again.
+    fetch: () => Promise.resolve({ ok: true }),
     innerHeight: 800,
     scrollTo: (_x: number, y: number) => scrolled.push(y),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
@@ -49,7 +53,13 @@ function page(at = "/", storage: Record<string, string> = {}) {
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === "[data-dev-role]" ? buttons : selector === "button" ? signInButtons : [],
+      selector === "[data-dev-role]"
+        ? buttons
+        : selector === "button"
+          ? signInButtons
+          : selector === "[data-kit=error]" && crashed
+            ? [{}]
+            : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
@@ -71,7 +81,7 @@ function page(at = "/", storage: Record<string, string> = {}) {
     window,
     document,
     { pushState() {}, replaceState() {} },
-    { pathname: at, search: "" },
+    { pathname: at, search: "", reload: () => reloads.push(1) },
     (tick: () => void) => ticks.push(tick),
     noop,
     noop,
@@ -95,6 +105,8 @@ function page(at = "/", storage: Record<string, string> = {}) {
     darkRule,
     clicked,
     scrolled,
+    posted,
+    reloads,
     tick: () => {
       for (const t of [...ticks]) t();
     },
@@ -105,6 +117,29 @@ function page(at = "/", storage: Record<string, string> = {}) {
     },
   };
 }
+
+test("a page that crashed while the app updated is loaded again, three times, then shown", async () => {
+  const storage: Record<string, string> = {};
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const crashed = page("/customers/new", storage, true);
+    // Not ready: Studio keeps the last good page; loaded again once the server answers.
+    expect(crashed.posted.map((m) => m.type)).toEqual(["errored"]);
+    crashed.tick();
+    await settle();
+    expect(crashed.reloads).toHaveLength(1);
+  }
+  // The fourth time the error is shown as it is.
+  const shown = page("/customers/new", storage, true);
+  expect(shown.posted.map((m) => m.type)).toEqual(["errored", "ready"]);
+  shown.tick();
+  await settle();
+  expect(shown.reloads).toHaveLength(0);
+  // A good load forgets the address's crashes; another address is counted on its own.
+  const good = page("/customers/new", storage);
+  expect(good.posted.map((m) => m.type)).toEqual(["ready"]);
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({});
+});
 
 test("the preview signs in whenever it shows the sign-in page, until the owner signs out", () => {
   const storage: Record<string, string> = {};
