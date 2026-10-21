@@ -3294,6 +3294,11 @@ async function inputSecurityFlow(dir, base) {
   const ran = async () => page.evaluate(() => Boolean(window.__ran));
   const dialogs = [];
   page.on("dialog", (dialog) => {
+    // Leaving a form with edits asks first (the Markdown check leaves one): not a script's dialog.
+    if (dialog.type() === "beforeunload") {
+      void dialog.accept();
+      return;
+    }
     dialogs.push(dialog.message());
     dialog.dismiss();
   });

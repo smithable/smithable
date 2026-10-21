@@ -56,6 +56,12 @@ export const w = {
       ? `That time is not free. Free that day: ${times}.`
       : "That time is not free, and that day has no other.",
   tooLateToCancel: "It is too late to cancel here: contact us to change it.",
+  editsWillBeLost: "What you entered on this form is not saved.",
+  fieldsToFix: (n: number) => (n === 1 ? "1 field to fix:" : `${n} fields to fix:`),
+  keepEditing: "Keep editing",
+  leaveWithout: "Leave without saving",
+  leaveWithoutSaving: "Leave without saving?",
+  trashKeepsIt: "It stays in the trash for 30 days, where it can be restored.",
   checkingPlaces: "Checking places…",
   chooseFile: "Choose a file",
   choosePicture: "Choose a picture",

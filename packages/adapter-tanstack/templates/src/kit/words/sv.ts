@@ -56,6 +56,12 @@ export const w = {
       ? `Den tiden är inte ledig. Lediga samma dag: ${times}.`
       : "Den tiden är inte ledig, och dagen har ingen annan.",
   tooLateToCancel: "Det är för sent att avboka här: kontakta oss för att ändra.",
+  editsWillBeLost: "Det du har skrivit i formuläret är inte sparat.",
+  fieldsToFix: (n: number) => (n === 1 ? "1 fält att rätta:" : `${n} fält att rätta:`),
+  keepEditing: "Fortsätt redigera",
+  leaveWithout: "Lämna utan att spara",
+  leaveWithoutSaving: "Lämna utan att spara?",
+  trashKeepsIt: "Den ligger kvar i papperskorgen i 30 dagar och kan återställas där.",
   checkingPlaces: "Kontrollerar platser…",
   chooseFile: "Välj en fil",
   choosePicture: "Välj en bild",
