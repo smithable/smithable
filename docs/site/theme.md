@@ -82,7 +82,7 @@ Text needs 4.5:1 against what it sits on, and the focus ring 3:1, so a theme tha
 
 ## 4. Or make it in the theme lab
 
-The lab is also [on this site](https://docs.smithable.ai/theme-lab/index.html), with nothing to install: the same controls on a booking app's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. Locally, it shows a running app and saves into the project:
+The lab is also [on this site](https://docs.smithable.ai/theme-lab/index.html), with nothing to install: the same controls on every starter's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. Locally, it shows a running app and saves into the project:
 
 ```console
 $ smithable theme lab --project .
@@ -90,7 +90,7 @@ Making the lab's app (a booking app with every control)…
 The theme lab is at http://localhost:4330 (the app at http://localhost:4331). A theme saved goes to the project …, through addTheme. Ctrl+C stops it.
 ```
 
-The lab opens in the browser beside a real app: a booking app with a field for every kind of control. On the left are the theme's fields, grouped as the file is. In the middle, one of the app's pages is shown at full size: the landing page, a list, its form or a record, each chosen by its tab, in light or in dark. The width buttons (phone 390, tablet 820, laptop 1280, desktop 1600) set the frame's width, and its edge drags to any width in between. The frame is scaled down only when the window is narrower than the width. **Phone beside** shows the phone's width next to it. At the bottom is the theme file itself as text. A change to a control or to the text shows in the frame at once, with no regeneration in between.
+The lab opens in the browser beside a real app: by default a booking app with a field for every kind of control. **Starter** at the top makes another starter's app in its place (a few seconds), so a theme is judged on the kind of app it is for; `--starter crm` starts with that one. On the left are the theme's fields, grouped as the file is. In the middle, one of the app's pages is shown at full size: the landing page, a list, its form or a record, each chosen by its tab, in light or in dark. The width buttons (phone 390, tablet 820, laptop 1280, desktop 1600) set the frame's width, and its edge drags to any width in between. The frame is scaled down only when the window is narrower than the width. **Phone beside** shows the phone's width next to it. At the bottom is the theme file itself as text. A change to a control or to the text shows in the frame at once, with no regeneration in between.
 
 - **Start from** any of the built-in themes or the project's own, then rename it.
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.

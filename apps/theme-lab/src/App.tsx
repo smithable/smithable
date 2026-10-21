@@ -19,9 +19,16 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getField, setField, themeText } from "./theme-text";
 
+type Frames = { label: string; path: string }[];
+
 interface Start {
   preview: string;
-  frames: { label: string; path: string }[];
+  frames: Frames;
+  /** The starters the switch offers, and the one shown (none when the app was given). */
+  starters: string[];
+  starter?: string;
+  /** Public mode: every starter's saved pages, so the switch needs no server. */
+  sets?: Record<string, Frames>;
   themes: { name: string; text: string }[];
   project: boolean;
   target: string;
@@ -59,14 +66,21 @@ export function App() {
   const [grey, setGrey] = useState(false);
   const [signedIn, setSignedIn] = useState(PUBLIC);
   const [saved, setSaved] = useState<string>();
+  // A starter being made (local mode): its name while the lab waits, or what went wrong.
+  const [making, setMaking] = useState<string>();
+  // Each new app is signed in again; the fallback below waits for it anew.
+  const [round, setRound] = useState(0);
   useEffect(() => {
     if (PUBLIC)
       void fetch("start.json")
         .then((r) => r.json())
-        .then(({ frames }) =>
+        .then(({ starters }: { starters: { name: string; frames: Frames }[] }) =>
           setStart({
             preview: new URL(".", location.href).href.replace(/\/$/, ""),
-            frames,
+            frames: starters[0]?.frames ?? [],
+            starters: starters.map((s) => s.name),
+            starter: starters[0]?.name,
+            sets: Object.fromEntries(starters.map((s) => [s.name, s.frames])),
             themes: [],
             project: false,
             target: "",
@@ -144,9 +158,29 @@ export function App() {
   }, [css, origin, mode, beside]);
   // The frames open once the app has signed the lab in (its development sign-in, as an admin).
   useEffect(() => {
+    if (round < 0) return;
     const later = setTimeout(() => setSignedIn(true), 20000);
     return () => clearTimeout(later);
-  }, []);
+  }, [round]);
+  // Another starter: public mode has its pages already; locally the lab makes its app, a few
+  // seconds, on the same address, then signs in to it.
+  const switchTo = async (name: string) => {
+    if (!start || name === start.starter) return;
+    setPage(undefined);
+    const set = start.sets?.[name];
+    if (set) return setStart({ ...start, starter: name, frames: set });
+    setMaking(name);
+    setSignedIn(false);
+    const answer = await fetch("/api/starter", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    }).then((r) => r.json() as Promise<{ frames?: Frames; error?: string }>);
+    if (!answer.frames) return setMaking(`Not switched: ${answer.error}`);
+    setStart({ ...start, starter: name, frames: answer.frames });
+    setMaking(undefined);
+    setRound((n) => n + 1);
+  };
 
   const set = (path: (string | number)[], value: unknown) => {
     setText((t) => setField(t, path, value));
@@ -214,7 +248,7 @@ export function App() {
         style={{ width: (phone ? PHONE : width) * scale, height: room.height }}
       >
         <iframe
-          key={`${onStage.path}-${onStage.label === "Landing" ? replay : 0}`}
+          key={`${start.starter}-${round}-${onStage.path}-${onStage.label === "Landing" ? replay : 0}`}
           title={`${onStage.label}, ${mode}${phone ? ", phone" : ""}`}
           src={`${start.preview}${onStage.path}`}
           data-frame={`${onStage.label}-${mode}${phone ? "-phone" : ""}`}
@@ -237,6 +271,21 @@ export function App() {
     <div className="lab">
       <header>
         <strong>Theme lab</strong>
+        {!!start?.starters.length && (
+          <label>
+            Starter{" "}
+            <select
+              aria-label="Starter"
+              value={start.starter}
+              disabled={!!making && !making.startsWith("Not ")}
+              onChange={(e) => void switchTo(e.target.value)}
+            >
+              {start.starters.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           Start from{" "}
           <select onChange={(e) => startFrom(e.target.value)} defaultValue="modern">
@@ -281,8 +330,9 @@ export function App() {
       </header>
       <aside>{shown && <Controls theme={shown} text={text} set={set} />}</aside>
       <main>
-        {start && !signedIn && (
+        {start && !signedIn && !making && (
           <iframe
+            key={round}
             title="Signing in"
             hidden
             data-sign-in
@@ -339,6 +389,11 @@ export function App() {
           </label>
         </div>
         <div ref={stage} className={grey ? "stage grey" : "stage"}>
+          {making && (
+            <p role="status" className="making">
+              {making.startsWith("Not ") ? making : `Making the ${making} app…`}
+            </p>
+          )}
           {signedIn && frame(false)}
           {signedIn && onStage && (
             // A pointer's drag; the width buttons are the keyboard's way.

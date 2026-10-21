@@ -135,6 +135,14 @@ it does not reload the page; the dragged width runs from 320 to 1920 px; the fra
 the stage under the bar, so a page is seen as a visitor's window shows it. The starter switch is
 step 2.
 
+**As built (A 132 step 2, 2026-10-21):** locally, `smithable theme lab --starter <name>` and the
+lab's Starter switch make that starter's app in a temporary folder and serve it on the same
+port (the old one is stopped and removed), then the lab signs in to it again; with `--app` there
+is no switch. Public: the export saves each starter's pages in `frames/<starter>/` and the fonts
+once in `frames/fonts/`; `start.json` lists the starters, booking first, and the switch needs no
+server. A starter without a list of its own frames its data page as the list (api), and one
+without a landing page its front page.
+
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
 (body and heading with a specimen line each), headings, surfaces, buttons, pictures, tables,

@@ -1,7 +1,7 @@
 # Orders across the day's statuses, each with its number, as staff see them on the orders page.
 - { number: 1, name: Lena Berg, phone: "+358 40 123 4567", email: lena@archipelago.example, status: collected }
 - { number: 2, name: Mats Holm, phone: "+358 40 234 5678", status: collected }
-- { number: 3, name: Aino Laine, phone: "+358 50 345 6789", email: aino@example.fi, status: collected, note: No onions, please. }
+- { number: 3, name: Aino Laine, phone: "+358 50 345 6789", email: aino@example.fi, status: collected, note: "No onions, please." }
 - { number: 4, name: Johan Ek, phone: "+358 40 456 7890", status: declined, reason: The cheese board is sold out today. }
 - { number: 5, name: Sara Nyström, phone: "+358 45 567 8901", email: sara@harbourfreight.example, status: ready }
 - { number: 6, name: Erik Sund, phone: "+358 40 678 9012", status: accepted, note: Extra bread. }

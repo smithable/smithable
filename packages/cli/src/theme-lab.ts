@@ -1,7 +1,7 @@
 // `smithable theme lab` (docs/design/theme-lab.md §3, local mode): the theme lab beside a real
-// app. Makes the sheet app once (the booking starter with the controls it lacks, as the theme
-// sheet makes it), serves its preview with the editor's runtime and the lab on the next port,
-// and opens the lab. The lab computes a theme's CSS in the browser and posts it to its frames
+// app. Makes the chosen starter's app (booking by default, with the controls it lacks, as the
+// theme sheet makes it), serves its preview with the editor's runtime and the lab on the next
+// port, and opens the lab; the lab's starter switch makes another starter's app in its place. The lab computes a theme's CSS in the browser and posts it to its frames
 // (preview-editor.ts), so nothing is regenerated while a theme is made. Save writes the theme
 // through addTheme into the project (--project, or the current folder when it is one), or as
 // themes/<name>.yml into a current folder that is no project, never over a file there.
@@ -10,12 +10,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, extname, join, normalize, resolve } from "node:path";
-import { formatDiagnostic, parseTheme } from "@smithable/core";
+import { formatDiagnostic, parseTheme, type SpecIR } from "@smithable/core";
 import { openBrowser } from "./dev.js";
 import { type Io, tool } from "./io.js";
 import { create } from "./new.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
+import { STARTERS } from "./starters.gen.js";
 import { loadSpec, projectThemeFiles } from "./validate.js";
 
 const PACKAGED = new URL("../theme-lab/", import.meta.url).pathname;
@@ -34,11 +35,16 @@ const TYPES: Record<string, string> = {
 /** Quiet output for the steps the lab takes on its own. */
 const quiet = (io: Io): Io => ({ ...io, out: () => {} });
 
-/** The sheet app: the booking starter, and a field for each control it has none for. */
-async function sheetApp(io: Io): Promise<string | undefined> {
+/** The lab's app: a starter's, and for booking a field for each control it has none for. */
+async function labApp(io: Io, starter: string): Promise<string | undefined> {
   const dir = join(mkdtempSync(join(tmpdir(), "smithable-theme-lab-")), "app");
-  io.out("Making the lab's app (a booking app with every control)…\n");
-  if ((await create(dir, quiet(io), "booking", { yes: true })) !== 0) return undefined;
+  io.out(
+    starter === "booking"
+      ? "Making the lab's app (a booking app with every control)…\n"
+      : `Making the lab's app (the ${starter} starter)…\n`,
+  );
+  if ((await create(dir, quiet(io), starter, { yes: true })) !== 0) return undefined;
+  if (starter !== "booking") return dir;
   for (const [field, kind] of [
     ["price", "money"],
     ["dropIn", "bool"],
@@ -58,12 +64,16 @@ async function sheetApp(io: Io): Promise<string | undefined> {
   return dir;
 }
 
-/** The pages the lab frames: the landing page, then a list, its form and a record. */
+/**
+ * The pages the lab frames: the landing page (or the app's front page), then a list, its form
+ * and a record; an app with no list of its own but a data page (the api starter) shows that one.
+ */
 export function labFrames(
   pages: { route: string; pattern: { kind: string } }[],
 ): { label: string; path: string }[] {
   const landing = pages.find((p) => p.pattern.kind === "landing");
   const list = pages.find((p) => p.pattern.kind === "crud");
+  const data = pages.find((p) => p.pattern.kind === "data");
   return [
     { label: "Landing", path: landing?.route ?? "/" },
     ...(list
@@ -72,7 +82,9 @@ export function labFrames(
           { label: "Form", path: `${list.route}/new` },
           { label: "Record", path: `${list.route}/1` },
         ]
-      : []),
+      : data
+        ? [{ label: "List", path: data.route }]
+        : []),
   ];
 }
 
@@ -86,8 +98,13 @@ const body = (req: IncomingMessage) =>
 export async function themeLab(
   io: Io,
   port: number,
-  options: { project?: string; app?: string } = {},
+  options: { project?: string; app?: string; starter?: string } = {},
 ): Promise<number> {
+  const starters = Object.keys(STARTERS);
+  if (options.starter && !starters.includes(options.starter)) {
+    io.err(`There is no starter "${options.starter}": ${starters.join(", ")}.\n`);
+    return 2;
+  }
   if (!existsSync(join(LAB, "index.html"))) {
     io.err("The theme lab is not built: run `pnpm build` in the Smithable repository.\n");
     return 1;
@@ -99,48 +116,67 @@ export async function themeLab(
       ? process.cwd()
       : undefined;
   if (project && !loadSpec(project, io).ir) return 1;
-  // The app shown: one given (tests reuse theirs), or the sheet app made now.
-  const app = options.app ? resolve(options.app) : await sheetApp(io);
-  if (!app) return 1;
-  const { ir } = loadSpec(app, io);
-  if (!ir) return 1;
+  // The app shown: one given (tests reuse theirs), or the chosen starter's made now; the lab's
+  // switch replaces it with another starter's on the same port.
   const previewPort = port + 1;
   const preview = `http://localhost:${previewPort}`;
-  const config = join("data", ".smithable", "preview.vite.config.mjs");
-  mkdirSync(join(app, "data", ".smithable"), { recursive: true });
-  writeFileSync(join(app, config), previewConfig());
-  const child: ChildProcess = spawn(
-    ...tool(app, "vite", [
-      "dev",
-      "--config",
-      config,
-      "--port",
-      String(previewPort),
-      "--strictPort",
-    ]),
-    { cwd: app, env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" } },
-  );
-  child.stderr?.on("data", (d) => io.err(String(d)));
-  // The sheet app made for this run goes with it.
-  const stop = () => {
-    child.kill();
-    if (!options.app) rmSync(join(app, ".."), { recursive: true, force: true });
-  };
-  process.on("exit", stop);
-  // The lab opens once the app answers (its first page compiles on the first request).
-  for (let waited = 0; ; waited += 500) {
-    const status = await fetch(`${preview}/sign-in`).then(
-      (r) => r.status,
-      () => 0,
-    );
-    if (status > 0 && status < 500) break;
-    if (waited > 120000 || child.exitCode !== null) {
-      io.err(`The lab's app did not start at ${preview}.\n`);
-      stop();
-      return 1;
+  let shown: { starter?: string; app: string; ir: SpecIR; child: ChildProcess } | undefined;
+  const stop = async () => {
+    const was = shown;
+    shown = undefined;
+    if (!was) return;
+    if (was.child.exitCode === null) {
+      const exited = new Promise((done) => was.child.once("exit", done));
+      was.child.kill();
+      await exited;
     }
-    await new Promise((done) => setTimeout(done, 500));
+    if (!options.app) rmSync(join(was.app, ".."), { recursive: true, force: true });
+  };
+  const show = async (starter?: string): Promise<boolean> => {
+    const app = options.app ? resolve(options.app) : await labApp(io, starter ?? "booking");
+    if (!app) return false;
+    const { ir } = loadSpec(app, io);
+    if (!ir) return false;
+    const config = join("data", ".smithable", "preview.vite.config.mjs");
+    mkdirSync(join(app, "data", ".smithable"), { recursive: true });
+    writeFileSync(join(app, config), previewConfig());
+    const child: ChildProcess = spawn(
+      ...tool(app, "vite", [
+        "dev",
+        "--config",
+        config,
+        "--port",
+        String(previewPort),
+        "--strictPort",
+      ]),
+      { cwd: app, env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" } },
+    );
+    child.stderr?.on("data", (d) => io.err(String(d)));
+    shown = { ...(options.app ? {} : { starter: starter ?? "booking" }), app, ir, child };
+    // Ready once the app answers (its first page compiles on the first request).
+    for (let waited = 0; ; waited += 500) {
+      const status = await fetch(`${preview}/sign-in`).then(
+        (r) => r.status,
+        () => 0,
+      );
+      if (status > 0 && status < 500) return true;
+      if (waited > 120000 || child.exitCode !== null) {
+        io.err(`The lab's app did not start at ${preview}.\n`);
+        return false;
+      }
+      await new Promise((done) => setTimeout(done, 500));
+    }
+  };
+  // The app made for this run goes with it.
+  process.on("exit", () => {
+    shown?.child.kill();
+    if (shown && !options.app) rmSync(join(shown.app, ".."), { recursive: true, force: true });
+  });
+  if (!(await show(options.starter))) {
+    await stop();
+    return 1;
   }
+  let switching = false;
 
   /** Where a save goes, and the project's own themes as starting points. */
   const target = project ?? process.cwd();
@@ -159,11 +195,33 @@ export async function themeLab(
     if (url.pathname === "/api/start")
       return json(200, {
         preview,
-        frames: labFrames(ir.pages),
+        frames: shown ? labFrames(shown.ir.pages) : [],
+        // The starters the switch offers: none when the app was given.
+        starters: options.app ? [] : starters,
+        starter: shown?.starter,
         themes: ownThemes(),
         project: Boolean(project),
         target,
       });
+    if (url.pathname === "/api/starter" && req.method === "POST") {
+      if (req.headers.origin !== `http://${req.headers.host}`)
+        return json(403, { error: "Not from the lab." });
+      const { name } = JSON.parse(await body(req)) as { name: string };
+      if (options.app || !starters.includes(name))
+        return json(400, { error: `No starter "${name}" to show.` });
+      if (switching) return json(409, { error: "Another starter is being made." });
+      switching = true;
+      try {
+        await stop();
+        if (!(await show(name))) {
+          await stop();
+          return json(500, { error: `The ${name} app did not start.` });
+        }
+        return json(200, { starter: name, frames: labFrames(shown?.ir.pages ?? []) });
+      } finally {
+        switching = false;
+      }
+    }
     if (url.pathname === "/api/save" && req.method === "POST") {
       // Only the lab's own page saves (the request's origin is the lab).
       if (req.headers.origin !== `http://${req.headers.host}`)
@@ -211,9 +269,10 @@ export async function themeLab(
   return new Promise<number>((done) => {
     for (const signal of ["SIGINT", "SIGTERM"] as const)
       process.once(signal, () => {
-        stop();
-        server.close();
-        done(0);
+        void stop().then(() => {
+          server.close();
+          done(0);
+        });
       });
   });
 }
