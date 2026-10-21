@@ -4741,7 +4741,7 @@ export const noteData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<NoteValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<NoteValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.notes.ownerId, attachment: schema.notes.attachment })
       .from(schema.notes)
@@ -5331,7 +5331,7 @@ export const projectData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ProjectValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ProjectValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.projects.ownerId })
       .from(schema.projects)
@@ -5912,7 +5912,7 @@ export const taskData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<TaskValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<TaskValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.tasks.ownerId })
       .from(schema.tasks)
@@ -9232,15 +9232,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "ecf0459c generated",
+  "src/generated/note.server.ts": "ce305e33 generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "450ffc82 generated",
+  "src/generated/project.server.ts": "3fe28b4b generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "c7862edb generated",
+  "src/generated/task.server.ts": "350703e6 generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "cfa2ff5a generated",
@@ -11745,7 +11745,7 @@ export const bookingData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<BookingValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<BookingValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.bookings.ownerId })
       .from(schema.bookings)
@@ -12327,7 +12327,7 @@ export const classTypeData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ClassTypeValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ClassTypeValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.classTypes.ownerId })
       .from(schema.classTypes)
@@ -13158,7 +13158,7 @@ export const instructorData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InstructorValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InstructorValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
       .from(schema.instructors)
@@ -13744,7 +13744,7 @@ export const messageData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.messages.ownerId })
       .from(schema.messages)
@@ -14436,7 +14436,7 @@ export const postData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<PostValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<PostValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.posts.ownerId, cover: schema.posts.cover })
       .from(schema.posts)
@@ -15086,7 +15086,7 @@ export const sessionData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<SessionValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<SessionValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.sessions.ownerId })
       .from(schema.sessions)
@@ -19809,10 +19809,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "9e0568cf generated",
+  "src/generated/booking.server.ts": "793f2148 generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "05707aec generated",
+  "src/generated/class-type.server.ts": "beb99b0b generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19820,20 +19820,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "7db111cd generated",
+  "src/generated/instructor.server.ts": "d2748252 generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "52edf3f0 generated",
+  "src/generated/message.server.ts": "279d0843 generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "4340dece generated",
+  "src/generated/post.server.ts": "ae3eb809 generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "3df3318c generated",
+  "src/generated/session.server.ts": "4bdf4fd7 generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -21803,7 +21803,7 @@ export const customerData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<CustomerValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<CustomerValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
@@ -22735,7 +22735,7 @@ export const orderData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -25591,13 +25591,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "161d0e6e generated",
+  "src/generated/customer.server.ts": "986912c3 generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "98f648a7 generated",
+  "src/generated/order.server.ts": "bb9d754a generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -28060,7 +28060,7 @@ export const businessProfileData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<BusinessProfileValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<BusinessProfileValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.businessProfiles.ownerId })
       .from(schema.businessProfiles)
@@ -28633,7 +28633,7 @@ export const clientData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ClientValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ClientValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.clients.ownerId })
       .from(schema.clients)
@@ -29422,7 +29422,7 @@ export const invoiceData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
       .from(schema.invoices)
@@ -30109,7 +30109,7 @@ export const invoiceLineData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceLineValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceLineValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.invoiceLines.ownerId })
       .from(schema.invoiceLines)
@@ -32579,21 +32579,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "230e670a generated",
+  "src/generated/business-profile.server.ts": "11b2cc19 generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "e9f7c8ac generated",
+  "src/generated/client.server.ts": "dcdafd53 generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "ab65295f generated",
+  "src/generated/invoice-line.server.ts": "9987279e generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "ad39285b generated",
+  "src/generated/invoice.server.ts": "fc3fd320 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -34846,7 +34846,7 @@ export const dishData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<DishValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<DishValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.dishes.ownerId, picture: schema.dishes.picture })
       .from(schema.dishes)
@@ -35396,7 +35396,7 @@ export const orderData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -35817,7 +35817,7 @@ export const orderLineData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderLineValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderLineValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orderLines.ownerId })
       .from(schema.orderLines)
@@ -36342,7 +36342,7 @@ export const stopData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<StopValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<StopValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.stops.ownerId })
       .from(schema.stops)
@@ -39382,23 +39382,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "c49587a4 generated",
-  "src/generated/dish.server.ts": "79399dfa generated",
+  "src/generated/dish.server.ts": "b796beff generated",
   "src/generated/dish.ts": "abeae023 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "eff1b2f5 generated",
-  "src/generated/order-line.server.ts": "f4e75d3d generated",
+  "src/generated/order-line.server.ts": "c98b4942 generated",
   "src/generated/order-line.ts": "14bf7a22 generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "e11e2edd generated",
+  "src/generated/order.server.ts": "38adcefe generated",
   "src/generated/order.ts": "e9a3c2e6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "cc18f1e6 generated",
-  "src/generated/stop.server.ts": "8eb8adba generated",
+  "src/generated/stop.server.ts": "ed945ad9 generated",
   "src/generated/stop.ts": "f17c58ca generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -41251,7 +41251,7 @@ export const itemData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.items.ownerId, photos: schema.items.photos })
       .from(schema.items)
@@ -43726,7 +43726,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "752b68c3 generated",
+  "src/generated/item.server.ts": "62aa8a9e generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -45395,7 +45395,7 @@ export const itemData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.items.ownerId })
       .from(schema.items)
@@ -46811,7 +46811,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "22df9062 generated",
+  "src/generated/item.server.ts": "1237ddd3 generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -50488,7 +50488,7 @@ export const componentData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ComponentValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ComponentValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.components.ownerId })
       .from(schema.components)
@@ -51221,7 +51221,7 @@ export const incidentData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<IncidentValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<IncidentValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.incidents.ownerId })
       .from(schema.incidents)
@@ -51850,7 +51850,7 @@ export const incidentUpdateData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<IncidentUpdateValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<IncidentUpdateValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.incidentUpdates.ownerId })
       .from(schema.incidentUpdates)
@@ -52583,7 +52583,7 @@ export const maintenanceData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MaintenanceValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MaintenanceValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.maintenances.ownerId })
       .from(schema.maintenances)
@@ -57286,20 +57286,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "faf39062 generated",
+  "src/generated/component.server.ts": "4ab9c8e3 generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "63c827b8 generated",
+  "src/generated/incident-update.server.ts": "4f73ce8b generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "b6061116 generated",
+  "src/generated/incident.server.ts": "180952c9 generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "8ef2e818 generated",
+  "src/generated/maintenance.server.ts": "ef76631d generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -60180,7 +60180,7 @@ export const messageData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.messages.ownerId, attachments: schema.messages.attachments })
       .from(schema.messages)
@@ -63545,7 +63545,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "62aba4ca generated",
+  "src/generated/message.server.ts": "d3e33c77 generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",

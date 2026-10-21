@@ -2006,7 +2006,7 @@ ${
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<${n.values}>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<${n.values}>, what = "changed", ${locks.length ? "frees" : "_frees"}: readonly string[] = []) {
     const row = db
       .select(${selectOwner})
       .from(${n.table})
