@@ -1984,7 +1984,7 @@ ${
 
 `
     : ""
-}  async create(viewer: Viewer | null, values: ${n.values}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
+}  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public

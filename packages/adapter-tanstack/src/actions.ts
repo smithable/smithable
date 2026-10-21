@@ -466,7 +466,7 @@ import { audit } from "#/kit/audit.server";
 ${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.settable} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
-${adds.map(({ tn }) => `import { ${tn.schema} } from "${tn.module}.schema";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${adds.map(({ tn }) => `import { ${tn.settable} } from "${tn.module}.schema";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
 type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
 
@@ -479,7 +479,7 @@ ${values.map((v) => `      ${v}`).join("\n")}
     }),
 ${adds
   .map(
-    ({ add }, i) => `    added${i}: ${adds[i]?.tn.schema}.parse({
+    ({ add }, i) => `    added${i}: ${adds[i]?.tn.settable}.parse({
       ${dataKeyOf(add.reference)}: row.id,
 ${adds[i]?.values.map((v) => `      ${v}`).join("\n")}
     }),`,
