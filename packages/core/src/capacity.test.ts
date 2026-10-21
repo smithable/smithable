@@ -132,6 +132,33 @@ test("closes and cancelUntil: a date-time of the referenced record, as it is or 
   ]);
 });
 
+test("a deadline follows a renamed reference or date-time, and refuses the removal of the date-time", () => {
+  const files = {
+    spec: spec(
+      "capacity: { per: session, max: 3, closes: 2 hours before session.startsAt, cancelUntil: session.startsAt }",
+    ),
+  };
+  const time = applyOperation(files, "renameField", {
+    model: "Session",
+    from: "startsAt",
+    to: "beginsAt",
+  });
+  expect(time.ok && time.files.spec).toContain("closes: 2 hours before session.beginsAt");
+  expect(time.ok && time.files.spec).toContain("cancelUntil: session.beginsAt");
+  const ref = applyOperation(files, "renameField", {
+    model: "Booking",
+    from: "session",
+    to: "class",
+  });
+  expect(ref.ok && ref.files.spec).toContain("closes: 2 hours before class.startsAt");
+  expect(
+    applyOperation(files, "removeField", { model: "Session", field: "startsAt" }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("counts on Session.startsAt"),
+  });
+});
+
 test("setCapacity writes the deadlines and refuses a malformed one", () => {
   const files = { spec: spec("") };
   const set = applyOperation(files, "setCapacity", {

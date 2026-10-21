@@ -463,7 +463,7 @@ const setCapacity: Operation<{
 }> = {
   name: "setCapacity",
   summary:
-    'Limit how many records of a model each referenced record may have, e.g. a session\'s bookings up to its capacity ("none" as per removes the limit).',
+    'Limit how many records of a model each referenced record may have, e.g. a session\'s bookings up to its capacity ("none" as per removes the limit). The capacity is set whole: a where or a deadline left out is lifted.',
   schema: {
     type: "object",
     required: ["model", "per"],

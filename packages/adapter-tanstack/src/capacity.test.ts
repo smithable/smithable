@@ -53,6 +53,12 @@ test("the deadlines are read from the referenced record in the write's transacti
   expect(booking).toContain("if (!(viewer && bookingAccess.delete.roles.includes(viewer.role))) {");
   expect(booking).toContain("return at ? new Date(at.getTime() - 0) : undefined;");
   expect(booking).toContain('throw new Conflict("cancel-closed")');
+  // A change: a move or an entry into the count is checked like a new record; leaving it is a cancel.
+  expect(booking).toContain("const counted = (r: Record<string, unknown>) => true;");
+  expect(booking).toContain("if (will && (moving || !was)) {");
+  expect(booking).toContain(
+    "if (was && !will && !moving && !(viewer && bookingAccess.write.roles.includes(viewer.role))) {",
+  );
   // The places tell the block the deadlines.
   const module = made.find((f) => f.path === "src/generated/booking.ts")?.content ?? "";
   expect(module).toContain("closesAt: closesAt?.toISOString() ?? null,");

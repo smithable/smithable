@@ -840,6 +840,20 @@ export function dataModule(
         if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
       }`
     : "";
+  /** Whether a row is counted by the capacity's `where`, as code over a row object. */
+  const countedJs = capacity?.where
+    ? Object.entries(capacity.where)
+        .map(([field, wanted]) =>
+          typeof wanted === "boolean"
+            ? wanted
+              ? `r.${field} === true`
+              : `!r.${field}`
+            : Array.isArray(wanted)
+              ? `${JSON.stringify(wanted)}.includes(String(r.${field}))`
+              : `r.${field} === ${JSON.stringify(wanted)}`,
+        )
+        .join(" && ")
+    : "true";
   /** The check before a write inside its transaction; `except` leaves out the record being changed. */
   const capacityCheck = (except?: string) =>
     capacity
@@ -847,6 +861,38 @@ export function dataModule(
       const taken = tx.select({ n: count() }).from(${n.table}).where(and(${[...capacityCounted, ...(except ? [`ne(${n.table}.id, ${except})`] : [])].join(", ")})).get()?.n ?? 0;
       if (taken >= ${capacityMax}) throw new Conflict("full");`
       : "";
+  /**
+   * A change's capacity checks, once the record is read (docs/design/booking.md §6): one that
+   * moves to another ${capacity?.per} takes a place there as a new record would, and one that
+   * enters the count (its `where` fits now) takes one in its own; both are refused past
+   * `closes` for anyone but a role that changes everyone's. One that leaves the count without
+   * moving is a cancellation: refused past `cancelUntil` for anyone but such a role.
+   */
+  const updateChecks = capacity
+    ? `
+        {
+          const counted = (r: Record<string, unknown>) => ${countedJs};
+          const perId = values.${capacity.per}Id ?? before.${capacity.per}Id;
+          const moving = values.${capacity.per}Id !== undefined && values.${capacity.per}Id !== before.${capacity.per}Id;
+          const was = counted(before);
+          const will = counted({ ...before, ...updated });
+          if (will && (moving || !was)) {${capacityCheck("id")
+            .replaceAll(`values.${capacity.per}Id`, "perId")
+            .replace(
+              /\n {6}/g,
+              "\n            ",
+            )}${closedCheck.replaceAll(`values.${capacity.per}Id`, "perId").replace(/\n {6}/g, "\n            ")}
+          }${
+            capacity.cancelUntil
+              ? `
+          if (was && !will && !moving && !(viewer && ${n.access}.write.roles.includes(viewer.role))) {
+            const cancelUntilAt = ${deadlineOf("cancelUntil", "perId")};
+            if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+          }`
+              : ""
+          }
+        }`
+    : "";
   const holdChecks = holds.map((m) => {
     const c = m.capacity as { per: string; max: string; where?: Condition };
     const tn = { table: tableRef(m) };
@@ -2144,10 +2190,10 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
         : "values"
     };
     try {
-      changed = db.transaction((tx) => {${capacity ? `\n      // A change that keeps its ${capacity.per} takes no new place: only a given one is counted.\n      if (values.${capacity.per}Id !== undefined) {${capacityCheck("id").replace(/\n {6}/g, "\n        ")}${closedCheck.replace(/\n {6}/g, "\n        ")}\n      }` : ""}${holdChecks.join("")}
+      changed = db.transaction((tx) => {${holdChecks.join("")}
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
-        if (!before) throw new AccessDenied(viewer !== null);${updateRules}${
+        if (!before) throw new AccessDenied(viewer !== null);${updateChecks}${updateRules}${
           occ
             ? `
         // A change that moves the time it takes (or takes time again) is checked like a new one.

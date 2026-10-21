@@ -182,7 +182,9 @@ export const modelsSection: SpecSection<"models"> = {
         const uses =
           (m.name === effect.model &&
             (c.per === effect.field || (c.where && effect.field in c.where))) ||
-          (target === effect.model && c.max === `${c.per}.${effect.field}`);
+          (target === effect.model &&
+            (c.max === `${c.per}.${effect.field}` ||
+              [c.closes, c.cancelUntil].some((d) => d?.field === `${c.per}.${effect.field}`)));
         if (uses)
           return {
             refusal: `${m.name}'s capacity counts on ${effect.model}.${effect.field}; change the capacity first.`,
@@ -266,6 +268,19 @@ export const modelsSection: SpecSection<"models"> = {
         c.max === `${c.per}.${effect.from}`
       )
         spec.set([...path, "max"], `${c.per}.${effect.to}`);
+      // A deadline follows the reference renamed on this model, or its date-time renamed on the referenced model.
+      for (const key of ["closes", "cancelUntil"] as const) {
+        const deadline = c[key];
+        if (!deadline) continue;
+        const [ref, field] = deadline.field.split(".");
+        const next =
+          m.name === effect.model && ref === effect.from
+            ? `${effect.to}.${field}`
+            : target === effect.model && ref === c.per && field === effect.from
+              ? `${c.per}.${effect.to}`
+              : undefined;
+        if (next) spec.set([...path, key], deadlineText({ ...deadline, field: next }));
+      }
     }
     return undefined;
   },
@@ -1173,7 +1188,7 @@ export function readDeadline(text: string): DeadlineIR | undefined {
   const field = m[3] as string;
   if (!m[1]) return { field };
   const amount = Number(m[1]);
-  if (amount < 1) return undefined;
+  if (amount < 1 || !Number.isSafeInteger(amount)) return undefined;
   const unit = `${(m[2] as string).replace(/s$/, "")}s` as "minutes" | "hours" | "days";
   return { field, before: { amount, unit } };
 }
