@@ -1515,23 +1515,23 @@
                   },
                   "picture": {
                     "type": "string",
-                    "description": "A picture field shown with the article."
+                    "description": "A picture field shown with the article; none for no picture."
                   },
                   "date": {
                     "type": "string",
-                    "description": "A date or date-time field: when it appeared."
+                    "description": "A date or date-time field: when it appeared; none for no date."
                   },
                   "address": {
                     "type": "string",
-                    "description": "A unique string field: the article's address (/blog/<address>)."
+                    "description": "A unique string field: the article's address (/blog/<address>); none for the number."
                   },
                   "summary": {
                     "type": "string",
-                    "description": "A text field shown in the list."
+                    "description": "A string or text field shown in the list; none for the body's first paragraph."
                   },
                   "author": {
                     "type": "string",
-                    "description": "A field that refers to the user who wrote it, shown with the article."
+                    "description": "A field that refers to the user who wrote it, shown with the article; none for no author."
                   }
                 }
               }

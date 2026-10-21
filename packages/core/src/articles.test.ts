@@ -92,8 +92,31 @@ test("what cannot be inferred, is found twice or is the wrong kind is an error t
     ).join(),
   ).toContain("Post has several unique string fields (key, other): name the address");
   expect(messages(spec("Post", "words: text!, body: markdown!")).join()).toContain(
-    'Post\'s title (words) is no string field, so the articles of page "blog" has no title.',
+    'Post has no stored string field for the title of the articles of page "blog" (its records are named by words).',
   );
+  // A field named for one part is no other part; "none" leaves an optional part out.
+  expect(messages(spec("{ model: Post, title: address, address: address }")).join()).toContain(
+    '"address" is both the title and the address of the articles of page "blog"',
+  );
+  const twoUsers = "title: string!, body: markdown!, writer: User, editor: User";
+  expect(read(spec("{ model: Post, author: none }", twoUsers)).ir?.pages[1]?.pattern).toEqual({
+    kind: "articles",
+    model: "Post",
+    title: "title",
+    body: "body",
+  });
+  expect(messages(spec("{ model: Post, title: none }")).join()).toContain(
+    'Post has no field named "none"',
+  );
+  // The long form may name a string as the summary; the rule infers only a text.
+  expect(
+    read(
+      spec("{ model: Post, summary: tagline }", "title: string!, tagline: string, body: markdown!"),
+    ).ir?.pages[1]?.pattern,
+  ).toMatchObject({ summary: "tagline" });
+  expect(
+    read(spec("Post", "title: string!, tagline: string, body: markdown!")).ir?.pages[1]?.pattern,
+  ).toEqual({ kind: "articles", model: "Post", title: "title", body: "body" });
   expect(messages(spec("{ model: Post, author: title }")).join()).toContain(
     '"title" is the author of the articles of page "blog": it must be a User field.',
   );

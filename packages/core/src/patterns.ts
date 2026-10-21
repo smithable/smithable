@@ -599,16 +599,28 @@ const articles: PagePattern<"articles"> = {
           model: { type: "string", description: "The model whose records are the articles." },
           title: { type: "string", description: "The article's title." },
           body: { type: "string", description: "A markdown field: the article itself." },
-          picture: { type: "string", description: "A picture field shown with the article." },
-          date: { type: "string", description: "A date or date-time field: when it appeared." },
+          picture: {
+            type: "string",
+            description: "A picture field shown with the article; none for no picture.",
+          },
+          date: {
+            type: "string",
+            description: "A date or date-time field: when it appeared; none for no date.",
+          },
           address: {
             type: "string",
-            description: "A unique string field: the article's address (/blog/<address>).",
+            description:
+              "A unique string field: the article's address (/blog/<address>); none for the number.",
           },
-          summary: { type: "string", description: "A text field shown in the list." },
+          summary: {
+            type: "string",
+            description:
+              "A string or text field shown in the list; none for the body's first paragraph.",
+          },
           author: {
             type: "string",
-            description: "A field that refers to the user who wrote it, shown with the article.",
+            description:
+              "A field that refers to the user who wrote it, shown with the article; none for no author.",
           },
         },
       },
@@ -1492,30 +1504,33 @@ function readArticles(
         ? f.type.name
         : f.type.kind;
   // What each part may be (docs/design/inference.md: by the fields' types, never their names).
-  // Unnamed, a part is the one field of its kind not taken by an earlier part; the title is the
-  // record's title field. Named, the field must be of the kind.
+  // Unnamed, a part is the one field of its kind not taken by another part; the title is the
+  // record's title field. Named, the field must be of the kind; "none" leaves an optional part out.
   const rules: Record<
     (typeof ARTICLE_KEYS)[number],
-    { kinds: string[]; words: string; unique?: boolean }
+    { kinds: string[]; infer?: string[]; words: string; unique?: boolean }
   > = {
     title: { kinds: ["string"], words: "string" },
     body: { kinds: ["markdown"], words: "markdown" },
     picture: { kinds: ["picture"], words: "picture" },
     date: { kinds: DATES, words: "date or datetime" },
     address: { kinds: ["string"], words: "unique string", unique: true },
-    summary: { kinds: ["text"], words: "text" },
+    summary: { kinds: ["string", "text"], infer: ["text"], words: "string or text" },
     author: { kinds: ["user"], words: "User" },
   };
   const result: PatternOf<"articles"> = { kind: "articles", model: modelName, title: "", body: "" };
-  const taken = new Set<string>();
+  // A field named for one part is no candidate for another.
+  const taken = new Set(Object.values(given).map((g) => g.value));
   for (const key of ARTICLE_KEYS) {
     const rule = rules[key];
-    const fits = (f: FieldIR) =>
-      rule.kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
+    const fits = (f: FieldIR, kinds = rule.kinds) =>
+      kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
     const named = given[key];
     let found: string | undefined;
     if (named) {
       const f = model.fields.find((x) => x.name === named.value);
+      const also = ARTICLE_KEYS.find((k) => k !== key && given[k]?.value === named.value);
+      if (named.value === "none" && key !== "title" && key !== "body") continue;
       if (!f)
         ctx.error(
           named.at,
@@ -1526,6 +1541,12 @@ function readArticles(
             model.fields.map((x) => x.name),
           ),
         );
+      else if (also)
+        ctx.error(
+          named.at,
+          "invalid-value",
+          `"${named.value}" is both the ${also} and the ${key} of ${at}: a field is one part.`,
+        );
       else if (!fits(f))
         ctx.error(
           named.at,
@@ -1535,14 +1556,14 @@ function readArticles(
       else found = f.name;
     } else if (key === "title") {
       const title = stored.find((f) => f.name === titleField(model));
-      found = title && fits(title) ? title.name : undefined;
+      found = title && fits(title) && !taken.has(title.name) ? title.name : undefined;
     } else {
-      const candidates = stored.filter((f) => fits(f) && !taken.has(f.name));
+      const candidates = stored.filter((f) => fits(f, rule.infer) && !taken.has(f.name));
       if (candidates.length > 1)
         ctx.error(
           modelAt,
           "missing-key",
-          `${modelName} has several ${rule.words} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
+          `${modelName} has several ${rule.infer ? rule.infer.join(" or ") : rule.words} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}, or "${key}: none".`,
           `Write "articles: { model: ${modelName}, ${key}: ${candidates[0]?.name} }".`,
         );
       else found = candidates[0]?.name;
@@ -1559,7 +1580,7 @@ function readArticles(
         "missing-key",
         key === "body"
           ? `${modelName} has no markdown field for the body of ${at}.`
-          : `${modelName}'s title (${titleField(model)}) is no string field, so ${at} has no title.`,
+          : `${modelName} has no stored string field for the title of ${at} (its records are named by ${titleField(model)}).`,
         key === "body"
           ? `Add one, e.g. "body: markdown!", or name it with "body".`
           : `Name a string field with "title" (or "namedBy" on ${modelName}).`,
