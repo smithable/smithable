@@ -1316,7 +1316,7 @@ ${[...others]
   .map((m) => `import { ${names(m, t).ui} } from "./${kebab(m.name)}";\n`)
   .join(
     "",
-  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues}, type ${n.values} } from "./${kebab(model.name)}";
+  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${
   group.length || roots.length
     ? `
@@ -1497,7 +1497,7 @@ ${
   uploadFields.length
     ? `
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<${n.values}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<${n.settableValues}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
 ${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}

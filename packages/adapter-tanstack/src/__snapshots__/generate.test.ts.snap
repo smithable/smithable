@@ -4406,7 +4406,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import { type NoteSettable, type NoteValues } from "./note";
+import { type NoteSettable } from "./note";
 
 /** Who may read, create, change and delete notes. */
 export const noteAccess: ModelAccess = {
@@ -4455,7 +4455,7 @@ const BY: string[] = ["project"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<NoteValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<NoteSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("attachment" in values ? { attachment: acceptFiles(viewer, "note", "attachment", values.attachment, before?.attachment) } : {}),
@@ -5021,7 +5021,7 @@ import { taskData } from "./task.server";
 import { noteData } from "./note.server";
 import { taskUi } from "./task";
 import { noteUi } from "./note";
-import { projectUi, type ProjectSettable, type ProjectValues } from "./project";
+import { projectUi, type ProjectSettable } from "./project";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -5604,7 +5604,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import { type TaskSettable, type TaskValues } from "./task";
+import { type TaskSettable } from "./task";
 
 /** Who may read, create, change and delete tasks. */
 export const taskAccess: ModelAccess = {
@@ -9310,15 +9310,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "1855b2e8 generated",
+  "src/generated/note.server.ts": "31bcd99e generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "c09308f4 generated",
+  "src/generated/project.server.ts": "b9eafb15 generated",
   "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "008409f3 generated",
+  "src/generated/task.server.ts": "3105cd3c generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "d437282f generated",
@@ -11482,7 +11482,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
-import { type BookingSettable, type BookingValues } from "./booking";
+import { type BookingSettable } from "./booking";
 
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
@@ -12066,7 +12066,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
-import { classTypeUi, type ClassTypeSettable, type ClassTypeValues } from "./class-type";
+import { classTypeUi, type ClassTypeSettable } from "./class-type";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -12893,7 +12893,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
-import { instructorUi, type InstructorSettable, type InstructorValues } from "./instructor";
+import { instructorUi, type InstructorSettable } from "./instructor";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -12960,7 +12960,7 @@ const BY: string[] = [];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<InstructorValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<InstructorSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("portrait" in values ? { portrait: acceptFiles(viewer, "instructor", "portrait", values.portrait, before?.portrait) } : {}),
@@ -13519,7 +13519,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type MessageSettable, type MessageValues } from "./message";
+import { type MessageSettable } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -14204,7 +14204,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type PostSettable, type PostValues } from "./post";
+import { type PostSettable } from "./post";
 
 /** Who may read, create, change and delete posts. */
 export const postAccess: ModelAccess = {
@@ -14254,7 +14254,7 @@ const BY: string[] = ["publishedOn","status"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<PostValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<PostSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("cover" in values ? { cover: acceptFiles(viewer, "post", "cover", values.cover, before?.cover) } : {}),
@@ -14836,7 +14836,7 @@ import { bookingData } from "./booking.server";
 import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
 import { bookingUi } from "./booking";
-import { sessionUi, type SessionSettable, type SessionValues } from "./session";
+import { sessionUi, type SessionSettable } from "./session";
 import { withSessionFormulas } from "./session.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -19971,10 +19971,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "6a281688 generated",
-  "src/generated/booking.server.ts": "27aa7ea3 generated",
+  "src/generated/booking.server.ts": "8fd6c6a0 generated",
   "src/generated/booking.ts": "f00a7a23 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "ca97a558 generated",
+  "src/generated/class-type.server.ts": "1be705ca generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19982,20 +19982,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "4d80d6f7 generated",
+  "src/generated/instructor.server.ts": "3bffc5ce generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "bc5eb51c generated",
+  "src/generated/message.server.ts": "420d47d7 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "7b8ec128 generated",
+  "src/generated/post.server.ts": "e8ed4586 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "2732bc34 generated",
+  "src/generated/session.server.ts": "8c09c192 generated",
   "src/generated/session.ts": "d120db70 generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -21608,7 +21608,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import { orderUi } from "./order";
-import { customerUi, type CustomerSettable, type CustomerValues } from "./customer";
+import { customerUi, type CustomerSettable } from "./customer";
 import "./trash.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -22530,7 +22530,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
-import { type OrderSettable, type OrderValues } from "./order";
+import { type OrderSettable } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import "./trash.server";
 
@@ -25803,13 +25803,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "d5312a5e generated",
+  "src/generated/customer.server.ts": "4bb5349e generated",
   "src/generated/customer.ts": "9773e647 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "91184a47 generated",
+  "src/generated/order.server.ts": "9b207081 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -27969,7 +27969,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type BusinessProfileSettable, type BusinessProfileValues } from "./business-profile";
+import { type BusinessProfileSettable } from "./business-profile";
 
 /** Who may read, create, change and delete business profiles. */
 export const businessProfileAccess: ModelAccess = {
@@ -28510,7 +28510,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import { invoiceUi } from "./invoice";
 import { invoiceLineUi } from "./invoice-line";
-import { clientUi, type ClientSettable, type ClientValues } from "./client";
+import { clientUi, type ClientSettable } from "./client";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -29252,7 +29252,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { invoiceLineData } from "./invoice-line.server";
 import { clientData } from "./client.server";
 import { invoiceLineUi } from "./invoice-line";
-import { invoiceUi, type InvoiceSettable, type InvoiceValues } from "./invoice";
+import { invoiceUi, type InvoiceSettable } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -29324,7 +29324,7 @@ const BY: string[] = ["client","issuedOn","dueOn","status"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<InvoiceValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<InvoiceSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("contract" in values ? { contract: acceptFiles(viewer, "invoice", "contract", values.contract, before?.contract) } : {}),
@@ -29998,7 +29998,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
-import { type InvoiceLineSettable, type InvoiceLineValues } from "./invoice-line";
+import { type InvoiceLineSettable } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
 
 /** Who may read, create, change and delete invoice lines. */
@@ -32856,21 +32856,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "24bb0c22 generated",
+  "src/generated/business-profile.server.ts": "1bcbbb0d generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "c214c8f4 generated",
+  "src/generated/client.server.ts": "ca35b83d generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "ed80dc47 generated",
+  "src/generated/invoice-line.server.ts": "62d0247c generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "db6aac41 generated",
+  "src/generated/invoice.server.ts": "3ca0493a generated",
   "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -34994,7 +34994,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderLineUi } from "./order-line";
-import { dishUi, type DishSettable, type DishValues } from "./dish";
+import { dishUi, type DishSettable } from "./dish";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -35033,7 +35033,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<DishValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<DishSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("picture" in values ? { picture: acceptFiles(viewer, "dish", "picture", values.picture, before?.picture) } : {}),
@@ -35543,7 +35543,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { dishData } from "./dish.server";
 import { orderLineData } from "./order-line.server";
 import { orderLineUi } from "./order-line";
-import { orderUi, type OrderSettable, type OrderValues } from "./order";
+import { orderUi, type OrderSettable } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import { nextInSequence } from "#/kit/sequence.server";
 
@@ -36010,7 +36010,7 @@ import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import { dishData } from "./dish.server";
-import { type OrderLineSettable, type OrderLineValues } from "./order-line";
+import { type OrderLineSettable } from "./order-line";
 import { withOrderLineFormulas } from "./order-line.formulas";
 
 /** Who may read, create, change and delete order lines. */
@@ -36548,7 +36548,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type StopSettable, type StopValues } from "./stop";
+import { type StopSettable } from "./stop";
 
 /** Who may read, create, change and delete stops. */
 export const stopAccess: ModelAccess = {
@@ -39725,23 +39725,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "8d4b7f4f generated",
+  "src/generated/dish.server.ts": "edfce461 generated",
   "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "6cbb8b81 generated",
+  "src/generated/order-line.server.ts": "4d4bac81 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "07f2c2d5 generated",
-  "src/generated/order.server.ts": "b2d49375 generated",
+  "src/generated/order.server.ts": "e4bf366f generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "0515168a generated",
+  "src/generated/stop.server.ts": "c208fcb8 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -41142,7 +41142,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type ItemSettable, type ItemValues } from "./item";
+import { type ItemSettable } from "./item";
 
 /**
  * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
@@ -41236,7 +41236,7 @@ const BY: string[] = ["category","condition","available"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<ItemValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<ItemSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("photos" in values ? { photos: acceptFiles(viewer, "item", "photos", values.photos, before?.photos) } : {}),
@@ -44110,7 +44110,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "3151c01d generated",
+  "src/generated/item.server.ts": "014e35aa generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -45456,7 +45456,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type ItemSettable, type ItemValues } from "./item";
+import { type ItemSettable } from "./item";
 import { withItemFormulas } from "./item.formulas";
 
 /** Who may read, create, change and delete items. */
@@ -47236,7 +47236,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "a0e0c43a generated",
+  "src/generated/item.server.ts": "a94bc93d generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -50592,7 +50592,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import { maintenanceData } from "./maintenance.server";
-import { type ComponentSettable, type ComponentValues } from "./component";
+import { type ComponentSettable } from "./component";
 
 /** Who may read, create, change and delete components. */
 export const componentAccess: ModelAccess = {
@@ -51280,7 +51280,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
 import { componentData } from "./component.server";
 import { incidentUpdateUi } from "./incident-update";
-import { incidentUi, type IncidentSettable, type IncidentValues } from "./incident";
+import { incidentUi, type IncidentSettable } from "./incident";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -51945,7 +51945,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
-import { type IncidentUpdateSettable, type IncidentUpdateValues } from "./incident-update";
+import { type IncidentUpdateSettable } from "./incident-update";
 
 /** Who may read, create, change and delete incident updates. */
 export const incidentUpdateAccess: ModelAccess = {
@@ -52696,7 +52696,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
-import { type MaintenanceSettable, type MaintenanceValues } from "./maintenance";
+import { type MaintenanceSettable } from "./maintenance";
 
 /** Who may read, create, change and delete maintenances. */
 export const maintenanceAccess: ModelAccess = {
@@ -57797,20 +57797,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "4e8687cc generated",
+  "src/generated/component.server.ts": "adca2f53 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "946b77f0 generated",
+  "src/generated/incident-update.server.ts": "c19657d7 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "1837d2fe generated",
+  "src/generated/incident.server.ts": "61aec32e generated",
   "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "d1721c92 generated",
+  "src/generated/maintenance.server.ts": "23ac5d0f generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -60349,7 +60349,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { supportCaseData } from "./support-case.server";
-import { type MessageSettable, type MessageValues } from "./message";
+import { type MessageSettable } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -60400,7 +60400,7 @@ const BY: string[] = ["sender","agent","supportCase"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<MessageValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<MessageSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("attachments" in values ? { attachments: acceptFiles(viewer, "message", "attachments", values.attachments, before?.attachments) } : {}),
@@ -61154,7 +61154,7 @@ import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { messageData } from "./message.server";
 import { messageUi } from "./message";
-import { supportCaseUi, type SupportCaseSettable, type SupportCaseValues } from "./support-case";
+import { supportCaseUi, type SupportCaseSettable } from "./support-case";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -61224,7 +61224,7 @@ const BY: string[] = ["status","assignee"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<SupportCaseValues>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<SupportCaseSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
     ...("attachments" in values ? { attachments: acceptFiles(viewer, "support-case", "attachments", values.attachments, before?.attachments) } : {}),
@@ -64104,13 +64104,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "66be17ce generated",
-  "src/generated/message.server.ts": "9cf6208e generated",
+  "src/generated/message.server.ts": "b3cb7e21 generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "cb507497 generated",
+  "src/generated/support-case.server.ts": "3af98d48 generated",
   "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
