@@ -61,7 +61,11 @@ const saved = await savePages(
 await browser.close();
 stop();
 
-const exported = saved.frames.map((f, i) => ({ label: frames[i].label, path: f.path }));
+// The lab's own labels, for the frames that were saved (a skipped one is not listed).
+const exported = frames
+  .map((f) => ({ label: f.label, path: `/frames/${f.label.toLowerCase()}.html` }))
+  .filter((f) => saved.frames.some((s) => s.path === f.path));
+for (const { label, reason } of saved.skipped) console.error(`Left out ${label}: ${reason}.`);
 writeFileSync(join(out, "start.json"), `${JSON.stringify({ frames: exported }, null, 2)}\n`);
 console.log(`Exported ${exported.length} pages and ${saved.assets} pictures into ${out}.`);
 process.exit(0);
