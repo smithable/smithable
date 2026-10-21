@@ -8,7 +8,7 @@ import { writeUniqueScopes } from "./unique-scopes.js";
 import type { UxIR } from "./ux.js";
 
 /**
- * Writes out what the rules settled (docs/design/inference.md §3), so the spec says it all and
+ * Writes out what the rules settled (docs/design/inference.md §4), so the spec says it all and
  * no later change of its shape moves anything: each model's title (`namedBy`), where its unique
  * values are unique, what a conversation reads from it (`thread`), an articles or calendar page's
  * parts in the long form, an order page's price, quantity and available. What is written already
@@ -17,10 +17,11 @@ import type { UxIR } from "./ux.js";
 export function writeExplicit(
   text: string,
   ir: SpecIR,
-  auth: AuthIR,
+  auth?: AuthIR,
   ux?: UxIR,
 ): { text: string; written: string[] } {
-  const scoped = writeUniqueScopes(text, ir, auth);
+  // Where a value is unique is read from the access: without the auth file it stays as written.
+  const scoped = auth ? writeUniqueScopes(text, ir, auth) : { text, written: [] as string[] };
   const spec = new YamlEditor(scoped.text);
   const written = [...scoped.written];
   const map = (value: unknown): Record<string, YamlValue> | undefined =>
@@ -37,7 +38,8 @@ export function writeExplicit(
         written.push(`${model.name}: namedBy ${by}`);
       }
     }
-    if (shownAsThread(ir, ux, model.name)) {
+    // A thread block begun by hand is completed too.
+    if (model.thread || shownAsThread(ir, ux, model.name)) {
       const b = threadBindings(model);
       const thread = map(spec.get([...path, "thread"])) ?? {};
       const parts: string[] = [];
@@ -114,7 +116,11 @@ function shownAsThread(ir: SpecIR, ux: UxIR | undefined, model: string): boolean
         ir.models
           .find((m) => m.name === pageModel(p))
           ?.fields.some(
-            (f) => f.name === name && f.type.kind === "relation" && f.type.model === model,
+            (f) =>
+              f.name === name &&
+              f.type.kind === "relation" &&
+              f.type.many &&
+              f.type.model === model,
           ),
     ),
   );
