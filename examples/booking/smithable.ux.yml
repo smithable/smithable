@@ -7,7 +7,6 @@ theme:
 pages:
   home:
     sections:
-      hero: { layout: split, image: right }   # the text beside the picture
       classes: { layout: cards }
       faq: { layout: accordion }
   sessions:
