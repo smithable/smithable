@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { changeDetail, refusal, studio, trace, unchangedEdit } from "./studio.js";
+import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 
 test("locally, only this machine's own host names reach Studio", () => {
@@ -55,7 +55,7 @@ test("a crashed preview restarts at once a few times, then with a growing pause,
 });
 
 test("the trace has each change's id, the person's files it changed and a model's request; a change opens as its patch", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-trace-"));
+  const dir = tempDir("smithable-trace-");
   const commit = (message: string, files: Record<string, string>) => {
     for (const [path, text] of Object.entries(files)) {
       mkdirSync(join(dir, path, ".."), { recursive: true });
@@ -137,7 +137,7 @@ test("the dev server's last word about a replaced app's modules is not the new a
   const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
-  const dir = mkdtempSync(join(tmpdir(), "echo-"));
+  const dir = tempDir("echo-");
   mkdirSync(join(dir, "src", "generated"), { recursive: true });
   writeFileSync(join(dir, "src", "generated", "session.ts"), "");
   const line = (file: string) =>
@@ -155,7 +155,7 @@ test("the dev server's last word about a replaced app's modules is not the new a
 });
 
 test("an edit of a whole file that only formats it is no change; a different file or part is", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-unchanged-"));
+  const dir = tempDir("smithable-unchanged-");
   writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: Shop }\n");
   const formatted = "smithable: 0.1\napp:\n  name: Shop\n";
   expect(unchangedEdit(dir, "editSpec", { text: formatted })).toBe(true);

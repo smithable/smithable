@@ -1,7 +1,6 @@
 // The scanners' answers (security.ts): a check that could not run to its end is never a pass,
 // whatever its report says, and a report from an earlier run is never read as this one's.
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
@@ -16,6 +15,7 @@ import {
   report,
   TOOLS,
 } from "./security.js";
+import { tempDir } from "./test-dir.js";
 
 const ran = (status: number | null, stdout = "", stderr = ""): Ran => ({
   status,
@@ -126,7 +126,7 @@ describe("the other scanners", () => {
 });
 
 test("a report left by an earlier run is removed first, never read as this run's", () => {
-  const path = join(mkdtempSync(join(tmpdir(), "report-")), "gitleaks.json");
+  const path = join(tempDir("report-"), "gitleaks.json");
   writeFileSync(path, "[]");
   // This run wrote nothing: there is no report, so nothing passes.
   const { text } = freshReport(path, () => ran(0));

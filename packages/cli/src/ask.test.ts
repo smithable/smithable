@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { proposalOutcome, usageLine } from "./ask.js";
+import { tempDir } from "./test-dir.js";
 
 test("a change a wording rule read says so, not that no model was used", () => {
   expect(usageLine([], "required-field")).toBe("Generator (required-field) · 0 tokens");
@@ -27,7 +27,7 @@ test("what a request used: tokens in and out, the cost, and the calls the cache 
 });
 
 test("a proposal's outcome is logged under its id, for training data", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-ask-"));
+  const dir = tempDir("smithable-ask-");
   proposalOutcome(dir, "p1", "declined");
   const log = readFileSync(join(dir, "data/.smithable/token-log.jsonl"), "utf8");
   expect(JSON.parse(log.trim())).toMatchObject({

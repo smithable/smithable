@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { parseMail, readOutbox } from "./outbox.js";
+import { tempDir } from "./test-dir.js";
 
 describe("the preview's outbox", () => {
   test("a mail's headers and quoted-printable text are decoded", () => {
@@ -30,7 +30,7 @@ describe("the preview's outbox", () => {
   });
 
   test("the newest mails come first, and an app without an outbox has none", () => {
-    const dir = mkdtempSync(join(tmpdir(), "outbox-"));
+    const dir = tempDir("outbox-");
     expect(readOutbox(dir)).toEqual([]);
     const outbox = join(dir, "data", "mail", "outbox");
     mkdirSync(outbox, { recursive: true });

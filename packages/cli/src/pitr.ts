@@ -4,9 +4,9 @@
 // changed and removed since, and on request brings back or undoes, in place. The same
 // statements as the hosted service (core's dataDiffSql and restoreOrder).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
@@ -98,59 +98,71 @@ export function restoreAt(
     io.err(`There is no database at ${db}: give the app's data folder with --data.\n`);
     return 1;
   }
+  const spec = ir;
+  // The restored copy lives in a folder of its own, gone when this returns.
   const then = join(mkdtempSync(join(tmpdir(), "smithable-restore-")), "then.db");
-  const restored = spawnSync(
-    "litestream",
-    [
-      "restore",
-      "-o",
-      then,
-      "-timestamp",
-      at.toISOString().replace(/\.\d+Z$/, "Z"),
-      replicaUrl(options.from),
-    ],
-    { encoding: "utf8" },
-  );
-  if (restored.status !== 0) {
-    io.err(`The stream could not be restored to ${at.toISOString()}: ${restored.stderr.trim()}\n`);
-    return 1;
+  try {
+    return compare(then);
+  } finally {
+    rmSync(dirname(then), { recursive: true, force: true });
   }
-  const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
-  const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
-  live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
-  const has = (schema: string, name: string) =>
-    Boolean(
-      live
-        .prepare(`SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = ?`)
-        .get(name),
+
+  function compare(then: string): number {
+    const restored = spawnSync(
+      "litestream",
+      [
+        "restore",
+        "-o",
+        then,
+        "-timestamp",
+        at.toISOString().replace(/\.\d+Z$/, "Z"),
+        replicaUrl(options.from),
+      ],
+      { encoding: "utf8" },
     );
-  const tables: Table[] = restoreOrder(ir).flatMap((model) => {
-    const table = tableNames(model).sqlTable;
-    const field = model.fields.find((f) => f.name === titleField(model));
-    return has("main", table) && has("past", table)
-      ? [{ model, table, title: field ? snake(dataKey(field)) : "id" }]
-      : [];
-  });
-  io.out(`Since ${at.toISOString().slice(0, 19).replace("T", " ")} UTC:\n`);
-  for (const t of tables) {
-    const sql = dataDiffSql({ table: t.table, title: t.title });
-    const n = (s: string) => (live.prepare(s).get() as { n: number }).n;
-    const [added, changed, removed] = [n(sql.added), n(sql.changed), n(sql.removed)];
-    if (!added && !changed && !removed) continue;
-    const names = live
-      .prepare(sql.removedNames(10))
-      .all()
-      .map((r) => String((r as { name: unknown }).name));
-    io.out(
-      `  ${t.model.name}: ${added} new, ${changed} changed, ${removed} removed${names.length ? ` (${names.join(", ")}${removed > names.length ? ", …" : ""})` : ""}\n`,
-    );
+    if (restored.status !== 0) {
+      io.err(
+        `The stream could not be restored to ${at.toISOString()}: ${restored.stderr.trim()}\n`,
+      );
+      return 1;
+    }
+    const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
+    const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
+    live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
+    const has = (schema: string, name: string) =>
+      Boolean(
+        live
+          .prepare(`SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = ?`)
+          .get(name),
+      );
+    const tables: Table[] = restoreOrder(spec).flatMap((model) => {
+      const table = tableNames(model).sqlTable;
+      const field = model.fields.find((f) => f.name === titleField(model));
+      return has("main", table) && has("past", table)
+        ? [{ model, table, title: field ? snake(dataKey(field)) : "id" }]
+        : [];
+    });
+    io.out(`Since ${at.toISOString().slice(0, 19).replace("T", " ")} UTC:\n`);
+    for (const t of tables) {
+      const sql = dataDiffSql({ table: t.table, title: t.title });
+      const n = (s: string) => (live.prepare(s).get() as { n: number }).n;
+      const [added, changed, removed] = [n(sql.added), n(sql.changed), n(sql.removed)];
+      if (!added && !changed && !removed) continue;
+      const names = live
+        .prepare(sql.removedNames(10))
+        .all()
+        .map((r) => String((r as { name: unknown }).name));
+      io.out(
+        `  ${t.model.name}: ${added} new, ${changed} changed, ${removed} removed${names.length ? ` (${names.join(", ")}${removed > names.length ? ", …" : ""})` : ""}\n`,
+      );
+    }
+    if (!writing) return 0;
+    if (!options.yes) {
+      io.out("Stop the app, then run this again with --yes to write those records back.\n");
+      return 0;
+    }
+    return writeBack(live, tables, db, options.bringBack ?? [], options.undoChanges ?? [], io);
   }
-  if (!writing) return 0;
-  if (!options.yes) {
-    io.out("Stop the app, then run this again with --yes to write those records back.\n");
-    return 0;
-  }
-  return writeBack(live, tables, db, options.bringBack ?? [], options.undoChanges ?? [], io);
 }
 
 /** Brings back and undoes in place, in one transaction, refusing a record whose reference stays gone. */

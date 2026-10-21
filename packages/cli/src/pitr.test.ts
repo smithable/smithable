@@ -1,12 +1,12 @@
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, test } from "vitest";
 import { restoreAt } from "./pitr.js";
+import { tempDir } from "./test-dir.js";
 
 test("restore --at shows what was removed, refuses a record whose reference stays gone, and brings back both", () => {
-  const dir = mkdtempSync(join(tmpdir(), "restore-at-"));
+  const dir = tempDir("restore-at-");
   mkdirSync(join(dir, "data/db"), { recursive: true });
   mkdirSync(join(dir, "bin"));
   writeFileSync(

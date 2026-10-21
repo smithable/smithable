@@ -1,10 +1,10 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { complete } from "./completion.js";
+import { tempDir } from "./test-dir.js";
 
-const dir = mkdtempSync(join(tmpdir(), "smithable-complete-"));
+const dir = tempDir("smithable-complete-");
 writeFileSync(
   join(dir, "smithable.yml"),
   `smithable: 0.1
@@ -46,7 +46,7 @@ test("concepts complete for inspect and code, and hooks is a code target", () =>
 });
 
 test("outside a project, only what needs no spec completes", () => {
-  expect(complete(["op", "addField"], "", mkdtempSync(join(tmpdir(), "empty-")))).toEqual([]);
+  expect(complete(["op", "addField"], "", tempDir("empty-"))).toEqual([]);
   expect(complete(["new", "--starter"], "", dir)).toEqual([
     "crm",
     "booking",

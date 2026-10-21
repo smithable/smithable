@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { safeRelative } from "./backup.js";
+import { tempDir } from "./test-dir.js";
 
 test("a restored file stays inside the restore folder", () => {
   expect(safeRelative("db/app.db")).toBe("db/app.db");
@@ -8,11 +9,11 @@ test("a restored file stays inside the restore folder", () => {
 });
 
 test("restore takes the newest backup, not a stray folder that sorts after the times", async () => {
-  const { mkdirSync, mkdtempSync, readFileSync, writeFileSync } = await import("node:fs");
+  const { mkdirSync, readFileSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const { restore } = await import("./backup.js");
-  const root = mkdtempSync(join(tmpdir(), "restore-"));
+  const root = tempDir("restore-");
   const project = join(root, "project");
   mkdirSync(project);
   writeFileSync(join(project, "package.json"), JSON.stringify({ name: "acme-crm" }));

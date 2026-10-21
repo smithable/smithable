@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateContent, validateSpec } from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
@@ -15,6 +14,7 @@ import {
   placePictures,
   writePictures,
 } from "./pictures.js";
+import { tempDir } from "./test-dir.js";
 
 const index = [
   {
@@ -52,7 +52,7 @@ const fakeFetch: Fetch = (async (url: string | URL | Request) => {
 }) as Fetch;
 const dirs: string[] = [];
 const temp = () => {
-  const d = mkdtempSync(join(tmpdir(), "smithable-pictures-"));
+  const d = tempDir("smithable-pictures-");
   dirs.push(d);
   return d;
 };
@@ -200,7 +200,7 @@ test("the library is where SMITHABLE_IMAGE_LIBRARY says, and the index's address
         asked = url;
         return new Response("[]");
       }) as never,
-      mkdtempSync(join(tmpdir(), "library-")),
+      tempDir("library-"),
     );
     expect(asked).toBe("http://172.30.0.2:8081/images/index.json");
   } finally {
@@ -210,7 +210,7 @@ test("the library is where SMITHABLE_IMAGE_LIBRARY says, and the index's address
 });
 
 test("a picture the texts name but the project does not have is left out", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "drop-"));
+  const dir = tempDir("drop-");
   mkdirSync(join(dir, "public", "images"), { recursive: true });
   writeFileSync(join(dir, "public", "images", "kept.webp"), "x");
   writeFileSync(
@@ -314,7 +314,7 @@ test("a starter's sample allowedDomains go, and a shared app open to sign-up bec
 });
 
 test("the hero picked for the app replaces the starter's, which has the same file name", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-place-"));
+  const dir = tempDir("smithable-place-");
   placePictures(
     dir,
     {

@@ -12,6 +12,7 @@ import {
   tooLittle,
   USER_AGENT,
 } from "./from-page.js";
+import { tempDir } from "./test-dir.js";
 
 const PAGE = `<!doctype html><html><head><title>Harbour Café</title><script>track()</script></head>
 <body><header><nav><a href="/">Home</a><a href="/menu">Menu</a><a href="/book">Book a table</a></nav></header>
@@ -104,11 +105,11 @@ test("pictures are downloaded as the project's own, named by their order", async
 });
 
 test("read-page prints the description of a saved page, and refuses one that shows too little", async () => {
-  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const { readPageCommand } = await import("./from-page.js");
-  const dir = mkdtempSync(join(tmpdir(), "read-page-"));
+  const dir = tempDir("read-page-");
   writeFileSync(join(dir, "page.html"), PAGE);
   writeFileSync(
     join(dir, "empty.html"),
