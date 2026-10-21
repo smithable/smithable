@@ -798,8 +798,8 @@ function readPublicRead(
 }
 
 /**
- * A role's grants name what exists: pages, models, and custom actions (a standard action
- * follows the model's write access). A role that can open no page is warned about, and so is
+ * A role's grants name what exists: pages, models and actions (a standard action is run by
+ * whoever may change the record too, docs/design/actions.md). A role that can open no page is warned about, and so is
  * "read" under shared access, where everyone who signs in reads every record already.
  */
 function checkGrants(
@@ -812,21 +812,12 @@ function checkGrants(
 ): void {
   const pages = ir.pages.map((p) => p.id);
   const models = ir.models.map((m) => m.name);
-  const custom = ir.actions.filter((a) => a.custom).map((a) => a.name);
+  const actions = ir.actions.map((a) => a.name);
   for (const { role, key, at, items } of grantNodes) {
-    const names = key === "pages" ? pages : key === "actions" ? custom : models;
-    const kind = key === "pages" ? "page" : key === "actions" ? "custom action" : "model";
+    const names = key === "pages" ? pages : key === "actions" ? actions : models;
+    const kind = key === "pages" ? "page" : key === "actions" ? "action" : "model";
     for (const { name, at: itemAt } of items) {
       if (names.includes(name)) continue;
-      if (key === "actions" && ir.actions.some((a) => a.name === name)) {
-        ctx.error(
-          itemAt,
-          "standard-action-grant",
-          `"${name}" is a standard action: it is run by whoever may change the record, so it is not granted by name.`,
-          `Grant ${role} "write" on its model instead.`,
-        );
-        continue;
-      }
       ctx.error(
         itemAt,
         `unknown-${kind.replace(" ", "-")}`,

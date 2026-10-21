@@ -253,3 +253,32 @@ test("renaming or removing a field follows into the rules; a rule left with one 
   if (!removed.ok) throw new Error(removed.message);
   expect(removed.files.spec).not.toContain("unique:");
 });
+
+test("changeField keeps a field in a rule a single stored value; a rule that shrinks onto another goes", () => {
+  const ruled = applyOperation(files, "setUnique", {
+    model: "Invoice",
+    fields: ["customer", "number"],
+  });
+  if (!ruled.ok) throw new Error(ruled.message);
+  const unique = applyOperation(ruled.files, "changeField", {
+    model: "Invoice",
+    field: "number",
+    type: "int! unique",
+  });
+  expect(unique.ok ? "" : unique.message).toContain("cannot become unique by itself");
+  const picture = applyOperation(ruled.files, "changeField", {
+    model: "Invoice",
+    field: "number",
+    type: "picture",
+  });
+  expect(picture.ok ? "" : picture.message).toContain("cannot become a picture");
+  const three = {
+    ...files,
+    spec: spec(
+      "  Customer:\n    fields:\n      name: string!\n  Invoice:\n    fields:\n      customer: Customer!\n      number: int!\n      year: int!\n    unique: [[customer, number], [customer, number, year]]\n",
+    ),
+  };
+  const removed = applyOperation(three, "removeField", { model: "Invoice", field: "year" });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.files.spec).toContain("    unique: [[customer, number]]\n");
+});

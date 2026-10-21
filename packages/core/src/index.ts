@@ -7,6 +7,7 @@ export {
   uniquePerOwner,
   uniqueScope,
 } from "./access.js";
+export { writeActionGrants } from "./action-grants.js";
 export type { OperationResult, ProjectFiles } from "./apply.js";
 export {
   applyOperation,

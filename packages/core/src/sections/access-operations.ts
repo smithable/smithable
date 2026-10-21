@@ -36,7 +36,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
         { ref: "grantNames", what: "what", label: "Which" },
         {
           description:
-            'The pages, models or custom actions; ["all"] for every one, none (or ["none"]) for nothing.',
+            'The pages, models or actions; ["all"] for every one, none (or ["none"]) for nothing.',
         },
         true,
       ),
@@ -51,14 +51,14 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
       return what === "pages"
         ? `${role} may open no page`
         : what === "actions"
-          ? `${role} may run no custom action`
+          ? `${role} may run no action`
           : what === "create"
             ? `${role} may add no records`
             : what === "review"
               ? `${role} may review no files`
               : `${role} may ${what === "read" ? "read" : what === "write" ? "change" : "delete"} only their own records`;
     if (names[0] === "all")
-      return `${role} may ${verb} every ${what === "pages" ? "page" : what === "actions" ? "custom action" : "kind of record"}`;
+      return `${role} may ${verb} every ${what === "pages" ? "page" : what === "actions" ? "action" : "kind of record"}`;
     const named = names.map((n) =>
       what === "pages"
         ? `the ${humanize(n).toLowerCase()} page`
@@ -95,9 +95,9 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
       key === "pages"
         ? ir.pages.map((p) => p.id)
         : key === "actions"
-          ? ir.actions.filter((a) => a.custom).map((a) => a.name)
+          ? ir.actions.map((a) => a.name)
           : ir.models.map((m) => m.name);
-    const kind = key === "pages" ? "page" : key === "actions" ? "custom action" : "model";
+    const kind = key === "pages" ? "page" : key === "actions" ? "action" : "model";
     for (const name of names)
       if (name !== "all" && name !== "none" && !known.includes(name))
         throw new OperationError(

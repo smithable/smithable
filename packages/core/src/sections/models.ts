@@ -459,7 +459,16 @@ function followUnique(spec: YamlEditor, model: string, field: string, to?: strin
     const scope = Array.isArray(rule) ? undefined : (rule as { scope?: string }).scope;
     return [scope ? { fields, scope } : fields];
   });
-  if (next.length) spec.set(path, next as YamlValue);
+  // A rule that shrank onto another goes too.
+  const seen: string[][] = [];
+  const kept = next.filter((rule) => {
+    const fields = Array.isArray(rule) ? rule : rule.fields;
+    if (seen.some((s) => s.length === fields.length && s.every((f) => fields.includes(f))))
+      return false;
+    seen.push(fields);
+    return true;
+  });
+  if (kept.length) spec.set(path, kept as YamlValue);
   else spec.remove(path);
 }
 
