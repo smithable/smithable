@@ -186,6 +186,7 @@ export function names(model: ModelIR, t: Texts) {
     deleteRule: `${camel(model.name)}DeleteRule`,
     module: `#/generated/${kebab(model.name)}`,
     options: `${camel(model.name)}Options`,
+    ownerOptions: `${camel(model.name)}OwnerOptions`,
     access: `${camel(model.name)}Access`,
     data: `${camel(model.name)}Data`,
     values: `${model.name}Values`,
@@ -495,9 +496,16 @@ export function optionsFor(
   const entries = refs.map(
     (ref) => `${dataKey(ref)}: await ${names(modelNamed(ir, ref.type.model), t).options}()`,
   );
-  const users = userFields(model);
+  // Whose record it is (ownedBy): chosen only by a role that may change everyone's.
+  const users = userFields(model).filter((f) => f.name !== model.ownedBy);
   if (users.length) modules.set("#/generated/users", ["userOptions"]);
   for (const f of users) entries.push(`${dataKey(f)}: await userOptions()`);
+  const owner = model.ownedBy && userFields(model).find((f) => f.name === model.ownedBy);
+  if (owner) {
+    const n = names(model, t);
+    modules.set(n.module, [...(modules.get(n.module) ?? []), n.ownerOptions]);
+    entries.push(`${dataKey(owner)}: await ${n.ownerOptions}()`);
+  }
   return {
     imports: [...modules].map(([module, fns]) => `import { ${fns.join(", ")} } from "${module}";`),
     expr: `{ ${entries.join(", ")} }`,

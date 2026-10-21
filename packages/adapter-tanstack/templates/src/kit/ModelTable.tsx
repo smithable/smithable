@@ -198,9 +198,22 @@ export function ModelTable<R extends Row>({
         return { ...row, ...Object.fromEntries(computed) } as R;
       })
     : rows;
-  const columns = (chosen ?? ui.columns)
+  const visible = (chosen ?? ui.columns)
     .filter((name) => !(hide as string[]).includes(name))
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
+  // Every column hidden (a related list whose only field is the record it is on): the record's
+  // own title, so each row can still be told apart and opened.
+  const columns: RecordFieldUi<R>[] = visible.length
+    ? visible
+    : [
+        ui.fields.find((f) => f.name === ui.titleField) ?? {
+          name: ui.titleField,
+          label: ui.label,
+          kind: ui.titleField === "id" ? "int" : "string",
+          required: true,
+          get: (row) => (row as Record<string, unknown>)[ui.titleField],
+        },
+      ];
   if (rows.length === 0) {
     return (
       <Card

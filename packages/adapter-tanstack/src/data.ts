@@ -235,6 +235,18 @@ export const ${n.options} = createServerFn().handler(async () =>
 );
 `
     : "";
+  // Whose record it is (ownedBy): the people to choose from, only for a role that may change
+  // everyone's; anyone else makes their own (ownerFor), so the form leaves the field out.
+  const ownerField = hasSignIn(auth) && userFields(model).find((f) => f.name === model.ownedBy);
+  const ownerOptions = ownerField
+    ? `
+/** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
+export const ${n.ownerOptions} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return viewer && ${n.access}.write.roles.includes(viewer.role) ? userOptions() : null;
+});
+`
+    : "";
   // A capacity: the reservation block's server functions (docs/design/booking.md): a
   // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
@@ -281,7 +293,9 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
 ]
   .filter((m) => m !== model)
   .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
-  .join("")}import { writeAllowed } from "#/kit/limit";
+  .join(
+    "",
+  )}import { writeAllowed } from "#/kit/limit";${ownerField ? '\nimport { userOptions } from "./users";' : ""}
 import { currentViewer } from "#/lib/viewer.server";
 import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
 
@@ -365,7 +379,7 @@ export const ${n.get} = createServerFn()
       }
     };
   });
-${options}
+${options}${ownerOptions}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
   .handler(async ({ data }) => ${n.data}.create(await writer(), data));

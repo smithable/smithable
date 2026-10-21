@@ -131,7 +131,8 @@ export interface AppUi {
 export type Row = { id: number } & Record<string, unknown>;
 
 /** Choices for a reference field, keyed by the field's name, e.g. { customerId: [...] }. */
-export type Options = Record<string, { value: number | string; label: string }[]>;
+/** Each field's choices; null for a field not the viewer's to fill (an owner they cannot choose). */
+export type Options = Record<string, { value: number | string; label: string }[] | null>;
 
 /**
  * Marks a visible text with where its wording is kept, e.g. "pages.customers.title", so the
