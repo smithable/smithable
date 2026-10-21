@@ -101,22 +101,27 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
+  // Never given: the id, the owner, the times, and a number counting up (the app counts it).
   const omitted = [
     "id",
     ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
+    ...storedFields(model)
+      .filter((f) => f.sequence)
+      .map(dataKey),
   ];
-  // What the app fills is never taken from a form (record-rules.md §1); an action may set it.
+  // What the app fills is never taken from a form (record-rules.md §1); an action may set it, so
+  // the settable schema keeps it, as optional: a form's values are settable values too.
   const byApp = storedFields(model)
-    .filter((f) => f.byApp)
+    .filter((f) => f.byApp && !f.sequence)
     .map(dataKey);
   return `${HEADER}import { createInsertSchema } from "drizzle-zod";
 import ${/\bz\.(?!output)/.test(schema) ? "{ z }" : "type { z }"} from "zod";
 ${SCHEMA_IMPORT}
 ${schema.includes("w.") ? 'import { w } from "#/kit/words";\n' : ""}
 /** What a ${n.label.toLowerCase()} may be given: a form's values and what the app fills (an action's set). */
-export const ${n.settable} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
+export const ${n.settable} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} })${byApp.length ? `.partial({ ${byApp.map((k) => `${k}: true`).join(", ")} })` : ""};
 ${
   byApp.length
     ? `/** What a ${n.label.toLowerCase()}'s form sends, checked: never what the app fills. */

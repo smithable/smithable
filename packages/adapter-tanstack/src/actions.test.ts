@@ -110,6 +110,7 @@ test("an action sets what a form cannot: a field the app fills", () => {
   const schema = confirm("src/generated/task.schema.ts");
   // The form's schema leaves the app's field out; the settable one keeps it for the action.
   expect(schema).toContain("export const taskSettable = createInsertSchema(schema.tasks, {");
+  expect(schema).toContain(".partial({ status: true });");
   expect(schema).toContain("export const taskSchema = taskSettable.omit({ status: true });");
   expect(schema).toContain("export type TaskSettable = z.output<typeof taskSettable>;");
   const server = confirm("src/generated/actions/confirm.server.ts");

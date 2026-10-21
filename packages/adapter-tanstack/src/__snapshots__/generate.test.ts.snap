@@ -35519,9 +35519,9 @@ export const orderSettable = createInsertSchema(schema.orders, {
   email: z.email(w.enterValidEmail).nullish(),
   note: (s) => s.max(2000, w.atMostCharacters(2000)),
   reason: (s) => s.max(2000, w.atMostCharacters(2000)),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
-/** What a order's form sends, checked: never what the app fills. */
-export const orderSchema = orderSettable.omit({ number: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, number: true });
+/** What a order's form sends, checked. */
+export const orderSchema = orderSettable;
 
 export type OrderSettable = z.output<typeof orderSettable>;
 export type OrderValues = z.output<typeof orderSchema>;
@@ -39733,7 +39733,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order-line.server.ts": "4d4bac81 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
-  "src/generated/order.schema.ts": "07f2c2d5 generated",
+  "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "e4bf366f generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
@@ -60323,7 +60323,7 @@ export const messageSettable = createInsertSchema(schema.messages, {
   content: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   fromEmail: z.email(w.enterValidEmail).nullish(),
   attachments: z.array(z.object({ file: z.string().regex(/^message\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() })).max(10).nullish(),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true }).partial({ agentId: true });
 /** What a message's form sends, checked: never what the app fills. */
 export const messageSchema = messageSettable.omit({ agentId: true });
 
@@ -64103,7 +64103,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/ask.server.ts": "8c32c143 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
-  "src/generated/message.schema.ts": "66be17ce generated",
+  "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "b3cb7e21 generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
