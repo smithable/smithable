@@ -20,7 +20,7 @@ import {
   type ThemeIR,
   USER_MODEL,
   type UxIR,
-  uniquePerOwner,
+  uniqueScope,
 } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
 
@@ -575,10 +575,11 @@ export function sequenceEntries(
   table: string,
   owner: string,
 ): string[] {
-  const perOwner = hasSignIn(auth) && uniquePerOwner(model, auth);
   return model.fields
     .filter((f) => f.sequence)
     .map((f) => {
+      // The counter's scope is the field's uniqueness scope (docs/design/uniqueness.md).
+      const perOwner = uniqueScope(f.unique || true, model, auth) === "owner";
       const key = perOwner
         ? `\`${model.name}.${f.name}:\${${owner}}\``
         : JSON.stringify(`${model.name}.${f.name}`);

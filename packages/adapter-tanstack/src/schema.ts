@@ -16,7 +16,7 @@ import {
   storesPictures,
   USER_MODEL,
   type UxIR,
-  uniquePerOwner,
+  uniqueScope,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
@@ -46,17 +46,18 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
-    const perOwner = uniquePerOwner(model, auth);
-    // A number counting up is unique by its nature (orders.md §4): an index says so.
-    const unique = (f: FieldIR) => Boolean(f.unique || f.sequence);
-    // With a trash, a unique value is unique among the live records (docs/design/trash.md §2):
-    // an index over them, not the column's own constraint.
-    const indexed = perOwner || Boolean(model.trash);
+    // Where each unique field is unique (docs/design/uniqueness.md): among one owner's records
+    // or in the whole app; a number counting up is unique by its nature (orders.md §4).
+    const scopeOf = (f: FieldIR) => uniqueScope(f.unique || Boolean(f.sequence), model, auth);
+    // A value unique per owner is an index over the owner and the field; with a trash, a unique
+    // value is unique among the live records (docs/design/trash.md §2): an index over them, not
+    // the column's own constraint.
+    const indexed = (f: FieldIR) => scopeOf(f) === "owner" || Boolean(model.trash);
     const reference = (field: FieldIR, target: string, type: string) => {
       const onDelete = field.required ? "restrict" : "set null";
       let expr = `${type}()`;
       if (field.required) expr += ".notNull()";
-      if (unique(field) && !indexed) expr += ".unique()";
+      if (scopeOf(field) && !indexed(field)) expr += ".unique()";
       // Tables that refer to each other (or to themselves) need the column's type said, as
       // Drizzle's docs show, or TypeScript cannot infer either table.
       const cycle =
@@ -74,26 +75,41 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
         const target = isUser ? "user" : tableNames(modelNamed(ir, field.type.model)).table;
         return [`  ${field.name}Id: ${reference(field, target, isUser ? "text" : "integer")},`];
       }
-      const { expr, uses } = column(
-        indexed ? { ...field, unique: false } : unique(field) ? { ...field, unique: true } : field,
-      );
+      const { expr, uses } = column({
+        ...field,
+        unique: Boolean(scopeOf(field)) && !indexed(field),
+      });
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
     if (hasSignIn(auth) && !model.ownedBy)
       columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
-    const uniqueOn = (f: FieldIR) =>
-      perOwner ? `t.${ownerKey(model)}, t.${dataKey(f)}` : `t.${dataKey(f)}`;
-    const uniques = model.trash
-      ? model.fields
-          .filter((f) => unique(f) && !(f.type.kind === "relation" && f.type.many))
-          .map(
-            (f) =>
-              `uniqueIndex(${JSON.stringify(`${n.sqlTable}_${snake(dataKey(f))}_unique`)}).on(${uniqueOn(f)}).where(sql\`\${t.deletedAt} is null\`)`,
-          )
-      : perOwner
-        ? model.fields.filter(unique).map((f) => `unique().on(${uniqueOn(f)})`)
-        : [];
+    // The owner's column first for a per-owner value, once when the rule names it itself (ownedBy).
+    const on = (fields: FieldIR[], owner: boolean) =>
+      [
+        ...new Set([
+          ...(owner ? [`t.${ownerKey(model)}`] : []),
+          ...fields.map((f) => `t.${dataKey(f)}`),
+        ]),
+      ].join(", ");
+    const constraint = (fields: FieldIR[], owner: boolean) =>
+      model.trash
+        ? `uniqueIndex(${JSON.stringify(`${n.sqlTable}_${fields.map((f) => snake(dataKey(f))).join("_")}_unique`)}).on(${on(fields, owner)}).where(sql\`\${t.deletedAt} is null\`)`
+        : `unique().on(${on(fields, owner)})`;
+    const alone = model.fields
+      .filter((f) => scopeOf(f) && indexed(f) && !(f.type.kind === "relation" && f.type.many))
+      .map((f) => constraint([f], scopeOf(f) === "owner"));
+    // Fields unique together (docs/design/uniqueness.md), per owner when their scope says so.
+    const together = (model.unique ?? []).map((u) =>
+      constraint(
+        u.fields.map((name) => model.fields.find((f) => f.name === name) as FieldIR),
+        uniqueScope(u.scope, model, auth) === "owner",
+      ),
+    );
+    const uniques = [...alone, ...together];
+    const perOwner =
+      model.fields.some((f) => scopeOf(f) === "owner") ||
+      (model.unique ?? []).some((u) => uniqueScope(u.scope, model, auth) === "owner");
     if (uniques.length) imports.add(model.trash ? "uniqueIndex" : "unique");
     // The trash (docs/design/trash.md): when and by whom a record was deleted, and with which
     // record when it went as part of a group (docs/design/delete-together.md); an index over the
@@ -124,7 +140,7 @@ ${columns.join("\n")}
     .$onUpdate(() => new Date()),${trash}
 }`;
     return extras.length
-      ? `${perOwner && uniques.length ? "// Records are private to their owner, so unique values are unique per owner.\n" : ""}export const ${n.table} = sqliteTable(
+      ? `${perOwner ? "// Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).\n" : ""}export const ${n.table} = sqliteTable(
   ${JSON.stringify(n.sqlTable)},
   ${indent(body, 2)},
   (t) => [${extras.join(", ")}],

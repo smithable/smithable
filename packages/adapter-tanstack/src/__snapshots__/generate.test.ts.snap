@@ -9705,7 +9705,7 @@ export const sessions = sqliteTable("sessions", {
     .$onUpdate(() => new Date()),
 });
 
-// Records are private to their owner, so unique values are unique per owner.
+// Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).
 export const bookings = sqliteTable(
   "bookings",
   {
@@ -19778,7 +19778,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "4486d7dc generated",
+  "src/db/schema.ts": "cc1602f3 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "efcd0c43 generated",
   "src/generated/app.ts": "7320a04b generated",
@@ -26007,7 +26007,7 @@ export const clients = sqliteTable("clients", {
     .$onUpdate(() => new Date()),
 });
 
-// Records are private to their owner, so unique values are unique per owner.
+// Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).
 export const invoices = sqliteTable(
   "invoices",
   {
@@ -32528,7 +32528,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "e6fa9f98 generated",
+  "src/db/schema.ts": "34fca66d generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d2fd305f generated",
   "src/generated/actions/mark-paid.server.ts": "ed9d8fa4 generated",

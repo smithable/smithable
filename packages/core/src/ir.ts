@@ -42,9 +42,21 @@ export interface AppIR extends SemanticText {
   timezone?: string;
 }
 
+/** Where a unique value is unique: among one owner's records, or in the whole app. */
+export type UniqueScope = "owner" | "app";
+
+/** Fields unique together (`unique: [[customer, number]]`, docs/design/uniqueness.md). */
+export interface UniqueIR {
+  fields: string[];
+  /** `true` as a field's `unique: true`: per owner or app-wide as the access says. */
+  scope: true | UniqueScope;
+}
+
 export interface ModelIR extends SemanticText {
   name: string;
   fields: FieldIR[];
+  /** Fields that are unique together, each list two or more of them. */
+  unique?: UniqueIR[];
   /** A `User` field that owns the record instead of the automatic owner. */
   ownedBy?: string;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
@@ -139,7 +151,12 @@ export interface FieldIR extends SemanticText {
   type: FieldType;
   /** A choice field with a default is always required: it can never be empty. */
   required: boolean;
-  unique: boolean;
+  /**
+   * No two records hold the same value: `true` among an owner's records when the model's records
+   * are read by their owners only, else in the whole app (access.ts uniquePerOwner); `owner` or
+   * `app` says which outright, so a change of roles never moves the index (docs/design/uniqueness.md).
+   */
+  unique: boolean | UniqueScope;
   default?: FieldValue;
   min?: number;
   max?: number;

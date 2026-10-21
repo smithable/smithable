@@ -1,5 +1,12 @@
 export type { Allowed, ModelAllowed } from "./access.js";
-export { actionAccess, modelAccess, pageAccess, reviewRoles, uniquePerOwner } from "./access.js";
+export {
+  actionAccess,
+  modelAccess,
+  pageAccess,
+  reviewRoles,
+  uniquePerOwner,
+  uniqueScope,
+} from "./access.js";
 export type { OperationResult, ProjectFiles } from "./apply.js";
 export {
   applyOperation,
@@ -211,6 +218,7 @@ export {
   type ThemeStyle,
 } from "./theme-style.js";
 export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
+export { writeUniqueScopes } from "./unique-scopes.js";
 export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";
 export {
   CONTROLS,

@@ -5,6 +5,7 @@ import {
   type ActionIR,
   type ModelIR,
   type PageIR,
+  type UniqueScope,
 } from "./ir.js";
 import { patternInfo } from "./patterns.js";
 
@@ -145,4 +146,19 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
     };
   }
   return { public: false, roles, owner: write.owner };
+}
+
+/**
+ * Where a unique field or a unique pair is unique (docs/design/uniqueness.md): `owner` (among one
+ * owner's records) or `app` (in the whole app), as written, or for the short form `true` as
+ * uniquePerOwner reads the access; nothing for a field that is not unique.
+ */
+export function uniqueScope(
+  unique: boolean | UniqueScope | undefined,
+  model: ModelIR,
+  auth: AuthIR,
+): UniqueScope | undefined {
+  if (!unique) return undefined;
+  if (unique === true) return uniquePerOwner(model, auth) ? "owner" : "app";
+  return auth.signIn === "none" ? "app" : unique;
 }

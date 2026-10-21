@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { modelAccess, uniquePerOwner } from "./access.js";
+import { modelAccess, uniqueScope } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -895,12 +895,28 @@ function checkAgainstSpec(
   publicNodes: Partial<Record<keyof AuthIR["public"], { name: string; at: At }[]>>,
   accessAt: At,
 ): void {
+  // "unique: owner" is per owner, which an app without sign-in has none of.
+  if (auth.signIn === "none")
+    for (const model of ir.models) {
+      const owned = [
+        ...model.fields.filter((f) => f.unique === "owner").map((f) => `${model.name}.${f.name}`),
+        ...(model.unique ?? [])
+          .filter((u) => u.scope === "owner")
+          .map((u) => `${model.name}'s ${u.fields.join(" and ")}`),
+      ];
+      if (owned.length)
+        ctx.error(
+          accessAt,
+          "unique-owner-no-sign-in",
+          `${owned.join(", ")} ${owned.length > 1 ? "are" : "is"} unique per owner, but nobody signs in to this app, so records have no owner. Write "unique: app" (or true), or let people sign in.`,
+        );
+    }
   // A capacity per a unique reference holds one record per referenced record when "unique" is
   // global (not per owner): a max above 1 is never reached. The default access decides which.
   for (const model of ir.models) {
     const capacity = model.capacity;
     const per = capacity && model.fields.find((f) => f.name === capacity.per);
-    if (!capacity || !per?.unique || uniquePerOwner(model, auth)) continue;
+    if (!capacity || !per?.unique || uniqueScope(per.unique, model, auth) !== "app") continue;
     if (typeof capacity.max === "number" && capacity.max <= 1) continue;
     const one = model.name.toLowerCase();
     ctx.warning(

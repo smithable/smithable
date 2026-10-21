@@ -9,7 +9,7 @@ export type Result<T> =
 export interface FieldShorthand {
   type: FieldType;
   required: boolean;
-  unique: boolean;
+  unique: boolean | "owner" | "app";
   /** Raw text after "=", not yet converted to the field's type. */
   defaultText?: string;
 }

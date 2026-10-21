@@ -6,7 +6,7 @@ models:
     fields:
       name: string
   Order:
-    unique: [number]               # expect: not-yet-supported
+    unique: [number]               # expect: invalid-value
     fields:
       number: string
 pages:

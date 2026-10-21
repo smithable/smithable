@@ -93,7 +93,8 @@ function shapeOf(field: FieldIR): FieldShape {
     values: t.kind === "choice" ? t.values.join(", ") : "",
     target: t.kind === "relation" ? t.model : "",
     required: field.required,
-    unique: field.unique,
+    // The box says whether it is unique; where (owner or app) stays the field's own key for now.
+    unique: Boolean(field.unique),
   };
 }
 
