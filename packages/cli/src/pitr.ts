@@ -128,40 +128,45 @@ export function restoreAt(
     }
     const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
     const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
-    live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
-    const has = (schema: string, name: string) =>
-      Boolean(
-        live
-          .prepare(`SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = ?`)
-          .get(name),
-      );
-    const tables: Table[] = restoreOrder(spec).flatMap((model) => {
-      const table = tableNames(model).sqlTable;
-      const field = model.fields.find((f) => f.name === titleField(model));
-      return has("main", table) && has("past", table)
-        ? [{ model, table, title: field ? snake(dataKey(field)) : "id" }]
-        : [];
-    });
-    io.out(`Since ${at.toISOString().slice(0, 19).replace("T", " ")} UTC:\n`);
-    for (const t of tables) {
-      const sql = dataDiffSql({ table: t.table, title: t.title });
-      const n = (s: string) => (live.prepare(s).get() as { n: number }).n;
-      const [added, changed, removed] = [n(sql.added), n(sql.changed), n(sql.removed)];
-      if (!added && !changed && !removed) continue;
-      const names = live
-        .prepare(sql.removedNames(10))
-        .all()
-        .map((r) => String((r as { name: unknown }).name));
-      io.out(
-        `  ${t.model.name}: ${added} new, ${changed} changed, ${removed} removed${names.length ? ` (${names.join(", ")}${removed > names.length ? ", …" : ""})` : ""}\n`,
-      );
+    try {
+      live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
+      const has = (schema: string, name: string) =>
+        Boolean(
+          live
+            .prepare(`SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = ?`)
+            .get(name),
+        );
+      const tables: Table[] = restoreOrder(spec).flatMap((model) => {
+        const table = tableNames(model).sqlTable;
+        const field = model.fields.find((f) => f.name === titleField(model));
+        return has("main", table) && has("past", table)
+          ? [{ model, table, title: field ? snake(dataKey(field)) : "id" }]
+          : [];
+      });
+      io.out(`Since ${at.toISOString().slice(0, 19).replace("T", " ")} UTC:\n`);
+      for (const t of tables) {
+        const sql = dataDiffSql({ table: t.table, title: t.title });
+        const n = (s: string) => (live.prepare(s).get() as { n: number }).n;
+        const [added, changed, removed] = [n(sql.added), n(sql.changed), n(sql.removed)];
+        if (!added && !changed && !removed) continue;
+        const names = live
+          .prepare(sql.removedNames(10))
+          .all()
+          .map((r) => String((r as { name: unknown }).name));
+        io.out(
+          `  ${t.model.name}: ${added} new, ${changed} changed, ${removed} removed${names.length ? ` (${names.join(", ")}${removed > names.length ? ", …" : ""})` : ""}\n`,
+        );
+      }
+      if (!writing) return 0;
+      if (!options.yes) {
+        io.out("Stop the app, then run this again with --yes to write those records back.\n");
+        return 0;
+      }
+      return writeBack(live, tables, db, options.bringBack ?? [], options.undoChanges ?? [], io);
+    } finally {
+      // Closed before the restored copy's folder goes (its file is still attached until then).
+      live.close();
     }
-    if (!writing) return 0;
-    if (!options.yes) {
-      io.out("Stop the app, then run this again with --yes to write those records back.\n");
-      return 0;
-    }
-    return writeBack(live, tables, db, options.bringBack ?? [], options.undoChanges ?? [], io);
   }
 }
 
