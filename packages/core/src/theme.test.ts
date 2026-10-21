@@ -29,11 +29,11 @@ dark:
 `;
 const parse = (text: string) => parseTheme({ path: "themes/forest.yml", text });
 
-test("the sixteen built-in themes read in both modes, each under its own name", () => {
+test("the nineteen built-in themes read in both modes, each under its own name", () => {
   const names = BUILT_IN_THEMES.map((t) => t.name);
   expect(names).toEqual([...THEME_PRESETS]);
-  expect(names).toHaveLength(16);
-  expect(new Set(names).size).toBe(16);
+  expect(names).toHaveLength(19);
+  expect(new Set(names).size).toBe(19);
   expect(names.slice(0, 4)).toEqual(["modern", "minimal", "playful", "corporate"]);
   for (const theme of BUILT_IN_THEMES) {
     expect(theme.source).toBe("built-in");
