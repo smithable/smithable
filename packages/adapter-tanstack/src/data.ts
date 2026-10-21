@@ -237,7 +237,8 @@ export const ${n.options} = createServerFn().handler(async () =>
     : "";
   // Whose record it is (ownedBy): the people to choose from, only for a role that may change
   // everyone's; anyone else makes their own (ownerFor), so the form leaves the field out.
-  const ownerField = hasSignIn(auth) && userFields(model).find((f) => f.name === model.ownedBy);
+  // The same test as optionsFor's, which calls it from the form's loader.
+  const ownerField = userFields(model).find((f) => f.name === model.ownedBy);
   const ownerOptions = ownerField
     ? `
 /** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
