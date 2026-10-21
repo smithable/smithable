@@ -592,6 +592,8 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
   const noRight = /^no-right:(.+)$/.exec(message)?.[1];
   if (noRight) return w.noRightToDelete(noRight);
   if (message === "full") return w.noPlacesLeft;
+  if (message === "closed") return w.bookingClosed;
+  if (message === "cancel-closed") return w.cancellingClosed;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
   if (booked) return w.alreadyTaken(booked);
   // A time someone does not have free, with the next free times that day.

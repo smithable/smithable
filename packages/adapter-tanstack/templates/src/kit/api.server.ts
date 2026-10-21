@@ -63,6 +63,8 @@ function conflict(code: string): string {
   if (code.startsWith("in-use"))
     return "It is still used by other records, so it cannot be deleted.";
   if (code === "full") return "No places left.";
+  if (code === "closed") return "Booking has closed.";
+  if (code === "cancel-closed") return "Cancelling has closed.";
   const booked = /^booked:(\d+)$/.exec(code)?.[1];
   if (booked) return `${booked} are already taken.`;
   return code;

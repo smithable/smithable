@@ -600,6 +600,14 @@
                 ],
                 "description": "A whole number, or a whole-number field of the referenced record, \"reference.field\"."
               },
+              "closes": {
+                "type": "string",
+                "description": "Until when a record may be added: a date-time of the referenced record (\"session.startsAt\"), as it is or a period before it (\"2 hours before session.startsAt\")."
+              },
+              "cancelUntil": {
+                "type": "string",
+                "description": "Until when a record's owner may delete it (\"24 hours before session.startsAt\"); roles that delete everyone's pass."
+              },
               "where": {
                 "type": "object",
                 "description": "Only records with these choice or yes/no values count."

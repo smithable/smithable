@@ -1,6 +1,7 @@
 import {
   type AuthIR,
   apiOffers,
+  type CapacityIR,
   type ContentIR,
   capitalize,
   emptyContent,
@@ -258,6 +259,20 @@ export function summarize(
       sentences.push(
         `At most ${limit} ${many(model)} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
       );
+      // The deadlines (booking.md §6): "until 2 hours before the session's start".
+      const targetModel = ir.models.find((m) => m.name === target);
+      const untilWords = (deadline: NonNullable<CapacityIR["closes"]>) => {
+        const name = deadline.field.split(".")[1] ?? "";
+        const field = targetModel?.fields.find((f) => f.name === name);
+        const when = `the ${humanize(target).toLowerCase()}'s ${field && targetModel ? fieldLabel(targetModel, field).toLowerCase() : humanize(name).toLowerCase()}`;
+        if (!deadline.before) return when;
+        const { amount, unit } = deadline.before;
+        return `${amount} ${amount === 1 ? unit.slice(0, -1) : unit} before ${when}`;
+      };
+      if (model.capacity.closes)
+        sentences.push(`A ${single} is added until ${untilWords(model.capacity.closes)}.`);
+      if (model.capacity.cancelUntil)
+        sentences.push(`Its owner deletes it until ${untilWords(model.capacity.cancelUntil)}.`);
     }
     if (model.schedule) sentences.push(scheduleWords(model, model.schedule));
     if (model.occupies) sentences.push(occupiesWords(model, model.occupies));

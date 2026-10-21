@@ -59,9 +59,13 @@ export function Reserve({
       setFailure(
         message === "full"
           ? w.lastPlaceTaken
-          : message.startsWith(w.tooMany("\0").split("\0")[0] ?? "")
-            ? message
-            : w.tryAgain,
+          : message === "closed"
+            ? w.bookingClosed
+            : message === "cancel-closed"
+              ? w.cancellingClosed
+              : message.startsWith(w.tooMany("\0").split("\0")[0] ?? "")
+                ? message
+                : w.tryAgain,
       );
     } finally {
       setAsking(false);

@@ -22,6 +22,7 @@ import {
 } from "../operation.js";
 import { pageModel } from "../patterns.js";
 import { parseFieldShorthand } from "./field-type.js";
+import { readDeadline } from "./models.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 import { scheduleOperations } from "./schedule-operations.js";
 import { put } from "./ux-operations.js";
@@ -457,6 +458,8 @@ const setCapacity: Operation<{
   per: string;
   max?: string;
   where?: Record<string, string | boolean | string[]>;
+  closes?: string;
+  cancelUntil?: string;
 }> = {
   name: "setCapacity",
   summary:
@@ -484,13 +487,25 @@ const setCapacity: Operation<{
         description:
           'Only records with these values count, e.g. { "status": "confirmed" } or { "status": "confirmed | paid" }.',
       },
+      closes: {
+        type: "string",
+        description:
+          'Until when a record may be added: a date-time of the referenced record ("session.startsAt"), as it is or a period before it ("2 hours before session.startsAt"); "none" lifts it.',
+      },
+      cancelUntil: {
+        type: "string",
+        description:
+          'Until when a record\'s owner may delete it ("24 hours before session.startsAt"); roles that delete everyone\'s pass; "none" lifts it.',
+      },
     },
   },
   positional: ["model", "per", "max", "...where"],
-  describe: ({ model, per, max }) =>
-    per === "none" ? `Remove the capacity of ${model}` : `Limit ${model} to ${max} per ${per}`,
+  describe: ({ model, per, max, closes, cancelUntil }) =>
+    per === "none"
+      ? `Remove the capacity of ${model}`
+      : `Limit ${model} to ${max} per ${per}${closes && closes !== "none" ? `, added until ${closes}` : ""}${cancelUntil && cancelUntil !== "none" ? `, deleted by its owner until ${cancelUntil}` : ""}`,
   destructive: () => false,
-  apply({ spec }, { model, per, max, where }, ir) {
+  apply({ spec }, { model, per, max, where, closes, cancelUntil }, ir) {
     if (!ir.models.some((m) => m.name === model))
       throw new OperationError(`There is no model named "${model}".`);
     const path = ["models", model, "capacity"];
@@ -503,6 +518,17 @@ const setCapacity: Operation<{
     const value: Record<string, YamlValue> = { per, max: /^\d+$/.test(max) ? Number(max) : max };
     const conditions = conditionArgs(where ?? {});
     if (Object.keys(conditions).length) value.where = conditions;
+    for (const [key, given] of [
+      ["closes", closes],
+      ["cancelUntil", cancelUntil],
+    ] as const) {
+      if (given === undefined || given === "none") continue;
+      if (!readDeadline(given))
+        throw new OperationError(
+          `"${key}" is a date-time of the ${per} record ("${per}.startsAt"), as it is or a period before it ("2 hours before ${per}.startsAt").`,
+        );
+      value[key] = given.trim();
+    }
     if (spec.has(path)) spec.set(path, value);
     else spec.add(["models", model], "capacity", value);
     return [];

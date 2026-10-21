@@ -270,10 +270,13 @@ export const ${reserveNames(model).places} = createServerFn()
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
     if (!${perData}.canRead(viewer, id)) return null;
-    const { taken, max } = ${n.data}.places(id);
+    const { taken, max, closesAt, cancelUntilAt } = ${n.data}.places(id);
     return {
       left: Math.max(0, max - taken),
       max,
+      // The deadlines (docs/design/booking.md §6), for the block's words; null without one.
+      closesAt: closesAt?.toISOString() ?? null,
+      cancelUntilAt: cancelUntilAt?.toISOString() ?? null,
       mine: viewer ? ${n.data}.mine(viewer, id) : undefined,
       canBook: allows(${n.access}.create, viewer),
       signedIn: viewer !== null,
@@ -814,6 +817,29 @@ export function dataModule(
       ? String(capacity.max)
       : `(tx.select({ n: ${perTarget}.${capacity.max.split(".")[1]} }).from(${perTarget}).where(eq(${perTarget}.id, values.${capacity.per}Id)).get()?.n ?? 0)`
     : "0";
+  /**
+   * A deadline of the capacity (closes, cancelUntil; docs/design/booking.md §6) as code: the
+   * referenced record's time less the period, read in the write's transaction; undefined
+   * without the record.
+   */
+  const deadlineOf = (key: "closes" | "cancelUntil", perId: string) => {
+    const deadline = capacity?.[key];
+    if (!deadline || !perTarget) return "undefined";
+    const field = deadline.field.split(".")[1];
+    const ms = deadline.before
+      ? deadline.before.amount *
+        { minutes: 60_000, hours: 3_600_000, days: 86_400_000 }[deadline.before.unit]
+      : 0;
+    return `(() => { const at = tx.select({ t: ${perTarget}.${field} }).from(${perTarget}).where(eq(${perTarget}.id, ${perId})).get()?.t; return at ? new Date(at.getTime() - ${ms}) : undefined; })()`;
+  };
+  /** Past `closes`, only a role that changes everyone's records adds one. */
+  const closedCheck = capacity?.closes
+    ? `
+      if (!(viewer && ${n.access}.write.roles.includes(viewer.role))) {
+        const closesAt = ${deadlineOf("closes", `values.${capacity.per}Id`)};
+        if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+      }`
+    : "";
   /** The check before a write inside its transaction; `except` leaves out the record being changed. */
   const capacityCheck = (except?: string) =>
     capacity
@@ -2008,9 +2034,9 @@ ${
 }${
   capacity && signedIn
     ? `  /** How many of a ${capacity.per}'s places are taken, and how many it has: numbers only, never whose. */
-  places(${capacity.per}Id: number): { taken: number; max: number } {
+  places(${capacity.per}Id: number): { taken: number; max: number; closesAt?: Date; cancelUntilAt?: Date } {
     const taken = db.select({ n: count() }).from(${n.table}).where(and(${capacityCounted.map((c) => c.replace(`values.${capacity.per}Id`, `${capacity.per}Id`)).join(", ")})).get()?.n ?? 0;
-    return { taken, max: ${capacityMax.replaceAll("tx.", "db.").replace(`values.${capacity.per}Id`, `${capacity.per}Id`)} };
+    return { taken, max: ${capacityMax.replaceAll("tx.", "db.").replace(`values.${capacity.per}Id`, `${capacity.per}Id`)}, closesAt: ${deadlineOf("closes", `${capacity.per}Id`).replaceAll("tx.", "db.")}, cancelUntilAt: ${deadlineOf("cancelUntil", `${capacity.per}Id`).replaceAll("tx.", "db.")} };
   },
 
   /** The viewer's own ${n.label.toLowerCase()} for a ${capacity.per}, if they have one. */
@@ -2075,7 +2101,7 @@ ${
       ${
         capacity
           ? `// The count and the insert in one transaction: two people cannot both take the last place.
-      row = db.transaction((tx) => {${capacityCheck()}${occ ? `\n        checkTime(tx, { ${choiceDefaults}...values });` : ""}
+      row = db.transaction((tx) => {${capacityCheck()}${closedCheck}${occ ? `\n        checkTime(tx, { ${choiceDefaults}...values });` : ""}
         ${insertAudited}
       });`
           : occ
@@ -2118,7 +2144,7 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
         : "values"
     };
     try {
-      changed = db.transaction((tx) => {${capacity ? `\n      // A change that keeps its ${capacity.per} takes no new place: only a given one is counted.\n      if (values.${capacity.per}Id !== undefined) {${capacityCheck("id").replace(/\n {6}/g, "\n        ")}\n      }` : ""}${holdChecks.join("")}
+      changed = db.transaction((tx) => {${capacity ? `\n      // A change that keeps its ${capacity.per} takes no new place: only a given one is counted.\n      if (values.${capacity.per}Id !== undefined) {${capacityCheck("id").replace(/\n {6}/g, "\n        ")}${closedCheck.replace(/\n {6}/g, "\n        ")}\n      }` : ""}${holdChecks.join("")}
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);${updateRules}${
@@ -2157,7 +2183,17 @@ ${dropPictures(
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+          throw new AccessDenied(viewer !== null);${
+            capacity?.cancelUntil
+              ? `
+        // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records does.
+        if (!(viewer && ${n.access}.delete.roles.includes(viewer.role))) {
+          const perId = tx.select({ p: ${n.table}.${capacity.per}Id }).from(${n.table}).where(eq(${n.table}.id, id)).get()?.p;
+          const cancelUntilAt = perId == null ? undefined : ${deadlineOf("cancelUntil", "perId")};
+          if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+        }`
+              : ""
+          }
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
           audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
