@@ -24,6 +24,7 @@ import {
   type FieldIR,
   type FieldValue,
   type LandingSection,
+  type ModelIR,
   type OnboardingStep,
   type PageIR,
   type PatternKind,
@@ -33,9 +34,11 @@ import {
   type SpecIR,
   storesFiles,
   storesPictures,
+  USER_MODEL,
 } from "./ir.js";
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Note, Refusal } from "./operation.js";
+import { titleField } from "./samples.js";
 import type { JsonSchema } from "./section.js";
 import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
@@ -577,7 +580,7 @@ const calendar: PagePattern<"calendar"> = {
 };
 
 /** The fields an articles page names, and what each must be (docs/design/articles.md). */
-const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary"] as const;
+const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary", "author"] as const;
 
 /** A model's records as articles: a list newest first, and a page per article. */
 const articles: PagePattern<"articles"> = {
@@ -586,7 +589,8 @@ const articles: PagePattern<"articles"> = {
     oneOf: [
       {
         type: "string",
-        description: "A model with a title and a markdown body; its other parts are inferred.",
+        description:
+          "A model with a title and a markdown body; its other parts are read from the fields' types (docs/design/inference.md).",
       },
       {
         type: "object",
@@ -596,13 +600,29 @@ const articles: PagePattern<"articles"> = {
           model: { type: "string", description: "The model whose records are the articles." },
           title: { type: "string", description: "The article's title." },
           body: { type: "string", description: "A markdown field: the article itself." },
-          picture: { type: "string", description: "A picture field shown with the article." },
-          date: { type: "string", description: "A date or date-time field: when it appeared." },
+          picture: {
+            type: "string",
+            description: "A picture field shown with the article; none for no picture.",
+          },
+          date: {
+            type: "string",
+            description: "A date or date-time field: when it appeared; none for no date.",
+          },
           address: {
             type: "string",
-            description: "A unique string field: the article's address (/blog/<address>).",
+            description:
+              "A unique string field: the article's address (/blog/<address>); none for the number.",
           },
-          summary: { type: "string", description: "A short text shown in the list." },
+          summary: {
+            type: "string",
+            description:
+              "A string or text field shown in the list; none for the body's first paragraph.",
+          },
+          author: {
+            type: "string",
+            description:
+              "A field that refers to the user who wrote it, shown with the article; none for no author.",
+          },
         },
       },
     ],
@@ -787,7 +807,7 @@ const custom: PagePattern<"custom"> = {
 };
 
 /** The order page's keys besides from and into (docs/design/orders.md §2). */
-const ORDER_KEYS = ["from", "into", "ask", "hours", "lead"];
+const ORDER_KEYS = ["from", "into", "ask", "hours", "lead", "price", "quantity", "available"];
 
 /** A page where visitors compose an order from a model's records (docs/design/orders.md §3). */
 const order: PagePattern<"order"> = {
@@ -802,7 +822,21 @@ const order: PagePattern<"order"> = {
       from: {
         type: "string",
         description:
-          "The model people choose from (dishes): its price, picture, section and available.",
+          "The model people choose from (dishes): its one money field is the price, its one yes/no field says what is available.",
+      },
+      price: {
+        type: "string",
+        description: 'The money field of "from" that is the price, when it has several.',
+      },
+      quantity: {
+        type: "string",
+        description:
+          "The whole-number field of the lines' model that holds how many, when it has several; none for no quantity.",
+      },
+      available: {
+        type: "string",
+        description:
+          'The yes/no field of "from" that says a record can be ordered, when it has several; none for always.',
       },
       into: {
         type: "string",
@@ -1478,28 +1512,40 @@ function readArticles(
   const model = parsed.models?.find((m) => m.name === modelName);
   if (!model) return { kind: "articles", model: modelName, title: "", body: "" };
   const stored = model.fields.filter((f) => !f.formula);
-  const kindOf = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
-  // What each part may be, and how it is found when not named.
+  const kindOf = (f: FieldIR) =>
+    f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many
+      ? "user"
+      : f.type.kind === "scalar"
+        ? f.type.name
+        : f.type.kind;
+  // What each part may be (docs/design/inference.md: by the fields' types, never their names).
+  // Unnamed, a part is the one field of its kind not taken by another part; the title is the
+  // record's title field. Named, the field must be of the kind; "none" leaves an optional part out.
   const rules: Record<
     (typeof ARTICLE_KEYS)[number],
-    { kinds: string[]; named?: RegExp; unique?: boolean }
+    { kinds: string[]; infer?: string[]; words: string; unique?: boolean }
   > = {
-    title: { kinds: ["string"], named: /^(title|name|headline)$/i },
-    body: { kinds: ["markdown"] },
-    picture: { kinds: ["picture"] },
-    date: { kinds: DATES },
-    address: { kinds: ["string"], named: /^(address|slug)$/i, unique: true },
-    summary: { kinds: ["string", "text"], named: /^(summary|excerpt)$/i },
+    title: { kinds: ["string"], words: "string" },
+    body: { kinds: ["markdown"], words: "markdown" },
+    picture: { kinds: ["picture"], words: "picture" },
+    date: { kinds: DATES, words: "date or datetime" },
+    address: { kinds: ["string"], words: "unique string", unique: true },
+    summary: { kinds: ["string", "text"], infer: ["text"], words: "string or text" },
+    author: { kinds: ["user"], words: "User" },
   };
   const result: PatternOf<"articles"> = { kind: "articles", model: modelName, title: "", body: "" };
+  // A field named for one part is no candidate for another.
+  const taken = new Set(Object.values(given).map((g) => g.value));
   for (const key of ARTICLE_KEYS) {
     const rule = rules[key];
-    const fits = (f: FieldIR) =>
-      rule.kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
+    const fits = (f: FieldIR, kinds = rule.kinds) =>
+      kinds.includes(kindOf(f) ?? "") && (!rule.unique || Boolean(f.unique));
     const named = given[key];
     let found: string | undefined;
     if (named) {
       const f = model.fields.find((x) => x.name === named.value);
+      const also = ARTICLE_KEYS.find((k) => k !== key && given[k]?.value === named.value);
+      if (named.value === "none" && key !== "title" && key !== "body") continue;
       if (!f)
         ctx.error(
           named.at,
@@ -1510,25 +1556,37 @@ function readArticles(
             model.fields.map((x) => x.name),
           ),
         );
+      else if (also)
+        ctx.error(
+          named.at,
+          "invalid-value",
+          `"${named.value}" is both the ${also} and the ${key} of ${at}: a field is one part.`,
+        );
       else if (!fits(f))
         ctx.error(
           named.at,
           "invalid-value",
-          `"${named.value}" is the ${key} of ${at}: it must be ${rule.unique ? "a unique " : "a "}${rule.kinds.join(" or ")} field.`,
+          `"${named.value}" is the ${key} of ${at}: it must be a ${rule.words} field.`,
         );
       else found = f.name;
+    } else if (key === "title") {
+      const title = stored.find((f) => f.name === titleField(model));
+      found = title && fits(title) && !taken.has(title.name) ? title.name : undefined;
     } else {
-      const candidates = stored.filter((f) => fits(f) && (!rule.named || rule.named.test(f.name)));
-      if (candidates.length > 1 && !rule.named)
+      const candidates = stored.filter((f) => fits(f, rule.infer) && !taken.has(f.name));
+      if (candidates.length > 1)
         ctx.error(
           modelAt,
           "missing-key",
-          `${modelName} has several ${rule.kinds.join(" or ")} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
+          `${modelName} has several ${rule.infer ? rule.infer.join(" or ") : rule.words} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}, or "${key}: none".`,
           `Write "articles: { model: ${modelName}, ${key}: ${candidates[0]?.name} }".`,
         );
       else found = candidates[0]?.name;
     }
-    if (found) result[key] = found;
+    if (found) {
+      result[key] = found;
+      taken.add(found);
+    }
   }
   for (const key of ["title", "body"] as const)
     if (!result[key] && !given[key])
@@ -1537,10 +1595,10 @@ function readArticles(
         "missing-key",
         key === "body"
           ? `${modelName} has no markdown field for the body of ${at}.`
-          : `${modelName} has no string field named title, name or headline for ${at}.`,
+          : `${modelName} has no stored string field for the title of ${at} (its records are named by ${titleField(model)}).`,
         key === "body"
           ? `Add one, e.g. "body: markdown!", or name it with "body".`
-          : `Name it with "title".`,
+          : `Name a string field with "title" (or "namedBy" on ${modelName}).`,
       );
   return result;
 }
@@ -1734,20 +1792,59 @@ function readOrder(
     return undefined;
   };
   const names = (fields: FieldIR[]) => fields.map((f) => f.name).join(", ");
-
-  // Several money fields (a cost beside the price): the one named price is the price.
+  // A part the page names (price, quantity, available) must be of its kind; unnamed, it is the
+  // one field of the kind, and two are an error naming the key (docs/design/inference.md: by the
+  // fields' types, never their names).
+  const part = (
+    key: "price" | "quantity" | "available",
+    model: ModelIR,
+    at: At,
+    fits: (f: FieldIR) => boolean,
+    words: string,
+    required: boolean,
+  ): FieldIR | undefined => {
+    const entry = byKey.get(key);
+    if (entry) {
+      const name = readString(ctx, entry.value, `"${key}" in ${orderWhere}`);
+      if (name === undefined || (name === "none" && !required)) return undefined;
+      const f = model.fields.find((x) => x.name === name);
+      if (!f)
+        ctx.error(
+          entry.value,
+          "unknown-field",
+          `${model.name} has no field named "${name}".`,
+          didYouMean(
+            name,
+            model.fields.map((x) => x.name),
+          ),
+        );
+      else if (!fits(f))
+        ctx.error(
+          entry.value,
+          "invalid-value",
+          `"${name}" is the ${key} of ${orderWhere}: it must be a ${words} field of ${model.name}.`,
+        );
+      return f && fits(f) ? f : undefined;
+    }
+    const found = model.fields.filter(fits);
+    if (found.length > 1)
+      ctx.error(
+        at,
+        "missing-key",
+        `${model.name} has several ${words} fields (${names(found)}): name the ${key} of ${orderWhere}${required ? "" : `, or "${key}: none"`}.`,
+        `Write "${key}: ${found[0]?.name}" under the order page.`,
+      );
+    else if (!found.length && required)
+      ctx.error(
+        at,
+        "invalid-value",
+        `${model.name} has no ${words} field: the order page needs its ${key}.`,
+      );
+    return found.length === 1 ? found[0] : undefined;
+  };
   const money = moneyFields(fromModel.fields);
-  const prices =
-    money.length > 1 && money.some((f) => f.name === "price")
-      ? money.filter((f) => f.name === "price")
-      : money;
-  if (prices.length !== 1)
-    return refuse(
-      from.at,
-      prices.length
-        ? `${from.name} has several money fields (${names(prices)}): the order page needs one price.`
-        : `${from.name} has no money field: the order page needs its price.`,
-    );
+  const price = part("price", fromModel, from.at, (f) => money.includes(f), "money", true);
+  if (!price) return undefined;
   const lists = intoModel.fields.filter((f) => f.type.kind === "relation" && f.type.many);
   const lines = lists[0];
   if (lists.length !== 1 || !lines || lines.type.kind !== "relation")
@@ -1783,14 +1880,17 @@ function readOrder(
       `${into.name} needs a number counting up for the order page, the one customers say.`,
       'For example "number: { type: int!, sequence: true }".',
     );
-  const ints = lineModel.fields.filter(
+  const quantity = part(
+    "quantity",
+    lineModel,
+    into.at,
     (f) => !f.formula && f.type.kind === "scalar" && f.type.name === "int",
+    "whole number",
+    false,
   );
-  const quantity = ints.find((f) => f.name === "quantity") ?? ints[0];
 
   // What the customer is asked: the order's own values, never what the app or the page fills.
-  const askable = (f: FieldIR) =>
-    !f.formula && !f.byApp && f.type.kind === "scalar" && f.name !== "status";
+  const askable = (f: FieldIR) => !f.formula && !f.byApp && f.type.kind === "scalar";
   const ask: string[] = [];
   const askEntry = byKey.get("ask");
   if (askEntry)
@@ -1864,8 +1964,13 @@ function readOrder(
   if (lead !== undefined && (!Number.isInteger(lead) || lead < 0))
     ctx.error(leadEntry?.value ?? node, "invalid-value", `"lead" is a whole number of minutes.`);
 
-  const available = fromModel.fields.find(
-    (f) => f.name === "available" && f.type.kind === "scalar" && f.type.name === "bool",
+  const available = part(
+    "available",
+    fromModel,
+    from.at,
+    (f) => f.type.kind === "scalar" && f.type.name === "bool",
+    "yes/no",
+    false,
   );
   return {
     kind: "order",
@@ -1874,7 +1979,7 @@ function readOrder(
     ask,
     ...(hours ? { hours } : {}),
     ...(lead !== undefined ? { lead } : {}),
-    price: (prices[0] as FieldIR).name,
+    price: price.name,
     ...(available ? { available: available.name } : {}),
     lines: lines.name,
     line: lineName,

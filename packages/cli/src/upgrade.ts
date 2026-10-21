@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
-import { migrateSpec, writeActionGrants, writeUniqueScopes } from "@smithable/core";
+import { migrateSpec, writeActionGrants, writeNamedBy, writeUniqueScopes } from "@smithable/core";
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
@@ -35,6 +35,11 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
   // Where each unique value is unique, written out once (docs/design/uniqueness.md), so a later
   // change of roles never moves an index.
   const loaded = loadSpec(dir, io);
+  // A title the old rule read from a field's name (docs/design/inference.md): said outright.
+  const titles = loaded.ir
+    ? writeNamedBy(readFileSync(specPath, "utf8"), loaded.ir)
+    : { text: "", written: [] as string[] };
+  if (titles.written.length) writeFileSync(specPath, titles.text);
   const scopes =
     loaded.ir && loaded.auth
       ? writeUniqueScopes(readFileSync(specPath, "utf8"), loaded.ir, loaded.auth)
@@ -80,7 +85,7 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     "commit",
     "-q",
     "-m",
-    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, unique: scopes.written, grants: grants.written })}\n`,
+    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, titles: titles.written, unique: scopes.written, grants: grants.written })}\n`,
   ]);
   io.out(
     `Upgraded from stack profile ${from} to ${STACK_PROFILE.id}; the type check and tests pass. Undo with: smithable undo\n`,

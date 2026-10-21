@@ -77,6 +77,30 @@ test("what the order page lacks is said in words", () => {
   expect(errors(without("      unitPrice: money!\n", "")).join()).toContain(
     "OrderLine needs one money field for the price when ordered",
   );
+  // A part found twice is named by its key, or left out with none; nothing goes by a field's name.
+  expect(
+    errors(without("      price: money!\n", "      price: money!\n      cost: money\n")).join(),
+  ).toContain("Dish has several money fields (price, cost): name the price of the order page");
+  const named = without(
+    "      price: money!\n",
+    "      cost: money\n      price: money!\n",
+  ).replace("      into: Order\n", "      into: Order\n      price: cost\n");
+  expect(errors(named)).toEqual([]);
+  expect(read(named).ir?.pages[0]?.pattern).toMatchObject({ price: "cost" });
+  const twoBools = without(
+    "      available: bool = true\n",
+    "      available: bool = true\n      vegan: bool\n",
+  );
+  expect(errors(twoBools).join()).toContain(
+    'Dish has several yes/no fields (available, vegan): name the available of the order page of page "menu", or "available: none"',
+  );
+  const noneBool = twoBools.replace(
+    "      into: Order\n",
+    "      into: Order\n      available: none\n",
+  );
+  expect(errors(noneBool)).toEqual([]);
+  expect(read(noneBool).ir?.pages[0]?.pattern).not.toHaveProperty("available");
+  // A choice (a status staff set) is not a value the customer gives.
   expect(
     errors(without("      ask: [name, phone, wanted, note]", "      ask: [name, status]")).join(),
   ).toContain('The customer cannot be asked for "status"');

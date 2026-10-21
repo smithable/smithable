@@ -35,20 +35,24 @@ export type SampleRecordValue = string | number | boolean | null | SamplePicture
 export type SamplesIR = Record<string, Record<string, SampleRecordValue>[]>;
 
 /**
- * The field that names a record: the first short text called like a name or title, else the
- * first short text; a model with none (a message: its words, who sent it) is named by its first
- * long text, which the app cuts to its first line (the kit's titleOf); else by its number.
+ * The field that names a record: the one the model's `namedBy` says; else, by the fields' types
+ * and order (docs/design/inference.md), its first short text, else its first long text (a
+ * message: its words), which the app cuts to its first line (the kit's titleOf); else its number.
+ * Never a field's name: what a field is called says nothing to the engine.
  */
 export function titleField(model: ModelIR): string {
+  if (model.namedBy) return model.namedBy;
+  return titleFieldByRule(model);
+}
+
+/** The title rule alone, what `titleField` settles when the spec says nothing. */
+export function titleFieldByRule(model: ModelIR): string {
   const kind = (f: { type: ModelIR["fields"][number]["type"] }, ...names: string[]) =>
     f.type.kind === "scalar" && names.includes(f.type.name);
-  const strings = model.fields.filter((f) => kind(f, "string"));
+  const stored = model.fields.filter((f) => !f.formula);
   return (
-    (
-      strings.find((f) => /name|title/i.test(f.name)) ??
-      strings[0] ??
-      model.fields.find((f) => kind(f, "text", "markdown"))
-    )?.name ?? "id"
+    (stored.find((f) => kind(f, "string")) ?? stored.find((f) => kind(f, "text", "markdown")))
+      ?.name ?? "id"
   );
 }
 

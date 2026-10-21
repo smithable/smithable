@@ -496,6 +496,10 @@
             "type": "boolean",
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
           },
+          "namedBy": {
+            "type": "string",
+            "description": "The field that names a record, shown as its title wherever one record is shown or referred to: a stored string, text or markdown field. Left out, the first short text field is the title, else the first long text, else the record's number."
+          },
           "thread": {
             "type": "object",
             "additionalProperties": false,
@@ -1488,7 +1492,7 @@
             "oneOf": [
               {
                 "type": "string",
-                "description": "A model with a title and a markdown body; its other parts are inferred."
+                "description": "A model with a title and a markdown body; its other parts are read from the fields' types (docs/design/inference.md)."
               },
               {
                 "type": "object",
@@ -1511,19 +1515,23 @@
                   },
                   "picture": {
                     "type": "string",
-                    "description": "A picture field shown with the article."
+                    "description": "A picture field shown with the article; none for no picture."
                   },
                   "date": {
                     "type": "string",
-                    "description": "A date or date-time field: when it appeared."
+                    "description": "A date or date-time field: when it appeared; none for no date."
                   },
                   "address": {
                     "type": "string",
-                    "description": "A unique string field: the article's address (/blog/<address>)."
+                    "description": "A unique string field: the article's address (/blog/<address>); none for the number."
                   },
                   "summary": {
                     "type": "string",
-                    "description": "A short text shown in the list."
+                    "description": "A string or text field shown in the list; none for the body's first paragraph."
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "A field that refers to the user who wrote it, shown with the article; none for no author."
                   }
                 }
               }
@@ -1552,7 +1560,19 @@
             "properties": {
               "from": {
                 "type": "string",
-                "description": "The model people choose from (dishes): its price, picture, section and available."
+                "description": "The model people choose from (dishes): its one money field is the price, its one yes/no field says what is available."
+              },
+              "price": {
+                "type": "string",
+                "description": "The money field of \"from\" that is the price, when it has several."
+              },
+              "quantity": {
+                "type": "string",
+                "description": "The whole-number field of the lines' model that holds how many, when it has several; none for no quantity."
+              },
+              "available": {
+                "type": "string",
+                "description": "The yes/no field of \"from\" that says a record can be ordered, when it has several; none for always."
               },
               "into": {
                 "type": "string",
