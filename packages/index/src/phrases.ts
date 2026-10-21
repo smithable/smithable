@@ -505,6 +505,7 @@ function clockOf(text: string): number | undefined {
 }
 
 const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const clockText = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -514,7 +515,11 @@ function daysOf(text: string): string[] | undefined {
     return WEEK.slice(0, 5);
   if (/^(?:every day|all week|all days|daily)$/.test(text)) return WEEK;
   if (/^(?:weekends|the weekend)$/.test(text)) return WEEK.slice(5);
-  const one = WEEK.findIndex((d) => new RegExp(`^${d}[a-z]*?s?$`).test(text));
+  // A day by its short or full name, once or plural ("mon", "monday", "mondays"); not "monthly".
+  const one = WEEK.findIndex(
+    (d, i) =>
+      text === d || text === `${d}s` || text === DAY_NAMES[i] || text === `${DAY_NAMES[i]}s`,
+  );
   return one >= 0 ? [WEEK[one] as string] : undefined;
 }
 
@@ -571,7 +576,8 @@ const RULES: Rule[] = [
               ? { breaks: kept.breaks.map(([a, b]) => `${clockText(a)}-${clockText(b)}`) }
               : {}),
             ...(kept?.gap ? { gap: kept.gap } : {}),
-            ...(kept?.away ? { away: kept.away.model } : {}),
+            // The time away as the IR has it, so a long form (its own resource or dates) stays.
+            ...(kept?.away ? { away: kept.away } : {}),
           },
         },
       ];

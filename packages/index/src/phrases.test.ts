@@ -555,10 +555,30 @@ models:
     expect(
       refusalOf(read(BARBERS), "barbers have opening hours 17 to 9 on weekdays"),
     ).toBeDefined();
-    // A day the rules do not know is a model's to read.
+    // A day the rules do not know is a model's to read; a day is its name, not a word starting so.
     expect(
       matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on fortnights"),
     ).toBeUndefined();
+    expect(matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on mondays")?.rule).toBe(
+      "schedule hours",
+    );
+    expect(
+      matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on monthly"),
+    ).toBeUndefined();
+    // Time away written in full (its own pair of times) stays as written, not the model alone.
+    const away = `${BARBERS.replace(
+      "    fields: { name: string! }\n",
+      "    fields: { name: string! }\n    schedule:\n      hours: { mon-fri: 09:00-17:00 }\n      away: { model: TimeOff, from: startsAt, until: endsAt }\n",
+    )}  TimeOff:
+    fields: { barber: Barber!, notedAt: datetime!, startsAt: datetime!, endsAt: datetime! }
+`;
+    const kept = read(
+      apply(
+        away,
+        matchRequest(read(away), "barbers are open 10-14 on saturdays")?.operations ?? [],
+      ),
+    ).models[1]?.schedule?.away;
+    expect(kept).toMatchObject({ model: "TimeOff", from: "startsAt", until: "endsAt" });
   });
 
   test("an appointment takes its barber's time, its start and length found by shape", () => {
