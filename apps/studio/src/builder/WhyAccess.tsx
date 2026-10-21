@@ -10,6 +10,7 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { useState } from "react";
+import { SHOW_CODE } from "../code-jump";
 
 /** What the question may be about: a page, a kind of record or an action, with what it takes. */
 interface Subject {
@@ -71,16 +72,11 @@ export function subjectsOf(ir: SpecIR): Subject[] {
   ];
 }
 
-export function WhyAccess({
-  ir,
-  auth,
-  onOpen,
-}: {
-  ir: SpecIR;
-  auth: AuthIR;
-  /** Shows a reason's setting: its file, at the path. */
-  onOpen?: (file: string, path: string) => void;
-}) {
+/** Shows a reason's setting in Code: its file, at the path (App puts Code on screen). */
+const showInCode = (file: string, path: string) =>
+  window.dispatchEvent(new CustomEvent(SHOW_CODE, { detail: { file, path } }));
+
+export function WhyAccess({ ir, auth }: { ir: SpecIR; auth: AuthIR }) {
   const subjects = subjectsOf(ir);
   const [as, setAs] = useState(auth.roles.find((r) => r.name !== "admin")?.name ?? "");
   const [subjectKey, setSubjectKey] = useState(subjects[0]?.key ?? "");
@@ -174,19 +170,14 @@ export function WhyAccess({
               {answer.reasons.map((r) => (
                 <li key={`${r.at.file}:${r.at.path}:${r.text}`}>
                   {r.text}{" "}
-                  {onOpen ? (
-                    <button
-                      type="button"
-                      className="text-xs text-accent underline-offset-2 hover:underline"
-                      onClick={() => onOpen(r.at.file, r.at.path)}
-                    >
-                      {r.at.file}: {r.at.path}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-muted">
-                      {r.at.file}: {r.at.path}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    className="text-xs text-accent underline-offset-2 hover:underline"
+                    title="Show it in Code"
+                    onClick={() => showInCode(r.at.file, r.at.path)}
+                  >
+                    {r.at.file}: {r.at.path}
+                  </button>
                 </li>
               ))}
             </ol>

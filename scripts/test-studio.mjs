@@ -557,6 +557,29 @@ try {
     await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 * P });
     await sub("Behavior");
   });
+  await step(
+    "Who can's Why?: the answer from the rules, and a reason's setting shown in Code",
+    async () => {
+      await sub("Who can");
+      const why = page.getByRole("region", { name: "Why?" });
+      await why.getByLabel("Who").selectOption("sales");
+      await why.getByLabel("What").selectOption("model:Customer");
+      await why.getByLabel("Do what").selectOption("create");
+      // Sales may add orders only (the step before): adding a customer is no, and says why.
+      await why.locator('[data-verdict="denied"]').waitFor({ timeout: 10000 * P });
+      await why
+        .getByRole("button", { name: /^smithable\.auth\.yml: roles\.sales/ })
+        .first()
+        .click();
+      const file = page.getByRole("region", { name: "Code" }).getByLabel("File", { exact: true });
+      await file.waitFor({ timeout: 30000 * P });
+      for (let i = 0; i < 40 && (await file.inputValue()) !== "smithable.auth.yml"; i++)
+        await new Promise((r) => setTimeout(r, 250));
+      if ((await file.inputValue()) !== "smithable.auth.yml")
+        throw new Error(`Code shows ${await file.inputValue()}, not the auth file`);
+      await sub("Behavior");
+    },
+  );
 
   await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",
