@@ -18,7 +18,7 @@ pages:
 const read = (text: string) => validateSpec({ path: "smithable.yml", text });
 const messages = (text: string) => read(text).diagnostics.map((d) => d.message);
 
-test("the short form infers every part by type and name; the long form names them", () => {
+test("the short form reads every part from the fields' types, never their names; the long form names them", () => {
   expect(read(spec("Post")).ir?.pages[1]?.pattern).toEqual({
     kind: "articles",
     model: "Post",
@@ -37,6 +37,40 @@ test("the short form infers every part by type and name; the long form names the
       ),
     ).ir?.pages[1]?.pattern,
   ).toEqual({ kind: "articles", model: "Post", title: "headline", body: "text" });
+  // Whatever the fields are called: the title field, the one unique string, the one text, the one User.
+  expect(
+    read(
+      spec(
+        "Post",
+        "heading: string!, key: string unique, blurb: text, writer: User, text: markdown!",
+      ),
+    ).ir?.pages[1]?.pattern,
+  ).toEqual({
+    kind: "articles",
+    model: "Post",
+    title: "heading",
+    body: "text",
+    address: "key",
+    summary: "blurb",
+    author: "writer",
+  });
+  // A short string beside the title is not a summary; the title field settled by namedBy is the title.
+  const named = read(`smithable: 0.1
+app: { name: Studio }
+models:
+  Post:
+    fields: { category: string!, title: string!, body: markdown! }
+    namedBy: title
+pages:
+  blog: { articles: Post }
+`);
+  expect(named.diagnostics).toEqual([]);
+  expect(named.ir?.pages[0]?.pattern).toEqual({
+    kind: "articles",
+    model: "Post",
+    title: "title",
+    body: "body",
+  });
 });
 
 test("what cannot be inferred, is found twice or is the wrong kind is an error that says how to settle it", () => {
@@ -48,6 +82,20 @@ test("what cannot be inferred, is found twice or is the wrong kind is an error t
   ).toContain("Post has several markdown fields (body, more): name the body");
   expect(messages(spec("{ model: Post, body: title }")).join()).toContain(
     '"title" is the body of the articles of page "blog": it must be a markdown field.',
+  );
+  expect(
+    messages(spec("Post", "title: string!, body: markdown!, writer: User, editor: User")).join(),
+  ).toContain("Post has several User fields (writer, editor): name the author");
+  expect(
+    messages(
+      spec("Post", "title: string!, body: markdown!, key: string unique, other: string unique"),
+    ).join(),
+  ).toContain("Post has several unique string fields (key, other): name the address");
+  expect(messages(spec("Post", "words: text!, body: markdown!")).join()).toContain(
+    'Post\'s title (words) is no string field, so the articles of page "blog" has no title.',
+  );
+  expect(messages(spec("{ model: Post, author: title }")).join()).toContain(
+    '"title" is the author of the articles of page "blog": it must be a User field.',
   );
 });
 

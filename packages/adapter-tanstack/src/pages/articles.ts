@@ -3,7 +3,7 @@
 // function, so visitors see only what its public read (and its `where`) lets them: a draft is
 // not found. A public articles page has the site's frame (the landing pages'), with head tags
 // for links shared elsewhere; a signed-in one the app's shell.
-import { kebab, type PageIR, type PatternOf, pageModel, USER_MODEL } from "@smithable/core";
+import { kebab, type PageIR, type PatternOf, pageModel } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
 import {
   attr,
@@ -39,9 +39,7 @@ function shared(page: ArticlesPage, ctx: GenContext) {
   const p = page.pattern;
   const model = modelNamed(ir, p.model);
   const n = names(model, t);
-  const author = model.fields.find(
-    (f) => f.name === "author" && f.type.kind === "relation" && f.type.model === USER_MODEL,
-  );
+  const author = p.author ? model.fields.find((f) => f.name === p.author) : undefined;
   const dateField = p.date ? model.fields.find((f) => f.name === p.date) : undefined;
   const dated = dateField?.type.kind === "scalar" && dateField.type.name === "date";
   const imports = importList()

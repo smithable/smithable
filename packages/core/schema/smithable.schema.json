@@ -1492,7 +1492,7 @@
             "oneOf": [
               {
                 "type": "string",
-                "description": "A model with a title and a markdown body; its other parts are inferred."
+                "description": "A model with a title and a markdown body; its other parts are read from the fields' types (docs/design/inference.md)."
               },
               {
                 "type": "object",
@@ -1527,7 +1527,11 @@
                   },
                   "summary": {
                     "type": "string",
-                    "description": "A short text shown in the list."
+                    "description": "A text field shown in the list."
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "A field that refers to the user who wrote it, shown with the article."
                   }
                 }
               }

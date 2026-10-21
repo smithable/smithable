@@ -33,9 +33,11 @@ import {
   type SpecIR,
   storesFiles,
   storesPictures,
+  USER_MODEL,
 } from "./ir.js";
 import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Note, Refusal } from "./operation.js";
+import { titleField } from "./samples.js";
 import type { JsonSchema } from "./section.js";
 import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
@@ -577,7 +579,7 @@ const calendar: PagePattern<"calendar"> = {
 };
 
 /** The fields an articles page names, and what each must be (docs/design/articles.md). */
-const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary"] as const;
+const ARTICLE_KEYS = ["title", "body", "picture", "date", "address", "summary", "author"] as const;
 
 /** A model's records as articles: a list newest first, and a page per article. */
 const articles: PagePattern<"articles"> = {
@@ -586,7 +588,8 @@ const articles: PagePattern<"articles"> = {
     oneOf: [
       {
         type: "string",
-        description: "A model with a title and a markdown body; its other parts are inferred.",
+        description:
+          "A model with a title and a markdown body; its other parts are read from the fields' types (docs/design/inference.md).",
       },
       {
         type: "object",
@@ -602,7 +605,11 @@ const articles: PagePattern<"articles"> = {
             type: "string",
             description: "A unique string field: the article's address (/blog/<address>).",
           },
-          summary: { type: "string", description: "A short text shown in the list." },
+          summary: { type: "string", description: "A text field shown in the list." },
+          author: {
+            type: "string",
+            description: "A field that refers to the user who wrote it, shown with the article.",
+          },
         },
       },
     ],
@@ -1478,20 +1485,29 @@ function readArticles(
   const model = parsed.models?.find((m) => m.name === modelName);
   if (!model) return { kind: "articles", model: modelName, title: "", body: "" };
   const stored = model.fields.filter((f) => !f.formula);
-  const kindOf = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
-  // What each part may be, and how it is found when not named.
+  const kindOf = (f: FieldIR) =>
+    f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many
+      ? "user"
+      : f.type.kind === "scalar"
+        ? f.type.name
+        : f.type.kind;
+  // What each part may be (docs/design/inference.md: by the fields' types, never their names).
+  // Unnamed, a part is the one field of its kind not taken by an earlier part; the title is the
+  // record's title field. Named, the field must be of the kind.
   const rules: Record<
     (typeof ARTICLE_KEYS)[number],
-    { kinds: string[]; named?: RegExp; unique?: boolean }
+    { kinds: string[]; words: string; unique?: boolean }
   > = {
-    title: { kinds: ["string"], named: /^(title|name|headline)$/i },
-    body: { kinds: ["markdown"] },
-    picture: { kinds: ["picture"] },
-    date: { kinds: DATES },
-    address: { kinds: ["string"], named: /^(address|slug)$/i, unique: true },
-    summary: { kinds: ["string", "text"], named: /^(summary|excerpt)$/i },
+    title: { kinds: ["string"], words: "string" },
+    body: { kinds: ["markdown"], words: "markdown" },
+    picture: { kinds: ["picture"], words: "picture" },
+    date: { kinds: DATES, words: "date or datetime" },
+    address: { kinds: ["string"], words: "unique string", unique: true },
+    summary: { kinds: ["text"], words: "text" },
+    author: { kinds: ["user"], words: "User" },
   };
   const result: PatternOf<"articles"> = { kind: "articles", model: modelName, title: "", body: "" };
+  const taken = new Set<string>();
   for (const key of ARTICLE_KEYS) {
     const rule = rules[key];
     const fits = (f: FieldIR) =>
@@ -1514,21 +1530,27 @@ function readArticles(
         ctx.error(
           named.at,
           "invalid-value",
-          `"${named.value}" is the ${key} of ${at}: it must be ${rule.unique ? "a unique " : "a "}${rule.kinds.join(" or ")} field.`,
+          `"${named.value}" is the ${key} of ${at}: it must be a ${rule.words} field.`,
         );
       else found = f.name;
+    } else if (key === "title") {
+      const title = stored.find((f) => f.name === titleField(model));
+      found = title && fits(title) ? title.name : undefined;
     } else {
-      const candidates = stored.filter((f) => fits(f) && (!rule.named || rule.named.test(f.name)));
-      if (candidates.length > 1 && !rule.named)
+      const candidates = stored.filter((f) => fits(f) && !taken.has(f.name));
+      if (candidates.length > 1)
         ctx.error(
           modelAt,
           "missing-key",
-          `${modelName} has several ${rule.kinds.join(" or ")} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
+          `${modelName} has several ${rule.words} fields (${candidates.map((f) => f.name).join(", ")}): name the ${key} of ${at}.`,
           `Write "articles: { model: ${modelName}, ${key}: ${candidates[0]?.name} }".`,
         );
       else found = candidates[0]?.name;
     }
-    if (found) result[key] = found;
+    if (found) {
+      result[key] = found;
+      taken.add(found);
+    }
   }
   for (const key of ["title", "body"] as const)
     if (!result[key] && !given[key])
@@ -1537,10 +1559,10 @@ function readArticles(
         "missing-key",
         key === "body"
           ? `${modelName} has no markdown field for the body of ${at}.`
-          : `${modelName} has no string field named title, name or headline for ${at}.`,
+          : `${modelName}'s title (${titleField(model)}) is no string field, so ${at} has no title.`,
         key === "body"
           ? `Add one, e.g. "body: markdown!", or name it with "body".`
-          : `Name it with "title".`,
+          : `Name a string field with "title" (or "namedBy" on ${modelName}).`,
       );
   return result;
 }

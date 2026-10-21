@@ -285,6 +285,8 @@ export interface PageIR extends SemanticText {
         date?: string;
         address?: string;
         summary?: string;
+        /** The field that refers to the user who wrote it, shown with the article. */
+        author?: string;
       };
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
