@@ -21,7 +21,7 @@ cd my-crm
 smithable studio          # the app and its editor in the browser
 ```
 
-`--starter <name>` picks another of the [nine starters](starters.md).
+`--starter <name>` picks another of the [ten starters](starters.md).
 
 `smithable studio` opens the editor beside a preview of the app. It has two modes, switched at the top: **No code**, where you change the app in plain words and forms, and **Code**, with the spec files, every operation as a form, the generated code's last change and the logs. Every change in either is an operation, so Undo (Ctrl+Z) takes it back. The first time you open an app, a short tour shows you around the places of No code (and of Code, if you choose it); Guide in the header shows the places of the mode you are in.
 

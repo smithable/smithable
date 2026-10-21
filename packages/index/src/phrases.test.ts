@@ -507,3 +507,84 @@ pages:
   }
   expect(files.spec).toContain("review: [photo]");
 });
+
+describe("one person's time (appointments.md §2)", () => {
+  const BARBERS = `smithable: 0.1
+app: { name: Barbers, timezone: Europe/Mariehamn }
+models:
+  Service:
+    fields: { name: string!, minutes: int! }
+  Barber:
+    fields: { name: string! }
+  Appointment:
+    fields: { service: Service!, barber: Barber!, startsAt: datetime!, name: string! }
+`;
+  const read = (text: string) =>
+    validateSpec({ path: "smithable.yml", text }).ir as NonNullable<
+      ReturnType<typeof validateSpec>["ir"]
+    >;
+  const apply = (text: string, ops: PhraseOperation[]) => {
+    let files = { spec: text };
+    for (const o of ops) {
+      const done = applyOperation(files, o.op, o.args);
+      if (!done.ok) throw new Error(done.message);
+      files = { ...files, ...done.files };
+    }
+    return files.spec;
+  };
+
+  test("barbers have opening hours, day by day, keeping the rest of the schedule", () => {
+    const first = matchRequest(read(BARBERS), "Barbers have opening hours 9 to 17 on weekdays.");
+    expect(first?.rule).toBe("schedule hours");
+    const once = apply(BARBERS, first?.operations ?? []);
+    expect(read(once).models[1]?.schedule?.hours).toMatchObject({
+      mon: [[540, 1020]],
+      fri: [[540, 1020]],
+    });
+    // A second day keeps the first, and the breaks and the gap written since.
+    const withBreak = once.replace(
+      "        mon-fri: 09:00-17:00\n",
+      "        mon-fri: 09:00-17:00\n      breaks: 12:00-12:30\n      gap: 10\n",
+    );
+    const second = matchRequest(read(withBreak), "the barbers are open 10-14 on saturdays");
+    const twice = read(apply(withBreak, second?.operations ?? [])).models[1]?.schedule;
+    expect(twice?.hours.mon).toEqual([[540, 1020]]);
+    expect(twice?.hours.sat).toEqual([[600, 840]]);
+    expect(twice?.breaks).toEqual([[720, 750]]);
+    expect(twice?.gap).toBe(10);
+    expect(
+      refusalOf(read(BARBERS), "barbers have opening hours 17 to 9 on weekdays"),
+    ).toBeDefined();
+    // A day the rules do not know is a model's to read.
+    expect(
+      matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on fortnights"),
+    ).toBeUndefined();
+  });
+
+  test("an appointment takes its barber's time, its start and length found by shape", () => {
+    const scheduled = apply(
+      BARBERS,
+      matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on weekdays")?.operations ??
+        [],
+    );
+    const found = matchRequest(read(scheduled), "An appointment takes its barber's time");
+    expect(found?.operations).toEqual([
+      {
+        op: "setOccupies",
+        args: {
+          model: "Appointment",
+          resource: "barber",
+          starts: "startsAt",
+          duration: "service.minutes",
+        },
+      },
+    ]);
+    expect(read(apply(scheduled, found?.operations ?? [])).models[2]?.occupies?.duration).toBe(
+      "service.minutes",
+    );
+    // Without a schedule there is no time to take; with two lengths to choose from, a model reads it.
+    expect(matchRequest(read(BARBERS), "an appointment takes its barber's time")).toBeUndefined();
+    const two = scheduled.replace("startsAt: datetime!,", "startsAt: datetime!, extra: int,");
+    expect(matchRequest(read(two), "an appointment takes its barber's time")).toBeUndefined();
+  });
+});

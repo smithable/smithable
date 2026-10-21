@@ -1,0 +1,4 @@
+- { name: Haircut, summary: A cut and a wash., minutes: 30, price: 32 }
+- { name: Beard trim, summary: Shaped and trimmed with a hot towel., minutes: 20, price: 22 }
+- { name: Haircut and beard, summary: "Both, in one sitting.", minutes: 50, price: 48 }
+- { name: Children's haircut, summary: For children under 12., minutes: 20, price: 20 }

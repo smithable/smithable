@@ -107,6 +107,21 @@ smithable new my-truck --starter kiosk
 
 See it live: coming soon.
 
+## Barbershop
+
+*Customers book a barber's time; the shop sees its day, a column per barber.*
+
+![A customer choosing a free time with the barbers starter, Harbour Cuts](starters/barbers-1.webp)
+![The shop's day: each barber's appointments in a column](starters/barbers-2.webp)
+
+For a barber, a hairdresser, a physiotherapist or anyone whose time is booked by the appointment. A customer signs in with a code by mail, chooses a service and a barber (or anyone), then a day and one of the free times: inside the shop's hours, outside the lunch break and a barber's time off, with ten minutes kept free after each appointment. Two customers taking the same time at once cannot both get it. The shop confirms each request, and the customer is mailed when it is made and when it is confirmed; they can cancel online until 12 hours before. The shop's day shows each barber's appointments side by side, and the week and the month are a click away.
+
+```sh
+smithable new my-shop --starter barbers
+```
+
+See it live: coming soon.
+
 ## A collection
 
 *A catalogue of things with pictures, public to browse: books, plants, wine.*

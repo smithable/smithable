@@ -115,6 +115,14 @@ const PAGES = [
     group: "Connect",
   },
   {
+    src: "docs/site/appointments.md",
+    out: "appointments.html",
+    description:
+      "Book a person's time: a barber's hours, breaks and days off, appointments that never overlap, the free times customers choose from and the shop's day, on the barbers starter.",
+    nav: "A person's time",
+    group: "Build",
+  },
+  {
     src: "docs/site/language.md",
     out: "language.html",
     description:

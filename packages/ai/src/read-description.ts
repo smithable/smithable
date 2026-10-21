@@ -12,7 +12,8 @@ export type Kind =
   | "records"
   | "api"
   | "support"
-  | "kiosk";
+  | "kiosk"
+  | "barbers";
 
 export interface Question {
   about: "kind" | "audience" | "visitors" | "languages";
@@ -100,6 +101,13 @@ cue("support", 1, "request");
 cue("kiosk", 3, "takeaway take-away food-truck truck pre-order preorder hatch");
 cue("kiosk", 2, "dish dishes pick-up pickup");
 cue("kiosk", 1, "menu");
+cue(
+  "barbers",
+  3,
+  "barber barbers barbershop hairdresser hairdressers salon appointment appointments",
+);
+cue("barbers", 2, "haircut haircuts physiotherapist therapist clinic massage");
+cue("barbers", 1, "slot slots");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business

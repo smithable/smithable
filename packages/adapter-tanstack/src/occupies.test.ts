@@ -84,7 +84,7 @@ test("the picker's free times, and the owner's Cancel inside its window", () => 
   );
   const data = file("src/generated/appointment.server.ts") ?? "";
   expect(data).toContain("const closes = row.startsAt.getTime() - 720 * 60_000;");
-  expect(data).toContain('{ status: "cancelled" } as unknown as AppointmentValues, "cancelled"');
+  expect(data).toContain('{ status: "cancelled" }, "cancelled"');
   // "Anyone": every barber the viewer may read, in their order.
   expect(data).toContain(
     "db.select({ id: schema.barbers.id }).from(schema.barbers).where(barberData.readable(viewer)).orderBy(asc(schema.barbers.id))",
