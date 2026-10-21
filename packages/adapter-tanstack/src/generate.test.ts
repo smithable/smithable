@@ -181,6 +181,9 @@ test("a required owner gets a user in the access tests, also for a visitor", () 
   const files = generateApp(spec, { ...options, auth: authOf(crmAuth) });
   const test = files.find((f) => f.path === "src/generated/access.test.ts")?.content ?? "";
   expect(test).toContain("lenderId: owner ?? stranger.id");
+  // The form may leave it out (for whoever cannot choose someone else): the server fills it.
+  const schema = files.find((f) => f.path === "src/generated/tool.schema.ts")?.content ?? "";
+  expect(schema).toContain("lenderId: (s) => s.optional(),");
 });
 
 test("whose record it is is chosen only by a role that may change everyone's", () => {

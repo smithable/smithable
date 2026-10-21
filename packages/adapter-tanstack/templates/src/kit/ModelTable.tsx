@@ -203,15 +203,16 @@ export function ModelTable<R extends Row>({
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
   // Every column hidden (a related list whose only field is the record it is on): the record's
   // own title, so each row can still be told apart and opened.
+  const fallback = (hide as string[]).includes(ui.titleField) ? "id" : ui.titleField;
   const columns: RecordFieldUi<R>[] = visible.length
     ? visible
     : [
-        ui.fields.find((f) => f.name === ui.titleField) ?? {
-          name: ui.titleField,
+        ui.fields.find((f) => f.name === fallback) ?? {
+          name: fallback,
           label: ui.label,
-          kind: ui.titleField === "id" ? "int" : "string",
+          kind: fallback === "id" ? "int" : "string",
           required: true,
-          get: (row) => (row as Record<string, unknown>)[ui.titleField],
+          get: (row) => (row as Record<string, unknown>)[fallback],
         },
       ];
   if (rows.length === 0) {

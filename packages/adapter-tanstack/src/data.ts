@@ -103,10 +103,17 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   const n = names(model, t);
   // Records visitors add, without an account (e.g. a contact form's messages).
   const visitors = modelAccess(model, auth).create.public;
-  const refinements = storedFields(model).flatMap((f) => {
-    const r = refinement(f, visitors, kebab(model.name));
-    return r ? [`  ${f.name}: ${r},`] : [];
-  });
+  const refinements = [
+    ...storedFields(model).flatMap((f) => {
+      const r = refinement(f, visitors, kebab(model.name));
+      return r ? [`  ${f.name}: ${r},`] : [];
+    }),
+    // A required owner (ownedBy) may be left out: the server makes it the viewer's own (ownerFor),
+    // and a form leaves the field out for whoever cannot choose someone else.
+    ...model.fields
+      .filter((f) => f.name === model.ownedBy && f.required && f.type.kind === "relation")
+      .map((f) => `  ${dataKey(f)}: (s) => s.optional(),`),
+  ];
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
