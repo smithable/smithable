@@ -360,32 +360,42 @@ if (typeof window !== "undefined" && window.parent !== window) {
     }
   };
   const crashed = document.querySelectorAll("[data-kit=error]").length > 0;
-  const tries = crashed ? (crashes()[location.pathname] || 0) + 1 : 0;
-  if (crashed) {
+  const kept = crashes();
+  const counted = Object.hasOwn(kept, location.pathname) && Number.isInteger(kept[location.pathname]) ? kept[location.pathname] : 0;
+  const tries = crashed ? counted + 1 : 0;
+  // A good load, and the fourth crash (shown), forget the address, so a later crash is tried again.
+  const remember = (count) => {
     try {
-      sessionStorage.setItem(CRASHES, JSON.stringify({ ...crashes(), [location.pathname]: tries }));
+      const rest = Object.fromEntries(Object.entries(kept).filter(([path]) => path !== location.pathname));
+      sessionStorage.setItem(CRASHES, JSON.stringify(count ? { ...rest, [location.pathname]: count } : rest));
     } catch {}
-    post({ type: "errored", tries });
-  } else if (crashes()[location.pathname]) {
-    try {
-      const { [location.pathname]: _, ...rest } = crashes();
-      sessionStorage.setItem(CRASHES, JSON.stringify(rest));
-    } catch {}
-  }
+  };
+  if (crashed) post({ type: "errored", tries });
   if (crashed && tries <= 3) {
+    remember(tries);
+    // Loaded again once the server renders this page cleanly: its own address, with the
+    // page's cookies, answered without the error page's mark (a not-found page counts as clean).
     let asking = false;
     const retry = setInterval(() => {
       if (asking) return;
       asking = true;
-      const answers = window.fetch ? window.fetch("/health").then((r) => r.ok, () => false) : Promise.resolve(true);
-      answers.then((ok) => {
+      const clean = window.fetch
+        ? window.fetch(location.href, { cache: "no-store" }).then(
+            (r) => (r.status < 500 ? r.text().then((t) => !/data-kit="error"/.test(t)) : false),
+            () => false,
+          )
+        : Promise.resolve(true);
+      clean.then((ok) => {
         asking = false;
         if (!ok) return;
         clearInterval(retry);
         location.reload();
       });
     }, 1500);
-  } else post({ type: "ready" });
+  } else {
+    if (counted) remember(0);
+    post({ type: "ready" });
+  }
 }
 `;
 

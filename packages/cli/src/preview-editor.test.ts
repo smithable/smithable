@@ -34,8 +34,8 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   const reloads: number[] = [];
   const window = {
     parent,
-    // The app's server answers; a crashed page asks it before loading itself again.
-    fetch: () => Promise.resolve({ ok: true }),
+    // The app's server renders the page cleanly; a crashed page asks before loading itself again.
+    fetch: () => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve("<html>") }),
     innerHeight: 800,
     scrollTo: (_x: number, y: number) => scrolled.push(y),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
@@ -129,16 +129,26 @@ test("a page that crashed while the app updated is loaded again, three times, th
     await settle();
     expect(crashed.reloads).toHaveLength(1);
   }
-  // The fourth time the error is shown as it is.
+  // The fourth time the error is shown as it is, and the address is forgotten: a later crash
+  // there is tried again.
   const shown = page("/customers/new", storage, true);
   expect(shown.posted.map((m) => m.type)).toEqual(["errored", "ready"]);
   shown.tick();
   await settle();
   expect(shown.reloads).toHaveLength(0);
-  // A good load forgets the address's crashes; another address is counted on its own.
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({});
+  // A good load forgets an address's crashes too.
+  page("/customers/new", storage, true);
   const good = page("/customers/new", storage);
   expect(good.posted.map((m) => m.type)).toEqual(["ready"]);
   expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({});
+  // An address named like something every object has is counted like any other.
+  const odd = page("/toString", storage, true);
+  expect(odd.posted.map((m) => m.type)).toEqual(["errored"]);
+  odd.tick();
+  await settle();
+  expect(odd.reloads).toHaveLength(1);
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({ "/toString": 1 });
 });
 
 test("the preview signs in whenever it shows the sign-in page, until the owner signs out", () => {

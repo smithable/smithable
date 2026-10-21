@@ -458,18 +458,20 @@ export async function studio(
    * The watcher being quiet is not the server being whole: under load, TanStack Start writes
    * the route tree and rebuilds its modules for seconds after, and a page loaded then met a
    * loader or a server function mid-rebuild (the sign-in page without its data, crashed).
-   * So the preview reloads only once the server renders a page cleanly: the sign-in page,
-   * public and small, asked for until it answers without the error page's mark, up to twenty
-   * seconds. The first answer also warms the page the preview loads next.
+   * So the preview reloads only once the server renders a page cleanly: the app's front
+   * page (which sends a visitor to the sign-in page where there is one), asked for until it
+   * answers without a server error and without the error page's mark (a not-found page is a
+   * clean answer), up to twenty seconds. The first answer also warms the server's modules.
    */
   const renders = async () => {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
-      const clean = await fetch(`http://127.0.0.1:${previewPort}/sign-in`, {
+      const clean = await fetch(`http://127.0.0.1:${previewPort}/`, {
         headers: previewHeaders,
         signal: AbortSignal.timeout(5000),
       }).then(
-        async (answer) => answer.ok && !(await answer.text()).includes('data-kit="error"'),
+        async (answer) =>
+          answer.status < 500 && !(await answer.text()).includes('data-kit="error"'),
         () => false,
       );
       if (clean) return;
