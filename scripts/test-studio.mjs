@@ -565,6 +565,14 @@ try {
       await why.getByLabel("Who", { exact: true }).selectOption("sales");
       await why.getByLabel("What", { exact: true }).selectOption("model:Customer");
       await why.getByLabel("Do what", { exact: true }).selectOption("create");
+      // Where each window is, to put them back after Code is shown for a reason.
+      const arrange = async () => {
+        await page.getByRole("button", { name: "Which window goes where" }).click();
+        return page.getByRole("dialog", { name: "Which window goes where" });
+      };
+      let dialog = await arrange();
+      const before = await dialog.locator("select").evaluateAll((s) => s.map((x) => x.value));
+      await dialog.getByRole("button", { name: "Done" }).click();
       // Sales may add orders only (the step before): adding a customer is no, and says why.
       await why.locator('[data-verdict="denied"]').waitFor({ timeout: 10000 * P });
       await why
@@ -577,6 +585,12 @@ try {
         await new Promise((r) => setTimeout(r, 250));
       if ((await file.inputValue()) !== "smithable.auth.yml")
         throw new Error(`Code shows ${await file.inputValue()}, not the auth file`);
+      dialog = await arrange();
+      const selects = dialog.locator("select");
+      for (let i = 0; i < before.length; i++)
+        if ((await selects.nth(i).inputValue()) !== before[i])
+          await selects.nth(i).selectOption(before[i]);
+      await dialog.getByRole("button", { name: "Done" }).click();
       await sub("Behavior");
     },
   );

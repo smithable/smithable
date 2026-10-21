@@ -219,7 +219,7 @@ export function App() {
       setArrangement({ ...arrangement, slots: [window, ...arrangement.slots.slice(1)] as never });
   };
   // A setting another window names (Who can's Why?): the Code window on screen, beside No code
-  // where there is room, and the setting shown there.
+  // and not over the preview where there is room, and the setting shown there.
   const [codeJump, setCodeJump] = useState<CodeJump>();
   useEffect(() => {
     const onShow = (e: Event) => {
@@ -227,10 +227,11 @@ export function App() {
       setCodeJump({ file, path, at: Date.now() });
       if (narrow) showWindow("code");
       else if (slotOf("code") === undefined) {
-        const free = Math.max(
-          0,
-          arrangement.slots.findIndex((s) => s !== "nocode"),
-        );
+        // Beside No code among the slots on screen, keeping the preview where another is free.
+        const free =
+          shown.find((i) => slots[i] !== "nocode" && slots[i] !== "preview") ??
+          shown.find((i) => slots[i] !== "nocode") ??
+          0;
         setArrangement({
           ...arrangement,
           slots: arrangement.slots.map((s, i) =>
