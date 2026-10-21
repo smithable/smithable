@@ -29,6 +29,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="actions"",
     "data-part=save])]:flex-1"",
   ],
+  "src/kit/AppearancePicker.tsx": [
+    "data-part="appearance"",
+  ],
   "src/kit/Articles.tsx": [
     "data-kit="articles"",
     "data-part="row"",

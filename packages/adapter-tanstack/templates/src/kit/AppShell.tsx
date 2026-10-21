@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
+import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
@@ -197,6 +198,7 @@ function Navigation({
         })}
       </nav>
       <ConsentSettings className="mx-3 px-3 pb-2 text-left text-xs underline-offset-4 hover:underline" />
+      <AppearancePicker className="mx-3 px-3 pb-2 text-xs" />
       {onSignOut && (
         <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
           {viewer ? (

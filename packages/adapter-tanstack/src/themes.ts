@@ -73,9 +73,9 @@ const HOVER = {
   light: `  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);`,
-  dark: `    --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
-    --primary-hover: color-mix(in oklch, var(--primary), white 30%);
-    --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);`,
+  dark: `  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --primary-hover: color-mix(in oklch, var(--primary), white 30%);
+  --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);`,
 };
 
 function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
@@ -172,7 +172,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
       .map(([k, v]) => `${indent}--${k}: ${v};`)
       .join("\n");
   /** One theme's variables under a selector: :root for the app, a page's own under its hook. */
-  const scope = (selector: string, from: UxIR) => {
+  const scope = (selector: string, dark: string, from: UxIR) => {
     const theme = themeOf(from, themes);
     const font = themeFont(from, themes);
     const density = DENSITY[from.theme.density];
@@ -195,18 +195,20 @@ ${block(tokens(from, theme, "light"), "  ")}
 ${block(styleVariables(theme, font), "  ")}
 ${HOVER.light}
 }`,
-      dark: `  ${selector} {
-${block(tokens(from, theme, "dark"), "    ")}
+      dark: `${dark} {
+${block(tokens(from, theme, "dark"), "  ")}
 ${HOVER.dark}
-  }`,
+}`,
       comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}, motion ${from.theme.motion}`,
     };
   };
-  const app = scope(":root", ux);
+  // Dark as the visitor's appearance resolves on <html> (src/kit/appearance.ts): the device's
+  // setting, or the one chosen.
+  const app = scope(":root", ':root[data-appearance="dark"]', ux);
   // A landing page's own theme: the same variables on its body (data-page), so only it changes.
   const pages = themedPages(ux).map((id) => ({
     id,
-    ...scope(`[data-page="${id}"]`, pageUx(ux, id)),
+    ...scope(`[data-page="${id}"]`, `[data-appearance="dark"] [data-page="${id}"]`, pageUx(ux, id)),
   }));
   return `${HEADER}${themeFonts(ux, themes)
     .map((font) => `@import "${FONT_PACKAGES[font]}";`)
@@ -233,9 +235,7 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
   }
 }
 
-@media (prefers-color-scheme: dark) {
 ${[app.dark, ...pages.map((p) => p.dark)].join("\n")}
-}
 ${
   ux.aiBadge
     ? ""

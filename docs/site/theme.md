@@ -1,6 +1,6 @@
 # Make a theme
 
-A theme is how an app looks: its colors in light and dark mode, its fonts, how headings, cards, buttons, pictures and tables are drawn, its corners, shadows, spacing and motion. It is a small file of values, never CSS, so any theme works on any app and switching back is always safe.
+A theme is how an app looks: its colors in light and dark mode, its fonts, how headings, cards, buttons, pictures and tables are drawn, its corners, shadows, spacing and motion. It is a small file of values, never CSS, so any theme works on any app and switching back is always safe. Which of the two modes a person sees is theirs to choose: **Appearance** in the app's menu, and in a public page's footer, offers System (the device's setting, the default), Light and Dark, kept in their browser.
 
 This page makes a theme of its own for the booking starter, first as a file and then in the theme lab. Every command below was run for real on a new booking app, and the answers are shown as they came back.
 

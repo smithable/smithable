@@ -75,9 +75,12 @@ test("a landing page's own theme is a second scope in theme.css, and its font is
   );
   expect(css).toContain("/* The home page's own theme: playful");
   expect(css).toContain('[data-page="home"] {');
+  // Dark as the visitor's appearance resolves on <html> (src/kit/appearance.ts): the app's, then
+  // the page's own.
   expect(css).toMatch(
-    /@media \(prefers-color-scheme: dark\) \{\n {2}:root \{[^}]*\}\n {2}\[data-page="home"\] \{/,
+    /:root\[data-appearance="dark"\] \{[^}]*\}\n\[data-appearance="dark"\] \[data-page="home"\] \{/,
   );
+  expect(css).not.toContain("prefers-color-scheme");
   const pkg = JSON.parse(files.find((f) => f.path === "package.json")?.content ?? "{}");
   expect(Object.keys(pkg.dependencies)).toEqual(
     expect.arrayContaining([

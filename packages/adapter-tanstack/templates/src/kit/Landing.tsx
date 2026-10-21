@@ -21,6 +21,7 @@ import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
+import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
@@ -230,6 +231,7 @@ function LandingLayoutView({
               </p>
               <LegalLinks links={site?.legal} />
               <ConsentSettings className="hover:underline" />
+              <AppearancePicker />
             </div>
           </div>
         ) : (
@@ -238,6 +240,7 @@ function LandingLayoutView({
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
             <LegalLinks links={site?.legal} />
             <ConsentSettings className="text-left hover:underline" />
+            <AppearancePicker />
           </div>
         )}
       </footer>

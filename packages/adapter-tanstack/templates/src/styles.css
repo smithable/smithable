@@ -6,7 +6,9 @@
    rules win over the kit's without !important, wherever they are imported. */
 @import "./custom/styles.css";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/* Dark as the visitor's appearance says (System, Light, Dark; src/kit/appearance.ts), resolved on
+   <html data-appearance> before the first paint. */
+@custom-variant dark (&:where([data-appearance="dark"], [data-appearance="dark"] *));
 
 @theme inline {
   --font-sans: var(--font-body);
