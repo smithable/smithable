@@ -49,11 +49,10 @@ export function titleField(model: ModelIR): string {
 export function titleFieldByRule(model: ModelIR): string {
   const kind = (f: { type: ModelIR["fields"][number]["type"] }, ...names: string[]) =>
     f.type.kind === "scalar" && names.includes(f.type.name);
+  const stored = model.fields.filter((f) => !f.formula);
   return (
-    (
-      model.fields.find((f) => kind(f, "string")) ??
-      model.fields.find((f) => kind(f, "text", "markdown"))
-    )?.name ?? "id"
+    (stored.find((f) => kind(f, "string")) ?? stored.find((f) => kind(f, "text", "markdown")))
+      ?.name ?? "id"
   );
 }
 

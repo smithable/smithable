@@ -272,7 +272,7 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(
-      `${model.name}: the title is ${titleField(model)} (${model.namedBy ? "as written" : "by rule: the first short text, else the first long text"})`,
+      `${model.name}: the title is ${titleField(model)} (${model.namedBy ? "as written" : "by rule: the first short text, else the first long text, else the number"})`,
     );
     const uniques = [
       ...model.fields

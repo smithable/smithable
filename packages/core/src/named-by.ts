@@ -9,7 +9,11 @@ import { titleFieldByRule } from "./samples.js";
  */
 function titleFieldByName(model: ModelIR): string | undefined {
   return model.fields.find(
-    (f) => f.type.kind === "scalar" && f.type.name === "string" && /name|title/i.test(f.name),
+    (f) =>
+      f.type.kind === "scalar" &&
+      f.type.name === "string" &&
+      !f.formula &&
+      /name|title/i.test(f.name),
   )?.name;
 }
 

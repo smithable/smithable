@@ -8,7 +8,7 @@ The engine fills what a spec leaves out, so a first app needs few words. Three t
 
 1. **It is read from the spec's shape only**: the fields' types, their order, their rules, the roles' grants. Never from what a field or a role is called. A field named `title` is a short text like any other; one named `price` is a money field like any other.
 2. **It has an explicit key.** Whatever the rule settles, the spec can say outright, and the explicit word wins. The key is one a person would write without knowing the rule exists.
-3. **It is shown.** `smithable validate --explain` says what each rule settled and whether it was written or read; the plain-language summary says it where it is not obvious.
+3. **It is shown.** `smithable validate --explain` says what each rule settled and whether it was written or read; the plain-language summary says what was written.
 
 A default is **written out** by `smithable upgrade` where a later change of the spec would move data or access: an index, a counter, a scope, a grant. Where the default only shows something (a title, a column), it stays a rule, and the upgrade writes it only when a rule's change would pick another field than before, so an app keeps what it had.
 
@@ -16,7 +16,7 @@ A default is **written out** by `smithable upgrade` where a later change of the 
 
 | What | Explicit key | By rule (shape only) | Shown by | Frozen by upgrade |
 |---|---|---|---|---|
-| A record's title | `Model.namedBy: field` (`setNamedBy`) | the first short text field, else the first long text, else the number | `--explain`, the summary ("A customer is known by its company") | where the rule before 2026-10-21 (a short text called like a name or title) picked another field |
+| A record's title | `Model.namedBy: field` (`setNamedBy`) | the first stored short text field, else the first stored long text, else the number | `--explain`; the summary when written ("A customer is known by its company") | where the rule before 2026-10-21 (a short text called like a name or title) picked another field |
 | Where a value is unique | `unique: owner \| app`; `unique: [{ fields, scope }]` (`setFieldRules --unique`, `setUnique`) | `true`: per owner when the model's records are read by their owners only, else in the whole app | `--explain` | always (an index moves) |
 | Who runs a standard action | a role's `actions` grant (`grant <role> actions <name>`) | the roles that write the model, and the record's owner | `--explain` ("run by …") | `actions: all` becomes the list where `all` would widen |
 | What a conversation reads | `Model.thread: { body, author, side }` (`setThread`) | the first long text; the first field that refers to a person, else the first email; the first two-valued choice | `--explain`, the summary, the `thread-ambiguous` warning | no (presentation) |

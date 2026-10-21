@@ -296,6 +296,14 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
           `${m}.${f} is unique together with ${rule.fields.filter((x) => x !== f).join(" and ")}, so it cannot become ${why}; remove that rule first (setUnique --remove).`,
         );
     }
+    // The field that names the model's records (namedBy) stays a text.
+    if (ir.models.find((x) => x.name === m)?.namedBy === f && parsed.ok) {
+      const t = parsed.value.type;
+      if (!(t.kind === "scalar" && ["string", "text", "markdown"].includes(t.name)))
+        throw new OperationError(
+          `${m}.${f} names a ${m.toLowerCase()} (namedBy), so it stays a string, text or markdown field; name another field first (setNamedBy).`,
+        );
+    }
     const choices =
       parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
     // A choice value that goes: what the records holding it get instead.

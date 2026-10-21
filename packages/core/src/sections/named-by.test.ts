@@ -116,3 +116,29 @@ test("the upgrade writes namedBy where the old name rule picked another field th
   const explicit = spec(customer("    namedBy: company\n")).ir;
   expect(writeNamedBy("x", explicit as NonNullable<typeof explicit>).written).toEqual([]);
 });
+
+test("a computed text is never the title by rule, nor written by the upgrade; the named field keeps a text type", () => {
+  const computed = spec(`  Customer:
+    fields:
+      title: { type: string, formula: company }
+      company: string!
+`);
+  expect(computed.diagnostics).toEqual([]);
+  const model = computed.ir?.models[0] as NonNullable<typeof computed.ir>["models"][0];
+  expect(titleField(model)).toBe("company");
+  expect(writeNamedBy("x", computed.ir as NonNullable<typeof computed.ir>).written).toEqual([]);
+  const set = applyOperation(files, "setNamedBy", { model: "Customer", field: "name" });
+  if (!set.ok) throw new Error(set.message);
+  const retyped = applyOperation(set.files, "changeField", {
+    model: "Customer",
+    field: "name",
+    type: "int",
+  });
+  expect(retyped.ok ? "" : retyped.message).toContain("names a customer (namedBy)");
+  const longer = applyOperation(set.files, "changeField", {
+    model: "Customer",
+    field: "name",
+    type: "text!",
+  });
+  expect(longer.ok).toBe(true);
+});
