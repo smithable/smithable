@@ -50,7 +50,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
       {/* Desktop: a sidebar. */}
       <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
         <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
-          <AppName {...shell} />
+          <AppName {...shell} wrap />
         </p>
         <Navigation {...shell} />
       </aside>
@@ -69,7 +69,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
             <Menu aria-hidden className="size-6" />
           </button>
         )}
-        <p className="min-w-0 truncate text-lg font-bold">
+        <p className="min-w-0 truncate text-lg font-bold" title={shell.appName}>
           <AppName {...shell} />
         </p>
       </header>
@@ -80,8 +80,8 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col rounded-r-xl bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
         <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
-          <p className="min-w-0 truncate text-lg font-bold">
-            <AppName {...shell} onNavigate={() => drawer.current?.close()} />
+          <p className="min-w-0 text-lg font-bold [overflow-wrap:anywhere]">
+            <AppName {...shell} wrap onNavigate={() => drawer.current?.close()} />
           </p>
           <button
             type="button"
@@ -107,22 +107,28 @@ function AppName({
   menus,
   viewer,
   onNavigate,
-}: ShellProps & { onNavigate?: () => void }) {
+  wrap,
+}: ShellProps & { onNavigate?: () => void; wrap?: boolean }) {
   const start =
     home && allows(home.access, viewer)
       ? home.to
       : menus.flatMap((m) => m.items).find((item) => allows(item.access, viewer))?.to;
   const name = logo ? (
-    <span className="inline-flex max-w-full items-center gap-2 align-middle">
+    <span
+      className={`inline-flex max-w-full gap-2 align-middle ${wrap ? "items-start" : "items-center"}`}
+    >
       <img
         src={logo}
         alt=""
         data-part="logo"
         width={24}
         height={24}
-        className="size-6 shrink-0 rounded-[4px] object-contain"
+        className={`size-6 shrink-0 rounded-[4px] object-contain ${wrap ? "mt-1.5" : ""}`}
       />
-      <span className="min-w-0 truncate">{appName}</span>
+      {/* In the sidebar a long name wraps; on a phone's one line it is cut, and named in full on hover. */}
+      <span className={wrap ? "min-w-0" : "min-w-0 truncate"} title={wrap ? undefined : appName}>
+        {appName}
+      </span>
     </span>
   ) : (
     appName

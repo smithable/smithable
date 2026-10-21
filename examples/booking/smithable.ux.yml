@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: playful
+  preset: ink-and-brass
 
 pages:
   home:
