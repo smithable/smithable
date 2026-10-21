@@ -129,6 +129,12 @@ their size were too small to judge a look by, and light beside dark says little.
 The controls, the file and Save are as before. The old all-at-once sheet stays as the
 `theme-sheet.mjs` picture for Johan's look, not as the lab's view.
 
+**As built (A 132 step 1, 2026-10-21):** the page tabs are the lab's frames (Landing, List, Form,
+Record: Dialog and Shell come with the starter switch); the mode is sent to the frame, so switching
+it does not reload the page; the dragged width runs from 320 to 1920 px; the frame is as tall as
+the stage under the bar, so a page is seen as a visitor's window shows it. The starter switch is
+step 2.
+
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
 (body and heading with a specimen line each), headings, surfaces, buttons, pictures, tables,

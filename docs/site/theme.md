@@ -90,7 +90,7 @@ Making the lab's app (a booking app with every control)…
 The theme lab is at http://localhost:4330 (the app at http://localhost:4331). A theme saved goes to the project …, through addTheme. Ctrl+C stops it.
 ```
 
-The lab opens in the browser beside a real app: a booking app with a field for every kind of control. On the left are the theme's fields, grouped as the file is. In the middle, the app's landing page, a list, its form and a record are each shown in light and in dark. At the bottom is the theme file itself as text. A change to a control or to the text shows on every page at once, with no regeneration in between.
+The lab opens in the browser beside a real app: a booking app with a field for every kind of control. On the left are the theme's fields, grouped as the file is. In the middle, one of the app's pages is shown at full size: the landing page, a list, its form or a record, each chosen by its tab, in light or in dark. The width buttons (phone 390, tablet 820, laptop 1280, desktop 1600) set the frame's width, and its edge drags to any width in between. The frame is scaled down only when the window is narrower than the width. **Phone beside** shows the phone's width next to it. At the bottom is the theme file itself as text. A change to a control or to the text shows in the frame at once, with no regeneration in between.
 
 - **Start from** any of the built-in themes or the project's own, then rename it.
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.
