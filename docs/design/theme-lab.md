@@ -185,7 +185,9 @@ field shows itself, and it is added before the lab ships.
 4. **The lab, local mode:** `apps/theme-lab`, `smithable theme lab`, the frames, the controls,
    the file view, the fit lines, Save through `addTheme`. (A.)
 5. **The lab, public mode:** the static export script and the docs site page. (C, then B for
-   the link from the site.)
+   the link from the site.) Since 2026-10-21 the saving is `smithable static`'s (`savePages` in
+   packages/cli/src/static.ts): any app's pages saved in the layout the lab frames, so the
+   several-starter lab above can take a folder made by the command.
 6. **Docs:** the spec reference's theme section, a "Make a theme" page on the docs site.
    (C.)
 

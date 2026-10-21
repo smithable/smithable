@@ -111,6 +111,18 @@ export const COMMANDS: Command[] = [
       "List the themes the ux file may name: the built-in ones and the project's themes/*.yml",
     ],
   },
+  {
+    name: "static",
+    usage: "static [dir]",
+    text: [
+      "Save the app's pages as static files, for a look at them with nothing running: each page",
+      "without its scripts, the kit's CSS, its pictures and fonts, and an index page that shows",
+      "them in light and dark at common widths; signed in --as a role (admin; visitor for the",
+      "public pages); --states adds a list with nothing found, a form with its errors and a delete",
+      "dialog; --out names the folder (data/static). Needs Playwright, as the app's smoke test does.",
+    ],
+    options: ["out", "as", "states"],
+  },
   { name: "build", usage: "build [dir]", text: ["Build the app's container image with Docker"] },
   {
     name: "security",
