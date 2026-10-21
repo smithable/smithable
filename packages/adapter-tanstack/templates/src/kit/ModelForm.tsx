@@ -1,7 +1,8 @@
 // Smithable app kit: a create/edit form for any model, validated with the model's Zod schema.
 // To customize a form, copy this file into src/custom/components/ and edit the copy.
+import { useBlocker } from "@tanstack/react-router";
 import { Calculator, CircleAlert } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -77,6 +78,17 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // The errors a failed save found, listed over the form until the next save.
+  const [summary, setSummary] = useState<string[]>([]);
+  // Edits not saved yet: leaving the page asks first. Not once a save or a delete is under way.
+  const [start, setStart] = useState(inputs);
+  const leaving = useRef(false);
+  const dirty = !readOnly && Object.keys(inputs).some((k) => inputs[k] !== start[k]);
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty && !leaving.current,
+    enableBeforeUnload: () => dirty && !leaving.current,
+    withResolver: true,
+  });
   // Computed fields follow what has been entered so far.
   // The record comes first so values that are not inputs (like related lines) are included.
   const computed = ui.compute?.({ ...initial, ...storedValues(ui, inputs, app.timeZone) }) ?? {};
@@ -127,7 +139,20 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     event.preventDefault();
     const { result, messages, ok } = problems(storedValues(ui, inputs, app.timeZone));
     setErrors(messages);
-    if (ok && result.success) await run(() => onSubmit(result.data));
+    const wrong = ui.fields.filter((f) => messages[f.name]).map((f) => f.name);
+    setSummary(wrong);
+    if (ok && result.success) {
+      leaving.current = true;
+      const saved = await run(() => onSubmit(result.data));
+      // A form that stays after its save (a dialog's, a page that does not move on) guards again,
+      // from what was saved.
+      leaving.current = false;
+      if (saved) setStart(inputs);
+      return;
+    }
+    // The first field to fix gets the focus; the summary over the form is read out.
+    const first = wrong[0];
+    if (first) document.getElementById(`${formId}field-${first}`)?.focus();
   }
 
   /**
@@ -156,19 +181,28 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       setErrors(({ [field.name]: _, ...rest }) => rest);
   }
 
-  async function run(action: () => Promise<unknown>) {
+  /** Runs a save or a delete; whether it went through. What was entered stays when it fails. */
+  async function run(action: () => Promise<unknown>): Promise<boolean> {
     setBusy(true);
     setFailure(undefined);
     try {
       await action();
+      return true;
     } catch (error) {
       const facts = inUseFacts(error);
       if (facts) setInUse(facts);
       else setFailure(failureMessage(ui, error, app.timeZone));
+      return false;
     } finally {
       setBusy(false);
     }
   }
+  /** A delete leaves the page when it goes through: the edits on the form go with the record. */
+  const remove = async (together?: boolean) => {
+    if (!onDelete) return;
+    leaving.current = true;
+    if (!(await run(() => onDelete(together)))) leaving.current = false;
+  };
 
   // A long text, a picture or a list takes the full width when the form has two columns.
   const wide = (field: FieldUi) =>
@@ -324,9 +358,45 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           const box = (event.target as Element).closest("[data-field]");
           const to = event.relatedTarget as HTMLElement | null;
           const field = ui.fields.find((f) => f.name === box?.getAttribute("data-field"));
-          if (field && !box?.contains(to) && !to?.closest("[data-part=actions]")) check(field);
+          if (
+            field &&
+            !box?.contains(to) &&
+            !to?.closest("[data-part=actions], [data-part=delete]")
+          )
+            check(field);
         }}
       >
+        {summary.some((name) => errors[name]) && (
+          <div
+            role="alert"
+            data-part="error-summary"
+            className="space-y-2 rounded-md border border-destructive p-3 text-sm text-destructive"
+          >
+            <p className="flex items-center gap-2 font-semibold">
+              <CircleAlert aria-hidden className="size-4 shrink-0" />
+              {w.fieldsToFix(summary.filter((name) => errors[name]).length)}
+            </p>
+            <ul className="list-disc space-y-1 pl-8">
+              {ui.fields
+                .filter((f) => summary.includes(f.name) && errors[f.name])
+                .map((f) => (
+                  <li key={f.name}>
+                    <a
+                      href={`#${formId}field-${f.name}`}
+                      className="underline"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        document.getElementById(`${formId}field-${f.name}`)?.focus();
+                      }}
+                    >
+                      {f.label}
+                    </a>
+                    : {errors[f.name]}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
         {!readOnly && ui.fields.some((f) => (f.required || f.requiredWhen) && !f.computed) && (
           <p className="text-sm text-muted-foreground">
             {w.fieldsMarked} <span className="text-destructive">*</span> {w.areRequired}
@@ -355,7 +425,12 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             {failure}
           </p>
         )}
-        <div data-part="actions" className="flex flex-wrap items-center gap-3 border-t pt-6">
+        {/* Save stays in reach on a long form: the row sticks to the bottom of the window. */}
+        <div
+          data-part="actions"
+          // With Delete under it, the row ends where the delete block starts; without, at the card's foot.
+          className={`sticky bottom-0 z-10 -mx-card flex flex-wrap items-center gap-3 border-t bg-card px-card py-4${onDelete ? "" : " -mb-card rounded-b-lg"}`}
+        >
           {!readOnly && (
             <Button type="submit" disabled={busy}>
               {busy ? w.saving : submitLabel}
@@ -366,17 +441,28 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               {cancelLabel ?? (readOnly ? "Back" : "Cancel")}
             </Button>
           )}
-          {onDelete && (
+        </div>
+        {/* Deleting is apart from saving, under the form, never beside Save. */}
+        {onDelete && (
+          <div
+            data-part="delete"
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-destructive/30 pt-6"
+          >
+            <p className="text-sm text-muted-foreground">
+              {trash ? w.trashKeepsIt : w.cannotBeUndone}
+            </p>
             <Button
               type="button"
               variant="outline"
-              className="ml-auto border-destructive text-destructive"
+              className="border-destructive text-destructive"
               disabled={busy}
-              onClick={() => (trash ? run(() => onDelete()) : confirmDelete.current?.showModal())}
+              onClick={() => (trash ? remove() : confirmDelete.current?.showModal())}
             >
               {trash ? w.moveToTrash : w.delete}
             </Button>
-          )}
+          </div>
+        )}
+        <>
           {onDelete && inUse && (
             <TogetherDialog
               facts={inUse}
@@ -389,7 +475,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               busy={busy}
               onTogether={() => {
                 setInUse(undefined);
-                run(() => onDelete(true));
+                remove(true);
               }}
               onClose={() => setInUse(undefined)}
             />
@@ -422,7 +508,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   variant="destructive"
                   onClick={() => {
                     confirmDelete.current?.close();
-                    run(() => onDelete());
+                    remove();
                   }}
                 >
                   {w.deleteIt(ui.label.toLowerCase())}
@@ -430,9 +516,49 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               </div>
             </dialog>
           )}
-        </div>
+          {blocker.status === "blocked" && (
+            <LeaveDialog onStay={() => blocker.reset?.()} onLeave={() => blocker.proceed?.()} />
+          )}
+        </>
       </form>
     </Card>
+  );
+}
+
+/** Leaving a form with edits not saved: stay (the default, Escape) or leave without them. */
+function LeaveDialog({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const title = useId();
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={title}
+      onCancel={(event) => {
+        event.preventDefault();
+        onStay();
+      }}
+      // Escape answers this dialog only, not a dialog the form is in.
+      onKeyDown={(event) => {
+        if (event.key === "Escape") event.stopPropagation();
+      }}
+      className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+    >
+      <h2 id={title} className="text-lg font-semibold">
+        {w.leaveWithoutSaving}
+      </h2>
+      <p className="mt-2 text-muted-foreground">{w.editsWillBeLost}</p>
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onStay}>
+          {w.keepEditing}
+        </Button>
+        <Button type="button" variant="destructive" onClick={onLeave}>
+          {w.leaveWithout}
+        </Button>
+      </div>
+    </dialog>
   );
 }
 
