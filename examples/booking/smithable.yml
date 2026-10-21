@@ -40,6 +40,8 @@ models:
     description: A member's place in a session.
     fields:
       session: Session!  unique         # private access: one booking per member and session
+      attendee: User                    # whose place it is: staff book for a member, a member for themselves
+    ownedBy: attendee                   # left empty, the one who books; only staff may choose someone else
     capacity:                           # a session never has more bookings than its capacity
       per: session
       max: session.capacity

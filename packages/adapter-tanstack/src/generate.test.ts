@@ -181,6 +181,28 @@ test("a required owner gets a user in the access tests, also for a visitor", () 
   const files = generateApp(spec, { ...options, auth: authOf(crmAuth) });
   const test = files.find((f) => f.path === "src/generated/access.test.ts")?.content ?? "";
   expect(test).toContain("lenderId: owner ?? stranger.id");
+  // The form may leave it out (for whoever cannot choose someone else): the server fills it.
+  const schema = files.find((f) => f.path === "src/generated/tool.schema.ts")?.content ?? "";
+  expect(schema).toContain("lenderId: (s) => s.optional(),");
+});
+
+test("whose record it is is chosen only by a role that may change everyone's", () => {
+  const spec = ir(
+    "smithable.yml",
+    "smithable: 0.1\napp: { name: Tools }\nmodels:\n  Tool:\n    fields: { name: string!, lender: User, keeper: User }\n    ownedBy: lender\npages:\n  tools: { crud: Tool }\n",
+  );
+  const crmAuth = Object.entries(authFiles).find(([path]) => path.includes("/crm/"))?.[1] ?? "";
+  const files = generateApp(spec, { ...options, auth: authOf(crmAuth) });
+  const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+  // The people to choose from, or null for a viewer who can only make their own: the form then
+  // leaves the field out (the server makes them the owner whatever is sent).
+  expect(file("src/generated/tool.ts")).toContain(
+    "return viewer && toolAccess.write.roles.includes(viewer.role) ? userOptions() : null;",
+  );
+  // The owner's choices come from it; another User field still lists everyone signed in.
+  expect(file("src/routes/tools/new.tsx")).toContain(
+    "keeperId: await userOptions(), lenderId: await toolOwnerOptions()",
+  );
 });
 
 describe("custom pages", () => {

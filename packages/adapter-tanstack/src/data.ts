@@ -103,10 +103,17 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   const n = names(model, t);
   // Records visitors add, without an account (e.g. a contact form's messages).
   const visitors = modelAccess(model, auth).create.public;
-  const refinements = storedFields(model).flatMap((f) => {
-    const r = refinement(f, visitors, kebab(model.name));
-    return r ? [`  ${f.name}: ${r},`] : [];
-  });
+  const refinements = [
+    ...storedFields(model).flatMap((f) => {
+      const r = refinement(f, visitors, kebab(model.name));
+      return r ? [`  ${f.name}: ${r},`] : [];
+    }),
+    // A required owner (ownedBy) may be left out: the server makes it the viewer's own (ownerFor),
+    // and a form leaves the field out for whoever cannot choose someone else.
+    ...model.fields
+      .filter((f) => f.name === model.ownedBy && f.required && f.type.kind === "relation")
+      .map((f) => `  ${dataKey(f)}: (s) => s.optional(),`),
+  ];
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
@@ -235,6 +242,19 @@ export const ${n.options} = createServerFn().handler(async () =>
 );
 `
     : "";
+  // Whose record it is (ownedBy): the people to choose from, only for a role that may change
+  // everyone's; anyone else makes their own (ownerFor), so the form leaves the field out.
+  // The same test as optionsFor's, which calls it from the form's loader.
+  const ownerField = userFields(model).find((f) => f.name === model.ownedBy);
+  const ownerOptions = ownerField
+    ? `
+/** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
+export const ${n.ownerOptions} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return viewer && ${n.access}.write.roles.includes(viewer.role) ? userOptions() : null;
+});
+`
+    : "";
   // A capacity: the reservation block's server functions (docs/design/booking.md): a
   // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
@@ -281,7 +301,9 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
 ]
   .filter((m) => m !== model)
   .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
-  .join("")}import { writeAllowed } from "#/kit/limit";
+  .join(
+    "",
+  )}import { writeAllowed } from "#/kit/limit";${ownerField ? '\nimport { userOptions } from "./users";' : ""}
 import { currentViewer } from "#/lib/viewer.server";
 import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
 
@@ -365,7 +387,7 @@ export const ${n.get} = createServerFn()
       }
     };
   });
-${options}
+${options}${ownerOptions}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
   .handler(async ({ data }) => ${n.data}.create(await writer(), data));

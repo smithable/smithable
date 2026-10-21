@@ -69,11 +69,10 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     fixed,
   } = props;
   const all = presented(props.ui, props);
-  // A field the app fills is never in the form, only on the record's page (record-rules.md §1).
-  const ui =
-    readOnly || !all.fields.some((f) => f.byApp)
-      ? all
-      : { ...all, fields: all.fields.filter((f) => !f.byApp) };
+  // A field the app fills is never in the form, only on the record's page (record-rules.md §1);
+  // nor one the viewer may not fill (whose record it is, for someone who can only make their own).
+  const left = (f: FieldUi) => !f.byApp && props.options?.[f.name] !== null;
+  const ui = readOnly || all.fields.every(left) ? all : { ...all, fields: all.fields.filter(left) };
   const [inputs, setInputs] = useState(() =>
     initialInputs(ui, initial ?? props.preset, app.timeZone, !initial),
   );

@@ -443,8 +443,19 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           },
           "unique": true,
         },
+        {
+          "name": "attendee",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "User",
+          },
+          "unique": false,
+        },
       ],
       "name": "Booking",
+      "ownedBy": "attendee",
     },
     {
       "description": "News and articles on the studio's blog.",

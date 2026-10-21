@@ -435,6 +435,15 @@ async function bookingFlow(dir, base) {
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
     if (await page.getByRole("button", { name: "Book a mat" }).count())
       throw new Error("a full session offers a place");
+    // The session's bookings name who booked (the attendee, made the member's own booking).
+    const [booker] = query(
+      dir,
+      "SELECT u.name FROM bookings b JOIN user u ON u.id = b.attendee_id",
+    );
+    if (!booker) throw new Error("the member's booking names no attendee");
+    await page
+      .getByRole("cell", { name: booker.name, exact: true })
+      .waitFor({ timeout: 10000 * P });
     await page.getByLabel("Capacity").fill("0");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page
@@ -456,7 +465,7 @@ async function bookingFlow(dir, base) {
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
     console.log(
-      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place)",
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place)",
     );
   } catch (error) {
     console.log(
