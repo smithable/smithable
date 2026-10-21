@@ -975,7 +975,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
-import { taskSchema } from "#/generated/task.schema";
+import { taskSettable } from "#/generated/task.schema";
 import { taskData } from "#/generated/task.server";
 import { completeAccess, completeFits } from "./complete";
 
@@ -985,7 +985,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof taskData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: taskSchema.partial().parse({
+    values: taskSettable.partial().parse({
       status: "done",
     }),
 
@@ -1083,7 +1083,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
-import { taskSchema } from "#/generated/task.schema";
+import { taskSettable } from "#/generated/task.schema";
 import { taskData } from "#/generated/task.server";
 import { reopenAccess, reopenFits } from "./reopen";
 
@@ -1093,7 +1093,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof taskData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: taskSchema.partial().parse({
+    values: taskSettable.partial().parse({
       status: "todo",
     }),
 
@@ -4377,13 +4377,16 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a note's form sends, checked. */
-export const noteSchema = createInsertSchema(schema.notes, {
+/** What a note may be given: a form's values and what the app fills (an action's set). */
+export const noteSettable = createInsertSchema(schema.notes, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   body: (s) => s.max(10000, w.atMostCharacters(10000)),
   attachment: z.object({ file: z.string().regex(/^note\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a note's form sends, checked. */
+export const noteSchema = noteSettable;
 
+export type NoteSettable = z.output<typeof noteSettable>;
 export type NoteValues = z.output<typeof noteSchema>;
 "
 `;
@@ -4403,7 +4406,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import { type NoteValues } from "./note";
+import { type NoteSettable, type NoteValues } from "./note";
 
 /** Who may read, create, change and delete notes. */
 export const noteAccess: ModelAccess = {
@@ -4460,7 +4463,7 @@ function checkFiles<V extends Partial<NoteValues>>(viewer: Viewer | null, values
 }
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<NoteValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<NoteSettable>): void {
   if (values.projectId != null && !projectData.canRead(viewer, values.projectId))
     throw new AccessDenied(viewer !== null);
 }
@@ -4752,7 +4755,7 @@ export const noteData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<NoteValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<NoteSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.notes.ownerId, attachment: schema.notes.attachment })
       .from(schema.notes)
@@ -4856,7 +4859,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { noteSchema } from "./note.schema";
 
-export type { NoteValues } from "./note.schema";
+export type { NoteSettable, NoteValues } from "./note.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -4989,12 +4992,15 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a project's form sends, checked. */
-export const projectSchema = createInsertSchema(schema.projects, {
+/** What a project may be given: a form's values and what the app fills (an action's set). */
+export const projectSettable = createInsertSchema(schema.projects, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a project's form sends, checked. */
+export const projectSchema = projectSettable;
 
+export type ProjectSettable = z.output<typeof projectSettable>;
 export type ProjectValues = z.output<typeof projectSchema>;
 "
 `;
@@ -5015,7 +5021,7 @@ import { taskData } from "./task.server";
 import { noteData } from "./note.server";
 import { taskUi } from "./task";
 import { noteUi } from "./note";
-import { projectUi, type ProjectValues } from "./project";
+import { projectUi, type ProjectSettable, type ProjectValues } from "./project";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -5347,7 +5353,7 @@ export const projectData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ProjectValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ProjectSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.projects.ownerId })
       .from(schema.projects)
@@ -5473,7 +5479,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { projectSchema } from "./project.schema";
 
-export type { ProjectValues } from "./project.schema";
+export type { ProjectSettable, ProjectValues } from "./project.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -5571,13 +5577,16 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a task's form sends, checked. */
-export const taskSchema = createInsertSchema(schema.tasks, {
+/** What a task may be given: a form's values and what the app fills (an action's set). */
+export const taskSettable = createInsertSchema(schema.tasks, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   dueDate: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   details: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a task's form sends, checked. */
+export const taskSchema = taskSettable;
 
+export type TaskSettable = z.output<typeof taskSettable>;
 export type TaskValues = z.output<typeof taskSchema>;
 "
 `;
@@ -5595,7 +5604,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
-import { type TaskValues } from "./task";
+import { type TaskSettable, type TaskValues } from "./task";
 
 /** Who may read, create, change and delete tasks. */
 export const taskAccess: ModelAccess = {
@@ -5647,7 +5656,7 @@ const BY: string[] = ["project","status","dueDate","assignee"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<TaskValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<TaskSettable>): void {
   if (values.projectId != null && !projectData.canRead(viewer, values.projectId))
     throw new AccessDenied(viewer !== null);
 }
@@ -5933,7 +5942,7 @@ export const taskData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<TaskValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<TaskSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.tasks.ownerId })
       .from(schema.tasks)
@@ -6032,7 +6041,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { taskSchema } from "./task.schema";
 
-export type { TaskValues } from "./task.schema";
+export type { TaskSettable, TaskValues } from "./task.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -9288,9 +9297,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/db/schema.ts": "b75b1ab6 generated",
   "src/db/seed.ts": "224df43d generated",
   "src/generated/access.test.ts": "130041c9 generated",
-  "src/generated/actions/complete.server.ts": "d77ad623 generated",
+  "src/generated/actions/complete.server.ts": "82dc9089 generated",
   "src/generated/actions/complete.ts": "da69e750 generated",
-  "src/generated/actions/reopen.server.ts": "3bd6e511 generated",
+  "src/generated/actions/reopen.server.ts": "7ce2de37 generated",
   "src/generated/actions/reopen.ts": "12e879b4 generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
@@ -9300,17 +9309,17 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
-  "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "40b61af8 generated",
-  "src/generated/note.ts": "40df96de generated",
+  "src/generated/note.schema.ts": "a44e751a generated",
+  "src/generated/note.server.ts": "90d3a38e generated",
+  "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
-  "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "bab2c00f generated",
-  "src/generated/project.ts": "4ce797fe generated",
+  "src/generated/project.schema.ts": "b7c6c8ff generated",
+  "src/generated/project.server.ts": "7a4d52d2 generated",
+  "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
-  "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "d81886fc generated",
-  "src/generated/task.ts": "fcfbf1ec generated",
+  "src/generated/task.schema.ts": "777642e1 generated",
+  "src/generated/task.server.ts": "b66783fd generated",
+  "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "d437282f generated",
   "src/generated/users.test.ts": "b5d92c9f generated",
@@ -11450,9 +11459,12 @@ import { createInsertSchema } from "drizzle-zod";
 import type { z } from "zod";
 import * as schema from "#/db/schema";
 
+/** What a booking may be given: a form's values and what the app fills (an action's set). */
+export const bookingSettable = createInsertSchema(schema.bookings).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a booking's form sends, checked. */
-export const bookingSchema = createInsertSchema(schema.bookings).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+export const bookingSchema = bookingSettable;
 
+export type BookingSettable = z.output<typeof bookingSettable>;
 export type BookingValues = z.output<typeof bookingSchema>;
 "
 `;
@@ -11470,7 +11482,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
-import { type BookingValues } from "./booking";
+import { type BookingSettable, type BookingValues } from "./booking";
 
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
@@ -11515,7 +11527,7 @@ const BY: string[] = ["session"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<BookingValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<BookingSettable>): void {
   if (values.sessionId != null && !sessionData.canRead(viewer, values.sessionId))
     throw new AccessDenied(viewer !== null);
 }
@@ -11814,7 +11826,7 @@ export const bookingData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<BookingValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<BookingSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.bookings.ownerId })
       .from(schema.bookings)
@@ -11922,7 +11934,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { bookingSchema, type BookingValues } from "./booking.schema";
 
-export type { BookingValues } from "./booking.schema";
+export type { BookingSettable, BookingValues } from "./booking.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -12026,12 +12038,15 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a class type's form sends, checked. */
-export const classTypeSchema = createInsertSchema(schema.classTypes, {
+/** What a class type may be given: a form's values and what the app fills (an action's set). */
+export const classTypeSettable = createInsertSchema(schema.classTypes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a class type's form sends, checked. */
+export const classTypeSchema = classTypeSettable;
 
+export type ClassTypeSettable = z.output<typeof classTypeSettable>;
 export type ClassTypeValues = z.output<typeof classTypeSchema>;
 "
 `;
@@ -12051,7 +12066,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
-import { classTypeUi, type ClassTypeValues } from "./class-type";
+import { classTypeUi, type ClassTypeSettable, type ClassTypeValues } from "./class-type";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -12404,7 +12419,7 @@ export const classTypeData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ClassTypeValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ClassTypeSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.classTypes.ownerId })
       .from(schema.classTypes)
@@ -12531,7 +12546,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { classTypeSchema } from "./class-type.schema";
 
-export type { ClassTypeValues } from "./class-type.schema";
+export type { ClassTypeSettable, ClassTypeValues } from "./class-type.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -12847,13 +12862,16 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a instructor's form sends, checked. */
-export const instructorSchema = createInsertSchema(schema.instructors, {
+/** What a instructor may be given: a form's values and what the app fills (an action's set). */
+export const instructorSettable = createInsertSchema(schema.instructors, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(50000, w.atMostCharacters(50000)),
   portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a instructor's form sends, checked. */
+export const instructorSchema = instructorSettable;
 
+export type InstructorSettable = z.output<typeof instructorSettable>;
 export type InstructorValues = z.output<typeof instructorSchema>;
 "
 `;
@@ -12875,7 +12893,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
-import { instructorUi, type InstructorValues } from "./instructor";
+import { instructorUi, type InstructorSettable, type InstructorValues } from "./instructor";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -13240,7 +13258,7 @@ export const instructorData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InstructorValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InstructorSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.instructors.ownerId, portrait: schema.instructors.portrait })
       .from(schema.instructors)
@@ -13373,7 +13391,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { instructorSchema } from "./instructor.schema";
 
-export type { InstructorValues } from "./instructor.schema";
+export type { InstructorSettable, InstructorValues } from "./instructor.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -13475,13 +13493,16 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a message's form sends, checked. */
-export const messageSchema = createInsertSchema(schema.messages, {
+/** What a message may be given: a form's values and what the app fills (an action's set). */
+export const messageSettable = createInsertSchema(schema.messages, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   email: z.email(w.enterValidEmail),
   message: (s) => s.trim().min(1, w.required).max(2000, w.atMostCharacters(2000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a message's form sends, checked. */
+export const messageSchema = messageSettable;
 
+export type MessageSettable = z.output<typeof messageSettable>;
 export type MessageValues = z.output<typeof messageSchema>;
 "
 `;
@@ -13498,7 +13519,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type MessageValues } from "./message";
+import { type MessageSettable, type MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -13831,7 +13852,7 @@ export const messageData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MessageSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.messages.ownerId })
       .from(schema.messages)
@@ -13929,7 +13950,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { messageSchema } from "./message.schema";
 
-export type { MessageValues } from "./message.schema";
+export type { MessageSettable, MessageValues } from "./message.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -14152,8 +14173,8 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a post's form sends, checked. */
-export const postSchema = createInsertSchema(schema.posts, {
+/** What a post may be given: a form's values and what the app fills (an action's set). */
+export const postSettable = createInsertSchema(schema.posts, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
@@ -14161,7 +14182,10 @@ export const postSchema = createInsertSchema(schema.posts, {
   body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
   publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a post's form sends, checked. */
+export const postSchema = postSettable;
 
+export type PostSettable = z.output<typeof postSettable>;
 export type PostValues = z.output<typeof postSchema>;
 "
 `;
@@ -14180,7 +14204,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type PostValues } from "./post";
+import { type PostSettable, type PostValues } from "./post";
 
 /** Who may read, create, change and delete posts. */
 export const postAccess: ModelAccess = {
@@ -14528,7 +14552,7 @@ export const postData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<PostValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<PostSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.posts.ownerId, cover: schema.posts.cover })
       .from(schema.posts)
@@ -14632,7 +14656,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { postSchema } from "./post.schema";
 
-export type { PostValues } from "./post.schema";
+export type { PostSettable, PostValues } from "./post.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -14787,9 +14811,12 @@ import { createInsertSchema } from "drizzle-zod";
 import type { z } from "zod";
 import * as schema from "#/db/schema";
 
+/** What a session may be given: a form's values and what the app fills (an action's set). */
+export const sessionSettable = createInsertSchema(schema.sessions).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a session's form sends, checked. */
-export const sessionSchema = createInsertSchema(schema.sessions).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+export const sessionSchema = sessionSettable;
 
+export type SessionSettable = z.output<typeof sessionSettable>;
 export type SessionValues = z.output<typeof sessionSchema>;
 "
 `;
@@ -14809,7 +14836,7 @@ import { bookingData } from "./booking.server";
 import { classTypeData } from "./class-type.server";
 import { instructorData } from "./instructor.server";
 import { bookingUi } from "./booking";
-import { sessionUi, type SessionValues } from "./session";
+import { sessionUi, type SessionSettable, type SessionValues } from "./session";
 import { withSessionFormulas } from "./session.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -14882,7 +14909,7 @@ const BY: string[] = ["classType","instructor","startsAt"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<SessionValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<SessionSettable>): void {
   if (values.classTypeId != null && !classTypeData.canRead(viewer, values.classTypeId))
     throw new AccessDenied(viewer !== null);
   if (values.instructorId != null && !instructorData.canRead(viewer, values.instructorId))
@@ -15183,7 +15210,7 @@ export const sessionData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<SessionValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<SessionSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.sessions.ownerId })
       .from(schema.sessions)
@@ -15303,7 +15330,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { sessionSchema } from "./session.schema";
 
-export type { SessionValues } from "./session.schema";
+export type { SessionSettable, SessionValues } from "./session.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -19943,33 +19970,33 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "efcd0c43 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
-  "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "719b8cb0 generated",
-  "src/generated/booking.ts": "a2d8de82 generated",
-  "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "36dfee34 generated",
-  "src/generated/class-type.ts": "ed89ba82 generated",
+  "src/generated/booking.schema.ts": "6a281688 generated",
+  "src/generated/booking.server.ts": "329b217d generated",
+  "src/generated/booking.ts": "f00a7a23 generated",
+  "src/generated/class-type.schema.ts": "c737b98d generated",
+  "src/generated/class-type.server.ts": "62a96e66 generated",
+  "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "7de29d96 generated",
-  "src/generated/instructor.ts": "1c77e395 generated",
-  "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "27aacde9 generated",
-  "src/generated/message.ts": "933e4ada generated",
+  "src/generated/instructor.schema.ts": "96eaebce generated",
+  "src/generated/instructor.server.ts": "2dd5097d generated",
+  "src/generated/instructor.ts": "fd304a3a generated",
+  "src/generated/message.schema.ts": "3ae9ea6f generated",
+  "src/generated/message.server.ts": "e23f238e generated",
+  "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
-  "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "c763a556 generated",
-  "src/generated/post.ts": "9a0abbb2 generated",
+  "src/generated/post.schema.ts": "bc3914c3 generated",
+  "src/generated/post.server.ts": "bfe5489e generated",
+  "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "91072b06 generated",
-  "src/generated/session.ts": "5eec502c generated",
+  "src/generated/session.schema.ts": "ea859e10 generated",
+  "src/generated/session.server.ts": "d12032ce generated",
+  "src/generated/session.ts": "d120db70 generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/kit/ActionButton.tsx": "719812de kit",
@@ -21551,15 +21578,18 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a customer's form sends, checked. */
-export const customerSchema = createInsertSchema(schema.customers, {
+/** What a customer may be given: a form's values and what the app fills (an action's set). */
+export const customerSettable = createInsertSchema(schema.customers, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   email: z.email(w.enterValidEmail).nullish(),
   phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone),
   creditLimit: (s) => s.min(0),
   notes: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, createdAt: true, updatedAt: true });
+/** What a customer's form sends, checked. */
+export const customerSchema = customerSettable;
 
+export type CustomerSettable = z.output<typeof customerSettable>;
 export type CustomerValues = z.output<typeof customerSchema>;
 "
 `;
@@ -21578,7 +21608,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import { orderUi } from "./order";
-import { customerUi, type CustomerValues } from "./customer";
+import { customerUi, type CustomerSettable, type CustomerValues } from "./customer";
 import "./trash.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -21938,7 +21968,7 @@ export const customerData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<CustomerValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<CustomerSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
@@ -22190,7 +22220,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { customerSchema } from "./customer.schema";
 
-export type { CustomerValues } from "./customer.schema";
+export type { CustomerSettable, CustomerValues } from "./customer.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -22475,11 +22505,14 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a order's form sends, checked. */
-export const orderSchema = createInsertSchema(schema.orders, {
+/** What a order may be given: a form's values and what the app fills (an action's set). */
+export const orderSettable = createInsertSchema(schema.orders, {
   number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a order's form sends, checked. */
+export const orderSchema = orderSettable;
 
+export type OrderSettable = z.output<typeof orderSettable>;
 export type OrderValues = z.output<typeof orderSchema>;
 "
 `;
@@ -22497,7 +22530,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { customerData } from "./customer.server";
-import { type OrderValues } from "./order";
+import { type OrderSettable, type OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import "./trash.server";
 
@@ -22567,7 +22600,7 @@ const BY: string[] = ["customer","status","shippingMethod","placedAt"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<OrderValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<OrderSettable>): void {
   if (values.customerId != null && !customerData.canRead(viewer, values.customerId))
     throw new AccessDenied(viewer !== null);
 }
@@ -22875,7 +22908,7 @@ export const orderData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -23113,7 +23146,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { orderSchema } from "./order.schema";
 
-export type { OrderValues } from "./order.schema";
+export type { OrderSettable, OrderValues } from "./order.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -25769,15 +25802,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "d905c8e0 generated",
-  "src/generated/customer.ts": "b28dda97 generated",
+  "src/generated/customer.schema.ts": "abdad055 generated",
+  "src/generated/customer.server.ts": "d5810b64 generated",
+  "src/generated/customer.ts": "9773e647 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "ce302b4d generated",
-  "src/generated/order.ts": "fff1b58f generated",
+  "src/generated/order.schema.ts": "906a5fce generated",
+  "src/generated/order.server.ts": "8c5e7131 generated",
+  "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
@@ -26902,7 +26935,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { invoiceSchema } from "#/generated/invoice.schema";
+import { invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceData } from "#/generated/invoice.server";
 import { markPaidAccess, markPaidFits } from "./mark-paid";
 
@@ -26912,7 +26945,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: invoiceSchema.partial().parse({
+    values: invoiceSettable.partial().parse({
       status: "paid",
     }),
 
@@ -27013,7 +27046,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { invoiceSchema } from "#/generated/invoice.schema";
+import { invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceData } from "#/generated/invoice.server";
 import { markSentAccess, markSentFits } from "./mark-sent";
 
@@ -27023,7 +27056,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: invoiceSchema.partial().parse({
+    values: invoiceSettable.partial().parse({
       status: "sent",
     }),
 
@@ -27909,14 +27942,17 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a business profile's form sends, checked. */
-export const businessProfileSchema = createInsertSchema(schema.businessProfiles, {
+/** What a business profile may be given: a form's values and what the app fills (an action's set). */
+export const businessProfileSettable = createInsertSchema(schema.businessProfiles, {
   businessName: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   vatNumber: (s) => s.max(200, w.atMostCharacters(200)),
   iban: (s) => s.max(200, w.atMostCharacters(200)),
   invoiceFooter: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a business profile's form sends, checked. */
+export const businessProfileSchema = businessProfileSettable;
 
+export type BusinessProfileSettable = z.output<typeof businessProfileSettable>;
 export type BusinessProfileValues = z.output<typeof businessProfileSchema>;
 "
 `;
@@ -27933,7 +27969,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type BusinessProfileValues } from "./business-profile";
+import { type BusinessProfileSettable, type BusinessProfileValues } from "./business-profile";
 
 /** Who may read, create, change and delete business profiles. */
 export const businessProfileAccess: ModelAccess = {
@@ -28239,7 +28275,7 @@ export const businessProfileData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<BusinessProfileValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<BusinessProfileSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.businessProfiles.ownerId })
       .from(schema.businessProfiles)
@@ -28337,7 +28373,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { businessProfileSchema } from "./business-profile.schema";
 
-export type { BusinessProfileValues } from "./business-profile.schema";
+export type { BusinessProfileSettable, BusinessProfileValues } from "./business-profile.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -28444,14 +28480,17 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a client's form sends, checked. */
-export const clientSchema = createInsertSchema(schema.clients, {
+/** What a client may be given: a form's values and what the app fills (an action's set). */
+export const clientSettable = createInsertSchema(schema.clients, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   email: z.email(w.enterValidEmail),
   address: (s) => s.max(10000, w.atMostCharacters(10000)),
   vatNumber: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a client's form sends, checked. */
+export const clientSchema = clientSettable;
 
+export type ClientSettable = z.output<typeof clientSettable>;
 export type ClientValues = z.output<typeof clientSchema>;
 "
 `;
@@ -28471,7 +28510,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import { invoiceUi } from "./invoice";
 import { invoiceLineUi } from "./invoice-line";
-import { clientUi, type ClientValues } from "./client";
+import { clientUi, type ClientSettable, type ClientValues } from "./client";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -28817,7 +28856,7 @@ export const clientData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ClientValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ClientSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.clients.ownerId })
       .from(schema.clients)
@@ -28944,7 +28983,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { clientSchema } from "./client.schema";
 
-export type { ClientValues } from "./client.schema";
+export type { ClientSettable, ClientValues } from "./client.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -29180,14 +29219,17 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a invoice's form sends, checked. */
-export const invoiceSchema = createInsertSchema(schema.invoices, {
+/** What a invoice may be given: a form's values and what the app fills (an action's set). */
+export const invoiceSettable = createInsertSchema(schema.invoices, {
   number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   contract: z.object({ file: z.string().regex(/^invoice\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a invoice's form sends, checked. */
+export const invoiceSchema = invoiceSettable;
 
+export type InvoiceSettable = z.output<typeof invoiceSettable>;
 export type InvoiceValues = z.output<typeof invoiceSchema>;
 "
 `;
@@ -29210,7 +29252,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { invoiceLineData } from "./invoice-line.server";
 import { clientData } from "./client.server";
 import { invoiceLineUi } from "./invoice-line";
-import { invoiceUi, type InvoiceValues } from "./invoice";
+import { invoiceUi, type InvoiceSettable, type InvoiceValues } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -29290,7 +29332,7 @@ function checkFiles<V extends Partial<InvoiceValues>>(viewer: Viewer | null, val
 }
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<InvoiceValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<InvoiceSettable>): void {
   if (values.clientId != null && !clientData.canRead(viewer, values.clientId))
     throw new AccessDenied(viewer !== null);
 }
@@ -29611,7 +29653,7 @@ export const invoiceData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
       .from(schema.invoices)
@@ -29748,7 +29790,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { invoiceSchema } from "./invoice.schema";
 
-export type { InvoiceValues } from "./invoice.schema";
+export type { InvoiceSettable, InvoiceValues } from "./invoice.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -29931,11 +29973,14 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a invoice line's form sends, checked. */
-export const invoiceLineSchema = createInsertSchema(schema.invoiceLines, {
+/** What a invoice line may be given: a form's values and what the app fills (an action's set). */
+export const invoiceLineSettable = createInsertSchema(schema.invoiceLines, {
   description: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a invoice line's form sends, checked. */
+export const invoiceLineSchema = invoiceLineSettable;
 
+export type InvoiceLineSettable = z.output<typeof invoiceLineSettable>;
 export type InvoiceLineValues = z.output<typeof invoiceLineSchema>;
 "
 `;
@@ -29953,7 +29998,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
-import { type InvoiceLineValues } from "./invoice-line";
+import { type InvoiceLineSettable, type InvoiceLineValues } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
 
 /** Who may read, create, change and delete invoice lines. */
@@ -30004,7 +30049,7 @@ const BY: string[] = ["invoice"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<InvoiceLineValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<InvoiceLineSettable>): void {
   if (values.invoiceId != null && !invoiceData.canRead(viewer, values.invoiceId))
     throw new AccessDenied(viewer !== null);
 }
@@ -30303,7 +30348,7 @@ export const invoiceLineData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceLineValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceLineSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.invoiceLines.ownerId })
       .from(schema.invoiceLines)
@@ -30403,7 +30448,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { invoiceLineSchema } from "./invoice-line.schema";
 
-export type { InvoiceLineValues } from "./invoice-line.schema";
+export type { InvoiceLineSettable, InvoiceLineValues } from "./invoice-line.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -32804,29 +32849,29 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/schema.ts": "34fca66d generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d2fd305f generated",
-  "src/generated/actions/mark-paid.server.ts": "90aaf4e3 generated",
+  "src/generated/actions/mark-paid.server.ts": "8868fcdf generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
-  "src/generated/actions/mark-sent.server.ts": "3b46e6cb generated",
+  "src/generated/actions/mark-sent.server.ts": "a4615a67 generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
-  "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "ad222be7 generated",
-  "src/generated/business-profile.ts": "c59f0973 generated",
-  "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "d16f76e7 generated",
-  "src/generated/client.ts": "5f62bef7 generated",
+  "src/generated/business-profile.schema.ts": "a24b04cb generated",
+  "src/generated/business-profile.server.ts": "76559c58 generated",
+  "src/generated/business-profile.ts": "bc86a8d8 generated",
+  "src/generated/client.schema.ts": "45fa8d56 generated",
+  "src/generated/client.server.ts": "8646e8fa generated",
+  "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "76b47b2c generated",
-  "src/generated/invoice-line.ts": "38066a0a generated",
+  "src/generated/invoice-line.schema.ts": "22398b2f generated",
+  "src/generated/invoice-line.server.ts": "b39d4a79 generated",
+  "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "55ea1c84 generated",
-  "src/generated/invoice.ts": "4afdf069 generated",
+  "src/generated/invoice.schema.ts": "9528011d generated",
+  "src/generated/invoice.server.ts": "006ee247 generated",
+  "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -34211,7 +34256,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { orderSchema } from "#/generated/order.schema";
+import { orderSettable } from "#/generated/order.schema";
 import { orderData } from "#/generated/order.server";
 import { acceptAccess, acceptFits } from "./accept";
 
@@ -34221,7 +34266,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof orderData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: orderSchema.partial().parse({
+    values: orderSettable.partial().parse({
       status: "accepted",
     }),
 
@@ -34321,7 +34366,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
-import { dishSchema } from "#/generated/dish.schema";
+import { dishSettable } from "#/generated/dish.schema";
 import { dishData } from "#/generated/dish.server";
 import { backOnAccess, backOnFits } from "./back-on";
 
@@ -34331,7 +34376,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof dishData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: dishSchema.partial().parse({
+    values: dishSettable.partial().parse({
       available: true,
     }),
 
@@ -34430,7 +34475,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { orderSchema } from "#/generated/order.schema";
+import { orderSettable } from "#/generated/order.schema";
 import { orderData } from "#/generated/order.server";
 import { collectedAccess, collectedFits } from "./collected";
 
@@ -34440,7 +34485,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof orderData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: orderSchema.partial().parse({
+    values: orderSettable.partial().parse({
       status: "collected",
     }),
 
@@ -34541,7 +34586,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { orderSchema } from "#/generated/order.schema";
+import { orderSettable } from "#/generated/order.schema";
 import { orderData } from "#/generated/order.server";
 import { declineAccess, declineFits, type declineAsks } from "./decline";
 import type { z } from "zod";
@@ -34552,7 +34597,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof orderData.get>>>;
 function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof declineAsks>) {
   return {
     id: row.id,
-    values: orderSchema.partial().parse({
+    values: orderSettable.partial().parse({
       status: "declined",
       reason: asked["reason"],
     }),
@@ -34674,7 +34719,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { orderSchema } from "#/generated/order.schema";
+import { orderSettable } from "#/generated/order.schema";
 import { orderData } from "#/generated/order.server";
 import { readyAccess, readyFits } from "./ready";
 
@@ -34684,7 +34729,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof orderData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: orderSchema.partial().parse({
+    values: orderSettable.partial().parse({
       status: "ready",
     }),
 
@@ -34784,7 +34829,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { afterChange } from "#/generated/hooks";
-import { dishSchema } from "#/generated/dish.schema";
+import { dishSettable } from "#/generated/dish.schema";
 import { dishData } from "#/generated/dish.server";
 import { soldOutAccess, soldOutFits } from "./sold-out";
 
@@ -34794,7 +34839,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof dishData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: dishSchema.partial().parse({
+    values: dishSettable.partial().parse({
       available: false,
     }),
 
@@ -34921,14 +34966,17 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a dish's form sends, checked. */
-export const dishSchema = createInsertSchema(schema.dishes, {
+/** What a dish may be given: a form's values and what the app fills (an action's set). */
+export const dishSettable = createInsertSchema(schema.dishes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
   picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
   allergens: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a dish's form sends, checked. */
+export const dishSchema = dishSettable;
 
+export type DishSettable = z.output<typeof dishSettable>;
 export type DishValues = z.output<typeof dishSchema>;
 "
 `;
@@ -34946,7 +34994,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderLineUi } from "./order-line";
-import { dishUi, type DishValues } from "./dish";
+import { dishUi, type DishSettable, type DishValues } from "./dish";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -35078,7 +35126,7 @@ export const dishData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<DishValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<DishSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.dishes.ownerId, picture: schema.dishes.picture })
       .from(schema.dishes)
@@ -35209,7 +35257,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { dishSchema } from "./dish.schema";
 
-export type { DishValues } from "./dish.schema";
+export type { DishSettable, DishValues } from "./dish.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -35464,15 +35512,18 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a order's form sends, checked. */
-export const orderSchema = createInsertSchema(schema.orders, {
+/** What a order may be given: a form's values and what the app fills (an action's set). */
+export const orderSettable = createInsertSchema(schema.orders, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone),
   email: z.email(w.enterValidEmail).nullish(),
   note: (s) => s.max(2000, w.atMostCharacters(2000)),
   reason: (s) => s.max(2000, w.atMostCharacters(2000)),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, number: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a order's form sends, checked: never what the app fills. */
+export const orderSchema = orderSettable.omit({ number: true });
 
+export type OrderSettable = z.output<typeof orderSettable>;
 export type OrderValues = z.output<typeof orderSchema>;
 "
 `;
@@ -35492,7 +35543,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { dishData } from "./dish.server";
 import { orderLineData } from "./order-line.server";
 import { orderLineUi } from "./order-line";
-import { orderUi, type OrderValues } from "./order";
+import { orderUi, type OrderSettable, type OrderValues } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import { nextInSequence } from "#/kit/sequence.server";
 
@@ -35633,7 +35684,7 @@ export const orderData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orders.ownerId })
       .from(schema.orders)
@@ -35763,7 +35814,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { orderSchema } from "./order.schema";
 
-export type { OrderValues } from "./order.schema";
+export type { OrderSettable, OrderValues } from "./order.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -35938,9 +35989,12 @@ import { createInsertSchema } from "drizzle-zod";
 import type { z } from "zod";
 import * as schema from "#/db/schema";
 
+/** What a order line may be given: a form's values and what the app fills (an action's set). */
+export const orderLineSettable = createInsertSchema(schema.orderLines).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a order line's form sends, checked. */
-export const orderLineSchema = createInsertSchema(schema.orderLines).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+export const orderLineSchema = orderLineSettable;
 
+export type OrderLineSettable = z.output<typeof orderLineSettable>;
 export type OrderLineValues = z.output<typeof orderLineSchema>;
 "
 `;
@@ -35956,7 +36010,7 @@ import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
 import { dishData } from "./dish.server";
-import { type OrderLineValues } from "./order-line";
+import { type OrderLineSettable, type OrderLineValues } from "./order-line";
 import { withOrderLineFormulas } from "./order-line.formulas";
 
 /** Who may read, create, change and delete order lines. */
@@ -35976,7 +36030,7 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<OrderLineValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<OrderLineSettable>): void {
   if (values.orderId != null && !orderData.canRead(viewer, values.orderId))
     throw new AccessDenied(viewer !== null);
   if (values.dishId != null && !dishData.canRead(viewer, values.dishId))
@@ -36059,7 +36113,7 @@ export const orderLineData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<OrderLineValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<OrderLineSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.orderLines.ownerId })
       .from(schema.orderLines)
@@ -36159,7 +36213,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { orderLineSchema } from "./order-line.schema";
 
-export type { OrderLineValues } from "./order-line.schema";
+export type { OrderLineSettable, OrderLineValues } from "./order-line.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -36470,14 +36524,17 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a stop's form sends, checked. */
-export const stopSchema = createInsertSchema(schema.stops, {
+/** What a stop may be given: a form's values and what the app fills (an action's set). */
+export const stopSettable = createInsertSchema(schema.stops, {
   place: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   day: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   hours: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   note: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a stop's form sends, checked. */
+export const stopSchema = stopSettable;
 
+export type StopSettable = z.output<typeof stopSettable>;
 export type StopValues = z.output<typeof stopSchema>;
 "
 `;
@@ -36491,7 +36548,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type StopValues } from "./stop";
+import { type StopSettable, type StopValues } from "./stop";
 
 /** Who may read, create, change and delete stops. */
 export const stopAccess: ModelAccess = {
@@ -36589,7 +36646,7 @@ export const stopData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<StopValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<StopSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.stops.ownerId })
       .from(schema.stops)
@@ -36687,7 +36744,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { stopSchema } from "./stop.schema";
 
-export type { StopValues } from "./stop.schema";
+export type { StopSettable, StopValues } from "./stop.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -39653,39 +39710,39 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "cf2bd0ff generated",
-  "src/generated/actions/accept.server.ts": "da4e1a7b generated",
+  "src/generated/actions/accept.server.ts": "a8a3a619 generated",
   "src/generated/actions/accept.ts": "7b2e4721 generated",
-  "src/generated/actions/back-on.server.ts": "bedafac6 generated",
+  "src/generated/actions/back-on.server.ts": "1dc469d6 generated",
   "src/generated/actions/back-on.ts": "e555a9d1 generated",
-  "src/generated/actions/collected.server.ts": "6ae01fc9 generated",
+  "src/generated/actions/collected.server.ts": "b88e3479 generated",
   "src/generated/actions/collected.ts": "cb9ba602 generated",
-  "src/generated/actions/decline.server.ts": "6facd764 generated",
+  "src/generated/actions/decline.server.ts": "1b0c453c generated",
   "src/generated/actions/decline.ts": "e341c1c9 generated",
-  "src/generated/actions/ready.server.ts": "de029d65 generated",
+  "src/generated/actions/ready.server.ts": "28edb875 generated",
   "src/generated/actions/ready.ts": "9800975e generated",
-  "src/generated/actions/sold-out.server.ts": "624f1cfb generated",
+  "src/generated/actions/sold-out.server.ts": "d98eccc9 generated",
   "src/generated/actions/sold-out.ts": "4b7dec85 generated",
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dish.schema.ts": "c49587a4 generated",
-  "src/generated/dish.server.ts": "7701e5b5 generated",
-  "src/generated/dish.ts": "abeae023 generated",
+  "src/generated/dish.schema.ts": "30168a95 generated",
+  "src/generated/dish.server.ts": "99896bf5 generated",
+  "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
-  "src/generated/order-line.schema.ts": "eff1b2f5 generated",
-  "src/generated/order-line.server.ts": "ef48e2b9 generated",
-  "src/generated/order-line.ts": "14bf7a22 generated",
+  "src/generated/order-line.schema.ts": "2cf71e78 generated",
+  "src/generated/order-line.server.ts": "e8026a9b generated",
+  "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
-  "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "a05228e5 generated",
-  "src/generated/order.ts": "e9a3c2e6 generated",
+  "src/generated/order.schema.ts": "07f2c2d5 generated",
+  "src/generated/order.server.ts": "a2ed88bf generated",
+  "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
-  "src/generated/stop.schema.ts": "cc18f1e6 generated",
-  "src/generated/stop.server.ts": "a1f1ddce generated",
-  "src/generated/stop.ts": "f17c58ca generated",
+  "src/generated/stop.schema.ts": "9b1cb273 generated",
+  "src/generated/stop.server.ts": "3fc85480 generated",
+  "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
   "src/generated/users.test.ts": "0b576940 generated",
@@ -41055,14 +41112,17 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a item's form sends, checked. */
-export const itemSchema = createInsertSchema(schema.items, {
+/** What a item may be given: a form's values and what the app fills (an action's set). */
+export const itemSettable = createInsertSchema(schema.items, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(10),
   description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a item's form sends, checked. */
+export const itemSchema = itemSettable;
 
+export type ItemSettable = z.output<typeof itemSettable>;
 export type ItemValues = z.output<typeof itemSchema>;
 "
 `;
@@ -41082,7 +41142,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
-import { type ItemValues } from "./item";
+import { type ItemSettable, type ItemValues } from "./item";
 
 /**
  * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
@@ -41537,7 +41597,7 @@ export const itemData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ItemSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.items.ownerId, photos: schema.items.photos })
       .from(schema.items)
@@ -41641,7 +41701,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { itemSchema } from "./item.schema";
 
-export type { ItemValues } from "./item.schema";
+export type { ItemSettable, ItemValues } from "./item.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -44049,9 +44109,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/ask.server.ts": "63f51ab2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "7137e5c6 generated",
-  "src/generated/item.ts": "7c6d4802 generated",
+  "src/generated/item.schema.ts": "1585b602 generated",
+  "src/generated/item.server.ts": "3a52a06b generated",
+  "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
   "src/generated/review.ts": "c0f62730 generated",
@@ -45369,14 +45429,17 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a item's form sends, checked. */
-export const itemSchema = createInsertSchema(schema.items, {
+/** What a item may be given: a form's values and what the app fills (an action's set). */
+export const itemSettable = createInsertSchema(schema.items, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
   link: z.url(w.enterValidUrl).nullish(),
   addedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a item's form sends, checked. */
+export const itemSchema = itemSettable;
 
+export type ItemSettable = z.output<typeof itemSettable>;
 export type ItemValues = z.output<typeof itemSchema>;
 "
 `;
@@ -45393,7 +45456,7 @@ import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
-import { type ItemValues } from "./item";
+import { type ItemSettable, type ItemValues } from "./item";
 import { withItemFormulas } from "./item.formulas";
 
 /** Who may read, create, change and delete items. */
@@ -45719,7 +45782,7 @@ export const itemData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ItemValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ItemSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.items.ownerId })
       .from(schema.items)
@@ -45818,7 +45881,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { itemSchema } from "./item.schema";
 
-export type { ItemValues } from "./item.schema";
+export type { ItemSettable, ItemValues } from "./item.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -47172,9 +47235,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "0eb0adab generated",
-  "src/generated/item.ts": "c0803a6a generated",
+  "src/generated/item.schema.ts": "0dc11389 generated",
+  "src/generated/item.server.ts": "e884ae00 generated",
+  "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
@@ -48316,7 +48379,7 @@ import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
-import { incidentSchema } from "#/generated/incident.schema";
+import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { incidentUpdateAccess } from "#/generated/incident-update.server";
@@ -48328,7 +48391,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: incidentSchema.partial().parse({
+    values: incidentSettable.partial().parse({
       status: "identified",
     }),
     added0: incidentUpdateSchema.parse({
@@ -48446,7 +48509,7 @@ import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
-import { incidentSchema } from "#/generated/incident.schema";
+import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { incidentUpdateAccess } from "#/generated/incident-update.server";
@@ -48458,7 +48521,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: incidentSchema.partial().parse({
+    values: incidentSettable.partial().parse({
       status: "monitoring",
     }),
     added0: incidentUpdateSchema.parse({
@@ -48576,7 +48639,7 @@ import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access
 import { audit } from "#/kit/audit.server";
 import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
-import { incidentSchema } from "#/generated/incident.schema";
+import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { incidentUpdateAccess } from "#/generated/incident-update.server";
@@ -48588,7 +48651,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: incidentSchema.partial().parse({
+    values: incidentSettable.partial().parse({
       status: "resolved",
       resolvedAt: new Date(F.NOW()),
     }),
@@ -50502,12 +50565,15 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a component's form sends, checked. */
-export const componentSchema = createInsertSchema(schema.components, {
+/** What a component may be given: a form's values and what the app fills (an action's set). */
+export const componentSettable = createInsertSchema(schema.components, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a component's form sends, checked. */
+export const componentSchema = componentSettable;
 
+export type ComponentSettable = z.output<typeof componentSettable>;
 export type ComponentValues = z.output<typeof componentSchema>;
 "
 `;
@@ -50526,7 +50592,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import { maintenanceData } from "./maintenance.server";
-import { type ComponentValues } from "./component";
+import { type ComponentSettable, type ComponentValues } from "./component";
 
 /** Who may read, create, change and delete components. */
 export const componentAccess: ModelAccess = {
@@ -50850,7 +50916,7 @@ export const componentData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<ComponentValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<ComponentSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.components.ownerId })
       .from(schema.components)
@@ -50974,7 +51040,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { componentSchema } from "./component.schema";
 
-export type { ComponentValues } from "./component.schema";
+export type { ComponentSettable, ComponentValues } from "./component.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -51186,12 +51252,15 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a incident's form sends, checked. */
-export const incidentSchema = createInsertSchema(schema.incidents, {
+/** What a incident may be given: a form's values and what the app fills (an action's set). */
+export const incidentSettable = createInsertSchema(schema.incidents, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(50000, w.atMostCharacters(50000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a incident's form sends, checked. */
+export const incidentSchema = incidentSettable;
 
+export type IncidentSettable = z.output<typeof incidentSettable>;
 export type IncidentValues = z.output<typeof incidentSchema>;
 "
 `;
@@ -51211,7 +51280,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { incidentUpdateData } from "./incident-update.server";
 import { componentData } from "./component.server";
 import { incidentUpdateUi } from "./incident-update";
-import { incidentUi, type IncidentValues } from "./incident";
+import { incidentUi, type IncidentSettable, type IncidentValues } from "./incident";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -51288,7 +51357,7 @@ const BY: string[] = ["status","component","detectedAt","resolvedAt"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<IncidentValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<IncidentSettable>): void {
   if (values.componentId != null && !componentData.canRead(viewer, values.componentId))
     throw new AccessDenied(viewer !== null);
 }
@@ -51588,7 +51657,7 @@ export const incidentData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<IncidentValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<IncidentSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.incidents.ownerId })
       .from(schema.incidents)
@@ -51717,7 +51786,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { incidentSchema } from "./incident.schema";
 
-export type { IncidentValues } from "./incident.schema";
+export type { IncidentSettable, IncidentValues } from "./incident.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -51850,11 +51919,14 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a incident update's form sends, checked. */
-export const incidentUpdateSchema = createInsertSchema(schema.incidentUpdates, {
+/** What a incident update may be given: a form's values and what the app fills (an action's set). */
+export const incidentUpdateSettable = createInsertSchema(schema.incidentUpdates, {
   message: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a incident update's form sends, checked. */
+export const incidentUpdateSchema = incidentUpdateSettable;
 
+export type IncidentUpdateSettable = z.output<typeof incidentUpdateSettable>;
 export type IncidentUpdateValues = z.output<typeof incidentUpdateSchema>;
 "
 `;
@@ -51873,7 +51945,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
-import { type IncidentUpdateValues } from "./incident-update";
+import { type IncidentUpdateSettable, type IncidentUpdateValues } from "./incident-update";
 
 /** Who may read, create, change and delete incident updates. */
 export const incidentUpdateAccess: ModelAccess = {
@@ -51923,7 +51995,7 @@ const BY: string[] = ["incident","at","status"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<IncidentUpdateValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<IncidentUpdateSettable>): void {
   if (values.incidentId != null && !incidentData.canRead(viewer, values.incidentId))
     throw new AccessDenied(viewer !== null);
 }
@@ -52222,7 +52294,7 @@ export const incidentUpdateData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<IncidentUpdateValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<IncidentUpdateSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.incidentUpdates.ownerId })
       .from(schema.incidentUpdates)
@@ -52321,7 +52393,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { incidentUpdateSchema } from "./incident-update.schema";
 
-export type { IncidentUpdateValues } from "./incident-update.schema";
+export type { IncidentUpdateSettable, IncidentUpdateValues } from "./incident-update.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -52598,12 +52670,15 @@ import type { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a maintenance's form sends, checked. */
-export const maintenanceSchema = createInsertSchema(schema.maintenances, {
+/** What a maintenance may be given: a form's values and what the app fills (an action's set). */
+export const maintenanceSettable = createInsertSchema(schema.maintenances, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a maintenance's form sends, checked. */
+export const maintenanceSchema = maintenanceSettable;
 
+export type MaintenanceSettable = z.output<typeof maintenanceSettable>;
 export type MaintenanceValues = z.output<typeof maintenanceSchema>;
 "
 `;
@@ -52621,7 +52696,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
-import { type MaintenanceValues } from "./maintenance";
+import { type MaintenanceSettable, type MaintenanceValues } from "./maintenance";
 
 /** Who may read, create, change and delete maintenances. */
 export const maintenanceAccess: ModelAccess = {
@@ -52672,7 +52747,7 @@ const BY: string[] = ["component","startsAt","endsAt"];
 
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<MaintenanceValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<MaintenanceSettable>): void {
   if (values.componentId != null && !componentData.canRead(viewer, values.componentId))
     throw new AccessDenied(viewer !== null);
 }
@@ -52971,7 +53046,7 @@ export const maintenanceData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MaintenanceValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MaintenanceSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.maintenances.ownerId })
       .from(schema.maintenances)
@@ -53070,7 +53145,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { maintenanceSchema } from "./maintenance.schema";
 
-export type { MaintenanceValues } from "./maintenance.schema";
+export type { MaintenanceSettable, MaintenanceValues } from "./maintenance.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -57712,31 +57787,31 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
   "src/generated/access.test.ts": "2df13645 generated",
-  "src/generated/actions/identified.server.ts": "8c89ab2e generated",
+  "src/generated/actions/identified.server.ts": "6cda636c generated",
   "src/generated/actions/identified.ts": "267f914e generated",
-  "src/generated/actions/monitoring.server.ts": "3212e6be generated",
+  "src/generated/actions/monitoring.server.ts": "69a506dc generated",
   "src/generated/actions/monitoring.ts": "d0f21008 generated",
-  "src/generated/actions/resolve.server.ts": "f4456057 generated",
+  "src/generated/actions/resolve.server.ts": "e5e92fb7 generated",
   "src/generated/actions/resolve.ts": "a587d798 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
-  "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "e978ad81 generated",
-  "src/generated/component.ts": "dd3fb957 generated",
+  "src/generated/component.schema.ts": "8a49641f generated",
+  "src/generated/component.server.ts": "efcabc0a generated",
+  "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
-  "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "3af52743 generated",
-  "src/generated/incident-update.ts": "765cb514 generated",
-  "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "88423802 generated",
-  "src/generated/incident.ts": "9088c218 generated",
+  "src/generated/incident-update.schema.ts": "cc47d218 generated",
+  "src/generated/incident-update.server.ts": "393dc1ae generated",
+  "src/generated/incident-update.ts": "eefb0ef7 generated",
+  "src/generated/incident.schema.ts": "45d7d984 generated",
+  "src/generated/incident.server.ts": "cbc01c7c generated",
+  "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
-  "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "4d233867 generated",
-  "src/generated/maintenance.ts": "a40c8230 generated",
+  "src/generated/maintenance.schema.ts": "80ec6842 generated",
+  "src/generated/maintenance.server.ts": "a9485138 generated",
+  "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -58804,7 +58879,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { supportCaseSchema } from "#/generated/support-case.schema";
+import { supportCaseSettable } from "#/generated/support-case.schema";
 import { supportCaseData } from "#/generated/support-case.server";
 import { assignToAccess, assignToFits, type assignToAsks } from "./assign-to";
 import type { z } from "zod";
@@ -58815,7 +58890,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof supportCaseData.get>>>;
 function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof assignToAsks>) {
   return {
     id: row.id,
-    values: supportCaseSchema.partial().parse({
+    values: supportCaseSettable.partial().parse({
       assigneeId: asked["assigneeId"],
     }),
 
@@ -58942,7 +59017,7 @@ import { AccessDenied, allows, check, personOf, type Viewer } from "#/kit/access
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { supportCaseSchema } from "#/generated/support-case.schema";
+import { supportCaseSettable } from "#/generated/support-case.schema";
 import { supportCaseData } from "#/generated/support-case.server";
 import { assignToMeAccess, assignToMeFits } from "./assign-to-me";
 
@@ -58952,7 +59027,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof supportCaseData.get>>>;
 function plan(viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: supportCaseSchema.partial().parse({
+    values: supportCaseSettable.partial().parse({
       assigneeId: personOf(viewer),
     }),
 
@@ -59053,7 +59128,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { supportCaseSchema } from "#/generated/support-case.schema";
+import { supportCaseSettable } from "#/generated/support-case.schema";
 import { supportCaseData } from "#/generated/support-case.server";
 import { closeAccess, closeFits, type closeAsks } from "./close";
 import type { z } from "zod";
@@ -59064,7 +59139,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof supportCaseData.get>>>;
 function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof closeAsks>) {
   return {
     id: row.id,
-    values: supportCaseSchema.partial().parse({
+    values: supportCaseSettable.partial().parse({
       status: "closed",
       assigneeId: asked["assigneeId"],
     }),
@@ -59192,7 +59267,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { supportCaseSchema } from "#/generated/support-case.schema";
+import { supportCaseSettable } from "#/generated/support-case.schema";
 import { supportCaseData } from "#/generated/support-case.server";
 import { reopenAccess, reopenFits } from "./reopen";
 
@@ -59202,7 +59277,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof supportCaseData.get>>>;
 function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
-    values: supportCaseSchema.partial().parse({
+    values: supportCaseSettable.partial().parse({
       status: "reopened",
     }),
 
@@ -59303,7 +59378,7 @@ import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { afterChange } from "#/generated/hooks";
-import { supportCaseSchema } from "#/generated/support-case.schema";
+import { supportCaseSettable } from "#/generated/support-case.schema";
 import { supportCaseData } from "#/generated/support-case.server";
 import { startWorkAccess, startWorkFits, type startWorkAsks } from "./start-work";
 import type { z } from "zod";
@@ -59314,7 +59389,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof supportCaseData.get>>>;
 function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof startWorkAsks>) {
   return {
     id: row.id,
-    values: supportCaseSchema.partial().parse({
+    values: supportCaseSettable.partial().parse({
       status: "inProgress",
       assigneeId: asked["assigneeId"],
     }),
@@ -60243,13 +60318,16 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a message's form sends, checked. */
-export const messageSchema = createInsertSchema(schema.messages, {
+/** What a message may be given: a form's values and what the app fills (an action's set). */
+export const messageSettable = createInsertSchema(schema.messages, {
   content: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   fromEmail: z.email(w.enterValidEmail).nullish(),
   attachments: z.array(z.object({ file: z.string().regex(/^message\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() })).max(10).nullish(),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, agentId: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a message's form sends, checked: never what the app fills. */
+export const messageSchema = messageSettable.omit({ agentId: true });
 
+export type MessageSettable = z.output<typeof messageSettable>;
 export type MessageValues = z.output<typeof messageSchema>;
 "
 `;
@@ -60271,7 +60349,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { supportCaseData } from "./support-case.server";
-import { type MessageValues } from "./message";
+import { type MessageSettable, type MessageValues } from "./message";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -60330,7 +60408,7 @@ function checkFiles<V extends Partial<MessageValues>>(viewer: Viewer | null, val
 }
 
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<MessageValues>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<MessageSettable>): void {
   if (values.supportCaseId != null && !supportCaseData.canRead(viewer, values.supportCaseId))
     throw new AccessDenied(viewer !== null);
 }
@@ -60616,7 +60694,7 @@ export const messageData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<MessageValues>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<MessageSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.messages.ownerId, attachments: schema.messages.attachments })
       .from(schema.messages)
@@ -60723,7 +60801,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { messageSchema } from "./message.schema";
 
-export type { MessageValues } from "./message.schema";
+export type { MessageSettable, MessageValues } from "./message.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -61041,15 +61119,18 @@ import { z } from "zod";
 import * as schema from "#/db/schema";
 import { w } from "#/kit/words";
 
-/** What a support case's form sends, checked. */
-export const supportCaseSchema = createInsertSchema(schema.supportCases, {
+/** What a support case may be given: a form's values and what the app fills (an action's set). */
+export const supportCaseSettable = createInsertSchema(schema.supportCases, {
   subject: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   customerEmail: z.email(w.enterValidEmail),
   priority: (s) => s.min(1).max(5),
   body: (s) => s.max(10000, w.atMostCharacters(10000)),
   attachments: z.array(z.object({ file: z.string().regex(/^support-case\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() })).max(10).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a support case's form sends, checked. */
+export const supportCaseSchema = supportCaseSettable;
 
+export type SupportCaseSettable = z.output<typeof supportCaseSettable>;
 export type SupportCaseValues = z.output<typeof supportCaseSchema>;
 "
 `;
@@ -61073,7 +61154,7 @@ import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { messageData } from "./message.server";
 import { messageUi } from "./message";
-import { supportCaseUi, type SupportCaseValues } from "./support-case";
+import { supportCaseUi, type SupportCaseSettable, type SupportCaseValues } from "./support-case";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -61440,7 +61521,7 @@ export const supportCaseData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<SupportCaseValues>, what = "changed", frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<SupportCaseSettable>, what = "changed", frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.supportCases.ownerId, attachments: schema.supportCases.attachments })
       .from(schema.supportCases)
@@ -61581,7 +61662,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { supportCaseSchema } from "./support-case.schema";
 
-export type { SupportCaseValues } from "./support-case.schema";
+export type { SupportCaseSettable, SupportCaseValues } from "./support-case.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -64008,29 +64089,29 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/db/schema.ts": "ddcd3e3c generated",
   "src/db/seed.ts": "59920618 generated",
   "src/generated/access.test.ts": "dc6adecc generated",
-  "src/generated/actions/assign-to-me.server.ts": "cf0f30b2 generated",
+  "src/generated/actions/assign-to-me.server.ts": "41077c20 generated",
   "src/generated/actions/assign-to-me.ts": "405ebc36 generated",
-  "src/generated/actions/assign-to.server.ts": "b6661997 generated",
+  "src/generated/actions/assign-to.server.ts": "c7fea8bd generated",
   "src/generated/actions/assign-to.ts": "4ba13b57 generated",
-  "src/generated/actions/close.server.ts": "def82df0 generated",
+  "src/generated/actions/close.server.ts": "f3f652b2 generated",
   "src/generated/actions/close.ts": "6140ec7f generated",
-  "src/generated/actions/reopen.server.ts": "3cdbbe85 generated",
+  "src/generated/actions/reopen.server.ts": "90344991 generated",
   "src/generated/actions/reopen.ts": "a2f04753 generated",
-  "src/generated/actions/start-work.server.ts": "e488000d generated",
+  "src/generated/actions/start-work.server.ts": "bcef2431 generated",
   "src/generated/actions/start-work.ts": "915fde76 generated",
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "8c32c143 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
-  "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "0e34cfa7 generated",
-  "src/generated/message.ts": "a09fcc8f generated",
+  "src/generated/message.schema.ts": "66be17ce generated",
+  "src/generated/message.server.ts": "9833f1ec generated",
+  "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
-  "src/generated/support-case.schema.ts": "380912eb generated",
-  "src/generated/support-case.server.ts": "8e302fc4 generated",
-  "src/generated/support-case.ts": "29922f74 generated",
+  "src/generated/support-case.schema.ts": "da32d7c9 generated",
+  "src/generated/support-case.server.ts": "f8b13a09 generated",
+  "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
   "src/generated/users.test.ts": "c9e9da25 generated",

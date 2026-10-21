@@ -175,6 +175,8 @@ export function names(model: ModelIR, t: Texts) {
     tableKey: tableNames(model).table,
     ui: `${camel(model.name)}Ui`,
     schema: `${camel(model.name)}Schema`,
+    /** The record's settable values: what a form sends plus what the app fills (an action's set). */
+    settable: `${camel(model.name)}Settable`,
     list: `list${pascal(pluralName)}`,
     get: `get${model.name}`,
     create: `create${model.name}`,
@@ -187,6 +189,7 @@ export function names(model: ModelIR, t: Texts) {
     access: `${camel(model.name)}Access`,
     data: `${camel(model.name)}Data`,
     values: `${model.name}Values`,
+    settableValues: `${model.name}Settable`,
     label: t.modelLabel(model),
     pluralLabel: t.modelPluralLabel(model),
   };

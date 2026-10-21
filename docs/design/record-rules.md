@@ -28,7 +28,7 @@ models:
       supportCase: SupportCase!
 ```
 
-- **`by: app`** on a field: the form never shows it, on create or edit. Its value comes from
+- **`by: app`** on a field: the form never shows it, on create or edit (the generated form schema leaves it out; the record's settable schema, which an action's `set` goes through, keeps it). Its value comes from
   its default (a literal, or a formula: `ME()` for who is making the record, `TODAY()`), from an
   action's `set` or `add`, from an incoming entry's `set` (`sender: customer` for a mail), from
   an import, or from custom code. The record page and lists show it as any field.
