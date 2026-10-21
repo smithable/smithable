@@ -126,9 +126,12 @@ export async function themeLab(
     shown = undefined;
     if (!was) return;
     if (was.child.exitCode === null) {
+      // Its port is reused: wait for it to go, and after five seconds make it go.
       const exited = new Promise((done) => was.child.once("exit", done));
       was.child.kill();
+      const hard = setTimeout(() => was.child.kill("SIGKILL"), 5000);
       await exited;
+      clearTimeout(hard);
     }
     if (!options.app) rmSync(join(was.app, ".."), { recursive: true, force: true });
   };
@@ -136,7 +139,10 @@ export async function themeLab(
     const app = options.app ? resolve(options.app) : await labApp(io, starter ?? "booking");
     if (!app) return false;
     const { ir } = loadSpec(app, io);
-    if (!ir) return false;
+    if (!ir) {
+      if (!options.app) rmSync(join(app, ".."), { recursive: true, force: true });
+      return false;
+    }
     const config = join("data", ".smithable", "preview.vite.config.mjs");
     mkdirSync(join(app, "data", ".smithable"), { recursive: true });
     writeFileSync(join(app, config), previewConfig());

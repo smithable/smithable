@@ -17,7 +17,6 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import { newApp, op, open, repo, serveDev, signIn } from "./dev-app.mjs";
@@ -87,7 +86,8 @@ for (const starter of chosen.length ? chosen : all) {
   // The saving is `smithable static`'s, into frames/ of a folder of its own, moved to
   // frames/<starter>/: the frame runtime's ../fonts/ is then frames/fonts/. The lab brings the
   // fonts, so the imported sheets stay out.
-  const saving = mkdtempSync(join(tmpdir(), "theme-lab-export-"));
+  // Saved beside its place, so the move stays on one filesystem (/tmp may be another).
+  const saving = mkdtempSync(join(out, "frames", ".saving-"));
   const saved = await savePages(
     page,
     base,
