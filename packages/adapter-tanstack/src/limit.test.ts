@@ -40,3 +40,14 @@ test("the limit counts within a window, refuses beyond it, and starts over after
   expect(() => kit.count("write:a", limit, "changes", at(63))).not.toThrow();
   expect(() => kit.count("write:a", limit, "changes", at(64))).toThrow(kit.TooMany);
 });
+
+test("full of live counts, the limit keeps them and refuses a new key until the window ends", () => {
+  const limit = { max: 1, seconds: 60 };
+  const now = 5_000_000;
+  for (let i = 0; i < 50_000; i++) kit.count(`flood:${i}`, limit, "changes", now);
+  // A live count is not dropped to make room: its limit still holds.
+  expect(() => kit.count("flood:0", limit, "changes", now + 1000)).toThrow(kit.TooMany);
+  expect(() => kit.count("newcomer", limit, "changes", now + 1000)).toThrow(kit.TooMany);
+  // Once the window is over the expired counts go, and a new key is counted.
+  expect(() => kit.count("newcomer", limit, "changes", now + 61_000)).not.toThrow();
+});

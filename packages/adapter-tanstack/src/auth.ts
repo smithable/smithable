@@ -75,27 +75,35 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
   const role = invitations ? `openInvitation(email)?.role ?? ${defaultRole}` : defaultRole;
   // A new account is in the audit log, and so is the invitation it used up.
   const afterCreate = `
-        after: async (created) => {
-          const who = { id: created.id, role: String(created.role) };${
-            invitations
-              ? `
+        after: async (created, ctx) => {
+          const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email)${invitations ? " || Boolean(openInvitation(email))" : ""})
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;${
+                invitations
+                  ? `
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();`
-              : ""
-          }
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }`
+                  : ""
+              }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },`;
   const tables = invitations
     ? "account, invitation, session, user, verification"
     : "account, session, user, verification";
   return `${HEADER}import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-${refuses ? 'import { APIError } from "better-auth/api";\n' : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
+${refuses || email ? `import { ${[...(refuses ? ["APIError"] : []), ...(email ? ["createAuthMiddleware"] : [])].join(", ")} } from "better-auth/api";\n` : ""}${email ? 'import { emailOTP } from "better-auth/plugins";\n' : ""}import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${tables} } from "#/db/schema";${closed || email ? '\nimport { app } from "#/generated/app";' : ""}
@@ -110,9 +118,11 @@ export const PROVIDERS = ${JSON.stringify(providers)};
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains)};\n` : ""}/** These addresses become admins when they first sign in. */
-const ADMINS: string[] = ${JSON.stringify(auth.admins)};
-
+${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains.map((d) => d.toLowerCase()))};\n` : ""}/** These addresses become admins when they first sign in. */
+const ADMINS: string[] = ${JSON.stringify(auth.admins.map((a) => a.toLowerCase()))};
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 ${providers
   .filter((p) => p !== "email")
@@ -188,7 +198,23 @@ export const auth = betterAuth({
   // In development the app may run on any local port (the preview, the tests).
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
-  socialProviders,
+  socialProviders,${
+    email
+      ? `
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },`
+      : ""
+  }
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -199,11 +225,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -211,8 +238,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: ${JSON.stringify(auth.defaultRole)}, input: false },
@@ -221,18 +249,21 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
-          const email = newUser.email.toLowerCase();${
+        before: async (newUser, ctx) => {
+          const email = newUser.email.toLowerCase();
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);${
             refuses
               ? `
-          const refused = joinRefusal(email);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }`
               : ""
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : ${role} } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? ${role} : ${defaultRole} } };
         },${afterCreate}
       },
     },
@@ -264,17 +295,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
 ${
   refuses
     ? `        // Who may not join gets no mail, and the page says the same either way.
@@ -394,6 +419,9 @@ import { authClient } from "#/lib/auth-client";
 
 const ROLES = ${JSON.stringify(roles)} as const;
 ${options}
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -405,18 +433,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({

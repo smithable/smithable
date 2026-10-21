@@ -74,6 +74,8 @@ export function makeKey(
   until?: Date,
 ): string {
   const by = admin(viewer);
+  // Its own check, not only the route's: a key stands for a role the app has.
+  if (!(KEY_ROLES as readonly string[]).includes(role)) throw new Error("No such role.");
   if (until && until.getTime() < Date.now()) throw new Error("The end date is in the past.");
   const key = \`smk_\${randomBytes(24).toString("base64url")}\`;
   db.transaction((tx) => {
@@ -136,7 +138,7 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { keyViewer, listKeys, makeKey, revokeKey } from "./keys.server";
-import { removeUser } from "./users.server";
+import { removeUser${other ? ", setRole" : ""} } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
@@ -159,6 +161,7 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer("Bearer smk_madeup")).toBeNull();
   expect(keyViewer(null)).toBeNull();
 ${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSON.stringify(other)} }, "Mine", ${JSON.stringify(other)})).toThrow(AccessDenied);\n` : ""}  // A key cannot make keys, whatever its role.
+  expect(() => makeKey(admin, "Made up", "superuser" as never)).toThrow("No such role.");
   const adminKey = makeKey(admin, "Admin key", "admin");
   expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
   revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);
@@ -168,7 +171,17 @@ ${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSO
   const theirs = makeKey(maker, "Theirs", ${JSON.stringify(role)});
   await removeUser(admin, maker.id);
   expect(keyViewer(\`Bearer \${theirs}\`)).toBeNull();
-  // What touches security keeps its values: the key's name and role, never the key.
+${
+  other
+    ? `  // And with the role they had: a new role ends the keys they made.
+  const demoted = { id: "keys-test-demoted", name: "Demoted", email: "keys-test-demoted@example.com", role: "admin" };
+  db.insert(user).values(demoted).run();
+  const before = makeKey(demoted, "Before", "admin");
+  await setRole(admin, demoted.id, ${JSON.stringify(other)});
+  expect(keyViewer(\`Bearer \${before}\`)).toBeNull();
+`
+    : ""
+}  // What touches security keeps its values: the key's name and role, never the key.
   const lines = db.select().from(auditLog).all().filter((l) => l.action.startsWith("key "));
   expect(lines.map((l) => [l.action, l.who, l.details?.name])).toEqual([
     ["key made", admin.id, "Billing sync"],
@@ -177,7 +190,7 @@ ${other ? `  expect(() => makeKey({ ...admin, id: "keys-test-other", role: ${JSO
     ["key made", admin.id, "Admin key"],
     ["key revoked", admin.id, "Admin key"],
     ["key made", maker.id, "Theirs"],
-    ["key revoked", admin.id, "Theirs"],
+    ["key revoked", admin.id, "Theirs"],${other ? `\n    ["key made", "keys-test-demoted", "Before"],\n    ["key revoked", admin.id, "Before"],` : ""}
   ]);
 });
 `;

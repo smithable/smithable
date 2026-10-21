@@ -124,15 +124,12 @@ const ODF = "application/vnd.oasis.opendocument.";
 /** The kinds a document may be, by extension: what the file must start with, and its type. */
 const KINDS: Record<string, { type: string; is: (bytes: Uint8Array, text: string) => boolean }> = {
   pdf: { type: "application/pdf", is: (_, t) => t.startsWith("%PDF-") },
-  docx: { type: `${OOXML}wordprocessingml.document`, is: (_, t) => zip(t, "[Content_Types].xml") },
-  xlsx: { type: `${OOXML}spreadsheetml.sheet`, is: (_, t) => zip(t, "[Content_Types].xml") },
-  pptx: {
-    type: `${OOXML}presentationml.presentation`,
-    is: (_, t) => zip(t, "[Content_Types].xml"),
-  },
-  odt: { type: `${ODF}text`, is: (_, t) => zip(t, `${ODF}text`) },
-  ods: { type: `${ODF}spreadsheet`, is: (_, t) => zip(t, `${ODF}spreadsheet`) },
-  odp: { type: `${ODF}presentation`, is: (_, t) => zip(t, `${ODF}presentation`) },
+  docx: { type: `${OOXML}wordprocessingml.document`, is: (b, t) => office(b, t) },
+  xlsx: { type: `${OOXML}spreadsheetml.sheet`, is: (b, t) => office(b, t) },
+  pptx: { type: `${OOXML}presentationml.presentation`, is: (b, t) => office(b, t) },
+  odt: { type: `${ODF}text`, is: (b, t) => openDocument(b, t, `${ODF}text`) },
+  ods: { type: `${ODF}spreadsheet`, is: (b, t) => openDocument(b, t, `${ODF}spreadsheet`) },
+  odp: { type: `${ODF}presentation`, is: (b, t) => openDocument(b, t, `${ODF}presentation`) },
   txt: { type: "text/plain; charset=utf-8", is: (b) => plainText(b) },
   csv: { type: "text/csv; charset=utf-8", is: (b) => plainText(b) },
   png: { type: "image/png", is: (_, t) => t.startsWith("\x89PNG\r\n\x1a\n") },
@@ -141,8 +138,39 @@ const KINDS: Record<string, { type: string; is: (bytes: Uint8Array, text: string
   webp: { type: "image/webp", is: (b) => webpSize(b) !== undefined },
 };
 
-/** A ZIP archive (an Office or OpenDocument file) that names `entry` inside it. */
-const zip = (text: string, entry: string) => text.startsWith("PK\x03\x04") && text.includes(entry);
+const u16 = (b: Uint8Array, at: number) => (b[at] ?? 0) | ((b[at + 1] ?? 0) << 8);
+const u32 = (b: Uint8Array, at: number) => (u16(b, at) | (u16(b, at + 2) << 16)) >>> 0;
+
+/**
+ * A ZIP archive's entry names, from its central directory at the end (which every entry is in,
+ * whatever its local header says); none when it is no archive.
+ */
+function zipEntries(bytes: Uint8Array, text: string): string[] {
+  if (!text.startsWith("PK\x03\x04")) return [];
+  // The end record: 22 bytes, after it at most a 64 KB comment.
+  const end = text.lastIndexOf("PK\x05\x06", bytes.length - 22);
+  if (end < 0 || end < bytes.length - 22 - 65_535) return [];
+  const names: string[] = [];
+  let at = u32(bytes, end + 16);
+  for (let i = u16(bytes, end + 10); i > 0 && at < end && text.startsWith("PK\x01\x02", at); i--) {
+    const name = u16(bytes, at + 28);
+    names.push(text.slice(at + 46, at + 46 + name));
+    at += 46 + name + u16(bytes, at + 30) + u16(bytes, at + 32);
+  }
+  return names;
+}
+
+/** An Office file: an archive with the [Content_Types].xml entry the format requires. */
+const office = (bytes: Uint8Array, text: string) =>
+  zipEntries(bytes, text).includes("[Content_Types].xml");
+
+/** An OpenDocument file: its first entry is "mimetype", stored, holding the document's type. */
+function openDocument(bytes: Uint8Array, text: string, type: string): boolean {
+  if (!text.startsWith("PK\x03\x04") || text.slice(30, 38) !== "mimetype") return false;
+  if (u16(bytes, 26) !== 8 || u16(bytes, 8) !== 0) return false;
+  const start = 30 + 8 + u16(bytes, 28);
+  return text.slice(start, start + type.length) === type && zipEntries(bytes, text).length > 0;
+}
 
 /** Text a person can read: UTF-8 without the NUL bytes of a binary file. */
 function plainText(bytes: Uint8Array): boolean {
@@ -223,6 +251,8 @@ export async function scanned(bytes: Uint8Array): Promise<void> {
     method: "POST",
     headers: { "content-type": "application/octet-stream" },
     body: new Uint8Array(bytes),
+    // A check that never answers refuses the file after half a minute, not never.
+    signal: AbortSignal.timeout(30_000),
   }).catch(() => undefined);
   if (!answer?.ok) throw new BadFile(w.virusRefused);
 }

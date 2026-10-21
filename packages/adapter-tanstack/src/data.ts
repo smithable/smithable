@@ -2024,7 +2024,9 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
     };
     try {
       changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
-        const before = tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get();${updateRules}
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);${updateRules}
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
         return after;
@@ -2050,6 +2052,9 @@ ${dropPictures(
     check(${n.access}.delete, viewer, ${ownerOf});
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
           audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}

@@ -211,7 +211,20 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   db.transaction((tx) => {
     tx.update(user).set({ role }).where(eq(user.id, userId)).run();
     // What touches security keeps its values: who, what they were and what they became.
-    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+    audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });${
+      hasKeys(ir, auth)
+        ? `
+    // The keys they made were made at the role they had: a new role ends them.
+    if (role !== target.role)
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker's role changed" } });`
+        : ""
+    }
   });
 }
 
@@ -336,11 +349,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@${domain}", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {

@@ -3296,6 +3296,8 @@ export function makeKey(
   until?: Date,
 ): string {
   const by = admin(viewer);
+  // Its own check, not only the route's: a key stands for a role the app has.
+  if (!(KEY_ROLES as readonly string[]).includes(role)) throw new Error("No such role.");
   if (until && until.getTime() < Date.now()) throw new Error("The end date is in the past.");
   const key = \`smk_\${randomBytes(24).toString("base64url")}\`;
   db.transaction((tx) => {
@@ -3356,7 +3358,7 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { keyViewer, listKeys, makeKey, revokeKey } from "./keys.server";
-import { removeUser } from "./users.server";
+import { removeUser, setRole } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
@@ -3380,6 +3382,7 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer(null)).toBeNull();
   expect(() => makeKey({ ...admin, id: "keys-test-other", role: "member" }, "Mine", "member")).toThrow(AccessDenied);
   // A key cannot make keys, whatever its role.
+  expect(() => makeKey(admin, "Made up", "superuser" as never)).toThrow("No such role.");
   const adminKey = makeKey(admin, "Admin key", "admin");
   expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
   revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);
@@ -3389,6 +3392,12 @@ test("an administrator makes a key; it stands for its role until revoked or past
   const theirs = makeKey(maker, "Theirs", "member");
   await removeUser(admin, maker.id);
   expect(keyViewer(\`Bearer \${theirs}\`)).toBeNull();
+  // And with the role they had: a new role ends the keys they made.
+  const demoted = { id: "keys-test-demoted", name: "Demoted", email: "keys-test-demoted@example.com", role: "admin" };
+  db.insert(user).values(demoted).run();
+  const before = makeKey(demoted, "Before", "admin");
+  await setRole(admin, demoted.id, "member");
+  expect(keyViewer(\`Bearer \${before}\`)).toBeNull();
   // What touches security keeps its values: the key's name and role, never the key.
   const lines = db.select().from(auditLog).all().filter((l) => l.action.startsWith("key "));
   expect(lines.map((l) => [l.action, l.who, l.details?.name])).toEqual([
@@ -3399,6 +3408,8 @@ test("an administrator makes a key; it stands for its role until revoked or past
     ["key revoked", admin.id, "Admin key"],
     ["key made", maker.id, "Theirs"],
     ["key revoked", admin.id, "Theirs"],
+    ["key made", "keys-test-demoted", "Before"],
+    ["key revoked", admin.id, "Before"],
   ]);
 });
 "
@@ -4756,7 +4767,9 @@ export const noteData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.notes).where(eq(schema.notes.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.notes).set(updated).where(eq(schema.notes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Note", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -4780,6 +4793,9 @@ export const noteData = {
     check(noteAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.notes.id }).from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.notes).where(eq(schema.notes.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Note", record: id, title: gone.title });
@@ -5341,7 +5357,9 @@ export const projectData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.projects).where(eq(schema.projects.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.projects).set(updated).where(eq(schema.projects.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Project", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -5364,6 +5382,9 @@ export const projectData = {
     check(projectAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.projects.id }).from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.projects).where(eq(schema.projects.id, id)).returning().get();
@@ -5920,7 +5941,9 @@ export const taskData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.tasks).set(updated).where(eq(schema.tasks.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Task", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -5943,6 +5966,9 @@ export const taskData = {
     check(taskAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.tasks.id }).from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.tasks).where(eq(schema.tasks.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Task", record: id, title: gone.title });
@@ -6295,6 +6321,15 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
     tx.update(user).set({ role }).where(eq(user.id, userId)).run();
     // What touches security keeps its values: who, what they were and what they became.
     audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+    // The keys they made were made at the role they had: a new role ends them.
+    if (role !== target.role)
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker's role changed" } });
   });
 }
 
@@ -6415,11 +6450,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
@@ -6530,7 +6565,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -6553,7 +6588,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["admin@team-tasks.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -6625,6 +6662,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -6635,11 +6684,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -6647,8 +6697,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -6657,25 +6708,36 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          const refused = joinRefusal(email);
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "member" } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "member" : "member" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email) || Boolean(openInvitation(email)))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -6705,17 +6767,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -8369,6 +8425,9 @@ const signInOptions = createServerFn()
     };
   });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -8380,18 +8439,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -9221,23 +9290,23 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "0f455bad generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
-  "src/generated/keys.server.ts": "803e4661 generated",
-  "src/generated/keys.test.ts": "05e27e83 generated",
+  "src/generated/keys.server.ts": "2237f355 generated",
+  "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "4aeaf6b4 generated",
+  "src/generated/note.server.ts": "8a29affb generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "dae61335 generated",
+  "src/generated/project.server.ts": "93181ac9 generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "8dd940bd generated",
+  "src/generated/task.server.ts": "e25c0297 generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
-  "src/generated/users.server.ts": "cfa2ff5a generated",
-  "src/generated/users.test.ts": "b686c0ea generated",
+  "src/generated/users.server.ts": "d437282f generated",
+  "src/generated/users.test.ts": "b5d92c9f generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -9270,12 +9339,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -9283,13 +9352,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e513332a generated",
+  "src/lib/auth.ts": "1efcad71 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -9326,10 +9395,10 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "505b868e generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "105e9502 generated",
+  "src/routes/sign-in.tsx": "d511ca5b generated",
   "src/routes/team/activity.tsx": "f5cfba7a generated",
   "src/routes/team/index.tsx": "c58a919e generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
@@ -11752,7 +11821,9 @@ export const bookingData = {
       changed = db.transaction((tx) => {
       const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId), ne(schema.bookings.id, id))).get()?.n ?? 0;
       if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
-        const before = tx.select().from(schema.bookings).where(eq(schema.bookings.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.bookings).set(updated).where(eq(schema.bookings.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "Booking", what, after, before);
@@ -11776,6 +11847,9 @@ export const bookingData = {
     check(bookingAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.bookings.id }).from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.bookings).where(eq(schema.bookings.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Booking", record: id, title: gone.id });
@@ -12328,7 +12402,9 @@ export const classTypeData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.classTypes).where(eq(schema.classTypes.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.classTypes).set(updated).where(eq(schema.classTypes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "ClassType", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -12351,6 +12427,9 @@ export const classTypeData = {
     check(classTypeAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, id)).returning().get();
@@ -13157,7 +13236,9 @@ export const instructorData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.instructors).where(eq(schema.instructors.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.instructors).set(updated).where(eq(schema.instructors.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Instructor", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -13181,6 +13262,9 @@ export const instructorData = {
     check(instructorAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.instructors.id }).from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, id)).returning().get();
@@ -13739,7 +13823,9 @@ export const messageData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.messages).where(eq(schema.messages.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.messages).set(updated).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -13762,6 +13848,9 @@ export const messageData = {
     check(messageAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.messages.id }).from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.messages).where(eq(schema.messages.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: gone.name });
@@ -14429,7 +14518,9 @@ export const postData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.posts).where(eq(schema.posts.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.posts).set(updated).where(eq(schema.posts.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Post", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -14453,6 +14544,9 @@ export const postData = {
     check(postAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.posts.id }).from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.posts).where(eq(schema.posts.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Post", record: id, title: gone.title });
@@ -15080,7 +15174,9 @@ export const sessionData = {
         const booked = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0;
         if (values.capacity < booked) throw new Conflict(\`booked:\${booked}\`);
       }
-        const before = tx.select().from(schema.sessions).where(eq(schema.sessions.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.sessions).set(updated).where(eq(schema.sessions.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["placesLeft"].includes(k))) });
         return after;
@@ -15103,6 +15199,9 @@ export const sessionData = {
     check(sessionAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.sessions.id }).from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, \`#\${id}\`);
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, id)).returning().get();
@@ -15339,6 +15438,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -15361,7 +15461,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@stillwater.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -15405,6 +15507,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -15415,11 +15529,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -15427,8 +15542,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -15437,13 +15553,22 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? "member" : "member" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          const email = created.email.toLowerCase();
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -15473,17 +15598,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -19157,6 +19276,9 @@ const signInOptions = createServerFn().handler(() => {
   return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -19168,18 +19290,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -19784,10 +19916,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "a2aa8951 generated",
+  "src/generated/booking.server.ts": "2c06e0ed generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "4f64fbdb generated",
+  "src/generated/class-type.server.ts": "794e6064 generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19795,20 +19927,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "2847f203 generated",
+  "src/generated/instructor.server.ts": "a0308913 generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "5927af3d generated",
+  "src/generated/message.server.ts": "4fa2ca5f generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "af04753d generated",
+  "src/generated/post.server.ts": "91d8260a generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "c0a6cc74 generated",
+  "src/generated/session.server.ts": "338bf01b generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -19853,11 +19985,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "8953ff1a kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
@@ -19867,13 +19999,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c13f1b62 generated",
+  "src/lib/auth.ts": "d7f55210 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -19927,9 +20059,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/$id.tsx": "2511b5a6 generated",
   "src/routes/sessions/index.tsx": "bfba6f07 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
-  "src/routes/sign-in.tsx": "3391627b generated",
+  "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "785d6529 generated",
@@ -21789,7 +21921,9 @@ export const customerData = {
     const updated = { ...values, accountManagerId: viewer && customerAccess.write.roles.includes(viewer.role) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.customers).where(eq(schema.customers.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.customers).set(updated).where(eq(schema.customers.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Customer", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -21812,6 +21946,9 @@ export const customerData = {
     check(customerAccess.delete, viewer, row.accountManagerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.customers.id }).from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used && !together) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const when = new Date();
@@ -22719,7 +22856,9 @@ export const orderData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.orders).where(eq(schema.orders.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.orders).set(updated).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["shippingCost"].includes(k))) });
         return after;
@@ -22742,6 +22881,9 @@ export const orderData = {
     check(orderAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const when = new Date();
         const gone = tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, id), isNull(schema.orders.deletedAt))).returning().get();
         if (gone) {
@@ -23421,11 +23563,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@acme.example", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
@@ -23536,7 +23678,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -23560,7 +23702,9 @@ function signedInAs(userId: string) {
 const ALLOWED_DOMAINS = ["acme.example"];
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@acme.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -23634,6 +23778,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -23644,11 +23800,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -23656,8 +23813,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "sales", input: false },
@@ -23666,25 +23824,36 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          const refused = joinRefusal(email);
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "sales" } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "sales" : "sales" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email) || Boolean(openInvitation(email)))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -23714,17 +23883,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -24719,6 +24882,9 @@ const signInOptions = createServerFn()
     };
   });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -24730,18 +24896,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@acme.example\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -25560,19 +25736,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "6f93a267 generated",
+  "src/generated/customer.server.ts": "a657215c generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "6e444399 generated",
+  "src/generated/order.server.ts": "32f1db44 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "1c432d97 generated",
   "src/generated/users.server.ts": "b7bb6e6e generated",
-  "src/generated/users.test.ts": "f49c4632 generated",
+  "src/generated/users.test.ts": "88e55585 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "719812de kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
@@ -25606,11 +25782,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -25622,7 +25798,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "2c551cb3 generated",
+  "src/lib/auth.ts": "8e3d7b24 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -25640,11 +25816,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "ffa48b2d generated",
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "64dfa537 generated",
+  "src/routes/sign-in.tsx": "77b87e28 generated",
   "src/routes/team/activity.tsx": "d04540a5 generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "1f2754d0 generated",
@@ -28042,7 +28218,9 @@ export const businessProfileData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.businessProfiles).where(eq(schema.businessProfiles.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.businessProfiles).set(updated).where(eq(schema.businessProfiles.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "BusinessProfile", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -28065,6 +28243,9 @@ export const businessProfileData = {
     check(businessProfileAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.businessProfiles.id }).from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.businessProfiles).where(eq(schema.businessProfiles.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: id, title: gone.businessName });
@@ -28612,7 +28793,9 @@ export const clientData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.clients).where(eq(schema.clients.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.clients).set(updated).where(eq(schema.clients.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Client", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -28635,6 +28818,9 @@ export const clientData = {
     check(clientAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.clients.id }).from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.clients).where(eq(schema.clients.id, id)).returning().get();
@@ -29400,7 +29586,9 @@ export const invoiceData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.invoices).set(updated).where(eq(schema.invoices.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
         outgoing(tx, viewer, "Invoice", what, after, before);
@@ -29425,6 +29613,9 @@ export const invoiceData = {
     check(invoiceAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.invoices.id }).from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.number ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, id)).returning().get();
@@ -30083,7 +30274,9 @@ export const invoiceLineData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.invoiceLines).where(eq(schema.invoiceLines.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.invoiceLines).set(updated).where(eq(schema.invoiceLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
         return after;
@@ -30106,6 +30299,9 @@ export const invoiceLineData = {
     check(invoiceLineAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.invoiceLines.id }).from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.invoiceLines).where(eq(schema.invoiceLines.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: id, title: gone.description });
@@ -30441,6 +30637,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -30463,7 +30660,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@invoicely.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -30507,6 +30706,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -30517,11 +30728,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -30529,8 +30741,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -30539,13 +30752,22 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? "member" : "member" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          const email = created.email.toLowerCase();
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -30575,17 +30797,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -31851,6 +32067,9 @@ const signInOptions = createServerFn().handler(() => {
   return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -31862,18 +32081,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -32538,21 +32767,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "51ccb907 generated",
+  "src/generated/business-profile.server.ts": "778b3c3d generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "f8cae38d generated",
+  "src/generated/client.server.ts": "387a524d generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "e0ebed11 generated",
+  "src/generated/invoice-line.server.ts": "db371db9 generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "4ceff5d4 generated",
+  "src/generated/invoice.server.ts": "e7ba3ea0 generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -32596,11 +32825,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "8953ff1a kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
@@ -32610,13 +32839,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c080c389 generated",
+  "src/lib/auth.ts": "4a80e875 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -32639,10 +32868,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/overview/index.tsx": "0f36177f generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "64f20402 generated",
-  "src/routes/sign-in.tsx": "d164c0c1 generated",
+  "src/routes/sign-in.tsx": "fc4a8bfc generated",
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "de260b5f generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "0b442446 generated",
@@ -34823,7 +35052,9 @@ export const dishData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.dishes).where(eq(schema.dishes.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.dishes).set(updated).where(eq(schema.dishes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Dish", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -34847,6 +35078,9 @@ export const dishData = {
     check(dishAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.dishes.id }).from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.dishes).where(eq(schema.dishes.id, id)).returning().get();
@@ -35369,7 +35603,9 @@ export const orderData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.orders).where(eq(schema.orders.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.orders).set(updated).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
         outgoing(tx, viewer, "Order", what, after, before);
@@ -35393,6 +35629,9 @@ export const orderData = {
     check(orderAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.orders).where(eq(schema.orders.id, id)).returning().get();
@@ -35788,7 +36027,9 @@ export const orderLineData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.orderLines).where(eq(schema.orderLines.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.orderLines).set(updated).where(eq(schema.orderLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "OrderLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
         return after;
@@ -35811,6 +36052,9 @@ export const orderLineData = {
     check(orderLineAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.orderLines.id }).from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.orderLines).where(eq(schema.orderLines.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "OrderLine", record: id, title: gone.id });
@@ -36309,7 +36553,9 @@ export const stopData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.stops).where(eq(schema.stops.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.stops).set(updated).where(eq(schema.stops.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Stop", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -36332,6 +36578,9 @@ export const stopData = {
     check(stopAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.stops.id }).from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.stops).where(eq(schema.stops.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Stop", record: id, title: gone.place });
@@ -36771,11 +37020,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
@@ -36869,7 +37118,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -36892,7 +37141,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@kiosken.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -36964,6 +37215,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -36974,11 +37237,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -36986,8 +37250,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "staff", input: false },
@@ -36996,25 +37261,36 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          const refused = joinRefusal(email);
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "staff" } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "staff" : "staff" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email) || Boolean(openInvitation(email)))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -37044,17 +37320,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -38153,6 +38423,9 @@ const signInOptions = createServerFn()
     };
   });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -38164,18 +38437,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -39335,27 +39618,27 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "c49587a4 generated",
-  "src/generated/dish.server.ts": "1716209d generated",
+  "src/generated/dish.server.ts": "5b4e5d8f generated",
   "src/generated/dish.ts": "abeae023 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "eff1b2f5 generated",
-  "src/generated/order-line.server.ts": "fdaa343d generated",
+  "src/generated/order-line.server.ts": "c406e690 generated",
   "src/generated/order-line.ts": "14bf7a22 generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "3b459fda generated",
+  "src/generated/order.server.ts": "56efdf71 generated",
   "src/generated/order.ts": "e9a3c2e6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "cc18f1e6 generated",
-  "src/generated/stop.server.ts": "ba8ff2f1 generated",
+  "src/generated/stop.server.ts": "62d63356 generated",
   "src/generated/stop.ts": "f17c58ca generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
-  "src/generated/users.test.ts": "e326a4a1 generated",
+  "src/generated/users.test.ts": "0b576940 generated",
   "src/kit/ActionButton.tsx": "719812de kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -39388,11 +39671,11 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "8953ff1a kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
@@ -39402,12 +39685,12 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "a58ac8b8 generated",
+  "src/lib/auth.ts": "68f64f85 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -39425,7 +39708,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/orders/index.tsx": "70f7b156 generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
-  "src/routes/sign-in.tsx": "66d1c612 generated",
+  "src/routes/sign-in.tsx": "708939ab generated",
   "src/routes/sitemap[.]xml.ts": "c3f0b7d5 generated",
   "src/routes/stops/$id.tsx": "40e092f5 generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
@@ -39433,7 +39716,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/activity.tsx": "0f6eab93 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
   "src/routes/where/index.tsx": "61898dc7 generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "484c6ea1 generated",
@@ -41216,7 +41499,9 @@ export const itemData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.items).where(eq(schema.items.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.items).set(updated).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         queueReviews(tx, viewer, id, before, after);
@@ -41241,6 +41526,9 @@ export const itemData = {
     check(itemAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.items.id }).from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.title });
@@ -41737,6 +42025,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -41759,7 +42048,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["owner@torget.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -41803,6 +42094,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -41813,11 +42116,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -41825,8 +42129,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -41835,13 +42140,22 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? "member" : "member" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          const email = created.email.toLowerCase();
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -41871,17 +42185,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -43065,6 +43373,9 @@ const signInOptions = createServerFn().handler(() => {
   return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -43076,18 +43387,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -43676,7 +43997,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "a0987167 generated",
+  "src/generated/item.server.ts": "5dcdb393 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -43719,11 +44040,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -43732,13 +44053,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "243cc248 generated",
+  "src/lib/auth.ts": "eeec5afa generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -43760,10 +44081,10 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/$id.tsx": "06067542 generated",
   "src/routes/saved/index.tsx": "5a3f02fe generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
-  "src/routes/sign-in.tsx": "3391627b generated",
+  "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "7c4525c4 generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
@@ -45356,7 +45677,9 @@ export const itemData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.items).where(eq(schema.items.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.items).set(updated).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -45379,6 +45702,9 @@ export const itemData = {
     check(itemAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.items.id }).from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.name });
@@ -45595,6 +45921,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -45617,7 +45944,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = [];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -45661,6 +45990,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -45671,11 +46012,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -45683,8 +46025,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "member", input: false },
@@ -45693,13 +46036,22 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : "member" } };
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? "member" : "member" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          const email = created.email.toLowerCase();
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -45729,17 +46081,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Not awaited, so the answer takes as long whether or not a mail goes out.
         void sendMail({
           to: address,
@@ -46264,6 +46610,9 @@ const signInOptions = createServerFn().handler(() => {
   return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn, codes: codesReachPeople(), kept: mailKept() };
 });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -46275,18 +46624,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -46758,7 +47117,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "f4c1a1ed generated",
+  "src/generated/item.server.ts": "800fa071 generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -46794,11 +47153,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -46810,7 +47169,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "7a53390e generated",
+  "src/lib/auth.ts": "a84aa70c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -46822,9 +47181,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
-  "src/routes/sign-in.tsx": "3391627b generated",
+  "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
@@ -50449,7 +50808,9 @@ export const componentData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.components).where(eq(schema.components.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.components).set(updated).where(eq(schema.components.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Component", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -50472,6 +50833,9 @@ export const componentData = {
     check(componentAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.components.id }).from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.components).where(eq(schema.components.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Component", record: id, title: gone.name });
@@ -51180,7 +51544,9 @@ export const incidentData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.incidents).set(updated).where(eq(schema.incidents.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Incident", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -51203,6 +51569,9 @@ export const incidentData = {
     check(incidentAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.incidents.id }).from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.title ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, id)).returning().get();
@@ -51806,7 +52175,9 @@ export const incidentUpdateData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.incidentUpdates).set(updated).where(eq(schema.incidentUpdates.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "IncidentUpdate", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -51829,6 +52200,9 @@ export const incidentUpdateData = {
     check(incidentUpdateAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.incidentUpdates.id }).from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: titleOf(gone.message) });
@@ -52036,6 +52410,8 @@ export function makeKey(
   until?: Date,
 ): string {
   const by = admin(viewer);
+  // Its own check, not only the route's: a key stands for a role the app has.
+  if (!(KEY_ROLES as readonly string[]).includes(role)) throw new Error("No such role.");
   if (until && until.getTime() < Date.now()) throw new Error("The end date is in the past.");
   const key = \`smk_\${randomBytes(24).toString("base64url")}\`;
   db.transaction((tx) => {
@@ -52096,7 +52472,7 @@ import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { keyViewer, listKeys, makeKey, revokeKey } from "./keys.server";
-import { removeUser } from "./users.server";
+import { removeUser, setRole } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
@@ -52120,6 +52496,7 @@ test("an administrator makes a key; it stands for its role until revoked or past
   expect(keyViewer(null)).toBeNull();
   expect(() => makeKey({ ...admin, id: "keys-test-other", role: "staff" }, "Mine", "staff")).toThrow(AccessDenied);
   // A key cannot make keys, whatever its role.
+  expect(() => makeKey(admin, "Made up", "superuser" as never)).toThrow("No such role.");
   const adminKey = makeKey(admin, "Admin key", "admin");
   expect(() => makeKey(keyViewer(\`Bearer \${adminKey}\`), "Minted", "admin")).toThrow(AccessDenied);
   revokeKey(admin, listKeys(admin).find((k) => k.name === "Admin key")?.id ?? 0);
@@ -52129,6 +52506,12 @@ test("an administrator makes a key; it stands for its role until revoked or past
   const theirs = makeKey(maker, "Theirs", "staff");
   await removeUser(admin, maker.id);
   expect(keyViewer(\`Bearer \${theirs}\`)).toBeNull();
+  // And with the role they had: a new role ends the keys they made.
+  const demoted = { id: "keys-test-demoted", name: "Demoted", email: "keys-test-demoted@example.com", role: "admin" };
+  db.insert(user).values(demoted).run();
+  const before = makeKey(demoted, "Before", "admin");
+  await setRole(admin, demoted.id, "staff");
+  expect(keyViewer(\`Bearer \${before}\`)).toBeNull();
   // What touches security keeps its values: the key's name and role, never the key.
   const lines = db.select().from(auditLog).all().filter((l) => l.action.startsWith("key "));
   expect(lines.map((l) => [l.action, l.who, l.details?.name])).toEqual([
@@ -52139,6 +52522,8 @@ test("an administrator makes a key; it stands for its role until revoked or past
     ["key revoked", admin.id, "Admin key"],
     ["key made", maker.id, "Theirs"],
     ["key revoked", admin.id, "Theirs"],
+    ["key made", "keys-test-demoted", "Before"],
+    ["key revoked", admin.id, "Before"],
   ]);
 });
 "
@@ -52536,7 +52921,9 @@ export const maintenanceData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.maintenances).where(eq(schema.maintenances.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.maintenances).set(updated).where(eq(schema.maintenances.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Maintenance", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
@@ -52559,6 +52946,9 @@ export const maintenanceData = {
     check(maintenanceAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.maintenances.id }).from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.maintenances).where(eq(schema.maintenances.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Maintenance", record: id, title: gone.title });
@@ -53772,6 +54162,15 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
     tx.update(user).set({ role }).where(eq(user.id, userId)).run();
     // What touches security keeps its values: who, what they were and what they became.
     audit(tx, by, { action: "role changed", model: "User", details: { user: userId, from: target.role, to: role } });
+    // The keys they made were made at the role they had: a new role ends them.
+    if (role !== target.role)
+      for (const key of tx
+        .update(apiKey)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKey.createdById, userId), isNull(apiKey.revokedAt)))
+        .returning()
+        .all())
+        audit(tx, by, { action: "key revoked", details: { name: key.name, role: key.role, why: "its maker's role changed" } });
   });
 }
 
@@ -53892,11 +54291,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
@@ -53990,7 +54389,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -54013,7 +54412,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["ops@northwind.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -54085,6 +54486,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -54095,11 +54508,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -54107,8 +54521,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "staff", input: false },
@@ -54117,25 +54532,36 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          const refused = joinRefusal(email);
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "staff" } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "staff" : "staff" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email) || Boolean(openInvitation(email)))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -54165,17 +54591,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -56033,6 +56453,9 @@ const signInOptions = createServerFn()
     };
   });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -56044,18 +56467,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -57224,27 +57657,27 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "184e0759 generated",
+  "src/generated/component.server.ts": "da9ec48b generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "ce6f6cde generated",
+  "src/generated/incident-update.server.ts": "505ce0b6 generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "f9ea3dde generated",
+  "src/generated/incident.server.ts": "26c5c111 generated",
   "src/generated/incident.ts": "9088c218 generated",
-  "src/generated/keys.server.ts": "b4a728e1 generated",
-  "src/generated/keys.test.ts": "0c2f5e91 generated",
+  "src/generated/keys.server.ts": "9390b2d5 generated",
+  "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "ec5e0b2e generated",
+  "src/generated/maintenance.server.ts": "f9a9a66a generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
-  "src/generated/users.server.ts": "e6e89d60 generated",
-  "src/generated/users.test.ts": "0fbcce1c generated",
+  "src/generated/users.server.ts": "89addff1 generated",
+  "src/generated/users.test.ts": "cd7e93db generated",
   "src/kit/ActionButton.tsx": "719812de kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
@@ -57284,12 +57717,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -57301,7 +57734,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c1e0ee8e generated",
+  "src/lib/auth.ts": "46f9008f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -57331,14 +57764,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "12695563 generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
-  "src/routes/sign-in.tsx": "66d1c612 generated",
+  "src/routes/sign-in.tsx": "708939ab generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "916ddbdb generated",
   "src/routes/team/index.tsx": "f53943cc generated",
   "src/routes/updates/$id.tsx": "f63d4a31 generated",
   "src/routes/updates/index.tsx": "544b43a8 generated",
   "src/routes/updates/new.tsx": "9bff0965 generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
@@ -60136,7 +60569,9 @@ export const messageData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.messages).where(eq(schema.messages.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         const after = tx.update(schema.messages).set(updated).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "Message", what, after, before);
@@ -60161,6 +60596,9 @@ export const messageData = {
     check(messageAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.messages.id }).from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const gone = tx.delete(schema.messages).where(eq(schema.messages.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: titleOf(gone.content) });
@@ -60951,7 +61389,9 @@ export const supportCaseData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-        const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, id)).get();
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
         if (before) {
           const given: Record<string, unknown> = updated;
           const was: Record<string, unknown> = before;
@@ -60985,6 +61425,9 @@ export const supportCaseData = {
     check(supportCaseAccess.delete, viewer, row.ownerId);
     try {
       db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.supportCases.id }).from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
         const used = usedBy(tx, id, String(row.subject ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.supportCases).where(eq(schema.supportCases.id, id)).returning().get();
@@ -61503,11 +61946,11 @@ const audited = (action: string) =>
 const admin = { id: "users-test-admin", name: "Users test admin", email: "users-test-admin@example.com", role: "admin" };
 db.insert(user).values(admin).run();
 
+/** A person's first sign-in: their user made the way any sign-in makes one, through the auth hooks. */
 async function signUp(email: string) {
-  const result = await auth.api.signUpEmail({
-    body: { email, password: "users-test-password", name: email.split("@")[0] ?? email },
-  });
-  return db.select().from(user).where(eq(user.id, result.user.id)).get();
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email, name: email.split("@")[0] ?? email, emailVerified: true }, { method: "admin" });
+  return db.select().from(user).where(eq(user.id, made.id)).get();
 }
 
 test("an invited address signs up with the invited role, and the invitation is used up", async () => {
@@ -61618,7 +62061,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
@@ -61641,7 +62084,9 @@ function signedInAs(userId: string) {
 }
 /** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ["support@harbour.example"];
-
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 
 };
@@ -61713,6 +62158,18 @@ export const auth = betterAuth({
   ...(import.meta.env.DEV ? { trustedOrigins: ["http://localhost:*", "http://127.0.0.1:*"] } : {}),
   database: drizzleAdapter(db, { provider: "sqlite", schema: { account, session, user, verification } }),
   socialProviders,
+  // A sign-in code is counted before the plugin makes one: a request past its limit gets the same
+  // answer as any other and leaves the code already sent working.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/email-otp/send-verification-otp" || ctx.body?.type !== "sign-in" || !codesReachPeople()) return;
+      try {
+        codeAllowed(String(ctx.body?.email ?? "").trim().toLowerCase(), ctx.headers ?? new Headers());
+      } catch {
+        return ctx.json({ success: true });
+      }
+    }),
+  },
   // Its limits count per address from the one header the auth route sets (src/kit/address.server.ts),
   // never from an X-Forwarded-For the visitor could make up.
   // Over https the cookies are named so only this app's own address can set them (__Host-: Secure,
@@ -61723,11 +62180,12 @@ export const auth = betterAuth({
       ? {
           useSecureCookies: false,
           // Every other cookie it makes stays Secure too (a sign-in's state).
-          defaultCookieAttributes: { secure: true },
+          // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
+          defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
             ["session_token", "session_data", "dont_remember", "state"].map((name) => [
               name,
-              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true } },
+              { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
           ),
         }
@@ -61735,8 +62193,9 @@ export const auth = betterAuth({
   },
   // On in every production build, not only where NODE_ENV says so (Better Auth's default).
   rateLimit: { enabled: !import.meta.env.DEV },
-  // Email and password only serve the development sign-in; production builds leave it off.
-  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn },
+  // Email and password only serve the development sign-in; production builds leave it off. Nobody
+  // signs up with a password: the development sign-in makes its users on the server.
+  emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true },
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: "agent", input: false },
@@ -61745,25 +62204,36 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (newUser) => {
+        before: async (newUser, ctx) => {
           const email = newUser.email.toLowerCase();
-          const refused = joinRefusal(email);
+          // A provider's sign-in proves the address only when the provider confirmed it (a code by
+          // mail proves it by itself): unconfirmed, it gets no role beyond the default.
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
+          const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
-          return { data: { ...newUser, role: ADMINS.includes(email) ? "admin" : openInvitation(email)?.role ?? "agent" } };
+          return { data: { ...newUser, role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "agent" : "agent" } };
         },
-        after: async (created) => {
+        after: async (created, ctx) => {
           const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email) || Boolean(openInvitation(email)))
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },
       },
     },
@@ -61793,17 +62263,11 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 5,
       storeOTP: "hashed",
-      async sendVerificationOTP({ email, otp, type }, ctx) {
+      async sendVerificationOTP({ email, otp, type }) {
         // Without mail settings a production app keeps no codes: nobody would get them.
         if (type !== "sign-in" || !codesReachPeople()) return;
+        // Too many codes were refused before the plugin made this one (hooks.before).
         const address = email.toLowerCase();
-        // Too many codes for the address (or from the network address): no mail. The plugin sends
-        // in the background, so the page's answer is the same either way.
-        try {
-          codeAllowed(address, ctx?.request?.headers ?? new Headers());
-        } catch {
-          return;
-        }
         // Who may not join gets no mail, and the page says the same either way.
         const known = db.select({ id: user.id }).from(user).where(eq(user.email, address)).get();
         if (!known && joinRefusal(address)) return;
@@ -62458,7 +62922,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // Incoming call "support" (smithable.yml incoming): another service calls this address
 // with its secret; the secret is the setting INCOMING_SUPPORT_SECRET.
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import { db } from "#/db";
@@ -62478,11 +62942,9 @@ const caller: Viewer = { id: "key:incoming-support", name: NAME, email: "", role
 
 const answer = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const same = (a: string, b: string) => {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-};
+// Both sides hashed first: the same length whatever was sent, so the compare tells nothing of it.
+const digest = (s: string) => createHash("sha256").update(s).digest();
+const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 
 /** The mail a host passes on: from, to, subject, text, html, attachments ({ name, type, data }). */
 type Mail = { from?: unknown; to?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown; messageId?: unknown; inReplyTo?: unknown; references?: unknown; autoSubmitted?: unknown };
@@ -62684,6 +63146,9 @@ const signInOptions = createServerFn()
     };
   });
 
+/** The development sign-in's passwords, by address, for this process only. */
+const devPasswords = new Map<string, string>();
+
 /** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
@@ -62695,18 +63160,28 @@ const devSignIn = createServerFn({ method: "POST" })
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     const email = \`\${prefix}-\${role}@example.com\`;
-    const password = \`\${prefix}-password\`;
+    // One password per user while this process runs, never a known one: nobody signs in as them
+    // without this button, and two tabs signing in at once (Studio and its guide) use the same.
+    const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
+    devPasswords.set(email, password);
+    const context = await auth.$context;
     const made = () => db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
     if (!made()) {
       // Two tabs signing in at once (Studio and its guide): the other may make the user first.
-      await auth.api
-        .signUpEmail({ body: { email, password, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\` } })
-        .catch((error) => {
-          if (!made()) throw error;
-        });
+      try {
+        const created = await context.internalAdapter.createUser({ email, name: \`\${prefix === "demo" ? "Demo" : "Dev"} \${role}\`, emailVerified: true }, { method: "admin" });
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: created.id, password: await context.password.hash(password), userId: created.id });
+      } catch (error) {
+        if (!made()) throw error;
+      }
     }
     db.update(user).set({ role }).where(eq(user.email, email)).run();
-    await auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
+    // After a restart (or a password someone changed) the user's is another one: set anew.
+    await signIn().catch(async () => {
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+      await signIn();
+    });
   });
 
 export const Route = createFileRoute("/sign-in")({
@@ -63484,17 +63959,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "1f7ca367 generated",
+  "src/generated/message.server.ts": "5b31c117 generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "380912eb generated",
-  "src/generated/support-case.server.ts": "cec1d381 generated",
+  "src/generated/support-case.server.ts": "43d7e977 generated",
   "src/generated/support-case.ts": "29922f74 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
-  "src/generated/users.test.ts": "d8bc0730 generated",
+  "src/generated/users.test.ts": "c9e9da25 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "719812de kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
@@ -63530,11 +64005,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/format.ts": "7a009d27 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "748fe3c0 kit",
+  "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "b2c207e9 kit",
-  "src/kit/origin.ts": "5facf7a7 kit",
+  "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "8953ff1a kit",
   "src/kit/outgoing.ts": "8050efb9 kit",
   "src/kit/params.ts": "8833a84a kit",
@@ -63544,13 +64019,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "efede7b4 kit",
+  "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "145362d6 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "b831fcc7 generated",
+  "src/lib/auth.ts": "d9bca5ab generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -63563,13 +64038,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "8bd3f7f2 generated",
+  "src/routes/incoming/support.ts": "cb9bb507 generated",
   "src/routes/index.tsx": "6a89e0fa generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "8b2b934d generated",
+  "src/routes/sign-in.tsx": "e3a9f60c generated",
   "src/routes/team/activity.tsx": "85ed449b generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
-  "src/start.ts": "b45a0afb kit",
+  "src/start.ts": "ca04f376 kit",
   "src/styles.css": "19116c27 kit",
   "src/theme.css": "90755988 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",

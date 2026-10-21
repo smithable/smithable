@@ -20,8 +20,17 @@ const ownPages = createCsrfMiddleware({
   filter: (ctx) =>
     ctx.handlerType === "serverFn" ||
     (ctx.request.method === "POST" && ctx.pathname.startsWith("/files/")),
-  // Behind a proxy the request arrives as http, so the address is compared by host.
-  origin: (origin, { request }) => URL.parse(origin)?.host === request.headers.get("host"),
+  // Behind a proxy the request arrives as http, so the address is compared by host; and a request
+  // known to have come over https (its own address, or a trusted proxy's word) takes an https page.
+  origin: (origin, { request }) => {
+    const page = URL.parse(origin);
+    const https =
+      new URL(request.url).protocol === "https:" ||
+      (process.env.TRUST_PROXY === "1" &&
+        request.headers.get("x-forwarded-proto")?.split(",").at(-1)?.trim().toLowerCase() ===
+          "https");
+    return page?.host === request.headers.get("host") && (!https || page.protocol === "https:");
+  },
 });
 
 export const startInstance = createStart(() => ({ requestMiddleware: [trace, ownPages] }));

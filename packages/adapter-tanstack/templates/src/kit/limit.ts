@@ -28,6 +28,8 @@ export const LIMITS = {
 };
 
 const counts = new Map<string, { n: number; until: number }>();
+/** When the expired counts were last dropped: at most once a second, not on every request. */
+let pruned = 0;
 
 /** One more `what` under `key`, or TooMany when `max` happened within `seconds`. */
 export function count(
@@ -36,7 +38,13 @@ export function count(
   what: string,
   now = Date.now(),
 ): void {
-  if (counts.size > 10_000) for (const [k, v] of counts) if (v.until <= now) counts.delete(k);
+  if (counts.size > 10_000 && now - pruned >= 1000) {
+    pruned = now;
+    for (const [k, v] of counts) if (v.until <= now) counts.delete(k);
+  }
+  // Bounded even under a flood of new addresses within the hour: while it is full, a new key
+  // is refused for the window, and no live count is dropped (which would clear its limit).
+  if (counts.size >= 50_000 && !counts.has(key)) throw new TooMany(what);
   const entry = counts.get(key);
   if (!entry || entry.until <= now) {
     counts.set(key, { n: 1, until: now + seconds * 1000 });
@@ -74,6 +82,7 @@ export function inviteAllowed(viewer: { id: string } | null): void {
 
 /** Counts a sign-in code mailed to the address, asked for from the request's network address. */
 export function codeAllowed(email: string, headers: Headers): void {
-  count(`code:${email}`, LIMITS.codes, w.signInCodes);
+  // The network address first: one past its own limit spends none of an email's codes.
   count(`code-from:${address(headers)}`, LIMITS.codesFromAddress, "sign-in codes");
+  count(`code:${email}`, LIMITS.codes, w.signInCodes);
 }
