@@ -43,7 +43,7 @@ test("the nineteen built-in themes read in both modes, each under its own name",
   }
 });
 
-test("the theme library's twelve are theme files a project could have written", () => {
+test("the theme library's fifteen are theme files a project could have written", () => {
   expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(4));
   for (const [name, text] of Object.entries(THEME_LIBRARY)) {
     const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
