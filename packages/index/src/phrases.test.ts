@@ -555,6 +555,10 @@ models:
     expect(
       refusalOf(read(BARBERS), "barbers have opening hours 17 to 9 on weekdays"),
     ).toBeDefined();
+    // A clock's minutes run to 59: "9:99" is no time the rules read.
+    expect(
+      matchRequest(read(BARBERS), "barbers have opening hours 9:99 to 17 on weekdays"),
+    ).toBeUndefined();
     // A day the rules do not know is a model's to read; a day is its name, not a word starting so.
     expect(
       matchRequest(read(BARBERS), "barbers have opening hours 9 to 17 on fortnights"),

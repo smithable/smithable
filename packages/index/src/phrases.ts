@@ -498,7 +498,7 @@ const menuFor = (scope: Scope, name?: string) => {
 
 /** "9", "9:30", "17.00" as minutes after midnight; undefined if not a time of day. */
 function clockOf(text: string): number | undefined {
-  const m = /^(\d{1,2})(?:[:.](\d{2}))?$/.exec(text);
+  const m = /^(\d{1,2})(?:[:.]([0-5]\d))?$/.exec(text);
   if (!m) return undefined;
   const minutes = Number(m[1]) * 60 + Number(m[2] ?? 0);
   return minutes <= 24 * 60 ? minutes : undefined;
