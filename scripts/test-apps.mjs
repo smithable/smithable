@@ -444,14 +444,14 @@ async function bookingFlow(dir, base) {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     await page.locator("section ol button", { hasText: title }).first().click();
-    await panel.getByRole("button", { name: "Cancel my booking" }).click();
+    await panel.getByRole("button", { name: "Cancel booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     // Bookings have a trash here: the cancelled one holds no place, and the same session can be
     // booked again (a unique value holds among live records only).
     await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
-    await panel.getByRole("button", { name: "Cancel my booking" }).click();
+    await panel.getByRole("button", { name: "Cancel booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();

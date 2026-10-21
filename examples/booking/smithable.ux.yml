@@ -7,7 +7,16 @@ theme:
 pages:
   home:
     sections:
-      hero: { layout: cover }          # the picture across the width, the text on the theme's color
+      hero: { layout: split, image: right }   # the text beside the picture
+      classes: { layout: cards }
+      faq: { layout: accordion }
   sessions:
     table:
-      columns: [startsAt, classType, instructor, capacity]
+      columns: [classType, startsAt, instructor, placesLeft, capacity]
+      sort: startsAt
+    form:
+      fieldOrder: [classType, instructor, startsAt, capacity]
+      columns: 2
+      control: { capacity: stepper }
+  instructors:
+    table: { columns: [name, portrait], view: cards }

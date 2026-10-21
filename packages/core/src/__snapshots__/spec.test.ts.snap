@@ -555,16 +555,37 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "navigation": [
     {
-      "name": "main",
+      "name": "schedule",
       "pages": [
         "schedule",
+        "my-bookings",
         "sessions",
+      ],
+    },
+    {
+      "name": "messages",
+      "pages": [
+        "messages",
+      ],
+    },
+    {
+      "name": "studioSetup",
+      "pages": [
         "class-types",
         "instructors",
-        "messages",
+      ],
+    },
+    {
+      "name": "website",
+      "pages": [
         "blog",
         "posts",
-        "my-bookings",
+        "home",
+      ],
+    },
+    {
+      "name": "admin",
+      "pages": [
         "admin",
       ],
     },
@@ -771,12 +792,21 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/schedule",
     },
     {
+      "filters": [
+        "classType",
+        "instructor",
+        "startsAt",
+      ],
       "id": "sessions",
       "pattern": {
         "kind": "crud",
         "model": "Session",
       },
       "route": "/sessions",
+      "sortable": [
+        "startsAt",
+        "capacity",
+      ],
     },
     {
       "filters": [

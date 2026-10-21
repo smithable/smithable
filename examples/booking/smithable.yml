@@ -103,6 +103,8 @@ pages:
     calendar: { model: Session, duration: classType.durationMinutes }
   sessions:                           # the staff's list of sessions
     crud: Session
+    filters: [classType, instructor, startsAt]
+    sortable: [startsAt, capacity]
   class-types:
     crud: ClassType
     filters: [level]
@@ -122,3 +124,12 @@ pages:
     crud: Booking
   admin:
     data: all                      # every model, for administrators
+
+# The menus: what members use first, then the studio's setup and its website. A page in no menu
+# is in none, so every page people open is named here.
+navigation:
+  schedule: [schedule, my-bookings, sessions]
+  messages: [messages]
+  studioSetup: [class-types, instructors]
+  website: [blog, posts, home]
+  admin: [admin]
