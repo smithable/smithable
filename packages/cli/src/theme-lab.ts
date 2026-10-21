@@ -43,7 +43,12 @@ async function labApp(io: Io, starter: string): Promise<string | undefined> {
       ? "Making the lab's app (a booking app with every control)…\n"
       : `Making the lab's app (the ${starter} starter)…\n`,
   );
-  if ((await create(dir, quiet(io), starter, { yes: true })) !== 0) return undefined;
+  // A step that fails leaves no folder behind.
+  const failed = () => {
+    rmSync(join(dir, ".."), { recursive: true, force: true });
+    return undefined;
+  };
+  if ((await create(dir, quiet(io), starter, { yes: true })) !== 0) return failed();
   if (starter !== "booking") return dir;
   for (const [field, kind] of [
     ["price", "money"],
@@ -60,7 +65,7 @@ async function labApp(io: Io, starter: string): Promise<string | undefined> {
         { yes: true },
       )) !== 0
     )
-      return undefined;
+      return failed();
   return dir;
 }
 
@@ -87,6 +92,16 @@ export function labFrames(
         : []),
   ];
 }
+
+/** A request's JSON body; {} when it is not JSON, so a malformed one is refused, not a crash. */
+const bodyJson = async (req: IncomingMessage): Promise<Record<string, unknown>> => {
+  try {
+    const parsed = JSON.parse(await body(req));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
 
 const body = (req: IncomingMessage) =>
   new Promise<string>((done) => {
@@ -121,9 +136,9 @@ export async function themeLab(
   const previewPort = port + 1;
   const preview = `http://localhost:${previewPort}`;
   let shown: { starter?: string; app: string; ir: SpecIR; child: ChildProcess } | undefined;
+  // The app is forgotten only once it is gone, so a Ctrl+C meanwhile still removes its folder.
   const stop = async () => {
     const was = shown;
-    shown = undefined;
     if (!was) return;
     if (was.child.exitCode === null) {
       // Its port is reused: wait for it to go, and after five seconds make it go.
@@ -134,6 +149,7 @@ export async function themeLab(
       clearTimeout(hard);
     }
     if (!options.app) rmSync(join(was.app, ".."), { recursive: true, force: true });
+    if (shown === was) shown = undefined;
   };
   const show = async (starter?: string): Promise<boolean> => {
     const app = options.app ? resolve(options.app) : await labApp(io, starter ?? "booking");
@@ -212,8 +228,8 @@ export async function themeLab(
     if (url.pathname === "/api/starter" && req.method === "POST") {
       if (req.headers.origin !== `http://${req.headers.host}`)
         return json(403, { error: "Not from the lab." });
-      const { name } = JSON.parse(await body(req)) as { name: string };
-      if (options.app || !starters.includes(name))
+      const { name } = (await bodyJson(req)) as { name?: string };
+      if (options.app || !name || !starters.includes(name))
         return json(400, { error: `No starter "${name}" to show.` });
       if (switching) return json(409, { error: "Another starter is being made." });
       switching = true;
@@ -232,10 +248,10 @@ export async function themeLab(
       // Only the lab's own page saves (the request's origin is the lab).
       if (req.headers.origin !== `http://${req.headers.host}`)
         return json(403, { error: "Not from the lab." });
-      const { name, text } = JSON.parse(await body(req)) as { name: string; text: string };
+      const { name, text } = (await bodyJson(req)) as { name?: string; text?: string };
       if (!/^[a-z][a-z0-9-]*$/.test(name ?? ""))
         return json(400, { error: "A theme's name is kebab-case." });
-      const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
+      const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text: text ?? "" });
       if (!theme) return json(400, { error: diagnostics.map(formatDiagnostic).join("\n") });
       if (project) {
         const said: string[] = [];
