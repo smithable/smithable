@@ -371,8 +371,14 @@ interface DevServer {
 }
 
 /** A connect middleware, as Vite's dev server takes them: every request, before Vite's own. */
+/** What the guard reads and strips of a request: its headers, parsed and raw. */
+export interface GuardedRequest {
+  headers: Record<string, string | string[] | undefined>;
+  rawHeaders?: string[];
+}
+
 export type Middleware = (
-  req: { headers: Record<string, string | string[] | undefined> },
+  req: GuardedRequest,
   res: {
     statusCode: number;
     setHeader(name: string, value: string): void;
@@ -411,9 +417,25 @@ function carriesToken(
  * the proxy adds it, and nothing else on the network reaches the app's pages or its data. Without
  * the digest to compare with, nothing is served at all (closed, never open by mistake).
  */
+const TOKEN_HEADER = "x-smithable-studio-token";
+
+/**
+ * The token out of the request once it is checked, parsed and raw, so neither Vite nor the app's
+ * own code running in the preview (a route, a middleware) can read it and use it on Studio.
+ */
+export function stripToken(req: GuardedRequest): void {
+  delete req.headers[TOKEN_HEADER];
+  if (!req.rawHeaders) return;
+  for (let i = req.rawHeaders.length - 2; i >= 0; i -= 2)
+    if (req.rawHeaders[i]?.toLowerCase() === TOKEN_HEADER) req.rawHeaders.splice(i, 2);
+}
+
 export function tokenGuard(digestHex: string | undefined): Middleware {
   return (req, res, next) => {
-    if (carriesToken(req.headers, digestHex)) return next();
+    if (carriesToken(req.headers, digestHex)) {
+      stripToken(req);
+      return next();
+    }
     res.statusCode = digestHex ? 401 : 503;
     res.setHeader("content-type", "text/plain");
     res.end(digestHex ? "The preview needs Studio's token." : "The preview has no token to check.");
@@ -440,10 +462,11 @@ export function guardUpgrades(server: UpgradeServer, digestHex: string | undefin
     server.removeAllListeners("upgrade");
     server.on("upgrade", (...args: unknown[]) => {
       const [req, socket] = args as [
-        { headers: Record<string, string | string[] | undefined> },
+        GuardedRequest,
         { write(text: string): void; destroy(): void },
       ];
       if (carriesToken(req.headers, digestHex)) {
+        stripToken(req);
         for (const listener of inner) listener(...args);
         return;
       }
