@@ -226,6 +226,9 @@ export const THEME_PRESETS = [
   "restaurant",
   "street-food",
   "cafe",
+  "warm-service",
+  "quiet-workspace",
+  "ink-and-brass",
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
