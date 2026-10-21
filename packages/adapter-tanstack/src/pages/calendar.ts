@@ -14,6 +14,7 @@ import {
 import { reserveElement } from "../data.js";
 import {
   attr,
+  dataKey,
   dataRoute,
   type GenContext,
   guard,
@@ -105,6 +106,22 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     titleOf(model.fields.find((f) => f.required && f.type.kind === "relation" && !f.type.many)) ??
     `\`${n.label} #\${row.id}\``;
 
+  // Records that take someone's time (appointments.md §1): a day view with a column for each of them.
+  const occupied = model.occupies;
+  const laneRef = occupied && field(occupied.resource);
+  const laneModel =
+    laneRef?.type.kind === "relation" ? modelNamed(ir, laneRef.type.model) : undefined;
+  let lanes = "";
+  if (laneModel) {
+    const ln = names(laneModel, t);
+    const laneTitle = titleField(laneModel);
+    imports.add(`${ln.module}.server`, ln.data);
+    lanes = `
+      // Whose time the records take, among those the viewer may read, in their order (as "anyone"
+      // takes them): the day view's columns.
+      lanes: (await ${ln.data}.list(viewer)).map((r) => ({ id: r.id, title: ${laneTitle === "id" ? `\`#\${r.id}\`` : `String(r.${laneTitle} ?? "")`} })).sort((a, b) => a.id - b.id),`;
+  }
+
   const opens = recordPages(model.name, ir);
   const opensId = recordPageId(model.name, ir);
   const range = dateOnly
@@ -130,8 +147,13 @@ const getRange = createServerFn()
         id: row.id,
         start: ${start},
         end: ${itemEnd},
-        title: ${title},
-      })),
+        title: ${title},${
+          laneRef
+            ? `
+        lane: row.${dataKey(laneRef)},`
+            : ""
+        }
+      })),${lanes}
       // Records are made on their page: the viewer must be able to open it, too.
       canCreate: ${opens && opensId ? `allows(${n.access}.create, viewer) && allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
       canOpen: ${opensId ? `allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
@@ -139,7 +161,12 @@ const getRange = createServerFn()
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: (s: Search) => optional({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: (s: Search) => optional({${
+    laneModel
+      ? `
+    day: shaped(s.day, /^\\d{4}-\\d{2}-\\d{2}$/),`
+      : ""
+  }
     week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
     month: shaped(s.month, /^\\d{4}-\\d{2}$/),
   }),
@@ -152,7 +179,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateS
 });
 
 function ${component}() {
-  const { items, canCreate, canOpen } = Route.useLoaderData();
+  const { items, canCreate, canOpen${laneModel ? ", lanes" : ""} } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   return (
@@ -162,7 +189,7 @@ function ${component}() {
         search={search}
         items={items}
         timeZone={app.timeZone}
-        dateOnly={${dateOnly}}
+        dateOnly={${dateOnly}}${laneModel ? "\n        lanes={lanes}" : ""}
         newLabel={w.newOne(${JSON.stringify(n.label.toLowerCase())})}${
           reserve
             ? `

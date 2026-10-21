@@ -104,7 +104,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.
   const files: GeneratedFile[] = Object.entries(TEMPLATES)
     .filter(([path]) => !path.startsWith(WORDS_DIR) && path !== WORDS_FILE)
-    // A file two parts share (refusal.ts) comes with either of them.
+    // A file two parts share comes with either of them.
     .filter(([path]) => {
       const parts = kits.filter((k) => k.files.includes(path));
       return !parts.length || parts.some((k) => k.used(ctx));
@@ -774,6 +774,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           Object.values(ux.pages).some((p) => Object.values(p.lists ?? {}).includes("thread")),
       },
       {
+        // One person's time (appointments.md §4): the free-time arithmetic and the form's picker.
+        files: ["src/kit/slots.ts", "src/kit/Slots.tsx"],
+        used: ({ ir }) => ir.models.some((m) => m.occupies),
+      },
+      {
         files: ["src/kit/Reserve.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.models.some((m) => m.capacity),
       },
@@ -800,8 +805,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => hasKeys(ir, auth),
       },
       {
-        // Finding, counting and adding up in the data modules: for the API and for "Ask".
-        files: ["src/kit/where.ts", "src/kit/refusal.ts"],
+        // Finding, counting and adding up in the data modules: for the API and for "Ask". The
+        // refusals (refusal.ts) come with every app: the log and a record's rules use them too.
+        files: ["src/kit/where.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth) || Boolean(auth.assistant),
       },
       {

@@ -23,6 +23,7 @@ import {
 import { pageModel } from "../patterns.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
+import { scheduleOperations } from "./schedule-operations.js";
 import { put } from "./ux-operations.js";
 
 const name = { type: "string", minLength: 1 };
@@ -1064,6 +1065,7 @@ export const modelOperations: AnyOperation[] = [
   removeField,
   renameModel,
   setCapacity,
+  ...scheduleOperations,
   setTrash,
   setReview,
   importRecords,

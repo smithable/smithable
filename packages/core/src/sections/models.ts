@@ -42,6 +42,14 @@ import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
 import { modelOperations, renameInFormulas, renameValuesInFormulas } from "./model-operations.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
+import {
+  checkSchedules,
+  followSchedules,
+  occupiesSchema,
+  readOccupies,
+  readSchedule,
+  scheduleSchema,
+} from "./schedule.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -148,6 +156,8 @@ export const modelsSection: SpecSection<"models"> = {
   required: false,
   operations: modelOperations,
   follow(spec, effect, ir) {
+    const scheduled = followSchedules(spec, effect, ir.models);
+    if (scheduled) return scheduled;
     // Formulas (and their examples) and an owner field follow a renamed field.
     // A field a capacity counts on cannot go while it does.
     if (effect.kind === "remove-field") {
@@ -375,6 +385,8 @@ export const modelsSection: SpecSection<"models"> = {
             },
           },
         },
+        schedule: scheduleSchema,
+        occupies: occupiesSchema,
         ...textSchema,
       },
     },
@@ -403,6 +415,7 @@ export const modelsSection: SpecSection<"models"> = {
     }
     checkRelations(ctx, models, relationNodes);
     checkFormulas(ctx, models);
+    checkSchedules(ctx, models);
     return models;
   },
 };
@@ -424,6 +437,8 @@ function readModel(
       "ownedBy",
       "namedBy",
       "capacity",
+      "schedule",
+      "occupies",
       "trash",
       "review",
       "unique",
@@ -457,6 +472,15 @@ function readModel(
       model.capacity = read;
       ctx.mark(`capacity:${name}`, capacity.value);
     }
+  }
+  const schedule = known.find((e) => e.key === "schedule");
+  const readSched = schedule && readSchedule(ctx, schedule.value, name);
+  if (readSched) model.schedule = readSched;
+  const occupies = known.find((e) => e.key === "occupies");
+  const readOcc = occupies && readOccupies(ctx, occupies.value, name);
+  if (readOcc) {
+    model.occupies = readOcc;
+    ctx.mark(`occupies:${name}`, occupies?.value);
   }
   const fields = known.find((e) => e.key === "fields");
   if (!fields) {

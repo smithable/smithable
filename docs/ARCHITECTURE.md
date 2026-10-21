@@ -241,6 +241,8 @@ Concretely: `src/kit/access.ts` holds the rule type and the checks (`allows`, `r
 
 A model's **capacity** (`capacity: { per, max, where? }`, [design/booking.md](design/booking.md)) is enforced in the same place: the generated data function counts and writes in one transaction, so two people cannot both take the last place, and the referenced record's data function refuses lowering its number below what is taken. The generated access test fills a capacity and sees the next record refused.
 
+One person's **time** (`schedule` on the model whose records are booked by their time, `occupies` on the model whose records take it, [design/appointments.md](design/appointments.md)) is checked in the same place: the data function reads the resource's bookings and time away around the day and refuses a time outside the hours, in a break, while away or over another booking with the gap after it, in the write's transaction, with the next free times in the refusal. The picker offers its times from the same kit function (`src/kit/slots.ts`) the check uses, so the two never disagree. The generated access test books a free time and sees the same time refused the second time.
+
 Teams are not in v0.1, but the design leaves room for them. Records will later get a **group** (team or workspace) next to their owner, and existing apps migrate by putting each user's records into a personal default group. Because access is enforced in one layer, adding groups changes one place.
 
 #### Sign-in

@@ -171,6 +171,43 @@ export function summarize(
     sections.push({ concept: "pages", title: "Pages", sentences: pages.map((p) => `- ${p}`) });
   }
 
+  /** "Barbers are booked by their time: Mon–Fri 09:00–17:00, a break 12:00–12:30, …" */
+  function scheduleWords(model: ModelIR, schedule: NonNullable<ModelIR["schedule"]>): string {
+    const clock = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+    const breaks = schedule.breaks.map(([a, b]) => `${clock(a)}–${clock(b)}`);
+    const away = schedule.away && modelNamed(schedule.away.model);
+    const parts = [
+      hoursText(schedule.hours) || "never open",
+      breaks.length ? `${breaks.length > 1 ? "breaks" : "a break"} ${list(breaks)}` : "",
+      schedule.gap ? `${schedule.gap} minutes kept free after each booking` : "",
+      away && schedule.away
+        ? `away during their ${many(away)} (by their fields ${humanize(schedule.away.from).toLowerCase()} and ${humanize(schedule.away.until).toLowerCase()})`
+        : "",
+    ].filter(Boolean);
+    return `${capitalize(many(model))} are booked by their time: ${parts.join(", ")}.`;
+  }
+
+  /** "An appointment takes its barber's time for its service's minutes while …; …" */
+  function occupiesWords(model: ModelIR, o: NonNullable<ModelIR["occupies"]>): string {
+    const field = (name: string) => {
+      const f = model.fields.find((x) => x.name === name);
+      return f ? fieldLabel(model, f) : humanize(name).toLowerCase();
+    };
+    const [first = "", second] = o.duration.split(".");
+    const length =
+      second === undefined
+        ? `its ${field(first)}`
+        : `its ${field(first)}'s ${humanize(second).toLowerCase()}`;
+    const unit = { m: "minute", h: "hour", d: "day" }[o.cancelUntil?.slice(-1) ?? "m"];
+    const amount = Number(o.cancelUntil?.slice(0, -1));
+    const cancel = o.cancel
+      ? `; whoever made it may cancel it${o.cancelUntil ? ` until ${amount} ${unit}${amount === 1 ? "" : "s"} before` : " until it starts"}`
+      : "";
+    const holds = o.while ? ` while ${conditionWords(o.while)}` : "";
+    return `${capitalize(article(one(model)))} takes its ${field(o.resource)}'s time from its ${field(o.starts)} for the number of minutes in ${length}${holds}${cancel}.`;
+  }
+
   /** A landing page's sections in words: what a records section shows, and the footer last. */
   function landingWords(sections: LandingSection[]): string[] {
     const ordered = [...sections].sort(
@@ -222,6 +259,8 @@ export function summarize(
         `At most ${limit} ${many(model)} per ${humanize(target).toLowerCase()}${counted ? ` (counting those with ${counted})` : ""}.`,
       );
     }
+    if (model.schedule) sentences.push(scheduleWords(model, model.schedule));
+    if (model.occupies) sentences.push(occupiesWords(model, model.occupies));
     if (model.trash)
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,

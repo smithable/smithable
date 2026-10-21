@@ -29,6 +29,12 @@ export function Combobox({
   const list = useId();
   const labelOf = (v: string) => options.find((o) => String(o.value) === v)?.label ?? "";
   const [text, setText] = useState(() => labelOf(value));
+  // A choice made from outside (a time picker choosing who) shows as if it were typed here.
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    setText(labelOf(value));
+  }
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const typed = text !== labelOf(value);

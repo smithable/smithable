@@ -78,6 +78,12 @@ export interface FieldControlProps {
   /** The record being edited, when it exists. */
   record?: number;
   onChange: (value: string) => void;
+  /** The form's other inputs, by field name, for a control that depends on them (a time picker). */
+  values?: Record<string, string | boolean>;
+  /** Sets another field of the form. */
+  set?: (name: string, value: string) => void;
+  /** The app's time zone, for a control that shows times. */
+  timeZone?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }
