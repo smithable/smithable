@@ -11760,8 +11760,11 @@ export const bookingData = {
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-      const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId), ne(schema.bookings.id, id))).get()?.n ?? 0;
-      if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
+      // A change that keeps its session takes no new place: only a given one is counted.
+      if (values.sessionId !== undefined) {
+        const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId), ne(schema.bookings.id, id))).get()?.n ?? 0;
+        if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
+      }
         const before = tx.select().from(schema.bookings).where(eq(schema.bookings.id, id)).get();
         const after = tx.update(schema.bookings).set(updated).where(eq(schema.bookings.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -19809,7 +19812,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "793f2148 generated",
+  "src/generated/booking.server.ts": "9a3552da generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
   "src/generated/class-type.server.ts": "beb99b0b generated",

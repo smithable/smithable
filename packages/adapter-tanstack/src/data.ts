@@ -2027,7 +2027,7 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
         : "values"
     };
     try {
-      changed = db.transaction((tx) => {${capacity || holds.length ? `${capacityCheck("id")}${holdChecks.join("")}` : ""}
+      changed = db.transaction((tx) => {${capacity ? `\n      // A change that keeps its ${capacity.per} takes no new place: only a given one is counted.\n      if (values.${capacity.per}Id !== undefined) {${capacityCheck("id").replace(/\n {6}/g, "\n        ")}\n      }` : ""}${holdChecks.join("")}
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);${updateRules}
