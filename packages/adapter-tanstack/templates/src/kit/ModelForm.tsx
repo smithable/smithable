@@ -261,7 +261,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   if (readOnly && initial) {
     const record = { ...initial, ...computed };
     return (
-      <Card data-kit="model-form" data-part="view" className="max-w-3xl">
+      <Card data-kit="model-form" data-part="view" className="max-w-[720px]">
         <div className="space-y-6 p-card">
           {groups(ui).map((group) => (
             <section key={group.name ?? ""} data-part="section" className="space-y-4">
@@ -281,7 +281,9 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                       data-field={field.name}
                       className={wide(field) ? "sm:col-span-2" : undefined}
                     >
-                      <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
+                      <dt className="text-[14px] font-medium text-muted-foreground">
+                        {field.label}
+                      </dt>
                       <dd
                         className={cn(
                           "mt-1",
@@ -308,7 +310,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   }
 
   return (
-    <Card data-kit="model-form" className="max-w-3xl">
+    <Card data-kit="model-form" className="max-w-[720px]">
       <form
         onSubmit={submit}
         noValidate

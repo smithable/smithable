@@ -51,7 +51,7 @@ export function Inspector({
     <div className="space-y-6">
       <form onSubmit={submit} className="space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-[14px]">
             <span className="text-muted-foreground">{w.as}</span>
             <select
               aria-label={w.actAs}

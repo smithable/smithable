@@ -663,7 +663,7 @@ ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChange
       />
 ${
   reserve
-    ? `      <section className="mt-10 max-w-3xl">
+    ? `      <section className="mt-10 max-w-[720px]">
         ${reserve}
       </section>
 `
@@ -672,7 +672,7 @@ ${
   history
     ? `
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>

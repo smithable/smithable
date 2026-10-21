@@ -69,7 +69,7 @@ export function ActivityLog({
     <div data-kit="activity-log" className="space-y-4">
       {filters && (
         <div className="flex flex-wrap items-end gap-3">
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-[14px]">
             {w.person}
             <select
               className={select}
@@ -84,7 +84,7 @@ export function ActivityLog({
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-[14px]">
             {w.records}
             <select
               className={select}
@@ -99,7 +99,7 @@ export function ActivityLog({
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-[14px]">
             {w.what}
             <select
               className={select}
@@ -115,7 +115,7 @@ export function ActivityLog({
             </select>
           </label>
           {targets?.length ? (
-            <label className="grid gap-1 text-sm">
+            <label className="grid gap-1 text-[14px]">
               {w.sentTo}
               <select
                 className={select}
@@ -131,7 +131,7 @@ export function ActivityLog({
               </select>
             </label>
           ) : null}
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-[14px]">
             {w.from}
             <input
               type="date"
@@ -140,7 +140,7 @@ export function ActivityLog({
               onChange={(e) => set("from", e.target.value)}
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-[14px]">
             {w.to}
             <input
               type="date"

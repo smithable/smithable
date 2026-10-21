@@ -185,7 +185,7 @@ export function Keys({
           }
         }}
       >
-        <label htmlFor={`${id}-name`} className="grid gap-1 text-sm">
+        <label htmlFor={`${id}-name`} className="grid gap-1 text-[14px]">
           {w.whatItIsFor}
           <Input
             id={`${id}-name`}
@@ -195,7 +195,7 @@ export function Keys({
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-[14px]">
           {w.role}
           <select
             className="h-control rounded-md border border-input bg-background px-2"
@@ -209,7 +209,7 @@ export function Keys({
             ))}
           </select>
         </label>
-        <label htmlFor={`${id}-until`} className="grid gap-1 text-sm">
+        <label htmlFor={`${id}-until`} className="grid gap-1 text-[14px]">
           {w.endsOptional}
           <Input
             id={`${id}-until`}

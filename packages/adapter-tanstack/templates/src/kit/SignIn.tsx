@@ -63,7 +63,7 @@ export function SignIn({
   }
   return (
     <Card data-kit="sign-in" className="mx-auto mt-10 max-w-sm space-y-5 p-card">
-      <h1 className="text-2xl font-bold">{w.signInTo(appName)}</h1>
+      <h1 className="text-2xl font-semibold">{w.signInTo(appName)}</h1>
       {invitedOnly && !invitation && (
         <p className="text-sm text-muted-foreground">{w.legalInvitedOnly}</p>
       )}

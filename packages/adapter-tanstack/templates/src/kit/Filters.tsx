@@ -156,7 +156,7 @@ function Filter({
   if (filter.kind === "mine" || filter.kind === "unread") {
     const on = filter.kind === "mine" ? "mine" : "1";
     return (
-      <label className="flex h-control items-center gap-2 text-sm font-semibold">
+      <label className="flex h-control items-center gap-2 text-[14px] font-semibold">
         <input
           type="checkbox"
           checked={value === on}
@@ -200,7 +200,7 @@ function Filter({
     const picked = [...chosen].find((v) => people.some((p) => p.value === v)) ?? "";
     return (
       <fieldset className="space-y-1">
-        <legend className="text-sm font-semibold">{filter.label}</legend>
+        <legend className="text-[14px] font-semibold">{filter.label}</legend>
         <div className="flex flex-wrap items-center gap-2">
           {options.map((o) => {
             const on = chosen.has(o.value);
@@ -269,7 +269,7 @@ function Filter({
     );
   return (
     <fieldset className="space-y-1">
-      <legend className="text-sm font-semibold">{filter.label}</legend>
+      <legend className="text-[14px] font-semibold">{filter.label}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const on = chosen.has(o.value);
@@ -330,7 +330,7 @@ function Range({
   const type = filter.input === "date" ? "date" : "number";
   return (
     <fieldset className="space-y-1">
-      <legend className="text-sm font-semibold">{filter.label}</legend>
+      <legend className="text-[14px] font-semibold">{filter.label}</legend>
       <div className="flex items-center gap-2">
         <Label htmlFor={`${id}-from`} className="sr-only">
           {w.rangeFrom(filter.label)}

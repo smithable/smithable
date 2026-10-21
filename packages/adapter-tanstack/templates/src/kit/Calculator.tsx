@@ -75,7 +75,7 @@ export function Calculator({
         <dl className="space-y-3">
           {results.map((field) => (
             <div key={field.name} className="flex items-baseline justify-between gap-4">
-              <dt className="text-sm text-muted-foreground">{field.label}</dt>
+              <dt className="text-[14px] text-muted-foreground">{field.label}</dt>
               <dd className="text-xl font-semibold tabular-nums">
                 {formatValue(field, computed[field.name], app)}
               </dd>

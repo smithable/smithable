@@ -93,7 +93,7 @@ function LandingLayoutView({
   );
   // With a mark, a row of the two; either way a long name ends in an ellipsis instead of
   // pushing the header wider.
-  const nameClass = `${logo ? "flex items-center gap-2" : "block truncate"} min-w-0 text-xl font-bold`;
+  const nameClass = `${logo ? "flex items-center gap-2" : "block truncate"} min-w-0 text-xl font-semibold`;
   const name = site?.home ? (
     <Link to={site.home} className={nameClass}>
       {named}
@@ -778,7 +778,7 @@ function PricingView({
               {plan.price && (
                 <p>
                   <span
-                    className="text-3xl font-bold tabular-nums"
+                    className="text-3xl font-semibold tabular-nums"
                     {...mark(texts, `items.${i}.price`)}
                   >
                     {plan.price}

@@ -40,6 +40,7 @@ const sidebarItem =
 
 export function AppShell({ children, ...shell }: ShellProps & { children: React.ReactNode }) {
   const drawer = useRef<HTMLDialogElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
   // A visitor to an app with no page for visitors (an invite-only CRM): the menu would hold only
   // Sign in, the page they are on, so there is none.
   const anyPage = shell.menus.some((m) => m.items.some((i) => allows(i.access, shell.viewer)));
@@ -47,11 +48,37 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
   return (
     <div data-kit="app-shell" className="min-h-screen lg:flex">
       {/* Desktop: a sidebar. */}
-      <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
-        <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
-          <AppName {...shell} />
-        </p>
+      <aside
+        data-collapsed={collapsed || undefined}
+        className="group/sidebar hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[232px] data-[collapsed]:lg:w-16 lg:shrink-0 lg:flex-col lg:transition-[width] lg:duration-300"
+      >
+        <div className="flex h-18 shrink-0 items-center px-6 group-data-[collapsed]/sidebar:justify-center group-data-[collapsed]/sidebar:px-0">
+          <p className="min-w-0 truncate text-2xl font-semibold group-data-[collapsed]/sidebar:sr-only [overflow-wrap:anywhere]">
+            <AppName {...shell} />
+          </p>
+          {shell.logo && (
+            <div className="hidden group-data-[collapsed]/sidebar:block">
+              <img
+                src={shell.logo}
+                alt={shell.appName}
+                data-part="logo"
+                width={24}
+                height={24}
+                className="size-6 shrink-0 rounded-[4px] object-contain"
+              />
+            </div>
+          )}
+        </div>
         <Navigation {...shell} />
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="mx-3 mb-3 mt-auto hidden h-11 items-center justify-center rounded-md hover:bg-hover group-data-[collapsed]/sidebar:mx-auto group-data-[collapsed]/sidebar:w-11 lg:flex"
+          aria-label={w.menu}
+          title={w.menu}
+        >
+          <Menu aria-hidden className="size-5" />
+        </button>
       </aside>
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
       <header
@@ -68,7 +95,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
             <Menu aria-hidden className="size-6" />
           </button>
         )}
-        <p className="min-w-0 truncate text-lg font-bold">
+        <p className="min-w-0 truncate text-lg font-semibold">
           <AppName {...shell} />
         </p>
       </header>
@@ -79,7 +106,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
         <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
-          <p className="min-w-0 truncate text-lg font-bold">
+          <p className="min-w-0 truncate text-lg font-semibold">
             <AppName {...shell} onNavigate={() => drawer.current?.close()} />
           </p>
           <button
@@ -93,7 +120,9 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         </div>
         <Navigation {...shell} onNavigate={() => drawer.current?.close()} />
       </dialog>
-      <main className="min-w-0 flex-1 px-5 py-6 lg:px-9 lg:py-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
+        {children}
+      </main>
     </div>
   );
 }
@@ -164,7 +193,7 @@ function Navigation({
           return (
             <div key={menu.name} className="flex flex-col gap-1">
               {menu.label && (
-                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide">
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide group-data-[collapsed]/sidebar:sr-only">
                   {tx(menu.label)}
                 </p>
               )}
@@ -173,15 +202,16 @@ function Navigation({
                   key={String(item.to)}
                   to={item.to}
                   onClick={onNavigate}
-                  className={sidebarItem}
+                  className={`${sidebarItem} group-data-[collapsed]/sidebar:mx-auto group-data-[collapsed]/sidebar:w-11 group-data-[collapsed]/sidebar:justify-center group-data-[collapsed]/sidebar:px-0`}
                   activeOptions={{ exact: hasBelow(String(item.to)) }}
                   activeProps={{
                     className:
                       "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                   }}
+                  title={tx(item.label)}
                 >
                   {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
-                  {tx(item.label)}
+                  <span className="group-data-[collapsed]/sidebar:sr-only">{tx(item.label)}</span>
                   {(counts?.[String(item.to)] ?? 0) > 0 && (
                     <span
                       data-part="count"
@@ -196,32 +226,39 @@ function Navigation({
           );
         })}
       </nav>
-      <ConsentSettings className="mx-3 px-3 pb-2 text-left text-xs underline-offset-4 hover:underline" />
+      <ConsentSettings className="mx-3 px-3 pb-2 text-left text-xs underline-offset-4 hover:underline group-data-[collapsed]/sidebar:sr-only" />
       {onSignOut && (
-        <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm">
+        <div className="mx-3 border-t border-sidebar-foreground/30 px-3 py-4 text-sm group-data-[collapsed]/sidebar:px-0">
           {viewer ? (
             <>
-              {onRename ? (
-                <YourName name={viewer.name} email={viewer.email} onRename={onRename} />
-              ) : (
-                <p className="truncate font-semibold" title={viewer.email}>
-                  {viewer.name}
-                </p>
-              )}
-              <p className="capitalize">{viewer.role}</p>
+              <div className="group-data-[collapsed]/sidebar:sr-only">
+                {onRename ? (
+                  <YourName name={viewer.name} email={viewer.email} onRename={onRename} />
+                ) : (
+                  <p className="truncate font-semibold" title={viewer.email}>
+                    {viewer.name}
+                  </p>
+                )}
+                <p className="capitalize">{viewer.role}</p>
+              </div>
               <button
                 type="button"
                 data-part="sign-out"
                 onClick={onSignOut}
-                className={`${sidebarItem} -mx-3 mt-2`}
+                className={`${sidebarItem} -mx-3 mt-2 group-data-[collapsed]/sidebar:mx-auto group-data-[collapsed]/sidebar:w-11 group-data-[collapsed]/sidebar:justify-center group-data-[collapsed]/sidebar:px-0`}
+                title={w.signOut}
               >
                 <LogOut aria-hidden className="size-5" />
-                {w.signOut}
+                <span className="group-data-[collapsed]/sidebar:sr-only">{w.signOut}</span>
               </button>
             </>
           ) : (
-            <AppLink href="/sign-in" className={`${sidebarItem} -mx-3`}>
-              {w.signIn}
+            <AppLink
+              href="/sign-in"
+              className={`${sidebarItem} -mx-3 group-data-[collapsed]/sidebar:mx-auto group-data-[collapsed]/sidebar:w-11 group-data-[collapsed]/sidebar:justify-center group-data-[collapsed]/sidebar:px-0`}
+              title={w.signIn}
+            >
+              <span className="group-data-[collapsed]/sidebar:sr-only">{w.signIn}</span>
             </AppLink>
           )}
         </div>
@@ -336,7 +373,7 @@ export function ErrorNotice({ title, message }: { title: string; message?: strin
     <div className="max-w-xl">
       <h1
         data-part="title"
-        className="mb-6 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
+        className="mb-6 break-words text-[28px] leading-9 font-semibold lg:text-[32px] lg:leading-10"
       >
         {title}
       </h1>
@@ -365,7 +402,7 @@ export function PageHeader({
       <div className="min-w-0">
         <h1
           data-part="title"
-          className="break-words text-[28px] leading-9 font-bold [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
+          className="break-words text-[28px] leading-9 font-semibold [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
           {...(page ? textMarker(`pages.${page}.title`) : {})}
         >
           {tx(title)}

@@ -36,7 +36,7 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
   return (
     <article data-kit="legal" className="mx-auto max-w-3xl space-y-8 px-5 py-12">
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold">{title}</h1>
+        <h1 className="text-3xl font-semibold">{title}</h1>
         <p className="text-muted-foreground">{w.legalIntro(facts.app)}</p>
       </header>
       <Part title={w.legalOperatorTitle}>

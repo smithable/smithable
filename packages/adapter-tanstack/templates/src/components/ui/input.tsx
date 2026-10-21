@@ -3,7 +3,7 @@ import { cn } from "#/lib/utils";
 
 // 16 px text on phones, so browsers do not zoom into a field being edited.
 export const fieldClassName =
-  "w-full min-w-0 rounded-md border border-input bg-card px-3 text-base text-foreground outline-none transition-[color,box-shadow] placeholder:text-muted-foreground hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:bg-muted disabled:text-muted-foreground aria-invalid:border-destructive aria-invalid:border-2 md:text-sm";
+  "w-full min-w-0 rounded-md border border-input bg-card px-3 text-[16px] text-foreground outline-none transition-[color,box-shadow] placeholder:text-muted-foreground hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:bg-muted disabled:text-muted-foreground aria-invalid:border-destructive aria-invalid:border-2 md:text-[14px]";
 
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return <input className={cn(fieldClassName, "h-control", className)} {...props} />;
@@ -39,7 +39,7 @@ export function Label({
   return (
     <label
       htmlFor={htmlFor}
-      className={cn("text-sm font-semibold leading-5", className)}
+      className={cn("text-[14px] font-semibold leading-5", className)}
       {...props}
     >
       {children}

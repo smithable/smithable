@@ -5,8 +5,8 @@ import Markdown, { type Components } from "react-markdown";
 import { AppLink } from "./AppLink";
 
 const components: Components = {
-  h1: ({ node: _, ...props }) => <h2 className="mt-6 mb-3 text-2xl font-bold" {...props} />,
-  h2: ({ node: _, ...props }) => <h3 className="mt-6 mb-3 text-xl font-bold" {...props} />,
+  h1: ({ node: _, ...props }) => <h2 className="mt-6 mb-3 text-2xl font-semibold" {...props} />,
+  h2: ({ node: _, ...props }) => <h3 className="mt-6 mb-3 text-xl font-semibold" {...props} />,
   h3: ({ node: _, ...props }) => <h4 className="mt-5 mb-2 text-lg font-semibold" {...props} />,
   h4: ({ node: _, ...props }) => <h5 className="mt-4 mb-2 font-semibold" {...props} />,
   p: ({ node: _, ...props }) => <p className="my-3 leading-relaxed" {...props} />,

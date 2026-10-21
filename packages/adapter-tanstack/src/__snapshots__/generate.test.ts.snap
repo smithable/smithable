@@ -8806,8 +8806,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -9086,6 +9086,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -9204,7 +9205,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -9239,24 +9240,25 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "cfa2ff5a generated",
   "src/generated/users.test.ts": "b686c0ea generated",
   "src/generated/users.ts": "cc5c380e generated",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Keys.tsx": "a0e6091b kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Keys.tsx": "7e6c86b4 kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -9330,8 +9332,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f5cfba7a generated",
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -17484,7 +17486,7 @@ function ClassTypePage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -17858,7 +17860,7 @@ function InstructorPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -18086,7 +18088,7 @@ function MessagePage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -18314,7 +18316,7 @@ function BookingPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -18549,7 +18551,7 @@ function PostPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -18955,7 +18957,7 @@ function SessionPage() {
             : undefined
         }
       />
-      <section className="mt-10 max-w-3xl">
+      <section className="mt-10 max-w-[720px]">
         <Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />
       </section>
       <section className="mt-10">
@@ -18982,7 +18984,7 @@ function SessionPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -19303,8 +19305,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -19629,6 +19631,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Articles.tsx",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Calculator.tsx",
@@ -19773,7 +19776,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -19813,25 +19816,26 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
-  "src/kit/Articles.tsx": "665733a1 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
+  "src/kit/Articles.tsx": "3b7a5a1f kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Calculator.tsx": "0ca254f1 kit",
-  "src/kit/Calendar.tsx": "37ba7570 kit",
+  "src/kit/Calculator.tsx": "bab951a2 kit",
+  "src/kit/Calendar.tsx": "023be2ec kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
-  "src/kit/LegalPage.tsx": "566b69f4 kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
+  "src/kit/LegalPage.tsx": "ae37df7e kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
-  "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/MarkdownFormatted.tsx": "cba3c8ae kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -19839,7 +19843,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Reserve.tsx": "9f0c730c kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -19901,7 +19905,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "16febad1 generated",
   "src/routes/blog/index.tsx": "6b23ad22 generated",
-  "src/routes/class-types/$id.tsx": "f08a457c generated",
+  "src/routes/class-types/$id.tsx": "737293fe generated",
   "src/routes/class-types/index.tsx": "fca9fe3b generated",
   "src/routes/class-types/new.tsx": "e9189dbc generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -19909,29 +19913,29 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "8a4728fe generated",
-  "src/routes/instructors/$id.tsx": "92fb8703 generated",
+  "src/routes/instructors/$id.tsx": "b29708d5 generated",
   "src/routes/instructors/index.tsx": "dfac8649 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
-  "src/routes/messages/$id.tsx": "5b651045 generated",
+  "src/routes/messages/$id.tsx": "721b1e4f generated",
   "src/routes/messages/index.tsx": "e4a7b8f3 generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
-  "src/routes/my-bookings/$id.tsx": "4332c45b generated",
+  "src/routes/my-bookings/$id.tsx": "4d0a58bd generated",
   "src/routes/my-bookings/index.tsx": "84f2d06f generated",
   "src/routes/my-bookings/new.tsx": "61c238a9 generated",
-  "src/routes/posts/$id.tsx": "12fdcf66 generated",
+  "src/routes/posts/$id.tsx": "71bf53c0 generated",
   "src/routes/posts/index.tsx": "759433b7 generated",
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "5e55ca3c generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "e15d829e generated",
-  "src/routes/sessions/$id.tsx": "2511b5a6 generated",
+  "src/routes/sessions/$id.tsx": "e7a78662 generated",
   "src/routes/sessions/index.tsx": "bfba6f07 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "785d6529 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -24045,7 +24049,7 @@ function CustomerPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -24422,7 +24426,7 @@ function OrderPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -25170,8 +25174,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -25448,6 +25452,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -25545,7 +25550,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/actions/merge-customers.ts": "916a9b22 custom",
   "src/custom/hooks.ts": "4247261f custom",
@@ -25575,23 +25580,24 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.test.ts": "f49c4632 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Trash.tsx": "26ea3332 kit",
   "src/kit/Users.tsx": "da068460 kit",
@@ -25628,14 +25634,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "a64267eb generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "4b2fb6e7 generated",
+  "src/routes/customers/$id.tsx": "b51728a1 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
   "src/routes/customers/index.tsx": "632d2f8c generated",
   "src/routes/customers/new.tsx": "e83ed298 generated",
   "src/routes/customers/trash.tsx": "732d5013 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "a204665c generated",
+  "src/routes/orders/$id.tsx": "c845c0de generated",
   "src/routes/orders/index.tsx": "370dfed8 generated",
   "src/routes/orders/new.tsx": "ffa48b2d generated",
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
@@ -25645,8 +25651,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -30902,7 +30908,7 @@ function ClientPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -31168,7 +31174,7 @@ function InvoiceLinePage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -31461,7 +31467,7 @@ function InvoicePage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -32091,8 +32097,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -32413,6 +32419,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -32523,7 +32530,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -32560,28 +32567,29 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/site.ts": "08ea7d3a generated",
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/Dashboard.tsx": "2b64ff8a kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/Dashboard.tsx": "901642e0 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/Onboarding.tsx": "aae45ddd kit",
+  "src/kit/Onboarding.tsx": "56365723 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -32622,7 +32630,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "327ec1de generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "c7e4a008 generated",
+  "src/routes/clients/$id.tsx": "6d832d92 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
   "src/routes/clients/new.tsx": "0909bfea generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -32630,10 +32638,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "04978b35 generated",
-  "src/routes/invoice-lines/$id.tsx": "fdf19783 generated",
+  "src/routes/invoice-lines/$id.tsx": "30fda155 generated",
   "src/routes/invoice-lines/index.tsx": "49077b68 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
-  "src/routes/invoices/$id.tsx": "9273081c generated",
+  "src/routes/invoices/$id.tsx": "13c2bb9e generated",
   "src/routes/invoices/index.tsx": "e953277d generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
   "src/routes/overview/index.tsx": "0f36177f generated",
@@ -32643,8 +32651,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
   "src/routes/welcome/index.tsx": "de260b5f generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -37364,7 +37372,7 @@ function DishPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -37830,7 +37838,7 @@ function OrderPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -38342,7 +38350,7 @@ function StopPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -38890,8 +38898,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -39200,6 +39208,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/FieldInput.tsx",
@@ -39303,7 +39312,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -39348,17 +39357,18 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/users.server.ts": "26958fac generated",
   "src/generated/users.test.ts": "e326a4a1 generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "61bb9677 kit",
@@ -39366,7 +39376,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -39403,7 +39413,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "1025d442 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/dishes/$id.tsx": "3ae8d79c generated",
+  "src/routes/dishes/$id.tsx": "eba6031e generated",
   "src/routes/dishes/index.tsx": "a1df2b33 generated",
   "src/routes/dishes/new.tsx": "3ac97d16 generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -39411,21 +39421,21 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "3c987813 generated",
-  "src/routes/orders/$id.tsx": "97ba757d generated",
+  "src/routes/orders/$id.tsx": "3f966a77 generated",
   "src/routes/orders/index.tsx": "70f7b156 generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
   "src/routes/sign-in.tsx": "66d1c612 generated",
   "src/routes/sitemap[.]xml.ts": "c3f0b7d5 generated",
-  "src/routes/stops/$id.tsx": "40e092f5 generated",
+  "src/routes/stops/$id.tsx": "1076841f generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
   "src/routes/team/activity.tsx": "0f6eab93 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
   "src/routes/where/index.tsx": "61898dc7 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "484c6ea1 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -42042,7 +42052,7 @@ function ItemPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -42476,7 +42486,7 @@ function ItemPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -42862,7 +42872,7 @@ function ItemPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -43270,8 +43280,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -43547,6 +43557,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -43653,7 +43664,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -43675,28 +43686,29 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/site.ts": "4c4ce201 generated",
   "src/generated/uploads.ts": "ca55296a generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
-  "src/kit/Review.tsx": "5f595873 kit",
+  "src/kit/Review.tsx": "53fd9c90 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -43732,7 +43744,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "8a68b445 generated",
+  "src/routes/$id.tsx": "a6b5024f generated",
   "src/routes/__root.tsx": "feefd6d4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -43740,22 +43752,22 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "24ab9545 generated",
-  "src/routes/my-items/$id.tsx": "1db8e672 generated",
+  "src/routes/my-items/$id.tsx": "e9f4d944 generated",
   "src/routes/my-items/index.tsx": "9a927b2e generated",
   "src/routes/my-items/new.tsx": "0a1bdc48 generated",
   "src/routes/new.tsx": "e97af4c3 generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "e17b4654 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "06067542 generated",
+  "src/routes/saved/$id.tsx": "64c55574 generated",
   "src/routes/saved/index.tsx": "5a3f02fe generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
   "src/routes/welcome/index.tsx": "7c4525c4 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -46037,7 +46049,7 @@ function ItemPage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -46399,8 +46411,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -46646,6 +46658,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -46734,7 +46747,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -46754,24 +46767,25 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -46808,15 +46822,15 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c2353742 generated",
-  "src/routes/items/$id.tsx": "15aad64f generated",
+  "src/routes/items/$id.tsx": "07251319 generated",
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3391627b generated",
   "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -54821,7 +54835,7 @@ function ComponentPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -55324,7 +55338,7 @@ function IncidentPage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -55736,7 +55750,7 @@ function MaintenancePage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -56564,7 +56578,7 @@ function IncidentUpdatePage() {
       />
 
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -56752,8 +56766,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -57075,6 +57089,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Articles.tsx",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
@@ -57195,7 +57210,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/sections/Uptime.tsx": "b8180e0a custom",
@@ -57236,29 +57251,30 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/users.server.ts": "e6e89d60 generated",
   "src/generated/users.test.ts": "0fbcce1c generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
-  "src/kit/Articles.tsx": "665733a1 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
+  "src/kit/Articles.tsx": "3b7a5a1f kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/Dashboard.tsx": "2b64ff8a kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/Keys.tsx": "a0e6091b kit",
-  "src/kit/Landing.tsx": "a353d371 kit",
+  "src/kit/Dashboard.tsx": "901642e0 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/Keys.tsx": "7e6c86b4 kit",
+  "src/kit/Landing.tsx": "fa1807a9 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
-  "src/kit/MarkdownFormatted.tsx": "6b5e86ea kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/MarkdownFormatted.tsx": "cba3c8ae kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -57305,17 +57321,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "f25b8dbb generated",
+  "src/routes/components/$id.tsx": "8adbc69d generated",
   "src/routes/components/index.tsx": "d167b8eb generated",
   "src/routes/components/new.tsx": "bb94e5ee generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "e6010bcb generated",
-  "src/routes/incidents/$id.tsx": "96aceca6 generated",
+  "src/routes/incidents/$id.tsx": "8bc6d400 generated",
   "src/routes/incidents/index.tsx": "5697fa30 generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
   "src/routes/index.tsx": "98dbe74c generated",
-  "src/routes/maintenance/$id.tsx": "1a54ed4d generated",
+  "src/routes/maintenance/$id.tsx": "d620d3a7 generated",
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
   "src/routes/mcp.ts": "0d8813db generated",
@@ -57325,12 +57341,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
   "src/routes/team/activity.tsx": "916ddbdb generated",
   "src/routes/team/index.tsx": "f53943cc generated",
-  "src/routes/updates/$id.tsx": "f63d4a31 generated",
+  "src/routes/updates/$id.tsx": "2589a8d3 generated",
   "src/routes/updates/index.tsx": "544b43a8 generated",
   "src/routes/updates/new.tsx": "9bff0965 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -62144,7 +62160,7 @@ function SupportCasePage() {
         />
       </section>
       {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-10 max-w-[720px]">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
           <ActivityLog lines={history} app={app} />
         </section>
@@ -63077,8 +63093,8 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   --chart-5: oklch(0.514256 0.197806 16.9350);
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --control-height: 2.75rem;
-  --row-height: 4rem;
+  --control-height: 2.5rem;
+  --row-height: 3.5rem;
   --cell-padding: 1rem;
   --card-padding: 1.5rem;
   --motion-fast: 120ms;
@@ -63351,6 +63367,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/AiMark.tsx",
   "kit: src/kit/AppLink.tsx",
   "kit: src/kit/AppShell.tsx",
+  "kit: src/kit/AppShell.tsx.bak",
   "kit: src/kit/Ask.tsx",
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
@@ -63451,7 +63468,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
   "src/components/ui/card.tsx": "70105365 kit",
-  "src/components/ui/input.tsx": "e771faee kit",
+  "src/components/ui/input.tsx": "73597ba8 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
@@ -63487,25 +63504,26 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/users.test.ts": "d8bc0730 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "719812de kit",
-  "src/kit/ActivityLog.tsx": "cc50334d kit",
+  "src/kit/ActivityLog.tsx": "a728d00b kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "7c7fbf05 kit",
+  "src/kit/AppShell.tsx.bak": "8b93345d kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "9d01fcee kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
-  "src/kit/FieldInput.tsx": "136de911 kit",
+  "src/kit/FieldInput.tsx": "c4e2485a kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "d74b66a3 kit",
-  "src/kit/Inspector.tsx": "82e9d79d kit",
-  "src/kit/ModelForm.tsx": "f19faf4c kit",
+  "src/kit/Filters.tsx": "c9b213d1 kit",
+  "src/kit/Inspector.tsx": "f86a326e kit",
+  "src/kit/ModelForm.tsx": "563efb65 kit",
   "src/kit/ModelTable.tsx": "b2d68afa kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "034a409a kit",
-  "src/kit/SignIn.tsx": "2005a78e kit",
+  "src/kit/SignIn.tsx": "0a192a30 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "da068460 kit",
   "src/kit/access.ts": "4e4f90b5 kit",
@@ -63546,7 +63564,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "2a291745 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/cases/$id.tsx": "89c51a5c generated",
+  "src/routes/cases/$id.tsx": "885db4de generated",
   "src/routes/cases/index.tsx": "891a3c3e generated",
   "src/routes/cases/new.tsx": "2360043b generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -63560,8 +63578,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "85ed449b generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "b45a0afb kit",
-  "src/styles.css": "19116c27 kit",
-  "src/theme.css": "90755988 generated",
+  "src/styles.css": "cbeb37d8 kit",
+  "src/theme.css": "5ff12049 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

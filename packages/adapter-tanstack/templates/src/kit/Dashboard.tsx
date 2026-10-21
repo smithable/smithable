@@ -31,7 +31,7 @@ export function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <Card data-kit="tile" className="space-y-2 p-card">
       <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
-      <p className="text-3xl font-bold tabular-nums">{value}</p>
+      <p className="text-3xl font-semibold tabular-nums">{value}</p>
     </Card>
   );
 }

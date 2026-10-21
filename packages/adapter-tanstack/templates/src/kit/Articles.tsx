@@ -116,7 +116,7 @@ export function ArticleView({
         </AiMarked>
       )}
       <header className="space-y-2">
-        <h1 data-part="title" className="text-3xl leading-tight font-bold sm:text-4xl">
+        <h1 data-part="title" className="text-3xl leading-tight font-semibold sm:text-4xl">
           {title}
         </h1>
         {(date || author) && (

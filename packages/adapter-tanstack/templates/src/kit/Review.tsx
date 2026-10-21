@@ -127,7 +127,7 @@ function Waiting({
       {rejecting ? (
         <div className="space-y-2">
           <p className="text-sm">{w.reviewRejectSure}</p>
-          <label className="block text-sm">
+          <label className="block text-[14px]">
             {w.rejectReason}
             <textarea
               value={reason}

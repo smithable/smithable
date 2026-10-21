@@ -216,182 +216,187 @@ export function Calendar({
   };
 
   return (
-    <div data-kit="calendar" className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          aria-label={w.previous}
-          onClick={() => onNavigate(range.prev)}
-        >
-          <ChevronLeft aria-hidden className="size-4" />
-        </Button>
-        <Button type="button" variant="outline" onClick={() => onNavigate(range.today)}>
-          {w.today}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          aria-label={w.next}
-          onClick={() => onNavigate(range.next)}
-        >
-          <ChevronRight aria-hidden className="size-4" />
-        </Button>
-        <h2 aria-live="polite" className="mx-2 text-lg font-semibold">
-          {range.label}
-        </h2>
-        <Button
-          type="button"
-          variant="ghost"
-          className="ml-auto"
-          onClick={() => onNavigate(range.other)}
-        >
-          {range.view === "week" ? w.month : w.week}
-        </Button>
-      </div>
+    <div
+      data-kit="calendar"
+      className="flex flex-col gap-6 [@media(min-width:1100px)]:flex-row [@media(min-width:1100px)]:items-start"
+    >
+      <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={w.previous}
+            onClick={() => onNavigate(range.prev)}
+          >
+            <ChevronLeft aria-hidden className="size-4" />
+          </Button>
+          <Button type="button" variant="outline" onClick={() => onNavigate(range.today)}>
+            {w.today}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={w.next}
+            onClick={() => onNavigate(range.next)}
+          >
+            <ChevronRight aria-hidden className="size-4" />
+          </Button>
+          <h2 aria-live="polite" className="mx-2 text-lg font-semibold">
+            {range.label}
+          </h2>
+          <Button
+            type="button"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => onNavigate(range.other)}
+          >
+            {range.view === "week" ? w.month : w.week}
+          </Button>
+        </div>
 
-      <div
-        className={
-          timed
-            ? "md:grid md:grid-cols-[3rem_repeat(7,minmax(0,1fr))] md:gap-x-1"
-            : "md:grid md:grid-cols-7 md:gap-1"
-        }
-      >
-        {timed && (
-          <div aria-hidden className="hidden md:block md:pt-10">
-            {hours.map((h) => (
-              <div
-                key={h}
-                className="text-right text-xs text-muted-foreground"
-                style={{ height: `${HOUR}rem` }}
+        <div
+          className={
+            timed
+              ? "md:grid md:grid-cols-[3rem_repeat(7,minmax(0,1fr))] md:gap-x-1"
+              : "md:grid md:grid-cols-7 md:gap-1"
+          }
+        >
+          {timed && (
+            <div aria-hidden className="hidden md:block md:pt-10">
+              {hours.map((h) => (
+                <div
+                  key={h}
+                  className="text-right text-xs text-muted-foreground"
+                  style={{ height: `${HOUR}rem` }}
+                >
+                  {clock(h * 60)}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* On a phone an empty week or month says so once, not "Nothing" under every day. */}
+          {empty && (
+            <div className="flex items-center justify-between gap-3 py-3 md:hidden">
+              <p className="text-sm text-muted-foreground">
+                {range.view === "week" ? w.nothingThisWeek : w.nothingThisMonth}
+              </p>
+              {/* Whoever may add one gets the button here (the hours to tap are a wide screen's). */}
+              {onCreate && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    onCreate(`${range.days.find((d) => d >= today) ?? range.days[0]}T09:00`)
+                  }
+                >
+                  {w.newOne(newLabel)}
+                </Button>
+              )}
+            </div>
+          )}
+          {range.days.map((d) => {
+            const records = byDay.get(d) ?? [];
+            const outside = range.month !== undefined && !d.startsWith(range.month);
+            return (
+              <section
+                key={d}
+                aria-label={longDay(d)}
+                className={`border-b py-3 md:border md:border-border md:py-0 ${empty ? "max-md:hidden" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
               >
-                {clock(h * 60)}
-              </div>
-            ))}
-          </div>
-        )}
-        {/* On a phone an empty week or month says so once, not "Nothing" under every day. */}
-        {empty && (
-          <div className="flex items-center justify-between gap-3 py-3 md:hidden">
-            <p className="text-sm text-muted-foreground">
-              {range.view === "week" ? w.nothingThisWeek : w.nothingThisMonth}
-            </p>
-            {/* Whoever may add one gets the button here (the hours to tap are a wide screen's). */}
-            {onCreate && (
-              <Button
-                variant="outline"
-                onClick={() =>
-                  onCreate(`${range.days.find((d) => d >= today) ?? range.days[0]}T09:00`)
-                }
-              >
-                {w.newOne(newLabel)}
-              </Button>
-            )}
-          </div>
-        )}
-        {range.days.map((d) => {
-          const records = byDay.get(d) ?? [];
-          const outside = range.month !== undefined && !d.startsWith(range.month);
-          return (
-            <section
-              key={d}
-              aria-label={longDay(d)}
-              className={`border-b py-3 md:border md:border-border md:py-0 ${empty ? "max-md:hidden" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
-            >
-              <h3
-                className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today ? "text-primary" : ""}`}
-              >
-                <span className="md:hidden">{longDay(d)}</span>
-                <span className="hidden md:inline">{shortDay(d)}</span>
-              </h3>
-              <div
-                className={timed ? "relative md:h-[var(--grid)]" : ""}
-                style={
-                  timed
-                    ? ({ "--grid": `${(span / 60) * HOUR}rem` } as React.CSSProperties)
-                    : undefined
-                }
-              >
-                {timed &&
-                  onCreate &&
-                  // Only hours no record overlaps: a block never hides part of a button.
-                  hours
-                    .filter((h) => !records.some((p) => p.from < (h + 1) * 60 && p.to > h * 60))
-                    .map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        aria-label={w.newAt(newLabel, longDay(d), clock(h * 60))}
-                        className="absolute inset-x-0 hidden border-t border-border/50 hover:bg-muted md:block"
-                        style={{
-                          top: `${((h - firstHour) * 60 * 100) / span}%`,
-                          height: `${HOUR}rem`,
-                        }}
-                        onClick={() => onCreate(`${d}T${clock(h * 60)}`)}
-                      />
-                    ))}
-                {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground md:sr-only">{w.nothing}</p>
-                ) : (
-                  <ol className="space-y-1 md:space-y-0">
-                    {records.map((p) => (
-                      <li
-                        key={p.id}
-                        className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
-                        style={
-                          timed
-                            ? ({
-                                top: `${((p.from - firstHour * 60) * 100) / span}%`,
-                                height: `${((p.to - p.from) * 100) / span}%`,
-                                left: `${(p.column * 100) / p.columns}%`,
-                                width: `${100 / p.columns}%`,
-                              } as React.CSSProperties)
-                            : undefined
-                        }
-                      >
+                <h3
+                  className={`text-[14px] font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today ? "text-primary" : ""}`}
+                >
+                  <span className="md:hidden">{longDay(d)}</span>
+                  <span className="hidden md:inline">{shortDay(d)}</span>
+                </h3>
+                <div
+                  className={timed ? "relative md:h-[var(--grid)]" : ""}
+                  style={
+                    timed
+                      ? ({ "--grid": `${(span / 60) * HOUR}rem` } as React.CSSProperties)
+                      : undefined
+                  }
+                >
+                  {timed &&
+                    onCreate &&
+                    // Only hours no record overlaps: a block never hides part of a button.
+                    hours
+                      .filter((h) => !records.some((p) => p.from < (h + 1) * 60 && p.to > h * 60))
+                      .map((h) => (
                         <button
+                          key={h}
                           type="button"
-                          onClick={() => open(p)}
-                          className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
+                          aria-label={w.newAt(newLabel, longDay(d), clock(h * 60))}
+                          className="absolute inset-x-0 hidden border-t border-border/50 hover:bg-muted md:block"
+                          style={{
+                            top: `${((h - firstHour) * 60 * 100) / span}%`,
+                            height: `${HOUR}rem`,
+                          }}
+                          onClick={() => onCreate(`${d}T${clock(h * 60)}`)}
+                        />
+                      ))}
+                  {records.length === 0 ? (
+                    <p className="text-[14px] text-muted-foreground md:sr-only">{w.nothing}</p>
+                  ) : (
+                    <ol className="space-y-1 md:space-y-0">
+                      {records.map((p) => (
+                        <li
+                          key={p.id}
+                          className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
+                          style={
+                            timed
+                              ? ({
+                                  top: `${((p.from - firstHour * 60) * 100) / span}%`,
+                                  height: `${((p.to - p.from) * 100) / span}%`,
+                                  left: `${(p.column * 100) / p.columns}%`,
+                                  width: `${100 / p.columns}%`,
+                                } as React.CSSProperties)
+                              : undefined
+                          }
                         >
-                          <span className="font-medium">{p.title}</span>
-                          <span className="sr-only">, {when(p)}</span>
-                          {!dateOnly && (
-                            <span aria-hidden className="block text-muted-foreground">
-                              {clock(p.from)}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            </section>
-          );
-        })}
+                          <button
+                            type="button"
+                            onClick={() => open(p)}
+                            className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-[14px] text-foreground hover:bg-primary/20 md:text-xs"
+                          >
+                            <span className="font-medium">{p.title}</span>
+                            <span className="sr-only">, {when(p)}</span>
+                            {!dateOnly && (
+                              <span aria-hidden className="block text-muted-foreground">
+                                {clock(p.from)}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
 
-      <dialog
-        ref={panel}
-        aria-labelledby="calendar-record"
-        className="m-auto w-[calc(100%-2.5rem)] max-w-sm rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
-      >
-        {shown && (
-          <>
+      {shown && !onOpen && (
+        <div className="w-full shrink-0 rounded-lg border bg-card p-card text-card-foreground [@media(min-width:1100px)]:w-[360px] [@media(min-width:1280px)]:w-[400px]">
+          <div className="flex items-start justify-between gap-4">
             <h2 id="calendar-record" className="text-lg font-semibold">
               {shown.title}
             </h2>
-            <p className="mt-2 text-muted-foreground">{when(shown)}</p>
-            {details && <div className="mt-4">{details(shown.id)}</div>}
-          </>
-        )}
-        <div className="mt-6 flex justify-end">
-          <Button type="button" variant="outline" onClick={() => panel.current?.close()}>
-            {w.close}
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setShown(undefined)}
+              aria-label={w.close}
+            >
+              <X aria-hidden className="size-4" />
+            </Button>
+          </div>
+          <p className="mt-2 text-muted-foreground">{when(shown)}</p>
+          {details && <div className="mt-4">{details(shown.id)}</div>}
         </div>
-      </dialog>
+      )}
     </div>
   );
 }
