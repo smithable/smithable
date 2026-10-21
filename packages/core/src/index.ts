@@ -98,6 +98,7 @@ export type { YamlValue } from "./edit.js";
 export { EditError, YamlEditor } from "./edit.js";
 export { type EditRename, editAsRename } from "./edit-rename.js";
 export { type EditOperation, type EditReading, editAsOperations } from "./edit-words.js";
+export { writeExplicit } from "./explicit.js";
 export { formatSpec, sameContent } from "./format.js";
 export type { Expr } from "./formula.js";
 export { formatFormula, parseFormula } from "./formula.js";

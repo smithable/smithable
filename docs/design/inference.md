@@ -31,9 +31,14 @@ Not inferences: `admin` and `owner` are reserved names the spec reference define
 
 A model's `title` is already a text in `smithable.content.yml` (how the kind of record is called on its pages), and the content file holds every visible word. `namedBy` says what the key does, the way `ownedBy` does: which field names a record.
 
-## 4. Steps
+## 4. Writing it all out
+
+`smithable validate --write` (Johan, 2026-10-21: a flag that makes the spec explicit) writes what every rule settled into `smithable.yml`: each model's `namedBy`, where each unique value is unique, the `thread` block of a model shown as a conversation, an articles or calendar page's parts in the long form, an order page's `price`, `quantity` and `available`. What is written already stays; a second run has nothing to write. A spec written out no longer follows its shape (a new first field does not become the title), which is the point: a project that wants its titles, indexes and parts fixed writes them, and reads them in one place. The reverse, dropping the keys that equal the rule, is not built; `--explain` says which keys those are.
+
+## 5. Steps
 
 1. **The title** (built): `namedBy` on the model, `setNamedBy`, `titleField` by shape, `writeNamedBy` in `smithable upgrade`, `--explain` saying written or by rule, the summary sentence, this note.
 2. **Articles and the author** (built): the short form's parts by shape; `author` in the long form; the old name matches are gone.
 3. **The order page** (built): `price`, `quantity` and `available` by shape and by key; `ask` takes any own value; the old name matches (price, quantity, status, available) are gone.
 4. Studio: the model's form offers `namedBy` and `thread` (A 128 with the unique forms).
+5. **Writing it all out** (built): `validate --write`, §4.
