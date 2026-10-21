@@ -110,23 +110,36 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
+  // Never given: the id, the owner, the times, and a number counting up (the app counts it).
   const omitted = [
     "id",
     ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
-    // What the app fills is never taken from a form (record-rules.md §1).
     ...storedFields(model)
-      .filter((f) => f.byApp)
+      .filter((f) => f.sequence)
       .map(dataKey),
   ];
+  // What the app fills is never taken from a form (record-rules.md §1); an action may set it, so
+  // the settable schema keeps it, as optional: a form's values are settable values too.
+  const byApp = storedFields(model)
+    .filter((f) => f.byApp && !f.sequence)
+    .map(dataKey);
   return `${HEADER}import { createInsertSchema } from "drizzle-zod";
 import ${/\bz\.(?!output)/.test(schema) ? "{ z }" : "type { z }"} from "zod";
 ${SCHEMA_IMPORT}
 ${schema.includes("w.") ? 'import { w } from "#/kit/words";\n' : ""}
-/** What a ${n.label.toLowerCase()}'s form sends, checked. */
-export const ${n.schema} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} });
+/** What a ${n.label.toLowerCase()} may be given: a form's values and what the app fills (an action's set). */
+export const ${n.settable} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} })${byApp.length ? `.partial({ ${byApp.map((k) => `${k}: true`).join(", ")} })` : ""};
+${
+  byApp.length
+    ? `/** What a ${n.label.toLowerCase()}'s form sends, checked: never what the app fills. */
+export const ${n.schema} = ${n.settable}.omit({ ${byApp.map((k) => `${k}: true`).join(", ")} });`
+    : `/** What a ${n.label.toLowerCase()}'s form sends, checked. */
+export const ${n.schema} = ${n.settable};`
+}
 
+export type ${n.settableValues} = z.output<typeof ${n.settable}>;
 export type ${n.values} = z.output<typeof ${n.schema}>;
 `;
 }
@@ -272,7 +285,7 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
 import { currentViewer } from "#/lib/viewer.server";
 import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
 
-export type { ${n.values} } from "./${kebab(model.name)}.schema";
+export type { ${n.settableValues}, ${n.values} } from "./${kebab(model.name)}.schema";
 
 /** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
 async function writer() {
@@ -1358,7 +1371,7 @@ ${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).ui} } from "./${kebab(m.name)}";\n`)
   .join(
     "",
-  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.values} } from "./${kebab(model.name)}";
+  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${
   group.length || roots.length || occ
     ? `
@@ -1539,7 +1552,7 @@ ${
   uploadFields.length
     ? `
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<${n.values}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+function checkFiles<V extends Partial<${n.settableValues}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
 ${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}
@@ -1551,7 +1564,7 @@ ${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: 
   refs.length
     ? `
 /** Checks that the viewer may read the records the values refer to. */
-function checkReferences(viewer: Viewer | null, values: Partial<${n.values}>): void {
+function checkReferences(viewer: Viewer | null, values: Partial<${n.settableValues}>): void {
 ${referenceChecks.join("\n")}
 }
 `
@@ -2026,7 +2039,7 @@ ${
 
 `
     : ""
-}  async create(viewer: Viewer | null, values: ${n.values}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
+}  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public
@@ -2062,7 +2075,7 @@ ${
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<${n.values}>, what = "changed", ${locks.length ? "frees" : "_frees"}: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<${n.settableValues}>, what = "changed", ${locks.length ? "frees" : "_frees"}: readonly string[] = []) {
     const row = db
       .select(${selectOwner})
       .from(${n.table})

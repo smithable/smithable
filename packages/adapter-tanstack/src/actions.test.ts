@@ -8,7 +8,12 @@ import {
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
-const generate = (name: string, action: string, content = emptyContent()) => {
+const generate = (
+  name: string,
+  action: string,
+  content = emptyContent(),
+  status = "status: open | done",
+) => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -17,7 +22,7 @@ models:
   Task:
     fields:
       title: string!
-      status: open | done
+      ${status}
 actions:
   ${name}: ${action}
 pages:
@@ -82,7 +87,9 @@ test("a copy run by Ask or through the API answers with the new record, read by 
 test("a standard action writes only the fields it sets, and frees only those from their locks", () => {
   const close = generate("close", "{ on: Task, set: { status: done } }");
   const server = close("src/generated/actions/close.server.ts");
-  expect(server).toContain('values: taskSchema.partial().parse({\n      status: "done",\n    }),');
+  expect(server).toContain(
+    'values: taskSettable.partial().parse({\n      status: "done",\n    }),',
+  );
   expect(server).not.toContain("...row,");
   expect(server).toContain('return taskData.update(viewer, id, one.values, "close", ["status"]);');
 });
@@ -91,6 +98,40 @@ test("the fields freed from their locks are the set's columns, never an asked on
   const assign = generate("assign", "{ on: Task, set: { status: done, title: } }");
   const server = assign("src/generated/actions/assign.server.ts");
   expect(server).toContain('"assign", ["status"]);');
+});
+
+test("an action sets what a form cannot: a field the app fills", () => {
+  const confirm = generate(
+    "confirm",
+    "{ on: Task, set: { status: done } }",
+    undefined,
+    "status: { type: open | done, by: app }",
+  );
+  const schema = confirm("src/generated/task.schema.ts");
+  // The form's schema leaves the app's field out; the settable one keeps it for the action.
+  expect(schema).toContain("export const taskSettable = createInsertSchema(schema.tasks, {");
+  expect(schema).toContain(".partial({ status: true });");
+  expect(schema).toContain("export const taskSchema = taskSettable.omit({ status: true });");
+  expect(schema).toContain("export type TaskSettable = z.output<typeof taskSettable>;");
+  const server = confirm("src/generated/actions/confirm.server.ts");
+  expect(server).toContain(
+    'values: taskSettable.partial().parse({\n      status: "done",\n    }),',
+  );
+  expect(confirm("src/generated/task.server.ts")).toContain(
+    'values: Partial<TaskSettable>, what = "changed"',
+  );
+  // A record an action adds may get the app's fields too.
+  const noted = generate(
+    "note",
+    "{ on: Task, add: { Note: { body: Noted, kind: system } } }",
+    undefined,
+    "status: open | done\n      notes: Note[]\n  Note:\n    fields:\n      body: text!\n      kind: { type: user | system, by: app }\n      task: Task!",
+  );
+  expect(noted("src/generated/actions/note.server.ts")).toContain("added0: noteSettable.parse({");
+  // Without a field the app fills, the two schemas are one.
+  expect(
+    generate("close", "{ on: Task, set: { status: done } }")("src/generated/task.schema.ts"),
+  ).toContain("export const taskSchema = taskSettable;");
 });
 
 test("a form's change needs write on the record; an action checked its own access", () => {
