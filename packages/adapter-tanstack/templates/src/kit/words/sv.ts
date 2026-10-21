@@ -57,6 +57,8 @@ export const w = {
     times
       ? `Den tiden är inte ledig. Lediga samma dag: ${times}.`
       : "Den tiden är inte ledig, och dagen har ingen annan.",
+  notInCalendar:
+    "Det här finns inte i kalendern som visas, eller så kan du inte se det. Stäng och välj ett annat.",
   tooLateToCancel: "Det är för sent att avboka här: kontakta oss för att ändra.",
   editsWillBeLost: "Det du har skrivit i formuläret är inte sparat.",
   fieldsToFix: (n: number) => (n === 1 ? "1 fält att rätta:" : `${n} fält att rätta:`),

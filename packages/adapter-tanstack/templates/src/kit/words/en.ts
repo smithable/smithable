@@ -57,6 +57,8 @@ export const w = {
     times
       ? `That time is not free. Free that day: ${times}.`
       : "That time is not free, and that day has no other.",
+  notInCalendar:
+    "This is not on the calendar shown, or you cannot see it. Close this and choose another.",
   tooLateToCancel: "It is too late to cancel here: contact us to change it.",
   editsWillBeLost: "What you entered on this form is not saved.",
   fieldsToFix: (n: number) => (n === 1 ? "1 field to fix:" : `${n} fields to fix:`),
