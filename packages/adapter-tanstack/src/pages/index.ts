@@ -28,7 +28,7 @@ export const PAGE_GENERATORS: {
   };
 } = {
   order: {
-    kit: ["src/kit/OrderPage.tsx", "src/kit/hours.ts", "src/kit/refusal.ts"],
+    kit: ["src/kit/OrderPage.tsx", "src/kit/hours.ts"],
     routes: (page, ctx) => ({ "index.tsx": orderRoute(page, ctx) }),
   },
   crud: {

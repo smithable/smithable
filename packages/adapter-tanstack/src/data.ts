@@ -33,6 +33,15 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
+import {
+  cancelMembers,
+  freeTimesMember,
+  movingKeys,
+  OCCUPIES_DRIZZLE,
+  occupiesHelpers,
+  occupiesImports,
+  occupying,
+} from "./occupies.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   addable,
@@ -253,7 +262,7 @@ import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 ${t.translated ? 'import { tx } from "#/kit/words";\n' : ""}import type { RecordUi } from "#/kit/model";
-${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
+${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.occupies ? 'import { bindSlots } from "#/kit/Slots";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
 ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perModel.name)}.server";\n` : ""}${[
   ...new Set(adds.map((a) => a.target)),
 ]
@@ -274,7 +283,30 @@ async function writer() {
 
 /** ${model.name} records as the kit reads them. */
 export type ${model.name}Row = ${rowType};
+${
+  model.occupies
+    ? `
+/** A day's free times for the form's picker (docs/design/appointments.md §4). */
+export const ${timesName(model)} = createServerFn()
+  .validator(z.object({ resource: z.number().int().positive().nullable(), length: z.number().int().positive(), date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), first: z.boolean().optional() }))
+  .handler(async ({ data }) => ${n.data}.freeTimes(await currentViewer(), data));
+${
+  model.occupies.cancel && hasSignIn(auth)
+    ? `
+/** Whether the viewer may cancel their own ${n.label.toLowerCase()} now (the record page's Cancel). */
+export const ${cancelNames(model).state} = createServerFn()
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => ${n.data}.cancelState(await currentViewer(), id));
 
+/** Cancels the viewer's own ${n.label.toLowerCase()}, while they may. */
+export const ${cancelNames(model).cancel} = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => ${n.data}.cancelOwn(await writer(), id));
+`
+    : ""
+}`
+    : ""
+}
 export const ${n.ui}: RecordUi<${model.name}Row> = ${uiSource};
 
 /** Who may delete ${n.pluralLabel.toLowerCase()}: a list's selection offers Delete by it (the server checks again). */
@@ -374,6 +406,16 @@ export const ${savedToggle(model)} = createServerFn({ method: "POST" })
 export function savedToggle(model: ModelIR): string {
   return `toggleSaved${model.name}`;
 }
+
+/** The record page's Cancel for a model that occupies someone's time (appointments.md §4). */
+export const cancelNames = (model: ModelIR) => ({
+  state: `${model.name.charAt(0).toLowerCase()}${model.name.slice(1)}CancelState`,
+  cancel: `cancelOwn${model.name}`,
+});
+
+/** The server function that answers the picker of a model that occupies someone's time. */
+const timesName = (model: ModelIR) =>
+  `${model.name.charAt(0).toLowerCase()}${model.name.slice(1)}Times`;
 
 /** The model a reference of `model` points to. */
 function relationTarget(model: ModelIR, field: string, ir: SpecIR): ModelIR | undefined {
@@ -661,6 +703,8 @@ export function dataModule(
   // checked in the same transaction as the write. And the records that hold a capacity for
   // this model's records ("max" a field here): lowering it below what is taken is refused.
   const capacity = model.capacity;
+  // One person's time (appointments.md §4): the time a record takes is checked in its write too.
+  const occ = occupying(model, ir);
   const holds = ir.models.filter((m) => {
     const c = m.capacity;
     if (!c) return false;
@@ -696,6 +740,12 @@ export function dataModule(
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
+    ...(occ ? OCCUPIES_DRIZZLE : []),
+    ...(occ &&
+    (model.trash ||
+      (occ.resource.schedule?.away && modelNamed(ir, occ.resource.schedule.away.model).trash))
+      ? ["isNull"]
+      : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
     ...(paged ? ["avg", "desc", "isNotNull", "max", "min", "sum"] : []),
     ...(model.trash ? ["desc", "isNotNull", "isNull", "lt"] : []),
@@ -1301,7 +1351,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
-${[...others]
+${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
   .filter((m) => m !== model)
@@ -1310,13 +1360,13 @@ ${[...others]
     "",
   )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.values} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${
-  group.length || roots.length
+  group.length || roots.length || occ
     ? `
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 `
     : ""
-}${usedBy}${rootInTrash}
+}${usedBy}${rootInTrash}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**
@@ -1935,7 +1985,7 @@ ${
 
 `
     : ""
-}  async get(viewer: Viewer | null, id: number) {
+}${occ ? freeTimesMember(occ, names(occ.resource, t).data, occ.lengthTarget && names(occ.lengthTarget.model, t).data) : ""}${occ && signedIn ? cancelMembers(occ, model, n, owner) : ""}  async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
     });
@@ -1990,15 +2040,21 @@ ${
       ${
         capacity
           ? `// The count and the insert in one transaction: two people cannot both take the last place.
-      row = db.transaction((tx) => {${capacityCheck()}
+      row = db.transaction((tx) => {${capacityCheck()}${occ ? `\n        checkTime(tx, { ${choiceDefaults}...values });` : ""}
         ${insertAudited}
       });`
-          : `row = db.transaction((tx) => {
+          : occ
+            ? `// The time's check and the insert in one transaction: two people cannot both take the same time.
+      row = db.transaction((tx) => {
+        checkTime(tx, { ${choiceDefaults}...values });
+        ${insertAudited}
+      });`
+            : `row = db.transaction((tx) => {
         ${insertAudited}
       });`
       }
     } catch (error) {
-      throw ${capacity ? "error instanceof Conflict ? error : " : ""}refusal(error);
+      throw ${capacity || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
     await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
@@ -2030,13 +2086,21 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
       changed = db.transaction((tx) => {${capacity ? `\n      // A change that keeps its ${capacity.per} takes no new place: only a given one is counted.\n      if (values.${capacity.per}Id !== undefined) {${capacityCheck("id").replace(/\n {6}/g, "\n        ")}\n      }` : ""}${holdChecks.join("")}
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
-        if (!before) throw new AccessDenied(viewer !== null);${updateRules}
+        if (!before) throw new AccessDenied(viewer !== null);${updateRules}${
+          occ
+            ? `
+        // A change that moves the time it takes (or takes time again) is checked like a new one.
+        const moving: Record<string, unknown> = updated;
+        if (!holdsTime(before) || ${literal(movingKeys(occ))}.some((k) => k in moving && JSON.stringify(moving[k]) !== JSON.stringify(before[k as keyof typeof before])))
+          checkTime(tx, { ...before, ...updated }, id);`
+            : ""
+        }
         const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
         return after;
       });
     } catch (error) {
-      throw ${capacity || holds.length ? "error instanceof Conflict ? error : " : ""}refusal(error);
+      throw ${capacity || holds.length || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
 ${dropPictures(
   (k) => `changed.${k}?.file`,
@@ -2238,6 +2302,14 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
     ...(field.min !== undefined && kind !== "string" && kind !== "text" ? { min: field.min } : {}),
     ...(field.max !== undefined && kind !== "string" && kind !== "text" ? { max: field.max } : {}),
     ...(kind === "markdown" ? { input: code("MarkdownEditor"), view: code("MarkdownText") } : {}),
+    // The start of a record that takes someone's time is chosen among their free times.
+    ...(model.occupies?.starts === field.name
+      ? {
+          input: code(
+            `bindSlots(${timesName(model)}, ${literal({ resource: occupying(model, ir)?.resourceKey, length: occupying(model, ir)?.lengthKey })})`,
+          ),
+        }
+      : {}),
     ...(kind === "picture"
       ? {
           input: code(

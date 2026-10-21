@@ -19,7 +19,7 @@ import {
   textMarker,
 } from "./model";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
-import { w } from "./words";
+import { language, w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
   ui: ModelUi;
@@ -164,7 +164,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     } catch (error) {
       const facts = inUseFacts(error);
       if (facts) setInUse(facts);
-      else setFailure(failureMessage(ui, error));
+      else setFailure(failureMessage(ui, error, app.timeZone));
     } finally {
       setBusy(false);
     }
@@ -195,6 +195,10 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         options={options}
         record={typeof initial?.id === "number" ? initial.id : undefined}
         currency={app.currency}
+        values={inputs}
+        // Another field set beside this one's own change: from the latest inputs, so neither is lost.
+        set={(name, value) => setInputs((current) => ({ ...current, [name]: value }))}
+        timeZone={app.timeZone}
         onChange={(value) => change(field, value)}
       />
     );
@@ -452,7 +456,7 @@ function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): stri
 }
 
 /** Explains server errors (see refusal in access.ts): a unique field taken, a record in use. */
-function failureMessage(ui: ModelUi, error: unknown): string {
+function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string {
   const message = error instanceof Error ? error.message : "";
   const column = /^taken:(\w+)$/.exec(message)?.[1];
   const field = ui.fields.find(
@@ -465,6 +469,22 @@ function failureMessage(ui: ModelUi, error: unknown): string {
   if (message === "full") return w.noPlacesLeft;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];
   if (booked) return w.alreadyTaken(booked);
+  // A time someone does not have free, with the next free times that day.
+  const notFree = /^not-free:(.*)$/.exec(message)?.[1];
+  if (notFree !== undefined)
+    return w.notFree(
+      notFree
+        .split(",")
+        .filter(Boolean)
+        .map((at) =>
+          new Intl.DateTimeFormat(language(), {
+            timeZone,
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(new Date(at)),
+        )
+        .join(", "),
+    );
   return message || w.tryAgain;
 }
 

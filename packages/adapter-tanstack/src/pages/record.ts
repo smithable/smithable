@@ -19,7 +19,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
-import { reserveElement, savedToggle, trashNames } from "../data.js";
+import { cancelNames, reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import {
   addable,
@@ -385,6 +385,16 @@ export function detailRoute(
           "row.id",
         )
       : undefined;
+  // The owner's own Cancel on a booking of someone's time (appointments.md §4).
+  const cancelOwn = Boolean(auth && hasSignIn(auth) && !within && model.occupies?.cancel);
+  if (cancelOwn) {
+    imports.set(n.module, [
+      ...(imports.get(n.module) ?? []),
+      cancelNames(model).state,
+      cancelNames(model).cancel,
+    ]);
+    imports.set("#/kit/Slots", ["CancelOwn"]);
+  }
   // A heart for the viewer's saved records (marketplace.md §2.3).
   const favorite = Boolean(auth && !within && page.favorites && hasFavorites(model, ir, auth));
   if (favorite) imports.set(n.module, [...(imports.get(n.module) ?? []), savedToggle(model)]);
@@ -655,6 +665,13 @@ ${
   reserve
     ? `      <section className="mt-10 max-w-3xl">
         ${reserve}
+      </section>
+`
+    : ""
+}${
+  cancelOwn
+    ? `      <section className="mt-10 max-w-3xl">
+        <CancelOwn id={row.id} load={${cancelNames(model).state}} cancel={${cancelNames(model).cancel}} />
       </section>
 `
     : ""

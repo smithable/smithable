@@ -606,6 +606,124 @@
               }
             }
           },
+          "schedule": {
+            "type": "object",
+            "description": "Its records are people (or rooms, chairs) whose time is booked, e.g. { hours: { mon-fri: \"09:00-17:00\" }, breaks: \"12:00-12:30\", gap: 10, away: TimeOff }.",
+            "required": [
+              "hours"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "hours": {
+                "type": "object",
+                "description": "The weekly hours in the app's time zone: a weekday or a range of them (mon-fri) to a span (\"09:00-17:00\") or a list of spans. A day not named is closed.",
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  ]
+                }
+              },
+              "breaks": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  }
+                ],
+                "description": "Spans kept free every open day: \"12:00-12:30\", or a list of them."
+              },
+              "gap": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Minutes kept free after each booking."
+              },
+              "away": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "model"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "model": {
+                        "type": "string",
+                        "description": "The model of time away."
+                      },
+                      "resource": {
+                        "type": "string",
+                        "description": "Its reference to this model; left out, its only one."
+                      },
+                      "from": {
+                        "type": "string",
+                        "description": "When the time away starts; left out, its first date-and-time field."
+                      },
+                      "until": {
+                        "type": "string",
+                        "description": "When it ends; left out, its second date-and-time field."
+                      }
+                    }
+                  }
+                ],
+                "description": "A model whose records block time (days off, holidays): its reference to this model and two date-time fields, from and until. Its name alone takes its one reference here and its first two date-time fields; { model, resource, from, until } says them."
+              }
+            }
+          },
+          "occupies": {
+            "type": "object",
+            "description": "Each record takes a scheduled record's time, e.g. { resource: barber, starts: startsAt, duration: service.minutes, while: { status: [requested, confirmed] }, cancelUntil: 12h }.",
+            "required": [
+              "resource",
+              "starts",
+              "duration"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "resource": {
+                "type": "string",
+                "description": "A required reference of this model to a model with a schedule."
+              },
+              "starts": {
+                "type": "string",
+                "description": "A date-and-time field: when the time is taken."
+              },
+              "duration": {
+                "type": "string",
+                "description": "Minutes: a whole-number field of this model, or of a record it refers to (\"service.minutes\")."
+              },
+              "while": {
+                "type": "object",
+                "description": "Only records with these choice or yes/no values take the time; the others free it."
+              },
+              "cancelUntil": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*[mhd]$",
+                "description": "How long before the start the record's owner may cancel it: \"30m\", \"12h\" or \"2d\". Without it, until the start."
+              },
+              "cancelTo": {
+                "type": "string",
+                "description": "The value the owner's Cancel sets, outside while; needed when several values are outside it."
+              }
+            }
+          },
           "description": {
             "type": "string",
             "title": "What it is for",

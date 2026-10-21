@@ -1,6 +1,6 @@
 # Appointments: one person's time (design)
 
-Status: 2026-10-11, proposed by Opus (backlog A 101, from an outside review). The booking starter books **places on a session**: a class at 09:00 with
+Status: 2026-10-11, proposed by Opus (backlog A 101, from an outside review); steps 1–2 built 2026-10-21 (§9 says where the build differs). The booking starter books **places on a session**: a class at 09:00 with
 twelve places (`booking.md`). A barber, a physiotherapist or a clinic books **one person's
 time**: a service of 30 minutes at the first free moment that person has, never two at once.
 This note designs that with two spec constructs and the parts already built. The build waits
@@ -172,3 +172,20 @@ time, the visit becomes an `occupies` record of the carpenter's schedule.
    as A 101 says; test-apps: book the earliest time, see it gone, cancel inside and outside the
    window, the owner's day view.
 4. Docs: a page on booking a person's time, beside the one on places.
+
+## 9. As built (steps 1–2)
+
+- **`away` says its fields, or they are found by shape.** `away: TimeOff` takes TimeOff's one
+  reference to the scheduled model and its first two date-and-time fields, in the order it writes
+  them; `away: { model, resource, from, until }` says them, and the summary names the fields it
+  reads. No field name is assumed.
+- **The Cancel is offered with `cancelUntil` or `cancelTo`.** `cancelTo` alone gives the owner a
+  Cancel until the start, as §2 says of a missing `cancelUntil`.
+- **The refusal** is `not-free:` with up to three next free times that day, which the form shows
+  in the app's time zone ("That time is not free. Free that day: 10:30, 10:45, 11:00.").
+- **The day view** needs no new key: a calendar of a model that occupies someone's time gets a
+  Day button beside Month, and the day shows a column per person, among those the viewer may read.
+- **Not yet:** refusing a scheduled model's change that leaves bookings outside its hours waits
+  for per-person hours (§6): until then the hours are the spec's, not a record's. The tier-0
+  phrases ("barbers have opening hours …") come with the starter.
+

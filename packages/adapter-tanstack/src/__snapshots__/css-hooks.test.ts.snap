@@ -155,6 +155,11 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="code"",
     "data-part="email"",
   ],
+  "src/kit/Slots.tsx": [
+    "data-kit="slots"",
+    "data-part="time"",
+    "data-kit="cancel-own"",
+  ],
   "src/kit/Thread.tsx": [
     "data-kit="thread"",
     "data-part="message"",

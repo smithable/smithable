@@ -79,6 +79,10 @@ export interface ModelIR extends SemanticText {
   namedBy?: string;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
   capacity?: CapacityIR;
+  /** Its records are people (or rooms, chairs) whose time is booked (docs/design/appointments.md). */
+  schedule?: ScheduleIR;
+  /** Each record takes a scheduled record's time (an appointment its barber's). */
+  occupies?: OccupiesIR;
   /**
    * Deleted records go to a trash for thirty days, where whoever may delete them can restore
    * them; the app's readers skip them (docs/design/trash.md).
@@ -99,6 +103,32 @@ export interface CapacityIR {
   max: number | string;
   /** Only records with these choice or yes/no values count. */
   where?: Condition;
+}
+
+export interface ScheduleIR {
+  /** The weekly hours, in the app's time zone; a day not named is closed. */
+  hours: Hours;
+  /** Spans kept free every open day. */
+  breaks: [number, number][];
+  /** Minutes kept free after each booking. */
+  gap: number;
+  /** A model whose records block time: a reference to this model and a start and an end. */
+  away?: { model: string; resource: string; from: string; until: string };
+}
+
+export interface OccupiesIR {
+  /** A required reference to a model with a schedule. */
+  resource: string;
+  /** A date-and-time field. */
+  starts: string;
+  /** Minutes: a whole-number field, or one of a referenced record ("service.minutes"). */
+  duration: string;
+  /** Only records with these choice or yes/no values take the time. */
+  while?: Condition;
+  /** How long before the start the record's owner may cancel it, written "12h" (30m, 2d). */
+  cancelUntil?: string;
+  /** The owner's Cancel: the choice field it sets and the value, outside `while`. */
+  cancel?: { field: string; to: string };
 }
 
 export const ACCESS_OPERATIONS = ["read", "create", "write", "delete"] as const;

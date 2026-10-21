@@ -18,6 +18,10 @@ interface FieldInputProps {
   record?: number;
   /** The app's currency (EUR), shown beside an amount of money. */
   currency?: string;
+  /** The form's inputs, and setting another field, for a control that depends on them. */
+  values?: Record<string, string | boolean>;
+  set?: (name: string, value: string) => void;
+  timeZone?: string;
   onChange: (value: string | boolean) => void;
 }
 
@@ -38,6 +42,9 @@ export function FieldInput({
   options,
   record,
   currency,
+  values,
+  set,
+  timeZone,
   onChange,
 }: FieldInputProps) {
   const common = {
@@ -77,7 +84,17 @@ export function FieldInput({
   const text = typeof value === "string" ? value : "";
   if (field.input) {
     const Control = field.input;
-    return <Control {...common} value={text} record={record} onChange={onChange} />;
+    return (
+      <Control
+        {...common}
+        value={text}
+        record={record}
+        values={values}
+        set={set}
+        timeZone={timeZone}
+        onChange={onChange}
+      />
+    );
   }
   if (field.kind === "text" || field.kind === "markdown" || field.control === "textarea") {
     return <Textarea {...common} value={text} onChange={(e) => onChange(e.target.value)} />;

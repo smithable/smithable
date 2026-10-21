@@ -46,6 +46,16 @@ export const w = {
   cancelYourBooking: "Avboka din plats?",
   cannotBeUndone: "Det här går inte att ångra.",
   changes: "ändringar",
+  chooseLengthFirst: "Välj först vad du vill boka.",
+  chooseTime: "Välj en tid",
+  day: "Dag",
+  findingTimes: "Letar efter lediga tider…",
+  noFreeTimes: "Inga lediga tider den här dagen.",
+  notFree: (times: string) =>
+    times
+      ? `Den tiden är inte ledig. Lediga samma dag: ${times}.`
+      : "Den tiden är inte ledig, och dagen har ingen annan.",
+  tooLateToCancel: "Det är för sent att avboka här: kontakta oss för att ändra.",
   checkingPlaces: "Kontrollerar platser…",
   chooseFile: "Välj en fil",
   choosePicture: "Välj en bild",

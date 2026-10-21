@@ -17,6 +17,7 @@ import {
 } from "@smithable/core";
 import { askedKeys } from "./actions.js";
 import { aggregatedLists } from "./formulas.js";
+import { isTestLength, TEST_MINUTES, testStart } from "./occupies.js";
 import { dataKey, lists as listFields, references } from "./shared.js";
 
 const HEADER =
@@ -59,8 +60,12 @@ function keepLocked(model: ModelIR, values: string, record: string): string {
     : values;
 }
 
-function testValue(field: FieldIR, model: ModelIR, owner = "owner"): string {
+function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"): string {
   if (field.type.kind === "choice") return JSON.stringify(field.type.values[0]);
+  // A booking of someone's time (appointments.md §4) at a time it fits, for a length that fits.
+  const start = model.occupies?.starts === field.name ? testStart(model, ir) : undefined;
+  if (start) return `instantOf(${JSON.stringify(start)}, app.timeZone)`;
+  if (isTestLength(field, model, ir)) return String(TEST_MINUTES);
   if (field.type.kind === "relation") {
     return field.type.model === USER_MODEL
       ? owner === "owner"
@@ -133,7 +138,7 @@ export function accessTestSource(ir: SpecIR, auth: AuthIR): string {
             ? "owner ?? stranger.id"
             : "owner"
           : f.required || f.unique
-            ? testValue(f, model)
+            ? testValue(f, model, ir)
             : "null";
       return `${key}: ${value}`;
     });
@@ -372,7 +377,7 @@ ${tests.join("\n\n")}
       const target = ir.models.find((m) => m.name === x.model) as ModelIR;
       const field = target.fields.find((f) => dataKey(f) === x.field) as FieldIR;
       // A person or a record asked for: the stranger, or one of theirs.
-      return `${JSON.stringify(x.key)}: ${testValue(field, target, "stranger.id")}`;
+      return `${JSON.stringify(x.key)}: ${testValue(field, target, ir, "stranger.id")}`;
     });
     // Each run gets its own values (a unique number must differ between two copies).
     const fresh = askedValues.some((v) => /\bn\b/.test(v));
@@ -501,6 +506,29 @@ ${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog
   });
 });`);
   }
+  // Someone's time taken twice (appointments.md §4): the second booking at the same time is refused.
+  const occupiers = ir.models.filter((m) => testStart(m, ir));
+  const creator = roles.find((r) => r === null || r === "admin") ?? roles[0];
+  for (const m of occupiers) {
+    const o = m.occupies as NonNullable<ModelIR["occupies"]>;
+    const ref = m.fields.find((f) => f.name === o.resource);
+    const resource = ref?.type.kind === "relation" ? ref.type.model : "";
+    // A field the app fills is not among the values a create takes: its default holds.
+    const holds = Object.entries(o.while ?? {})
+      .filter(([k]) => !m.fields.find((f) => f.name === k)?.byApp)
+      .map(([k, v]) => `, ${k}: ${JSON.stringify(Array.isArray(v) ? v[0] : v)}`)
+      .join("");
+    const viewer = creator === null || !signedIn ? "null" : `signedIn(${JSON.stringify(creator)})`;
+    const id = viewer === "null" ? "null" : "viewer.id";
+    describes.push(`describe("${m.name} takes its ${o.resource}'s time", () => {
+  test("the same time twice is refused", async () => {
+    const viewer = ${viewer};
+    const ${o.resource}Id = insert${resource}(${id}).id;
+    await ${camel(m.name)}Data.create(viewer, { ...${camel(m.name)}Values(${id}), ${o.resource}Id${holds} });
+    await expect(${camel(m.name)}Data.create(viewer, { ...${camel(m.name)}Values(${id}), ${o.resource}Id${holds} })).rejects.toThrow(/^not-free:/);
+  });
+});`);
+  }
   const imports = [
     ...ir.models.map((m) => `import { ${camel(m.name)}Data } from "./${kebab(m.name)}.server";`),
     ...standard.map(
@@ -514,7 +542,7 @@ ${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length || upda
 import { db } from "#/db";
 ${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
-${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${ir.models.some(sendsFiles) ? 'import { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
+${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${occupiers.length ? 'import { instantOf } from "#/kit/zoned";\nimport { app } from "./app";\n' : ""}${ir.models.some(sendsFiles) ? 'import { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
 
 let counter = 0;
 const next = () => ++counter;

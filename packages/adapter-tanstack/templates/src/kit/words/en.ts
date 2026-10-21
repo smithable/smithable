@@ -46,6 +46,16 @@ export const w = {
   cancelYourBooking: "Cancel your booking?",
   cannotBeUndone: "This cannot be undone.",
   changes: "changes",
+  chooseLengthFirst: "Choose what to book first.",
+  chooseTime: "Choose a time",
+  day: "Day",
+  findingTimes: "Looking for free times…",
+  noFreeTimes: "No free times this day.",
+  notFree: (times: string) =>
+    times
+      ? `That time is not free. Free that day: ${times}.`
+      : "That time is not free, and that day has no other.",
+  tooLateToCancel: "It is too late to cancel here: contact us to change it.",
   checkingPlaces: "Checking places…",
   chooseFile: "Choose a file",
   choosePicture: "Choose a picture",
