@@ -241,6 +241,27 @@ test("on a host the preview takes Studio's token on every request, requests and 
   expect(call(tokenGuard(undefined), "secret-token")).toBe(
     "503 The preview has no token to check.",
   );
+  // Once checked, the token is gone from the request, parsed and raw: the app's own code in the
+  // preview never sees it.
+  const passing = {
+    headers: { host: "p.example", "x-smithable-studio-token": "secret-token" } as Record<
+      string,
+      string | string[] | undefined
+    >,
+    rawHeaders: ["Host", "p.example", "X-Smithable-Studio-Token", "secret-token", "Accept", "*/*"],
+    headersDistinct: {
+      host: ["p.example"],
+      "x-smithable-studio-token": ["secret-token"],
+    } as Record<string, string[] | undefined>,
+  };
+  let passedOn = false;
+  guard(passing, { statusCode: 200, setHeader: () => undefined, end: () => undefined }, () => {
+    passedOn = true;
+  });
+  expect(passedOn).toBe(true);
+  expect(passing.headers).toEqual({ host: "p.example" });
+  expect(passing.rawHeaders).toEqual(["Host", "p.example", "Accept", "*/*"]);
+  expect(passing.headersDistinct).toEqual({ host: ["p.example"] });
   // Upgrades: the server's own listeners run only for an upgrade with the token.
   const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
   const server: UpgradeServer = {
@@ -251,7 +272,11 @@ test("on a host the preview takes Studio's token on every request, requests and 
       void listeners.set(event, [...(listeners.get(event) ?? []), listener]),
   };
   const seen: string[] = [];
-  server.on("upgrade", (req) => seen.push((req as { url: string }).url));
+  const seenHeaders: unknown[] = [];
+  server.on("upgrade", (req) => {
+    seen.push((req as { url: string }).url);
+    seenHeaders.push((req as { headers: unknown }).headers);
+  });
   guardUpgrades(server, digest);
   for (const l of listeners.get("listening") ?? []) l();
   const upgrade = (token: string | undefined, url: string) => {
@@ -271,6 +296,7 @@ test("on a host the preview takes Studio's token on every request, requests and 
     return { written, destroyed };
   };
   expect(upgrade("secret-token", "/ok")).toEqual({ written: [], destroyed: false });
+  expect(seenHeaders[0]).toEqual({});
   const refused = upgrade("wrong", "/no");
   expect(refused.destroyed).toBe(true);
   expect(refused.written[0]).toContain("401 Unauthorized");

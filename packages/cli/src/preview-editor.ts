@@ -371,8 +371,16 @@ interface DevServer {
 }
 
 /** A connect middleware, as Vite's dev server takes them: every request, before Vite's own. */
+/** What the guard reads and strips of a request: its headers, parsed and raw. */
+export interface GuardedRequest {
+  headers: Record<string, string | string[] | undefined>;
+  rawHeaders?: string[];
+  /** Node's per-name lists of the same headers (headersDistinct), kept apart from `headers`. */
+  headersDistinct?: Record<string, string[] | undefined>;
+}
+
 export type Middleware = (
-  req: { headers: Record<string, string | string[] | undefined> },
+  req: GuardedRequest,
   res: {
     statusCode: number;
     setHeader(name: string, value: string): void;
@@ -411,9 +419,27 @@ function carriesToken(
  * the proxy adds it, and nothing else on the network reaches the app's pages or its data. Without
  * the digest to compare with, nothing is served at all (closed, never open by mistake).
  */
+const TOKEN_HEADER = "x-smithable-studio-token";
+
+/**
+ * The token out of the request once it is checked, parsed and raw, so neither Vite nor the app's
+ * own code running in the preview (a route, a middleware) can read it and use it on Studio.
+ */
+export function stripToken(req: GuardedRequest): void {
+  delete req.headers[TOKEN_HEADER];
+  // Node keeps a second, per-name view of the headers; it is read lazily and then kept.
+  if (req.headersDistinct) delete req.headersDistinct[TOKEN_HEADER];
+  if (!req.rawHeaders) return;
+  for (let i = req.rawHeaders.length - 2; i >= 0; i -= 2)
+    if (req.rawHeaders[i]?.toLowerCase() === TOKEN_HEADER) req.rawHeaders.splice(i, 2);
+}
+
 export function tokenGuard(digestHex: string | undefined): Middleware {
   return (req, res, next) => {
-    if (carriesToken(req.headers, digestHex)) return next();
+    if (carriesToken(req.headers, digestHex)) {
+      stripToken(req);
+      return next();
+    }
     res.statusCode = digestHex ? 401 : 503;
     res.setHeader("content-type", "text/plain");
     res.end(digestHex ? "The preview needs Studio's token." : "The preview has no token to check.");
@@ -432,7 +458,10 @@ export interface UpgradeServer {
  * WebSocket upgrades (hot reload, and what a client may ask the dev server over it) do not pass
  * the middlewares: once the server listens, its upgrade listeners are wrapped so an upgrade
  * without the token is refused before any of them sees it. The proxy sends the token on
- * upgrades as on requests.
+ * upgrades as on requests. What this cannot cover: a listener a plugin adds to the HTTP server
+ * itself after it listens, or on its request event ahead of the middlewares, sees the request
+ * first; the generated apps and Vite add none, and the preview's process never holds the token
+ * itself, only its digest.
  */
 export function guardUpgrades(server: UpgradeServer, digestHex: string | undefined): void {
   server.once("listening", () => {
@@ -440,10 +469,11 @@ export function guardUpgrades(server: UpgradeServer, digestHex: string | undefin
     server.removeAllListeners("upgrade");
     server.on("upgrade", (...args: unknown[]) => {
       const [req, socket] = args as [
-        { headers: Record<string, string | string[] | undefined> },
+        GuardedRequest,
         { write(text: string): void; destroy(): void },
       ];
       if (carriesToken(req.headers, digestHex)) {
+        stripToken(req);
         for (const listener of inner) listener(...args);
         return;
       }
