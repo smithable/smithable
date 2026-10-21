@@ -70,3 +70,38 @@ Visitors see "Sign in to book" linking to the sign-in page, which returns them t
 - **Texts.** "Book a place" and "Cancel booking" are the block's defaults, taken as props. They are not in `smithable.content.yml` yet (`models.Booking.book`/`cancel`), since the content schema has no model-level texts beyond labels.
 - **No sample bookings.** The seed skips models with a capacity, so every place starts free.
 - **The browser step.** Development sign-in has one user per role, so "a second member" is the admin: every session gets one place, the member books one, the admin sees it full on its page and cannot lower its places, and the member cancels.
+
+## 6. Decided 2026-10-21: cutoffs, and telling the attendees when a session moves
+
+From the UI feedback's product decisions (a tester's report of 2026-10-17; Johan's answers of
+2026-10-21). Two of the open points above are now decided and go in the capacity block and in
+`outgoing`, so every booking app gets them by saying so, and nothing is enforced by words alone.
+
+- **Cutoffs with a notice period.** `capacity` gets `closes` and `cancelUntil`, each naming a
+  date-time field of the `per` record, as it is (`closes: session.startsAt`: booking until the
+  start) or with a notice period before it (`closes: 2 hours before session.startsAt`,
+  `cancelUntil: 24 hours before session.startsAt`). Nothing is stored: the deadline is the
+  field's value less the period, worked out when a write is checked, so a moved session moves its
+  deadlines. The period is the spec's value, written by `setCapacity`; a settings-page value may
+  stand in for it later. The rule holds where the
+  capacity holds: a new record after `closes` is refused on every write path (the form, Reserve,
+  the API, the assistant) with the deadline named, and so is the owner's cancel after
+  `cancelUntil`; a role that may change (or delete) everyone's records passes, and the Activity
+  line says so, with no reason field. Reserve says "Book until 17:00" and, booked, "Cancel until
+  15:00"; past the deadline the button goes and the sentence says why. The booking starter's
+  default is until the start both ways; a studio sets its hours. Later, when asked: an admin
+  marking attendance during or after a session (a `by: app` yes/no on the booking and a staff
+  action with `when` after the start).
+- **Telling everyone booked when the start moves.** An outgoing `recipient` may reach a list and
+  then a recipient on its records, `bookings.owner`: one mail per booking, each to its owner.
+  A `<Model> changed` entry may name `fields: [startsAt]`, so only a change of those fields
+  counts. The starter gets `sessionMoved: { when: Session changed, fields: [startsAt], to: mail,
+  recipient: bookings.owner }`. The sessions form asks first when the session has bookings: the
+  old and new time and "N attendees will be told of the new time". The generator gives the form
+  that step from the spec, wherever an entry names `fields` of the model with a list recipient;
+  nothing is written for sessions in particular. A separate Reschedule action
+  is words on top and waits for a case.
+
+The split: the grammar, validation, the data layer's checks and fan-out, and the spec reference
+are core's (Fable 58 and 59); the words, the dialog and the starter's values are the kit's
+(A 133 and 134).

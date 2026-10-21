@@ -183,3 +183,20 @@ Unchanged: `brand.primary` replaces the theme's primary, ring, accent and first 
 - A theme editor in Studio (sliders for the tokens with the thumbnail live). The file is small enough to write by hand, and the AI can write one from "a warm theme with terracotta" through `addTheme`.
 - Translating a theme's name and a section's look into words for the index beyond one sentence.
 - Positions, the answer stays custom CSS.
+
+### Decided 2026-10-21: a third density, and radii derived in the kit
+
+From the UI feedback's product decisions (a tester's report of 2026-10-17; Johan's answers of
+2026-10-21).
+
+- **`density: comfortable | standard | compact`.** Standard sits between the two: controls
+  2.5rem, rows 3.5rem, cells 0.875rem, cards 1.25rem. One density per theme scope, as today: a
+  landing page's own theme already gives the public pages their own, which is how "customer pages
+  comfortable, staff pages standard" is written; list density and section density stay one
+  setting, since two knobs would let the one scale drift apart within a page. Core's value and
+  the adapter's row are Fable 61; the theme lab's control A 137.
+- **Corner radii per component, derived, no new keys.** Controls a step smaller than the theme's
+  `--radius` (the kit's `--radius-md`, two pixels less), cards the radius itself (`--radius-lg`,
+  which equals `--radius` in styles.css today), dialogs and drawers a step larger (`--radius-xl`,
+  four pixels more). The kit's classes are checked to agree (A 136). Three keys in the theme
+  file only if a theme author asks.
