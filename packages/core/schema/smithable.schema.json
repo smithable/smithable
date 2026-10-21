@@ -496,6 +496,10 @@
             "type": "boolean",
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
           },
+          "namedBy": {
+            "type": "string",
+            "description": "The field that names a record, shown as its title wherever one record is shown or referred to: a stored string, text or markdown field. Left out, the first short text field is the title, else the first long text, else the record's number."
+          },
           "thread": {
             "type": "object",
             "additionalProperties": false,

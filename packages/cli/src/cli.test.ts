@@ -187,9 +187,9 @@ pages:
   const io = { out: (s: string) => out.push(s), err: (s: string) => out.push(s) };
   expect(await run(["validate", dir, "--explain"], io)).toBe(0);
   const text = out.join("");
-  expect(text).toContain("Ticket: the title is title");
+  expect(text).toContain("Ticket: the title is title (by rule: the first short text");
   expect(text).toContain("  unique: code (per owner)");
-  expect(text).toContain("Note: the title is body");
+  expect(text).toContain("Note: the title is body (by rule");
   expect(text).toContain("  as a conversation: the message is body, nobody named (by rule)");
   expect(text).toContain("close (on Ticket): run by admin, customer, the record's owner");
 });

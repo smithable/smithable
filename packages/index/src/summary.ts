@@ -226,6 +226,10 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
+    if (model.namedBy) {
+      const f = model.fields.find((x) => x.name === model.namedBy);
+      if (f) sentences.push(`A ${one(model)} is known by its ${fieldLabel(model, f)}.`);
+    }
     if (model.thread) {
       const t = model.thread;
       const label = (name?: string) => {

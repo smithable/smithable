@@ -162,6 +162,7 @@ export const modelsSection: SpecSection<"models"> = {
       followReview(spec, effect.model, effect.field);
       followUnique(spec, effect.model, effect.field);
       followThread(spec, effect.model, effect.field);
+      followNamedBy(spec, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
         if (!c) continue;
@@ -231,6 +232,7 @@ export const modelsSection: SpecSection<"models"> = {
     followReview(spec, effect.model, effect.from, effect.to);
     followUnique(spec, effect.model, effect.from, effect.to);
     followThread(spec, effect.model, effect.from, effect.to);
+    followNamedBy(spec, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
@@ -288,6 +290,11 @@ export const modelsSection: SpecSection<"models"> = {
           type: "boolean",
           description:
             "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good.",
+        },
+        namedBy: {
+          type: "string",
+          description:
+            "The field that names a record, shown as its title wherever one record is shown or referred to: a stored string, text or markdown field. Left out, the first short text field is the title, else the first long text, else the record's number.",
         },
         thread: {
           type: "object",
@@ -412,7 +419,17 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "capacity", "trash", "review", "unique", "thread", ...TEXT_KEYS],
+    allowed: [
+      "fields",
+      "ownedBy",
+      "namedBy",
+      "capacity",
+      "trash",
+      "review",
+      "unique",
+      "thread",
+      ...TEXT_KEYS,
+    ],
     later: ["examples"],
     content: ["label", "title"],
     moved: {
@@ -470,7 +487,44 @@ function readModel(
   if (unique) readUniqueTogether(ctx, model, unique);
   const thread = known.find((e) => e.key === "thread");
   if (thread) readThread(ctx, model, thread);
+  const namedBy = known.find((e) => e.key === "namedBy");
+  if (namedBy) readNamedBy(ctx, model, namedBy);
   return model;
+}
+
+/**
+ * A model's `namedBy` (docs/design/inference.md): the stored string, text or markdown field that
+ * names a record. Said outright, so that no rule (and never a field's name) decides the title.
+ */
+function readNamedBy(ctx: ParseContext, model: ModelIR, { value, keyNode }: Entry): void {
+  const where = `"namedBy" of "${model.name}"`;
+  const name = readString(ctx, value, where);
+  if (name === undefined) return;
+  const f = model.fields.find((x) => x.name === name);
+  if (!f) {
+    ctx.error(keyNode, "unknown-field", `${model.name} has no field "${name}" (${where}).`);
+    return;
+  }
+  const text =
+    f.type.kind === "scalar" && ["string", "text", "markdown"].includes(f.type.name) && !f.formula;
+  if (!text) {
+    ctx.error(
+      keyNode,
+      "invalid-value",
+      `${model.name}.${name} cannot name a ${model.name.toLowerCase()}: the title is a stored string, text or markdown field.`,
+    );
+    return;
+  }
+  model.namedBy = name;
+  ctx.mark(`namedBy:${model.name}`, keyNode);
+}
+
+/** A field a model's `namedBy` names that is renamed (to) or removed (no to): the setting follows. */
+function followNamedBy(spec: YamlEditor, model: string, field: string, to?: string): void {
+  const path = ["models", model, "namedBy"];
+  if (spec.get(path) !== field) return;
+  if (to) spec.set(path, to);
+  else spec.remove(path);
 }
 
 /**

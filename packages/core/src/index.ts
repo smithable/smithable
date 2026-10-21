@@ -130,6 +130,7 @@ export {
 } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export { writeNamedBy } from "./named-by.js";
 export {
   camel,
   capitalize,

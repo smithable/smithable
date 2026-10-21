@@ -999,7 +999,53 @@ const setThread: Operation<{
   },
 };
 
+const setNamedBy: Operation<{ model: string; field?: string; none?: boolean }> = {
+  name: "setNamedBy",
+  summary:
+    "Say which field names a record of a model, its title wherever one record is shown or referred to (a stored string, text or markdown field); --none leaves it to the rule again (the first short text, else the first long text).",
+  schema: {
+    type: "object",
+    required: ["model"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      field: refTo({ ref: "field", model: "model", label: "Field" }),
+      none: {
+        type: "boolean",
+        description: "true removes the setting: the rule picks the title again.",
+      },
+    },
+  },
+  positional: ["model", "field"],
+  describe: ({ model, field, none }) =>
+    none ? `Let the rule say what names a ${model}` : `A ${model} is named by its ${field}`,
+  destructive: () => false,
+  apply({ spec }, { model, field, none }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found) throw new OperationError(`There is no model named "${model}".`);
+    const path = ["models", model, "namedBy"];
+    if (none) {
+      if (!spec.has(path)) throw new OperationError(`${model} has no namedBy setting.`);
+      spec.remove(path);
+      return [];
+    }
+    if (field === undefined)
+      throw new OperationError("Say which field names the record (or --none).");
+    const f = found.fields.find((x) => x.name === field);
+    if (!f) throw new OperationError(`${model} has no field "${field}".`);
+    if (
+      !(f.type.kind === "scalar" && ["string", "text", "markdown"].includes(f.type.name)) ||
+      f.formula
+    )
+      throw new OperationError(`${model}.${field} is not a stored string, text or markdown field.`);
+    if (spec.has(path)) spec.set(path, field);
+    else spec.add(["models", model], "namedBy", field);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
+  setNamedBy,
   setThread,
   setUnique,
   addModel,

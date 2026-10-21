@@ -72,6 +72,11 @@ export interface ModelIR extends SemanticText {
   thread?: ThreadIR;
   /** A `User` field that owns the record instead of the automatic owner. */
   ownedBy?: string;
+  /**
+   * The field that names a record (`namedBy: company`): its title wherever one record is shown or
+   * referred to. Left out, the rule picks it from the fields' types and order (core's titleField).
+   */
+  namedBy?: string;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
   capacity?: CapacityIR;
   /**
