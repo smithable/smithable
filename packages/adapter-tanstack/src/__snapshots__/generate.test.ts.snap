@@ -4748,7 +4748,9 @@ export const noteData = {
       .where(and(eq(schema.notes.id, id), noteData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(noteAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(noteAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ attachment: schema.notes.attachment }).from(schema.notes).where(eq(schema.notes.id, id)).get());
     checkReferences(viewer, values);
     let changed: typeof schema.notes.$inferSelect;
@@ -5336,7 +5338,9 @@ export const projectData = {
       .where(and(eq(schema.projects.id, id), projectData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(projectAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(projectAccess.write, viewer, row.ownerId);
     let changed: typeof schema.projects.$inferSelect;
     const updated = values;
     try {
@@ -5915,7 +5919,9 @@ export const taskData = {
       .where(and(eq(schema.tasks.id, id), taskData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(taskAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(taskAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.tasks.$inferSelect;
     const updated = values;
@@ -9226,15 +9232,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "05e27e83 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "232f14f7 generated",
-  "src/generated/note.server.ts": "4014f066 generated",
+  "src/generated/note.server.ts": "ecf0459c generated",
   "src/generated/note.ts": "40df96de generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "f483bc5d generated",
-  "src/generated/project.server.ts": "564b0e00 generated",
+  "src/generated/project.server.ts": "450ffc82 generated",
   "src/generated/project.ts": "4ce797fe generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "a8acfc07 generated",
-  "src/generated/task.server.ts": "05745949 generated",
+  "src/generated/task.server.ts": "c7862edb generated",
   "src/generated/task.ts": "fcfbf1ec generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "cfa2ff5a generated",
@@ -11746,7 +11752,9 @@ export const bookingData = {
       .where(and(eq(schema.bookings.id, id), bookingData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(bookingAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(bookingAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.bookings.$inferSelect;
     const updated = values;
@@ -12326,7 +12334,9 @@ export const classTypeData = {
       .where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(classTypeAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(classTypeAccess.write, viewer, row.ownerId);
     let changed: typeof schema.classTypes.$inferSelect;
     const updated = values;
     try {
@@ -13155,7 +13165,9 @@ export const instructorData = {
       .where(and(eq(schema.instructors.id, id), instructorData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(instructorAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(instructorAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ portrait: schema.instructors.portrait }).from(schema.instructors).where(eq(schema.instructors.id, id)).get());
     let changed: typeof schema.instructors.$inferSelect;
     const updated = values;
@@ -13739,7 +13751,9 @@ export const messageData = {
       .where(and(eq(schema.messages.id, id), messageData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(messageAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     let changed: typeof schema.messages.$inferSelect;
     const updated = values;
     try {
@@ -14429,7 +14443,9 @@ export const postData = {
       .where(and(eq(schema.posts.id, id), postData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(postAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(postAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ cover: schema.posts.cover }).from(schema.posts).where(eq(schema.posts.id, id)).get());
     let changed: typeof schema.posts.$inferSelect;
     const updated = values;
@@ -15077,7 +15093,9 @@ export const sessionData = {
       .where(and(eq(schema.sessions.id, id), sessionData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(sessionAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(sessionAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.sessions.$inferSelect;
     const updated = values;
@@ -19791,10 +19809,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "f9efc641 generated",
   "src/generated/booking.schema.ts": "1c394ac8 generated",
-  "src/generated/booking.server.ts": "c5edeb75 generated",
+  "src/generated/booking.server.ts": "9e0568cf generated",
   "src/generated/booking.ts": "a2d8de82 generated",
   "src/generated/class-type.schema.ts": "3e3796d0 generated",
-  "src/generated/class-type.server.ts": "658c7066 generated",
+  "src/generated/class-type.server.ts": "05707aec generated",
   "src/generated/class-type.ts": "ed89ba82 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -19802,20 +19820,20 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "7e4a7f16 generated",
-  "src/generated/instructor.server.ts": "6c5243cf generated",
+  "src/generated/instructor.server.ts": "7db111cd generated",
   "src/generated/instructor.ts": "1c77e395 generated",
   "src/generated/message.schema.ts": "818a120f generated",
-  "src/generated/message.server.ts": "bad89552 generated",
+  "src/generated/message.server.ts": "52edf3f0 generated",
   "src/generated/message.ts": "933e4ada generated",
   "src/generated/outgoing.server.ts": "b7a435bc generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "4e81ce94 generated",
-  "src/generated/post.server.ts": "826c56b4 generated",
+  "src/generated/post.server.ts": "4340dece generated",
   "src/generated/post.ts": "9a0abbb2 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "e75c13d3 generated",
-  "src/generated/session.server.ts": "2185752e generated",
+  "src/generated/session.server.ts": "3df3318c generated",
   "src/generated/session.ts": "5eec502c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -21792,7 +21810,9 @@ export const customerData = {
       .where(and(eq(schema.customers.id, id), customerData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(customerAccess.write, viewer, row.accountManagerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(customerAccess.write, viewer, row.accountManagerId);
     let changed: typeof schema.customers.$inferSelect;
     const updated = { ...values, accountManagerId: viewer && customerAccess.write.roles.includes(viewer.role) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
     try {
@@ -22722,7 +22742,9 @@ export const orderData = {
       .where(and(eq(schema.orders.id, id), orderData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(orderAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.orders.$inferSelect;
     const updated = values;
@@ -25569,13 +25591,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "5975cb14 generated",
-  "src/generated/customer.server.ts": "6b32a198 generated",
+  "src/generated/customer.server.ts": "161d0e6e generated",
   "src/generated/customer.ts": "b28dda97 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "ca29c87f generated",
-  "src/generated/order.server.ts": "44d9ab6d generated",
+  "src/generated/order.server.ts": "98f648a7 generated",
   "src/generated/order.ts": "fff1b58f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -28045,7 +28067,9 @@ export const businessProfileData = {
       .where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(businessProfileAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(businessProfileAccess.write, viewer, row.ownerId);
     let changed: typeof schema.businessProfiles.$inferSelect;
     const updated = values;
     try {
@@ -28616,7 +28640,9 @@ export const clientData = {
       .where(and(eq(schema.clients.id, id), clientData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(clientAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(clientAccess.write, viewer, row.ownerId);
     let changed: typeof schema.clients.$inferSelect;
     const updated = values;
     try {
@@ -29403,7 +29429,9 @@ export const invoiceData = {
       .where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(invoiceAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(invoiceAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ contract: schema.invoices.contract }).from(schema.invoices).where(eq(schema.invoices.id, id)).get());
     checkReferences(viewer, values);
     let changed: typeof schema.invoices.$inferSelect;
@@ -30088,7 +30116,9 @@ export const invoiceLineData = {
       .where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(invoiceLineAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(invoiceLineAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.invoiceLines.$inferSelect;
     const updated = values;
@@ -32549,21 +32579,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "8eb5f996 generated",
   "src/generated/business-profile.schema.ts": "266ef3bb generated",
-  "src/generated/business-profile.server.ts": "17cbec6c generated",
+  "src/generated/business-profile.server.ts": "230e670a generated",
   "src/generated/business-profile.ts": "c59f0973 generated",
   "src/generated/client.schema.ts": "9a0a1f46 generated",
-  "src/generated/client.server.ts": "2e0e8fee generated",
+  "src/generated/client.server.ts": "e9f7c8ac generated",
   "src/generated/client.ts": "5f62bef7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "7f436c63 generated",
-  "src/generated/invoice-line.server.ts": "a05e7091 generated",
+  "src/generated/invoice-line.server.ts": "ab65295f generated",
   "src/generated/invoice-line.ts": "38066a0a generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "675ec149 generated",
-  "src/generated/invoice.server.ts": "23978175 generated",
+  "src/generated/invoice.server.ts": "ad39285b generated",
   "src/generated/invoice.ts": "4afdf069 generated",
   "src/generated/outgoing.server.ts": "a3d9b1fc generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -34305,7 +34335,7 @@ export async function runDecline(viewer: Viewer | null, id: number, asked: z.out
   check(declineAccess, viewer, row.ownerId);
   if (!declineFits(row)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
-  return orderData.update(viewer, id, one.values, "decline", ["status","reason"]);
+  return orderData.update(viewer, id, one.values, "decline", ["status"]);
 }
 
 /**
@@ -34823,7 +34853,9 @@ export const dishData = {
       .where(and(eq(schema.dishes.id, id), dishData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(dishAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(dishAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ picture: schema.dishes.picture }).from(schema.dishes).where(eq(schema.dishes.id, id)).get());
     let changed: typeof schema.dishes.$inferSelect;
     const updated = values;
@@ -35371,7 +35403,9 @@ export const orderData = {
       .where(and(eq(schema.orders.id, id), orderData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(orderAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orders.$inferSelect;
     const updated = values;
     try {
@@ -35790,7 +35824,9 @@ export const orderLineData = {
       .where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(orderLineAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(orderLineAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.orderLines.$inferSelect;
     const updated = values;
@@ -36313,7 +36349,9 @@ export const stopData = {
       .where(and(eq(schema.stops.id, id), stopData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(stopAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(stopAccess.write, viewer, row.ownerId);
     let changed: typeof schema.stops.$inferSelect;
     const updated = values;
     try {
@@ -39335,7 +39373,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/actions/back-on.ts": "e555a9d1 generated",
   "src/generated/actions/collected.server.ts": "6ae01fc9 generated",
   "src/generated/actions/collected.ts": "cb9ba602 generated",
-  "src/generated/actions/decline.server.ts": "3c987bdc generated",
+  "src/generated/actions/decline.server.ts": "6facd764 generated",
   "src/generated/actions/decline.ts": "e341c1c9 generated",
   "src/generated/actions/ready.server.ts": "de029d65 generated",
   "src/generated/actions/ready.ts": "9800975e generated",
@@ -39344,23 +39382,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "c49587a4 generated",
-  "src/generated/dish.server.ts": "46641080 generated",
+  "src/generated/dish.server.ts": "79399dfa generated",
   "src/generated/dish.ts": "abeae023 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "eff1b2f5 generated",
-  "src/generated/order-line.server.ts": "9b4c6177 generated",
+  "src/generated/order-line.server.ts": "f4e75d3d generated",
   "src/generated/order-line.ts": "14bf7a22 generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "a3e989a0 generated",
-  "src/generated/order.server.ts": "b4fa364b generated",
+  "src/generated/order.server.ts": "e11e2edd generated",
   "src/generated/order.ts": "e9a3c2e6 generated",
   "src/generated/outgoing.server.ts": "d9c810d0 generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "cc18f1e6 generated",
-  "src/generated/stop.server.ts": "a216c23c generated",
+  "src/generated/stop.server.ts": "8eb8adba generated",
   "src/generated/stop.ts": "f17c58ca generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -41220,7 +41258,9 @@ export const itemData = {
       .where(and(eq(schema.items.id, id), itemData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(itemAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ photos: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get());
     let changed: typeof schema.items.$inferSelect;
     const updated = values;
@@ -43686,7 +43726,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "703c1c02 generated",
-  "src/generated/item.server.ts": "01bbbd65 generated",
+  "src/generated/item.server.ts": "752b68c3 generated",
   "src/generated/item.ts": "7c6d4802 generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -45362,7 +45402,9 @@ export const itemData = {
       .where(and(eq(schema.items.id, id), itemData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(itemAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     let changed: typeof schema.items.$inferSelect;
     const updated = values;
     try {
@@ -46769,7 +46811,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "2eb8b331 generated",
-  "src/generated/item.server.ts": "4f7d8a84 generated",
+  "src/generated/item.server.ts": "22df9062 generated",
   "src/generated/item.ts": "c0803a6a generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -50453,7 +50495,9 @@ export const componentData = {
       .where(and(eq(schema.components.id, id), componentData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(componentAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(componentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.components.$inferSelect;
     const updated = values;
     try {
@@ -51184,7 +51228,9 @@ export const incidentData = {
       .where(and(eq(schema.incidents.id, id), incidentData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(incidentAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(incidentAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.incidents.$inferSelect;
     const updated = values;
@@ -51811,7 +51857,9 @@ export const incidentUpdateData = {
       .where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(incidentUpdateAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(incidentUpdateAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.incidentUpdates.$inferSelect;
     const updated = values;
@@ -52542,7 +52590,9 @@ export const maintenanceData = {
       .where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(maintenanceAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(maintenanceAccess.write, viewer, row.ownerId);
     checkReferences(viewer, values);
     let changed: typeof schema.maintenances.$inferSelect;
     const updated = values;
@@ -57236,20 +57286,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "310141e3 generated",
-  "src/generated/component.server.ts": "d5761fa8 generated",
+  "src/generated/component.server.ts": "faf39062 generated",
   "src/generated/component.ts": "dd3fb957 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "580706a6 generated",
-  "src/generated/incident-update.server.ts": "719d5082 generated",
+  "src/generated/incident-update.server.ts": "63c827b8 generated",
   "src/generated/incident-update.ts": "765cb514 generated",
   "src/generated/incident.schema.ts": "6d0ffdd3 generated",
-  "src/generated/incident.server.ts": "67045204 generated",
+  "src/generated/incident.server.ts": "b6061116 generated",
   "src/generated/incident.ts": "9088c218 generated",
   "src/generated/keys.server.ts": "b4a728e1 generated",
   "src/generated/keys.test.ts": "0c2f5e91 generated",
   "src/generated/maintenance.schema.ts": "e60318e8 generated",
-  "src/generated/maintenance.server.ts": "1d3af0f2 generated",
+  "src/generated/maintenance.server.ts": "8ef2e818 generated",
   "src/generated/maintenance.ts": "a40c8230 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -58343,7 +58393,7 @@ export async function runAssignTo(viewer: Viewer | null, id: number, asked: z.ou
   check(assignToAccess, viewer, row.ownerId);
   if (!assignToFits(row)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
-  return supportCaseData.update(viewer, id, one.values, "assignTo", ["assignee"]);
+  return supportCaseData.update(viewer, id, one.values, "assignTo", []);
 }
 
 /**
@@ -58480,7 +58530,7 @@ export async function runAssignToMe(viewer: Viewer | null, id: number) {
   check(assignToMeAccess, viewer, row.ownerId);
   if (!assignToMeFits(row)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
-  return supportCaseData.update(viewer, id, one.values, "assignToMe", ["assignee"]);
+  return supportCaseData.update(viewer, id, one.values, "assignToMe", ["assigneeId"]);
 }
 
 /**
@@ -60137,7 +60187,9 @@ export const messageData = {
       .where(and(eq(schema.messages.id, id), messageData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(messageAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ attachments: schema.messages.attachments }).from(schema.messages).where(eq(schema.messages.id, id)).get());
     checkReferences(viewer, values);
     let changed: typeof schema.messages.$inferSelect;
@@ -60954,7 +61006,9 @@ export const supportCaseData = {
       .where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(supportCaseAccess.write, viewer, row.ownerId);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(supportCaseAccess.write, viewer, row.ownerId);
     values = checkFiles(viewer, values, db.select({ attachments: schema.supportCases.attachments }).from(schema.supportCases).where(eq(schema.supportCases.id, id)).get());
     let changed: typeof schema.supportCases.$inferSelect;
     const updated = values;
@@ -63476,9 +63530,9 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/db/schema.ts": "ddcd3e3c generated",
   "src/db/seed.ts": "59920618 generated",
   "src/generated/access.test.ts": "dc6adecc generated",
-  "src/generated/actions/assign-to-me.server.ts": "b7182e09 generated",
+  "src/generated/actions/assign-to-me.server.ts": "cf0f30b2 generated",
   "src/generated/actions/assign-to-me.ts": "405ebc36 generated",
-  "src/generated/actions/assign-to.server.ts": "a04f4520 generated",
+  "src/generated/actions/assign-to.server.ts": "b6661997 generated",
   "src/generated/actions/assign-to.ts": "4ba13b57 generated",
   "src/generated/actions/close.server.ts": "def82df0 generated",
   "src/generated/actions/close.ts": "6140ec7f generated",
@@ -63491,13 +63545,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "1aa6d2c8 generated",
-  "src/generated/message.server.ts": "b8457df4 generated",
+  "src/generated/message.server.ts": "62aba4ca generated",
   "src/generated/message.ts": "a09fcc8f generated",
   "src/generated/outgoing.server.ts": "15ea7ea8 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "380912eb generated",
-  "src/generated/support-case.server.ts": "6bedd038 generated",
+  "src/generated/support-case.server.ts": "d34d9d0a generated",
   "src/generated/support-case.ts": "29922f74 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",

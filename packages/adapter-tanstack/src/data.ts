@@ -2013,7 +2013,9 @@ ${
       .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(${n.access}.write, viewer, ${ownerOf});
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(${n.access}.write, viewer, ${ownerOf});
 ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${
       model.ownedBy && signedIn

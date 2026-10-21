@@ -279,6 +279,22 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
     checkType(type);
     const before = field(ir, m, f);
     const parsed = parseFieldShorthand(type);
+    // A field unique together with others (docs/design/uniqueness.md) stays one stored value.
+    const rule = ir.models.find((x) => x.name === m)?.unique?.find((u) => u.fields.includes(f));
+    if (rule && parsed.ok) {
+      const t = parsed.value.type;
+      const why = parsed.value.unique
+        ? "unique by itself"
+        : t.kind === "relation" && t.many
+          ? "a list of records"
+          : t.kind === "scalar" && ["picture", "pictures", "file", "files"].includes(t.name)
+            ? `a ${t.name}`
+            : undefined;
+      if (why)
+        throw new OperationError(
+          `${m}.${f} is unique together with ${rule.fields.filter((x) => x !== f).join(" and ")}, so it cannot become ${why}; remove that rule first (setUnique --remove).`,
+        );
+    }
     const choices =
       parsed.ok && parsed.value.type.kind === "choice" ? parsed.value.type.values : [];
     // A choice value that goes: what the records holding it get instead.

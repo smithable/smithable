@@ -433,6 +433,11 @@ export function standardActionServer(
     toldAbout(ir, m)
       ? `\n      outgoing(tx, viewer, ${JSON.stringify(m)}, ${what}, ${record}${before && `, ${before}`});`
       : "";
+  // The columns the action may change although locked: the fields its set gives a value, never
+  // one it asks the person for (docs/design/actions.md, Access).
+  const frees = action.set
+    .filter((v) => !("asked" in v))
+    .map((v) => dataKey(model.fields.find((f) => f.name === v.field) as FieldIR));
   // A record an action adds gets its numbers counting up as a create does (orders.md §4).
   const numbered = (m: ModelIR, table: string) =>
     sequenceEntries(m, auth, table, "personOf(viewer)")
@@ -496,7 +501,7 @@ ${
   const written = db.transaction((tx) => ${writes("one")});
 ${hooks("written")}
   return written.changed;`
-    : `  return ${n.data}.update(viewer, id, one.values, ${JSON.stringify(action.name)}, ${JSON.stringify(action.set.map((v) => v.field))});`
+    : `  return ${n.data}.update(viewer, id, one.values, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)});`
 }
 }
 
