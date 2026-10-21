@@ -88,7 +88,7 @@ test("a standard action writes only the fields it sets, and frees only those fro
 });
 
 test("the fields freed from their locks are the set's columns, never an asked one", () => {
-  const assign = generate("assign", "{ on: Task, set: { status: done, owner: } }");
+  const assign = generate("assign", "{ on: Task, set: { status: done, title: } }");
   const server = assign("src/generated/actions/assign.server.ts");
   expect(server).toContain('"assign", ["status"]);');
 });
