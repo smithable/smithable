@@ -1,5 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
@@ -12,6 +11,7 @@ import {
   readAdvisories,
 } from "./advisories.js";
 import { published } from "./security.js";
+import { tempDir } from "./test-dir.js";
 
 // The advisories of 2026-09-30 and two older ones, as their repositories publish them.
 const start: Advisory = {
@@ -224,7 +224,7 @@ describe("readAdvisories", () => {
 
 describe("the check in `smithable security`", () => {
   const app = (dependencies: Record<string, string>) => {
-    const dir = mkdtempSync(join(tmpdir(), "smithable-advisories-"));
+    const dir = tempDir("smithable-advisories-");
     writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies }));
     return dir;
   };
@@ -287,7 +287,7 @@ describe("the check in `smithable security`", () => {
 });
 
 test("the lists are kept a day on the machine, so a second read asks GitHub nothing", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-advisories-cache-"));
+  const dir = tempDir("smithable-advisories-cache-");
   let github = 0;
   const fetchFn = (async (url: string) => {
     if (String(url).startsWith("https://registry.npmjs.org/"))

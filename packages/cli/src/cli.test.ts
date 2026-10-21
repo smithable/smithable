@@ -1,10 +1,10 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STARTER_TEXTS } from "@smithable/ai";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
+import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 import { VERSION } from "./version.js";
 
@@ -117,7 +117,7 @@ test("a new project's administrator is the one given, never the starter's sample
 });
 
 test("validate --json gives every finding with its code, for programs", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-validate-"));
+  const dir = tempDir("smithable-validate-");
   writeFileSync(
     join(dir, "smithable.yml"),
     "smithable: 0.1\napp: { name: Demo }\nmodels:\n  Member:\n    fields:\n      name: string!\n      cardNumber: string\npages:\n  members: { crud: Member }\n",
@@ -153,7 +153,7 @@ test("validate --json gives every finding with its code, for programs", async ()
 });
 
 test("validate --explain says what the rules settled", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-explain-"));
+  const dir = tempDir("smithable-explain-");
   writeFileSync(
     join(dir, "smithable.yml"),
     `smithable: 0.1

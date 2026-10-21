@@ -57,6 +57,9 @@ umask_was=$(umask)
 umask 002
 mkdir -p "$queue"
 touch "$turns" "$lock"
+# Folders the tests, the apps' checks and the lab left under /tmp: dropped once a day old, so a
+# machine that runs gates all day does not fill up (the tests now remove their own as they end).
+find "${TMPDIR:-/tmp}" -mindepth 1 -maxdepth 1 \( -name 'smithable-*' -o -name 'ui-lab-*' \) -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 
 # The waiting gates in the order of their turns: "<ticket> <session> <worktree>" a line. A
 # ticket is "<arrival>.<pid>" and holds "session<TAB>worktree"; one whose process is gone is dropped.

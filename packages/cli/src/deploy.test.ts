@@ -1,11 +1,11 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { mailWarning, targetWarnings } from "./deploy.js";
+import { tempDir } from "./test-dir.js";
 
 test("deploying an app with email sign-in and no mail settings warns that no code reaches anyone", () => {
-  const dir = mkdtempSync(join(tmpdir(), "deploy-"));
+  const dir = tempDir("deploy-");
   writeFileSync(
     join(dir, "smithable.auth.yml"),
     "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\n",
@@ -20,7 +20,7 @@ test("deploying an app with email sign-in and no mail settings warns that no cod
 });
 
 test("deploying an app whose outgoing target is not set names its missing settings", () => {
-  const dir = mkdtempSync(join(tmpdir(), "deploy-"));
+  const dir = tempDir("deploy-");
   writeFileSync(
     join(dir, "smithable.yml"),
     `smithable: 0.1

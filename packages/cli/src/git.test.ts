@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import {
@@ -11,6 +10,7 @@ import {
   uncommitted,
   uncommittedRefusal,
 } from "./git.js";
+import { tempDir } from "./test-dir.js";
 
 // As on a machine where Git was just installed: no name or address, and none to be guessed.
 for (const name of [
@@ -30,7 +30,7 @@ Object.assign(process.env, {
 });
 
 test("without a Git name and address a commit is Smithable's own, and a configured one is kept", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-git-"));
+  const dir = tempDir("smithable-git-");
   try {
     writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
     ensureRepository(dir);
@@ -55,7 +55,7 @@ test("without a Git name and address a commit is Smithable's own, and a configur
 });
 
 test("a change is refused over uncommitted edits, which it lists", () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-git-"));
+  const dir = tempDir("smithable-git-");
   git(dir, ["init", "-q"]);
   expect(uncommittedRefusal(dir)).toBeUndefined();
   writeFileSync(join(dir, "notes.txt"), "x");
@@ -73,7 +73,7 @@ test("a trailer is read from a commit body", () => {
 
 // The README's first steps make the app inside the clone of Smithable.
 test("an app made inside another repository gets its own, and leaves that one alone", () => {
-  const outer = mkdtempSync(join(tmpdir(), "smithable-git-"));
+  const outer = tempDir("smithable-git-");
   try {
     const run = (dir: string, ...args: string[]) =>
       spawnSync("git", ["-c", "user.name=T", "-c", "user.email=t@example.com", ...args], {

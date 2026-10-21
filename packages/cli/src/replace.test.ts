@@ -1,19 +1,12 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { sync } from "./replace.js";
+import { tempDir } from "./test-dir.js";
 
 test("a replacement writes what differs by a rename over the file, and removes the rest", () => {
-  const from = mkdtempSync(join(tmpdir(), "smithable-from-"));
-  const dir = mkdtempSync(join(tmpdir(), "smithable-dir-"));
+  const from = tempDir("smithable-from-");
+  const dir = tempDir("smithable-dir-");
   mkdirSync(join(from, "public", "images"), { recursive: true });
   mkdirSync(join(dir, "public", "images"), { recursive: true });
   writeFileSync(join(from, "public", "images", "logo.webp"), "new mark");

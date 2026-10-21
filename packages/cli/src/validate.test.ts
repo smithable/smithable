@@ -1,8 +1,8 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
+import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 
 const examples = new URL("../../../examples/", import.meta.url).pathname;
@@ -20,7 +20,7 @@ test("validate accepts a directory and summarizes a valid spec", async () => {
 });
 
 test("validate reports errors with file, line and column, and exits with 1", async () => {
-  const file = join(mkdtempSync(join(tmpdir(), "smithable-")), "smithable.yml");
+  const file = join(tempDir("smithable-"), "smithable.yml");
   writeFileSync(
     file,
     "smithable: 0.1\napp:\n  name: X\nmodels:\n  Customer:\n    fields:\n      name: strng\n",
@@ -38,14 +38,14 @@ test("validate reports errors with file, line and column, and exits with 1", asy
 });
 
 test("validate explains a missing spec", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-"));
+  const dir = tempDir("smithable-");
   const io = captureIo();
   expect(await run(["validate", dir], io)).toBe(1);
   expect(io.stderr).toBe(`No spec found at ${join(dir, "smithable.yml")}.\n`);
 });
 
 test("validate requires smithable.auth.yml and checks it against the spec", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "smithable-"));
+  const dir = tempDir("smithable-");
   writeFileSync(
     join(dir, "smithable.yml"),
     "smithable: 0.1\napp: { name: X }\nmodels:\n  Note: { fields: { text: string } }\n",

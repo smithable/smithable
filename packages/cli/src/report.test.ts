@@ -1,6 +1,5 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, expect, test } from "vitest";
 import {
@@ -12,11 +11,12 @@ import {
   setReportChoice,
   traceIdOf,
 } from "./report.js";
+import { tempDir } from "./test-dir.js";
 
 let dir: string;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "report-"));
-  process.env.XDG_CONFIG_HOME = mkdtempSync(join(tmpdir(), "report-config-"));
+  dir = tempDir("report-");
+  process.env.XDG_CONFIG_HOME = tempDir("report-config-");
   delete process.env.SMITHABLE_REPORT_URL;
   delete process.env.SMITHABLE_FAILURE_URL;
   writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: CRM }\n");
@@ -106,7 +106,7 @@ test("a report carries the trace id of the request that failed, from its tracepa
   );
   expect(traceIdOf(undefined)).toBeUndefined();
   expect(traceIdOf("not a traceparent")).toBeUndefined();
-  const dir = mkdtempSync(join(tmpdir(), "report-trace-"));
+  const dir = tempDir("report-trace-");
   recordFailure(
     dir,
     "addField",
