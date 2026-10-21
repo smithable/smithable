@@ -562,9 +562,9 @@ try {
     async () => {
       await sub("Who can");
       const why = page.getByRole("region", { name: "Why?" });
-      await why.getByLabel("Who").selectOption("sales");
-      await why.getByLabel("What").selectOption("model:Customer");
-      await why.getByLabel("Do what").selectOption("create");
+      await why.getByLabel("Who", { exact: true }).selectOption("sales");
+      await why.getByLabel("What", { exact: true }).selectOption("model:Customer");
+      await why.getByLabel("Do what", { exact: true }).selectOption("create");
       // Sales may add orders only (the step before): adding a customer is no, and says why.
       await why.locator('[data-verdict="denied"]').waitFor({ timeout: 10000 * P });
       await why
