@@ -215,6 +215,74 @@ describe("invoicing: a standard action with a condition", () => {
   });
 });
 
+describe("a copy with a condition, and a public condition on two fields", () => {
+  const spec = `smithable: 0.1
+app: { name: Blog }
+models:
+  Post:
+    fields: { title: string!, status: draft | published, pinned: bool }
+actions:
+  duplicate: { on: Post, copy: { status: draft }, when: { status: published } }
+pages:
+  posts: { crud: Post }
+`;
+  const authText = `smithableAuth: 0.1
+signIn: { providers: [email] }
+defaultAccess: private
+roles: { admin: all, member: { pages: all, create: [Post] }, reader: { pages: all } }
+defaultRole: member
+public:
+  pages: [posts]
+  read:
+    - Post: { where: { status: published, pinned: true } }
+`;
+  const ir = validateSpec(
+    { path: "smithable.yml", text: spec },
+    { roles: ["admin", "member", "reader"] },
+  ).ir as SpecIR;
+  const auth = validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth as AuthIR;
+  const ask = (
+    scenario: AccessScenario,
+    resource: Parameters<typeof explainAccess>[3],
+    verb: AccessVerb,
+  ) => explainAccess(ir, auth, scenario, resource, verb);
+  const read = (scenario: AccessScenario) =>
+    ask(scenario, { kind: "model", model: "Post" }, "read");
+  const copy = (scenario: AccessScenario) =>
+    ask(scenario, { kind: "action", action: "duplicate" }, "run");
+
+  test("a copy is run by whoever may add one, while the record fits its condition", () => {
+    expect(copy({ as: "member" }).verdict).toBe("conditional");
+    expect(paths(copy({ as: "member" }))).toEqual([
+      "actions.duplicate",
+      "roles.member.create",
+      "actions.duplicate.when",
+    ]);
+    expect(copy({ as: "member", values: { status: "published" } }).verdict).toBe("allowed");
+    expect(copy({ as: "member", values: { status: "draft" } }).verdict).toBe("denied");
+    const reader = copy({ as: "reader", values: { status: "published" } });
+    expect(reader.verdict).toBe("denied");
+    expect(reader.reasons.at(-1)?.text).toBe("reader's create grant does not name Post.");
+  });
+
+  test("a value that does not fit decides, whatever else is unknown", () => {
+    expect(read({ values: { pinned: false } }).verdict).toBe("denied");
+    expect(read({ values: { status: "published" } }).verdict).toBe("conditional");
+    expect(read({ values: { status: "published", pinned: true } }).verdict).toBe("allowed");
+    expect(read({ values: { status: "published", pinned: null } }).verdict).toBe("denied");
+  });
+
+  test("a signed-in reader without the read grant reads a record anyone may, whoever owns it", () => {
+    const fitting = read({ as: "reader", values: { status: "published", pinned: true } });
+    expect(fitting.verdict).toBe("allowed");
+    expect(paths(fitting)).toEqual(["defaultAccess", "public.read", "public.read.Post.where"]);
+    expect(read({ as: "reader", values: { status: "draft" } }).verdict).toBe("conditional");
+    expect(read({ as: "reader", record: "another's", values: { status: "draft" } }).verdict).toBe(
+      "denied",
+    );
+  });
+});
+
 describe("every example agrees with the rules the generated app enforces", () => {
   const withAuth = [...new Set(Object.keys(examples).map((p) => p.split("/")[4] as string))].filter(
     (name) => examples[`../../../examples/${name}/smithable.auth.yml`],

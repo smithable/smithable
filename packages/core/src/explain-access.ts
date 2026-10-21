@@ -157,9 +157,13 @@ function whose(model: ModelIR, kind: NonNullable<AccessScenario["record"]>): Acc
  * that is false or empty is no); undefined while a field it reads is unknown.
  */
 function fits(condition: Condition, values: AccessScenario["values"]): boolean | undefined {
+  let unknown = false;
   for (const [field, wanted] of Object.entries(condition)) {
     const value = values?.[field];
-    if (value === undefined) return undefined;
+    if (value === undefined) {
+      unknown = true;
+      continue;
+    }
     const ok =
       typeof wanted === "boolean"
         ? wanted
@@ -170,7 +174,7 @@ function fits(condition: Condition, values: AccessScenario["values"]): boolean |
           : value === wanted;
     if (!ok) return false;
   }
-  return true;
+  return unknown ? undefined : true;
 }
 
 /** The answer once a condition is the last word: decided by the values, or conditional on them. */
@@ -314,11 +318,18 @@ function explainRead(
   );
   if (scenario.record === "own") return allowed(own, whose(model, "own"));
   if (scenario.record === undefined) {
-    if (a.where)
-      return conditional(
-        own,
-        inAuth("public.read", `Also the ${what} anyone may read, where ${conditionText(a.where)}.`),
+    if (a.where) {
+      const open = inAuth(
+        "public.read",
+        `Also the ${what} anyone may read, where ${conditionText(a.where)}.`,
       );
+      if (fits(a.where, scenario.values) === true)
+        return allowed(own, open, {
+          at: whereAt,
+          text: `This ${record(model.name)} fits: ${conditionText(a.where)}.`,
+        });
+      return conditional(own, open);
+    }
     return conditional(own);
   }
   const reasons = [own, whose(model, scenario.record)];
@@ -416,13 +427,18 @@ function explainAction(
       `${humanize(action.name)} copies a ${record(model.name)}: whoever may add one runs it.`,
     );
     if (create.public)
-      return allowed(
-        copies,
-        inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
+      return onWhen(
+        [
+          copies,
+          inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
+        ],
+        action,
+        model,
+        scenario,
       );
     const why = whyGranted(role, "create", model.name, what);
     return why && a.roles.includes(role.name)
-      ? allowed(copies, why)
+      ? onWhen([copies, why], action, model, scenario)
       : denied(copies, notGranted(role, "create", model.name));
   }
   const changes = inSpec(
@@ -455,11 +471,18 @@ function explainAction(
       ),
     );
   }
+  if (!a.owner)
+    return denied(
+      changes,
+      inAuth(
+        `roles.${role.name}`,
+        `${role.name}'s write grant does not name ${model.name} and its actions grant does not name ${action.name}.`,
+      ),
+    );
   const own = inAuth(
     "defaultAccess",
     `Everyone who signs in changes their own ${what}; ${role.name}'s write grant does not name ${model.name} and its actions grant does not name ${action.name}, so ${role.name} runs ${label} on their own ${what} only.`,
   );
-  if (!a.owner) return denied(changes, own);
   if (scenario.record === "own")
     return onWhen([changes, own, whose(model, "own")], action, model, scenario);
   if (scenario.record === undefined) {
