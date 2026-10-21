@@ -389,7 +389,11 @@ export function smithableEditor(options: { holdUpdates?: boolean } = {}) {
      * model's module or `app.ts`, modules without components, and their hot update reaches the
      * components that read them, which show the new text in place; Studio then reloads nothing.
      */
-    hotUpdate(update: { file: string }) {
+    hotUpdate(this: unknown, update: { file: string }) {
+      // Only the browser's updates are held: the server's module runner takes every change, or
+      // the page Studio reloads is rendered from the module before it (an old logo, an old menu).
+      const environment = (this as { environment?: { name: string } } | undefined)?.environment;
+      if (environment && environment.name !== "client") return undefined;
       return options.holdUpdates &&
         !/\/src\/custom\//.test(update.file) &&
         !WORDS_MODULE.test(update.file)

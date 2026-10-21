@@ -178,6 +178,11 @@ test("in Studio the dev server's hot updates for generated files are held back; 
   expect(studio.hotUpdate({ file: "/app/src/generated/customer.server.ts" })).toEqual([]);
   expect(studio.hotUpdate({ file: "/app/src/generated/customer.schema.ts" })).toEqual([]);
   expect(studio.hotUpdate({ file: "/app/src/generated/actions/merge-customers.ts" })).toEqual([]);
+  // Held for the browser only: the server's module runner takes the change, so the page Studio
+  // reloads is rendered from the new route.
+  const route = { file: "/app/src/routes/__root.tsx" };
+  expect(studio.hotUpdate.call({ environment: { name: "client" } }, route)).toEqual([]);
+  expect(studio.hotUpdate.call({ environment: { name: "ssr" } }, route)).toBeUndefined();
   // The theme lab and anything else: the dev server's own updates, as always.
   expect(smithableEditor().hotUpdate({ file: "/app/src/routes/orders/index.tsx" })).toBeUndefined();
   expect(previewConfig(undefined, undefined, { holdUpdates: true })).toContain(
