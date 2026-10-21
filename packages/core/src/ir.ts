@@ -52,11 +52,24 @@ export interface UniqueIR {
   scope: true | UniqueScope;
 }
 
+/**
+ * What a model's records are when shown as a conversation (docs/design/conversation.md §2):
+ * which field is the message's body, who wrote it, and which side is ours. Each part optional;
+ * what is left out is read from the fields' types and order (core's threadBindings).
+ */
+export interface ThreadIR {
+  body?: string;
+  author?: string;
+  side?: { field: string; ours: string };
+}
+
 export interface ModelIR extends SemanticText {
   name: string;
   fields: FieldIR[];
   /** Fields that are unique together, each list two or more of them. */
   unique?: UniqueIR[];
+  /** The model's records as messages of a conversation, where the inference should not guess. */
+  thread?: ThreadIR;
   /** A `User` field that owns the record instead of the automatic owner. */
   ownedBy?: string;
   /** At most `max` records per record `per` refers to (a booking's places in a session). */

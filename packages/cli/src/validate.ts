@@ -2,18 +2,24 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   type AuthIR,
+  actionAccess,
   type ContentIR,
   type Diagnostic,
   formatDiagnostic,
   hasErrors,
   LANGUAGES,
+  pageModel,
   parseTheme,
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
   type ThemeIR,
+  threadBindings,
+  titleField,
   translationPath,
+  type UniqueScope,
   type UxIR,
+  uniqueScope,
   validateAuth,
   validateContent,
   validateContext,
@@ -218,6 +224,7 @@ export function validate(
   io: Io,
   extraPlugins: string[] = [],
   json = false,
+  explain = false,
 ): number {
   if (json) {
     // For a program: every finding with its code, file and place, and whether the project is
@@ -228,11 +235,12 @@ export function validate(
     return ir ? 0 : 1;
   }
   const found: Diagnostic[] = [];
-  const { ir, path } = loadSpec(target, io, extraPlugins, found);
+  const { ir, path, auth, ux } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
   );
+  if (explain && auth) io.out(`\n${explainSpec(ir, auth, ux)}`);
   // Advice, after the verdict: what the app would gain, each with the operation that does it.
   const notes = found.filter((d) => d.severity === "note");
   if (notes.length) {
@@ -252,4 +260,54 @@ export function isDirectory(path: string): boolean {
 
 function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+/**
+ * What the spec leaves to the rules, said in words (`validate --explain`): each model's title
+ * field, where its unique values are unique, what a conversation reads from it, and who may run
+ * each action. The same functions the generated app is built from, so this is what it does.
+ */
+export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
+  const lines: string[] = [];
+  const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
+  for (const model of ir.models) {
+    lines.push(`${model.name}: the title is ${titleField(model)}`);
+    const uniques = [
+      ...model.fields
+        .filter((f) => f.unique || f.sequence)
+        .map(
+          (f) =>
+            `${f.name} (${scope(uniqueScope(f.unique || Boolean(f.sequence), model, auth))}${f.sequence ? ", counting up" : ""})`,
+        ),
+      ...(model.unique ?? []).map(
+        (u) => `${u.fields.join(" and ")} together (${scope(uniqueScope(u.scope, model, auth))})`,
+      ),
+    ];
+    if (uniques.length) lines.push(`  unique: ${uniques.join("; ")}`);
+    const shownAsThread = ir.pages.some((p) =>
+      Object.entries(ux?.pages[p.id]?.lists ?? {}).some(
+        ([name, look]) =>
+          look === "thread" &&
+          ir.models
+            .find((m) => m.name === pageModel(p))
+            ?.fields.some(
+              (f) => f.name === name && f.type.kind === "relation" && f.type.model === model.name,
+            ),
+      ),
+    );
+    if (shownAsThread) {
+      const b = threadBindings(model);
+      lines.push(
+        `  as a conversation: the message is ${b.body?.name ?? "?"}${b.author ? `, written by ${b.author.name}` : ", nobody named"}${b.side ? `, ${b.side.field.name} says the side (${b.side.ours} is ours)` : ""}${b.ambiguous.length ? ` (by rule for ${b.ambiguous.join(", ")}: say it with thread)` : model.thread ? " (as thread says)" : " (by rule)"}`,
+      );
+    }
+  }
+  for (const action of ir.actions) {
+    const a = actionAccess(action, auth, ir.models);
+    const who = [...a.roles, ...(a.owner ? ["the record's owner"] : [])];
+    lines.push(
+      `${action.name}${action.custom ? "" : ` (on ${action.on})`}: run by ${who.length ? who.join(", ") : "nobody"}`,
+    );
+  }
+  return `${lines.join("\n")}\n`;
 }

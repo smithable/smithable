@@ -13,6 +13,7 @@ import {
   pascal,
   type SpecIR,
   type StandardActionIR,
+  threadBindings,
   USER_MODEL,
   type UxIR,
 } from "@smithable/core";
@@ -320,18 +321,9 @@ function addressFrom(title: unknown): string {
  * whether the reply box can fill every required field (defaults, the app, the reference back).
  */
 function threadOf(target: ModelIR, owner: ModelIR) {
-  const kind = (f: FieldIR) => (f.type.kind === "scalar" ? f.type.name : f.type.kind);
-  const text = target.fields.find((f) => ["text", "markdown"].includes(kind(f)));
+  // What the model's `thread` says, the rest by rule (core's threadBindings).
+  const { body: text, author: writer, side, files, badges } = threadBindings(target);
   if (!text) return undefined;
-  const person = target.fields.find(
-    (f) => f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many,
-  );
-  const writer = person ?? target.fields.find((f) => kind(f) === "email");
-  const side = target.fields.find((f) => f.type.kind === "choice" && f.type.values.length === 2);
-  const files = target.fields.filter((f) =>
-    ["file", "files", "picture", "pictures"].includes(kind(f)),
-  );
-  const badges = target.fields.filter((f) => f.type.kind === "choice" && f !== side);
   const replies = target.fields.every(
     (f) =>
       f === text ||
@@ -346,9 +338,7 @@ function threadOf(target: ModelIR, owner: ModelIR) {
   return {
     text: dataKey(text),
     ...(writer ? { writer: dataKey(writer) } : {}),
-    ...(side?.type.kind === "choice"
-      ? { side: { field: side.name, ours: side.type.values[0] as string } }
-      : {}),
+    ...(side ? { side: { field: side.field.name, ours: side.ours } } : {}),
     files: files.map(dataKey),
     badges: badges.map(dataKey),
     replies,

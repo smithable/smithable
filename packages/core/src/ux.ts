@@ -13,6 +13,7 @@ import { capitalize, humanize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { didYouMean } from "./suggest.js";
 import { FONTS, type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
+import { threadBindings } from "./thread.js";
 
 /**
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
@@ -286,9 +287,8 @@ function readRecordLists(
       }
       const target = ir.models.find((m) => m.name === (field.type as { model: string }).model);
       if (look === "thread" && target) {
-        const long = (f: FieldIR) =>
-          f.type.kind === "scalar" && (f.type.name === "text" || f.type.name === "markdown");
-        const text = target.fields.find(long);
+        const bindings = threadBindings(target);
+        const text = bindings.body;
         if (!text) {
           ctx.error(
             pair.value,
@@ -297,6 +297,15 @@ function readRecordLists(
           );
           continue;
         }
+        // Where the rule had to pick one of several fields, the model should say which
+        // (docs/design/conversation.md §2, `thread`).
+        if (bindings.ambiguous.length)
+          ctx.warning(
+            pair.value,
+            "thread-ambiguous",
+            `${target.name} has several fields that could be the thread's ${bindings.ambiguous.join(", ")}: the first is used (${bindings.ambiguous.map((p) => (p === "side" ? bindings.side?.field.name : bindings[p]?.name) ?? "?").join(", ")}).`,
+            `Say which in smithable.yml: ${target.name}: { thread: { ${bindings.ambiguous.map((p) => (p === "side" ? `side: { field: ${bindings.side?.field.name}, ours: ${bindings.side?.ours} }` : `${p}: ${bindings[p]?.name}`)).join(", ")} } } (setThread).`,
+          );
         // What the reply box cannot fill: it asks for the text and the attachments, fixes the
         // reference back, and leaves the rest to defaults and the app.
         for (const f of target.fields) {

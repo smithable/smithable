@@ -30,6 +30,7 @@ import {
   type ModelIR,
   SCALAR_TYPES,
   type SpecIR,
+  type ThreadIR,
   type UniqueIR,
   type UniqueScope,
   USER_MODEL,
@@ -160,6 +161,7 @@ export const modelsSection: SpecSection<"models"> = {
         };
       followReview(spec, effect.model, effect.field);
       followUnique(spec, effect.model, effect.field);
+      followThread(spec, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
         if (!c) continue;
@@ -228,6 +230,7 @@ export const modelsSection: SpecSection<"models"> = {
         );
     followReview(spec, effect.model, effect.from, effect.to);
     followUnique(spec, effect.model, effect.from, effect.to);
+    followThread(spec, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
@@ -285,6 +288,36 @@ export const modelsSection: SpecSection<"models"> = {
           type: "boolean",
           description:
             "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good.",
+        },
+        thread: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "The records as messages of a conversation (a page shows a list of them as a thread): which field is the body, who wrote it, which side is ours; what is left out is read from the fields.",
+          properties: {
+            body: {
+              type: "string",
+              description: "The message's text: a text or markdown field (or a string).",
+            },
+            author: {
+              type: "string",
+              description: "Who wrote it: a field that refers to User, or an email field.",
+            },
+            side: {
+              type: "object",
+              required: ["field", "ours"],
+              additionalProperties: false,
+              description:
+                "Which side a message is on: a two-valued choice field, and the value that is our side.",
+              properties: {
+                field: { type: "string", description: "A choice field with two values." },
+                ours: {
+                  type: "string",
+                  description: "The value that means our side (shown on the right).",
+                },
+              },
+            },
+          },
         },
         unique: {
           type: "array",
@@ -379,7 +412,7 @@ function readModel(
   const entries = mapEntries(ctx, node, `model "${name}"`);
   if (!entries) return model;
   const known = checkKeys(ctx, entries, `model "${name}"`, {
-    allowed: ["fields", "ownedBy", "capacity", "trash", "review", "unique", ...TEXT_KEYS],
+    allowed: ["fields", "ownedBy", "capacity", "trash", "review", "unique", "thread", ...TEXT_KEYS],
     later: ["examples"],
     content: ["label", "title"],
     moved: {
@@ -435,6 +468,8 @@ function readModel(
   if (review) readReview(ctx, model, review);
   const unique = known.find((e) => e.key === "unique");
   if (unique) readUniqueTogether(ctx, model, unique);
+  const thread = known.find((e) => e.key === "thread");
+  if (thread) readThread(ctx, model, thread);
   return model;
 }
 
@@ -1362,4 +1397,134 @@ function readUniqueTogether(ctx: ParseContext, model: ModelIR, { value, keyNode 
     model.unique = together;
     ctx.mark(`unique:${model.name}`, keyNode);
   }
+}
+
+/**
+ * A model's `thread` (docs/design/conversation.md §2): which field is a message's body (text,
+ * markdown or string), who wrote it (a person or an email) and which side is ours (a two-valued
+ * choice and one of its values). Each part optional; the rest is read from the fields.
+ */
+function readThread(ctx: ParseContext, model: ModelIR, { value, keyNode }: Entry): void {
+  const where = `"thread" of "${model.name}"`;
+  const entries = mapEntries(ctx, value, where);
+  if (!entries) return;
+  const known = checkKeys(ctx, entries, where, { allowed: ["body", "author", "side"] });
+  const thread: ThreadIR = {};
+  const field = (name: string, what: string, fits: (f: FieldIR) => boolean, kinds: string) => {
+    const f = model.fields.find((x) => x.name === name);
+    if (!f) {
+      ctx.error(
+        keyNode,
+        "unknown-field",
+        `${model.name} has no field "${name}" (${what} of ${where}).`,
+      );
+      return undefined;
+    }
+    if (!fits(f)) {
+      ctx.error(
+        keyNode,
+        "invalid-value",
+        `${model.name}.${name} cannot be the ${what} of a thread: it is ${kinds}.`,
+      );
+      return undefined;
+    }
+    return f;
+  };
+  const scalar = (f: FieldIR, ...names: string[]) =>
+    f.type.kind === "scalar" && names.includes(f.type.name);
+  const body = known.find((e) => e.key === "body");
+  if (body) {
+    const name = readString(ctx, body.value, `"body" of ${where}`);
+    if (
+      name &&
+      field(
+        name,
+        "body",
+        (f) => scalar(f, "text", "markdown", "string"),
+        "a text, markdown or string field",
+      )
+    )
+      thread.body = name;
+  }
+  const author = known.find((e) => e.key === "author");
+  if (author) {
+    const name = readString(ctx, author.value, `"author" of ${where}`);
+    if (
+      name &&
+      field(
+        name,
+        "author",
+        (f) =>
+          scalar(f, "email") ||
+          (f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many),
+        "a field that refers to User, or an email",
+      )
+    )
+      thread.author = name;
+  }
+  const side = known.find((e) => e.key === "side");
+  if (side) {
+    const parts = mapEntries(ctx, side.value, `"side" of ${where}`);
+    if (parts) {
+      const sideKnown = checkKeys(ctx, parts, `"side" of ${where}`, { allowed: ["field", "ours"] });
+      const fieldEntry = sideKnown.find((e) => e.key === "field");
+      const oursEntry = sideKnown.find((e) => e.key === "ours");
+      const name = fieldEntry && readString(ctx, fieldEntry.value, `"field" of "side" of ${where}`);
+      const ours = oursEntry && readString(ctx, oursEntry.value, `"ours" of "side" of ${where}`);
+      if (!name || !ours)
+        ctx.error(
+          side.keyNode,
+          "missing-key",
+          `"side" of ${where} needs "field" (a two-valued choice) and "ours" (the value that is our side).`,
+        );
+      else {
+        const f = field(
+          name,
+          "side",
+          (x) => x.type.kind === "choice" && x.type.values.length === 2,
+          "not a choice with two values",
+        );
+        if (f?.type.kind === "choice") {
+          if (!f.type.values.includes(ours))
+            ctx.error(
+              oursEntry?.value ?? side.keyNode,
+              "invalid-value",
+              `"${ours}" is not one of ${model.name}.${name}'s values (${f.type.values.join(", ")}).`,
+            );
+          else thread.side = { field: name, ours };
+        }
+      }
+    }
+  }
+  if (Object.keys(thread).length) {
+    model.thread = thread;
+    ctx.mark(`thread:${model.name}`, keyNode);
+  }
+}
+
+/**
+ * A field a model's `thread` names that is renamed (to) or removed (no to): the setting follows,
+ * and goes when nothing is left.
+ */
+function followThread(spec: YamlEditor, model: string, field: string, to?: string): void {
+  const path = ["models", model, "thread"];
+  const current = spec.get(path);
+  if (typeof current !== "object" || current === null) return;
+  const thread = { ...(current as Record<string, YamlValue>) };
+  let touched = false;
+  for (const key of ["body", "author"] as const) {
+    if (thread[key] !== field) continue;
+    touched = true;
+    if (to) thread[key] = to;
+    else delete thread[key];
+  }
+  const side = thread.side as { field?: string; ours?: string } | undefined;
+  if (side?.field === field) {
+    touched = true;
+    if (to) thread.side = { ...side, field: to };
+    else delete thread.side;
+  }
+  if (!touched) return;
+  if (Object.keys(thread).length) spec.set(path, thread);
+  else spec.remove(path);
 }

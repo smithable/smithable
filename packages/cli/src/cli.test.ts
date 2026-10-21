@@ -151,3 +151,45 @@ test("validate --json gives every finding with its code, for programs", async ()
   expect(refused.valid).toBe(false);
   expect(refused.diagnostics.map((d) => d.code)).toContain("invalid-name");
 });
+
+test("validate --explain says what the rules settled", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-explain-"));
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    `smithable: 0.1
+app: { name: Desk }
+models:
+  Ticket:
+    fields:
+      title: string!
+      code: string unique
+      status: open | closed
+      notes: Note[]
+  Note:
+    fields:
+      body: text!
+      ticket: Ticket!
+actions:
+  close: { on: Ticket, set: { status: closed } }
+pages:
+  tickets: { crud: Ticket, actions: [close] }
+`,
+  );
+  writeFileSync(
+    join(dir, "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles:\n  admin: all\n  agent: { pages: all, read: [Ticket] }\n  customer: { pages: all, actions: [close] }\ndefaultRole: customer\n",
+  );
+  writeFileSync(
+    join(dir, "smithable.ux.yml"),
+    "smithableUx: 0.1\npages:\n  tickets:\n    record:\n      lists: { notes: thread }\n",
+  );
+  const out: string[] = [];
+  const io = { out: (s: string) => out.push(s), err: (s: string) => out.push(s) };
+  expect(await run(["validate", dir, "--explain"], io)).toBe(0);
+  const text = out.join("");
+  expect(text).toContain("Ticket: the title is title");
+  expect(text).toContain("  unique: code (per owner)");
+  expect(text).toContain("Note: the title is body");
+  expect(text).toContain("  as a conversation: the message is body, nobody named (by rule)");
+  expect(text).toContain("close (on Ticket): run by admin, customer, the record's owner");
+});
