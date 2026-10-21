@@ -21,7 +21,7 @@ A default is **written out** by `smithable upgrade` where a later change of the 
 | Who runs a standard action | a role's `actions` grant (`grant <role> actions <name>`) | the roles that write the model, and the record's owner | `--explain` ("run by …") | `actions: all` becomes the list where `all` would widen |
 | What a conversation reads | `Model.thread: { body, author, side }` (`setThread`) | the first long text; the first field that refers to a person, else the first email; the first two-valued choice | `--explain`, the summary, the `thread-ambiguous` warning | no (presentation) |
 | An articles page's parts | the long form `articles: { model, title, body, picture, date, address, summary, author }` | title: the model's title field (a string); body: the one markdown field; picture, date: the one field of the kind; address: the one unique string besides the title; summary: the one text; author: the one field that refers to a User; `none` leaves an optional part out (built) | the error names the long form when a part is missing or found twice | through the title: `namedBy` where the old title rule picked another field |
-| An order page's price, quantity and asked fields | `order: { from, price, quantity, ask }` | the one money field; the one whole number; the fields a customer can fill (next step; today `price`, `quantity` and `status` are matched by name) | the error names the key when a part is found twice | no |
+| An order page's price, quantity, available and asked fields | `order: { from, price, quantity, available, ask }` | the one money field of `from`; the one whole number of the lines; the one yes/no field of `from`; the fields a customer can fill (built; `none` leaves quantity or available out) | the error names the key when a part is found twice | no |
 | A calendar's `starts`, `ends`, `title` | the long form | the one date or date-time field; the model's title field | the error names the long form | no |
 | Sample values for a first app | a `samples/<Model>.csv` file | by the field's type; the field's name only shapes the sample text (a presentation choice, nothing the app does depends on it) | the generated samples | no |
 
@@ -35,5 +35,5 @@ A model's `title` is already a text in `smithable.content.yml` (how the kind of 
 
 1. **The title** (built): `namedBy` on the model, `setNamedBy`, `titleField` by shape, `writeNamedBy` in `smithable upgrade`, `--explain` saying written or by rule, the summary sentence, this note.
 2. **Articles and the author** (built): the short form's parts by shape; `author` in the long form; the old name matches are gone.
-3. **The order page**: `price`, `quantity` and `ask` by shape and by key; the old name matches go.
+3. **The order page** (built): `price`, `quantity` and `available` by shape and by key; `ask` takes any own value; the old name matches (price, quantity, status, available) are gone.
 4. Studio: the model's form offers `namedBy` and `thread` (A 128 with the unique forms).

@@ -1560,7 +1560,19 @@
             "properties": {
               "from": {
                 "type": "string",
-                "description": "The model people choose from (dishes): its price, picture, section and available."
+                "description": "The model people choose from (dishes): its one money field is the price, its one yes/no field says what is available."
+              },
+              "price": {
+                "type": "string",
+                "description": "The money field of \"from\" that is the price, when it has several."
+              },
+              "quantity": {
+                "type": "string",
+                "description": "The whole-number field of the lines' model that holds how many, when it has several; none for no quantity."
+              },
+              "available": {
+                "type": "string",
+                "description": "The yes/no field of \"from\" that says a record can be ordered, when it has several; none for always."
               },
               "into": {
                 "type": "string",

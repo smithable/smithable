@@ -24,6 +24,7 @@ import {
   type FieldIR,
   type FieldValue,
   type LandingSection,
+  type ModelIR,
   type OnboardingStep,
   type PageIR,
   type PatternKind,
@@ -806,7 +807,7 @@ const custom: PagePattern<"custom"> = {
 };
 
 /** The order page's keys besides from and into (docs/design/orders.md §2). */
-const ORDER_KEYS = ["from", "into", "ask", "hours", "lead"];
+const ORDER_KEYS = ["from", "into", "ask", "hours", "lead", "price", "quantity", "available"];
 
 /** A page where visitors compose an order from a model's records (docs/design/orders.md §3). */
 const order: PagePattern<"order"> = {
@@ -821,7 +822,21 @@ const order: PagePattern<"order"> = {
       from: {
         type: "string",
         description:
-          "The model people choose from (dishes): its price, picture, section and available.",
+          "The model people choose from (dishes): its one money field is the price, its one yes/no field says what is available.",
+      },
+      price: {
+        type: "string",
+        description: 'The money field of "from" that is the price, when it has several.',
+      },
+      quantity: {
+        type: "string",
+        description:
+          "The whole-number field of the lines' model that holds how many, when it has several; none for no quantity.",
+      },
+      available: {
+        type: "string",
+        description:
+          'The yes/no field of "from" that says a record can be ordered, when it has several; none for always.',
       },
       into: {
         type: "string",
@@ -1777,20 +1792,59 @@ function readOrder(
     return undefined;
   };
   const names = (fields: FieldIR[]) => fields.map((f) => f.name).join(", ");
-
-  // Several money fields (a cost beside the price): the one named price is the price.
+  // A part the page names (price, quantity, available) must be of its kind; unnamed, it is the
+  // one field of the kind, and two are an error naming the key (docs/design/inference.md: by the
+  // fields' types, never their names).
+  const part = (
+    key: "price" | "quantity" | "available",
+    model: ModelIR,
+    at: At,
+    fits: (f: FieldIR) => boolean,
+    words: string,
+    required: boolean,
+  ): FieldIR | undefined => {
+    const entry = byKey.get(key);
+    if (entry) {
+      const name = readString(ctx, entry.value, `"${key}" in ${orderWhere}`);
+      if (name === undefined || (name === "none" && !required)) return undefined;
+      const f = model.fields.find((x) => x.name === name);
+      if (!f)
+        ctx.error(
+          entry.value,
+          "unknown-field",
+          `${model.name} has no field named "${name}".`,
+          didYouMean(
+            name,
+            model.fields.map((x) => x.name),
+          ),
+        );
+      else if (!fits(f))
+        ctx.error(
+          entry.value,
+          "invalid-value",
+          `"${name}" is the ${key} of ${orderWhere}: it must be a ${words} field of ${model.name}.`,
+        );
+      return f && fits(f) ? f : undefined;
+    }
+    const found = model.fields.filter(fits);
+    if (found.length > 1)
+      ctx.error(
+        at,
+        "missing-key",
+        `${model.name} has several ${words} fields (${names(found)}): name the ${key} of ${orderWhere}${required ? "" : `, or "${key}: none"`}.`,
+        `Write "${key}: ${found[0]?.name}" under the order page.`,
+      );
+    else if (!found.length && required)
+      ctx.error(
+        at,
+        "invalid-value",
+        `${model.name} has no ${words} field: the order page needs its ${key}.`,
+      );
+    return found.length === 1 ? found[0] : undefined;
+  };
   const money = moneyFields(fromModel.fields);
-  const prices =
-    money.length > 1 && money.some((f) => f.name === "price")
-      ? money.filter((f) => f.name === "price")
-      : money;
-  if (prices.length !== 1)
-    return refuse(
-      from.at,
-      prices.length
-        ? `${from.name} has several money fields (${names(prices)}): the order page needs one price.`
-        : `${from.name} has no money field: the order page needs its price.`,
-    );
+  const price = part("price", fromModel, from.at, (f) => money.includes(f), "money", true);
+  if (!price) return undefined;
   const lists = intoModel.fields.filter((f) => f.type.kind === "relation" && f.type.many);
   const lines = lists[0];
   if (lists.length !== 1 || !lines || lines.type.kind !== "relation")
@@ -1826,14 +1880,17 @@ function readOrder(
       `${into.name} needs a number counting up for the order page, the one customers say.`,
       'For example "number: { type: int!, sequence: true }".',
     );
-  const ints = lineModel.fields.filter(
+  const quantity = part(
+    "quantity",
+    lineModel,
+    into.at,
     (f) => !f.formula && f.type.kind === "scalar" && f.type.name === "int",
+    "whole number",
+    false,
   );
-  const quantity = ints.find((f) => f.name === "quantity") ?? ints[0];
 
   // What the customer is asked: the order's own values, never what the app or the page fills.
-  const askable = (f: FieldIR) =>
-    !f.formula && !f.byApp && f.type.kind === "scalar" && f.name !== "status";
+  const askable = (f: FieldIR) => !f.formula && !f.byApp && f.type.kind === "scalar";
   const ask: string[] = [];
   const askEntry = byKey.get("ask");
   if (askEntry)
@@ -1907,8 +1964,13 @@ function readOrder(
   if (lead !== undefined && (!Number.isInteger(lead) || lead < 0))
     ctx.error(leadEntry?.value ?? node, "invalid-value", `"lead" is a whole number of minutes.`);
 
-  const available = fromModel.fields.find(
-    (f) => f.name === "available" && f.type.kind === "scalar" && f.type.name === "bool",
+  const available = part(
+    "available",
+    fromModel,
+    from.at,
+    (f) => f.type.kind === "scalar" && f.type.name === "bool",
+    "yes/no",
+    false,
   );
   return {
     kind: "order",
@@ -1917,7 +1979,7 @@ function readOrder(
     ask,
     ...(hours ? { hours } : {}),
     ...(lead !== undefined ? { lead } : {}),
-    price: (prices[0] as FieldIR).name,
+    price: price.name,
     ...(available ? { available: available.name } : {}),
     lines: lines.name,
     line: lineName,
