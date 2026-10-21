@@ -11849,7 +11849,7 @@ export const bookingData = {
         const before = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
         {
-          const counted = (r: Record<string, unknown>) => true;
+          const counted = (_r: Record<string, unknown>) => true;
           const perId = values.sessionId ?? before.sessionId;
           const moving = values.sessionId !== undefined && values.sessionId !== before.sessionId;
           const was = counted(before);
@@ -20110,7 +20110,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "2e7a3e55 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "4f11a0c6 generated",
+  "src/generated/booking.server.ts": "d0cc5cb5 generated",
   "src/generated/booking.ts": "3d4fe164 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "1be705ca generated",

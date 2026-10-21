@@ -871,7 +871,7 @@ export function dataModule(
   const updateChecks = capacity
     ? `
         {
-          const counted = (r: Record<string, unknown>) => ${countedJs};
+          const counted = (${capacity.where ? "r" : "_r"}: Record<string, unknown>) => ${countedJs};
           const perId = values.${capacity.per}Id ?? before.${capacity.per}Id;
           const moving = values.${capacity.per}Id !== undefined && values.${capacity.per}Id !== before.${capacity.per}Id;
           const was = counted(before);
