@@ -103,9 +103,10 @@ it), in two modes:
 | Dialog | a confirm dialog over the list | shadows, radius, the ring |
 | Menu and header | the shell with the mark | the heading font on the brand |
 
-Each frame in light and dark side by side, at desktop width and at phone width (a toggle), so
-one judges the theme where people meet it. A "greyscale" toggle takes the colour out: if the
-two themes still read as different, the style layer did its work (the review's test).
+As first built, each frame was shown in light and dark side by side, at desktop width and at
+phone width (a toggle), all frames at once at 42 % of their size. A "greyscale" toggle takes the
+colour out: if two themes still read as different, the style layer did its work (the review's
+test).
 
 **Changed 2026-10-21 (Johan, after the tester's report of 2026-10-17):** the frames at 42 % of
 their size were too small to judge a look by, and light beside dark says little. The lab shows
