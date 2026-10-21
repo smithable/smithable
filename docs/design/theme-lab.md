@@ -107,6 +107,27 @@ Each frame in light and dark side by side, at desktop width and at phone width (
 one judges the theme where people meet it. A "greyscale" toggle takes the colour out: if the
 two themes still read as different, the style layer did its work (the review's test).
 
+**Changed 2026-10-21 (Johan, after the tester's report of 2026-10-17):** the frames at 42 % of
+their size were too small to judge a look by, and light beside dark says little. The lab shows
+**one frame at full size**, and the person picks what it shows:
+
+- **The page:** Landing, List (table or cards), Form, Dialog, Shell, as tabs over the frame.
+- **The mode:** light or dark, one at a time (a switch; the theme's dark rules apply, not the
+  visitor's setting). The greyscale toggle stays.
+- **The size:** buttons for the common widths (phone 390, tablet 820, laptop 1280, desktop
+  1600), each at 100 % when it fits the window and scaled down only as much as the window needs;
+  between them the frame's edge can be dragged, so the breakpoints in between are seen. A
+  **"phone beside"** switch shows the phone frame next to the chosen one, since a theme is met
+  on both, and that pair is the one worth seeing at once.
+- **The starter:** the sheet app is made from the starter chosen (booking by default; crm,
+  kiosk, support, status, api, records, articles, the lab's own with every control), so a theme
+  is judged on the kind of app it is for. Local: the lab makes the chosen starter's app in its
+  temporary folder on the switch (a few seconds, the frame says so). Public: the export script
+  saves every starter's pages, and the lab loads the chosen set.
+
+The controls, the file and Save are as before. The old all-at-once sheet stays as the
+`theme-sheet.mjs` picture for Johan's look, not as the lab's view.
+
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
 (body and heading with a specimen line each), headings, surfaces, buttons, pictures, tables,
