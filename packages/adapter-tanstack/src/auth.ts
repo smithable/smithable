@@ -75,23 +75,28 @@ export function authModule(auth: AuthIR, ir: SpecIR): string {
   const role = invitations ? `openInvitation(email)?.role ?? ${defaultRole}` : defaultRole;
   // A new account is in the audit log, and so is the invitation it used up.
   const afterCreate = `
-        after: async (created) => {
-          const who = { id: created.id, role: String(created.role) };${
-            invitations
-              ? `
+        after: async (created, ctx) => {
+          const who = { id: created.id, role: String(created.role) };
           const email = created.email.toLowerCase();
-          // Only an invitation still open was accepted (under open sign-up an expired one is not).
+          // A role the address would have had but was not given says why (create.before).
+          const withheld =
+            unconfirmed(ctx?.path, created.emailVerified) && (ADMINS.includes(email)${invitations ? " || Boolean(openInvitation(email))" : ""})
+              ? "the sign-in provider has not confirmed the address"
+              : undefined;${
+                invitations
+                  ? `
+          // Only an invitation still open was accepted (under open sign-up an expired one is not);
+          // one whose role was withheld stays for whoever does own the address.
           const used = openInvitation(email);
-          // An invitation whose role was not given (an address the provider has not confirmed)
-          // stays for whoever does own the address.
-          if (used && used.role !== who.role) return audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
-          if (used)
-            audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
-          // The invitation is used up: the user is the record from now on.
-          db.delete(invitation).where(eq(invitation.email, email)).run();`
-              : ""
-          }
-          audit(db, who, { action: "account created", model: "User", details: { role: who.role } });
+          if (!(used && withheld)) {
+            if (used)
+              audit(db, who, { action: "invitation accepted", model: "User", details: { role: used.role } });
+            // The invitation is used up: the user is the record from now on.
+            db.delete(invitation).where(eq(invitation.email, email)).run();
+          }`
+                  : ""
+              }
+          audit(db, who, { action: "account created", model: "User", details: { role: who.role, ...(withheld ? { withheld } : {}) } });
         },`;
   const tables = invitations
     ? "account, invitation, session, user, verification"
@@ -115,6 +120,9 @@ function signedInAs(userId: string) {
 }
 ${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains.map((d) => d.toLowerCase()))};\n` : ""}/** These addresses become admins when they first sign in. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins.map((a) => a.toLowerCase()))};
+/** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
+const unconfirmed = (path: string | undefined, verified: unknown) =>
+  /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(path ?? "") && verified !== true;
 const socialProviders = {
 ${providers
   .filter((p) => p !== "email")
@@ -245,8 +253,7 @@ export const auth = betterAuth({
           const email = newUser.email.toLowerCase();
           // A provider's sign-in proves the address only when the provider confirmed it (a code by
           // mail proves it by itself): unconfirmed, it gets no role beyond the default.
-          const byProvider = /^\\/(callback|sign-in\\/social|oauth2)(\\/|$)/.test(ctx?.path ?? "");
-          const proven = !byProvider || newUser.emailVerified === true;${
+          const proven = !unconfirmed(ctx?.path, newUser.emailVerified);${
             refuses
               ? `
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";

@@ -56,7 +56,7 @@ test("a users page brings the invitation table, the server module, the kit, a te
     'role: proven && ADMINS.includes(email) ? "admin" : proven ? openInvitation(email)?.role ?? "sales" : "sales"',
   );
   expect(auth).not.toContain("Only invited people");
-  expect(auth).toContain("after: async (created) =>");
+  expect(auth).toContain("after: async (created, ctx) =>");
   expect(file(app, "src/routes/sign-in.tsx")).toContain("invitation={invitation}");
   expect(file(app, "src/generated/users.test.ts")).toContain("gets the default role");
 });
