@@ -190,12 +190,19 @@ export async function refusedAddress(url: string): Promise<string | undefined> {
   return undefined;
 }
 
-let sending = false;
+/**
+ * The outbox's state, one per process: in development a regeneration evaluates this module again,
+ * and two instances must not drain it side by side (each would send the same mail).
+ */
+type Outbox = { sending: boolean; timers: ReturnType<typeof setTimeout>[] };
+const everyInstance = globalThis as { smithableOutbox?: Outbox };
+everyInstance.smithableOutbox ??= { sending: false, timers: [] };
+const outbox = everyInstance.smithableOutbox;
 
 /** Sends the mails and calls that are due; one round at a time. */
 export async function sendDue(now = Date.now()): Promise<number> {
-  if (sending) return 0;
-  sending = true;
+  if (outbox.sending) return 0;
+  outbox.sending = true;
   let done = 0;
   try {
     done += await sendCalls(now);
@@ -263,7 +270,7 @@ export async function sendDue(now = Date.now()): Promise<number> {
       }
     }
   } finally {
-    sending = false;
+    outbox.sending = false;
   }
   return done;
 }
@@ -415,8 +422,10 @@ export function sendAgain(viewer: Viewer | null, again: { mail: number } | { cal
   if (changed.changes) sendSoon();
 }
 
-// What was queued before a restart goes out after it; then every minute, for the retries.
+// What was queued before a restart goes out after it; then every minute, for the retries. A
+// module evaluated again replaces the timers of the one before, never adds to them.
 if (import.meta.env.SSR) {
-  setTimeout(sendSoon, 5_000).unref?.();
-  setInterval(sendSoon, MINUTE).unref?.();
+  for (const timer of outbox.timers) clearTimeout(timer);
+  outbox.timers = [setTimeout(sendSoon, 5_000), setInterval(sendSoon, MINUTE)];
+  for (const timer of outbox.timers) timer.unref?.();
 }
