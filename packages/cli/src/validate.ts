@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   type AuthIR,
@@ -26,6 +26,7 @@ import {
   validateSamples,
   validateSpec,
   validateUx,
+  writeExplicit,
 } from "@smithable/core";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
@@ -225,6 +226,7 @@ export function validate(
   extraPlugins: string[] = [],
   json = false,
   explain = false,
+  write = false,
 ): number {
   if (json) {
     // For a program: every finding with its code, file and place, and whether the project is
@@ -240,7 +242,20 @@ export function validate(
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
   );
-  if (explain && auth) io.out(`\n${explainSpec(ir, auth, ux)}`);
+  // --write: what the rules settled, written into the spec, so it says it all and no later
+  // change of its shape moves anything (docs/design/inference.md §4); then --explain reads the spec as written..
+  let shown = { ir, auth, ux };
+  if (write) {
+    const specPath = isDirectory(target) ? join(target, "smithable.yml") : target;
+    const result = writeExplicit(readFileSync(specPath, "utf8"), ir, auth, ux);
+    if (result.written.length) {
+      writeFileSync(specPath, result.text);
+      io.out(`\nWritten into ${specPath}:\n${result.written.map((w) => `  ${w}\n`).join("")}`);
+      const again = loadSpec(target, { ...io, err: () => {} }, extraPlugins);
+      if (again.ir) shown = { ir: again.ir, auth: again.auth, ux: again.ux };
+    } else io.out("\nNothing was left to the rules; the spec says it all.\n");
+  }
+  if (explain && shown.auth) io.out(`\n${explainSpec(shown.ir, shown.auth, shown.ux)}`);
   // Advice, after the verdict: what the app would gain, each with the operation that does it.
   const notes = found.filter((d) => d.severity === "note");
   if (notes.length) {
@@ -293,7 +308,11 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           ir.models
             .find((m) => m.name === pageModel(p))
             ?.fields.some(
-              (f) => f.name === name && f.type.kind === "relation" && f.type.model === model.name,
+              (f) =>
+                f.name === name &&
+                f.type.kind === "relation" &&
+                f.type.many &&
+                f.type.model === model.name,
             ),
       ),
     );

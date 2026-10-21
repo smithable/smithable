@@ -160,6 +160,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         values.plugin ? [values.plugin] : [],
         values.json === true,
         values.explain === true,
+        values.write === true,
       );
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
@@ -328,6 +329,7 @@ const CONFIG = {
     dir: { type: "string" },
     json: { type: "boolean" },
     explain: { type: "boolean" },
+    write: { type: "boolean" },
     implementation: { type: "boolean" },
     port: { type: "string" },
     project: { type: "string" },

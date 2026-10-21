@@ -87,9 +87,10 @@ export const COMMANDS: Command[] = [
       "(--plugin <name> also loads a plugin that is not declared yet;",
       "--json prints every finding with its code, file and place, for programs;",
       "--explain says what the spec leaves to the rules: each model's title field, where its",
-      "unique values are unique, what a conversation reads, and who may run each action)",
+      "unique values are unique, what a conversation reads, and who may run each action;",
+      "--write writes what the rules settled into smithable.yml, so it says it all)",
     ],
-    options: ["plugin", "json", "explain"],
+    options: ["plugin", "json", "explain", "write"],
   },
   {
     name: "theme",

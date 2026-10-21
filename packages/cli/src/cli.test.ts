@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { STARTER_TEXTS } from "@smithable/ai";
@@ -194,4 +194,23 @@ pages:
   expect(text).toContain("Note: the title is body (by rule");
   expect(text).toContain("  as a conversation: the message is body, nobody named (by rule)");
   expect(text).toContain("close (on Ticket): run by admin, customer, the record's owner");
+  // --write: what the rules settled goes into the spec, which then says it all.
+  out.length = 0;
+  expect(await run(["validate", dir, "--write"], io)).toBe(0);
+  const written = out.join("");
+  expect(written).toContain("Ticket: namedBy title");
+  expect(written).toContain("Note: namedBy body");
+  expect(written).toContain("Ticket.code: unique owner");
+  expect(written).toContain("Note: thread body body");
+  const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+  expect(spec).toContain("    namedBy: title\n");
+  expect(spec).toContain("    namedBy: body\n");
+  expect(spec).toContain("thread:");
+  expect(spec).toContain("      code:\n        type: string\n        unique: owner\n");
+  out.length = 0;
+  expect(await run(["validate", dir, "--write"], io)).toBe(0);
+  expect(out.join("")).toContain("Nothing was left to the rules");
+  out.length = 0;
+  expect(await run(["validate", dir, "--explain"], io)).toBe(0);
+  expect(out.join("")).toContain("Ticket: the title is title (as written)");
 });
