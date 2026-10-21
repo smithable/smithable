@@ -2602,15 +2602,47 @@ if (!failed) {
         // The frames open once the app has signed the lab in; the landing page in light first.
         const frame = labPage.frameLocator('[data-frame="Landing-light"]');
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 * P });
-        // Signed in (no sign-in form in the list), and the record frame shows a record.
+        // One page at a time, chosen by its tab: signed in (no sign-in form in the list), and the
+        // record's page shows a record.
+        const tab = (name) =>
+          labPage.getByRole("group", { name: "Page" }).getByRole("button", { name });
+        await tab("List").click();
         const list = labPage.frameLocator('[data-frame="List-light"]');
         await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await list.getByText(/^Sign in to /).count())
           throw new Error("the lab's frames are not signed in");
+        await tab("Record").click();
         const record = labPage.frameLocator('[data-frame="Record-light"]');
         await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await record.getByText("does not exist, or you cannot see it").count())
           throw new Error("the record frame shows no record");
+        // The width at 100 % when it fits, the phone beside it, and dark in the same frame.
+        await labPage.getByRole("button", { name: "Phone 390" }).click();
+        const shown = await labPage
+          .locator('[data-frame="Record-light"]')
+          .evaluate((f) => [f.clientWidth, f.getBoundingClientRect().width]);
+        if (shown[0] !== 390 || Math.round(shown[1]) !== 390)
+          throw new Error(`the phone width is shown as ${shown.join(" / ")}`);
+        await labPage.getByRole("button", { name: "Laptop 1280" }).click();
+        await labPage.getByLabel("Phone beside").check();
+        await labPage
+          .frameLocator('[data-frame="Record-light-phone"]')
+          .locator("body[data-hydrated=true]")
+          .waitFor({ timeout: 60000 * P });
+        const background = (mode) =>
+          labPage
+            .frameLocator(`[data-frame="Record-${mode}"]`)
+            .locator("body")
+            .evaluate((b) => getComputedStyle(b).backgroundColor);
+        const light = await background("light");
+        await labPage.getByRole("button", { name: "Dark", exact: true }).click();
+        for (let i = 0; i < 40 && (await background("dark")) === light; i++)
+          await new Promise((r) => setTimeout(r, 250));
+        if ((await background("dark")) === light) throw new Error("Dark left the frame light");
+        await labPage.getByRole("button", { name: "Light", exact: true }).click();
+        await labPage.getByLabel("Phone beside").uncheck();
+        await tab("Landing").click();
+        await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
         const sheet = frame.locator("style#sm-theme");
         for (

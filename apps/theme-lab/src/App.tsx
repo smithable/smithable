@@ -1,5 +1,6 @@
-// The theme lab (docs/design/theme-lab.md §3): the theme file as controls and as text, a real
-// app's pages in frames in light and dark, the fit lines and the problems under them. A change
+// The theme lab (docs/design/theme-lab.md §3): the theme file as controls and as text, one of a
+// real app's pages in a frame at full size (the page, the mode and the width chosen; the phone
+// beside it on request), the fit lines and the problems under it. A change
 // computes the theme's CSS here and posts it to every frame (the preview's runtime swaps it in);
 // nothing is regenerated until Save adds the theme.
 import { themeCss } from "@smithable/adapter-tanstack";
@@ -38,15 +39,23 @@ const MOTION_NOTES = {
 /** On docs.smithable.ai (`pnpm site`): the exported pages beside it, no server, Save downloads. */
 const PUBLIC = import.meta.env.VITE_THEME_LAB === "public";
 
-const SIZES = {
-  desktop: { width: 1280, height: 820, scale: 0.42 },
-  phone: { width: 390, height: 780, scale: 0.6 },
-};
+/** The common widths; the frame's edge drags to any width between them. */
+const SIZES = [
+  ["Phone", 390],
+  ["Tablet", 820],
+  ["Laptop", 1280],
+  ["Desktop", 1600],
+] as const;
+const PHONE = 390;
+const GAP = 16;
 
 export function App() {
   const [start, setStart] = useState<Start>();
   const [text, setText] = useState(() => themeText(BUILT_IN_THEMES[0] as ThemeIR));
-  const [size, setSize] = useState<keyof typeof SIZES>("desktop");
+  const [page, setPage] = useState<string>();
+  const [mode, setMode] = useState<"light" | "dark">("light");
+  const [width, setWidth] = useState(1280);
+  const [beside, setBeside] = useState(false);
   const [grey, setGrey] = useState(false);
   const [signedIn, setSignedIn] = useState(PUBLIC);
   const [saved, setSaved] = useState<string>();
@@ -107,11 +116,8 @@ export function App() {
   useEffect(() => {
     if (!css || !origin) return;
     for (const frame of frames.current)
-      frame.contentWindow?.postMessage(
-        { type: "smithable:theme-css", css, mode: frame.dataset.mode },
-        origin,
-      );
-  }, [css, origin]);
+      frame.contentWindow?.postMessage({ type: "smithable:theme-css", css, mode }, origin);
+  }, [css, origin, mode]);
   useEffect(() => {
     const heard = (event: MessageEvent) => {
       if (event.origin !== origin || event.data?.source !== "smithable-preview") return;
@@ -119,7 +125,6 @@ export function App() {
       if (event.data.type === "ready") {
         // The frame's mode: the app's dark rules follow it, not the visitor's setting.
         const frame = [...frames.current].find((f) => f.contentWindow === from);
-        const mode = frame?.dataset.mode;
         if (frame?.dataset.signIn !== undefined)
           from.postMessage({ type: "smithable:dev-sign-in", role: "admin" }, origin);
         if (css) from.postMessage({ type: "smithable:theme-css", css, mode }, origin);
@@ -127,7 +132,7 @@ export function App() {
           from.postMessage({ type: "smithable:motion-tour" }, origin);
           // Once per click: a later reload of the frame (a save, Vite's own) does not tour again.
           toured.current.add(frame.dataset.frame);
-          if (toured.current.size === 2) touring.current = false;
+          if (toured.current.size === (beside ? 2 : 1)) touring.current = false;
         }
         // Asked for its place, the page says where it is (and from then on, each move).
         from.postMessage({ type: "smithable:select-mode", on: false }, origin);
@@ -136,7 +141,7 @@ export function App() {
     };
     window.addEventListener("message", heard);
     return () => window.removeEventListener("message", heard);
-  }, [css, origin]);
+  }, [css, origin, mode, beside]);
   // The frames open once the app has signed the lab in (its development sign-in, as an admin).
   useEffect(() => {
     const later = setTimeout(() => setSignedIn(true), 20000);
@@ -171,7 +176,63 @@ export function App() {
     setSaved(undefined);
   };
 
-  const { width, height, scale } = SIZES[size];
+  // The frame at 100 %, scaled down only as much as the stage needs (both frames alike), and as
+  // tall as the stage; its right edge drags the width.
+  const stage = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState({ width: 1200, height: 700 });
+  useEffect(() => {
+    const element = stage.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setRoom({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const scale = Math.min(1, (room.width - GAP * 2) / (width + (beside ? PHONE + GAP : 0)));
+  const height = Math.round(room.height / scale);
+  const drag = (down: React.PointerEvent<HTMLDivElement>) => {
+    const from = down.clientX;
+    const was = width;
+    const edge = down.currentTarget;
+    edge.setPointerCapture(down.pointerId);
+    const move = (event: PointerEvent) =>
+      setWidth(Math.round(Math.min(1920, Math.max(320, was + (event.clientX - from) / scale))));
+    const up = () => {
+      edge.removeEventListener("pointermove", move);
+      edge.removeEventListener("pointerup", up);
+    };
+    edge.addEventListener("pointermove", move);
+    edge.addEventListener("pointerup", up);
+  };
+  const onStage = start?.frames.find((f) => f.label === page) ?? start?.frames[0];
+  const frame = (phone: boolean) =>
+    start &&
+    onStage && (
+      <div
+        className="frame"
+        style={{ width: (phone ? PHONE : width) * scale, height: room.height }}
+      >
+        <iframe
+          key={`${onStage.path}-${onStage.label === "Landing" ? replay : 0}`}
+          title={`${onStage.label}, ${mode}${phone ? ", phone" : ""}`}
+          src={`${start.preview}${onStage.path}`}
+          data-frame={`${onStage.label}-${mode}${phone ? "-phone" : ""}`}
+          data-mode={mode}
+          style={{
+            width: phone ? PHONE : width,
+            height,
+            transform: `scale(${scale})`,
+            transformOrigin: "0 0",
+          }}
+          ref={(f) => {
+            if (!f) return;
+            frames.current.add(f);
+            return () => void frames.current.delete(f);
+          }}
+        />
+      </div>
+    );
   return (
     <div className="lab">
       <header>
@@ -199,22 +260,11 @@ export function App() {
           Name{" "}
           <input aria-label="Name" value={name} onChange={(e) => set(["name"], e.target.value)} />
         </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={size === "phone"}
-            onChange={(e) => setSize(e.target.checked ? "phone" : "desktop")}
-          />{" "}
-          Phone
-        </label>
-        <label>
-          <input type="checkbox" checked={grey} onChange={(e) => setGrey(e.target.checked)} />{" "}
-          Greyscale
-        </label>
         <button
           type="button"
           disabled={!signedIn}
           onClick={() => {
+            setPage("Landing");
             touring.current = true;
             toured.current.clear();
             setReplay((n) => n + 1);
@@ -244,40 +294,57 @@ export function App() {
             }}
           />
         )}
-        <div className={grey ? "frames grey" : "frames"}>
-          {start &&
-            signedIn &&
-            start.frames.flatMap((f) =>
-              (["light", "dark"] as const).map((mode) => (
-                <figure
-                  key={`${f.path}-${mode}-${f.label === "Landing" ? replay : 0}`}
-                  style={{ width: width * scale }}
-                >
-                  <figcaption>
-                    {f.label}, {mode}
-                  </figcaption>
-                  <div style={{ height: height * scale, overflow: "hidden" }}>
-                    <iframe
-                      title={`${f.label}, ${mode}`}
-                      src={`${start.preview}${f.path}`}
-                      data-frame={`${f.label}-${mode}`}
-                      data-mode={mode}
-                      style={{
-                        width,
-                        height,
-                        transform: `scale(${scale})`,
-                        transformOrigin: "0 0",
-                      }}
-                      ref={(frame) => {
-                        if (!frame) return;
-                        frames.current.add(frame);
-                        return () => void frames.current.delete(frame);
-                      }}
-                    />
-                  </div>
-                </figure>
-              )),
-            )}
+        <div className="bar">
+          <fieldset aria-label="Page">
+            {start?.frames.map((f) => (
+              <button
+                type="button"
+                key={f.label}
+                aria-pressed={f === onStage}
+                onClick={() => setPage(f.label)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </fieldset>
+          <fieldset aria-label="Mode">
+            {(["light", "dark"] as const).map((m) => (
+              <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>
+                {m === "light" ? "Light" : "Dark"}
+              </button>
+            ))}
+          </fieldset>
+          <fieldset aria-label="Width">
+            {SIZES.map(([label, w]) => (
+              <button
+                type="button"
+                key={label}
+                aria-pressed={width === w}
+                onClick={() => setWidth(w)}
+              >
+                {label} {w}
+              </button>
+            ))}
+          </fieldset>
+          <span data-width>
+            {width} px{scale < 1 && `, shown at ${Math.round(scale * 100)} %`}
+          </span>
+          <label>
+            <input type="checkbox" checked={beside} onChange={(e) => setBeside(e.target.checked)} />{" "}
+            Phone beside
+          </label>
+          <label>
+            <input type="checkbox" checked={grey} onChange={(e) => setGrey(e.target.checked)} />{" "}
+            Greyscale
+          </label>
+        </div>
+        <div ref={stage} className={grey ? "stage grey" : "stage"}>
+          {signedIn && frame(false)}
+          {signedIn && onStage && (
+            // A pointer's drag; the width buttons are the keyboard's way.
+            <div className="edge" title="Drag to change the width" onPointerDown={drag} />
+          )}
+          {signedIn && beside && frame(true)}
         </div>
         <section className="notes">
           {errors.map((d) => (

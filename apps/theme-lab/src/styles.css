@@ -56,25 +56,58 @@ main {
   overflow: auto;
   padding: 16px;
 }
-.frames {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.frames.grey iframe {
-  filter: grayscale(1);
-}
-figure {
-  margin: 0;
-}
-figcaption {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
 iframe {
   border: 0;
   background: #fff;
   box-shadow: 0 1px 4px #0003;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.bar fieldset {
+  display: flex;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.bar button {
+  border: 1px solid #bbb;
+  background: #fff;
+  padding: 3px 8px;
+  font: inherit;
+}
+.bar button + button {
+  border-left: 0;
+}
+.bar button[aria-pressed="true"] {
+  background: #1d1d1f;
+  color: #fff;
+}
+/* The frame's stage: most of the window's height, so a page is seen as a visitor sees it. */
+.stage {
+  display: flex;
+  gap: 0 16px;
+  height: max(420px, calc(100vh - 150px));
+  overflow: hidden;
+}
+.stage.grey iframe {
+  filter: grayscale(1);
+}
+.frame {
+  flex: none;
+  overflow: hidden;
+}
+.edge {
+  flex: none;
+  width: 8px;
+  margin-left: -16px;
+  cursor: ew-resize;
+  background: linear-gradient(90deg, transparent 3px, #999 3px, #999 5px, transparent 5px);
+  touch-action: none;
 }
 .notes p {
   margin: 4px 0;
