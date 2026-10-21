@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Union Jobs
-  description: Job posts from our local union, where members find work and apply.
+  name: Union Job Board
+  description: Job openings shared by the local union, where members find work and apply.
   currency: USD
+  timezone: America/New_York
 models:
   Job:
     fields:
@@ -10,38 +11,36 @@ models:
       employer: string!
       description: text!
       location: string
-      trade: string
-      jobType: fullTime | partTime | temporary | apprenticeship
+      trade: construction | electrical | plumbing | manufacturing | transport | healthcare | office | other
+      type: fullTime | partTime | temporary | apprenticeship
       pay: string
-      startDate: date
-      deadline: date
-      status: open | filled | closed
+      closesOn: date
+      open: bool = true
       applications: Application[]
   Application:
     fields:
-      job: Job!
-      fullName: string!
+      job: Job! unique
+      name: string!
       phone: phone
       memberNumber: string
       coverLetter: text
-      resume: file
-      status:
-        type: submitted | reviewing | accepted | rejected
-        by: app
-      staffNotes: text
+      cv: file
+      status: submitted | shortlisted | rejected | hired
 pages:
   jobs:
     route: /
     crud: Job
-    search: [title, employer, description, location, trade]
-    filters: [jobType, status, deadline]
-    sortable: [deadline, startDate, createdAt]
-    actions: [markFilled, closeJob]
+    search: [title, employer, description, location]
+    filters: [trade, type, open, closesOn]
+    sortable: [closesOn, createdAt]
+    favorites: true
+    actions: [closeJob]
   applications:
     crud: Application
     filters: [job, status]
-    search: [fullName, memberNumber]
-    actions: [startReview, accept, reject]
+  myApplications:
+    crud: Application
+    mine: true
   home:
     route: /welcome
     landing:
@@ -50,44 +49,36 @@ pages:
       latestJobs:
         records: Job
         where:
-          status: open
-      faq:
+          open: true
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
-  markFilled:
-    on: Job
-    when:
-      status: open
-    set:
-      status: filled
-    intent: Mark a job as filled once someone has been hired.
   closeJob:
     on: Job
     when:
-      status: open
+      open: true
     set:
-      status: closed
-    intent: Close a job post without filling it.
-  startReview:
+      open: false
+    intent: Stop taking applications for a job.
+  shortlist:
     on: Application
     when:
       status: submitted
     set:
-      status: reviewing
-    intent: Start reviewing an application.
-  accept:
+      status: shortlisted
+  hire:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
-      status: accepted
-    intent: Accept an application.
+      status: hired
   reject:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: rejected
-    intent: Reject an application.
+navigation: [jobs, myApplications, applications, team]

@@ -5,12 +5,12 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Follows the club; only administrators add teams, players and matches.
-    pages: [home, teams, players, matches, privacy]
+    description: Follows the club; only administrators add and change teams, players and matches.
+    pages: all
 assistant:
   for: signed-in
 public:
-  pages: [home, teams, players, matches, privacy]
+  pages: [home, matches, teams, players, privacy]
   read: [Team, Player, Match]
 defaultRole: member
 admins: [johan@smithable.ai]

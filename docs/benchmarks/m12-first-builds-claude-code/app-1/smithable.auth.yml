@@ -11,7 +11,8 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, privacy]
+  pages: [home, schedule, instructors, class-types, privacy]
   read: [ClassType, Instructor, Session]
+  create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Toolshare
-  description: Neighbors lend each other tools instead of buying their own.
+  name: Neighbor Tools
+  description: A tool library where neighbors lend each other tools.
   currency: EUR
 models:
   Tool:
@@ -9,7 +9,7 @@ models:
       title: string!
       photos: pictures!
       description: text!
-      category: garden | power | hand | ladders | cleaning | other
+      category: powerTools | handTools | garden | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -48,11 +48,10 @@ pages:
     route: /welcome
     landing:
       hero:
+      footer:
+      features:
       latest:
         records: Tool
-        where:
-          available: true
-      footer:
   privacy:
     route: /privacy
     legal: privacy
@@ -64,4 +63,5 @@ actions:
     set:
       status: returned
       returnedOn: TODAY()
+    intent: Record that the borrowed tool has come back.
 navigation: [catalog, myTools, loans, saved, review]

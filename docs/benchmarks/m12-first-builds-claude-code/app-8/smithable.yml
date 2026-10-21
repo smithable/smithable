@@ -1,12 +1,13 @@
 smithable: 0.1
 app:
   name: Conference Hub
-  description: "Registration for a conference: browse the talks and speakers, and sign up for the talks you want to attend."
+  description: Schedule, speakers and talk registration for a conference.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
-      title: string
       company: string
       bio: markdown
       portrait: picture
@@ -14,12 +15,12 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: markdown
+      abstract: text
       speaker: Speaker!
+      track: keynote | talk | workshop
+      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
-      room: string
-      track: general | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -31,31 +32,21 @@ models:
     capacity:
       per: talk
       max: talk.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
 pages:
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, speakers]
       footer:
-      programme:
+      program:
         records: Talk
       lineup:
         records: Speaker
       faq:
       callToAction:
         button: schedule
-      contact:
-        form: Message
   schedule:
-    calendar:
-      model: Talk
-      starts: startsAt
+    calendar: Talk
   talks:
     crud: Talk
     filters: [track, speaker]
@@ -63,8 +54,6 @@ pages:
     crud: Speaker
   my-registrations:
     crud: Registration
-  messages:
-    crud: Message
   privacy:
     route: /privacy
     legal: privacy
@@ -73,9 +62,5 @@ pages:
 outgoing:
   registrationMade:
     when: Registration created
-    to: mail
-    recipient: owner
-  registrationCancelled:
-    when: Registration deleted
     to: mail
     recipient: owner

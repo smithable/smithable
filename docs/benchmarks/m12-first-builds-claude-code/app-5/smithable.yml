@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Bakery Stock
-  description: Keeps track of the bakery's ingredients, their suppliers and how much is in stock.
+  description: Keep track of the bakery's ingredients, their suppliers and how much is in stock.
 models:
   Supplier:
     fields:
@@ -14,21 +14,49 @@ models:
       ingredients: Ingredient[]
   Ingredient:
     fields:
-      name: string! unique
-      category: flour | sugar | dairy | eggs | fats | yeast | fruit | nuts | chocolate | spices | packaging | other
-      unit: kg | g | l | ml | pieces
-      inStock: decimal! = 0
-      reorderLevel: decimal = 0
+      name: string!
+      category: dry | dairy | eggs | fats | sweeteners | fruit | other
       supplier: Supplier
+      unit: kg | g | l | ml | pieces | packs
+      inStock: decimal! = 0
+      reorderAt: decimal
+      status: inStock | low | out
       lastCountedOn: date = TODAY()
       notes: text
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [category, supplier]
+    filters: [category, status, supplier]
+    actions: [markLow, markOut, restock]
   suppliers:
     crud: Supplier
     search: [name, contactName, email]
   team:
     users: manage
+actions:
+  markLow:
+    on: Ingredient
+    when:
+      status: inStock
+    set:
+      status: low
+    intent: Flag an ingredient as running low so it gets reordered.
+  markOut:
+    on: Ingredient
+    when:
+      status: [inStock, low]
+    set:
+      status: out
+      inStock: 0
+      lastCountedOn: TODAY()
+    intent: Mark an ingredient as used up.
+  restock:
+    on: Ingredient
+    when:
+      status: [low, out]
+    set:
+      status: inStock
+      inStock:
+      lastCountedOn: TODAY()
+    intent: "Record a delivery: enter the new amount in stock."

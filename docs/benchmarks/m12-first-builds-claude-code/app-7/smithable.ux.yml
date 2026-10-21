@@ -1,25 +1,22 @@
 smithableUx: 0.1
 pages:
+  matches:
+    table:
+      sort: -kickoff
+      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
   players:
     table:
       view: cards
-      sort: number
-  matches:
+  teams:
     table:
-      columns: [kickoff, team, opponent, venue, competition, status, goalsFor, goalsAgainst]
-      sort: -kickoff
-  home:
-    sections:
-      hero:
-        layout: centered
+      view: cards
 tones:
   Match.status:
     played: success
     postponed: warning
-    cancelled: danger
+    canceled: danger
 theme:
   preset: modern
-  motion: subtle
   brand:
     primary: "#15803d"
     font: Archivo Narrow

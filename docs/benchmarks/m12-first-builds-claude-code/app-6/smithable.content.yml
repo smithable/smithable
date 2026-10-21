@@ -2,21 +2,17 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Union jobs, posted for our members
-      subtitle: Browse open positions from employers who work with our local, and apply in a few minutes.
+      title: Work for union members, posted by your local
+      subtitle: Browse open jobs from employers we work with, and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
     latestJobs:
-      title: Open jobs
-    faq:
-      title: Questions
-  jobs:
-    title: Jobs
-  applications:
-    title: Applications
+      title: Latest openings
+  myApplications:
+    title: My applications
 logo:
   src: images/logo.webp
   alt: A map pin

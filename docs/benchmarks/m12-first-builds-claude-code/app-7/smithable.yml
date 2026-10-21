@@ -1,16 +1,16 @@
 smithable: 0.1
 app:
-  name: Club Football
-  description: The football club's site, with its teams, players, fixtures and results.
+  name: Football Club
+  description: The club's site with its teams, players, fixtures and results.
+  timezone: Europe/Mariehamn
 models:
   Team:
     fields:
-      name: string!
-      ageGroup: senior | youth | junior | veterans
-      league: string
+      name: string! unique
+      category: string
       coach: string
       photo: picture
-      about: text
+      description: text
       players: Player[]
       matches: Match[]
   Player:
@@ -30,9 +30,9 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      location: string
-      competition: league | cup | friendly
-      status: scheduled | played | postponed | cancelled
+      ground: string
+      competition: string
+      status: scheduled | played | postponed | canceled
       goalsFor:
         type: int
         min: 0
@@ -41,26 +41,23 @@ models:
         min: 0
       report: text
 pages:
+  matches:
+    crud: Match
+    search: [opponent, competition]
+    filters: [team, status, venue]
+    actions: [recordResult, postpone]
   teams:
     crud: Team
-    search: [name, league]
-    filters: [ageGroup]
   players:
     crud: Player
     search: [name]
     filters: [team, position]
-  matches:
-    crud: Match
-    search: [opponent, location]
-    filters: [team, status, competition, venue, kickoff]
-    actions: [recordResult, postpone]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [teams, players, matches]
       footer:
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
@@ -68,7 +65,7 @@ pages:
         records: Match
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
   privacy:
     route: /privacy
@@ -82,7 +79,7 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match that has been played.
+    intent: Enter the final score of a match once it has been played.
   postpone:
     on: Match
     when:
@@ -90,3 +87,4 @@ actions:
     set:
       status: postponed
     intent: Mark a scheduled match as postponed.
+navigation: [matches, teams, players]
