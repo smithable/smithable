@@ -6,8 +6,17 @@ import { w } from "./words";
 
 export function AppearancePicker({ className }: { className?: string }) {
   const [choice, setChoice] = useState<Appearance>("system");
-  // Read once in the browser: the server cannot know it.
-  useEffect(() => setChoice(storedAppearance()), []);
+  // Read in the browser (the server cannot know it), and again when another picker or tab changes it.
+  useEffect(() => {
+    const read = () => setChoice(storedAppearance());
+    read();
+    window.addEventListener("sm-appearance", read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener("sm-appearance", read);
+      window.removeEventListener("storage", read);
+    };
+  }, []);
   return (
     <label data-part="appearance" className={className}>
       <span>{w.appearance}</span>
