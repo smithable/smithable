@@ -370,7 +370,7 @@ export function ModelTable<R extends Row>({
             >
               {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
               {selection && view === "cards" && pictureField && (
-                <span className="absolute top-3 left-3 z-10 rounded bg-card/90 p-1">
+                <span className="absolute top-3 left-3 z-10 rounded-sm bg-card/90 p-1">
                   {check(row, index, "size-6")}
                 </span>
               )}

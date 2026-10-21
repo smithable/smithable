@@ -150,7 +150,7 @@ export function SelectionBar({
         aria-label={trash ? w.moveToTrash : w.delete}
         className="m-auto w-full max-w-md bg-transparent p-0 backdrop:bg-black/50"
       >
-        <Card className="space-y-4 p-card">
+        <Card className="space-y-4 rounded-xl p-card">
           <p className="font-medium">
             {(trash ? w.trashHowMany : w.deleteHowMany)(
               deletable,

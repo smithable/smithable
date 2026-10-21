@@ -89,7 +89,7 @@ export function ActionButton({
           aria-label={label}
           className="m-auto w-full max-w-lg bg-transparent p-0 backdrop:bg-black/50"
         >
-          <Card className="space-y-4 p-card text-left">
+          <Card className="space-y-4 rounded-xl p-card text-left">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold">{label}</h2>
               {help && <p className="text-sm text-muted-foreground">{help}</p>}

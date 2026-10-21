@@ -454,7 +454,7 @@ export function Calendar({
         ref={panel}
         onClose={closed}
         aria-labelledby="calendar-record"
-        className="m-auto w-[calc(100%-2.5rem)] max-w-sm rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+        className="m-auto w-[calc(100%-2.5rem)] max-w-sm rounded-xl border bg-card p-card text-card-foreground backdrop:bg-black/50"
       >
         {shown ? (
           <>

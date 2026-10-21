@@ -77,7 +77,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         ref={drawer}
         aria-label={w.menu}
         data-kit="drawer"
-        className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
+        className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col rounded-r-xl bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
         <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
           <p className="min-w-0 truncate text-lg font-bold">
@@ -277,7 +277,7 @@ function YourName({
         aria-label={w.yourName}
         className="m-auto w-[calc(100%-2.5rem)] max-w-md bg-transparent p-0 text-foreground backdrop:bg-black/50"
       >
-        <Card className="p-card">
+        <Card className="rounded-xl p-card">
           <form onSubmit={save} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="your-name">{w.yourName}</Label>
