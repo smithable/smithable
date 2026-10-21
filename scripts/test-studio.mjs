@@ -580,6 +580,24 @@ try {
       await sub("Behavior");
     },
   );
+  await step(
+    "the Data map: a box per kind of record, arrows between them, a name opens Behavior",
+    async () => {
+      await sub("Data map");
+      const map = page.getByRole("region", { name: "Data map" });
+      for (const box of ["Customer", "Order", "User"])
+        await map.locator(`[data-map-box="${box}"]`).waitFor({ timeout: 30000 * P });
+      if ((await map.locator(".react-flow__edge").count()) < 3)
+        throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
+      await map
+        .locator('[data-map-box="Customer"]')
+        .getByRole("button", { name: "Customer" })
+        .click();
+      await page
+        .getByRole("tab", { name: "Behavior", selected: true })
+        .waitFor({ timeout: 10000 * P });
+    },
+  );
 
   await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",

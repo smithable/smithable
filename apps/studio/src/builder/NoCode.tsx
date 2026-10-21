@@ -10,6 +10,7 @@ import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
 import { swipe } from "../windows";
 import type { Run } from "./ChangeForms";
+import { DataMap } from "./DataMap";
 import { ImportRecords, OwnCode } from "./EntryTools";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
@@ -17,8 +18,8 @@ import { SpecForm } from "./SpecForm";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
 
-export type SubView = "behavior" | "look" | "who" | "content";
-const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content"];
+export type SubView = "behavior" | "look" | "who" | "content" | "map";
+const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content", "map"];
 
 /** A part picked in the preview, as the sub view and the place in its file it opens at. */
 function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | undefined {
@@ -229,6 +230,7 @@ export function NoCode({
               ["look", "Look", "look"],
               ["who", "Who can"],
               ["content", "Content"],
+              ["map", "Data map"],
             ]}
             value={sub}
             onChange={setSub}
@@ -277,6 +279,12 @@ export function NoCode({
         <Look spec={spec} run={run} themes={project.themes} />
       ) : sub === "who" ? (
         <WhoCan spec={spec} run={run} authText={project.files.auth} />
+      ) : sub === "map" ? (
+        spec.ir ? (
+          <DataMap ir={spec.ir} auth={spec.auth} />
+        ) : (
+          <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>
+        )
       ) : (
         <div className="divide-y divide-line">
           <SpecForm
