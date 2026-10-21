@@ -248,10 +248,10 @@ export async function themeLab(
       // Only the lab's own page saves (the request's origin is the lab).
       if (req.headers.origin !== `http://${req.headers.host}`)
         return json(403, { error: "Not from the lab." });
-      const { name, text } = (await bodyJson(req)) as { name?: string; text?: string };
+      const { name, text = "" } = (await bodyJson(req)) as { name?: string; text?: string };
       if (!/^[a-z][a-z0-9-]*$/.test(name ?? ""))
         return json(400, { error: "A theme's name is kebab-case." });
-      const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text: text ?? "" });
+      const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
       if (!theme) return json(400, { error: diagnostics.map(formatDiagnostic).join("\n") });
       if (project) {
         const said: string[] = [];
