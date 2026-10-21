@@ -218,6 +218,7 @@ export {
   STYLE_VALUES,
   type ThemeStyle,
 } from "./theme-style.js";
+export { type ThreadBindings, threadBindings } from "./thread.js";
 export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
 export { writeUniqueScopes } from "./unique-scopes.js";
 export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";

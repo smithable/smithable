@@ -68,7 +68,7 @@ pages:
   page's model: the record page shows that list as the conversation of §1 instead of a table.
   `table` is the default and the other value. Why the ux file: how related records are shown
   is presentation (rule 1); what a message is stays in `smithable.yml`.
-- **What the thread reads from the message model**, by rule, no keys: the **text** is the
+- **What the thread reads from the message model** (since 2026-10-21 the model may say it: `thread: { body, author, side: { field, ours } }` in `smithable.yml`, each part optional, set by `setThread`; the rule below fills what is left out, and `validate` warns, `thread-ambiguous`, where it had to pick one of several: Johan's rule that a default may be inferred from the spec's shape but everything is explicitly sayable). By rule: the **text** is the
   model's first long text field (`text` or `markdown`; a `string` when it has none); the
   **writer** is the model's first field that refers to `User` when it has a value, else its
   first `email` field, else nobody named; the **time** is `createdAt`; **attachments** are its

@@ -496,6 +496,40 @@
             "type": "boolean",
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
           },
+          "thread": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The records as messages of a conversation (a page shows a list of them as a thread): which field is the body, who wrote it, which side is ours; what is left out is read from the fields.",
+            "properties": {
+              "body": {
+                "type": "string",
+                "description": "The message's text: a text or markdown field (or a string)."
+              },
+              "author": {
+                "type": "string",
+                "description": "Who wrote it: a field that refers to User, or an email field."
+              },
+              "side": {
+                "type": "object",
+                "required": [
+                  "field",
+                  "ours"
+                ],
+                "additionalProperties": false,
+                "description": "Which side a message is on: a two-valued choice field, and the value that is our side.",
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "description": "A choice field with two values."
+                  },
+                  "ours": {
+                    "type": "string",
+                    "description": "The value that means our side (shown on the right)."
+                  }
+                }
+              }
+            }
+          },
           "unique": {
             "type": "array",
             "minItems": 1,

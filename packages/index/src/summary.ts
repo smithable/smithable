@@ -226,6 +226,20 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
+    if (model.thread) {
+      const t = model.thread;
+      const label = (name?: string) => {
+        const f = name ? model.fields.find((x) => x.name === name) : undefined;
+        return f ? fieldLabel(model, f) : undefined;
+      };
+      const parts = [
+        label(t.body) && `the ${label(t.body)} is the message`,
+        label(t.author) && `the ${label(t.author)} wrote it`,
+        t.side &&
+          `the ${label(t.side.field) ?? t.side.field} says the side (${humanize(t.side.ours).toLowerCase()} is ours)`,
+      ].filter(Boolean);
+      if (parts.length) sentences.push(`Shown as a conversation, ${parts.join(", ")}.`);
+    }
     for (const u of model.unique ?? []) {
       const named = u.fields.map((n) => {
         const f = model.fields.find((x) => x.name === n);

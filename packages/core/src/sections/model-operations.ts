@@ -10,6 +10,7 @@ import {
   type SpecIR,
   storageOf,
   typeKey,
+  USER_MODEL,
 } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import {
@@ -889,7 +890,117 @@ const setUnique: Operation<{
   },
 };
 
+/**
+ * What a model's records are when a page shows them as a conversation (docs/design/conversation.md
+ * §2): which field is the body, who wrote it, which side is ours. Each part given replaces what was
+ * there; "none" takes the whole setting away, and the rule reads the fields again.
+ */
+const setThread: Operation<{
+  model: string;
+  body?: string;
+  author?: string;
+  side?: string;
+  ours?: string;
+  none?: boolean;
+}> = {
+  name: "setThread",
+  summary:
+    "Say which fields a conversation reads from a model's records: the message's body (a text field), its author (a person or email field) and the side that is ours (a two-valued choice and its value); --none leaves it to the rule again.",
+  schema: {
+    type: "object",
+    required: ["model"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      body: {
+        type: "string",
+        description: "The text, markdown or string field shown as the message.",
+      },
+      author: {
+        type: "string",
+        description: "The field that says who wrote it: a person, or an email.",
+      },
+      side: {
+        type: "string",
+        description: "The two-valued choice field that says which side a message is on.",
+      },
+      ours: {
+        type: "string",
+        description: "The side field's value that is our side; needed with --side.",
+      },
+      none: {
+        type: "boolean",
+        description: "true removes the setting: the rule reads the fields again.",
+      },
+    },
+  },
+  positional: ["model"],
+  describe: ({ model, body, author, side, ours, none }) =>
+    none
+      ? `Let the rule say what a ${model} shows as a message`
+      : `A ${model} as a message: ${[
+          body && `its text is ${body}`,
+          author && `written by ${author}`,
+          side && `${side} says the side (${ours} is ours)`,
+        ]
+          .filter(Boolean)
+          .join(", ")}`,
+  destructive: () => false,
+  apply({ spec }, { model, body, author, side, ours, none }, ir) {
+    const found = ir.models.find((m) => m.name === model);
+    if (!found) throw new OperationError(`There is no model named "${model}".`);
+    const path = ["models", model, "thread"];
+    if (none) {
+      if (!spec.has(path)) throw new OperationError(`${model} has no thread setting.`);
+      spec.remove(path);
+      return [];
+    }
+    if (body === undefined && author === undefined && side === undefined)
+      throw new OperationError(
+        "Say what to set: --body, --author or --side with --ours (or --none).",
+      );
+    if ((side === undefined) !== (ours === undefined))
+      throw new OperationError(
+        "--side and --ours go together: the field, and the value that is our side.",
+      );
+    const field = (name: string) => {
+      const f = found.fields.find((x) => x.name === name);
+      if (!f) throw new OperationError(`${model} has no field "${name}".`);
+      return f;
+    };
+    const current = (spec.has(path) ? spec.get(path) : {}) as Record<string, YamlValue>;
+    const next: Record<string, YamlValue> = { ...current };
+    if (body !== undefined) {
+      const f = field(body);
+      if (!(f.type.kind === "scalar" && ["text", "markdown", "string"].includes(f.type.name)))
+        throw new OperationError(`${model}.${body} is not a text, markdown or string field.`);
+      next.body = body;
+    }
+    if (author !== undefined) {
+      const f = field(author);
+      const person = f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many;
+      if (!person && !(f.type.kind === "scalar" && f.type.name === "email"))
+        throw new OperationError(`${model}.${author} refers to no person and is no email field.`);
+      next.author = author;
+    }
+    if (side !== undefined && ours !== undefined) {
+      const f = field(side);
+      if (!(f.type.kind === "choice" && f.type.values.length === 2))
+        throw new OperationError(`${model}.${side} is not a choice with two values.`);
+      if (!f.type.values.includes(ours))
+        throw new OperationError(
+          `"${ours}" is not one of ${model}.${side}'s values (${f.type.values.join(", ")}).`,
+        );
+      next.side = { field: side, ours };
+    }
+    if (spec.has(path)) spec.set(path, next);
+    else spec.add(["models", model], "thread", next);
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
+  setThread,
   setUnique,
   addModel,
   addField,

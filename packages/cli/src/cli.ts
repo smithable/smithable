@@ -154,7 +154,13 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   const dir = args[0] ?? ".";
   switch (command) {
     case "validate":
-      return validate(dir, io, values.plugin ? [values.plugin] : [], values.json === true);
+      return validate(
+        dir,
+        io,
+        values.plugin ? [values.plugin] : [],
+        values.json === true,
+        values.explain === true,
+      );
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
     case "read-page":
@@ -321,6 +327,7 @@ const CONFIG = {
     check: { type: "boolean" },
     dir: { type: "string" },
     json: { type: "boolean" },
+    explain: { type: "boolean" },
     implementation: { type: "boolean" },
     port: { type: "string" },
     project: { type: "string" },
