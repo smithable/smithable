@@ -249,6 +249,10 @@ test("on a host the preview takes Studio's token on every request, requests and 
       string | string[] | undefined
     >,
     rawHeaders: ["Host", "p.example", "X-Smithable-Studio-Token", "secret-token", "Accept", "*/*"],
+    headersDistinct: {
+      host: ["p.example"],
+      "x-smithable-studio-token": ["secret-token"],
+    } as Record<string, string[] | undefined>,
   };
   let passedOn = false;
   guard(passing, { statusCode: 200, setHeader: () => undefined, end: () => undefined }, () => {
@@ -257,6 +261,7 @@ test("on a host the preview takes Studio's token on every request, requests and 
   expect(passedOn).toBe(true);
   expect(passing.headers).toEqual({ host: "p.example" });
   expect(passing.rawHeaders).toEqual(["Host", "p.example", "Accept", "*/*"]);
+  expect(passing.headersDistinct).toEqual({ host: ["p.example"] });
   // Upgrades: the server's own listeners run only for an upgrade with the token.
   const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
   const server: UpgradeServer = {

@@ -375,6 +375,8 @@ interface DevServer {
 export interface GuardedRequest {
   headers: Record<string, string | string[] | undefined>;
   rawHeaders?: string[];
+  /** Node's per-name lists of the same headers (headersDistinct), kept apart from `headers`. */
+  headersDistinct?: Record<string, string[] | undefined>;
 }
 
 export type Middleware = (
@@ -425,6 +427,8 @@ const TOKEN_HEADER = "x-smithable-studio-token";
  */
 export function stripToken(req: GuardedRequest): void {
   delete req.headers[TOKEN_HEADER];
+  // Node keeps a second, per-name view of the headers; it is read lazily and then kept.
+  if (req.headersDistinct) delete req.headersDistinct[TOKEN_HEADER];
   if (!req.rawHeaders) return;
   for (let i = req.rawHeaders.length - 2; i >= 0; i -= 2)
     if (req.rawHeaders[i]?.toLowerCase() === TOKEN_HEADER) req.rawHeaders.splice(i, 2);
@@ -454,7 +458,10 @@ export interface UpgradeServer {
  * WebSocket upgrades (hot reload, and what a client may ask the dev server over it) do not pass
  * the middlewares: once the server listens, its upgrade listeners are wrapped so an upgrade
  * without the token is refused before any of them sees it. The proxy sends the token on
- * upgrades as on requests.
+ * upgrades as on requests. What this cannot cover: a listener a plugin adds to the HTTP server
+ * itself after it listens, or on its request event ahead of the middlewares, sees the request
+ * first; the generated apps and Vite add none, and the preview's process never holds the token
+ * itself, only its digest.
  */
 export function guardUpgrades(server: UpgradeServer, digestHex: string | undefined): void {
   server.once("listening", () => {
