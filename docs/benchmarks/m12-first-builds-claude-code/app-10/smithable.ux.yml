@@ -6,8 +6,8 @@ pages:
     icon: book
   shoppingLists:
     table:
-      columns: [name, forDate, status]
-      sort: -forDate
+      columns: [name, shopOn, status]
+      sort: -shopOn
     icon: cart
 tones:
   ShoppingList.status:

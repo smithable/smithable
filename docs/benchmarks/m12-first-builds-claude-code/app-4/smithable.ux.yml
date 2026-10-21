@@ -3,7 +3,7 @@ pages:
   loans:
     table:
       columns: [tool, borrower, from, due, status]
-      sort: -from
+      sort: due
 tones:
   Loan.status:
     out: warning

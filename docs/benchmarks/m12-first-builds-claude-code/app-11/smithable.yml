@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: "The live state of our API: incidents as they happen and maintenance we have planned."
+  description: Is our API working? Live status, incidents and planned maintenance.
 models:
   Component:
     fields:
@@ -35,7 +35,7 @@ models:
 pages:
   incidents:
     crud: Incident
-    filters: [status]
+    filters: [status, component]
     actions: [identified, monitoring, resolve]
   updates:
     crud: IncidentUpdate
@@ -77,6 +77,7 @@ pages:
         limit: 5
   team:
     users: manage
+navigation: [overview, incidents, updates, maintenance, components, team]
 actions:
   identified:
     on: Incident
@@ -115,4 +116,3 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The incident is over, with an update saying so.
-navigation: [overview, incidents, updates, maintenance, components, team]

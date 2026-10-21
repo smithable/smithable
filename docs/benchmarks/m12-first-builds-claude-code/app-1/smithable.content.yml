@@ -1,28 +1,15 @@
 smithableContent: 0.1
-models:
-  Instructor:
-    label: Teacher
-    pluralLabel: Teachers
-  Session:
-    fields:
-      instructor:
-        label: Teacher
 pages:
-  instructors:
-    title: Teachers
   home:
     hero:
-      title: Find your flow
-      subtitle: Yoga classes for every level, led by experienced teachers. See the week's schedule and book your place online.
+      title: Find your balance at Juniper Yoga
+      subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
         generated: true
-    callToAction:
-      title: Ready to roll out your mat?
-      button: Book a class
 logo:
   src: images/logo.webp
-  alt: A lotus over a ripple
+  alt: A calendar page
   generated: true

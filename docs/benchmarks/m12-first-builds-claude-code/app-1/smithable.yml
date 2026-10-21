@@ -1,9 +1,8 @@
 smithable: 0.1
 app:
-  name: Lotus Flow Yoga
+  name: Juniper Yoga Studio
   description: Class schedule, teachers and online booking for a yoga studio.
   currency: EUR
-  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -34,21 +33,12 @@ models:
     capacity:
       per: session
       max: session.capacity
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      classes:
-        records: ClassType
-      teachers:
-        records: Instructor
-      faq:
-      callToAction:
-        button: schedule
-      footer:
-  schedule:
-    calendar: Session
   sessions:
     crud: Session
   class-types:
@@ -58,18 +48,33 @@ pages:
     crud: Instructor
   my-bookings:
     crud: Booking
+  messages:
+    crud: Message
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  home:
+    route: /
+    landing:
+      hero:
+        shortcuts: [schedule, instructors]
+      footer:
+      classes:
+        records: ClassType
+      teachers:
+        records: Instructor
+      faq:
+      callToAction:
+        button: schedule
+      contact:
+        form: Message
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
 outgoing:
   bookingMade:
     when: Booking created
-    to: mail
-    recipient: owner
-  bookingChanged:
-    when: Booking changed
     to: mail
     recipient: owner
   bookingCancelled:

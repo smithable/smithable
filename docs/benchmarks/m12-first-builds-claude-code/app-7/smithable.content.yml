@@ -3,18 +3,27 @@ pages:
   home:
     hero:
       title: Welcome to the club
-      subtitle: Our teams, our players, the next fixtures and the latest results.
-      button: See the fixtures
+      subtitle: Our teams, our players, upcoming fixtures and the latest results, all in one place.
+      button: See fixtures and results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    fixtures:
+    upcoming:
       title: Upcoming matches
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
+    footer:
+      text: Football Club · Come and support us on match day.
+  matches:
+    title: Fixtures & results
+actions:
+  recordResult:
+    label: Record result
+  postpone:
+    label: Postpone
 logo:
   src: images/logo.webp
   alt: A football
