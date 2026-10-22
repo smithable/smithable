@@ -654,8 +654,8 @@ async function outgoingFlow(dir, base) {
     count = mails().length;
     const field = page.getByLabel(/^Session/);
     if ((await field.evaluate((e) => e.tagName)) === "SELECT")
-      await field.selectOption({ label: `#${other}` });
-    else await chooseRecord(page, /^Session/, `#${other}`, true);
+      await field.selectOption({ label: `Session #${other}` });
+    else await chooseRecord(page, /^Session/, `Session #${other}`, true);
     await page.getByRole("button", { name: "Save changes" }).click();
     const changed = await next(count, "the change");
     if (
