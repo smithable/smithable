@@ -331,9 +331,18 @@ export function Loading() {
 
 /** Shown instead of a page that failed, e.g. "You are not allowed to do this." A sentence, so never
  *  in the theme's capitals. */
-export function ErrorNotice({ title, message }: { title: string; message?: string }) {
+export function ErrorNotice({
+  title,
+  message,
+  kind = "error",
+}: {
+  title: string;
+  message?: string;
+  /** What the page is: an error (the preview loads it again while the app updates), or a page not found. */
+  kind?: "error" | "not-found";
+}) {
   return (
-    <div className="max-w-xl">
+    <div data-kit={kind} className="max-w-xl">
       <h1
         data-part="title"
         className="mb-6 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"

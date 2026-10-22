@@ -6920,7 +6920,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -9327,7 +9327,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -9378,7 +9378,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f3199843 generated",
+  "src/routes/__root.tsx": "535f2fee generated",
   "src/routes/admin/activity.tsx": "0f07d2d4 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
@@ -15919,7 +15919,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -20145,7 +20145,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
@@ -20206,7 +20206,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f83f42a6 generated",
+  "src/routes/__root.tsx": "c12e6f6b generated",
   "src/routes/admin/activity.tsx": "62617d51 generated",
   "src/routes/admin/bookings/$id.tsx": "1941ec5d generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
@@ -24248,7 +24248,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -25970,7 +25970,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -26018,7 +26018,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "a64267eb generated",
+  "src/routes/__root.tsx": "1bd22a76 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "2a5fc923 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
@@ -31191,7 +31191,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -33032,7 +33032,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -33089,7 +33089,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "327ec1de generated",
+  "src/routes/__root.tsx": "594091f1 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "c7e4a008 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
@@ -37730,7 +37730,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -39903,7 +39903,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -39954,7 +39954,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "1025d442 generated",
+  "src/routes/__root.tsx": "a4c1585d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/dishes/$id.tsx": "3ae8d79c generated",
   "src/routes/dishes/index.tsx": "a1df2b33 generated",
@@ -42748,7 +42748,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -44275,7 +44275,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -44330,7 +44330,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "8a68b445 generated",
-  "src/routes/__root.tsx": "feefd6d4 generated",
+  "src/routes/__root.tsx": "5be4d731 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -46475,7 +46475,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -47398,7 +47398,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -47445,7 +47445,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "520e9b4b generated",
+  "src/routes/__root.tsx": "fb7ac722 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c2353742 generated",
@@ -55062,7 +55062,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -57975,7 +57975,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -58031,7 +58031,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "27f47867 generated",
+  "src/routes/__root.tsx": "fea40d82 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -62700,7 +62700,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -64275,7 +64275,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "a9f5a3c8 kit",
+  "src/kit/AppShell.tsx": "ae7818fc kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -64329,7 +64329,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "2a291745 generated",
+  "src/routes/__root.tsx": "40119410 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "89c51a5c generated",
   "src/routes/cases/index.tsx": "891a3c3e generated",

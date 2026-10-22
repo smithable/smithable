@@ -12,7 +12,13 @@ import {
 } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
-function page(at = "/", storage: Record<string, string> = {}) {
+function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
+  // The dev server's error overlay, put up by the test; the observers watching for it, and the
+  // timers the runtime sets, run by hand.
+  const overlay = { shown: false };
+  const observers: (() => void)[] = [];
+  const timers = new Map<number, () => void>();
+  let timerId = 0;
   // One rule for the dark color scheme, as the app's styles have; and the development sign-in's buttons.
   const darkRule = { media: { mediaText: "(prefers-color-scheme: dark)" } };
   const clicked: string[] = [];
@@ -28,10 +34,14 @@ function page(at = "/", storage: Record<string, string> = {}) {
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string }[] = [];
-  const parent = { postMessage() {} };
+  const posted: { type: string }[] = [];
+  const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
+  const reloads: number[] = [];
   const window = {
     parent,
+    // The app's server renders the page cleanly; a crashed page asks before loading itself again.
+    fetch: () => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve("<html>") }),
     innerHeight: 800,
     scrollTo: (_x: number, y: number) => scrolled.push(y),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
@@ -49,7 +59,15 @@ function page(at = "/", storage: Record<string, string> = {}) {
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === "[data-dev-role]" ? buttons : selector === "button" ? signInButtons : [],
+      selector === "[data-dev-role]"
+        ? buttons
+        : selector === "button"
+          ? signInButtons
+          : selector === "[data-kit=error]" && crashed
+            ? [{}]
+            : selector === "vite-error-overlay" && overlay.shown
+              ? [{}]
+              : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
@@ -64,6 +82,7 @@ function page(at = "/", storage: Record<string, string> = {}) {
     "setInterval",
     "setTimeout",
     "clearInterval",
+    "clearTimeout",
     "MutationObserver",
     "sessionStorage",
     RUNTIME,
@@ -71,16 +90,23 @@ function page(at = "/", storage: Record<string, string> = {}) {
     window,
     document,
     { pushState() {}, replaceState() {} },
-    { pathname: at, search: "" },
+    { pathname: at, search: "", reload: () => reloads.push(1) },
     (tick: () => void) => ticks.push(tick),
+    (timer: () => void) => timers.set(++timerId, timer) && timerId,
     noop,
-    noop,
+    (id: number) => timers.delete(id),
     class {
+      callback: () => void;
+      constructor(callback: () => void) {
+        this.callback = callback;
+        observers.push(callback);
+      }
       observe() {}
     },
     {
       getItem: (key: string) => storage[key] ?? null,
       setItem: (key: string, value: string) => {
+        if (storage.blocked) throw new Error("blocked");
         storage[key] = value;
       },
     },
@@ -95,8 +121,21 @@ function page(at = "/", storage: Record<string, string> = {}) {
     darkRule,
     clicked,
     scrolled,
+    posted,
+    reloads,
     tick: () => {
       for (const t of [...ticks]) t();
+    },
+    /** The dev server puts up (or takes down) its error overlay. */
+    overlay: (shown: boolean) => {
+      overlay.shown = shown;
+      for (const o of observers) o();
+    },
+    /** The timers set so far run, once each. */
+    later: () => {
+      const due = [...timers.values()];
+      timers.clear();
+      for (const t of due) t();
     },
     /** The owner presses the app's Sign out. */
     signOut: () => {
@@ -105,6 +144,82 @@ function page(at = "/", storage: Record<string, string> = {}) {
     },
   };
 }
+
+test("a page that crashed while the app updated is loaded again, three times, then shown", async () => {
+  const storage: Record<string, string> = {};
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const crashed = page("/customers/new", storage, true);
+    // Not ready: Studio keeps the last good page; loaded again once the server answers.
+    expect(crashed.posted.map((m) => m.type)).toEqual(["errored"]);
+    crashed.tick();
+    await settle();
+    expect(crashed.reloads).toHaveLength(1);
+  }
+  // The fourth time the error is shown as it is, and the address is forgotten: a later crash
+  // there is tried again.
+  const shown = page("/customers/new", storage, true);
+  expect(shown.posted.map((m) => m.type)).toEqual(["errored", "ready"]);
+  shown.tick();
+  await settle();
+  expect(shown.reloads).toHaveLength(0);
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({});
+  // A good load forgets an address's crashes too.
+  page("/customers/new", storage, true);
+  const good = page("/customers/new", storage);
+  expect(good.posted.map((m) => m.type)).toEqual(["ready"]);
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({});
+  // An address named like something every object has is counted like any other.
+  const odd = page("/toString", storage, true);
+  expect(odd.posted.map((m) => m.type)).toEqual(["errored"]);
+  odd.tick();
+  await settle();
+  expect(odd.reloads).toHaveLength(1);
+  expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({ "/toString": 1 });
+});
+
+test("the dev server's overlay that stays has the page loaded again, three times in a row", () => {
+  const storage: Record<string, string> = {};
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const p = page("/orders", storage);
+    expect(p.posted.map((m) => m.type)).toEqual(["ready"]);
+    p.overlay(true);
+    p.later();
+    expect(p.posted.map((m) => m.type)).toEqual(["ready", "errored"]);
+    expect(p.reloads).toHaveLength(1);
+    expect(storage["smithable:overlays"]).toBe(String(attempt));
+  }
+  // The fourth in a row is left as it is, and the row forgotten.
+  const shown = page("/orders", storage);
+  shown.overlay(true);
+  shown.later();
+  expect(shown.posted.map((m) => m.type)).toEqual(["ready", "errored"]);
+  expect(shown.reloads).toHaveLength(0);
+  expect(storage["smithable:overlays"]).toBe("0");
+  // An overlay the server takes down by itself (the file arrived) means no reload.
+  const brief = page("/orders", storage);
+  brief.overlay(true);
+  brief.overlay(false);
+  brief.later();
+  expect(brief.reloads).toHaveLength(0);
+  expect(brief.posted.map((m) => m.type)).toEqual(["ready"]);
+  // Where nothing can be stored, nothing is tried again: the overlay stays, no reload.
+  const blocked = page("/orders", storage);
+  storage.blocked = "1";
+  blocked.overlay(true);
+  blocked.later();
+  expect(blocked.reloads).toHaveLength(0);
+  delete storage.blocked;
+  // Ten quiet seconds end a row: the next overlay is the first of a new one.
+  storage["smithable:overlays"] = "2";
+  const quiet = page("/orders", storage);
+  quiet.later();
+  expect(storage["smithable:overlays"]).toBe("0");
+  quiet.overlay(true);
+  quiet.later();
+  expect(quiet.reloads).toHaveLength(1);
+  expect(storage["smithable:overlays"]).toBe("1");
+});
 
 test("the preview signs in whenever it shows the sign-in page, until the owner signs out", () => {
   const storage: Record<string, string> = {};

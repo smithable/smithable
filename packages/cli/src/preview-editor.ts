@@ -26,11 +26,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-flash]{outline:3px solid #e8590c!important;outline-offset:3px;animation:sm-flash 1.6s ease-out forwards}" +
     "@media (prefers-reduced-motion:reduce){[data-sm-flash]{animation:none}}";
   document.head.append(style);
-  // Studio's origin, learned from its first message; until then only "ready" (which carries
-  // nothing) goes out, to any origin.
+  // Studio's origin, learned from its first message; until then only "ready" and "errored"
+  // (which carry nothing of the app) go out, to any origin.
   let studio = null;
   const post = (message) => {
-    const target = studio ?? (message.type === "ready" ? "*" : null);
+    const target = studio ?? (message.type === "ready" || message.type === "errored" ? "*" : null);
     if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
   };
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
@@ -347,7 +347,100 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   if (document.readyState === "complete") styled();
   else window.addEventListener("load", styled, { once: true });
-  post({ type: "ready" });
+  // A page that crashed while the app was taking in a change (the root's error page: a loader
+  // or a server function met the dev server mid-rebuild) is loaded again once the server
+  // answers, up to three times for an address, and does not say it is ready, so Studio keeps
+  // the last good page on screen meanwhile; the fourth time the error is shown as it is.
+  const CRASHES = "smithable:crashes";
+  const crashes = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem(CRASHES) || "{}");
+    } catch {
+      return {};
+    }
+  };
+  const crashed = document.querySelectorAll("[data-kit=error]").length > 0;
+  const kept = crashes();
+  const counted = Object.hasOwn(kept, location.pathname) && Number.isInteger(kept[location.pathname]) ? kept[location.pathname] : 0;
+  const tries = crashed ? counted + 1 : 0;
+  // A good load, and the fourth crash (shown), forget the address, so a later crash is tried again.
+  // Where nothing can be stored, nothing is tried again either, so no reload goes on forever.
+  const remember = (count) => {
+    try {
+      const rest = Object.fromEntries(Object.entries(kept).filter(([path]) => path !== location.pathname));
+      sessionStorage.setItem(CRASHES, JSON.stringify(count ? { ...rest, [location.pathname]: count } : rest));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (crashed) post({ type: "errored", tries });
+  if (crashed && tries <= 3 && remember(tries)) {
+    // Loaded again once the server renders this page cleanly: its own address, with the
+    // page's cookies, answered without the error page's mark (a not-found page counts as clean).
+    let asking = false;
+    const retry = setInterval(() => {
+      if (asking) return;
+      asking = true;
+      const clean = window.fetch
+        ? window.fetch(location.href, { cache: "no-store" }).then(
+            (r) => (r.status < 500 ? r.text().then((t) => !/data-kit="error"/.test(t)) : false),
+            () => false,
+          )
+        : Promise.resolve(true);
+      clean.then((ok) => {
+        asking = false;
+        if (!ok) return;
+        clearInterval(retry);
+        location.reload();
+      });
+    }, 1500);
+  } else {
+    if (counted) remember(0);
+    post({ type: "ready" });
+    // The dev server's own error overlay (a page updated while the app was still writing a file
+    // it imports) that stays two seconds is treated the same way: the page is loaded again, up
+    // to three times in a row (ten quiet seconds end a row), then it is left as it is.
+    const OVERLAYS = "smithable:overlays";
+    const overlays = () => {
+      try {
+        const n = Number(sessionStorage.getItem(OVERLAYS));
+        return Number.isInteger(n) ? n : 0;
+      } catch {
+        return 0;
+      }
+    };
+    const keep = (n) => {
+      try {
+        sessionStorage.setItem(OVERLAYS, String(n));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const overlaid = () => document.querySelectorAll("vite-error-overlay").length > 0;
+    let waiting = false;
+    let quiet = setTimeout(() => keep(0), 10000);
+    new MutationObserver(() => {
+      if (waiting || !overlaid()) return;
+      waiting = true;
+      clearTimeout(quiet);
+      setTimeout(() => {
+        waiting = false;
+        if (!overlaid()) {
+          quiet = setTimeout(() => keep(0), 10000);
+          return;
+        }
+        const row = overlays() + 1;
+        post({ type: "errored", tries: row });
+        if (row > 3) {
+          keep(0);
+          return;
+        }
+        if (keep(row)) location.reload();
+      }, 2000);
+    }).observe(document.body, { childList: true });
+  }
 }
 `;
 
