@@ -184,6 +184,10 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
   },
 };
 
+/** No detail parts: none given, or the one word "none". */
+const noDetail = (detail?: string[]) =>
+  !detail?.length || (detail.length === 1 && detail[0] === "none");
+
 const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: string[] }> = {
   name: "setRecordLines",
   summary:
@@ -202,15 +206,15 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
         type: "array",
         items: { type: "string" },
         description:
-          "Smaller parts after it, e.g. classType.level capacity; none given removes them.",
+          "Smaller parts after it, e.g. classType.level capacity; none (or no parts) removes them.",
       },
     },
   },
   positional: ["page", "subtitle"],
   describe: ({ page, subtitle, detail }) =>
-    subtitle === "none" && !detail?.length
+    subtitle === "none" && noDetail(detail)
       ? `Show only the name on the ${page} page's records`
-      : `Under a record's name on the ${page} page, show ${[subtitle && subtitle !== "none" ? subtitle : "", ...(detail ?? [])].filter(Boolean).join(", ")}`,
+      : `Under a record's name on the ${page} page, show ${[subtitle && subtitle !== "none" ? subtitle : "", ...(noDetail(detail) ? [] : (detail ?? []))].filter(Boolean).join(", ")}`,
   destructive: () => false,
   apply(editors, { page, subtitle, detail }, ir) {
     const found = ir.pages.find((p) => p.id === page);
@@ -231,12 +235,14 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
         ["pages", page, "record", "subtitle"],
         subtitle === "none" ? undefined : check(subtitle),
       );
-    if (detail !== undefined)
-      put(
-        editors.ux,
-        ["pages", page, "record", "detail"],
-        detail.length ? detail.map(check) : undefined,
-      );
+    if (detail !== undefined) {
+      const parts = noDetail(detail) ? undefined : detail.map(check);
+      const line =
+        subtitle === undefined ? editors.ux.get(["pages", page, "record", "subtitle"]) : subtitle;
+      const twice = parts?.find((p, i) => parts.indexOf(p) !== i || p === line);
+      if (twice) throw new OperationError(`The ${page} page would show ${twice} twice.`);
+      put(editors.ux, ["pages", page, "record", "detail"], parts);
+    }
     return [];
   },
 };
