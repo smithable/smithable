@@ -106,6 +106,7 @@ pages:
   sessions:                           # the staff's list of sessions
     crud: Session
     filters: [classType, instructor, startsAt]
+    defaultFilter: { startsAt: upcoming }   # opens on what is to come; All shows the past too
     sortable: [startsAt, capacity]
   class-types:
     crud: ClassType

@@ -317,6 +317,14 @@ export const w = {
   thisUser: "this user",
   to: "To",
   today: "Today",
+  /** A date filter's relative values (Upcoming, Past, Today, This week, This month). */
+  upcoming: "Upcoming",
+  past: "Past",
+  thisWeek: "This week",
+  thisMonth: "This month",
+  /** The filters folded away when a list is first reached, and folding them again. */
+  moreFilters: "More filters",
+  fewerFilters: "Fewer filters",
   trashEmpty: "Nothing is in the trash.",
   trashLead: "Deleted records stay here for thirty days, then they are removed for good.",
   trashOf: (plural: string) => `${plural} in the trash`,

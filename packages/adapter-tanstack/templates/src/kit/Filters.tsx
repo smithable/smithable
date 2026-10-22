@@ -9,6 +9,19 @@ import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
 import { withDefaults } from "./params";
 import { tx, w } from "./words";
+import { RELATIVE, type Relative } from "./zoned";
+
+/** A relative date in words. */
+const relativeWord = (value: Relative) =>
+  ({
+    upcoming: w.upcoming,
+    past: w.past,
+    today: w.today,
+    thisWeek: w.thisWeek,
+    thisMonth: w.thisMonth,
+  })[value];
+const isRelative = (value: string | undefined): value is Relative =>
+  (RELATIVE as readonly string[]).includes(value ?? "");
 
 export interface FilterUi {
   /** The field's name: its key in the address. */
@@ -62,12 +75,16 @@ export function Filters({
     ...(f.options ? { options: f.options.map((o) => ({ ...o, label: tx(o.label) })) } : {}),
   }));
   const [open, setOpen] = useState(false);
+  // The ux file's shown: the other filters wait behind "More filters", unless one has a value.
+  const [more, setMore] = useState(false);
   const id = useId();
   const shown = filters.filter((f) => (f.kind !== "mine" && f.kind !== "unread") || signedIn);
   // What is in force: the address, with the page's defaults where it says nothing. The address
   // is written back as it is, so a default stays implicit and a cleared one ("all") stays cleared.
   const effective = withDefaults(values, defaults);
   const active = shown.filter((f) => effective[f.name]);
+  const folded = shown.filter((f) => f.folded && !effective[f.name]);
+  const visible = more ? shown : shown.filter((f) => !folded.includes(f));
   const set = (name: string, value: string | undefined) =>
     onChange({
       ...values,
@@ -119,7 +136,7 @@ export function Filters({
               open ? "flex" : "hidden",
             )}
           >
-            {shown.map((f) => (
+            {visible.map((f) => (
               <Filter
                 key={f.name}
                 filter={f}
@@ -127,6 +144,17 @@ export function Filters({
                 onChange={(v) => set(f.name, v)}
               />
             ))}
+            {folded.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                aria-expanded={more}
+                onClick={() => setMore(!more)}
+                className="self-end"
+              >
+                {more ? w.fewerFilters : w.moreFilters}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -138,15 +166,26 @@ export function Filters({
               className="inline-flex items-center gap-1 rounded-full bg-accent py-1 pr-1 pl-3 text-sm text-accent-foreground"
             >
               {f.label}: {describe(f, effective[f.name] as string)}
-              {/* Only the × removes it, not a click on its words. */}
-              <button
-                type="button"
-                aria-label={w.removeFilter(f.label)}
-                onClick={() => set(f.name, undefined)}
-                className="cursor-pointer rounded-full p-0.5 outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <X aria-hidden className="size-4" />
-              </button>
+              {/* The page's default, in force without being chosen: All shows every record. */}
+              {defaults[f.name] !== undefined && values[f.name] === undefined ? (
+                <button
+                  type="button"
+                  onClick={() => set(f.name, undefined)}
+                  className="cursor-pointer rounded-full px-2 py-0.5 font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {w.all}
+                </button>
+              ) : (
+                /* Only the × removes it, not a click on its words. */
+                <button
+                  type="button"
+                  aria-label={w.removeFilter(f.label)}
+                  onClick={() => set(f.name, undefined)}
+                  className="cursor-pointer rounded-full p-0.5 outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X aria-hidden className="size-4" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -322,7 +361,8 @@ function Range({
   onChange: (value: string | undefined) => void;
 }) {
   const id = useId();
-  const [from = "", to = ""] = (value ?? "").split("..");
+  const relative = isRelative(value) ? value : undefined;
+  const [from = "", to = ""] = relative ? [] : (value ?? "").split("..");
   const [text, setText] = useState({ from, to });
   // A change from elsewhere (its chip removed, the address changed) replaces what was typed, or
   // the typed range would come straight back; the range this field sent itself does not.
@@ -333,7 +373,8 @@ function Range({
   }
   useEffect(() => {
     const next = text.from || text.to ? `${text.from}..${text.to}` : undefined;
-    if (next === value) return;
+    // A relative value stays until a date is typed.
+    if (next === value || (relative && !next)) return;
     const timer = setTimeout(() => {
       setSeen((s) => ({ ...s, sent: next }));
       onChange(next);
@@ -344,6 +385,29 @@ function Range({
   return (
     <fieldset className="space-y-1">
       <legend className="text-sm font-semibold">{filter.label}</legend>
+      {filter.input === "date" && (
+        <div className="flex flex-wrap gap-2">
+          {RELATIVE.map((r) => (
+            <button
+              key={r}
+              type="button"
+              aria-pressed={relative === r}
+              onClick={() => {
+                setText({ from: "", to: "" });
+                onChange(relative === r ? undefined : r);
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-sm",
+                relative === r
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-card hover:bg-hover",
+              )}
+            >
+              {relativeWord(r)}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Label htmlFor={`${id}-from`} className="sr-only">
           {w.rangeFrom(filter.label)}
@@ -378,6 +442,7 @@ function describe(filter: FilterUi, value: string): string {
   if (filter.kind === "mine" || filter.kind === "unread") return w.yes;
   if (filter.kind === "toggle") return value === "true" ? w.yes : w.no;
   if (filter.kind === "range") {
+    if (isRelative(value)) return relativeWord(value);
     const [from, to] = value.split("..");
     return from && to ? `${from}–${to}` : from ? w.fromValue(from) : w.upToValue(to);
   }
