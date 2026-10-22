@@ -464,6 +464,23 @@ async function bookingFlow(dir, base) {
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
+    // Booking and cancelling close when the class starts (closes, cancelUntil: its start): the
+    // block says until when; once it has started the member can no longer cancel here.
+    await panel.getByRole("button", { name: "Book a mat" }).click();
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
+    await panel.getByText(/^Cancel until /).waitFor({ timeout: 10000 * P });
+    const [booked] = query(
+      dir,
+      "SELECT s.id, s.starts_at AS at FROM sessions s JOIN bookings b ON b.session_id = s.id",
+    );
+    write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
+    await panel.getByRole("button", { name: "Close" }).click();
+    await page.locator("section ol button", { hasText: title }).first().click();
+    await panel.getByText(/^Cancelling closed at /).waitFor({ timeout: 10000 * P });
+    if (await panel.getByRole("button", { name: "Cancel booking" }).count())
+      throw new Error("a started class still offers to cancel");
+    write(dir, `DELETE FROM bookings WHERE session_id = ${booked.id}`);
+    write(dir, `UPDATE sessions SET starts_at = ${booked.at} WHERE id = ${booked.id}`);
     // A visitor picks the class, signs in from its panel and finds the same class open, books it
     // once, and Back closes the panel before leaving the schedule.
     const visit = await (
@@ -500,7 +517,7 @@ async function bookingFlow(dir, base) {
     await again.getByRole("button", { name: "Book a mat" }).waitFor({ timeout: 10000 * P });
     await visit.context().close();
     console.log(
-      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place); a visitor's chosen class is open again after signing in, booked once, and Back closes it",
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place); the block says until when one may cancel, and once the class has started it cannot be cancelled here; a visitor's chosen class is open again after signing in, booked once, and Back closes it",
     );
   } catch (error) {
     console.log(

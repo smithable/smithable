@@ -484,7 +484,8 @@ export function reserveElement(
   const r = reserveNames(booked);
   add(bn.module, r.places, r.book, bn.remove);
   add("#/kit/Reserve", "Reserve");
-  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}}${t.reserve(booked)} />`;
+  add("#/generated/app", "app");
+  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}}${t.reserve(booked)} timeZone={app.timeZone} />`;
 }
 
 /** The reservation block's server functions for a model with a capacity, e.g. bookingPlaces. */
