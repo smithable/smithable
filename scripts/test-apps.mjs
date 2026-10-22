@@ -190,9 +190,9 @@ async function open(page, url) {
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
-async function chooseRecord(page, label, name) {
+async function chooseRecord(page, label, name, exact = false) {
   await page.getByRole("combobox", { name: label }).fill(name.slice(0, 5));
-  await page.getByRole("option", { name }).click();
+  await page.getByRole("option", { name, exact }).click();
 }
 
 /** Signs in through the development sign-in on the sign-in page. */
@@ -324,15 +324,18 @@ async function calendarFlow(base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
     await open(page, `${base}/schedule`);
-    const week = page.getByRole("heading", { level: 2 }).first();
-    const shown = await week.innerText();
-    const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 * P });
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/week.png`, fullPage: true });
-    // A visitor gets the session's details in a panel.
+    // A visitor gets the session's details in a panel: a class still open for booking.
+    const week = page.getByRole("heading", { level: 2 }).first();
+    await page
+      .locator("section ol button")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    const shown = await week.innerText();
+    const { nth } = await openClass(page, page.getByRole("dialog"));
+    const session = page.locator("section ol button").nth(nth);
     const title = (await session.locator("span").first().innerText()).trim();
-    await session.click();
     await page
       .getByRole("dialog")
       .getByRole("heading", { name: title })
@@ -649,7 +652,7 @@ async function outgoingFlow(dir, base) {
     const field = page.getByLabel(/^Session/);
     if ((await field.evaluate((e) => e.tagName)) === "SELECT")
       await field.selectOption({ label: `#${other}` });
-    else await chooseRecord(page, /^Session/, `#${other}`);
+    else await chooseRecord(page, /^Session/, `#${other}`, true);
     await page.getByRole("button", { name: "Save changes" }).click();
     const changed = await next(count, "the change");
     if (
