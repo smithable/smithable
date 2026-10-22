@@ -1519,6 +1519,18 @@ try {
       for (let i = 0; i < 60 * P && (await down.isDisabled()); i++)
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
+      // A page's frame (page-sections.md §4): the customers in the site's frame, in the ux file.
+      await page.getByLabel("Frame of Customers").selectOption("site");
+      const framed = () =>
+        /customers:\s*\n(\s+\S.*\n)*?\s+frame: site/.test(
+          readFileSync(join(dir, "smithable.ux.yml"), "utf8"),
+        );
+      for (let i = 0; i < 60 * P && !framed(); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (!framed()) throw new Error("the ux file has no frame for the customers");
+      // Back to its kind's, for the steps after this one.
+      await page.getByLabel("Frame of Customers").selectOption("default");
+      for (let i = 0; i < 60 * P && framed(); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (framed()) throw new Error("the customers kept the site's frame");
       await sub("Behavior");
     },
   );

@@ -427,9 +427,23 @@ async function bookingFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     if ((await page.locator("main tbody tr").count()) !== 1)
       throw new Error("not one booking in My bookings");
+    // A member sees their pages in the site frame (frame: site): its menu, Sign out, the note
+    // after the list, and no way into the workspace.
+    await page.getByText("Can't come after all?").waitFor({ timeout: 10000 * P });
+    await page.locator("[data-kit=landing]").getByRole("button", { name: "Sign out" }).waitFor();
+    if (await page.getByRole("link", { name: "Workspace" }).count())
+      throw new Error("a member is offered the workspace");
     // The admin opens the same session on its page: full, and its places cannot go below one.
     await signInAs(page, base, "admin");
+    // The about page is a page of parts: its story, who teaches, and questions.
+    await open(page, `${base}/about`);
+    await page
+      .getByRole("heading", { name: "A small studio by the harbour" })
+      .waitFor({ timeout: 10000 * P });
+    await page.getByRole("heading", { name: "Who teaches" }).waitFor();
     await open(page, `${base}/schedule`);
+    // Staff see the schedule as members do, with the way into the workspace.
+    await page.getByRole("link", { name: "Workspace" }).waitFor({ timeout: 10000 * P });
     await page.locator("section ol button", { hasText: title }).first().click();
     await page.waitForURL(/\/sessions\/\d+$/);
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });

@@ -35,7 +35,8 @@ import { LUCIDE } from "./root.js";
 /**
  * A landing page: its sections in order, with texts from smithable.content.yml or derived ones.
  * A page of sections with no kind (docs/design/page-sections.md) is laid out the same way without
- * a frame of its own (framed false): the root gives it the page's frame.
+ * a frame of its own (framed false): the root gives it the page's frame. The parts beside a
+ * kind's own page are a module of their own (framed "parts", partsModule).
  */
 export function landingRoute(
   page: PageIR,
@@ -44,15 +45,17 @@ export function landingRoute(
   t: Texts,
   auth: AuthIR,
   ux: UxIR,
-  framed = true,
+  framed: boolean | "parts" = true,
 ): string {
   const text = (name: string) => t.section(page.id, name);
   const component = `${pascal(page.id)}Page`;
-  const imports = importList()
-    .add("@tanstack/react-router", "createFileRoute")
-    .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "guardPage");
-  if (framed)
+  const imports = importList();
+  if (framed !== "parts")
+    imports
+      .add("@tanstack/react-router", "createFileRoute")
+      .add("#/generated/pages", "pageAccess")
+      .add("#/kit/access", "guardPage");
+  if (framed === true)
     imports
       .add("#/kit/Landing", "LandingLayout")
       .add("#/kit/words", "w")
@@ -405,6 +408,33 @@ export function landingRoute(
         texts: `pages.${page.id}.${footerSection.name}`,
       })}}`
     : "";
+  if (framed === "parts") {
+    // Before the kind's own part, and after it.
+    const at = sections.findIndex((s) => s.own);
+    const before = sections.slice(0, Math.max(at, 0)).flatMap(sectionParts);
+    const after = sections.slice(at + 1).flatMap(sectionParts);
+    const all = [...before, ...after];
+    if (all.some((p) => p.includes("pageAccess["))) imports.add("#/generated/pages", "pageAccess");
+    if (needsViewer(all)) imports.add("@tanstack/react-router", "useRouteContext");
+    const viewer = needsViewer(all)
+      ? `  const { viewer } = useRouteContext({ from: "__root__" });\n`
+      : "";
+    const part = (name: string, parts: string[]) => `
+/** The page's parts ${name === "Before" ? "before" : "after"} its own. */
+export function ${name}() {
+${
+  parts.length
+    ? `${parts.some((p) => p.includes("viewer)")) ? viewer : ""}  return (
+    <>
+      ${parts.join("\n      ")}
+    </>
+  );`
+    : "  return null;"
+}
+}
+`;
+    return `${HEADER}${imports.render()}${part("Before", before)}${part("After", after)}`;
+  }
   if (!framed)
     return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
@@ -461,7 +491,9 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string
     .map((p) => ({
       to: p.route,
       label: code(t.pageTitleOf(p.id)),
-      ...(auth.public.pages.includes(p.id) ? {} : { access: code(`pageAccess[${JSON.stringify(p.id)}]`) }),
+      ...(auth.public.pages.includes(p.id)
+        ? {}
+        : { access: code(`pageAccess[${JSON.stringify(p.id)}]`) }),
     }));
   const guarded = menu.some((m) => "access" in m);
   // The privacy page: a footer line, beside the cookie settings.
@@ -478,7 +510,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string
       texts?.[k] ? [[k, texts[k] as string]] : [],
     ),
   );
-  return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? "\nimport { pageAccess } from \"#/generated/pages\";" : ""}
+  return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? '\nimport { pageAccess } from "#/generated/pages";' : ""}
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = ${literal({

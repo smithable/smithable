@@ -1141,6 +1141,10 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "name": "crud",
           "own": true,
         },
+        {
+          "kind": "text",
+          "name": "cancelling",
+        },
       ],
     },
     {

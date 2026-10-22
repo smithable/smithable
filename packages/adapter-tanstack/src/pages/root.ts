@@ -4,9 +4,9 @@ import {
   type AuthIR,
   type ContentIR,
   type Icon,
+  type PageIR,
   pageAccess,
   pageIcon,
-  type PageIR,
   type SpecIR,
   type UxIR,
 } from "@smithable/core";
@@ -180,7 +180,9 @@ export function rootRoute(
             !["site", "none"].includes(ux.pages[p.id]?.frame ?? "") &&
             !p.route.includes("$"),
         )
-        .map((p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`)
+        .map(
+          (p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`,
+        )
     : [];
   const visitorPages =
     signIn &&
@@ -358,7 +360,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           </p>
         )}
         ${
-          landings.length || sites.length || visitorPages.length || sitePages.length || barePages.length
+          landings.length ||
+          sites.length ||
+          visitorPages.length ||
+          sitePages.length ||
+          barePages.length
             ? `{${
                 landings.length || sites.length
                   ? `${framedBySite} ? (

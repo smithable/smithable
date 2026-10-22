@@ -44,7 +44,7 @@ pages:
   const content = validateContent(
     {
       path: "smithable.content.yml",
-      text: "smithableContent: 0.1\npages:\n  about:\n    story: { title: Our story, text: \"One room.\\n\\nNow two.\" }\n    team: { title: Who teaches }\n    faq: { items: [{ question: When?, answer: Mornings. }] }\n  instructors:\n    notice: { title: Closed on Friday }\n",
+      text: 'smithableContent: 0.1\npages:\n  about:\n    story: { title: Our story, text: "One room.\\n\\nNow two." }\n    team: { title: Who teaches }\n    faq: { items: [{ question: When?, answer: Mornings. }] }\n  instructors:\n    notice: { title: Closed on Friday }\n',
     },
     ir,
   ).content;
@@ -53,12 +53,23 @@ pages:
   const about = file("src/routes/about/index.tsx");
   expect(about).not.toContain("LandingLayout");
   expect(about).toContain('<div data-kit="sections">');
-  expect(about).toContain('<TextSection\n          texts="pages.about.story"\n          id="story"\n          title="Our story"');
+  expect(about).toContain(
+    '<TextSection\n          texts="pages.about.story"\n          id="story"\n          title="Our story"',
+  );
   expect(about).toContain('texts="pages.about.team"');
   expect(about).toContain('texts="pages.about.faq"');
   expect(file("src/kit/Landing.tsx")).toBeDefined();
-  // The crud page is its list as before; its parts wait for the page renderer.
-  expect(file("src/routes/instructors/index.tsx")).toContain("ModelTable");
+  // The crud page is its list as before, with its parts around it: the notice and the questions
+  // after the list, since the sections do not place it.
+  const instructors = file("src/routes/instructors/index.tsx") ?? "";
+  expect(instructors).toContain("ModelTable");
+  expect(instructors).toContain(
+    `import { After as PartsAfter, Before as PartsBefore } from "./-instructors-parts";`,
+  );
+  expect(instructors).toContain("<PartsBefore />\n      <InstructorsPage />\n      <PartsAfter />");
+  const parts = file("src/routes/instructors/-instructors-parts.tsx") ?? "";
+  expect(parts).toMatch(/export function Before\(\) \{\n {2}return null;\n\}/);
+  expect(parts).toContain(`<TextSection\n          texts="pages.instructors.notice"`);
   expect(file("src/generated/pages.ts")).toContain("about: {");
 });
 

@@ -1,6 +1,6 @@
 // Each page pattern's routes, registered like the patterns themselves (PAGE_PATTERNS in core):
 // the files a page of that pattern gets, and the kit files only such pages need.
-import type { PageIR, PatternKind, PatternOf } from "@smithable/core";
+import { type PageIR, type PatternKind, type PatternOf, partSections } from "@smithable/core";
 import { calculatorRoute } from "../calculators.js";
 import { hasKeys } from "../keys.js";
 import { reviewFileRoute, reviewRoute } from "../review.js";
@@ -118,8 +118,37 @@ export const PAGE_GENERATORS: {
   },
 };
 
-/** A page's route files (the lookup TypeScript cannot type). */
+/**
+ * A page's route files (the lookup TypeScript cannot type). A kind's page with parts beside its
+ * own (docs/design/page-sections.md §2) gets them from a module beside its route (a "-" file,
+ * which is no route), around its own component.
+ */
 export function pageRoutes(page: PageIR, ctx: GenContext): Record<string, string> {
   const generator = PAGE_GENERATORS[page.pattern.kind] as (typeof PAGE_GENERATORS)["crud"];
-  return generator.routes(page as PageOf<"crud">, ctx);
+  const files = generator.routes(page as PageOf<"crud">, ctx);
+  const index = files["index.tsx"];
+  // Records beside a kind need the route's loader: a page of sections shows them for now.
+  const parts = page.sections.filter((s) => s.own || !s.model);
+  const kind = page.pattern.kind;
+  if (kind === "landing" || kind === "sections" || !index || !partSections(page).length)
+    return files;
+  const module = `-${page.id}-parts`;
+  const own = /\n {2}component: (\w+),\n/;
+  const component = own.exec(index)?.[1];
+  if (!component) return files;
+  return {
+    ...files,
+    [`${module}.tsx`]: landingRoute(page, parts, ctx.ir, ctx.t, ctx.auth, ctx.ux, "parts"),
+    "index.tsx": index
+      .replace(
+        "\nexport const Route",
+        () =>
+          `import { After as PartsAfter, Before as PartsBefore } from "./${module}";\n\nexport const Route`,
+      )
+      .replace(
+        own,
+        () =>
+          `\n  component: () => (\n    <>\n      <PartsBefore />\n      <${component} />\n      <PartsAfter />\n    </>\n  ),\n`,
+      ),
+  };
 }
