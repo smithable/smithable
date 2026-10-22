@@ -36,6 +36,7 @@ import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formula
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
+import { composed, nameModule } from "./names.js";
 import { outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
@@ -886,6 +887,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         return [
           generated(`${base}.ts`, modelModule(model, t, ir, auth, ux)),
           generated(`${base}.schema.ts`, modelSchemaModule(model, t, auth)),
+          // A name made of parts (docs/design/record-names.md): its function, for server and page.
+          ...(composed(model) ? [generated(`${base}.name.ts`, nameModule(ir, model, t))] : []),
           generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
           ...(hasFormulas(model)
             ? [generated(`${base}.formulas.ts`, formulasModuleSource(model, ir))]

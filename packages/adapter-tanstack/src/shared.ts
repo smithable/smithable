@@ -379,6 +379,25 @@ export function relatedTitle(ir: SpecIR, model: string): string {
   return model === USER_MODEL ? "name" : titleField(modelNamed(ir, model));
 }
 
+/**
+ * The key the kit reads a record's name under: its title field, or for a name made of parts
+ * (docs/design/record-names.md) "$name", which the data functions set on the rows they return.
+ */
+export function shownTitleKey(ir: SpecIR, model: string): string {
+  if (model === USER_MODEL) return "name";
+  const m = modelNamed(ir, model);
+  return composedName(m) ? "$name" : titleField(m);
+}
+
+/** Whether a model's name is made of parts, not one stored text field (today's title column). */
+export function composedName(model: ModelIR): boolean {
+  const parts = model.nameParts;
+  if (!parts?.length) return false;
+  if (parts.length > 1 || parts[0]?.through) return true;
+  const f = model.fields.find((x) => x.name === parts[0]?.field);
+  return !(f?.type.kind === "scalar" && ["string", "text", "markdown"].includes(f.type.name));
+}
+
 import { titleField } from "@smithable/core";
 
 export { titleField };
