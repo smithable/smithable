@@ -14098,10 +14098,26 @@ import type { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
 import { counts } from "#/kit/outgoing";
+import { sessionName } from "./session.name";
+import { bookingName } from "./booking.name";
 import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
 
-type Tx = Pick<typeof db, "select" | "insert">;
+type Tx = Pick<typeof db, "select" | "insert" | "query">;
 type Row = Record<string, unknown>;
+
+/** A session's name, read with what it needs (record-names.md); one in the trash is gone. */
+function sessionNamed(tx: Tx, id: number | null): string {
+  if (id == null) return "—";
+  const row = tx.query.sessions.findFirst({ where: (t, { eq }) => eq(t.id, id), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } }).sync();
+  return row ? sessionName(row) : "—";
+}
+
+/** A booking's name, read with what it needs (record-names.md); one in the trash is gone. */
+function bookingNamed(tx: Tx, id: number | null): string {
+  if (id == null) return "—";
+  const row = tx.query.bookings.findFirst({ where: (t, { eq }) => eq(t.id, id), ...{ columns: { id: true }, with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } } } }).sync();
+  return row ? bookingName(row) : "—";
+}
 
 /** One column of the record with the id, inside the transaction. */
 function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
@@ -14117,9 +14133,9 @@ function people(tx: Tx, where: SQL): Recipient[] {
 /** Each model's record as a mail shows it: the subject, its fields, its page. */
 const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
   "Booking": (tx, r) => ({
-    subject: \`Booking: #\${r.id}\`,
+    subject: \`Booking: \${bookingNamed(tx, r.id as number)}\`,
     fields: [
-      ["Session", r.sessionId == null ? "—" : \`#\${r.sessionId}\`],
+      ["Session", sessionNamed(tx, r.sessionId as number | null)],
       ["Attendee", String(one(tx, schema.user, schema.user.id, schema.user.name, r.attendeeId) ?? "—")],
     ],
     link: \`/my-bookings/\${r.id}\`,
@@ -14911,6 +14927,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { sortRows } from "#/kit/model";
 import { sessionName } from "./session.name";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
@@ -15385,14 +15402,14 @@ export const sessionData = {
   },
 
   /** Choices for fields that refer to a session: the ones the viewer may read. */
-  options(viewer: Viewer | null) {
+  async options(viewer: Viewer | null) {
     if (readScope(sessionAccess.read, viewer) === "none") return [];
-    return db
-      .select({ value: schema.sessions.id, label: sql<string>\`'Session #' || \${schema.sessions.id}\` })
-      .from(schema.sessions)
-      .where(sessionData.readable(viewer))
-      .orderBy(schema.sessions.id)
-      .all();
+    // Named by its parts (record-names.md): ordered by the first one's value.
+    const rows = await db.query.sessions.findMany({ where: sessionData.readable(viewer), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } });
+    return sortRows(
+      rows.map((row) => ({ value: row.id, label: sessionName(row), first: row.classType?.name ?? null })),
+      "first",
+    ).map(({ value, label }) => ({ value, label }));
   },
 };
 "
@@ -16264,6 +16281,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { bookingUi, deleteBooking, getBooking, updateBooking } from "#/generated/booking";
 import { bookingSchema } from "#/generated/booking.schema";
+import { bookingName } from "#/generated/booking.name";
 import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/access";
@@ -16288,7 +16306,7 @@ function BookingPage() {
   const back = () => navigate({ to: "/admin/bookings" });
   return (
     <>
-      <PageHeader title={\`Booking #\${row.id}\`} />
+      <PageHeader title={bookingName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -17288,6 +17306,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { deleteSession, getSession, sessionUi, updateSession } from "#/generated/session";
 import { sessionSchema } from "#/generated/session.schema";
+import { sessionName } from "#/generated/session.name";
 import { bookingUi } from "#/generated/booking";
 import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
@@ -17314,7 +17333,7 @@ function SessionPage() {
   const back = () => navigate({ to: "/admin/sessions" });
   return (
     <>
-      <PageHeader title={\`Session #\${row.id}\`} />
+      <PageHeader title={sessionName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -18545,6 +18564,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { bookingUi, deleteBooking, getBooking, updateBooking } from "#/generated/booking";
 import { bookingSchema } from "#/generated/booking.schema";
+import { bookingName } from "#/generated/booking.name";
 import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/access";
@@ -18595,7 +18615,7 @@ function BookingPage() {
   const back = () => navigate({ to: "/my-bookings" });
   return (
     <>
-      <PageHeader title={\`Booking #\${row.id}\`} />
+      <PageHeader title={bookingName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -19108,6 +19128,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { bookingPlaces, reserveBooking, deleteBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
 import { classTypeData } from "#/generated/class-type.server";
+import { sessionName } from "#/generated/session.name";
 
 /** The sessions whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
@@ -19127,7 +19148,7 @@ const getRange = createServerFn()
         id: row.id,
         start: row.startsAt,
         end: new Date(row.startsAt.getTime() + (minutes.get(row.classTypeId) ?? 60) * 60_000),
-        title: String(row.classType?.name ?? ""),
+        title: sessionName(row as Record<string, unknown>),
       })),
       // Records are made on their page: the viewer must be able to open it, too.
       canCreate: allows(sessionAccess.create, viewer) && allows(pageAccess["sessions"], viewer),
@@ -19192,6 +19213,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { deleteSession, getSession, sessionUi, updateSession } from "#/generated/session";
 import { sessionSchema } from "#/generated/session.schema";
+import { sessionName } from "#/generated/session.name";
 import { bookingPlaces, bookingUi, deleteBooking, reserveBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
 import { buttonVariants } from "#/components/ui/button";
@@ -19246,7 +19268,7 @@ function SessionPage() {
   const back = () => navigate({ to: "/sessions" });
   return (
     <>
-      <PageHeader title={\`Session #\${row.id}\`} />
+      <PageHeader title={sessionName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -20182,7 +20204,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "420d47d7 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "fcf6b4e0 generated",
+  "src/generated/outgoing.server.ts": "7bfbbe7b generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e8ed4586 generated",
@@ -20191,7 +20213,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "5b176bca generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "f84e0336 generated",
+  "src/generated/session.server.ts": "6d2f88d9 generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -20265,7 +20287,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "5c621ed2 generated",
   "src/routes/admin/activity.tsx": "62617d51 generated",
-  "src/routes/admin/bookings/$id.tsx": "1941ec5d generated",
+  "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "557a5a18 generated",
   "src/routes/admin/class-types/$id.tsx": "5e020c24 generated",
@@ -20281,7 +20303,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/$id.tsx": "db7551c8 generated",
   "src/routes/admin/posts/index.tsx": "26384ffe generated",
   "src/routes/admin/posts/new.tsx": "3e7419c5 generated",
-  "src/routes/admin/sessions/$id.tsx": "54a7b3fa generated",
+  "src/routes/admin/sessions/$id.tsx": "5c4f43b0 generated",
   "src/routes/admin/sessions/index.tsx": "c0419765 generated",
   "src/routes/admin/sessions/new.tsx": "91d9748d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -20301,7 +20323,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/$id.tsx": "5b651045 generated",
   "src/routes/messages/index.tsx": "e4a7b8f3 generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
-  "src/routes/my-bookings/$id.tsx": "dc1b6526 generated",
+  "src/routes/my-bookings/$id.tsx": "976f7782 generated",
   "src/routes/my-bookings/index.tsx": "9b16db67 generated",
   "src/routes/my-bookings/new.tsx": "ea212364 generated",
   "src/routes/posts/$id.tsx": "12fdcf66 generated",
@@ -20309,8 +20331,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
-  "src/routes/schedule/index.tsx": "02dcec4c generated",
-  "src/routes/sessions/$id.tsx": "2511b5a6 generated",
+  "src/routes/schedule/index.tsx": "47576e82 generated",
+  "src/routes/sessions/$id.tsx": "adb8c5fa generated",
   "src/routes/sessions/index.tsx": "1a15b581 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",

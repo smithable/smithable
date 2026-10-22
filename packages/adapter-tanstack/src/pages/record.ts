@@ -21,10 +21,12 @@ import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { cancelNames, reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
+import { nameFunction } from "../names.js";
 import {
   addable,
   appStart,
   attr,
+  composedName,
   dataKey,
   dataRoute,
   fieldOrder,
@@ -359,8 +361,10 @@ export function detailRoute(
   const component = `${model.name}Page`;
   const title = titleField(model);
   // A long title (a message's words) heads the page cut to its first line.
-  const heading =
-    title === "id"
+  // A name made of parts (record-names.md) by its function, from the columns the record came with.
+  const heading = composedName(model)
+    ? `${nameFunction(model)}(row as Record<string, unknown>)`
+    : title === "id"
       ? `\`${n.label} #\${row.id}\``
       : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${n.label} #\${row.id}\``;
   const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
@@ -370,6 +374,9 @@ export function detailRoute(
     ...(longTitle(model) ? ([["#/kit/format", ["titleOf"]]] as [string, string[]][]) : []),
     [n.module, [n.remove, n.get, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])]],
     [`${n.module}.schema`, [n.schema]],
+    ...(composedName(model)
+      ? ([[`${n.module}.name`, [nameFunction(model)]]] as [string, string[]][])
+      : []),
     ...(trash
       ? ([["#/kit/Trash", ["rememberTrashed", "TrashedBanner"]]] as [string, string[]][])
       : []),
