@@ -9,6 +9,11 @@ export interface Viewer {
   name: string;
   email: string;
   role: string;
+  /**
+   * The app itself, as a timer runs (docs/design/timed-actions.md §2): no role's grants apply, so
+   * every rule allows it. Never made from a request: only the timers' tick makes one.
+   */
+  system?: true;
 }
 
 /** Who may do something: anyone (public), users with one of `roles`, and a record's owner. */
@@ -41,15 +46,15 @@ export class Conflict extends Error {}
 
 /**
  * The person a viewer is, for owning records: their user id, or null for an API key, which is a
- * role and not a person (docs/design/integrations.md §2).
+ * role and not a person (docs/design/integrations.md §2), and for the app itself (a timer).
  */
 export function personOf(viewer: Viewer | null): string | null {
-  return viewer && !viewer.id.startsWith("key:") ? viewer.id : null;
+  return viewer && !viewer.system && !viewer.id.startsWith("key:") ? viewer.id : null;
 }
 
 /** Whether the viewer may do something; `ownerId` is the owner of the record involved, if any. */
 export function allows(rule: Rule, viewer: Viewer | null, ownerId?: string | null): boolean {
-  if (rule.public) return true;
+  if (rule.public || viewer?.system) return true;
   if (!viewer) return false;
   if (rule.among && !rule.among.includes(viewer.role)) return false;
   if (rule.roles.includes(viewer.role)) return true;
@@ -66,7 +71,7 @@ export function check(rule: Rule, viewer: Viewer | null, ownerId?: string | null
  * rule limits those), only the public ones, or none.
  */
 export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "public" | "none" {
-  if (viewer && rule.roles.includes(viewer.role)) return "all";
+  if (viewer && (viewer.system || rule.roles.includes(viewer.role))) return "all";
   if (rule.public && !rule.where) return "all";
   if (viewer && rule.owner) return "own";
   return rule.public ? "public" : "none";

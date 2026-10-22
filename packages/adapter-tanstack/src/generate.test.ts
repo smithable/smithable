@@ -197,7 +197,7 @@ test("whose record it is is chosen only by a role that may change everyone's", (
   // The people to choose from, or null for a viewer who can only make their own: the form then
   // leaves the field out (the server makes them the owner whatever is sent).
   expect(file("src/generated/tool.ts")).toContain(
-    "return viewer && toolAccess.write.roles.includes(viewer.role) ? userOptions() : null;",
+    "return (!!viewer && (!!viewer.system || toolAccess.write.roles.includes(viewer.role))) ? userOptions() : null;",
   );
   // The owner's choices come from it; another User field still lists everyone signed in.
   expect(file("src/routes/tools/new.tsx")).toContain(

@@ -241,6 +241,8 @@ const CHANGES = [
   ["addAction", "An action"],
   ["setAction", "Change what an action says"],
   ["removeAction", "Remove an action"],
+  ["addTimer", "A timer: something the app does at a time"],
+  ["removeTimer", "Remove a timer"],
   ["importRecords", "Records from a CSV file"],
 ] as const;
 
@@ -321,6 +323,18 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
             controls={{ action: actionPicker(spec) }}
             hint="Its buttons go too; a custom action's code stays. Undo brings it back."
             disabled={!spec.ir.actions.length}
+          />
+        )}
+        {change === "addTimer" && <AddTimer spec={spec} run={runAndReset} />}
+        {change === "removeTimer" && (
+          <FromSchema
+            op="removeTimer"
+            spec={spec}
+            run={runAndReset}
+            initial={{ name: spec.ir.timers[0]?.name ?? "" }}
+            submit="Remove timer"
+            hint="Undo brings it back."
+            disabled={!spec.ir.timers.length}
           />
         )}
         {change === "removeSection" && (
@@ -1221,6 +1235,176 @@ const MEASURES: [string, string][] = [
   ["list", "The latest records"],
   ["query", "A custom query's records"],
 ];
+
+/**
+ * A timer (timed-actions.md §7): what it runs for, when (a picker: a time before or after a date
+ * of the records, or every day, weekday, week, month or a weekday at a clock time; a cron
+ * expression under Advanced takes the picker's place), and then: an action, or only its event.
+ */
+function AddTimer({ spec, run }: FormProps) {
+  const models = spec.ir?.models ?? [];
+  const actions = spec.ir?.actions ?? [];
+  const [label, setLabel] = useState("");
+  const [on, setOn] = useState(models[0]?.name ?? "");
+  const [form, setForm] = useState<"record" | "every">("record");
+  const [amount, setAmount] = useState("1");
+  const [unit, setUnit] = useState("day");
+  const [direction, setDirection] = useState("before");
+  const [field, setField] = useState("");
+  const [every, setEvery] = useState("day");
+  const [time, setTime] = useState("08:00");
+  const [cron, setCron] = useState("");
+  const [then, setThen] = useState("");
+  const model = models.find((m) => m.name === on);
+  const dated = (name: string | undefined) =>
+    (models.find((m) => m.name === name)?.fields ?? []).flatMap((f) =>
+      f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime")
+        ? [f.name]
+        : [],
+    );
+  // A date of the records, or one reference away.
+  const dates = model
+    ? [
+        ...dated(model.name),
+        ...model.fields.flatMap((f) =>
+          f.type.kind === "relation" && !f.type.many
+            ? dated(f.type.model).map((d) => `${f.name}.${d}`)
+            : [],
+        ),
+      ]
+    : [];
+  const date = dates.includes(field) ? field : (dates[0] ?? "");
+  const byRecord = form === "record" && !cron && model;
+  const offered = actions.filter((a) => (model ? "on" in a && a.on === model.name : !("on" in a)));
+  const doing = offered.some((a) => a.name === then) ? then : "";
+  const n = Number(amount);
+  const at = n > 0 ? `${n} ${unit}${n === 1 ? "" : "s"} ${direction} ${date}` : date;
+  return (
+    <Form
+      onSubmit={() =>
+        run("addTimer", {
+          name: identifier(label),
+          ...(model ? { on: model.name } : {}),
+          ...(cron ? { cron } : byRecord ? { at } : { every, at: time }),
+          ...(doing ? { run: doing } : {}),
+        })
+      }
+    >
+      <Label text="Name">
+        <Input
+          aria-label="Timer name"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Remind"
+        />
+      </Label>
+      <Label text="For" hint="The records it runs for; none for an action of its own, run once">
+        <Select
+          aria-label="Timer records"
+          value={on}
+          onChange={(e) => setOn(e.target.value)}
+          options={[
+            ...models.map((m): [string, string] => [m.name, humanize(m.name)]),
+            ["", "No records"],
+          ]}
+        />
+      </Label>
+      {!cron && (
+        <Label text="When">
+          <Select
+            aria-label="Timer when"
+            value={model ? form : "every"}
+            onChange={(e) => setForm(e.target.value as "record" | "every")}
+            options={[
+              ...(model ? [["record", "At a date of the records"] as [string, string]] : []),
+              ["every", "On a clock"],
+            ]}
+          />
+        </Label>
+      )}
+      {byRecord && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Input
+            aria-label="Timer amount"
+            type="number"
+            min={0}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-16"
+          />
+          <Select
+            aria-label="Timer unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            options={[
+              ["minute", "minutes"],
+              ["hour", "hours"],
+              ["day", "days"],
+            ]}
+          />
+          <Select
+            aria-label="Timer direction"
+            value={direction}
+            onChange={(e) => setDirection(e.target.value)}
+            options={[
+              ["before", "before"],
+              ["after", "after"],
+            ]}
+          />
+          <Select
+            aria-label="Timer date"
+            value={date}
+            onChange={(e) => setField(e.target.value)}
+            options={dates.map((d): [string, string] => [d, humanize(d.replace(".", " "))])}
+          />
+        </div>
+      )}
+      {!byRecord && !cron && (
+        <div className="flex items-center gap-2 text-sm">
+          <Select
+            aria-label="Timer every"
+            value={every}
+            onChange={(e) => setEvery(e.target.value)}
+            options={[
+              ["day", "Every day"],
+              ["weekday", "Every weekday"],
+              ["week", "Every week (Monday)"],
+              ["month", "Every month (the 1st)"],
+              ...["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map(
+                (d): [string, string] => [d, `Every ${humanize(d)}`],
+              ),
+            ]}
+          />
+          <Input
+            aria-label="Timer time"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-28"
+          />
+        </div>
+      )}
+      <details className="text-sm">
+        <summary className="cursor-pointer text-muted">Advanced</summary>
+        <Label text="Cron" hint="Five fields, e.g. 0 6 25 * *: it takes the picker's place">
+          <Input aria-label="Timer cron" value={cron} onChange={(e) => setCron(e.target.value)} />
+        </Label>
+      </details>
+      <Label text="Then" hint="Without an action it only raises its event, for a mail on it">
+        <Select
+          aria-label="Timer action"
+          value={doing}
+          onChange={(e) => setThen(e.target.value)}
+          options={[
+            ["", "Nothing more"],
+            ...offered.map((a): [string, string] => [a.name, humanize(a.name)]),
+          ]}
+        />
+      </Label>
+      <Submit label="Add timer" disabled={!label || (byRecord ? !date : false)} />
+    </Form>
+  );
+}
 
 function AddTile({ spec, run }: FormProps) {
   const ir = spec.ir;

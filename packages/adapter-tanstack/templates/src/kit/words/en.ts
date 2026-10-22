@@ -337,6 +337,8 @@ export const w = {
   /** The activity log: a record that is gone, by its id. */
   aDeletedOne: (label: string, id: string) => `a deleted ${label.toLowerCase()} (#${id})`,
   aKey: (id: string) => `a key (#${id})`,
+  /** Who did it, in Activity: a timer of the app (timed-actions.md). */
+  byTimer: (name: string) => `the timer ${name}`,
   aRemovedUser: (id: string) => `a removed user (#${id})`,
   atLeastCharacters: (n: number) => `At least ${n} characters`,
   atMostCharacters: (n: number) => `At most ${n.toLocaleString("en")} characters`,
