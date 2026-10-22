@@ -24,7 +24,7 @@ export interface FilterUi {
   options?: { value: string; label: string }[];
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
-  /** Folded behind "More filters" when the list is first reached (smithable.ux.yml's shown). */
+  /** Folded behind "More filters" when the list is first reached (the ux file's shown). */
   folded?: boolean;
 }
 
