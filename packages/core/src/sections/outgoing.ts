@@ -1,3 +1,4 @@
+import { isSeq } from "yaml";
 import {
   conditionArgs,
   conditionText,
@@ -173,6 +174,10 @@ function readFields(
     if (f.formula)
       return {
         problem: `${model.name}.${name} is worked out from other fields, so it never changes by itself; name those.`,
+      };
+    if (f.type.kind === "relation" && f.type.many)
+      return {
+        problem: `${model.name}.${name} lists other records and stores nothing, so it never changes by itself.`,
       };
   }
   return { fields: [...new Set(fields)] };
@@ -425,6 +430,8 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         const names = readNameList(ctx, fieldsEntry.value, `"fields" of ${where}`).map(
           (n) => n.name,
         );
+        // Not a list: said once already.
+        if (!isSeq(fieldsEntry.value)) continue;
         const f = readFields(names, read.when, model);
         if ("problem" in f) {
           ctx.error(fieldsEntry.value, "invalid-outgoing", `${capital(where)}: ${f.problem}`);

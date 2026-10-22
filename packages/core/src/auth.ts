@@ -1020,15 +1020,20 @@ function checkAgainstSpec(
     if (o.to !== "mail" || !r) continue;
     const model = ir.models.find((m) => m.name === o.when.model);
     if (!model) continue;
-    const field =
-      r.kind === "field" && r.via === "email" && r.path.length === 1 ? r.path[0] : undefined;
-    const createdByVisitors = publicNodes.create?.find((n) => n.name === model.name);
-    if (field && createdByVisitors && "event" in o.when)
+    // The address is typed on the record itself, or on each record of a list of them.
+    const typed =
+      r.kind === "field" && r.via === "email" && r.path.length === 1
+        ? { field: r.path[0], on: model }
+        : r.kind === "list" && r.each.kind === "field" && r.each.via === "email"
+          ? { field: r.each.field, on: ir.models.find((m) => m.name === r.model) ?? model }
+          : undefined;
+    const createdByVisitors = typed && publicNodes.create?.find((n) => n.name === typed.on.name);
+    if (typed && createdByVisitors && "event" in o.when)
       ctx.warning(
         createdByVisitors.at,
         "visitor-typed-recipient",
-        `Visitors may add ${model.name} records and type any address in ${field}, so the app does not send "${o.name}" to it: a stranger could make the app mail anyone.`,
-        `Mail the owner or a role instead, or take ${model.name} out of "create" under "public".`,
+        `Visitors may add ${typed.on.name} records and type any address in ${typed.field}, so the app does not send "${o.name}" to it: a stranger could make the app mail anyone.`,
+        `Mail the owner or a role instead, or take ${typed.on.name} out of "create" under "public".`,
       );
     if (r.kind === "role") {
       const read = modelAccess(model, auth).read;

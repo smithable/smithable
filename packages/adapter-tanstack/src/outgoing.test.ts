@@ -138,6 +138,11 @@ outgoing:
     when: Order created
     to: mail
     recipient: owner
+  orderMoved:
+    when: Order changed
+    fields: [customer, note]
+    to: mail
+    recipient: owner
 pages:
   orders: { crud: Order }
   customers: { crud: Customer }
@@ -159,6 +164,8 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   // A list's records, each told: the bookings' owners as people, the contacts as addresses; the
   // orders of a customer without the trashed ones; only a change of the fields named counts.
   expect(module).toContain('fields: ["startsAt"],');
+  // A reference is watched by its column.
+  expect(module).toContain('fields: ["customerId","note"],');
   expect(module).toContain(
     "((ids) => (ids.length ? people(tx, inArray(schema.user.id, ids)) : []))(tx.select({ v: schema.bookings.ownerId }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id)).all().map((x) => x.v).filter((v) => v != null).map(String))",
   );
@@ -190,6 +197,35 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
     'export const outgoingMail = sqliteTable(\n  "outgoing_mail"',
   );
   expect(files.some((f) => f.path === "src/kit/outgoing.server.ts")).toBe(true);
+});
+
+test("an app whose only mail goes to a list's addresses still imports what the query needs", () => {
+  const only = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields:
+      title: string!
+      bookings: Booking[]
+  Booking:
+    fields:
+      session: Session!
+      contact: email
+outgoing:
+  named:
+    when: Session changed
+    to: mail
+    recipient: bookings.contact
+pages:
+  sessions: { crud: Session }
+`,
+  }).ir as SpecIR;
+  const files = generateApp(only, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  expect(module).toContain('import { eq } from "drizzle-orm";');
+  expect(module).toContain("where(eq(schema.bookings.sessionId, r.id))");
 });
 
 test("a customer in the trash is neither mailed nor named, and its orders show a dash", () => {

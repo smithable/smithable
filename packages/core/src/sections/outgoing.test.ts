@@ -164,6 +164,16 @@ test("a list field's records, each told; and which fields' change counts", () =>
       "  x:\n    when: Customer changed\n    fields: []\n    to: mail\n    recipient: owner\n",
     ),
   ).toEqual([expect.stringContaining("names at least one field")]);
+  expect(
+    messages(
+      "  x:\n    when: Customer changed\n    fields: [bookings]\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining("Customer.bookings lists other records and stores nothing")]);
+  expect(
+    messages(
+      "  x:\n    when: Customer changed\n    fields: name\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining("must be a list")]);
 });
 
 test("addOutgoing with fields and a list recipient; the model's changes follow into both", () => {

@@ -19,6 +19,7 @@ import { apiFields, readCode } from "./api.js";
 import { fieldUi } from "./data.js";
 import {
   HEADER,
+  keyOf,
   literal,
   modelNamed,
   names,
@@ -223,7 +224,7 @@ ${apiFields(model)
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields)},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
     ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
@@ -234,7 +235,7 @@ ${apiFields(model)
   const drizzle = [
     ...(trashOne || threaded ? ["and"] : []),
     ...(threaded ? ["asc"] : []),
-    ...(ones || users || threaded ? ["eq"] : []),
+    ...(ones || users || threaded || body.includes("eq(") ? ["eq"] : []),
     ...(body.includes("inArray(") ? ["inArray"] : []),
     ...(trashOne ? ["isNull"] : []),
     ...(users ? ["type SQL"] : []),
