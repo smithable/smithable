@@ -85,10 +85,11 @@ function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"):
       return "1000";
     case "bool":
       return "true";
+    // Ahead of today, so a booking that closes at its session's start is still open.
     case "date":
-      return '"2026-01-15"';
+      return '"2099-01-15"';
     case "datetime":
-      return 'new Date("2026-01-15T10:00:00Z")';
+      return 'new Date("2099-01-15T10:00:00Z")';
     case "email":
       return `\`${camel(model.name)}\${n}@example.com\``;
     case "phone":

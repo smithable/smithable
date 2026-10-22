@@ -10042,7 +10042,7 @@ function insertInstructor(owner: string | null, values: Record<string, unknown> 
 
 function sessionValues(owner: string | null) {
   const n = next();
-  return { classTypeId: insertClassType(owner).id, instructorId: insertInstructor(owner).id, startsAt: new Date("2026-01-15T10:00:00Z"), capacity: n } as const;
+  return { classTypeId: insertClassType(owner).id, instructorId: insertInstructor(owner).id, startsAt: new Date("2099-01-15T10:00:00Z"), capacity: n } as const;
 }
 
 function insertSession(owner: string | null, values: Record<string, unknown> = {}) {
@@ -20124,7 +20124,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "7868de01 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "8e151646 generated",
+  "src/generated/access.test.ts": "1cbec0bc generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "2e7a3e55 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
@@ -26622,7 +26622,7 @@ function insertClient(owner: string | null, values: Record<string, unknown> = {}
 
 function invoiceValues(owner: string | null) {
   const n = next();
-  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2026-01-15", dueOn: "2026-01-15", status: "draft", contract: null } as const;
+  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2099-01-15", dueOn: "2099-01-15", status: "draft", contract: null } as const;
 }
 
 function insertInvoice(owner: string | null, values: Record<string, unknown> = {}) {
@@ -33013,7 +33013,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "34fca66d generated",
   "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "d2fd305f generated",
+  "src/generated/access.test.ts": "21610f07 generated",
   "src/generated/actions/mark-paid.server.ts": "8868fcdf generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
   "src/generated/actions/mark-sent.server.ts": "a4615a67 generated",
@@ -33732,7 +33732,7 @@ function insertOrderLine(owner: string | null, values: Record<string, unknown> =
 
 function stopValues(_owner: string | null) {
   const n = next();
-  return { place: \`Stop place \${n}\`, day: "2026-01-15", hours: \`Stop hours \${n}\`, note: null } as const;
+  return { place: \`Stop place \${n}\`, day: "2099-01-15", hours: \`Stop hours \${n}\`, note: null } as const;
 }
 
 function insertStop(owner: string | null, values: Record<string, unknown> = {}) {
@@ -39874,7 +39874,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
-  "src/generated/access.test.ts": "cf2bd0ff generated",
+  "src/generated/access.test.ts": "ae254a9d generated",
   "src/generated/actions/accept.server.ts": "a8a3a619 generated",
   "src/generated/actions/accept.ts": "7b2e4721 generated",
   "src/generated/actions/back-on.server.ts": "1dc469d6 generated",
@@ -44725,7 +44725,7 @@ async function reads(
 
 function itemValues(_owner: string | null) {
   const n = next();
-  return { name: \`Item name \${n}\`, summary: null, kind: "general", link: null, addedOn: "2026-01-15" } as const;
+  return { name: \`Item name \${n}\`, summary: null, kind: "general", link: null, addedOn: "2099-01-15" } as const;
 }
 
 function insertItem(owner: string | null, values: Record<string, unknown> = {}) {
@@ -47394,7 +47394,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "71825882 generated",
-  "src/generated/access.test.ts": "6338c554 generated",
+  "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "41a8fc86 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -47987,7 +47987,7 @@ function insertComponent(owner: string | null, values: Record<string, unknown> =
 
 function incidentValues(_owner: string | null) {
   const n = next();
-  return { title: \`Incident title \${n}\`, status: "investigating", componentId: null, detectedAt: new Date("2026-01-15T10:00:00Z"), resolvedAt: null, summary: null } as const;
+  return { title: \`Incident title \${n}\`, status: "investigating", componentId: null, detectedAt: new Date("2099-01-15T10:00:00Z"), resolvedAt: null, summary: null } as const;
 }
 
 function insertIncident(owner: string | null, values: Record<string, unknown> = {}) {
@@ -48000,7 +48000,7 @@ function insertIncident(owner: string | null, values: Record<string, unknown> = 
 
 function incidentUpdateValues(owner: string | null) {
   const n = next();
-  return { incidentId: insertIncident(owner).id, at: new Date("2026-01-15T10:00:00Z"), status: "investigating", message: \`IncidentUpdate message \${n}\` } as const;
+  return { incidentId: insertIncident(owner).id, at: new Date("2099-01-15T10:00:00Z"), status: "investigating", message: \`IncidentUpdate message \${n}\` } as const;
 }
 
 function insertIncidentUpdate(owner: string | null, values: Record<string, unknown> = {}) {
@@ -48013,7 +48013,7 @@ function insertIncidentUpdate(owner: string | null, values: Record<string, unkno
 
 function maintenanceValues(_owner: string | null) {
   const n = next();
-  return { title: \`Maintenance title \${n}\`, componentId: null, startsAt: new Date("2026-01-15T10:00:00Z"), endsAt: new Date("2026-01-15T10:00:00Z"), description: null } as const;
+  return { title: \`Maintenance title \${n}\`, componentId: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), description: null } as const;
 }
 
 function insertMaintenance(owner: string | null, values: Record<string, unknown> = {}) {
@@ -57951,7 +57951,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "2df13645 generated",
+  "src/generated/access.test.ts": "41f7c3b5 generated",
   "src/generated/actions/identified.server.ts": "fc584110 generated",
   "src/generated/actions/identified.ts": "267f914e generated",
   "src/generated/actions/monitoring.server.ts": "09d85fa8 generated",
