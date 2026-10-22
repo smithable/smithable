@@ -21,6 +21,13 @@ export interface MapEdge {
   label: string;
   /** A reference a field stores; or ownership: whose record it is (ownedBy, or who made it). */
   kind: "reference" | "owner";
+  /**
+   * How the two relate, read from the source: many of these to one of those, or one to one where
+   * the field is unique on its own (Johan, 2026-10-23).
+   */
+  relation: "many to one" | "one to one";
+  /** The list on the other side that shows these records, when there is one (Customer.orders). */
+  list?: string;
 }
 
 const holds = (f: FieldIR): string =>
@@ -40,12 +47,24 @@ export function mapOf(ir: SpecIR, auth?: AuthIR): { nodes: MapNode[]; edges: Map
       // A list is the other side of a reference: drawn once, from the record that stores it.
       if (field.type.kind !== "relation" || field.type.many) continue;
       const owner = field.name === model.ownedBy;
+      const one = (model.unique ?? []).some(
+        (u) => u.fields.length === 1 && u.fields[0] === field.name,
+      );
+      const target = field.type.model;
+      const list = ir.models
+        .find((m) => m.name === target)
+        ?.fields.find(
+          (f) => f.type.kind === "relation" && f.type.many && f.type.model === model.name,
+        );
+      const relation = one ? "one to one" : "many to one";
       edges.push({
         id: `${model.name}.${field.name}`,
         source: model.name,
-        target: field.type.model,
-        label: owner ? `${field.name} (owns it)` : field.name,
+        target,
+        label: `${field.name}${owner ? " (owns it)" : ""} · ${relation}${list ? ` · ${target}.${list.name}` : ""}`,
         kind: owner ? "owner" : "reference",
+        relation,
+        ...(list ? { list: `${target}.${list.name}` } : {}),
       });
     }
   }

@@ -20,8 +20,15 @@ test("the CRM's map: its kinds of record and the people, references and ownershi
     id: "Customer.accountManager",
     source: "Customer",
     target: "User",
-    label: "accountManager (owns it)",
+    label: "accountManager (owns it) · many to one",
     kind: "owner",
+    relation: "many to one",
+  });
+  // How they relate, with the list on the other side.
+  expect(edges.find((e) => e.id === "Order.customer")).toMatchObject({
+    relation: "many to one",
+    list: "Customer.orders",
+    label: "customer · many to one · Customer.orders",
   });
   // An order is whoever made it: said in its box, not by an arrow to the people.
   expect(nodes.find((n) => n.id === "Order")?.madeBy).toBe(true);

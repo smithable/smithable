@@ -371,6 +371,8 @@ function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; wor
 /** What Smith answers by himself (studio-v3.md §2), from the app and its checks. */
 export interface Ready {
   sections: SummarySection[];
+  /** The app's name, for the greeting. */
+  appName?: string;
   /** The validator's notes: advice with its fix. */
   notes: Diagnostic[];
   /** Hosted: where the app is published and shared. */
@@ -420,6 +422,11 @@ function ReadyPrompts({
   ];
   return (
     <div className="space-y-3">
+      {/* A greeting by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */}
+      <div className="space-y-1 text-sm">
+        <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
+        <p className="text-muted">Perhaps you want to…</p>
+      </div>
       <fieldset aria-label="Ready prompts" className="flex flex-wrap gap-1.5">
         <legend className="sr-only">Ready prompts</legend>
         {chips.map(([id, label]) => (

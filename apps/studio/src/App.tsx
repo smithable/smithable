@@ -872,7 +872,7 @@ export function App() {
                   >
                     <Tabs
                       tabs={[
-                        ["smith", "Smith"],
+                        ["smith", WINDOW_NAMES.smith],
                         ["changes", "Changes"],
                       ]}
                       value={phoneSub}
@@ -919,7 +919,7 @@ export function App() {
                         />
                       </Suspense>
                     ) : w === "smith" ? (
-                      <Panel key={w} title="Smith" className="min-h-0 flex-1">
+                      <Panel key={w} title={WINDOW_NAMES.smith} className="min-h-0 flex-1">
                         <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                           <Ask
                             example={example}
@@ -928,6 +928,7 @@ export function App() {
                             trace={project.trace}
                             ready={{
                               sections,
+                              appName: project.name,
                               notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
                               ...(project.home ? { home: project.home } : {}),
                               apply: (op, args) => void run(op, args),
