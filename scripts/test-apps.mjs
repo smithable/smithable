@@ -519,6 +519,47 @@ async function bookingFlow(dir, base) {
  * the studio deletes it and the member is told about it as it was. Mails are sent after the
  * change, so each is waited for in the outbox.
  */
+/**
+ * The staff's list of sessions (filters.md, A 135): it opens on what is to come (the page's
+ * defaultFilter), shown as a chip with All, which shows the past too; the instructor filter waits
+ * behind "More filters" (the ux file's filters.shown) and shows at once with a value.
+ */
+async function sessionsListFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/sessions`);
+    const chips = page.getByRole("list", { name: "Active filters" });
+    await chips.getByText(/: Upcoming$/).waitFor({ timeout: 10000 * P });
+    const rows = () => page.locator("main tbody tr").count();
+    await page
+      .locator("main tbody tr")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    const upcoming = await rows();
+    await chips.getByRole("button", { name: "All", exact: true }).click();
+    await page.waitForURL(/[?&]startsAt=all/, { timeout: 10000 * P });
+    for (let i = 0; i < 50 * P && (await rows()) <= upcoming; i++) await page.waitForTimeout(100);
+    if ((await rows()) <= upcoming) throw new Error("All shows no more sessions than Upcoming");
+    // Folded: the instructor filter until More filters.
+    if (await page.getByRole("group", { name: "Instructor" }).count())
+      throw new Error("the instructor filter is not folded");
+    await page.getByRole("button", { name: "More filters" }).click();
+    await page.getByRole("group", { name: "Instructor" }).waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: the sessions list opens on upcoming ones, a chip with All shows the past too, and the instructor filter waits behind More filters",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("sessions list");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function outgoingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -6948,6 +6989,7 @@ test("the session cookie's name and attributes", async () => {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
+        await sessionsListFlow(base);
         await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);

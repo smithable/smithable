@@ -1295,6 +1295,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/schedule",
     },
     {
+      "defaultFilter": {
+        "startsAt": "upcoming",
+      },
       "filters": [
         "classType",
         "instructor",
