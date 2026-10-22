@@ -6,14 +6,18 @@ defaultAccess: shared
 roles:
   admin: all
   staff:
-    description: Writes incidents and their updates.
-    pages: [overview, incidents, updates, maintenance]
+    description: Writes outages and their updates.
+    pages: [overview, incidents, updates]
     create: all
     write: all
 assistant:
   for: signed-in
 public:
   pages: [home, privacy]
-  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
+  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate]
 defaultRole: staff
+api:
+  models: [Component, Incident]
+  actions: [resolve]
+  assistants: true
 admins: [johan@smithable.ai]

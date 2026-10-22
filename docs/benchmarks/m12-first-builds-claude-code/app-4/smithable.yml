@@ -9,7 +9,7 @@ models:
       title: string!
       photos: pictures!
       description: text!
-      category: powerTools | handTools | garden | ladders | cleaning | other
+      category: garden | power | hand | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -18,18 +18,19 @@ models:
     fields:
       tool: Tool!
       borrower: User!
-      from: date!
-      due: date
+      lentOn: date!
+      dueOn: date
       status: out | returned
-      returnedOn: date
+      returnedOn:
+        type: date
+        by: app
       note: text
 pages:
-  catalog:
+  tools:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
-    sortable: [title, createdAt]
     favorites: true
     contact: owner
   myTools:
@@ -49,9 +50,10 @@ pages:
     landing:
       hero:
       footer:
-      features:
       latest:
         records: Tool
+        where:
+          available: true
   privacy:
     route: /privacy
     legal: privacy
@@ -64,4 +66,4 @@ actions:
       status: returned
       returnedOn: TODAY()
     intent: Record that the borrowed tool has come back.
-navigation: [catalog, myTools, loans, saved, review]
+navigation: [tools, myTools, loans, saved, review]

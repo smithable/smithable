@@ -2,13 +2,16 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Find your balance at Juniper Yoga
-      subtitle: Classes for every level, taught by experienced teachers. See the schedule and book your place online.
+      title: Find your calm on the mat
+      subtitle: Classes for every level with experienced teachers. See the week's schedule and book your place online.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
         generated: true
+    callToAction:
+      title: Ready for your next class?
+      button: Book a class
 logo:
   src: images/logo.webp
   alt: A calendar page

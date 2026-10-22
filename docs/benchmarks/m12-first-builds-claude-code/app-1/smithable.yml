@@ -3,6 +3,7 @@ app:
   name: Juniper Yoga Studio
   description: Class schedule, teachers and online booking for a yoga studio.
   currency: EUR
+  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -30,6 +31,8 @@ models:
   Booking:
     fields:
       session: Session! unique
+      attendee: User
+    ownedBy: attendee
     capacity:
       per: session
       max: session.capacity
@@ -39,21 +42,6 @@ models:
       email: email!
       message: text!
 pages:
-  sessions:
-    crud: Session
-  class-types:
-    crud: ClassType
-    filters: [level]
-  instructors:
-    crud: Instructor
-  my-bookings:
-    crud: Booking
-  messages:
-    crud: Message
-  schedule:
-    calendar:
-      model: Session
-      starts: startsAt
   home:
     route: /
     landing:
@@ -69,15 +57,32 @@ pages:
         button: schedule
       contact:
         form: Message
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  my-bookings:
+    crud: Booking
+  sessions:
+    crud: Session
+    filters: [classType, instructor, startsAt]
+    sortable: [startsAt, capacity]
+  class-types:
+    crud: ClassType
+    filters: [level]
+  instructors:
+    crud: Instructor
+  messages:
+    crud: Message
   privacy:
     route: /privacy
     legal: privacy
-outgoing:
-  bookingMade:
-    when: Booking created
-    to: mail
-    recipient: owner
-  bookingCancelled:
-    when: Booking deleted
-    to: mail
-    recipient: owner
+  admin:
+    data: all
+navigation:
+  main: [home, schedule, my-bookings, sessions, class-types, instructors, messages, privacy, admin]
+  schedule: [schedule, my-bookings, sessions]
+  messages: [messages]
+  studioSetup: [class-types, instructors]
+  website: [home]
+  admin: [admin]

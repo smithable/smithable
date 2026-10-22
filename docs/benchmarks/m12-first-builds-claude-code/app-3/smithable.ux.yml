@@ -1,8 +1,4 @@
 smithableUx: 0.1
-theme:
-  preset: modern
-  brand:
-    primary: "#0f766e"
 pages:
   payments:
     table:
@@ -10,6 +6,8 @@ pages:
   invoices:
     table:
       columns: [number, client, issuedOn, dueOn, status, total, balance]
+theme:
+  preset: modern
 tones:
   Invoice.status:
     paid: success

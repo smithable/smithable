@@ -1,3 +1,10 @@
 smithableUx: 0.1
+pages:
+  sessions:
+    table:
+      sort: startsAt
+  instructors:
+    table:
+      view: cards
 theme:
-  preset: woodland
+  preset: nordic

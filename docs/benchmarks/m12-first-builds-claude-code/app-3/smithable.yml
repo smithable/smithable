@@ -1,17 +1,10 @@
 smithable: 0.1
 app:
-  name: Billfold
+  name: Ledgerly
   description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
   currency: EUR
   timezone: Europe/Stockholm
 models:
-  BusinessProfile:
-    fields:
-      businessName: string!
-      vatNumber: string
-      iban: string
-      paymentTermDays: int! = 30
-      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -28,13 +21,22 @@ models:
         type: money
         formula: quantity * unitPrice
       invoice: Invoice!
+  Payment:
+    fields:
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      reference: string
+      note: text
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
+      contract: file
       lines: InvoiceLine[]
       payments: Payment[]
       total:
@@ -46,21 +48,33 @@ models:
       balance:
         type: money
         formula: total - paidAmount
-  Payment:
-    fields:
-      invoice: Invoice!
-      amount: money!
-      paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
-      reference: string
-      note: text
 pages:
+  overview:
+    dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
+      outstanding:
+        sum: Invoice.balance
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.balance
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+      latest:
+        list: Invoice
+        limit: 5
   clients:
     crud: Client
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
   invoice-lines:
     crud: InvoiceLine
-  settings:
-    crud: BusinessProfile
   home:
     route: /
     landing:
@@ -77,28 +91,6 @@ pages:
     crud: Invoice
     filters: [client, status]
     actions: [markSent, markPaid]
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
-  overview:
-    dashboard:
-      outstanding:
-        sum: Invoice.balance
-        where:
-          status: sent
-      overdue:
-        sum: Invoice.balance
-        where:
-          status: overdue
-      received:
-        sum: Payment.amount
-        by: paidOn
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
-      latest:
-        list: Invoice
-        limit: 5
 actions:
   markSent:
     on: Invoice
@@ -119,3 +111,8 @@ actions:
         paidOn: TODAY()
         method:
     intent: The client paid the invoice; the payment is recorded with it.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

@@ -6,10 +6,10 @@ defaultAccess: shared
 roles:
   admin: all
   member:
-    description: "A family member: adds and changes recipes and shopping lists."
+    description: "A family member: adds recipes and shops from the lists."
     pages: all
     create: all
-    write: all
+    write: [ShoppingList, ShoppingItem]
 assistant:
   for: signed-in
 defaultRole: member

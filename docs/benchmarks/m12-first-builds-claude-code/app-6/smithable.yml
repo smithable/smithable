@@ -1,84 +1,95 @@
 smithable: 0.1
 app:
   name: Union Job Board
-  description: Job openings shared by the local union, where members find work and apply.
+  description: Job posts from our local union, and members' applications for them.
   currency: USD
-  timezone: America/New_York
+  timezone: America/Chicago
 models:
   Job:
     fields:
       title: string!
       employer: string!
-      description: text!
+      trade: electrical | plumbing | carpentry | construction | manufacturing | transport | healthcare | other
+      jobType: fullTime | partTime | temporary | apprenticeship
       location: string
-      trade: construction | electrical | plumbing | manufacturing | transport | healthcare | office | other
-      type: fullTime | partTime | temporary | apprenticeship
-      pay: string
+      payRate: string
+      description: text!
       closesOn: date
-      open: bool = true
+      status: open | filled | closed
       applications: Application[]
   Application:
     fields:
-      job: Job! unique
+      job: Job!
       name: string!
+      email: email!
       phone: phone
       memberNumber: string
-      coverLetter: text
-      cv: file
-      status: submitted | shortlisted | rejected | hired
+      message: text
+      resume: file
+      status:
+        type: submitted | shortlisted | accepted | declined
+        by: app
 pages:
   jobs:
     route: /
     crud: Job
-    search: [title, employer, description, location]
-    filters: [trade, type, open, closesOn]
-    sortable: [closesOn, createdAt]
+    search: [title, employer, location, description]
+    filters: [trade, jobType, status, closesOn]
+    sortable: [createdAt, closesOn]
     favorites: true
-    actions: [closeJob]
-  applications:
-    crud: Application
-    filters: [job, status]
+    actions: [markFilled, closeJob]
   myApplications:
     crud: Application
     mine: true
+  applications:
+    crud: Application
+    filters: [job, status]
+    search: [name, email, memberNumber]
   home:
     route: /welcome
     landing:
       hero:
-      footer:
       latestJobs:
         records: Job
         where:
-          open: true
+          status: open
+      footer:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
 actions:
+  markFilled:
+    on: Job
+    when:
+      status: open
+    set:
+      status: filled
+    intent: Mark a job as filled once someone is hired.
   closeJob:
     on: Job
     when:
-      open: true
+      status: open
     set:
-      open: false
-    intent: Stop taking applications for a job.
+      status: closed
+    intent: Close a job post to new applications.
   shortlist:
     on: Application
     when:
       status: submitted
     set:
       status: shortlisted
-  hire:
+    intent: Put an application on the shortlist.
+  accept:
     on: Application
     when:
       status: [submitted, shortlisted]
     set:
-      status: hired
-  reject:
+      status: accepted
+    intent: Accept an application.
+  decline:
     on: Application
     when:
       status: [submitted, shortlisted]
     set:
-      status: rejected
-navigation: [jobs, myApplications, applications, team]
+      status: declined
+    intent: Decline an application.
