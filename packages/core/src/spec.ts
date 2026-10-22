@@ -13,6 +13,7 @@ import { navigationSection } from "./sections/navigation.js";
 import { outgoingSection } from "./sections/outgoing.js";
 import { pagesSection } from "./sections/pages.js";
 import { queriesSection } from "./sections/queries.js";
+import { timersSection } from "./sections/timers.js";
 import { didYouMean } from "./suggest.js";
 
 /** The spec format version this build of Smithable reads and writes. */
@@ -23,6 +24,7 @@ export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
   actionsSection,
+  timersSection,
   outgoingSection,
   incomingSection,
   queriesSection,

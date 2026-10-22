@@ -979,6 +979,55 @@
         }
       }
     },
+    "timers": {
+      "type": "object",
+      "description": "What the app does on a clock: an event raised at a time, on a schedule or relative to a date of a record, running an action over the records it is due for; outgoing may listen to it.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "type": "string",
+            "description": "The model whose records the timer runs for."
+          },
+          "at": {
+            "type": "string",
+            "description": "With \"on\": a date field of the records, alone or after an offset (\"1 day before session.startsAt\", \"7 days after dueOn\"); with \"every\": a clock time (\"08:00\") in the app's time zone."
+          },
+          "every": {
+            "enum": [
+              "day",
+              "weekday",
+              "week",
+              "month",
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ],
+            "description": "A clock timer: day, weekday, week, month (the first day of theirs) or a weekday's name; with at."
+          },
+          "cron": {
+            "type": "string",
+            "description": "A five-field cron expression (minute, hour, day of the month, month, weekday), for what every cannot say; the app's time zone."
+          },
+          "where": {
+            "type": "object",
+            "description": "Only records with these values, e.g. { status: confirmed }."
+          },
+          "run": {
+            "type": "string",
+            "description": "The action it runs: a standard action of the records' model (for each record), or a custom action (once)."
+          }
+        }
+      }
+    },
     "outgoing": {
       "type": "object",
       "description": "Who is told when something happens to a record: a mail to the owner, a role or an address on the record; or a signed call to a named target.",

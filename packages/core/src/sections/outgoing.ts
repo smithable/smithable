@@ -8,7 +8,14 @@ import {
 } from "../condition.js";
 import { checkKeys, mapEntries, readNameList, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
-import type { Condition, ModelIR, OutgoingIR, RecipientIR, StandardActionIR } from "../ir.js";
+import type {
+  Condition,
+  ModelIR,
+  OutgoingIR,
+  RecipientIR,
+  StandardActionIR,
+  TimerIR,
+} from "../ir.js";
 import { humanize } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import type { SpecSection } from "../section.js";
@@ -29,11 +36,12 @@ const WHEN = /^([A-Z][A-Za-z0-9]*)\s+(created|changed|deleted)$/;
 
 type When = OutgoingIR["when"];
 
-/** Reads `when`: a model's event, or a standard action; says what is wrong otherwise. */
+/** Reads `when`: a model's event, a standard action or a timer; says what is wrong otherwise. */
 function readWhen(
   text: string,
   models: ModelIR[],
   actions: StandardActionIR[],
+  timers: TimerIR[] = [],
 ): { when: When } | { problem: string; hint?: string } {
   const event = WHEN.exec(text.trim());
   if (event) {
@@ -49,13 +57,25 @@ function readWhen(
     return { when: { model, event: kind as (typeof EVENTS)[number] } };
   }
   const action = actions.find((a) => a.name === text.trim());
+  const timer = timers.find((t) => t.name === text.trim());
+  // A timer may run an action of the same name (the design's own example); "when" then cannot
+  // tell them apart, so it asks for one of them to be renamed.
+  if (action && timer)
+    return {
+      problem: `"${text.trim()}" is both an action and a timer, so "when" cannot tell which; rename one of them.`,
+    };
   if (action) return { when: { model: action.on, action: action.name } };
+  if (timer) {
+    // A timer's event comes per record; one without records has nothing to tell about.
+    if (!timer.on)
+      return {
+        problem: `the timer "${timer.name}" runs for no records (no "on"), so there is no record to tell anyone about; the action it runs may mail.`,
+      };
+    return { when: { model: timer.on, timer: timer.name } };
+  }
   return {
-    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted" or the name of a standard action; "${text}" is neither.`,
-    hint: didYouMean(
-      text.trim(),
-      actions.map((a) => a.name),
-    ),
+    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of a standard action or the name of a timer; "${text}" is none of them.`,
+    hint: didYouMean(text.trim(), [...actions.map((a) => a.name), ...timers.map((t) => t.name)]),
   };
 }
 
@@ -201,7 +221,9 @@ export function outgoingText(o: OutgoingIR, label?: (model: string) => string): 
       ? `When a ${name} changes so that ${conditionText(o.where as Condition)}`
       : "event" in o.when
         ? `When a ${name} is ${EVENT_WORDS[o.when.event]}${o.where ? ` and ${conditionText(o.where)}` : ""}`
-        : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
+        : "timer" in o.when
+          ? `When the timer “${humanize(o.when.timer)}” comes for a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`
+          : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
   const to =
     o.to !== "mail"
       ? `tells ${humanize(o.to).toLowerCase()}`
@@ -287,6 +309,7 @@ const addOutgoing: Operation<{
       when,
       ir.models,
       ir.actions.filter((a): a is StandardActionIR => !a.custom),
+      ir.timers,
     );
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
@@ -391,7 +414,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       const whenText = readString(ctx, whenEntry.value, `"when" of ${where}`);
       if (whenText === undefined) continue;
-      const read = readWhen(whenText, models, actions);
+      const read = readWhen(whenText, models, actions, parsed.timers ?? []);
       if ("problem" in read) {
         ctx.error(
           whenEntry.value,

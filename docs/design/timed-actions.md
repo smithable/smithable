@@ -1,6 +1,6 @@
 # Timed actions: what the app does on a clock (design)
 
-Status: proposed 2026-10-22 by Fable, from Johan's questions of 2026-10-21 ("did you implement
+Status: step 1 (core) built 2026-10-22 by Fable (the section, its three forms, the words, the operations, outgoing's `when` on a timer, the spec reference); steps 2–4 by A follow. Proposed 2026-10-22 by Fable, from Johan's questions of 2026-10-21 ("did you implement
 schedules? should it be in the spec, or an admin setting up scheduled actions in the app? should
 mail go directly or always via an action?") and his go the same night, with two asks: a cron
 expression may be the spec's form if the person can choose in a more normal way, and other

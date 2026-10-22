@@ -109,7 +109,8 @@ test("the trace has each change's id, the person's files it changed and a model'
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-});
+  // A real project's trace: seconds on a loaded machine, so not vitest's five.
+}, 30_000);
 
 test("a request's body is refused past its limit, before it is read in full", async () => {
   const { readJson, TooLarge } = await import("./studio.js");
