@@ -33,6 +33,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
+import { nameColumns, nameFunction } from "./names.js";
 import {
   cancelMembers,
   freeTimesMember,
@@ -46,6 +47,7 @@ import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   addable,
   code,
+  composedName,
   dataKey,
   type GenContext,
   Getter,
@@ -65,6 +67,7 @@ import {
   sequenceEntries,
   shownFields,
   shownTitle,
+  shownTitleKey,
   storedFields,
   type Texts,
   tableRef,
@@ -167,7 +170,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     model: model.name,
     label: n.label,
     pluralLabel: n.pluralLabel,
-    titleField: titleField(model),
+    titleField: shownTitleKey(ir, model.name),
     ...(description ? { descriptionField: dataKey(description) } : {}),
     columns: columnsOf(model, shown).map(dataKey),
     fields: shown.map((field) => ({
@@ -179,24 +182,28 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   // carry (a list's rows have them, a record's own list of related records does not).
   const extras = shown.flatMap((f) => {
     if (f.type.kind === "relation") {
-      const title = relatedTitle(ir, f.type.model);
+      const title = shownTitleKey(ir, f.type.model);
       const user = f.type.model === USER_MODEL;
       // The title as Drizzle gives it: a user's name always, another model's title field
-      // when it is required, else possibly null.
+      // when it is required, else possibly null; a name made of parts, set by the data
+      // functions (docs/design/record-names.md).
       const titleType =
-        user || modelNamed(ir, f.type.model).fields.find((x) => x.name === title)?.required
+        title === "$name"
           ? "string"
-          : "string | null";
+          : user || modelNamed(ir, f.type.model).fields.find((x) => x.name === title)?.required
+            ? "string"
+            : "string | null";
       return [
-        `${f.name}?: { id: ${user ? "string" : "number"}${title === "id" ? "" : `; ${title}: ${titleType}`}${trashed(f) ? "; deletedAt?: Date | null" : ""} } | null`,
+        `${f.name}?: { id: ${user ? "string" : "number"}${title === "id" ? "" : `; ${title}${title === "$name" ? "?" : ""}: ${titleType}`}${trashed(f) ? "; deletedAt?: Date | null" : ""} } | null`,
       ];
     }
     return f.formula ? [`${f.name}?: unknown`] : [];
   });
+  if (composedName(model)) extras.push("$name?: string");
   const rowType = `typeof ${n.table}.$inferSelect${extras.length ? ` & {\n  ${extras.join(";\n  ")};\n}` : ""}`;
   function accessor(f: FieldIR): string {
     if (f.type.kind !== "relation") return `(row) => row.${f.name}`;
-    const title = relatedTitle(ir, f.type.model);
+    const title = shownTitleKey(ir, f.type.model);
     const live = trashed(f) ? ` && !row.${f.name}.deletedAt` : "";
     if (title === "id") return `(row) => (row.${f.name}${live} ? \`#\${row.${f.name}.id}\` : null)`;
     return live
@@ -631,17 +638,15 @@ export function dataModule(
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
   );
-  // With whether it is in the trash: its referrers then show a dash (docs/design/trash.md).
-  const title = (m: ModelIR) => {
-    const f = titleField(m);
-    return `{ id: true${f === "id" ? "" : `, ${f}: true`}${m.trash ? ", deletedAt: true" : ""} }`;
-  };
   // Related records to include: the title of each referenced record (and user), and for
   // lists the listed records the viewer may read, with the titles of what they refer to.
   const withReferences = (m: ModelIR, except?: string) => [
     ...references(m)
       .filter((f) => f.type.model !== except)
-      .map((f) => `${f.name}: { columns: ${title(modelNamed(ir, f.type.model))} }`),
+      .map((f) => {
+        const target = modelNamed(ir, f.type.model);
+        return `${f.name}: ${nameColumns(ir, target, target.trash ? ", deletedAt: true" : "")}`;
+      }),
     ...userFields(m).map((f) => `${f.name}: { columns: { id: true, name: true } }`),
   ];
   // A list of a model with a trash counts its live records only (docs/design/trash.md).
@@ -687,16 +692,32 @@ export function dataModule(
   const refs = references(model);
   // A related record's title only for who may read that record (its read rule, ownership, the
   // trash, review holds): each reference the viewer may not read is shown as nothing.
+  // Names made of parts (docs/design/record-names.md): set on the rows and on the references
+  // the viewer may read, after the others are hidden, so a hidden one names nothing.
+  const composedRefs = refs.filter((f) => composedName(modelNamed(ir, f.type.model)));
+  const namedRows = (rows: string) =>
+    composedName(model) || composedRefs.length
+      ? `${rows}.map((row) => ({ ...row${composedName(model) ? `, $name: ${nameFunction(model)}(row)` : ""}${composedRefs
+          .map(
+            (f) =>
+              `, ${f.name}: row.${f.name} ? { ...(row.${f.name} as Record<string, unknown>), $name: ${nameFunction(modelNamed(ir, f.type.model))}(row.${f.name} as Record<string, unknown>) } : row.${f.name}`,
+          )
+          .join("")} }) as R)`
+      : rows;
   const shownRefsMethod = () => `
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(${refs.length ? "viewer" : "_viewer"}: Viewer | null, rows: R[]): R[] {
-    return ${refs.reduce((rows, f) => {
-      const target = modelNamed(ir, f.type.model);
-      const table = tableRef(target);
-      const readable =
-        target === model ? `${self}.readable(viewer)` : `${names(target, t).data}.readable(viewer)`;
-      return `hideRefs(${rows}, "${f.name}", (ids, c = ${readable}) => (c ? db.select({ id: ${table}.id }).from(${table}).where(and(inArray(${table}.id, ids), c)).all().map((r) => r.id) : ids))`;
-    }, "rows")};
+    return ${namedRows(
+      refs.reduce((rows, f) => {
+        const target = modelNamed(ir, f.type.model);
+        const table = tableRef(target);
+        const readable =
+          target === model
+            ? `${self}.readable(viewer)`
+            : `${names(target, t).data}.readable(viewer)`;
+        return `hideRefs(${rows}, "${f.name}", (ids, c = ${readable}) => (c ? db.select({ id: ${table}.id }).from(${table}).where(and(inArray(${table}.id, ids), c)).all().map((r) => r.id) : ids))`;
+      }, "rows"),
+    )};
   },
 `;
   const shownOne = (v: string) => {
@@ -1457,7 +1478,16 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+${[
+  ...new Set([
+    ...(composedName(model) ? [model] : []),
+    ...composedRefs.map((f) => modelNamed(ir, f.type.model)),
+  ]),
+]
+  .map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`)
+  .join(
+    "",
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2411,7 +2441,7 @@ export function fieldUi(model: ModelIR, field: FieldIR, t: Texts, ir: SpecIR, ux
         }
       : {}),
     ...(field.type.kind === "relation"
-      ? { relation: { key: field.name, titleField: relatedTitle(ir, field.type.model) } }
+      ? { relation: { key: field.name, titleField: shownTitleKey(ir, field.type.model) } }
       : {}),
     ...(field.default !== undefined
       ? { default: kind === "money" ? Math.round(Number(field.default) * 100) : field.default }
