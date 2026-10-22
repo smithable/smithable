@@ -46,10 +46,12 @@ const writePlaces = (app: string, nodes: Node[]) => {
   } catch {}
 };
 
-/** dagre's first layout, left to right, the referring record before the one it refers to. */
+/** dagre's first layout, top to bottom, the referring record above the one it refers to. */
 function laidOut(boxes: MapNode[], edges: { source: string; target: string }[]) {
   const g = new graphlib.Graph();
-  g.setGraph({ rankdir: "LR", nodesep: 32, ranksep: 96 });
+  // Top to bottom, as No code's column is tall and narrow; room between the rows for an
+  // arrow's label ("accountManager (owns it)") and between boxes for the arrows passing them.
+  g.setGraph({ rankdir: "TB", nodesep: 48, ranksep: 110 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const b of boxes) g.setNode(b.id, { width: WIDTH, height: HEIGHT });
   for (const e of edges) g.setEdge(e.source, e.target);
@@ -71,7 +73,7 @@ function Box({ data }: NodeProps<Node<BoxData>>) {
       className="rounded border border-line bg-panel text-xs shadow-sm"
       style={{ width: WIDTH }}
     >
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position={Position.Top} />
       <div className="flex items-center justify-between gap-2 px-2 py-1.5">
         {people ? (
           <span className="font-semibold">{box.id}: the people who sign in</span>
@@ -108,7 +110,7 @@ function Box({ data }: NodeProps<Node<BoxData>>) {
           ))}
         </ul>
       )}
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }
@@ -178,6 +180,7 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
           nodesConnectable={false}
           edgesFocusable={false}
           fitView
+          fitViewOptions={{ padding: 0.15 }}
           colorMode="system"
         >
           <Background />
