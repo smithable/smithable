@@ -2,6 +2,7 @@
 // (docs/design/record-names.md). A model named by one stored text field keeps today's title
 // column; one named by several parts, a reference, a path or a date is named by a function of
 // its own (src/generated/<model>.name.ts), from the columns its parts need, loaded with the record.
+// The lines a page shows under a name (the ux file's record: subtitle, detail) are read there too.
 import {
   camel,
   type FieldIR,
@@ -11,6 +12,7 @@ import {
   type NamePartIR,
   type SpecIR,
   USER_MODEL,
+  type UxIR,
 } from "@smithable/core";
 import {
   composedName as composed,
@@ -26,6 +28,9 @@ export { composed };
 /** The function that names a composed model's records, in its module. */
 export const nameFunction = (model: ModelIR) => `${camel(model.name)}Name`;
 
+/** The function that gives a record's lines under its name, in the same module. */
+export const linesFunction = (model: ModelIR) => `${camel(model.name)}Lines`;
+
 const fieldOf = (model: ModelIR, name: string) =>
   model.fields.find((f) => f.name === name) as FieldIR;
 
@@ -35,45 +40,87 @@ const targetOf = (ir: SpecIR, f: FieldIR) =>
     : undefined;
 
 /**
- * The columns Drizzle loads for a record to be named: its title column, or what its parts need,
- * with the referenced records' own (one reference at a time, as names compose).
+ * The lines under a record's name (record-names.md §3): the ux file's `record` on the model's
+ * list page, where its records are shown and chosen. None when the page says nothing.
  */
-export function nameColumns(ir: SpecIR, model: ModelIR, extra = ""): string {
-  if (!composed(model)) {
-    const f = titleField(model);
-    return `{ columns: { id: true${f === "id" ? "" : `, ${f}: true`}${extra} } }`;
-  }
+export function recordLines(
+  ir: SpecIR,
+  ux: UxIR | undefined,
+  model: ModelIR,
+): { subtitle?: NamePartIR; detail?: NamePartIR[] } | undefined {
+  const page = ir.pages.find(
+    (p) =>
+      p.pattern.kind === "crud" &&
+      p.pattern.model === model.name &&
+      (ux?.pages[p.id]?.subtitle || ux?.pages[p.id]?.detail?.length),
+  );
+  const own = page ? ux?.pages[page.id] : undefined;
+  return own
+    ? {
+        ...(own.subtitle ? { subtitle: own.subtitle } : {}),
+        ...(own.detail?.length ? { detail: own.detail } : {}),
+      }
+    : undefined;
+}
+
+/** Whether a model has a module of its name: a name of parts, or lines under it. */
+export const named = (ir: SpecIR, ux: UxIR | undefined, model: ModelIR) =>
+  composed(model) || recordLines(ir, ux, model) !== undefined;
+
+/** The parts of a record's lines, as one list. */
+const lineParts = (lines: ReturnType<typeof recordLines>): NamePartIR[] =>
+  lines ? [...(lines.subtitle ? [lines.subtitle] : []), ...(lines.detail ?? [])] : [];
+
+/**
+ * The columns Drizzle loads for a record to be named: its title column, or what its parts need,
+ * with the referenced records' own (one reference at a time, as names compose); `also`, more
+ * parts to load (the lines under the name).
+ */
+export function nameColumns(
+  ir: SpecIR,
+  model: ModelIR,
+  extra = "",
+  also: NamePartIR[] = [],
+): string {
+  const parts = [...(composed(model) ? (model.nameParts ?? []) : []), ...also];
   const columns = new Set<string>(["id"]);
-  const withs = new Map<string, string>();
-  for (const part of model.nameParts ?? []) {
+  const title = titleField(model);
+  if (!composed(model) && title !== "id") columns.add(title);
+  const withs = new Map<string, { columns: Set<string>; named: boolean }>();
+  for (const part of parts) {
     const ref = fieldOf(model, part.through ?? part.field);
     if (ref.type.kind !== "relation") {
       columns.add(part.field);
       continue;
     }
-    if (ref.type.model === USER_MODEL) {
-      withs.set(ref.name, "{ columns: { id: true, name: true } }");
-      continue;
-    }
-    const target = modelNamed(ir, ref.type.model);
-    withs.set(
-      ref.name,
-      part.through
-        ? `{ columns: { id: true, ${part.field}: true } }`
-        : nameColumns(ir, target, target.trash ? ", deletedAt: true" : ""),
-    );
+    const entry = withs.get(ref.name) ?? { columns: new Set<string>(), named: false };
+    if (part.through) entry.columns.add(part.field);
+    else entry.named = true;
+    withs.set(ref.name, entry);
   }
+  const nested = [...withs].map(([key, { columns: cols, named: whole }]) => {
+    const ref = fieldOf(model, key);
+    if (ref.type.kind === "relation" && ref.type.model === USER_MODEL)
+      return `${key}: { columns: { id: true, name: true } }`;
+    const target = targetOf(ir, ref) as ModelIR;
+    const paths = [...cols].map((c) => ({ field: c }));
+    return `${key}: ${
+      whole
+        ? nameColumns(ir, target, target.trash ? ", deletedAt: true" : "", paths)
+        : `{ columns: { id: true${[...cols].map((c) => `, ${c}: true`).join("")} } }`
+    }`;
+  });
   const cols = [...columns].map((c) => `${c}: true`).join(", ");
-  const nested = [...withs].map(([k, v]) => `${k}: ${v}`).join(", ");
-  return `{ columns: { ${cols}${extra} }${nested ? `, with: { ${nested} }` : ""} }`;
+  return `{ columns: { ${cols}${extra} }${nested.length ? `, with: { ${nested.join(", ")} }` : ""} }`;
 }
 
 /**
- * A composed model's naming function, for its module: each part's words, " · " between them,
- * the empty ones left out, and the label and number when all are empty (record-names.md §1).
+ * A model's name module: its naming function for a name of parts, each part's words with
+ * " · " between them, the empty ones left out, and the label and number when all are empty
+ * (record-names.md §1); and the lines under the name a page asks for (§3).
  */
-export function nameModule(ir: SpecIR, model: ModelIR, t: Texts): string {
-  const imports: [string, string][] = [["#/kit/format", "nameOf"]];
+export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): string {
+  const imports: [string, string][] = [];
   const label = t.modelLabel(model);
   const value = (f: FieldIR, expr: string, owner: ModelIR): string => {
     if (f.type.kind === "choice") {
@@ -87,7 +134,7 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts): string {
       const target = modelNamed(ir, f.type.model);
       const ref = `(${expr} as Record<string, unknown> | null | undefined)`;
       if (composed(target)) {
-        imports.push([`./${kebab(target.name)}.name`, nameFunction(target)]);
+        if (target !== model) imports.push([`./${kebab(target.name)}.name`, nameFunction(target)]);
         return `${ref} ? ${nameFunction(target)}(${ref} as Record<string, unknown>) : ""`;
       }
       const title = titleField(target);
@@ -111,7 +158,7 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts): string {
     imports.push(["#/kit/format", "titleOf"]);
     return `titleOf(${expr})`;
   };
-  const parts = (model.nameParts ?? []).map((part: NamePartIR) => {
+  const partCode = (part: NamePartIR) => {
     if (!part.through) return value(fieldOf(model, part.field), `row.${part.field}`, model);
     const ref = fieldOf(model, part.through);
     const target = targetOf(ir, ref) as ModelIR;
@@ -120,25 +167,40 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts): string {
       `(row.${ref.name} as Record<string, unknown> | null | undefined)?.${part.field}`,
       target,
     );
-  });
-  const words = (model.nameParts ?? []).map((p) =>
-    p.through ? `${p.through}.${p.field}` : p.field,
-  );
-  const code = `
-/** A ${label.toLowerCase()}'s name: ${words.join(" · ")} (smithable.yml's namedBy). */
+  };
+  const words = (parts: NamePartIR[]) =>
+    parts.map((p) => (p.through ? `${p.through}.${p.field}` : p.field)).join(" · ");
+  let code = "";
+  if (composed(model)) {
+    imports.push(["#/kit/format", "nameOf"]);
+    const parts = model.nameParts ?? [];
+    code += `
+/** A ${label.toLowerCase()}'s name: ${words(parts)} (smithable.yml's namedBy). */
 export function ${nameFunction(model)}(row: Record<string, unknown>): string {
   return nameOf(
     [
-      ${parts.join(",\n      ")},
+      ${parts.map(partCode).join(",\n      ")},
     ],
     \`${label} #\${row.id}\`,
   );
 }
 `;
+  }
+  const lines = recordLines(ir, ux, model);
+  if (lines) {
+    imports.push(["#/kit/format", "nameOf"]);
+    code += `
+/** What a ${label.toLowerCase()} shows under its name where there is room (smithable.ux.yml's record). */
+export function ${linesFunction(model)}(row: Record<string, unknown>): { subtitle?: string; detail?: string } {
+  return {${lines.subtitle ? `\n    subtitle: ${partCode(lines.subtitle)} || undefined,` : ""}${lines.detail?.length ? `\n    detail: nameOf([${lines.detail.map(partCode).join(", ")}], "") || undefined,` : ""}
+  };
+}
+`;
+  }
   const modules = new Map<string, Set<string>>();
   for (const [module, what] of imports)
     modules.set(module, (modules.get(module) ?? new Set()).add(what));
-  const lines = [...modules]
+  const header = [...modules]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([module, what]) => {
       const all = [...what].sort();
@@ -147,6 +209,10 @@ export function ${nameFunction(model)}(row: Record<string, unknown>): string {
         ? `import type { ${all.map((w) => w.slice(5)).join(", ")} } from "${module}";`
         : `import { ${all.join(", ")} } from "${module}";`;
     });
-  return `${HEADER}${lines.join("\n")}
+  return `${HEADER}${header.join("\n")}
 ${code}`;
 }
+
+/** The lines' parts, for loading the columns they need with a model's records. */
+export const linesParts = (ir: SpecIR, ux: UxIR | undefined, model: ModelIR) =>
+  lineParts(recordLines(ir, ux, model));

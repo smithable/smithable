@@ -12,6 +12,8 @@ pages:
       faq: { layout: accordion }
   sessions:
     filters: { shown: [startsAt, classType] }   # the instructor behind "More filters"
+    # Under a session's name where there is room: who teaches it, and its level.
+    record: { subtitle: instructor.name, detail: [classType.level] }
     table:
       columns: [classType, startsAt, instructor, placesLeft, capacity]
       sort: startsAt
