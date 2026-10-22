@@ -169,21 +169,7 @@ export function rootRoute(
   const barePages = framed("none");
   // The workspace: the pages in the shell, in the navigation's order; the site frame links to the
   // first the viewer may open.
-  const workspace = sitePages.length
-    ? ir.navigation
-        .flatMap((m) => m.pages)
-        .map((id) => ir.pages.find((p) => p.id === id) as PageIR)
-        .filter(
-          (p) =>
-            p &&
-            !ownFrame(p) &&
-            !["site", "none"].includes(ux.pages[p.id]?.frame ?? "") &&
-            !p.route.includes("$"),
-        )
-        .map(
-          (p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`,
-        )
-    : [];
+  const workspace = sitePages.length ? workspaceEntries(ir, ux, auth) : [];
   const visitorPages =
     signIn &&
     (ir.pages.some((p) => p.pattern.kind === "landing") ||
@@ -412,6 +398,27 @@ ${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question }
   );
 }
 `;
+}
+
+/**
+ * The workspace's pages, in the navigation's order, as code: the pages in the app's shell (not in
+ * the site's frame or none, not a landing page or a public blog). The site frame and a landing
+ * page link to the first one the viewer may open (page-sections.md §4).
+ */
+export function workspaceEntries(ir: SpecIR, ux: UxIR, auth: AuthIR): string[] {
+  return ir.navigation
+    .flatMap((m) => m.pages)
+    .map((id) => ir.pages.find((p) => p.id === id))
+    .filter(
+      (p): p is PageIR =>
+        !!p &&
+        p.pattern.kind !== "landing" &&
+        p.pattern.kind !== "onboarding" &&
+        !publicArticles(p, { auth }) &&
+        !["site", "none"].includes(ux.pages[p.id]?.frame ?? "") &&
+        !p.route.includes("$"),
+    )
+    .map((p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`);
 }
 
 export function indexRoute(ir: SpecIR): string {

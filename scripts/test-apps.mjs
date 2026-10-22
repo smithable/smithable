@@ -408,6 +408,8 @@ async function bookingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const panel = page.getByRole("dialog");
+  // Which part of the flow a failure is in, for its line.
+  let step = "the member's booking";
   try {
     write(dir, "UPDATE sessions SET capacity = 1");
     await signInAs(page, base, "member");
@@ -427,6 +429,7 @@ async function bookingFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     if ((await page.locator("main tbody tr").count()) !== 1)
       throw new Error("not one booking in My bookings");
+    step = "the member's site frame";
     // A member sees their pages in the site frame (frame: site): its menu, Sign out, the note
     // after the list, and no way into the workspace.
     await page.getByText("Can't come after all?").waitFor({ timeout: 10000 * P });
@@ -435,15 +438,18 @@ async function bookingFlow(dir, base) {
       throw new Error("a member is offered the workspace");
     // The admin opens the same session on its page: full, and its places cannot go below one.
     await signInAs(page, base, "admin");
+    step = "the about page";
     // The about page is a page of parts: its story, who teaches, and questions.
     await open(page, `${base}/about`);
     await page
       .getByRole("heading", { name: "A small studio by the harbour" })
       .waitFor({ timeout: 10000 * P });
     await page.getByRole("heading", { name: "Who teaches" }).waitFor();
+    step = "the staff's schedule";
     await open(page, `${base}/schedule`);
     // Staff see the schedule as members do, with the way into the workspace.
     await page.getByRole("link", { name: "Workspace" }).waitFor({ timeout: 10000 * P });
+    step = "the session's page from the schedule";
     await page.locator("section ol button", { hasText: title }).first().click();
     await page.waitForURL(/\/sessions\/\d+$/);
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
@@ -518,7 +524,7 @@ async function bookingFlow(dir, base) {
     );
   } catch (error) {
     console.log(
-      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+      `  ✗ browser (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("booking flow");
   } finally {
@@ -4563,7 +4569,7 @@ async function logoCheck(dir, base) {
         for (let i = 0; i < 3 && !(await page.locator('[data-kit="app-shell"]').count()); i++) {
           const into = page
             .locator('[data-kit="landing"] [data-part="header"]')
-            .getByRole("link", { name: /^Open / });
+            .getByRole("link", { name: /^(Open |Workspace$)/ });
           if (await into.count()) await into.first().click();
           else await open(page, `${base}/`);
           await page.waitForLoadState("networkidle");
@@ -4624,7 +4630,8 @@ async function aiMarkCheck(dir, base) {
         const cards = sampled && html.includes('src="/files/') ? 1 : 0;
         if (small < gallery + cards)
           throw new Error(`${small} "AI" mark(s), expected at least ${gallery + cards}`);
-        const first = /<section[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+        // The hero, wherever its page comes among the routes (a page of sections may come first).
+        const first = /<section[^>]*data-hero[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
         const marked = first.includes('data-part="ai-mark"');
         if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
         if (hero && !veiled && !/data-part="ai-mark"[^>]*>AI-generated</.test(first))
@@ -5922,8 +5929,11 @@ for (const [index, example] of examples.entries()) {
                     ? html.includes('data-kit="legal"')
                     : page.pattern.kind === "order"
                       ? html.includes('data-kit="order"') && html.includes('data-part="choice"')
-                      : // A list, as a table or as cards.
-                        html.includes('data-kit="model-table"') && !/>New [a-z ]+<\/a>/.test(html))
+                      : page.pattern.kind === "sections"
+                        ? html.includes('data-kit="sections"') && html.includes("<h1")
+                        : // A list, as a table or as cards.
+                          html.includes('data-kit="model-table"') &&
+                          !/>New [a-z ]+<\/a>/.test(html))
           : response.status === 307 && response.headers.get("location").includes("/sign-in");
         const what = !isPublic
           ? "needs sign-in"
@@ -5937,7 +5947,9 @@ for (const [index, example] of examples.entries()) {
                   ? "is public: the privacy page opens without sign-in"
                   : page.pattern.kind === "order"
                     ? "is public: the menu to order from, without sign-in"
-                    : "is public: lists sample data without sign-in, read-only";
+                    : page.pattern.kind === "sections"
+                      ? "is public: a page of sections opens without sign-in, headed by its title"
+                      : "is public: lists sample data without sign-in, read-only";
         console.log(`  ${ok ? "✓" : "✗"} ${path} ${what}`);
         if (!ok) failures.push(`${example} ${path}`);
         // A starter's pictures (its hero) are in the app and served.

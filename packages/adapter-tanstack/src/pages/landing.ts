@@ -30,7 +30,7 @@ import {
   type Texts,
   titleField,
 } from "../shared.js";
-import { LUCIDE } from "./root.js";
+import { LUCIDE, workspaceEntries } from "./root.js";
 
 /**
  * A landing page: its sections in order, with texts from smithable.content.yml or derived ones.
@@ -453,9 +453,16 @@ ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(
   );
 }
 `;
-  const header = hasSignIn(auth)
-    ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
-    : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
+  // With pages in the site's frame (page-sections.md §4), one signed in is offered the workspace
+  // when they may open a page of it, as the site frame does; otherwise the app's first page.
+  const sited = ir.pages.some((p) => ux.pages[p.id]?.frame === "site");
+  const workspace = sited && hasSignIn(auth) ? workspaceEntries(ir, ux, auth) : [];
+  if (workspace.length) imports.add("#/kit/access", "allows");
+  const header = workspace.length
+    ? `viewer ? ((page) => (page ? { to: page.to, label: w.workspace } : undefined))(([${workspace.join(", ")}] as const).find((p) => allows(p.access, viewer))) : { to: "/sign-in", label: w.signIn }`
+    : hasSignIn(auth)
+      ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
+      : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
   imports.add("#/generated/app", "app");
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
