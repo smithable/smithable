@@ -23,7 +23,7 @@ import {
 import { pageModel } from "../patterns.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { readDeadline } from "./models.js";
-import { partText, readNamePart } from "./name-parts.js";
+import { nameCircle, partText, readNamePart } from "./name-parts.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 import { scheduleOperations } from "./schedule-operations.js";
 import { put } from "./ux-operations.js";
@@ -1078,11 +1078,24 @@ const setNamedBy: Operation<{ model: string; parts?: string[]; field?: string; n
     const written = [...(parts ?? []), ...(field ? [field] : [])];
     if (!written.length)
       throw new OperationError("Say what names the record: one part or several (or --none).");
-    const read = written.map((text) => {
+    const parts_ = written.map((text) => {
       const r = readNamePart(text, found, ir.models);
       if ("problem" in r) throw new OperationError(`${r.problem}${r.hint ? ` ${r.hint}` : ""}`);
-      return partText(r.part);
+      return r.part;
     });
+    const read = parts_.map(partText);
+    const twice = read.find((t, i) => read.indexOf(t) !== i);
+    if (twice) throw new OperationError(`${model} would be named by ${twice} twice.`);
+    // Named by a reference whose record is named by this one, round and round: refused as when read.
+    const next = { ...found, nameParts: parts_ };
+    const circle = nameCircle(
+      next,
+      ir.models.map((m) => (m.name === model ? next : m)),
+    );
+    if (circle)
+      throw new OperationError(
+        `${model}'s name would come back to itself: ${circle.join(" → ")}. One of them must be named by its own fields.`,
+      );
     const value = read.length === 1 ? (read[0] as string) : read;
     if (spec.has(path)) spec.set(path, value);
     else spec.add(["models", model], "namedBy", value);

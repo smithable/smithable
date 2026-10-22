@@ -308,12 +308,18 @@ function readRecord(
       continue;
     }
     if (option.key === "detail") {
-      detail = readNameList(ctx, option.value, `"detail" of the record of ${where}`).flatMap(
-        ({ name, at }) => {
-          const p = part(name, at as ParsedNode);
-          return p ? [p] : [];
-        },
-      );
+      detail = [];
+      for (const { name, at } of readNameList(
+        ctx,
+        option.value,
+        `"detail" of the record of ${where}`,
+      )) {
+        const p = part(name, at as ParsedNode);
+        if (!p) continue;
+        if (detail.some((d) => d.field === p.field && d.through === p.through))
+          ctx.error(at, "duplicate-name", `The record of ${where} shows ${name} twice.`);
+        else detail.push(p);
+      }
       continue;
     }
     for (const pair of mapEntries(ctx, option.value, `"lists" of ${where}`) ?? []) {

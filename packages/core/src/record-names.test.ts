@@ -102,6 +102,25 @@ test("setNamedBy writes parts, a field or none; a renamed or removed part follow
     ok: false,
     message: expect.stringContaining("cannot be part of a name"),
   });
+  expect(
+    applyOperation({ spec }, "setNamedBy", { model: "Session", parts: ["classType", "classType"] }),
+  ).toMatchObject({ ok: false, message: "Session would be named by classType twice." });
+  const circle = applyOperation(
+    {
+      spec: spec.replace(
+        "      bookings: Booking[]\n",
+        "      bookings: Booking[]\n      firstBooking: Booking\n",
+      ),
+    },
+    "setNamedBy",
+    { model: "Session", parts: ["firstBooking"] },
+  );
+  expect(circle).toMatchObject({
+    ok: false,
+    message: expect.stringContaining(
+      "Session's name would come back to itself: Session → Booking → Session",
+    ),
+  });
   const none = applyOperation({ spec }, "setNamedBy", { model: "Customer", none: true });
   expect(none.ok && none.files.spec).not.toContain("namedBy: company");
   const renamed = applyOperation({ spec }, "renameField", {
@@ -127,6 +146,18 @@ test("setNamedBy writes parts, a field or none; a renamed or removed part follow
   expect(removed.files.spec).toContain("    namedBy: classType\n");
   const gone = applyOperation({ spec }, "removeField", { model: "Customer", field: "company" });
   expect(gone.ok && gone.files.spec).not.toContain("namedBy: company");
+  // A far part keeps its field when the model's own field of the same name is renamed.
+  const same = applyOperation(
+    {
+      spec: spec
+        .replace("namedBy: [classType, startsAt]", "namedBy: classType.name")
+        .replace("      capacity: int\n", "      capacity: int\n      name: string\n"),
+    },
+    "renameField",
+    { model: "Session", from: "name", to: "label" },
+  );
+  if (!same.ok) throw new Error(same.message);
+  expect(same.files.spec).toContain("namedBy: classType.name");
 });
 
 test("the ux file's record lines take the same parts, by page; setRecordLines writes them; a rename follows", () => {
@@ -146,6 +177,11 @@ test("the ux file's record lines take the same parts, by page; setRecordLines wr
       "smithableUx: 0.1\npages:\n  sessions:\n    record: { subtitle: bookings }\n",
     ).diagnostics.map((d) => d.message),
   ).toEqual([expect.stringContaining("Session.bookings cannot be part of a name")]);
+  expect(
+    ux(
+      "smithableUx: 0.1\npages:\n  sessions:\n    record: { detail: [capacity, capacity] }\n",
+    ).diagnostics.map((d) => `${d.code}: ${d.message}`),
+  ).toEqual(['duplicate-name: The record of page "sessions" shows capacity twice.']);
   const set = applyOperation({ spec }, "setRecordLines", {
     page: "sessions",
     subtitle: "instructor.name",
@@ -171,4 +207,12 @@ test("the ux file's record lines take the same parts, by page; setRecordLines wr
     detail: [],
   });
   expect(cleared.ok && cleared.files.ux).not.toContain("record");
+  const noDetail = applyOperation(set.files, "setRecordLines", {
+    page: "sessions",
+    detail: ["none"],
+  });
+  expect(noDetail.ok && noDetail.files.ux).not.toContain("detail");
+  expect(
+    applyOperation(set.files, "setRecordLines", { page: "sessions", detail: ["instructor.name"] }),
+  ).toMatchObject({ ok: false, message: "The sessions page would show instructor.name twice." });
 });

@@ -630,12 +630,19 @@ function followNameParts(
         ? (m.fields.find((f) => f.name === p.through)?.type as { model?: string } | undefined)
             ?.model
         : undefined;
-      const own = m.name === model && (p.field === field || p.through === field);
-      const far = refModel === model && p.field === field;
-      if (!own && !far) return [p];
+      // The model's own field: the part itself, or the reference a far part goes through. A far
+      // part's field is the other model's, even when it has the same name.
+      const ownField = m.name === model && !p.through && p.field === field;
+      const ownThrough = m.name === model && p.through === field;
+      const far = p.through !== undefined && refModel === model && p.field === field;
+      if (!ownField && !ownThrough && !far) return [p];
       if (!to) return [];
-      if (own && p.through === field) return [{ ...p, through: to }];
-      return [{ ...p, field: to }];
+      return [
+        {
+          field: ownField || far ? to : p.field,
+          ...(p.through ? { through: ownThrough ? to : p.through } : {}),
+        },
+      ];
     });
     if (next.length === m.nameParts.length && next.every((p, i) => p === m.nameParts?.[i]))
       continue;
