@@ -72,7 +72,8 @@ export function landingRoute(
     to
       ? `{{ to: ${JSON.stringify(to)}, label: ${expression ? label : JSON.stringify(label)} }}`
       : "{undefined}";
-  const records = sections.filter((s) => s.model);
+  // A kind's own part (its list) is the kind's page, which loads its own records.
+  const records = sections.filter((s) => s.model && !s.own);
   const loaders = [...new Set(records.map((s) => s.model as string))].map((name) => {
     const n = names(modelNamed(ir, name), t);
     imports.add(n.module, n.list);

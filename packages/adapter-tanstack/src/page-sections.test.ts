@@ -70,6 +70,8 @@ pages:
   const parts = file("src/routes/instructors/-instructors-parts.tsx") ?? "";
   expect(parts).toMatch(/export function Before\(\) \{\n {2}return null;\n\}/);
   expect(parts).toContain(`<TextSection\n          texts="pages.instructors.notice"`);
+  // The list is the kind's own: the parts load nothing of it.
+  expect(parts).not.toContain("listInstructors");
   expect(file("src/generated/pages.ts")).toContain("about: {");
 });
 
