@@ -377,8 +377,8 @@ export function deriveTokens(
     "accent-foreground": given["accent-foreground"] ?? foreground,
     border: given.border ?? towards(background, foreground, 0.3),
     input: given.input ?? given.border ?? towards(background, foreground, 0.3),
-    // The primary, or for a bright one a step towards the text, so the focus ring shows on a card.
-    ring: given.ring ?? readable(primary, card, foreground, 3),
+    // The primary, or for a bright one a step towards the card's text, so the focus ring shows.
+    ring: given.ring ?? readable(primary, card, given["card-foreground"] ?? foreground, 3),
     sidebar: given.sidebar ?? card,
     "sidebar-foreground": given["sidebar-foreground"] ?? foreground,
     destructive,
