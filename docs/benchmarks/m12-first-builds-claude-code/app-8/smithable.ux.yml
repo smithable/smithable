@@ -3,11 +3,17 @@ pages:
   talks:
     table:
       sort: startsAt
+    icon: list
   speakers:
     table:
       view: cards
-tones:
-  Talk.track:
-    keynote: success
+    icon: users
+  schedule:
+    icon: calendar
+  my-registrations:
+    icon: star
 theme:
   preset: modern
+  brand:
+    primary: "#4f46e5"
+    font: DM Sans

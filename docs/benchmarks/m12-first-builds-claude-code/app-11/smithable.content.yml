@@ -2,8 +2,6 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: API Status
-      subtitle: Live status of our API, current incidents and planned maintenance.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town

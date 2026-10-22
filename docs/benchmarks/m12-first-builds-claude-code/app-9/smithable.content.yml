@@ -1,4 +1,12 @@
 smithableContent: 0.1
+models:
+  SupportCase:
+    label: Ticket
+    pluralLabel: Tickets
+  Message:
+    fields:
+      supportCase:
+        label: Ticket
 logo:
   src: images/logo.webp
   alt: A speech bubble

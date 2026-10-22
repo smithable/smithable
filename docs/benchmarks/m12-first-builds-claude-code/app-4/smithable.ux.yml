@@ -1,9 +1,11 @@
 smithableUx: 0.1
 pages:
+  tools:
+    table:
+      view: cards
   loans:
     table:
-      columns: [tool, borrower, from, due, status]
-      sort: due
+      columns: [tool, borrower, lentOn, dueOn, status]
 tones:
   Loan.status:
     out: warning

@@ -14,49 +14,24 @@ models:
       ingredients: Ingredient[]
   Ingredient:
     fields:
-      name: string!
-      category: dry | dairy | eggs | fats | sweeteners | fruit | other
+      name: string! unique
       supplier: Supplier
-      unit: kg | g | l | ml | pieces | packs
+      category: flour | sugar | dairy | eggs | fats | yeast | flavorings | fruitAndNuts | packaging | other
+      unit: kg | g | l | ml | pieces
       inStock: decimal! = 0
-      reorderAt: decimal
-      status: inStock | low | out
-      lastCountedOn: date = TODAY()
+      reorderLevel: decimal = 0
+      costPerUnit: money
+      storage: dry | chilled | frozen
+      lastCounted: date = TODAY()
       notes: text
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [category, status, supplier]
-    actions: [markLow, markOut, restock]
+    filters: [category, supplier, storage]
+    sortable: [name, inStock, lastCounted]
   suppliers:
     crud: Supplier
     search: [name, contactName, email]
   team:
     users: manage
-actions:
-  markLow:
-    on: Ingredient
-    when:
-      status: inStock
-    set:
-      status: low
-    intent: Flag an ingredient as running low so it gets reordered.
-  markOut:
-    on: Ingredient
-    when:
-      status: [inStock, low]
-    set:
-      status: out
-      inStock: 0
-      lastCountedOn: TODAY()
-    intent: Mark an ingredient as used up.
-  restock:
-    on: Ingredient
-    when:
-      status: [low, out]
-    set:
-      status: inStock
-      inStock:
-      lastCountedOn: TODAY()
-    intent: "Record a delivery: enter the new amount in stock."

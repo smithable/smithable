@@ -11,7 +11,7 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, instructors, class-types, privacy]
+  pages: [home, schedule, instructors, privacy]
   read: [ClassType, Instructor, Session]
   create: [Message]
 defaultRole: member

@@ -8,6 +8,6 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, catalog, privacy]
+  pages: [home, tools, privacy]
   read: [Tool]
 admins: [johan@smithable.ai]
