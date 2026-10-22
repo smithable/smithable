@@ -40,6 +40,7 @@ navigation: [cases, team]
 actions:
   assignToMe:
     on: SupportCase
+    when: { assignee: not ME() }
     set: { assignee: ME() }
     intent: "Take the case: you become its assignee."
   assignTo:

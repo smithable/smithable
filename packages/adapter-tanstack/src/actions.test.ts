@@ -139,3 +139,31 @@ test("a form's change needs write on the record; an action checked its own acces
   const data = close("src/generated/task.server.ts");
   expect(data).toContain('if (what === "changed") check(taskAccess.write, viewer, row.ownerId);');
 });
+
+test("an action's condition on a reference reads the stored key and the viewer: not ME() is anyone's but theirs, or nobody's", () => {
+  const take = generate(
+    "assignToMe",
+    "{ on: Task, when: { assignee: not ME() }, set: { assignee: ME() } }",
+    emptyContent(),
+    "assignee: User",
+  );
+  const module = take("src/generated/actions/assign-to-me.ts");
+  expect(module).toContain(
+    "export function assignToMeFits(row: { assigneeId?: unknown }, viewer: { id: string } | null): boolean {\n  return (viewer == null || row.assigneeId !== viewer.id);\n}",
+  );
+  expect(take("src/generated/actions/assign-to-me.server.ts")).toContain("Fits(row, viewer)");
+  expect(take("src/routes/tasks/$id.tsx")).toContain("Fits(row, viewer)");
+  const release = generate(
+    "release",
+    "{ on: Task, when: { assignee: ME() }, set: { assignee: } }",
+    emptyContent(),
+    "assignee: User",
+  );
+  expect(release("src/generated/actions/release.ts")).toContain(
+    "return viewer != null && row.assigneeId === viewer.id;",
+  );
+  const plain = generate("finish", "{ on: Task, when: { status: open }, set: { status: done } }");
+  expect(plain("src/generated/actions/finish.ts")).toContain(
+    'finishFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {\n  return row.status === "open";',
+  );
+});

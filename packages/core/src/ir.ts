@@ -700,6 +700,19 @@ export type PatternOf<K extends PatternKind> = Extract<PageIR["pattern"], { kind
  */
 export type Condition = Record<string, string | boolean | string[]>;
 
+/**
+ * What a condition may want of a reference field (an action's `when` only): empty, set, the
+ * person signed in, or anyone but them; the last two for a field that refers to User. Spaces
+ * inside do not matter ("not ME()", "not ME ()"); the canonical form, or nothing.
+ */
+export function referenceWant(text: string): "none" | "any" | "ME()" | "not ME()" | undefined {
+  const bare = text.replace(/\s+/g, "");
+  if (bare === "none" || bare === "any") return bare;
+  if (bare === "ME()") return "ME()";
+  if (bare === "notME()") return "not ME()";
+  return undefined;
+}
+
 export function conditionFits(
   model: ModelIR,
   field: string,
@@ -709,9 +722,17 @@ export function conditionFits(
    * `when`, a field's `locked` and `required`), never in a query (record-rules.md §5).
    */
   computed = false,
+  /** Whether a reference field may be named (an action's `when`): see referenceWant. */
+  reference = false,
 ): boolean {
   const f = model.fields.find((x) => x.name === field);
   if (!f) return false;
+  if (f.type.kind === "relation") {
+    if (!reference || f.type.many || typeof wanted !== "string") return false;
+    const want = referenceWant(wanted);
+    if (want === "none" || want === "any") return true;
+    return want !== undefined && f.type.model === USER_MODEL;
+  }
   // A computed field as its kind says: yes/no takes true or false, a text a value or a list of
   // them; a number or a date is never a condition (a computed field compares it instead).
   if (f.formula) {

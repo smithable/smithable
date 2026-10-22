@@ -69,7 +69,7 @@ outgoing:
   expect(timers).toContain('outgoing(tx, as("remind"), "Booking", "timer:remind", now)');
   // A date is its day's start in the app's zone; the action where it fits, else a skip in Activity.
   expect(timers).toContain("instantOf(`${row.at}T00:00`, app.timeZone).getTime() + 604800000");
-  expect(timers).toContain("if (!markOverdueFits(row)) {");
+  expect(timers).toContain('if (!markOverdueFits(row, as("markOverdue"))) {');
   expect(timers).toContain('await runMarkOverdue(as("markOverdue"), id);');
   // A retry, or a run a stopped process left running, is taken by one tick only.
   expect(timers).toContain(

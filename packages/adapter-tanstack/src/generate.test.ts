@@ -323,10 +323,12 @@ pages:
     "src/generated/actions/resolve.ts",
   ]);
   const server = files.find((f) => f.path === "src/generated/actions/resolve.server.ts")?.content;
-  expect(server).toContain('if (!resolveFits(row)) throw new Error("This cannot be done now.");');
+  expect(server).toContain(
+    'if (!resolveFits(row, viewer)) throw new Error("This cannot be done now.");',
+  );
   expect(server).toContain('status: "resolved",');
   const record = files.find((f) => f.path === "src/routes/incidents/$id.tsx")?.content;
-  expect(record).toContain("resolveFits(row) && (");
+  expect(record).toContain("resolveFits(row, viewer) && (");
   expect(files.some((f) => f.path === "src/kit/ActionButton.tsx")).toBe(true);
 });
 

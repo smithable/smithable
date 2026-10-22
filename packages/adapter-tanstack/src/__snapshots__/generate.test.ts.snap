@@ -997,7 +997,7 @@ export async function runComplete(viewer: Viewer | null, id: number) {
   const row = await taskData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(completeAccess, viewer, row.ownerId);
-  if (!completeFits(row)) throw new Error("This cannot be done now.");
+  if (!completeFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return taskData.update(viewer, id, one.values, "complete", ["status"]);
 }
@@ -1013,7 +1013,7 @@ export async function runCompleteMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await taskData.get(viewer, id);
-    if (!row || !allows(completeAccess, viewer, row.ownerId) || !completeFits(row)) continue;
+    if (!row || !allows(completeAccess, viewer, row.ownerId) || !completeFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -1053,7 +1053,7 @@ import { runComplete, runCompleteMany } from "./complete.server";
 export const completeAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: true };
 
 /** Whether the "complete" action fits the task: it is offered and allowed only then. */
-export function completeFits(row: { status?: unknown }): boolean {
+export function completeFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["todo","doing"].includes(String(row.status));
 }
 
@@ -1105,7 +1105,7 @@ export async function runReopen(viewer: Viewer | null, id: number) {
   const row = await taskData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(reopenAccess, viewer, row.ownerId);
-  if (!reopenFits(row)) throw new Error("This cannot be done now.");
+  if (!reopenFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return taskData.update(viewer, id, one.values, "reopen", ["status"]);
 }
@@ -1121,7 +1121,7 @@ export async function runReopenMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await taskData.get(viewer, id);
-    if (!row || !allows(reopenAccess, viewer, row.ownerId) || !reopenFits(row)) continue;
+    if (!row || !allows(reopenAccess, viewer, row.ownerId) || !reopenFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -1161,7 +1161,7 @@ import { runReopen, runReopenMany } from "./reopen.server";
 export const reopenAccess: Rule = { public: false, roles: ["admin", "member", "assistant"], owner: true };
 
 /** Whether the "reopen" action fits the task: it is offered and allowed only then. */
-export function reopenFits(row: { status?: unknown }): boolean {
+export function reopenFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "done";
 }
 
@@ -9312,10 +9312,10 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/db/schema.ts": "b75b1ab6 generated",
   "src/db/seed.ts": "224df43d generated",
   "src/generated/access.test.ts": "130041c9 generated",
-  "src/generated/actions/complete.server.ts": "82dc9089 generated",
-  "src/generated/actions/complete.ts": "da69e750 generated",
-  "src/generated/actions/reopen.server.ts": "7ce2de37 generated",
-  "src/generated/actions/reopen.ts": "12e879b4 generated",
+  "src/generated/actions/complete.server.ts": "550fbe39 generated",
+  "src/generated/actions/complete.ts": "cdd6a4a8 generated",
+  "src/generated/actions/reopen.server.ts": "186345bf generated",
+  "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
   "src/generated/ask.server.ts": "0f455bad generated",
@@ -10468,7 +10468,7 @@ export async function runCancel(viewer: Viewer | null, id: number) {
   const row = await appointmentData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(cancelAccess, viewer, row.ownerId);
-  if (!cancelFits(row)) throw new Error("This cannot be done now.");
+  if (!cancelFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return appointmentData.update(viewer, id, one.values, "cancel", ["status"]);
 }
@@ -10484,7 +10484,7 @@ export async function runCancelMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await appointmentData.get(viewer, id);
-    if (!row || !allows(cancelAccess, viewer, row.ownerId) || !cancelFits(row)) continue;
+    if (!row || !allows(cancelAccess, viewer, row.ownerId) || !cancelFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -10526,7 +10526,7 @@ import { runCancel, runCancelMany } from "./cancel.server";
 export const cancelAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "cancel" action fits the appointment: it is offered and allowed only then. */
-export function cancelFits(row: { status?: unknown }): boolean {
+export function cancelFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["requested","confirmed"].includes(String(row.status));
 }
 
@@ -10579,7 +10579,7 @@ export async function runConfirm(viewer: Viewer | null, id: number) {
   const row = await appointmentData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(confirmAccess, viewer, row.ownerId);
-  if (!confirmFits(row)) throw new Error("This cannot be done now.");
+  if (!confirmFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return appointmentData.update(viewer, id, one.values, "confirm", ["status"]);
 }
@@ -10595,7 +10595,7 @@ export async function runConfirmMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await appointmentData.get(viewer, id);
-    if (!row || !allows(confirmAccess, viewer, row.ownerId) || !confirmFits(row)) continue;
+    if (!row || !allows(confirmAccess, viewer, row.ownerId) || !confirmFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -10637,7 +10637,7 @@ import { runConfirm, runConfirmMany } from "./confirm.server";
 export const confirmAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "confirm" action fits the appointment: it is offered and allowed only then. */
-export function confirmFits(row: { status?: unknown }): boolean {
+export function confirmFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "requested";
 }
 
@@ -13008,7 +13008,7 @@ function AppointmentPage() {
         title={row.name || \`Appointment #\${row.id}\`}
         actions={
           <>
-            {allows(confirmAccess, viewer, row.ownerId) && confirmFits(row) && (
+            {allows(confirmAccess, viewer, row.ownerId) && confirmFits(row, viewer) && (
               <ActionButton
                 label="Confirm"
                 concept="action:confirm"
@@ -13018,7 +13018,7 @@ function AppointmentPage() {
                 }}
               />
             )}
-            {allows(cancelAccess, viewer, row.ownerId) && cancelFits(row) && (
+            {allows(cancelAccess, viewer, row.ownerId) && cancelFits(row, viewer) && (
               <ActionButton
                 label="Cancel"
                 concept="action:cancel"
@@ -13132,7 +13132,7 @@ function AppointmentsPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(confirmAccess, viewer, row.ownerId) && confirmFits(row) || allows(cancelAccess, viewer, row.ownerId) && cancelFits(row) || allows(appointmentDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(confirmAccess, viewer, row.ownerId) && confirmFits(row, viewer) || allows(cancelAccess, viewer, row.ownerId) && cancelFits(row, viewer) || allows(appointmentDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/appointments/new" className={buttonVariants()}>
       {w.newOne("appointment")}
@@ -13167,13 +13167,13 @@ function AppointmentsPage() {
             {
               label: "Confirm",
               concept: "action:confirm",
-              applies: chosen.filter((row) => allows(confirmAccess, viewer, row.ownerId) && confirmFits(row)).length,
+              applies: chosen.filter((row) => allows(confirmAccess, viewer, row.ownerId) && confirmFits(row, viewer)).length,
               run: () => confirmMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Cancel",
               concept: "action:cancel",
-              applies: chosen.filter((row) => allows(cancelAccess, viewer, row.ownerId) && cancelFits(row)).length,
+              applies: chosen.filter((row) => allows(cancelAccess, viewer, row.ownerId) && cancelFits(row, viewer)).length,
               run: () => cancelMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
           ]}
@@ -13196,7 +13196,7 @@ function AppointmentsPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <>
-            {allows(confirmAccess, viewer, row.ownerId) && confirmFits(row) && (
+            {allows(confirmAccess, viewer, row.ownerId) && confirmFits(row, viewer) && (
               <ActionButton
                 label="Confirm"
                 concept="action:confirm"
@@ -13206,7 +13206,7 @@ function AppointmentsPage() {
                 }}
               />
             )}
-            {allows(cancelAccess, viewer, row.ownerId) && cancelFits(row) && (
+            {allows(cancelAccess, viewer, row.ownerId) && cancelFits(row, viewer) && (
               <ActionButton
                 label="Cancel"
                 concept="action:cancel"
@@ -14790,10 +14790,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/db/schema.ts": "81cf488e generated",
   "src/db/seed.ts": "aeda6345 generated",
   "src/generated/access.test.ts": "9e5c3643 generated",
-  "src/generated/actions/cancel.server.ts": "423d6e8d generated",
-  "src/generated/actions/cancel.ts": "95a570de generated",
-  "src/generated/actions/confirm.server.ts": "21226bc7 generated",
-  "src/generated/actions/confirm.ts": "59f19cb6 generated",
+  "src/generated/actions/cancel.server.ts": "17e8e159 generated",
+  "src/generated/actions/cancel.ts": "1bae0072 generated",
+  "src/generated/actions/confirm.server.ts": "fb453863 generated",
+  "src/generated/actions/confirm.ts": "f4df37ea generated",
   "src/generated/app.ts": "97916622 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
   "src/generated/appointment.server.ts": "b1563eab generated",
@@ -14873,8 +14873,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "bd3451f4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/appointments/$id.tsx": "c30c4fd4 generated",
-  "src/routes/appointments/index.tsx": "a130fe97 generated",
+  "src/routes/appointments/$id.tsx": "4d088ddc generated",
+  "src/routes/appointments/index.tsx": "12dbcdff generated",
   "src/routes/appointments/new.tsx": "8c0370e1 generated",
   "src/routes/barbers/$id.tsx": "a8ba804e generated",
   "src/routes/barbers/index.tsx": "9a49a0b9 generated",
@@ -16185,7 +16185,7 @@ export async function runPublish(viewer: Viewer | null, id: number) {
   const row = await postData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(publishAccess, viewer, row.ownerId);
-  if (!publishFits(row)) throw new Error("This cannot be done now.");
+  if (!publishFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return postData.update(viewer, id, one.values, "publish", ["status"]);
 }
@@ -16201,7 +16201,7 @@ export async function runPublishMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await postData.get(viewer, id);
-    if (!row || !allows(publishAccess, viewer, row.ownerId) || !publishFits(row)) continue;
+    if (!row || !allows(publishAccess, viewer, row.ownerId) || !publishFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -16241,7 +16241,7 @@ import { runPublish, runPublishMany } from "./publish.server";
 export const publishAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "publish" action fits the post: it is offered and allowed only then. */
-export function publishFits(row: { status?: unknown }): boolean {
+export function publishFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "draft";
 }
 
@@ -21184,7 +21184,7 @@ export const site: LandingSite = {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
@@ -21201,8 +21201,6 @@ import { postData } from "./post.server";
 const DAY = 24 * 60 * 60 * 1000;
 /** A run that fails is tried again on the next ticks, this many times in all. */
 const TRIES = 3;
-/** A run still "running" after this long was left by a process that stopped. */
-const STALE = 10 * 60 * 1000;
 
 /** The app itself, as a timer runs: no role's grants apply (docs/design/timed-actions.md §2). */
 const as = (timer: string): Viewer => ({ id: \`timer:\${timer}\`, name: "", email: "", role: "", system: true });
@@ -21221,21 +21219,11 @@ const runs = schema.timerRuns;
 const at = (run: Due) => and(eq(runs.timer, run.timer), eq(runs.record, run.record), eq(runs.due, run.due));
 const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).get() !== undefined;
 
-/**
- * Takes a run, by one tick only: a new one, a failed one to try again, or one left running by a
- * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
- * running elsewhere.
- */
+/** Takes a run: false when it is taken already (done, skipped, given up, or running elsewhere). */
 function take(run: Due): boolean {
-  if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
-  const stale = new Date(Date.now() - STALE);
-  return (
-    db
-      .update(runs)
-      .set({ outcome: "running", ranAt: new Date(), tries: sql\`\${runs.tries} + case when \${runs.outcome} = 'running' then 1 else 0 end\` })
-      .where(and(at(run), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, stale)))))
-      .run().changes === 1
-  );
+  const before = db.select().from(runs).where(at(run)).get();
+  if (before) return before.outcome === "failed";
+  return db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1;
 }
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
@@ -21313,7 +21301,7 @@ async function publishRecord(id: number): Promise<string> {
   const row = await postData.get(as("publish"), id);
   if (!row) return "gone";
   // A record its action's condition does not fit is skipped, and Activity says so.
-  if (!publishFits(row)) {
+  if (!publishFits(row, as("publish"))) {
     audit(db, as("publish"), { action: "timer skipped", model: "Post", record: id, details: { action: "publish" } });
     return "skipped";
   }
@@ -26006,8 +25994,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/schema.ts": "58a35d99 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "b9a0719e generated",
-  "src/generated/actions/publish.server.ts": "ea04f420 generated",
-  "src/generated/actions/publish.ts": "b5d2ed98 generated",
+  "src/generated/actions/publish.server.ts": "7e85fad8 generated",
+  "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "79ddc670 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
@@ -26038,7 +26026,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.server.ts": "0dea4541 generated",
   "src/generated/session.ts": "d120db70 generated",
   "src/generated/site.ts": "592b0fd3 generated",
-  "src/generated/timers.server.ts": "57043277 generated",
+  "src/generated/timers.server.ts": "f39f51b3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
@@ -33090,7 +33078,7 @@ export async function runMarkOverdue(viewer: Viewer | null, id: number) {
   const row = await invoiceData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(markOverdueAccess, viewer, row.ownerId);
-  if (!markOverdueFits(row)) throw new Error("This cannot be done now.");
+  if (!markOverdueFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return invoiceData.update(viewer, id, one.values, "markOverdue", ["status"]);
 }
@@ -33106,7 +33094,7 @@ export async function runMarkOverdueMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await invoiceData.get(viewer, id);
-    if (!row || !allows(markOverdueAccess, viewer, row.ownerId) || !markOverdueFits(row)) continue;
+    if (!row || !allows(markOverdueAccess, viewer, row.ownerId) || !markOverdueFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -33148,7 +33136,7 @@ import { runMarkOverdue, runMarkOverdueMany } from "./mark-overdue.server";
 export const markOverdueAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "markOverdue" action fits the invoice: it is offered and allowed only then. */
-export function markOverdueFits(row: { status?: unknown }): boolean {
+export function markOverdueFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "sent";
 }
 
@@ -33201,7 +33189,7 @@ export async function runMarkPaid(viewer: Viewer | null, id: number) {
   const row = await invoiceData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(markPaidAccess, viewer, row.ownerId);
-  if (!markPaidFits(row)) throw new Error("This cannot be done now.");
+  if (!markPaidFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return invoiceData.update(viewer, id, one.values, "markPaid", ["status"]);
 }
@@ -33217,7 +33205,7 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await invoiceData.get(viewer, id);
-    if (!row || !allows(markPaidAccess, viewer, row.ownerId) || !markPaidFits(row)) continue;
+    if (!row || !allows(markPaidAccess, viewer, row.ownerId) || !markPaidFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -33259,7 +33247,7 @@ import { runMarkPaid, runMarkPaidMany } from "./mark-paid.server";
 export const markPaidAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "markPaid" action fits the invoice: it is offered and allowed only then. */
-export function markPaidFits(row: { status?: unknown }): boolean {
+export function markPaidFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["sent","overdue"].includes(String(row.status));
 }
 
@@ -33312,7 +33300,7 @@ export async function runMarkSent(viewer: Viewer | null, id: number) {
   const row = await invoiceData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(markSentAccess, viewer, row.ownerId);
-  if (!markSentFits(row)) throw new Error("This cannot be done now.");
+  if (!markSentFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return invoiceData.update(viewer, id, one.values, "markSent", ["status"]);
 }
@@ -33328,7 +33316,7 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await invoiceData.get(viewer, id);
-    if (!row || !allows(markSentAccess, viewer, row.ownerId) || !markSentFits(row)) continue;
+    if (!row || !allows(markSentAccess, viewer, row.ownerId) || !markSentFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -33370,7 +33358,7 @@ import { runMarkSent, runMarkSentMany } from "./mark-sent.server";
 export const markSentAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
 /** Whether the "markSent" action fits the invoice: it is offered and allowed only then. */
-export function markSentFits(row: { status?: unknown }): boolean {
+export function markSentFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "draft";
 }
 
@@ -36957,7 +36945,7 @@ export const site: LandingSite = { home: "/", menu: [] };
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
@@ -36973,8 +36961,6 @@ import { invoiceData } from "./invoice.server";
 const DAY = 24 * 60 * 60 * 1000;
 /** A run that fails is tried again on the next ticks, this many times in all. */
 const TRIES = 3;
-/** A run still "running" after this long was left by a process that stopped. */
-const STALE = 10 * 60 * 1000;
 
 /** The app itself, as a timer runs: no role's grants apply (docs/design/timed-actions.md §2). */
 const as = (timer: string): Viewer => ({ id: \`timer:\${timer}\`, name: "", email: "", role: "", system: true });
@@ -36993,21 +36979,11 @@ const runs = schema.timerRuns;
 const at = (run: Due) => and(eq(runs.timer, run.timer), eq(runs.record, run.record), eq(runs.due, run.due));
 const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).get() !== undefined;
 
-/**
- * Takes a run, by one tick only: a new one, a failed one to try again, or one left running by a
- * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
- * running elsewhere.
- */
+/** Takes a run: false when it is taken already (done, skipped, given up, or running elsewhere). */
 function take(run: Due): boolean {
-  if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
-  const stale = new Date(Date.now() - STALE);
-  return (
-    db
-      .update(runs)
-      .set({ outcome: "running", ranAt: new Date(), tries: sql\`\${runs.tries} + case when \${runs.outcome} = 'running' then 1 else 0 end\` })
-      .where(and(at(run), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, stale)))))
-      .run().changes === 1
-  );
+  const before = db.select().from(runs).where(at(run)).get();
+  if (before) return before.outcome === "failed";
+  return db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1;
 }
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
@@ -37060,7 +37036,7 @@ async function markOverdueRecord(id: number): Promise<string> {
   const row = await invoiceData.get(as("markOverdue"), id);
   if (!row) return "gone";
   // A record its action's condition does not fit is skipped, and Activity says so.
-  if (!markOverdueFits(row)) {
+  if (!markOverdueFits(row, as("markOverdue"))) {
     audit(db, as("markOverdue"), { action: "timer skipped", model: "Invoice", record: id, details: { action: "markOverdue" } });
     return "skipped";
   }
@@ -38125,7 +38101,7 @@ function InvoicePage() {
         title={row.number || \`Invoice #\${row.id}\`}
         actions={
           <>
-            {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) && (
+            {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) && (
               <ActionButton
                 label="Mark sent"
                 concept="action:markSent"
@@ -38135,7 +38111,7 @@ function InvoicePage() {
                 }}
               />
             )}
-            {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) && (
+            {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer) && (
               <ActionButton
                 label="Mark paid"
                 concept="action:markPaid"
@@ -38270,7 +38246,7 @@ function InvoicesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) || allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) || allows(invoiceDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) || allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer) || allows(invoiceDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/invoices/new" className={buttonVariants()}>
       {w.newOne("invoice")}
@@ -38306,13 +38282,13 @@ function InvoicesPage() {
             {
               label: "Mark sent",
               concept: "action:markSent",
-              applies: chosen.filter((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row)).length,
+              applies: chosen.filter((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer)).length,
               run: () => markSentMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Mark paid",
               concept: "action:markPaid",
-              applies: chosen.filter((row) => allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row)).length,
+              applies: chosen.filter((row) => allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer)).length,
               run: () => markPaidMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
           ]}
@@ -38335,7 +38311,7 @@ function InvoicesPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <>
-            {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row) && (
+            {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) && (
               <ActionButton
                 label="Mark sent"
                 concept="action:markSent"
@@ -38345,7 +38321,7 @@ function InvoicesPage() {
                 }}
               />
             )}
-            {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row) && (
+            {allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer) && (
               <ActionButton
                 label="Mark paid"
                 concept="action:markPaid"
@@ -39282,12 +39258,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/schema.ts": "0a45fa1f generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "2ee3b41d generated",
-  "src/generated/actions/mark-overdue.server.ts": "98d60677 generated",
-  "src/generated/actions/mark-overdue.ts": "0d9e8b05 generated",
-  "src/generated/actions/mark-paid.server.ts": "8868fcdf generated",
-  "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
-  "src/generated/actions/mark-sent.server.ts": "a4615a67 generated",
-  "src/generated/actions/mark-sent.ts": "074ce2ea generated",
+  "src/generated/actions/mark-overdue.server.ts": "33566007 generated",
+  "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
+  "src/generated/actions/mark-paid.server.ts": "bcae8c0b generated",
+  "src/generated/actions/mark-paid.ts": "9047ea54 generated",
+  "src/generated/actions/mark-sent.server.ts": "d94b7633 generated",
+  "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "810be1a4 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
@@ -39311,7 +39287,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
-  "src/generated/timers.server.ts": "4e12b1b9 generated",
+  "src/generated/timers.server.ts": "a55d856d generated",
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
@@ -39390,8 +39366,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoice-lines/$id.tsx": "8b97d0fe generated",
   "src/routes/invoice-lines/index.tsx": "49077b68 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
-  "src/routes/invoices/$id.tsx": "c81cad15 generated",
-  "src/routes/invoices/index.tsx": "e953277d generated",
+  "src/routes/invoices/$id.tsx": "dc083f5d generated",
+  "src/routes/invoices/index.tsx": "89980771 generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
   "src/routes/overview/index.tsx": "0f36177f generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -40717,7 +40693,7 @@ export async function runAccept(viewer: Viewer | null, id: number) {
   const row = await orderData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(acceptAccess, viewer, row.ownerId);
-  if (!acceptFits(row)) throw new Error("This cannot be done now.");
+  if (!acceptFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return orderData.update(viewer, id, one.values, "accept", ["status"]);
 }
@@ -40733,7 +40709,7 @@ export async function runAcceptMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await orderData.get(viewer, id);
-    if (!row || !allows(acceptAccess, viewer, row.ownerId) || !acceptFits(row)) continue;
+    if (!row || !allows(acceptAccess, viewer, row.ownerId) || !acceptFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -40775,7 +40751,7 @@ import { runAccept, runAcceptMany } from "./accept.server";
 export const acceptAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "accept" action fits the order: it is offered and allowed only then. */
-export function acceptFits(row: { status?: unknown }): boolean {
+export function acceptFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "new";
 }
 
@@ -40827,7 +40803,7 @@ export async function runBackOn(viewer: Viewer | null, id: number) {
   const row = await dishData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(backOnAccess, viewer, row.ownerId);
-  if (!backOnFits(row)) throw new Error("This cannot be done now.");
+  if (!backOnFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return dishData.update(viewer, id, one.values, "backOn", ["available"]);
 }
@@ -40843,7 +40819,7 @@ export async function runBackOnMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await dishData.get(viewer, id);
-    if (!row || !allows(backOnAccess, viewer, row.ownerId) || !backOnFits(row)) continue;
+    if (!row || !allows(backOnAccess, viewer, row.ownerId) || !backOnFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -40883,7 +40859,7 @@ import { runBackOn, runBackOnMany } from "./back-on.server";
 export const backOnAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "backOn" action fits the dish: it is offered and allowed only then. */
-export function backOnFits(row: { available?: unknown }): boolean {
+export function backOnFits(row: { available?: unknown }, _viewer: { id: string } | null): boolean {
   return !row.available;
 }
 
@@ -40936,7 +40912,7 @@ export async function runCollected(viewer: Viewer | null, id: number) {
   const row = await orderData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(collectedAccess, viewer, row.ownerId);
-  if (!collectedFits(row)) throw new Error("This cannot be done now.");
+  if (!collectedFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return orderData.update(viewer, id, one.values, "collected", ["status"]);
 }
@@ -40952,7 +40928,7 @@ export async function runCollectedMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await orderData.get(viewer, id);
-    if (!row || !allows(collectedAccess, viewer, row.ownerId) || !collectedFits(row)) continue;
+    if (!row || !allows(collectedAccess, viewer, row.ownerId) || !collectedFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -40994,7 +40970,7 @@ import { runCollected, runCollectedMany } from "./collected.server";
 export const collectedAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "collected" action fits the order: it is offered and allowed only then. */
-export function collectedFits(row: { status?: unknown }): boolean {
+export function collectedFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "ready";
 }
 
@@ -41049,7 +41025,7 @@ export async function runDecline(viewer: Viewer | null, id: number, asked: z.out
   const row = await orderData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(declineAccess, viewer, row.ownerId);
-  if (!declineFits(row)) throw new Error("This cannot be done now.");
+  if (!declineFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
   return orderData.update(viewer, id, one.values, "decline", ["status"]);
 }
@@ -41065,7 +41041,7 @@ export async function runDeclineMany(viewer: Viewer | null, ids: number[], asked
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await orderData.get(viewer, id);
-    if (!row || !allows(declineAccess, viewer, row.ownerId) || !declineFits(row)) continue;
+    if (!row || !allows(declineAccess, viewer, row.ownerId) || !declineFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row, asked));
     } catch (error) {
@@ -41110,7 +41086,7 @@ import { runDecline, runDeclineMany } from "./decline.server";
 export const declineAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "decline" action fits the order: it is offered and allowed only then. */
-export function declineFits(row: { status?: unknown }): boolean {
+export function declineFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["new","accepted"].includes(String(row.status));
 }
 
@@ -41180,7 +41156,7 @@ export async function runReady(viewer: Viewer | null, id: number) {
   const row = await orderData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(readyAccess, viewer, row.ownerId);
-  if (!readyFits(row)) throw new Error("This cannot be done now.");
+  if (!readyFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return orderData.update(viewer, id, one.values, "ready", ["status"]);
 }
@@ -41196,7 +41172,7 @@ export async function runReadyMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await orderData.get(viewer, id);
-    if (!row || !allows(readyAccess, viewer, row.ownerId) || !readyFits(row)) continue;
+    if (!row || !allows(readyAccess, viewer, row.ownerId) || !readyFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -41238,7 +41214,7 @@ import { runReady, runReadyMany } from "./ready.server";
 export const readyAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "ready" action fits the order: it is offered and allowed only then. */
-export function readyFits(row: { status?: unknown }): boolean {
+export function readyFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "accepted";
 }
 
@@ -41290,7 +41266,7 @@ export async function runSoldOut(viewer: Viewer | null, id: number) {
   const row = await dishData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(soldOutAccess, viewer, row.ownerId);
-  if (!soldOutFits(row)) throw new Error("This cannot be done now.");
+  if (!soldOutFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return dishData.update(viewer, id, one.values, "soldOut", ["available"]);
 }
@@ -41306,7 +41282,7 @@ export async function runSoldOutMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await dishData.get(viewer, id);
-    if (!row || !allows(soldOutAccess, viewer, row.ownerId) || !soldOutFits(row)) continue;
+    if (!row || !allows(soldOutAccess, viewer, row.ownerId) || !soldOutFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -41346,7 +41322,7 @@ import { runSoldOut, runSoldOutMany } from "./sold-out.server";
 export const soldOutAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "soldOut" action fits the dish: it is offered and allowed only then. */
-export function soldOutFits(row: { available?: unknown }): boolean {
+export function soldOutFits(row: { available?: unknown }, _viewer: { id: string } | null): boolean {
   return row.available === true;
 }
 
@@ -44146,7 +44122,7 @@ function DishPage() {
         title={row.name || \`Dish #\${row.id}\`}
         actions={
           <>
-            {allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row) && (
+            {allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row, viewer) && (
               <ActionButton
                 label="Sold out"
                 concept="action:soldOut"
@@ -44156,7 +44132,7 @@ function DishPage() {
                 }}
               />
             )}
-            {allows(backOnAccess, viewer, row.ownerId) && backOnFits(row) && (
+            {allows(backOnAccess, viewer, row.ownerId) && backOnFits(row, viewer) && (
               <ActionButton
                 label="Back on"
                 concept="action:backOn"
@@ -44268,7 +44244,7 @@ function DishesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row) || allows(backOnAccess, viewer, row.ownerId) && backOnFits(row) || allows(dishDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row, viewer) || allows(backOnAccess, viewer, row.ownerId) && backOnFits(row, viewer) || allows(dishDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/dishes/new" className={buttonVariants()}>
       {w.newOne("dish")}
@@ -44304,13 +44280,13 @@ function DishesPage() {
             {
               label: "Sold out",
               concept: "action:soldOut",
-              applies: chosen.filter((row) => allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row)).length,
+              applies: chosen.filter((row) => allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row, viewer)).length,
               run: () => soldOutMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Back on",
               concept: "action:backOn",
-              applies: chosen.filter((row) => allows(backOnAccess, viewer, row.ownerId) && backOnFits(row)).length,
+              applies: chosen.filter((row) => allows(backOnAccess, viewer, row.ownerId) && backOnFits(row, viewer)).length,
               run: () => backOnMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
           ]}
@@ -44334,7 +44310,7 @@ function DishesPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <>
-            {allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row) && (
+            {allows(soldOutAccess, viewer, row.ownerId) && soldOutFits(row, viewer) && (
               <ActionButton
                 label="Sold out"
                 concept="action:soldOut"
@@ -44344,7 +44320,7 @@ function DishesPage() {
                 }}
               />
             )}
-            {allows(backOnAccess, viewer, row.ownerId) && backOnFits(row) && (
+            {allows(backOnAccess, viewer, row.ownerId) && backOnFits(row, viewer) && (
               <ActionButton
                 label="Back on"
                 concept="action:backOn"
@@ -44579,7 +44555,7 @@ function OrderPage() {
         title={row.name || \`Order #\${row.id}\`}
         actions={
           <Overflow>
-            {allows(acceptAccess, viewer, row.ownerId) && acceptFits(row) && (
+            {allows(acceptAccess, viewer, row.ownerId) && acceptFits(row, viewer) && (
               <ActionButton
                 label="Accept"
                 concept="action:accept"
@@ -44589,7 +44565,7 @@ function OrderPage() {
                 }}
               />
             )}
-            {allows(readyAccess, viewer, row.ownerId) && readyFits(row) && (
+            {allows(readyAccess, viewer, row.ownerId) && readyFits(row, viewer) && (
               <ActionButton
                 label="Ready"
                 concept="action:ready"
@@ -44599,7 +44575,7 @@ function OrderPage() {
                 }}
               />
             )}
-            {allows(collectedAccess, viewer, row.ownerId) && collectedFits(row) && (
+            {allows(collectedAccess, viewer, row.ownerId) && collectedFits(row, viewer) && (
               <ActionButton
                 label="Collected"
                 concept="action:collected"
@@ -44609,7 +44585,7 @@ function OrderPage() {
                 }}
               />
             )}
-            {allows(declineAccess, viewer, row.ownerId) && declineFits(row) && (
+            {allows(declineAccess, viewer, row.ownerId) && declineFits(row, viewer) && (
               <ActionButton
                 label="Decline"
                 concept="action:decline"
@@ -44738,7 +44714,7 @@ function OrdersPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(acceptAccess, viewer, row.ownerId) && acceptFits(row) || allows(readyAccess, viewer, row.ownerId) && readyFits(row) || allows(collectedAccess, viewer, row.ownerId) && collectedFits(row) || allows(declineAccess, viewer, row.ownerId) && declineFits(row) || allows(orderDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(acceptAccess, viewer, row.ownerId) && acceptFits(row, viewer) || allows(readyAccess, viewer, row.ownerId) && readyFits(row, viewer) || allows(collectedAccess, viewer, row.ownerId) && collectedFits(row, viewer) || allows(declineAccess, viewer, row.ownerId) && declineFits(row, viewer) || allows(orderDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/orders/new" className={buttonVariants()}>
       {w.newOne("order")}
@@ -44780,25 +44756,25 @@ function OrdersPage() {
             {
               label: "Accept",
               concept: "action:accept",
-              applies: chosen.filter((row) => allows(acceptAccess, viewer, row.ownerId) && acceptFits(row)).length,
+              applies: chosen.filter((row) => allows(acceptAccess, viewer, row.ownerId) && acceptFits(row, viewer)).length,
               run: () => acceptMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Ready",
               concept: "action:ready",
-              applies: chosen.filter((row) => allows(readyAccess, viewer, row.ownerId) && readyFits(row)).length,
+              applies: chosen.filter((row) => allows(readyAccess, viewer, row.ownerId) && readyFits(row, viewer)).length,
               run: () => readyMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Collected",
               concept: "action:collected",
-              applies: chosen.filter((row) => allows(collectedAccess, viewer, row.ownerId) && collectedFits(row)).length,
+              applies: chosen.filter((row) => allows(collectedAccess, viewer, row.ownerId) && collectedFits(row, viewer)).length,
               run: () => collectedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Decline",
               concept: "action:decline",
-              applies: chosen.filter((row) => allows(declineAccess, viewer, row.ownerId) && declineFits(row)).length,
+              applies: chosen.filter((row) => allows(declineAccess, viewer, row.ownerId) && declineFits(row, viewer)).length,
               ask: { ui: declineAskUi, schema: declineAsks },
               run: (values) => declineMany({ data: { ids: chosen.map((row) => row.id), values: values as never } }),
             },
@@ -44823,7 +44799,7 @@ function OrdersPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <Overflow inRow>
-            {allows(acceptAccess, viewer, row.ownerId) && acceptFits(row) && (
+            {allows(acceptAccess, viewer, row.ownerId) && acceptFits(row, viewer) && (
               <ActionButton
                 label="Accept"
                 concept="action:accept"
@@ -44833,7 +44809,7 @@ function OrdersPage() {
                 }}
               />
             )}
-            {allows(readyAccess, viewer, row.ownerId) && readyFits(row) && (
+            {allows(readyAccess, viewer, row.ownerId) && readyFits(row, viewer) && (
               <ActionButton
                 label="Ready"
                 concept="action:ready"
@@ -44843,7 +44819,7 @@ function OrdersPage() {
                 }}
               />
             )}
-            {allows(collectedAccess, viewer, row.ownerId) && collectedFits(row) && (
+            {allows(collectedAccess, viewer, row.ownerId) && collectedFits(row, viewer) && (
               <ActionButton
                 label="Collected"
                 concept="action:collected"
@@ -44853,7 +44829,7 @@ function OrdersPage() {
                 }}
               />
             )}
-            {allows(declineAccess, viewer, row.ownerId) && declineFits(row) && (
+            {allows(declineAccess, viewer, row.ownerId) && declineFits(row, viewer) && (
               <ActionButton
                 label="Decline"
                 concept="action:decline"
@@ -46160,18 +46136,18 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "cf2bd0ff generated",
-  "src/generated/actions/accept.server.ts": "a8a3a619 generated",
-  "src/generated/actions/accept.ts": "7b2e4721 generated",
-  "src/generated/actions/back-on.server.ts": "1dc469d6 generated",
-  "src/generated/actions/back-on.ts": "e555a9d1 generated",
-  "src/generated/actions/collected.server.ts": "b88e3479 generated",
-  "src/generated/actions/collected.ts": "cb9ba602 generated",
-  "src/generated/actions/decline.server.ts": "1b0c453c generated",
-  "src/generated/actions/decline.ts": "e341c1c9 generated",
-  "src/generated/actions/ready.server.ts": "28edb875 generated",
-  "src/generated/actions/ready.ts": "9800975e generated",
-  "src/generated/actions/sold-out.server.ts": "d98eccc9 generated",
-  "src/generated/actions/sold-out.ts": "4b7dec85 generated",
+  "src/generated/actions/accept.server.ts": "873be1fd generated",
+  "src/generated/actions/accept.ts": "38e5215d generated",
+  "src/generated/actions/back-on.server.ts": "1c453792 generated",
+  "src/generated/actions/back-on.ts": "2fcd77e5 generated",
+  "src/generated/actions/collected.server.ts": "3984c7c5 generated",
+  "src/generated/actions/collected.ts": "121a754a generated",
+  "src/generated/actions/decline.server.ts": "38eeca2c generated",
+  "src/generated/actions/decline.ts": "1ba1a2b1 generated",
+  "src/generated/actions/ready.server.ts": "c18f8451 generated",
+  "src/generated/actions/ready.ts": "4551fcd6 generated",
+  "src/generated/actions/sold-out.server.ts": "168d311d generated",
+  "src/generated/actions/sold-out.ts": "d324a1d9 generated",
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
@@ -46255,16 +46231,16 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "c9b7fba0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/dishes/$id.tsx": "e9b50311 generated",
-  "src/routes/dishes/index.tsx": "a1df2b33 generated",
+  "src/routes/dishes/$id.tsx": "a8c9781d generated",
+  "src/routes/dishes/index.tsx": "eb035ee3 generated",
   "src/routes/dishes/new.tsx": "3ac97d16 generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "3c987813 generated",
-  "src/routes/orders/$id.tsx": "672f3f38 generated",
-  "src/routes/orders/index.tsx": "70f7b156 generated",
+  "src/routes/orders/$id.tsx": "aa89b4ac generated",
+  "src/routes/orders/index.tsx": "576b775a generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
   "src/routes/sign-in.tsx": "708939ab generated",
@@ -54870,7 +54846,7 @@ export async function runIdentified(viewer: Viewer | null, id: number) {
   const row = await incidentData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(identifiedAccess, viewer, row.ownerId);
-  if (!identifiedFits(row)) throw new Error("This cannot be done now.");
+  if (!identifiedFits(row, viewer)) throw new Error("This cannot be done now.");
   check(incidentUpdateAccess.create, viewer);
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
@@ -54900,7 +54876,7 @@ export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await incidentData.get(viewer, id);
-    if (!row || !allows(identifiedAccess, viewer, row.ownerId) || !identifiedFits(row)) continue;
+    if (!row || !allows(identifiedAccess, viewer, row.ownerId) || !identifiedFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -54940,7 +54916,7 @@ import { runIdentified, runIdentifiedMany } from "./identified.server";
 export const identifiedAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "identified" action fits the incident: it is offered and allowed only then. */
-export function identifiedFits(row: { status?: unknown }): boolean {
+export function identifiedFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "investigating";
 }
 
@@ -55000,7 +54976,7 @@ export async function runMonitoring(viewer: Viewer | null, id: number) {
   const row = await incidentData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(monitoringAccess, viewer, row.ownerId);
-  if (!monitoringFits(row)) throw new Error("This cannot be done now.");
+  if (!monitoringFits(row, viewer)) throw new Error("This cannot be done now.");
   check(incidentUpdateAccess.create, viewer);
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
@@ -55030,7 +55006,7 @@ export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await incidentData.get(viewer, id);
-    if (!row || !allows(monitoringAccess, viewer, row.ownerId) || !monitoringFits(row)) continue;
+    if (!row || !allows(monitoringAccess, viewer, row.ownerId) || !monitoringFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -55070,7 +55046,7 @@ import { runMonitoring, runMonitoringMany } from "./monitoring.server";
 export const monitoringAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "monitoring" action fits the incident: it is offered and allowed only then. */
-export function monitoringFits(row: { status?: unknown }): boolean {
+export function monitoringFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["investigating","identified"].includes(String(row.status));
 }
 
@@ -55131,7 +55107,7 @@ export async function runResolve(viewer: Viewer | null, id: number) {
   const row = await incidentData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(resolveAccess, viewer, row.ownerId);
-  if (!resolveFits(row)) throw new Error("This cannot be done now.");
+  if (!resolveFits(row, viewer)) throw new Error("This cannot be done now.");
   check(incidentUpdateAccess.create, viewer);
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
@@ -55161,7 +55137,7 @@ export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await incidentData.get(viewer, id);
-    if (!row || !allows(resolveAccess, viewer, row.ownerId) || !resolveFits(row)) continue;
+    if (!row || !allows(resolveAccess, viewer, row.ownerId) || !resolveFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -55201,7 +55177,7 @@ import { runResolve, runResolveMany } from "./resolve.server";
 export const resolveAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "resolve" action fits the incident: it is offered and allowed only then. */
-export function resolveFits(row: { status?: unknown }): boolean {
+export function resolveFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["investigating","identified","monitoring"].includes(String(row.status));
 }
 
@@ -62279,7 +62255,7 @@ function IncidentPage() {
         title={row.title || \`Incident #\${row.id}\`}
         actions={
           <>
-            {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) && (
+            {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row, viewer) && (
               <ActionButton
                 label="Identified"
                 concept="action:identified"
@@ -62289,7 +62265,7 @@ function IncidentPage() {
                 }}
               />
             )}
-            {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) && (
+            {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row, viewer) && (
               <ActionButton
                 label="Monitoring"
                 concept="action:monitoring"
@@ -62299,7 +62275,7 @@ function IncidentPage() {
                 }}
               />
             )}
-            {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) && (
+            {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row, viewer) && (
               <ActionButton
                 label="Resolve"
                 concept="action:resolve"
@@ -62434,7 +62410,7 @@ function IncidentsPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) || allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) || allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) || allows(incidentDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row, viewer) || allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row, viewer) || allows(resolveAccess, viewer, row.ownerId) && resolveFits(row, viewer) || allows(incidentDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/incidents/new" className={buttonVariants()}>
       {w.newOne("incident")}
@@ -62469,19 +62445,19 @@ function IncidentsPage() {
             {
               label: "Identified",
               concept: "action:identified",
-              applies: chosen.filter((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row)).length,
+              applies: chosen.filter((row) => allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row, viewer)).length,
               run: () => identifiedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Monitoring",
               concept: "action:monitoring",
-              applies: chosen.filter((row) => allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row)).length,
+              applies: chosen.filter((row) => allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row, viewer)).length,
               run: () => monitoringMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Resolve",
               concept: "action:resolve",
-              applies: chosen.filter((row) => allows(resolveAccess, viewer, row.ownerId) && resolveFits(row)).length,
+              applies: chosen.filter((row) => allows(resolveAccess, viewer, row.ownerId) && resolveFits(row, viewer)).length,
               run: () => resolveMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
           ]}
@@ -62504,7 +62480,7 @@ function IncidentsPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <Overflow inRow>
-            {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row) && (
+            {allows(identifiedAccess, viewer, row.ownerId) && identifiedFits(row, viewer) && (
               <ActionButton
                 label="Identified"
                 concept="action:identified"
@@ -62514,7 +62490,7 @@ function IncidentsPage() {
                 }}
               />
             )}
-            {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row) && (
+            {allows(monitoringAccess, viewer, row.ownerId) && monitoringFits(row, viewer) && (
               <ActionButton
                 label="Monitoring"
                 concept="action:monitoring"
@@ -62524,7 +62500,7 @@ function IncidentsPage() {
                 }}
               />
             )}
-            {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row) && (
+            {allows(resolveAccess, viewer, row.ownerId) && resolveFits(row, viewer) && (
               <ActionButton
                 label="Resolve"
                 concept="action:resolve"
@@ -64258,12 +64234,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
   "src/generated/access.test.ts": "2df13645 generated",
-  "src/generated/actions/identified.server.ts": "fc584110 generated",
-  "src/generated/actions/identified.ts": "267f914e generated",
-  "src/generated/actions/monitoring.server.ts": "09d85fa8 generated",
-  "src/generated/actions/monitoring.ts": "d0f21008 generated",
-  "src/generated/actions/resolve.server.ts": "14a98fdf generated",
-  "src/generated/actions/resolve.ts": "a587d798 generated",
+  "src/generated/actions/identified.server.ts": "14da46dc generated",
+  "src/generated/actions/identified.ts": "08a14f22 generated",
+  "src/generated/actions/monitoring.server.ts": "081af354 generated",
+  "src/generated/actions/monitoring.ts": "bcd8c8b0 generated",
+  "src/generated/actions/resolve.server.ts": "6b6da89f generated",
+  "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
@@ -64367,8 +64343,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "e6010bcb generated",
-  "src/routes/incidents/$id.tsx": "75decb97 generated",
-  "src/routes/incidents/index.tsx": "5697fa30 generated",
+  "src/routes/incidents/$id.tsx": "345c12e1 generated",
+  "src/routes/incidents/index.tsx": "df2fa48e generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
   "src/routes/index.tsx": "98dbe74c generated",
   "src/routes/maintenance/$id.tsx": "dd96b09a generated",
@@ -65073,8 +65049,8 @@ describe("Message", () => {
 describe("the assignToMe action", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
-    const others = insertSupportCase(stranger.id, {});
-    const own = insertSupportCase(viewer.id, {});
+    const others = insertSupportCase(stranger.id, {"assignee":"not ME()"});
+    const own = insertSupportCase(viewer.id, {"assignee":"not ME()"});
     expect({
       others: await can(() => runAssignToMe(viewer, others.id)),
       own: await can(() => runAssignToMe(viewer, own.id)),
@@ -65083,8 +65059,8 @@ describe("the assignToMe action", () => {
 
   test("agent", async () => {
     const viewer = signedIn("agent");
-    const others = insertSupportCase(stranger.id, {});
-    const own = insertSupportCase(viewer.id, {});
+    const others = insertSupportCase(stranger.id, {"assignee":"not ME()"});
+    const own = insertSupportCase(viewer.id, {"assignee":"not ME()"});
     expect({
       others: await can(() => runAssignToMe(viewer, others.id)),
       own: await can(() => runAssignToMe(viewer, own.id)),
@@ -65093,7 +65069,7 @@ describe("the assignToMe action", () => {
 
   test("a visitor who has not signed in", async () => {
     const viewer = null;
-    const others = insertSupportCase(stranger.id, {});
+    const others = insertSupportCase(stranger.id, {"assignee":"not ME()"});
     const othersBefore = JSON.stringify(db.select().from(schema.supportCases).where(eq(schema.supportCases.id, others.id)).get());
     expect({
       others: await can(() => runAssignToMe(viewer, others.id)),
@@ -65375,7 +65351,7 @@ export async function runAssignTo(viewer: Viewer | null, id: number, asked: z.ou
   const row = await supportCaseData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(assignToAccess, viewer, row.ownerId);
-  if (!assignToFits(row)) throw new Error("This cannot be done now.");
+  if (!assignToFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
   return supportCaseData.update(viewer, id, one.values, "assignTo", []);
 }
@@ -65391,7 +65367,7 @@ export async function runAssignToMany(viewer: Viewer | null, ids: number[], aske
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await supportCaseData.get(viewer, id);
-    if (!row || !allows(assignToAccess, viewer, row.ownerId) || !assignToFits(row)) continue;
+    if (!row || !allows(assignToAccess, viewer, row.ownerId) || !assignToFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row, asked));
     } catch (error) {
@@ -65437,7 +65413,7 @@ import { runAssignTo, runAssignToMany } from "./assign-to.server";
 export const assignToAccess: Rule = { public: false, roles: ["admin", "agent"], owner: true };
 
 /** Whether the "assignTo" action fits the support case: it is offered and allowed only then. */
-export function assignToFits(_row: { }): boolean {
+export function assignToFits(_row: { }, _viewer: { id: string } | null): boolean {
   return true;
 }
 
@@ -65512,7 +65488,7 @@ export async function runAssignToMe(viewer: Viewer | null, id: number) {
   const row = await supportCaseData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(assignToMeAccess, viewer, row.ownerId);
-  if (!assignToMeFits(row)) throw new Error("This cannot be done now.");
+  if (!assignToMeFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return supportCaseData.update(viewer, id, one.values, "assignToMe", ["assigneeId"]);
 }
@@ -65528,7 +65504,7 @@ export async function runAssignToMeMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await supportCaseData.get(viewer, id);
-    if (!row || !allows(assignToMeAccess, viewer, row.ownerId) || !assignToMeFits(row)) continue;
+    if (!row || !allows(assignToMeAccess, viewer, row.ownerId) || !assignToMeFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -65570,8 +65546,8 @@ import { runAssignToMe, runAssignToMeMany } from "./assign-to-me.server";
 export const assignToMeAccess: Rule = { public: false, roles: ["admin", "agent"], owner: true };
 
 /** Whether the "assignToMe" action fits the support case: it is offered and allowed only then. */
-export function assignToMeFits(_row: { }): boolean {
-  return true;
+export function assignToMeFits(row: { assigneeId?: unknown }, viewer: { id: string } | null): boolean {
+  return (viewer == null || row.assigneeId !== viewer.id);
 }
 
 /** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
@@ -65625,7 +65601,7 @@ export async function runClose(viewer: Viewer | null, id: number, asked: z.outpu
   const row = await supportCaseData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(closeAccess, viewer, row.ownerId);
-  if (!closeFits(row)) throw new Error("This cannot be done now.");
+  if (!closeFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
   return supportCaseData.update(viewer, id, one.values, "close", ["status"]);
 }
@@ -65641,7 +65617,7 @@ export async function runCloseMany(viewer: Viewer | null, ids: number[], asked: 
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await supportCaseData.get(viewer, id);
-    if (!row || !allows(closeAccess, viewer, row.ownerId) || !closeFits(row)) continue;
+    if (!row || !allows(closeAccess, viewer, row.ownerId) || !closeFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row, asked));
     } catch (error) {
@@ -65687,7 +65663,7 @@ import { runClose, runCloseMany } from "./close.server";
 export const closeAccess: Rule = { public: false, roles: ["admin", "agent"], owner: true };
 
 /** Whether the "close" action fits the support case: it is offered and allowed only then. */
-export function closeFits(row: { status?: unknown }): boolean {
+export function closeFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["open","inProgress","reopened"].includes(String(row.status));
 }
 
@@ -65762,7 +65738,7 @@ export async function runReopen(viewer: Viewer | null, id: number) {
   const row = await supportCaseData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(reopenAccess, viewer, row.ownerId);
-  if (!reopenFits(row)) throw new Error("This cannot be done now.");
+  if (!reopenFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
   return supportCaseData.update(viewer, id, one.values, "reopen", ["status"]);
 }
@@ -65778,7 +65754,7 @@ export async function runReopenMany(viewer: Viewer | null, ids: number[]) {
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await supportCaseData.get(viewer, id);
-    if (!row || !allows(reopenAccess, viewer, row.ownerId) || !reopenFits(row)) continue;
+    if (!row || !allows(reopenAccess, viewer, row.ownerId) || !reopenFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row));
     } catch (error) {
@@ -65820,7 +65796,7 @@ import { runReopen, runReopenMany } from "./reopen.server";
 export const reopenAccess: Rule = { public: false, roles: ["admin", "agent"], owner: true };
 
 /** Whether the "reopen" action fits the support case: it is offered and allowed only then. */
-export function reopenFits(row: { status?: unknown }): boolean {
+export function reopenFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "closed";
 }
 
@@ -65875,7 +65851,7 @@ export async function runStartWork(viewer: Viewer | null, id: number, asked: z.o
   const row = await supportCaseData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(startWorkAccess, viewer, row.ownerId);
-  if (!startWorkFits(row)) throw new Error("This cannot be done now.");
+  if (!startWorkFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row, asked);
   return supportCaseData.update(viewer, id, one.values, "startWork", ["status"]);
 }
@@ -65891,7 +65867,7 @@ export async function runStartWorkMany(viewer: Viewer | null, ids: number[], ask
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await supportCaseData.get(viewer, id);
-    if (!row || !allows(startWorkAccess, viewer, row.ownerId) || !startWorkFits(row)) continue;
+    if (!row || !allows(startWorkAccess, viewer, row.ownerId) || !startWorkFits(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row, asked));
     } catch (error) {
@@ -65937,7 +65913,7 @@ import { runStartWork, runStartWorkMany } from "./start-work.server";
 export const startWorkAccess: Rule = { public: false, roles: ["admin", "agent"], owner: true };
 
 /** Whether the "startWork" action fits the support case: it is offered and allowed only then. */
-export function startWorkFits(row: { status?: unknown }): boolean {
+export function startWorkFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return ["open","reopened"].includes(String(row.status));
 }
 
@@ -69148,7 +69124,7 @@ function SupportCasePage() {
         title={row.subject || \`Support case #\${row.id}\`}
         actions={
           <Overflow>
-            {allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row) && (
+            {allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row, viewer) && (
               <ActionButton
                 label="Assign to me"
                 concept="action:assignToMe"
@@ -69158,7 +69134,7 @@ function SupportCasePage() {
                 }}
               />
             )}
-            {allows(assignToAccess, viewer, row.ownerId) && assignToFits(row) && (
+            {allows(assignToAccess, viewer, row.ownerId) && assignToFits(row, viewer) && (
               <ActionButton
                 label="Assign to"
                 concept="action:assignTo"
@@ -69169,7 +69145,7 @@ function SupportCasePage() {
                 }}
               />
             )}
-            {allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row) && (
+            {allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row, viewer) && (
               <ActionButton
                 label="Start work"
                 concept="action:startWork"
@@ -69180,7 +69156,7 @@ function SupportCasePage() {
                 }}
               />
             )}
-            {allows(closeAccess, viewer, row.ownerId) && closeFits(row) && (
+            {allows(closeAccess, viewer, row.ownerId) && closeFits(row, viewer) && (
               <ActionButton
                 label="Close"
                 concept="action:close"
@@ -69191,7 +69167,7 @@ function SupportCasePage() {
                 }}
               />
             )}
-            {allows(reopenAccess, viewer, row.ownerId) && reopenFits(row) && (
+            {allows(reopenAccess, viewer, row.ownerId) && reopenFits(row, viewer) && (
               <ActionButton
                 label="Reopen"
                 concept="action:reopen"
@@ -69326,7 +69302,7 @@ function CasesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row) || allows(assignToAccess, viewer, row.ownerId) && assignToFits(row) || allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row) || allows(closeAccess, viewer, row.ownerId) && closeFits(row) || allows(reopenAccess, viewer, row.ownerId) && reopenFits(row) || allows(supportCaseDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row, viewer) || allows(assignToAccess, viewer, row.ownerId) && assignToFits(row, viewer) || allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row, viewer) || allows(closeAccess, viewer, row.ownerId) && closeFits(row, viewer) || allows(reopenAccess, viewer, row.ownerId) && reopenFits(row, viewer) || allows(supportCaseDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/cases/new" className={buttonVariants()}>
       {w.newOne("support case")}
@@ -69380,34 +69356,34 @@ function CasesPage() {
             {
               label: "Assign to me",
               concept: "action:assignToMe",
-              applies: chosen.filter((row) => allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row)).length,
+              applies: chosen.filter((row) => allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row, viewer)).length,
               run: () => assignToMeMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Assign to",
               concept: "action:assignTo",
-              applies: chosen.filter((row) => allows(assignToAccess, viewer, row.ownerId) && assignToFits(row)).length,
+              applies: chosen.filter((row) => allows(assignToAccess, viewer, row.ownerId) && assignToFits(row, viewer)).length,
               ask: { ui: assignToAskUi, schema: assignToAsks, loadOptions: assignToAskOptions },
               run: (values) => assignToMany({ data: { ids: chosen.map((row) => row.id), values: values as never } }),
             },
             {
               label: "Start work",
               concept: "action:startWork",
-              applies: chosen.filter((row) => allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row)).length,
+              applies: chosen.filter((row) => allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row, viewer)).length,
               ask: { ui: startWorkAskUi, schema: startWorkAsks, loadOptions: startWorkAskOptions },
               run: (values) => startWorkMany({ data: { ids: chosen.map((row) => row.id), values: values as never } }),
             },
             {
               label: "Close",
               concept: "action:close",
-              applies: chosen.filter((row) => allows(closeAccess, viewer, row.ownerId) && closeFits(row)).length,
+              applies: chosen.filter((row) => allows(closeAccess, viewer, row.ownerId) && closeFits(row, viewer)).length,
               ask: { ui: closeAskUi, schema: closeAsks, loadOptions: closeAskOptions },
               run: (values) => closeMany({ data: { ids: chosen.map((row) => row.id), values: values as never } }),
             },
             {
               label: "Reopen",
               concept: "action:reopen",
-              applies: chosen.filter((row) => allows(reopenAccess, viewer, row.ownerId) && reopenFits(row)).length,
+              applies: chosen.filter((row) => allows(reopenAccess, viewer, row.ownerId) && reopenFits(row, viewer)).length,
               run: () => reopenMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
           ]}
@@ -69431,7 +69407,7 @@ function CasesPage() {
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <Overflow inRow>
-            {allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row) && (
+            {allows(assignToMeAccess, viewer, row.ownerId) && assignToMeFits(row, viewer) && (
               <ActionButton
                 label="Assign to me"
                 concept="action:assignToMe"
@@ -69441,7 +69417,7 @@ function CasesPage() {
                 }}
               />
             )}
-            {allows(assignToAccess, viewer, row.ownerId) && assignToFits(row) && (
+            {allows(assignToAccess, viewer, row.ownerId) && assignToFits(row, viewer) && (
               <ActionButton
                 label="Assign to"
                 concept="action:assignTo"
@@ -69452,7 +69428,7 @@ function CasesPage() {
                 }}
               />
             )}
-            {allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row) && (
+            {allows(startWorkAccess, viewer, row.ownerId) && startWorkFits(row, viewer) && (
               <ActionButton
                 label="Start work"
                 concept="action:startWork"
@@ -69463,7 +69439,7 @@ function CasesPage() {
                 }}
               />
             )}
-            {allows(closeAccess, viewer, row.ownerId) && closeFits(row) && (
+            {allows(closeAccess, viewer, row.ownerId) && closeFits(row, viewer) && (
               <ActionButton
                 label="Close"
                 concept="action:close"
@@ -69474,7 +69450,7 @@ function CasesPage() {
                 }}
               />
             )}
-            {allows(reopenAccess, viewer, row.ownerId) && reopenFits(row) && (
+            {allows(reopenAccess, viewer, row.ownerId) && reopenFits(row, viewer) && (
               <ActionButton
                 label="Reopen"
                 concept="action:reopen"
@@ -70572,17 +70548,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "ddcd3e3c generated",
   "src/db/seed.ts": "59920618 generated",
-  "src/generated/access.test.ts": "dc6adecc generated",
-  "src/generated/actions/assign-to-me.server.ts": "41077c20 generated",
-  "src/generated/actions/assign-to-me.ts": "405ebc36 generated",
-  "src/generated/actions/assign-to.server.ts": "c7fea8bd generated",
-  "src/generated/actions/assign-to.ts": "4ba13b57 generated",
-  "src/generated/actions/close.server.ts": "f3f652b2 generated",
-  "src/generated/actions/close.ts": "6140ec7f generated",
-  "src/generated/actions/reopen.server.ts": "90344991 generated",
-  "src/generated/actions/reopen.ts": "a2f04753 generated",
-  "src/generated/actions/start-work.server.ts": "bcef2431 generated",
-  "src/generated/actions/start-work.ts": "915fde76 generated",
+  "src/generated/access.test.ts": "caa1406d generated",
+  "src/generated/actions/assign-to-me.server.ts": "cdf480ac generated",
+  "src/generated/actions/assign-to-me.ts": "7f1c30db generated",
+  "src/generated/actions/assign-to.server.ts": "743e91b5 generated",
+  "src/generated/actions/assign-to.ts": "ec25b09b generated",
+  "src/generated/actions/close.server.ts": "c712c2ea generated",
+  "src/generated/actions/close.ts": "4898d627 generated",
+  "src/generated/actions/reopen.server.ts": "051bad29 generated",
+  "src/generated/actions/reopen.ts": "47cc7a6f generated",
+  "src/generated/actions/start-work.server.ts": "44c4920d generated",
+  "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "8c32c143 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -70662,8 +70638,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "83ba828d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/cases/$id.tsx": "e873cd0b generated",
-  "src/routes/cases/index.tsx": "891a3c3e generated",
+  "src/routes/cases/$id.tsx": "c5ea4e91 generated",
+  "src/routes/cases/index.tsx": "f7f09d40 generated",
   "src/routes/cases/new.tsx": "2360043b generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",

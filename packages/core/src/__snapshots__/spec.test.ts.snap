@@ -4563,6 +4563,9 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
           "me": true,
         },
       ],
+      "when": {
+        "assignee": "not ME()",
+      },
     },
     {
       "custom": false,

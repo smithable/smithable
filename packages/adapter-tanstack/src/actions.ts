@@ -200,18 +200,41 @@ ${records
 `;
 }
 
-/** Whether a standard action's condition fits a record, as code on the stored row. */
-export function fitsCode(action: StandardActionIR): string {
-  const tests = Object.entries(action.when ?? {}).map(([field, wanted]) =>
-    typeof wanted === "boolean"
+/** The stored keys an action's condition reads (a reference by its key, assigneeId). */
+export function whenKeys(action: StandardActionIR, ir: SpecIR): string[] {
+  const model = modelNamed(ir, action.on);
+  return Object.keys(action.when ?? {}).map((field) => {
+    const f = model.fields.find((x) => x.name === field);
+    return f ? dataKey(f) : field;
+  });
+}
+
+/** Whether the condition names the person signed in (ME() or not ME()), so fits needs the viewer. */
+export const whenNamesViewer = (action: StandardActionIR): boolean =>
+  Object.values(action.when ?? {}).some((w) => w === "ME()" || w === "not ME()");
+
+/** Whether a standard action's condition fits a record, as code on the stored row and the viewer. */
+export function fitsCode(action: StandardActionIR, ir: SpecIR): string {
+  const model = modelNamed(ir, action.on);
+  const tests = Object.entries(action.when ?? {}).map(([field, wanted]) => {
+    const f = model.fields.find((x) => x.name === field);
+    if (f?.type.kind === "relation") {
+      // A reference: empty, set, the viewer's own, or anyone's but the viewer's (also empty).
+      const key = dataKey(f);
+      if (wanted === "none") return `row.${key} == null`;
+      if (wanted === "any") return `row.${key} != null`;
+      if (wanted === "ME()") return `viewer != null && row.${key} === viewer.id`;
+      return `(viewer == null || row.${key} !== viewer.id)`;
+    }
+    return typeof wanted === "boolean"
       ? // A boolean either way: true only when it is yes; no (or empty) when it is not.
         wanted
         ? `row.${field} === true`
         : `!row.${field}`
       : Array.isArray(wanted)
         ? `${JSON.stringify(wanted)}.includes(String(row.${field}))`
-        : `row.${field} === ${JSON.stringify(wanted)}`,
-  );
+        : `row.${field} === ${JSON.stringify(wanted)}`;
+  });
   return tests.length ? tests.join(" && ") : "true";
 }
 
@@ -278,7 +301,7 @@ export function standardActionModule(
 ): string {
   const a = actionNames(action);
   const n = names(modelNamed(ir, action.on), t);
-  const when = Object.keys(action.when ?? {});
+  const when = whenKeys(action, ir);
   const asked = askedKeys(action, ir);
   const models = [...new Set(asked.map((x) => x.model))].map((m) => names(modelNamed(ir, m), t));
   const named = (m: string) => names(modelNamed(ir, m), t);
@@ -337,8 +360,8 @@ import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Whether the "${action.name}" action fits the ${n.label.toLowerCase()}: it is offered and allowed only then. */
-export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `${f}?: unknown`).join("; ")}${when.length ? " " : ""}}): boolean {
-  return ${fitsCode(action)};
+export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `${f}?: unknown`).join("; ")}${when.length ? " " : ""}}, ${whenNamesViewer(action) ? "viewer" : "_viewer"}: { id: string } | null): boolean {
+  return ${fitsCode(action, ir)};
 }
 ${asks}
 /** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
@@ -493,7 +516,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number${askedParam}) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(${a.access}, viewer, row.${ownerKey(model)});
-  if (!${a.fits}(row)) throw new Error("This cannot be done now.");
+  if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
 ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  const one = plan(viewer, row${askedArg});
 ${
   adds.length
@@ -516,7 +539,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await ${n.data}.get(viewer, id);
-    if (!row || !allows(${a.access}, viewer, row.${ownerKey(model)}) || !${a.fits}(row)) continue;
+    if (!row || !allows(${a.access}, viewer, row.${ownerKey(model)}) || !${a.fits}(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row${askedArg}));
     } catch (error) {
@@ -715,7 +738,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, ask
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(${a.access}, viewer);
-  if (!${a.fits}(row)) throw new Error("This cannot be done now.");
+  if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
   // Its stored fields, then what the copy says differs (worked out on the original).
   const values = ${n.schema}.parse({
     ${pick(

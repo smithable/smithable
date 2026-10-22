@@ -350,7 +350,7 @@ function recordRun(
     steps.push(`  const row = await ${n.data}.get(${actor}, id);
   if (!row) return "gone";
   // A record its action's condition does not fit is skipped, and Activity says so.
-  if (!${a.fits}(row)) {
+  if (!${a.fits}(row, ${actor})) {
     audit(db, ${actor}, { action: "timer skipped", model: ${JSON.stringify(model.name)}, record: id, details: { action: ${JSON.stringify(run.name)} } });
     return "skipped";
   }

@@ -3,7 +3,7 @@
 import { isScalar, isSeq, type ParsedNode } from "yaml";
 import { type At, mapEntries, type ParseContext } from "./context.js";
 import type { YamlEditor } from "./edit.js";
-import { type Condition, conditionFits, type ModelIR } from "./ir.js";
+import { type Condition, conditionFits, type ModelIR, referenceWant } from "./ir.js";
 import { didYouMean } from "./suggest.js";
 
 /**
@@ -17,6 +17,11 @@ export function readCondition(
   model?: ModelIR,
   /** A computed field may be named (a condition read on the loaded record, not in a query). */
   computed = false,
+  /**
+   * A reference field may be named (an action's `when`): `none` (empty), `any` (set), and for
+   * a field that refers to User `ME()` (the person signed in) or `not ME()`.
+   */
+  reference = false,
 ): Condition | undefined {
   const condition: Condition = {};
   for (const { key, keyNode, value } of mapEntries(ctx, node, what) ?? []) {
@@ -25,9 +30,17 @@ export function readCondition(
       ctx.error(value, "invalid-value", `${what} ${SHAPE}`);
       continue;
     }
-    if (model && !conditionFits(model, key, wanted, computed)) {
+    if (model && !conditionFits(model, key, wanted, computed, reference)) {
       const field = model.fields.find((f) => f.name === key);
-      if (!field)
+      if (field?.type.kind === "relation" && reference && !field.type.many)
+        ctx.error(
+          value,
+          "invalid-where",
+          field.type.model === "User"
+            ? `"${key}" in ${what} is a reference: it is none (empty), any (set), ME() (the person signed in) or not ME().`
+            : `"${key}" in ${what} is a reference to ${field.type.model}, not to User: it is none (empty) or any (set); ME() names nobody there.`,
+        );
+      else if (!field)
         ctx.error(
           keyNode,
           "unknown-field",
@@ -50,7 +63,11 @@ export function readCondition(
       } else ctx.error(value, "invalid-where", `"${key}" in ${what}: ${SHAPE}`);
       continue;
     }
-    condition[key] = wanted;
+    const field = model?.fields.find((f) => f.name === key);
+    condition[key] =
+      field?.type.kind === "relation" && typeof wanted === "string"
+        ? (referenceWant(wanted) ?? wanted)
+        : wanted;
   }
   return Object.keys(condition).length ? condition : undefined;
 }
@@ -109,9 +126,17 @@ export function followRenamed(
   return next;
 }
 
-/** "status is published", "status is investigating or identified", "pinned is true". */
+/** "status is published", "status is investigating or identified", "pinned is true", "assignee is not you". */
 export function conditionText(where: Condition): string {
+  const said = (v: Condition[string]) => {
+    if (Array.isArray(v)) return v.join(" or ");
+    if (v === "ME()") return "you";
+    if (v === "not ME()") return "not you";
+    if (v === "none") return "empty";
+    if (v === "any") return "set";
+    return String(v);
+  };
   return Object.entries(where)
-    .map(([k, v]) => `${k} is ${Array.isArray(v) ? v.join(" or ") : v}`)
+    .map(([k, v]) => `${k} is ${said(v)}`)
     .join(" and ");
 }
