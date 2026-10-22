@@ -221,6 +221,7 @@ export function App() {
   // A setting another window names (Who can's Why?): the Code window on screen, beside No code
   // and not over the preview where there is room, and the setting shown there.
   const [codeJump, setCodeJump] = useState<CodeJump>();
+  const forgetJump = useCallback(() => setCodeJump(undefined), []);
   useEffect(() => {
     const onShow = (e: Event) => {
       const { file, path } = (e as CustomEvent<Omit<CodeJump, "at">>).detail;
@@ -867,6 +868,7 @@ export function App() {
                           place={place.code}
                           onPlace={codePlace}
                           jumpTo={codeJump}
+                          onJumped={forgetJump}
                           onLook={() => {
                             nocodePlace({ sub: "look" });
                             if (narrow) showWindow("nocode");

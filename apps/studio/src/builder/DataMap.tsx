@@ -164,8 +164,9 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={(changes: NodeChange<Node<BoxData>>[]) =>
-            setNodes(() => {
-              const next = applyNodeChanges(changes, shown);
+            // On the latest boxes, so changes in one batch build on each other.
+            setNodes((current) => {
+              const next = applyNodeChanges(changes, current.length ? current : shown);
               // A drag ended: the boxes keep their places in this browser.
               if (changes.some((c) => c.type === "position" && c.dragging === false))
                 writePlaces(app, next);
