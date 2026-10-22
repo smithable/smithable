@@ -50,12 +50,12 @@ export const PAGE_GENERATORS: {
       "index.tsx": landingRoute(page, page.pattern.sections, ir, t, auth, ux),
     }),
   },
-  // A page of parts and no kind: laid out as a landing page's sections are, in the site frame,
-  // until the one page renderer with the page's frame (docs/design/page-sections.md §8, step 2).
+  // A page of parts and no kind: laid out as a landing page's sections are, in the page's frame
+  // (docs/design/page-sections.md §4), which the root gives it.
   sections: {
     kit: ["src/kit/Landing.tsx"],
     routes: (page, { ir, t, auth, ux }) => ({
-      "index.tsx": landingRoute(page, page.sections, ir, t, auth, ux),
+      "index.tsx": landingRoute(page, page.sections, ir, t, auth, ux, false),
     }),
   },
   dashboard: {

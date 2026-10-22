@@ -36,6 +36,23 @@ pages:
       email: hello@calmyoga.example
       country: Åland, Finland
       hosting: in the EU
+  about:
+    title: About us
+    story:
+      title: A small studio by the harbour
+      text: |-
+        Calm Yoga began in 2019 as one evening class in a borrowed room. Today it is a studio of
+        its own on Torggatan, with classes from early morning to late evening.
+
+        The classes stay small, so every teacher knows your name and how your practice is going.
+    team: { title: Who teaches }
+    faq:
+      title: Questions before you come
+      items:
+        - question: Do I need experience?
+          answer: No. Foundations and all-levels classes are made for beginners.
+        - question: How early should I arrive?
+          answer: Ten minutes before the class, to settle in and find your mat.
   home:
     description: Small yoga classes in Mariehamn for every level. See the schedule and book a mat.
     estimate:

@@ -19,6 +19,7 @@ exports[`the examples > booking is valid with its auth file 1`] = `
       "home",
       "schedule",
       "blog",
+      "about",
       "privacy",
     ],
     "read": [

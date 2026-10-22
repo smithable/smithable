@@ -6,6 +6,7 @@ import {
   type Icon,
   pageAccess,
   pageIcon,
+  type PageIR,
   type SpecIR,
   type UxIR,
 } from "@smithable/core";
@@ -157,12 +158,41 @@ export function rootRoute(
   const catalog = ir.pages.some(
     (p) => p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id),
   );
+  // A page that says its frame in the ux file (docs/design/page-sections.md §4) has it for
+  // everyone: site, the public frame with its menu; none, no frame at all; app, the shell. The
+  // kinds with a frame of their own (landing, onboarding, a public blog) keep it.
+  const ownFrame = (p: PageIR) =>
+    p.pattern.kind === "landing" || p.pattern.kind === "onboarding" || publicArticles(p, { auth });
+  const framed = (frame: "site" | "app" | "none") =>
+    ir.pages.filter((p) => !ownFrame(p) && ux.pages[p.id]?.frame === frame).map((p) => p.route);
+  const sitePages = framed("site");
+  const barePages = framed("none");
+  // The workspace: the pages in the shell, in the navigation's order; the site frame links to the
+  // first the viewer may open.
+  const workspace = sitePages.length
+    ? ir.navigation
+        .flatMap((m) => m.pages)
+        .map((id) => ir.pages.find((p) => p.id === id) as PageIR)
+        .filter(
+          (p) =>
+            p &&
+            !ownFrame(p) &&
+            !["site", "none"].includes(ux.pages[p.id]?.frame ?? "") &&
+            !p.route.includes("$"),
+        )
+        .map((p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`)
+    : [];
   const visitorPages =
-    signIn && (ir.pages.some((p) => p.pattern.kind === "landing") || sites.length || catalog)
+    signIn &&
+    (ir.pages.some((p) => p.pattern.kind === "landing") ||
+      sites.length ||
+      catalog ||
+      sitePages.length)
       ? ir.pages
           .filter(
             (p) =>
               auth.public.pages.includes(p.id) &&
+              !ux.pages[p.id]?.frame &&
               !["landing", "onboarding", "articles"].includes(p.pattern.kind),
           )
           .map((p) => p.route)
@@ -174,6 +204,11 @@ export function rootRoute(
   const framedBySite = sites.length
     ? `landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`))`
     : "landingRoutes.includes(pathname)";
+  // The site frame's way in: the workspace for one who may open a page of it, else signing in.
+  const enter = signIn ? `viewer ? undefined : { to: "/sign-in", label: w.signIn }` : "undefined";
+  const siteLink = workspace.length
+    ? `((page) => (page ? { to: page.to, label: w.workspace } : ${enter}))(workspacePages.find((p) => allows(p.access, viewer)))`
+    : enter;
   // The review pages (docs/design/file-review.md): the menu shows how many files wait on each.
   const reviews = hasSignIn(auth)
     ? ir.pages.flatMap((p) =>
@@ -190,7 +225,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
@@ -199,7 +234,7 @@ ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCs
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
-${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}${visitorPages.length ? `/** Public pages that visitors see in the site's frame (signed in, the app's). */\nconst visitorRoutes = ${literal(visitorPages)};\n` : ""}
+${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}${visitorPages.length ? `/** Public pages that visitors see in the site's frame (signed in, the app's). */\nconst visitorRoutes = ${literal(visitorPages)};\n` : ""}${sitePages.length ? `/** Pages in the site's frame for everyone (their frame in smithable.ux.yml). */\nconst sitePageRoutes = ${literal(sitePages)};\n` : ""}${barePages.length ? `/** Pages with no frame: no menu, no header. */\nconst bareRoutes = ${literal(barePages)};\n` : ""}${workspace.length ? `/** The workspace's pages, in the menu's order: the site frame links to the first the viewer may open. */\nconst workspacePages = [\n  ${workspace.join(",\n  ")},\n] as const;\n` : ""}
 ${analytics ? `${analyticsConstants(analytics)}\n` : ""}/** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = ${literal(pageRoutes)};
 
@@ -323,11 +358,25 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           </p>
         )}
         ${
-          landings.length || sites.length || visitorPages.length
+          landings.length || sites.length || visitorPages.length || sitePages.length || barePages.length
             ? `{${
                 landings.length || sites.length
                   ? `${framedBySite} ? (
           children
+        ) : `
+                  : ""
+              }${
+                barePages.length
+                  ? `bareRoutes.some((r) => pathname === r || ${under}) ? (
+          children
+        ) : `
+                  : ""
+              }${
+                sitePages.length
+                  ? `sitePageRoutes.some((r) => pathname === r || ${under}) ? (
+          <LandingLayout appName={app.name}${t.logo} link={${siteLink}} site={site} viewer={viewer}${signIn ? " onSignOut={viewer ? signOut : undefined}" : ""}>
+            <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
+          </LandingLayout>
         ) : `
                   : ""
               }${
