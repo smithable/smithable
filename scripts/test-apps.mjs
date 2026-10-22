@@ -500,8 +500,8 @@ async function bookingFlow(dir, base) {
       "SELECT s.id, s.starts_at AS at FROM sessions s JOIN bookings b ON b.session_id = s.id",
     );
     write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
-    await panel.getByRole("button", { name: "Close" }).click();
-    // Its place in the week moved with its start: it is opened by its address.
+    // Its place in the week moved with its start: it is opened by its address (no Close first,
+    // whose step back in the history would cut this navigation short).
     const moved = new URL(schedule);
     moved.searchParams.set("open", String(booked.id));
     await open(page, moved.toString());
