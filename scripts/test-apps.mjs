@@ -483,9 +483,16 @@ async function bookingFlow(dir, base) {
     const again = visit.getByRole("dialog");
     await again.getByRole("button", { name: "Book a mat" }).click();
     await again.getByText("You're booked").waitFor({ timeout: 10000 * P });
-    await visit.goBack();
+    // Close takes the class out of the address; one opened on the schedule is closed by Back.
+    await again.getByRole("button", { name: "Close" }).click();
     await visit.waitForURL((url) => !url.searchParams.has("open"), { timeout: 10000 * P });
-    if (await visit.getByRole("dialog").isVisible()) throw new Error("Back left the panel open");
+    await visit.locator("section ol button", { hasText: title }).first().click();
+    await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
+    await visit.goBack();
+    await visit.waitForURL((url) => url.pathname === "/schedule" && !url.searchParams.has("open"), {
+      timeout: 10000 * P,
+    });
+    await again.waitFor({ state: "hidden", timeout: 10000 * P });
     // Cancelled again, so the checks after this one find the class as they expect it.
     await visit.locator("section ol button", { hasText: title }).first().click();
     await again.getByRole("button", { name: "Cancel booking" }).click();
