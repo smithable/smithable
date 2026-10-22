@@ -6921,7 +6921,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -9330,7 +9330,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -9376,14 +9376,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "cd0fa29a generated",
+  "src/routes/__root.tsx": "231b85d7 generated",
   "src/routes/admin/activity.tsx": "0f07d2d4 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
@@ -14112,6 +14112,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -14142,7 +14144,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -15923,7 +15925,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -19053,7 +19055,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, gte, lt } from "drizzle-orm";
 import { z } from "zod";
-import { optional, type Search, shaped } from "#/kit/params";
+import { count, optional, type Search, shaped } from "#/kit/params";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
@@ -19099,8 +19101,11 @@ export const Route = createFileRoute("/schedule/")({
   validateSearch: (s: Search) => optional({
     week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
     month: shaped(s.month, /^\\d{4}-\\d{2}$/),
+    // The record whose panel is open, so a sign-in or a link returns to it.
+    open: count(s.open),
   }),
-  loaderDeps: ({ search }) => search,
+  // The period shown decides what is loaded; opening a record's panel loads nothing again.
+  loaderDeps: ({ search: { open: _open, ...period } }) => period,
   loader: ({ deps }) => {
     const range = calendarRange(deps, app.timeZone);
     return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString() } });
@@ -19122,7 +19127,7 @@ function SchedulePage() {
         dateOnly={false}
         newLabel={w.newOne("session")}
         details={(id) => <Reserve id={id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />}
-        onNavigate={(next) => navigate({ to: "/schedule", search: next })}
+        onNavigate={(next, replace) => navigate({ to: "/schedule", search: next, replace })}
         onOpen={canOpen ? (id) => navigate({ to: "/sessions/$id", params: { id: String(id) } }) : undefined}
         onCreate={
           canCreate
@@ -20134,7 +20139,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "420d47d7 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "3f9a78c9 generated",
+  "src/generated/outgoing.server.ts": "fcf6b4e0 generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e8ed4586 generated",
@@ -20151,12 +20156,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
-  "src/kit/Calendar.tsx": "775c62a5 kit",
+  "src/kit/Calendar.tsx": "776df10b kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -20196,7 +20201,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -20207,14 +20212,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f1baacb3 generated",
+  "src/routes/__root.tsx": "5c621ed2 generated",
   "src/routes/admin/activity.tsx": "62617d51 generated",
   "src/routes/admin/bookings/$id.tsx": "1941ec5d generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
@@ -20260,7 +20265,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
-  "src/routes/schedule/index.tsx": "e15d829e generated",
+  "src/routes/schedule/index.tsx": "02dcec4c generated",
   "src/routes/sessions/$id.tsx": "2511b5a6 generated",
   "src/routes/sessions/index.tsx": "1a15b581 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
@@ -24257,7 +24262,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -25981,7 +25986,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -26024,14 +26029,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "4e492958 generated",
+  "src/routes/__root.tsx": "483be48d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "2a5fc923 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
@@ -30770,6 +30775,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -30788,7 +30795,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -31203,7 +31210,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -33037,7 +33044,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "3ca0493a generated",
   "src/generated/invoice.ts": "b569c412 generated",
-  "src/generated/outgoing.server.ts": "a3d9b1fc generated",
+  "src/generated/outgoing.server.ts": "4b29e5a5 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -33046,7 +33053,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -33087,7 +33094,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -33098,14 +33105,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "c382cb01 generated",
+  "src/routes/__root.tsx": "8917ea9a generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "c7e4a008 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
@@ -36561,6 +36568,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -36599,7 +36608,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     if (entry.target) {
       const sent = SENT[model]?.(record);
       if (sent)
@@ -37745,7 +37754,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -39906,7 +39915,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "e4bf366f generated",
   "src/generated/order.ts": "4fdb55f6 generated",
-  "src/generated/outgoing.server.ts": "d9c810d0 generated",
+  "src/generated/outgoing.server.ts": "844b85db generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
@@ -39920,7 +39929,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
@@ -39956,7 +39965,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -39966,14 +39975,14 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "aec78e5f generated",
+  "src/routes/__root.tsx": "c9b7fba0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/dishes/$id.tsx": "3ae8d79c generated",
   "src/routes/dishes/index.tsx": "a1df2b33 generated",
@@ -42768,7 +42777,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -44297,7 +44306,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -44346,7 +44355,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
@@ -44354,7 +44363,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "8a68b445 generated",
-  "src/routes/__root.tsx": "4d355ed3 generated",
+  "src/routes/__root.tsx": "133c6066 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -46500,7 +46509,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -47425,7 +47434,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -47467,14 +47476,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "eebb2262 generated",
+  "src/routes/__root.tsx": "cf62494b generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c2353742 generated",
@@ -55092,7 +55101,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -58007,7 +58016,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
@@ -58058,14 +58067,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "450520a6 generated",
+  "src/routes/__root.tsx": "f3935f13 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -61221,6 +61230,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -61247,7 +61258,7 @@ const ENTRIES: {
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   if (arriving.getStore()?.quiet) return;
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -62733,7 +62744,7 @@ export const Route = createRootRoute({
     <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
   ),
   notFoundComponent: () => (
-    <ErrorNotice title={w.notFound} message={w.notFoundNote} />
+    <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),
 });
 
@@ -64296,7 +64307,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "b3cb7e21 generated",
   "src/generated/message.ts": "f4cafefa generated",
-  "src/generated/outgoing.server.ts": "15ea7ea8 generated",
+  "src/generated/outgoing.server.ts": "d9f41429 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
@@ -64310,7 +64321,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "3148e2e7 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "8368fd3d kit",
+  "src/kit/AppShell.tsx": "6a8c989b kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
@@ -64348,7 +64359,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -64359,14 +64370,14 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "215f24d6 kit",
+  "src/kit/words/en.ts": "e9ebf120 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "53cc5358 generated",
+  "src/routes/__root.tsx": "83ba828d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "89c51a5c generated",
   "src/routes/cases/index.tsx": "891a3c3e generated",
