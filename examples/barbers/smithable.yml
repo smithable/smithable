@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+app:
+  name: Harbour Cuts
+  description: Appointments with a small barbershop's barbers, booked online by their time.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Service:
+    description: What a customer books, such as a haircut or a beard trim, with how long it takes.
+    fields:
+      name: string!
+      summary: text
+      minutes: int! = 30
+      price: money
+
+  Barber:
+    description: One of the barbers whose time customers book.
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+      timeOffs: TimeOff[]               # their days off, on their page
+    schedule:                           # the shop's week; a barber's days off are Time off
+      hours: { mon-fri: "09:00-17:00", sat: "10:00-14:00" }
+      breaks: "12:00-12:30"
+      gap: 10                           # minutes to sweep up after each appointment
+      away: TimeOff
+
+  TimeOff:
+    description: Days or hours a barber is away, such as a holiday, a course or a dentist's appointment.
+    fields:
+      barber: Barber!
+      from: datetime!
+      until: datetime!
+      note: string
+
+  Appointment:
+    description: A customer's appointment with a barber for a service.
+    fields:
+      service: Service!
+      barber: Barber!
+      startsAt: datetime!
+      name: string!
+      phone: phone
+      note: text
+      status: { type: requested | confirmed | cancelled, by: app }
+    occupies:                           # an appointment takes its barber's time, never two at once
+      resource: barber
+      starts: startsAt
+      duration: service.minutes
+      while: { status: [requested, confirmed] }
+      cancelUntil: 12h                  # the customer cancels online until 12 hours before
+
+actions:
+  confirm:
+    on: Appointment
+    when: { status: requested }
+    set: { status: confirmed }
+  cancel:
+    on: Appointment
+    when: { status: [requested, confirmed] }
+    set: { status: cancelled }
+
+outgoing:
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin                    # the shop hears of each new request
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner                    # the customer who booked
+  appointmentConfirmed:
+    when: confirm
+    to: mail
+    recipient: owner
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: appointments }
+      services: { records: Service }
+      barbers: { records: Barber }
+      footer:
+  appointments:                         # a customer's own; the shop's all, with Confirm and Cancel
+    crud: Appointment
+    actions: [confirm, cancel]
+    filters: [status]
+  day:                                  # the shop's day, a column per barber
+    calendar: { model: Appointment, starts: startsAt, duration: service.minutes, title: name }
+  services:
+    crud: Service
+  barbers:
+    crud: Barber
+  time-off:
+    crud: TimeOff
+  privacy:
+    route: /privacy
+    legal: privacy

@@ -191,8 +191,7 @@ export function cancelMembers(
   /** Cancels the viewer's own ${label} while they may: ${model.name}.${cancel.field} becomes ${cancel.to}. */
   async cancelOwn(viewer: Viewer | null, id: number) {
     if (!${n.data}.cancelState(viewer, id)?.can) throw new AccessDenied(viewer !== null);
-    // The field may be one the app fills, never among the values a form sends.
-    return ${n.data}.update(viewer, id, { ${cancel.field}: ${JSON.stringify(cancel.to)} } as unknown as ${n.values}, "cancelled");
+    return ${n.data}.update(viewer, id, { ${cancel.field}: ${JSON.stringify(cancel.to)} }, "cancelled");
   },
 
 `;

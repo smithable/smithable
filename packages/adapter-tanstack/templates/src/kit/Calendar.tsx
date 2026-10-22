@@ -377,7 +377,7 @@ export function Calendar({
               className={`border-b py-3 md:border md:border-border md:py-0 ${empty ? "max-md:hidden" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
             >
               <h3
-                className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today ? "text-primary" : ""}`}
+                className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today && range.view !== "day" ? "text-primary" : ""}`}
               >
                 <span className="md:hidden">{long}</span>
                 <span className="hidden md:inline">{short}</span>

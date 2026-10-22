@@ -1,0 +1,13 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: modern
+
+tones:
+  Appointment.status: { requested: warning, confirmed: success, cancelled: neutral }
+
+pages:
+  appointments:
+    table:
+      columns: [startsAt, service, barber, name, status]

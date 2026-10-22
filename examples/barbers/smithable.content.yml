@@ -1,0 +1,35 @@
+# What people read. Derived from names when not given here.
+smithableContent: 0.1
+
+pages:
+  privacy:
+    title: Privacy
+    operator:
+      name: Harbour Cuts Ab
+      address: Sjögatan 4, 22100 Mariehamn
+      email: hello@harbourcuts.example
+      country: Åland, Finland
+      hosting: in the EU
+  home:
+    hero:
+      title: A good haircut, at a time that suits you
+      subtitle: Choose a service and a barber, then a free time. You get a mail when it is confirmed.
+      button: Book a time
+    services:
+      title: Services
+    barbers:
+      title: The barbers
+  appointments:
+    title: Appointments
+  day:
+    title: The day
+
+outgoing:
+  appointmentRequested:
+    subject: A new appointment to confirm
+  appointmentMade:
+    subject: We have your appointment
+    text: Thank you. We mail you again when it is confirmed. You can cancel online until 12 hours before.
+  appointmentConfirmed:
+    subject: Your appointment is confirmed
+    text: See you then. To cancel, sign in and open the appointment.

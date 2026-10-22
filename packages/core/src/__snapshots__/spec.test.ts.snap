@@ -237,6 +237,469 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "name": "confirm",
+      "on": "Appointment",
+      "set": [
+        {
+          "field": "status",
+          "value": "confirmed",
+        },
+      ],
+      "when": {
+        "status": "requested",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "cancel",
+      "on": "Appointment",
+      "set": [
+        {
+          "field": "status",
+          "value": "cancelled",
+        },
+      ],
+      "when": {
+        "status": [
+          "requested",
+          "confirmed",
+        ],
+      },
+    },
+  ],
+  "app": {
+    "currency": "EUR",
+    "description": "Appointments with a small barbershop's barbers, booked online by their time.",
+    "name": "Harbour Cuts",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [],
+  "models": [
+    {
+      "description": "What a customer books, such as a haircut or a beard trim, with how long it takes.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": 30,
+          "name": "minutes",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "price",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Service",
+    },
+    {
+      "description": "One of the barbers whose time customers book.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "bio",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "portrait",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "picture",
+          },
+          "unique": false,
+        },
+        {
+          "name": "timeOffs",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "TimeOff",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Barber",
+      "schedule": {
+        "away": {
+          "from": "from",
+          "model": "TimeOff",
+          "resource": "barber",
+          "until": "until",
+        },
+        "breaks": [
+          [
+            720,
+            750,
+          ],
+        ],
+        "gap": 10,
+        "hours": {
+          "fri": [
+            [
+              540,
+              1020,
+            ],
+          ],
+          "mon": [
+            [
+              540,
+              1020,
+            ],
+          ],
+          "sat": [
+            [
+              600,
+              840,
+            ],
+          ],
+          "thu": [
+            [
+              540,
+              1020,
+            ],
+          ],
+          "tue": [
+            [
+              540,
+              1020,
+            ],
+          ],
+          "wed": [
+            [
+              540,
+              1020,
+            ],
+          ],
+        },
+      },
+    },
+    {
+      "description": "Days or hours a barber is away, such as a holiday, a course or a dentist's appointment.",
+      "fields": [
+        {
+          "name": "barber",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Barber",
+          },
+          "unique": false,
+        },
+        {
+          "name": "from",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "until",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "note",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "TimeOff",
+    },
+    {
+      "description": "A customer's appointment with a barber for a service.",
+      "fields": [
+        {
+          "name": "service",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Service",
+          },
+          "unique": false,
+        },
+        {
+          "name": "barber",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Barber",
+          },
+          "unique": false,
+        },
+        {
+          "name": "startsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "phone",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
+          },
+          "unique": false,
+        },
+        {
+          "name": "note",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "default": "requested",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "requested",
+              "confirmed",
+              "cancelled",
+            ],
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Appointment",
+      "occupies": {
+        "cancel": {
+          "field": "status",
+          "to": "cancelled",
+        },
+        "cancelUntil": "12h",
+        "duration": "service.minutes",
+        "resource": "barber",
+        "starts": "startsAt",
+        "while": {
+          "status": [
+            "requested",
+            "confirmed",
+          ],
+        },
+      },
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "appointments",
+        "day",
+        "services",
+        "barbers",
+        "time-off",
+      ],
+    },
+  ],
+  "outgoing": [
+    {
+      "name": "appointmentRequested",
+      "recipient": {
+        "kind": "role",
+        "role": "admin",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "Appointment",
+      },
+    },
+    {
+      "name": "appointmentMade",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "event": "created",
+        "model": "Appointment",
+      },
+    },
+    {
+      "name": "appointmentConfirmed",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "action": "confirm",
+        "model": "Appointment",
+      },
+    },
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "appointments",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "model": "Service",
+            "name": "services",
+          },
+          {
+            "kind": "records",
+            "model": "Barber",
+            "name": "barbers",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+    },
+    {
+      "actions": [
+        "confirm",
+        "cancel",
+      ],
+      "filters": [
+        "status",
+      ],
+      "id": "appointments",
+      "pattern": {
+        "kind": "crud",
+        "model": "Appointment",
+      },
+      "route": "/appointments",
+    },
+    {
+      "id": "day",
+      "pattern": {
+        "duration": "service.minutes",
+        "kind": "calendar",
+        "model": "Appointment",
+        "starts": "startsAt",
+        "title": "name",
+      },
+      "route": "/day",
+    },
+    {
+      "id": "services",
+      "pattern": {
+        "kind": "crud",
+        "model": "Service",
+      },
+      "route": "/services",
+    },
+    {
+      "id": "barbers",
+      "pattern": {
+        "kind": "crud",
+        "model": "Barber",
+      },
+      "route": "/barbers",
+    },
+    {
+      "id": "time-off",
+      "pattern": {
+        "kind": "crud",
+        "model": "TimeOff",
+      },
+      "route": "/time-off",
+    },
+    {
+      "id": "privacy",
+      "pattern": {
+        "kind": "legal",
+        "legal": "privacy",
+      },
+      "route": "/privacy",
+    },
+  ],
+  "queries": [],
+  "specVersion": "0.1",
+}
+`;
+
 exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 {
   "actions": [],

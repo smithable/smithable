@@ -4,6 +4,7 @@
 // of the set in --copy for review.
 // Run after `pnpm build`: `node scripts/starter-shots.mjs [starter…] [--copy <dir>]`. Not part of `check`.
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
@@ -55,6 +56,65 @@ const SHOTS = {
   kiosk: [
     ["menu", "list", "visitor", true],
     ["orders", "list", "admin"],
+  ],
+  // The free times a customer chooses from, and the shop's day with a column per barber (the
+  // starter has no appointments: today's few are written first).
+  barbers: [
+    [
+      "appointments",
+      "new",
+      "member",
+      false,
+      async (page) => {
+        const service = page.getByLabel(/^Service/);
+        if ((await service.evaluate((e) => e.tagName)) === "SELECT")
+          await service.selectOption({ label: "Haircut" });
+        else {
+          await service.fill("Hairc");
+          await page.getByRole("option", { name: "Haircut", exact: true }).click();
+        }
+        await page.locator('[data-kit="slots"] [data-part="time"]').first().waitFor();
+      },
+    ],
+    [
+      "day",
+      "list",
+      "admin",
+      false,
+      async (page, dir) => {
+        const db = new (createRequire(join(dir, "package.json"))("better-sqlite3"))(
+          join(dir, "data/db/app.db"),
+        );
+        const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Mariehamn" }).format(
+          new Date(),
+        );
+        // The shop's clock: Mariehamn's offset from UTC today (summer time or not).
+        const noon = new Date(`${today}T12:00:00Z`);
+        const offset =
+          Number(
+            new Intl.DateTimeFormat("en-GB", {
+              timeZone: "Europe/Mariehamn",
+              hour: "2-digit",
+              hourCycle: "h23",
+            }).format(noon),
+          ) - 12;
+        const at = (clock) => Date.parse(`${today}T${clock}:00Z`) - offset * 3_600_000;
+        const add = db.prepare(
+          "insert into appointments (service_id, barber_id, starts_at, name, status, created_at, updated_at) values (?, ?, ?, ?, ?, 0, 0)",
+        );
+        for (const [service, barber, clock, name, status] of [
+          [1, 1, "09:00", "Mikael Lind", "confirmed"],
+          [3, 1, "10:00", "Anders Holm", "confirmed"],
+          [2, 1, "13:30", "Jonas Eklund", "requested"],
+          [4, 2, "09:30", "Ella Nyström", "confirmed"],
+          [1, 2, "11:00", "Karin Berg", "requested"],
+          [3, 2, "14:00", "Leo Sundqvist", "confirmed"],
+        ])
+          add.run(service, barber, at(clock), name, status);
+        db.close();
+        await open(page, `${base}/day?day=${today}`);
+      },
+    ],
   ],
   api: [
     ["admin", "tasks", "admin"],
@@ -120,7 +180,7 @@ try {
         const page = await context.newPage();
         if (who !== "visitor") await signIn(page, base, who);
         await open(page, `${base}${path}`);
-        if (before) await before(page);
+        if (before) await before(page, dir);
         await page.waitForTimeout(500); // pictures and fonts settle
         const file = join(out, `${starter}-${n + 1}.webp`);
         writeFileSync(

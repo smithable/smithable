@@ -496,7 +496,138 @@ const menuFor = (scope: Scope, name?: string) => {
   return menus.length === 1 ? menus[0] : menus.find((m) => m.name === "main");
 };
 
+/** "9", "9:30", "17.00" as minutes after midnight; undefined if not a time of day. */
+function clockOf(text: string): number | undefined {
+  const m = /^(\d{1,2})(?:[:.]([0-5]\d))?$/.exec(text);
+  if (!m) return undefined;
+  const minutes = Number(m[1]) * 60 + Number(m[2] ?? 0);
+  return minutes <= 24 * 60 ? minutes : undefined;
+}
+
+const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const clockText = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/** "weekdays", "every day", "weekends", "saturdays", "monday to friday" as weekdays. */
+function daysOf(text: string): string[] | undefined {
+  if (/^(?:weekdays|every weekday|monday to friday|mondays to fridays)$/.test(text))
+    return WEEK.slice(0, 5);
+  if (/^(?:every day|all week|all days|daily)$/.test(text)) return WEEK;
+  if (/^(?:weekends|the weekend)$/.test(text)) return WEEK.slice(5);
+  // A day by its short or full name, once or plural ("mon", "monday", "mondays"); not "monthly".
+  const one = WEEK.findIndex(
+    (d, i) =>
+      text === d || text === `${d}s` || text === DAY_NAMES[i] || text === `${DAY_NAMES[i]}s`,
+  );
+  return one >= 0 ? [WEEK[one] as string] : undefined;
+}
+
+/** A week's hours as the spec writes them: runs of days with the same spans as one key (mon-fri). */
+function hoursValue(hours: Record<string, [number, number][]>): Record<string, string | string[]> {
+  const said = (d: string) => (hours[d] ?? []).map(([a, b]) => `${clockText(a)}-${clockText(b)}`);
+  const out: Record<string, string | string[]> = {};
+  for (let at = 0; at < WEEK.length; ) {
+    const text = said(WEEK[at] as string);
+    let end = at;
+    while (end + 1 < WEEK.length && said(WEEK[end + 1] as string).join() === text.join()) end++;
+    if (text.length)
+      out[end > at ? `${WEEK[at]}-${WEEK[end]}` : (WEEK[at] as string)] =
+        text.length === 1 ? (text[0] as string) : text;
+    at = end + 1;
+  }
+  return out;
+}
+
 const RULES: Rule[] = [
+  {
+    // "barbers have opening hours 9 to 17 on weekdays", "rooms are open 10-14 on saturdays":
+    // the model's records are booked by their time (appointments.md §2); other days are kept.
+    name: "schedule hours",
+    match(text, scope) {
+      const m =
+        /^(?:the )?(?<model>.+?) (?:have|has|keep|work) (?:opening |working )?hours (?:from )?(?<from>[\d:.]+)(?: (?:to|until) | ?[-–] ?)(?<to>[\d:.]+) (?:on |at )?(?<days>.+)$/.exec(
+          text,
+        ) ??
+        /^(?:the )?(?<model>.+?) (?:are|is) open (?:from )?(?<from>[\d:.]+)(?: (?:to|until) | ?[-–] ?)(?<to>[\d:.]+) (?:on |at )?(?<days>.+)$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const model = modelFor(scope.ir, m.groups.model ?? "");
+      const from = clockOf(m.groups.from ?? "");
+      const to = clockOf(m.groups.to ?? "");
+      const days = daysOf(m.groups.days ?? "");
+      if (!model || model.name === USER_MODEL || from === undefined || to === undefined || !days)
+        return null;
+      if (to <= from)
+        return {
+          refusal: `The hours end before they start: ${clockText(from)} to ${clockText(to)}.`,
+        };
+      const hours: Record<string, [number, number][]> = { ...(model.schedule?.hours ?? {}) };
+      for (const d of days) hours[d] = [[from, to]];
+      const kept = model.schedule;
+      return [
+        {
+          op: "setSchedule",
+          args: {
+            model: model.name,
+            hours: hoursValue(hours),
+            ...(kept?.breaks.length
+              ? { breaks: kept.breaks.map(([a, b]) => `${clockText(a)}-${clockText(b)}`) }
+              : {}),
+            ...(kept?.gap ? { gap: kept.gap } : {}),
+            // The time away as the IR has it, so a long form (its own resource or dates) stays.
+            ...(kept?.away ? { away: kept.away } : {}),
+          },
+        },
+      ];
+    },
+  },
+  {
+    // "an appointment takes its barber's time": the reference names whose; the start and the
+    // length are found by shape (its one date-and-time field; one whole-number field on it or a
+    // record it refers to), or a model reads the request.
+    name: "occupies",
+    match(text, scope) {
+      const m =
+        /^(?:an? |each |every |the )?(?<model>.+?) (?:takes|uses|books|occupies) (?:its|their|the) (?<resource>.+?)(?:'s|s'|') time$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const model = modelFor(scope.ir, m.groups.model ?? "");
+      const ref = model && fieldFor(model, m.groups.resource ?? "");
+      if (!model || ref?.type.kind !== "relation" || ref.type.many || !ref.required) return null;
+      const target = scope.ir.models.find((x) => x.name === (ref.type as { model: string }).model);
+      if (!target?.schedule) return null;
+      const dates = model.fields.filter(
+        (f) => f.type.kind === "scalar" && f.type.name === "datetime" && !f.formula,
+      );
+      const isInt = (f: FieldIR) => f.type.kind === "scalar" && f.type.name === "int" && !f.formula;
+      const lengths = [
+        ...model.fields.filter(isInt).map((f) => f.name),
+        ...model.fields.flatMap((f) =>
+          f.type.kind === "relation" && !f.type.many && f.required && f !== ref
+            ? (scope.ir.models
+                .find((x) => x.name === (f.type as { model: string }).model)
+                ?.fields.filter(isInt)
+                .map((x) => `${f.name}.${x.name}`) ?? [])
+            : [],
+        ),
+      ];
+      if (dates.length !== 1 || lengths.length !== 1) return null;
+      return [
+        {
+          op: "setOccupies",
+          args: {
+            model: model.name,
+            resource: ref.name,
+            starts: (dates[0] as FieldIR).name,
+            duration: lengths[0] as string,
+          },
+        },
+      ];
+    },
+  },
   {
     // "the customer email should be required", "make email unique", "phone is optional"
     name: "field flag",

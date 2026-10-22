@@ -56,6 +56,10 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     text: "A takeaway where people browse our menu and order dishes to pick up, with staff we invite.",
     pages: { dish: "dishes", order: "orders" },
   },
+  barbers: {
+    text: "A barbershop where people browse our services and barbers and book an appointment with a barber for a service, at a time that is free.",
+    pages: { appointment: "appointments", service: "services", barber: "barbers" },
+  },
 };
 
 export type Edit =

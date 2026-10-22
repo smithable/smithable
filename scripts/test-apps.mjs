@@ -831,6 +831,116 @@ async function kioskFlow(dir, base) {
   }
 }
 
+/**
+ * The barbers starter (appointments.md §8 step 3): a customer books the earliest free time with a
+ * barber and sees it gone; a booking within 12 hours says to contact the shop, one further ahead
+ * is cancelled online; the shop's day shows the barber's column. The shop is open around the
+ * clock here, so the flow does not depend on the hour it runs at (the hours are unit tests).
+ */
+async function barbersFlow(dir, base) {
+  const spec = join(dir, "smithable.yml");
+  writeFileSync(
+    spec,
+    readFileSync(spec, "utf8").replace(
+      /hours: \{ mon-fri[^}]*\}/,
+      'hours: { mon-sun: "00:00-24:00" }',
+    ),
+  );
+  const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+  if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  const one = (sql) => {
+    const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).get()))`;
+    return JSON.parse(
+      spawnSync("node", ["-e", code], { cwd: dir, encoding: "utf8" }).stdout || "null",
+    );
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+  const choose = async (label, name) => {
+    const field = page.getByLabel(new RegExp(`^${label}`));
+    if ((await field.evaluate((e) => e.tagName)) === "SELECT")
+      await field.selectOption({ label: name });
+    else {
+      // "Haircut" is also part of "Haircut and beard": the option named exactly.
+      await field.fill(name.slice(0, 5));
+      await page.getByRole("option", { name, exact: true }).click();
+    }
+  };
+  const times = page.locator('[data-kit="slots"] [data-part="time"]');
+  /** A new appointment's form with the haircut and Elin chosen, once its times are in. */
+  const form = async () => {
+    await open(page, `${base}/appointments/new`);
+    await page.getByLabel(/^Service/).waitFor();
+    await choose("Service", "Haircut");
+    await choose("Barber", "Elin Sjöberg");
+    await times.first().waitFor({ timeout: 20000 * P });
+  };
+  const book = async (name) => {
+    await page.getByRole("textbox", { name: "Name *" }).fill(name);
+    await page.getByRole("button", { name: "Create appointment" }).click();
+    await page.waitForURL((url) => !url.pathname.endsWith("/new"), { timeout: 15000 * P });
+    // The save moves on to the new appointment's page: let that navigation finish first.
+    await page.waitForLoadState("networkidle");
+  };
+  try {
+    await signInAs(page, base, "member");
+    await form();
+    const earliest = await times.first().textContent();
+    await times.first().click();
+    await book("Pia Wall");
+    // Taken: Elin's earliest time is not offered again.
+    await form();
+    if ((await times.first().textContent()) === earliest)
+      throw new Error(`${earliest} is still offered after it was booked`);
+    // Further ahead, the third day shown: cancelled online, inside the window.
+    await page.locator('[data-kit="slots"] fieldset').first().getByRole("button").nth(2).click();
+    await times.first().waitFor({ timeout: 20000 * P });
+    await times.first().click();
+    await book("Pia Wall later");
+    const later = one("select id from appointments where name = 'Pia Wall later'");
+    await open(page, `${base}/appointments/${later.id}`);
+    await page.getByRole("button", { name: "Cancel booking" }).click();
+    // Cancelling reloads the page: let that reload finish before the next page is opened.
+    const reloaded = page.waitForEvent("load", { timeout: 20000 * P });
+    await page.getByRole("button", { name: "Yes, cancel it" }).click();
+    await reloaded;
+    for (
+      let i = 0;
+      i < 50 * P &&
+      one(`select status from appointments where id = ${later.id}`).status !== "cancelled";
+      i++
+    )
+      await new Promise((r) => setTimeout(r, 200));
+    if (one(`select status from appointments where id = ${later.id}`).status !== "cancelled")
+      throw new Error("the later appointment was not cancelled");
+    // Within 12 hours: no Cancel, a line to contact the shop.
+    const soon = one("select id, starts_at from appointments where name = 'Pia Wall'");
+    await open(page, `${base}/appointments/${soon.id}`);
+    await page.getByText("It is too late to cancel here").waitFor({ timeout: 15000 * P });
+    // The shop's day: Elin's column holds the appointment.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signInAs(page, base, "admin");
+    const day = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Mariehamn" }).format(
+      new Date(soon.starts_at),
+    );
+    await open(page, `${base}/day?day=${day}`);
+    await page
+      .getByRole("region", { name: "Elin Sjöberg" })
+      .getByText("Pia Wall", { exact: true })
+      .waitFor({ timeout: 15000 * P });
+    console.log(
+      `  ✓ barbers: the earliest time with Elin (${earliest}) is booked and no longer offered; a booking days ahead is cancelled online, one within 12 hours says to contact the shop; the shop's day shows it in Elin's column`,
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ barbers: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("barbers flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function supportFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
@@ -6795,6 +6905,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "marketplace") await reviewFlow(dir, base);
       if (example === "support") await supportFlow(dir, base);
       if (example === "kiosk") await kioskFlow(dir, base);
+      if (example === "barbers") await barbersFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);
