@@ -20141,7 +20141,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
-  "src/kit/Calendar.tsx": "ae91ff83 kit",
+  "src/kit/Calendar.tsx": "776df10b kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",

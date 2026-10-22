@@ -5,7 +5,7 @@
 // person. The list is the content and the grid only its layout, so screen readers get one list
 // per day. To change it, copy this file into src/custom/components/ and edit the copy.
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
 import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
