@@ -6,7 +6,6 @@
 import {
   camel,
   type FieldIR,
-  humanize,
   kebab,
   type ModelIR,
   type NamePartIR,
@@ -17,8 +16,8 @@ import {
 import {
   composedName as composed,
   HEADER,
-  literal,
   modelNamed,
+  names,
   type Texts,
   titleField,
 } from "./shared.js";
@@ -124,9 +123,10 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): str
   const label = t.modelLabel(model);
   const value = (f: FieldIR, expr: string, owner: ModelIR): string => {
     if (f.type.kind === "choice") {
-      const words = t.field(owner, f).values ?? {};
-      const labels = Object.fromEntries(f.type.values.map((v) => [v, words[v] ?? humanize(v)]));
-      return `((${literal(labels)}) as Record<string, string>)[String(${expr})] ?? ""`;
+      // Its label as the model's description has it: a label is written once (words-once.md).
+      const ui = names(owner, t).ui;
+      imports.push([`./${kebab(owner.name)}`, ui]);
+      return `${ui}.fields.find((f) => f.name === ${JSON.stringify(f.name)})?.choices?.find((c) => c.value === ${expr})?.label ?? ""`;
     }
     if (f.type.kind === "relation") {
       if (f.type.model === USER_MODEL)
