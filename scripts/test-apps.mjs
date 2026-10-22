@@ -501,7 +501,10 @@ async function bookingFlow(dir, base) {
     );
     write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
     await panel.getByRole("button", { name: "Close" }).click();
-    await session(page).click();
+    // Its place in the week moved with its start: it is opened by its address.
+    const moved = new URL(schedule);
+    moved.searchParams.set("open", String(booked.id));
+    await open(page, moved.toString());
     await panel.getByText(/^Cancelling closed at /).waitFor({ timeout: 10000 * P });
     if (await panel.getByRole("button", { name: "Cancel booking" }).count())
       throw new Error("a started class still offers to cancel");
