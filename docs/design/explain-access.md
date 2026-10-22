@@ -83,4 +83,4 @@ that is false or empty is no, a list of values is any of them.
 `packages/core/src/explain-access.ts`, exported from core (`explainAccess`, `AccessScenario`,
 `AccessResource`, `AccessVerb`, `AccessExplanation`, `AccessReason`); tests on the booking, CRM
 and invoicing examples, and the agreement test over every example with an auth file. Studio's
-Why? is A 127.
+Why? is A 127 (who-can.md, "Why?").

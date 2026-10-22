@@ -130,3 +130,14 @@ grid's own reading of the four warnings on the CRM and booking files (a pure fun
    Anyone columns, the "only where" line.
 4. The four in-place warnings and the diagnostics list; the cell sentences.
 5. The summary's click into the tab; the guide's stop if one is wanted; tests.
+
+## Why? (A 127, 2026-10-22)
+
+Under the grid, a question built from the app's own names: may *a visitor or a role* *open,
+read, add, change, delete, review* *a page, a kind of record or an action*, and, once a record is
+in question, *any of them, their own, someone else's or one with no owner*. Core's
+`explainAccess` (explain-access.md) answers it from the same rules the app enforces: yes, no, or
+it depends on the record, then the reasons in the order they apply, each naming its setting as
+a file and a path. A click on one puts the Code window on screen (beside No code where there is
+room) with that setting selected (`SHOW_CODE`, `src/code-jump.ts`). Nothing is changed from the
+question; the cells are still where grants are set.

@@ -557,6 +557,61 @@ try {
     await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 * P });
     await sub("Behavior");
   });
+  await step(
+    "Who can's Why?: the answer from the rules, and a reason's setting shown in Code",
+    async () => {
+      await sub("Who can");
+      const why = page.getByRole("region", { name: "Why?" });
+      await why.getByLabel("Who", { exact: true }).selectOption("sales");
+      await why.getByLabel("What", { exact: true }).selectOption("model:Customer");
+      await why.getByLabel("Do what", { exact: true }).selectOption("create");
+      // Where each window is, to put them back after Code is shown for a reason.
+      const arrange = async () => {
+        await page.getByRole("button", { name: "Which window goes where" }).click();
+        return page.getByRole("dialog", { name: "Which window goes where" });
+      };
+      let dialog = await arrange();
+      const before = await dialog.locator("select").evaluateAll((s) => s.map((x) => x.value));
+      await dialog.getByRole("button", { name: "Done" }).click();
+      // Sales may add orders only (the step before): adding a customer is no, and says why.
+      await why.locator('[data-verdict="denied"]').waitFor({ timeout: 10000 * P });
+      await why
+        .getByRole("button", { name: /^smithable\.auth\.yml: roles\.sales/ })
+        .first()
+        .click();
+      const file = page.getByRole("region", { name: "Code" }).getByLabel("File", { exact: true });
+      await file.waitFor({ timeout: 30000 * P });
+      for (let i = 0; i < 40 && (await file.inputValue()) !== "smithable.auth.yml"; i++)
+        await new Promise((r) => setTimeout(r, 250));
+      if ((await file.inputValue()) !== "smithable.auth.yml")
+        throw new Error(`Code shows ${await file.inputValue()}, not the auth file`);
+      dialog = await arrange();
+      const selects = dialog.locator("select");
+      for (let i = 0; i < before.length; i++)
+        if ((await selects.nth(i).inputValue()) !== before[i])
+          await selects.nth(i).selectOption(before[i]);
+      await dialog.getByRole("button", { name: "Done" }).click();
+      await sub("Behavior");
+    },
+  );
+  await step(
+    "the Data map: a box per kind of record, arrows between them, a name opens Behavior",
+    async () => {
+      await sub("Data map");
+      const map = page.getByRole("region", { name: "Data map" });
+      for (const box of ["Customer", "Order", "User"])
+        await map.locator(`[data-map-box="${box}"]`).waitFor({ timeout: 30000 * P });
+      if ((await map.locator(".react-flow__edge").count()) < 3)
+        throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
+      await map
+        .locator('[data-map-box="Customer"]')
+        .getByRole("button", { name: "Customer" })
+        .click();
+      await page
+        .getByRole("tab", { name: "Behavior", selected: true })
+        .waitFor({ timeout: 10000 * P });
+    },
+  );
 
   await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",

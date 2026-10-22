@@ -15,6 +15,7 @@ import { isMap, isScalar, isSeq, type Node, parseDocument } from "yaml";
 import type { Project } from "../api";
 import type { Run } from "../builder/ChangeForms";
 import { Wizard, type WizardKind } from "../builder/Wizard";
+import type { CodeJump } from "../code-jump";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
 import { isPreviewMessage, type Place } from "../preview";
@@ -33,12 +34,18 @@ export function Code({
   place,
   onPlace,
   onLook,
+  jumpTo,
+  onJumped,
 }: {
   project: Project;
   spec: Spec;
   run: Run;
   /** Opens No code's Look: where the ux file's choices have controls. */
   onLook: () => void;
+  /** A setting to show, asked by another window (App.tsx, from SHOW_CODE). */
+  jumpTo?: CodeJump;
+  /** The jump was taken: App forgets it, so a Code window opened later does not jump again. */
+  onJumped?: () => void;
   /** The file open, kept for the tab's session (App.tsx). */
   place: Place["code"];
   onPlace: (place: Place["code"]) => void;
@@ -54,6 +61,12 @@ export function Code({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  // A setting another window names (Who can's Why?): its file, at a dotted path.
+  useEffect(() => {
+    if (!jumpTo) return;
+    setJump({ concept: `path:${jumpTo.path}`, file: jumpTo.file, at: jumpTo.at });
+    onJumped?.();
+  }, [jumpTo, onJumped]);
   return (
     <section aria-label="Code" data-guide="files" className="flex h-full min-h-0 flex-col bg-panel">
       <SpecEditor
@@ -163,7 +176,9 @@ function SpecEditor({
       formatted(project.files[EDITABLE_FILES[jump.file]] ?? emptyFile(jump.file) ?? "");
     const range = jump.concept.startsWith("text:")
       ? contentRange(text, jump.concept.slice(5))
-      : specRange(text, jump.concept);
+      : jump.concept.startsWith("path:")
+        ? contentRange(text, jump.concept.slice(5))
+        : specRange(text, jump.concept);
     return range && jump ? { from: range[0], to: range[1], at: jump.at } : undefined;
   }, [jump]);
   const { diagnostics, roles } = useMemo(

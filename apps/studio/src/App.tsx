@@ -16,6 +16,7 @@ import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask } from "./builder/Ask";
 import { NoCode, OPEN_PART } from "./builder/NoCode";
 import { ASK_SMITH } from "./builder/Wizard";
+import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
 import { doneKey, guideOff, TOURS } from "./guide";
 import { logStore } from "./logs";
@@ -217,6 +218,32 @@ export function App() {
     else
       setArrangement({ ...arrangement, slots: [window, ...arrangement.slots.slice(1)] as never });
   };
+  // A setting another window names (Who can's Why?): the Code window on screen, beside No code
+  // and not over the preview where there is room, and the setting shown there.
+  const [codeJump, setCodeJump] = useState<CodeJump>();
+  const forgetJump = useCallback(() => setCodeJump(undefined), []);
+  useEffect(() => {
+    const onShow = (e: Event) => {
+      const { file, path } = (e as CustomEvent<Omit<CodeJump, "at">>).detail;
+      setCodeJump({ file, path, at: Date.now() });
+      if (narrow) showWindow("code");
+      else if (slotOf("code") === undefined) {
+        // Beside No code among the slots on screen, keeping the preview where another is free.
+        const free =
+          shown.find((i) => slots[i] !== "nocode" && slots[i] !== "preview") ??
+          shown.find((i) => slots[i] !== "nocode") ??
+          0;
+        setArrangement({
+          ...arrangement,
+          slots: arrangement.slots.map((s, i) =>
+            i === free ? "code" : s,
+          ) as typeof arrangement.slots,
+        });
+      }
+    };
+    window.addEventListener(SHOW_CODE, onShow);
+    return () => window.removeEventListener(SHOW_CODE, onShow);
+  });
 
   // The spec the preview shows now, for what a change touches (refresh).
   const shownIR = useRef<Spec["ir"]>(undefined);
@@ -840,6 +867,8 @@ export function App() {
                           run={run}
                           place={place.code}
                           onPlace={codePlace}
+                          jumpTo={codeJump}
+                          onJumped={forgetJump}
                           onLook={() => {
                             nocodePlace({ sub: "look" });
                             if (narrow) showWindow("nocode");

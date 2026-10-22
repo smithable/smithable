@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import { Button, cx, Input, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { WhyAccess } from "./WhyAccess";
 import {
   adminPage,
   cellSentence,
@@ -73,6 +74,7 @@ export function WhoCan({
       <SignIn auth={auth} run={run} />
       {auth.signIn !== "none" && <Records auth={auth} run={run} />}
       <Grid ir={ir} auth={auth} run={run} marked={marked} />
+      <WhyAccess ir={ir} auth={auth} />
       {others.length > 0 && (
         <ul aria-label="Other notes on who can" className="space-y-1 text-xs text-muted">
           {others.map((d) => (

@@ -79,8 +79,8 @@ describe("booking: a private app with public pages and records", () => {
     expect(paths(member())).toEqual(["defaultAccess"]);
     expect(member("own").verdict).toBe("allowed");
     expect(member("own").reasons[1]).toEqual({
-      at: { file: "smithable.yml", path: "models.Booking" },
-      text: "This booking is their own: they are its owner.",
+      at: { file: "smithable.yml", path: "models.Booking.ownedBy" },
+      text: "This booking is their own: they are its attendee.",
     });
     expect(member("another's").verdict).toBe("denied");
     expect(member("ownerless").verdict).toBe("denied");
@@ -119,7 +119,7 @@ describe("booking: a private app with public pages and records", () => {
     expect(other.verdict).toBe("denied");
     expect(other.reasons.map((r) => r.text)).toEqual([
       "Everyone who signs in deletes their own bookings; member's delete grant does not name Booking, so not everyone's.",
-      "This booking is someone else's: its owner is another person.",
+      "This booking is someone else's: its attendee is another person.",
     ]);
     expect(ask({}, { kind: "model", model: "Booking" }, "write").verdict).toBe("denied");
   });
