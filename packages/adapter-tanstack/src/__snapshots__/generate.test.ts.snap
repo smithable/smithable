@@ -16059,6 +16059,8 @@ import { sessionUi } from "#/generated/session";
 import { bookingUi } from "#/generated/booking";
 import { postUi } from "#/generated/post";
 import { messageUi } from "#/generated/message";
+import { sessionName } from "#/generated/session.name";
+import { bookingName } from "#/generated/booking.name";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -16144,23 +16146,19 @@ const getActivity = createServerFn()
       [
         "Session",
         new Map(
-          db
-            .select({ id: schema.sessions.id, title: schema.sessions.id })
-            .from(schema.sessions)
-            .where(inArray(schema.sessions.id, ids("Session")))
-            .all()
-            .map((r) => [r.id, String(r.title ?? r.id)]),
+          db.query.sessions
+            .findMany({ where: (t, { inArray }) => inArray(t.id, ids("Session")), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } })
+            .sync()
+            .map((r) => [r.id, sessionName(r)]),
         ),
       ],
       [
         "Booking",
         new Map(
-          db
-            .select({ id: schema.bookings.id, title: schema.bookings.id })
-            .from(schema.bookings)
-            .where(inArray(schema.bookings.id, ids("Booking")))
-            .all()
-            .map((r) => [r.id, String(r.title ?? r.id)]),
+          db.query.bookings
+            .findMany({ where: (t, { inArray }) => inArray(t.id, ids("Booking")), ...{ columns: { id: true }, with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } } } })
+            .sync()
+            .map((r) => [r.id, bookingName(r)]),
         ),
       ],
       [
@@ -20287,7 +20285,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "5c621ed2 generated",
-  "src/routes/admin/activity.tsx": "62617d51 generated",
+  "src/routes/admin/activity.tsx": "997e0535 generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "557a5a18 generated",
