@@ -60,7 +60,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     .add("@tanstack/react-start", "createServerFn")
     .add("drizzle-orm", "and", "gte", "lt")
     .add("zod", "z")
-    .add("#/kit/params", "optional", "type Search", "shaped")
+    .add("#/kit/params", "count", "optional", "type Search", "shaped")
     .add("#/db/schema", "* as schema")
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
@@ -169,8 +169,11 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateS
   }
     week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
     month: shaped(s.month, /^\\d{4}-\\d{2}$/),
+    // The record whose panel is open, so a sign-in or a link returns to it.
+    open: count(s.open),
   }),
-  loaderDeps: ({ search }) => search,
+  // The period shown decides what is loaded; opening a record's panel loads nothing again.
+  loaderDeps: ({ search: { open: _open, ...period } }) => period,
   loader: ({ deps }) => {
     const range = calendarRange(deps, app.timeZone);
     return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString() } });
@@ -196,7 +199,7 @@ function ${component}() {
         details={(id) => ${reserve}}`
             : ""
         }
-        onNavigate={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: next })}${
+        onNavigate={(next, replace) => navigate({ to: ${JSON.stringify(page.route)}, search: next, replace })}${
           opens
             ? `
         onOpen={canOpen ? (id) => navigate({ to: ${JSON.stringify(join(opens, "$id"))}, params: { id: String(id) } }) : undefined}

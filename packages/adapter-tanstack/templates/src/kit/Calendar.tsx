@@ -5,13 +5,14 @@
 // person. The list is the content and the grid only its layout, so screen readers get one list
 // per day. To change it, copy this file into src/custom/components/ and edit the copy.
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
 import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
 /** Where a calendar is: a day, a week (`2026-W40`) or a month (`2026-10`), as in the page's address. */
-export type CalendarSearch = { day?: string; week?: string; month?: string };
+/** The period shown, and the record whose panel is open (its id), so a sign-in or a link returns to it. */
+export type CalendarSearch = { day?: string; week?: string; month?: string; open?: number };
 
 export interface CalendarItem {
   id: number;
@@ -172,7 +173,8 @@ export function Calendar({
   timeZone?: string;
   /** Records placed by a date, not a date and time: no hours. */
   dateOnly: boolean;
-  onNavigate: (search: CalendarSearch) => void;
+  /** `replace`: no history entry of its own (closing a panel opened from an address). */
+  onNavigate: (search: CalendarSearch, replace?: boolean) => void;
   /** Opens a record on its own page; without it, a record's details open in a panel. */
   onOpen?: (id: number) => void;
   /** Starts a new record at a wall time ("2026-09-30T09:00"), for those who may create one. */
@@ -185,8 +187,10 @@ export function Calendar({
   lanes?: { id: number; title: string }[];
 }) {
   const range = calendarRange(search, timeZone);
-  const [shown, setShown] = useState<Placed>();
   const panel = useRef<HTMLDialogElement>(null);
+  // The panel was opened here (a history entry of its own): closing it steps back, so Back and
+  // Close agree. Opened from an address (a return from sign-in), closing takes `open` away.
+  const pushed = useRef(false);
   const today = wallTime(new Date(), timeZone).slice(0, 10);
   const longDay = (text: string) =>
     new Intl.DateTimeFormat(undefined, {
@@ -250,8 +254,23 @@ export function Calendar({
       : `${longDay(p.day)}, ${clock(p.from)}–${clock(Math.min(p.to, 24 * 60 - 1))}`;
   const open = (p: Placed) => {
     if (onOpen) return onOpen(p.id);
-    setShown(p);
-    panel.current?.showModal();
+    pushed.current = true;
+    onNavigate({ ...search, open: p.id });
+  };
+  // The open record's panel follows the address; one not among those shown is said so.
+  const shown = search.open === undefined ? undefined : placed.find((p) => p.id === search.open);
+  useEffect(() => {
+    const dialog = panel.current;
+    if (!dialog) return;
+    if (search.open !== undefined && !dialog.open) dialog.showModal();
+    if (search.open === undefined && dialog.open) dialog.close();
+  }, [search.open]);
+  const closed = () => {
+    if (search.open === undefined) return;
+    if (pushed.current) {
+      pushed.current = false;
+      window.history.back();
+    } else onNavigate({ ...search, open: undefined }, true);
   };
 
   return (
@@ -433,10 +452,11 @@ export function Calendar({
 
       <dialog
         ref={panel}
+        onClose={closed}
         aria-labelledby="calendar-record"
         className="m-auto w-[calc(100%-2.5rem)] max-w-sm rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
       >
-        {shown && (
+        {shown ? (
           <>
             <h2 id="calendar-record" className="text-lg font-semibold">
               {shown.title}
@@ -444,6 +464,12 @@ export function Calendar({
             <p className="mt-2 text-muted-foreground">{when(shown)}</p>
             {details && <div className="mt-4">{details(shown.id)}</div>}
           </>
+        ) : (
+          search.open !== undefined && (
+            <p id="calendar-record" role="status">
+              {w.notInCalendar}
+            </p>
+          )
         )}
         <div className="mt-6 flex justify-end">
           <Button type="button" variant="outline" onClick={() => panel.current?.close()}>

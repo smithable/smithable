@@ -9371,7 +9371,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
@@ -19047,7 +19047,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, gte, lt } from "drizzle-orm";
 import { z } from "zod";
-import { optional, type Search, shaped } from "#/kit/params";
+import { count, optional, type Search, shaped } from "#/kit/params";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
@@ -19093,8 +19093,11 @@ export const Route = createFileRoute("/schedule/")({
   validateSearch: (s: Search) => optional({
     week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
     month: shaped(s.month, /^\\d{4}-\\d{2}$/),
+    // The record whose panel is open, so a sign-in or a link returns to it.
+    open: count(s.open),
   }),
-  loaderDeps: ({ search }) => search,
+  // The period shown decides what is loaded; opening a record's panel loads nothing again.
+  loaderDeps: ({ search: { open: _open, ...period } }) => period,
   loader: ({ deps }) => {
     const range = calendarRange(deps, app.timeZone);
     return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString() } });
@@ -19116,7 +19119,7 @@ function SchedulePage() {
         dateOnly={false}
         newLabel={w.newOne("session")}
         details={(id) => <Reserve id={id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />}
-        onNavigate={(next) => navigate({ to: "/schedule", search: next })}
+        onNavigate={(next, replace) => navigate({ to: "/schedule", search: next, replace })}
         onOpen={canOpen ? (id) => navigate({ to: "/sessions/$id", params: { id: String(id) } }) : undefined}
         onCreate={
           canCreate
@@ -20149,7 +20152,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
-  "src/kit/Calendar.tsx": "775c62a5 kit",
+  "src/kit/Calendar.tsx": "776df10b kit",
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -20199,7 +20202,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
@@ -20252,7 +20255,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
-  "src/routes/schedule/index.tsx": "e15d829e generated",
+  "src/routes/schedule/index.tsx": "02dcec4c generated",
   "src/routes/sessions/$id.tsx": "2511b5a6 generated",
   "src/routes/sessions/index.tsx": "1a15b581 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
@@ -26011,7 +26014,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
@@ -33082,7 +33085,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
@@ -39947,7 +39950,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
@@ -44322,7 +44325,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
@@ -47438,7 +47441,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
@@ -58024,7 +58027,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
@@ -64322,7 +64325,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "f19a691a kit",
+  "src/kit/words/en.ts": "49032c54 kit",
   "src/kit/zoned.ts": "aba7ecfd kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",

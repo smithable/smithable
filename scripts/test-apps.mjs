@@ -464,8 +464,43 @@ async function bookingFlow(dir, base) {
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
+    // A visitor picks the class, signs in from its panel and finds the same class open, books it
+    // once, and Back closes the panel before leaving the schedule.
+    const visit = await (
+      await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+    ).newPage();
+    await open(visit, `${base}/schedule`);
+    await visit.locator("section ol button", { hasText: title }).first().click();
+    await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
+    const picked = new URL(visit.url()).searchParams.get("open");
+    await visit.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).click();
+    await visit.waitForURL((url) => url.pathname === "/sign-in", { timeout: 10000 * P });
+    await visit.getByRole("button", { name: "Sign in as member" }).click();
+    await visit.waitForURL(
+      (url) => url.pathname === "/schedule" && url.searchParams.get("open") === picked,
+      { timeout: 15000 * P },
+    );
+    const again = visit.getByRole("dialog");
+    await again.getByRole("button", { name: "Book a mat" }).click();
+    await again.getByText("You're booked").waitFor({ timeout: 10000 * P });
+    // Close takes the class out of the address; one opened on the schedule is closed by Back.
+    await again.getByRole("button", { name: "Close" }).click();
+    await visit.waitForURL((url) => !url.searchParams.has("open"), { timeout: 10000 * P });
+    await visit.locator("section ol button", { hasText: title }).first().click();
+    await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
+    await visit.goBack();
+    await visit.waitForURL((url) => url.pathname === "/schedule" && !url.searchParams.has("open"), {
+      timeout: 10000 * P,
+    });
+    await again.waitFor({ state: "hidden", timeout: 10000 * P });
+    // Cancelled again, so the checks after this one find the class as they expect it.
+    await visit.locator("section ol button", { hasText: title }).first().click();
+    await again.getByRole("button", { name: "Cancel booking" }).click();
+    await again.getByRole("button", { name: "Yes, cancel it" }).click();
+    await again.getByRole("button", { name: "Book a mat" }).waitFor({ timeout: 10000 * P });
+    await visit.context().close();
     console.log(
-      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place)",
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place); a visitor's chosen class is open again after signing in, booked once, and Back closes it",
     );
   } catch (error) {
     console.log(
