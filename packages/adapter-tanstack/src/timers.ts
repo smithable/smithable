@@ -51,7 +51,7 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     for (const w of what) set.add(w);
     imports.set(module, set);
   };
-  const drizzle = new Set(["and", "eq"]);
+  const drizzle = new Set(["and", "eq", "lt", "or", "sql"]);
   const action = (name: string | undefined) => ir.actions.find((a) => a.name === name);
   let events = false;
   let zoned = false;
@@ -146,6 +146,8 @@ ${lines.join("\n")}
 const DAY = 24 * 60 * 60 * 1000;
 /** A run that fails is tried again on the next ticks, this many times in all. */
 const TRIES = 3;
+/** A run still "running" after this long was left by a process that stopped. */
+const STALE = 10 * 60 * 1000;
 
 /** The app itself, as a timer runs: no role's grants apply (docs/design/timed-actions.md §2). */
 const as = (timer: string): Viewer => ({ id: \`timer:\${timer}\`, name: "", email: "", role: "", system: true });
@@ -163,11 +165,21 @@ type ClockTimer = { clock: Clock; run: (due: string) => Promise<void> };
 const runs = schema.timerRuns;
 const at = (run: Due) => and(eq(runs.timer, run.timer), eq(runs.record, run.record), eq(runs.due, run.due));
 ${record.length ? "const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).get() !== undefined;\n" : ""}
-/** Takes a run: false when it is taken already (done, skipped, given up, or running elsewhere). */
+/**
+ * Takes a run, by one tick only: a new one, a failed one to try again, or one left running by a
+ * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
+ * running elsewhere.
+ */
 function take(run: Due): boolean {
-  const before = db.select().from(runs).where(at(run)).get();
-  if (before) return before.outcome === "failed";
-  return db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1;
+  if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
+  const stale = new Date(Date.now() - STALE);
+  return (
+    db
+      .update(runs)
+      .set({ outcome: "running", ranAt: new Date(), tries: sql\`\${runs.tries} + case when \${runs.outcome} = 'running' then 1 else 0 end\` })
+      .where(and(at(run), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, stale)))))
+      .run().changes === 1
+  );
 }
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */

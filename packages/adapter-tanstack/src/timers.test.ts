@@ -71,6 +71,10 @@ outgoing:
   expect(timers).toContain("instantOf(`${row.at}T00:00`, app.timeZone).getTime() + 604800000");
   expect(timers).toContain("if (!markOverdueFits(row)) {");
   expect(timers).toContain('await runMarkOverdue(as("markOverdue"), id);');
+  // A retry, or a run a stopped process left running, is taken by one tick only.
+  expect(timers).toContain(
+    'lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, stale)))',
+  );
   // A clock timer running a custom action, once.
   expect(timers).toContain('clock: {"every":"monday","at":"08:00"}');
   expect(timers).toContain('await digest({} as DigestInput, as("weekly"));');
