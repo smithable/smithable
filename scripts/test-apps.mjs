@@ -531,7 +531,10 @@ async function sessionsListFlow(base) {
     await signInAs(page, base, "admin");
     await open(page, `${base}/sessions`);
     const chips = page.getByRole("list", { name: "Active filters" });
-    await chips.getByText(/: Upcoming$/).waitFor({ timeout: 10000 * P });
+    await chips
+      .getByRole("listitem")
+      .filter({ hasText: "Starts at: Upcoming" })
+      .waitFor({ timeout: 10000 * P });
     const rows = () => page.locator("main tbody tr").count();
     await page
       .locator("main tbody tr")
