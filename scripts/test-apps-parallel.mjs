@@ -13,9 +13,13 @@ import { join } from "node:path";
 import { refused } from "./ports.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
-const examples = readdirSync(join(repo, "examples"), { withFileTypes: true })
-  .filter((e) => e.isDirectory())
-  .map((e) => e.name);
+// The examples named on the command line, or every example (scripts/gate.sh names the ones a
+// change needs).
+const examples = process.argv.slice(2).length
+  ? process.argv.slice(2)
+  : readdirSync(join(repo, "examples"), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
 
 // Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
 // at the same time can keep apart. An example whose ports (test-apps.mjs adds 0, 100, 200 and
