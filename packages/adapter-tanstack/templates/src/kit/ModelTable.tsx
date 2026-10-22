@@ -264,6 +264,9 @@ export function ModelTable<R extends Row>({
     );
   };
   const title = columns.find((f) => f.name === ui.titleField) ?? columns[0];
+  // A name made of parts, and the lines under it, as the server sets them (record-names.md).
+  const named = (row: R) => (row as { $name?: string }).$name;
+  const lines = (row: R) => (row as { $lines?: { subtitle?: string; detail?: string } }).$lines;
   // Cards view shows the picture on top, so not again among the details.
   const others = columns.filter(
     (f) => f !== title && !(view === "cards" && (f.kind === "picture" || f.kind === "pictures")),
@@ -405,7 +408,17 @@ export function ModelTable<R extends Row>({
                   <span className="-ml-1 shrink-0">{check(row, index, "size-6")}</span>
                 )}
                 <div className="min-w-0 flex-1 space-y-1">
-                  {title && open(row, cell(title, row), "break-words text-base font-semibold")}
+                  {named(row) !== undefined
+                    ? open(row, named(row), "break-words text-base font-semibold")
+                    : title && open(row, cell(title, row), "break-words text-base font-semibold")}
+                  {lines(row)?.subtitle && (
+                    <p className="break-words text-sm">{lines(row)?.subtitle}</p>
+                  )}
+                  {lines(row)?.detail && (
+                    <p className="break-words text-sm text-muted-foreground">
+                      {lines(row)?.detail}
+                    </p>
+                  )}
                   {secondary && <p className="break-words text-sm">{stacked(secondary, row)}</p>}
                   {description && Boolean(displayValue(description, row)) && (
                     <p

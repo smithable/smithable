@@ -11,6 +11,8 @@ pages:
       classes: { layout: cards }
       faq: { layout: accordion }
   sessions:
+    # Under a session's name where there is room: who teaches it, and its level.
+    record: { subtitle: instructor.name, detail: [classType.level] }
     table:
       columns: [classType, startsAt, instructor, placesLeft, capacity]
       sort: startsAt

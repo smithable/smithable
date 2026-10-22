@@ -33,7 +33,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
-import { nameColumns, nameFunction } from "./names.js";
+import { linesFunction, linesParts, nameColumns, nameFunction } from "./names.js";
 import {
   cancelMembers,
   freeTimesMember,
@@ -645,7 +645,11 @@ export function dataModule(
       .filter((f) => f.type.model !== except)
       .map((f) => {
         const target = modelNamed(ir, f.type.model);
-        return `${f.name}: ${nameColumns(ir, target, target.trash ? ", deletedAt: true" : "")}`;
+        // With what the lines under m's names read through this reference (record-names.md §3).
+        const also = linesParts(ir, ux, m)
+          .filter((p) => p.through === f.name)
+          .map((p) => ({ field: p.field }));
+        return `${f.name}: ${nameColumns(ir, target, target.trash ? ", deletedAt: true" : "", also)}`;
       }),
     ...userFields(m).map((f) => `${f.name}: { columns: { id: true, name: true } }`),
   ];
@@ -695,9 +699,10 @@ export function dataModule(
   // Names made of parts (docs/design/record-names.md): set on the rows and on the references
   // the viewer may read, after the others are hidden, so a hidden one names nothing.
   const composedRefs = refs.filter((f) => composedName(modelNamed(ir, f.type.model)));
+  const lined = linesParts(ir, ux, model).length > 0;
   const namedRows = (rows: string) =>
-    composedName(model) || composedRefs.length
-      ? `${rows}.map((row) => ({ ...row${composedName(model) ? `, $name: ${nameFunction(model)}(row)` : ""}${composedRefs
+    composedName(model) || composedRefs.length || lined
+      ? `${rows}.map((row) => ({ ...row${composedName(model) ? `, $name: ${nameFunction(model)}(row)` : ""}${lined ? `, $lines: ${linesFunction(model)}(row)` : ""}${composedRefs
           .map(
             (f) =>
               `, ${f.name}: row.${f.name} ? { ...(row.${f.name} as Record<string, unknown>), $name: ${nameFunction(modelNamed(ir, f.type.model))}(row.${f.name} as Record<string, unknown>) } : row.${f.name}`,
@@ -1478,13 +1483,16 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${composedName(model) && referenced ? 'import { sortRows } from "#/kit/model";\n' : ""}${[
+${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/kit/model";\n' : ""}${[
   ...new Set([
-    ...(composedName(model) ? [model] : []),
+    ...(composedName(model) || lined ? [model] : []),
     ...composedRefs.map((f) => modelNamed(ir, f.type.model)),
   ]),
 ]
-  .map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`)
+  .map(
+    (m) =>
+      `import { ${[...(composedName(m) ? [nameFunction(m)] : []), ...(m === model && lined ? [linesFunction(m)] : [])].join(", ")} } from "./${kebab(m.name)}.name";\n`,
+  )
   .join(
     "",
   )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
@@ -2345,15 +2353,16 @@ ${
       }
   /** Choices for fields that refer to a ${n.label.toLowerCase()}: the ones the viewer may read. */
 ${
-  composedName(model)
+  composedName(model) || lined
     ? `  async options(viewer: Viewer | null) {
     if (readScope(${n.access}.read, viewer) === "none") return [];
-    // Named by its parts (record-names.md): ordered by the first one's value.
-    const rows = await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model)} });
+    // Named by its parts (record-names.md), with the line under the name a picker shows: ordered
+    // by the first part's value.
+    const rows = await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model, "", linesParts(ir, ux, model))} });
     return sortRows(
-      rows.map((row) => ({ value: row.id, label: ${nameFunction(model)}(row), first: ${firstPart(model, ir)} })),
+      rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${n.label} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
       "first",
-    ).map(({ value, label }) => ({ value, label }));
+    ).map(({ value, label${lined ? ", detail" : ""} }) => ({ value, label${lined ? ", detail" : ""} }));
   },
 `
     : `  options(viewer: Viewer | null) {
