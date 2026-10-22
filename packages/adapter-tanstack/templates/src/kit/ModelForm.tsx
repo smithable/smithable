@@ -484,7 +484,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
             <dialog
               ref={confirmDelete}
               aria-labelledby="delete-title"
-              className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+              className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-xl border bg-card p-card text-card-foreground backdrop:bg-black/50"
             >
               <h2 id="delete-title" className="text-lg font-semibold">
                 {w.delete}{" "}
@@ -543,7 +543,7 @@ function LeaveDialog({ onStay, onLeave }: { onStay: () => void; onLeave: () => v
       onKeyDown={(event) => {
         if (event.key === "Escape") event.stopPropagation();
       }}
-      className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+      className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-xl border bg-card p-card text-card-foreground backdrop:bg-black/50"
     >
       <h2 id={title} className="text-lg font-semibold">
         {w.leaveWithoutSaving}

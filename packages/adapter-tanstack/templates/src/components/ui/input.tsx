@@ -22,7 +22,7 @@ export function Checkbox({ className, ...props }: React.ComponentProps<"input">)
     <input
       type="checkbox"
       className={cn(
-        "size-5 rounded accent-primary outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "size-5 rounded-sm accent-primary outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       {...props}

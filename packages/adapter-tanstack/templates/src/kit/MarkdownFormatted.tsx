@@ -16,7 +16,7 @@ const components: Components = {
     <blockquote className="my-4 border-l-4 pl-4 text-muted-foreground" {...props} />
   ),
   code: ({ node: _, ...props }) => (
-    <code className="rounded bg-muted px-1 font-mono text-sm" {...props} />
+    <code className="rounded-sm bg-muted px-1 font-mono text-sm" {...props} />
   ),
   // A link to a page of the app opens through the router (AppLink); others are ordinary links.
   a: ({ node: _, href, ...props }) => (

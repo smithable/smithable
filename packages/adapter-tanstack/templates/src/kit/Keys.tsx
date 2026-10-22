@@ -65,7 +65,7 @@ function Copyable({ label, text }: { label: string; text: string }) {
       <div className="flex items-start gap-2">
         <pre
           ref={shown}
-          className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded bg-muted px-3 py-2 text-xs"
+          className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded-sm bg-muted px-3 py-2 text-xs"
         >
           {text}
         </pre>
@@ -233,7 +233,7 @@ export function Keys({
             <code
               ref={shownKey}
               data-part="key"
-              className="break-all rounded bg-muted px-2 py-1 text-sm"
+              className="break-all rounded-sm bg-muted px-2 py-1 text-sm"
             >
               {made}
             </code>

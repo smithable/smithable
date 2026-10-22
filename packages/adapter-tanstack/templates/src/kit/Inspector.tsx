@@ -153,7 +153,7 @@ export function Shown({
                   {step.tool} {JSON.stringify(step.args)}
                 </code>{" "}
                 ({step.ms} ms)
-                <pre className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 whitespace-pre-wrap">
+                <pre className="mt-1 max-h-48 overflow-auto rounded-sm bg-muted p-2 whitespace-pre-wrap">
                   {step.proposed ? w.notRun : (step.error ?? JSON.stringify(step.result, null, 2))}
                 </pre>
               </li>

@@ -349,7 +349,7 @@ export function Users({
       <dialog
         ref={confirmRemove}
         aria-labelledby="remove-title"
-        className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+        className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-xl border bg-card p-card text-card-foreground backdrop:bg-black/50"
       >
         <h2 id="remove-title" className="text-lg font-semibold">
           {w.removeWho(removing?.name ?? w.thisUser)}

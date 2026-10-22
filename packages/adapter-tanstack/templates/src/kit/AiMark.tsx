@@ -26,7 +26,7 @@ export function AiMarked({
       {children}
       <span
         data-part="ai-mark"
-        className="pointer-events-none absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white"
+        className="pointer-events-none absolute right-2 bottom-2 rounded-sm bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white"
       >
         {full ? w.aiGenerated : w.ai}
       </span>
