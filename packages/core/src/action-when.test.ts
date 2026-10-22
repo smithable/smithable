@@ -49,8 +49,26 @@ test("when takes none, any, ME() and not ME() on a reference, in the canonical f
   expect(conditionText({ assignee: "not ME()", status: "open" })).toBe(
     "assignee is not you and status is open",
   );
-  expect(conditionText({ assignee: "none" })).toBe("assignee is empty");
-  expect(conditionText({ team: "any", assignee: "ME()" })).toBe("team is set and assignee is you");
+  expect(conditionText({ assignee: "none" })).toBe("assignee is none");
+  expect(conditionText({ team: "any", assignee: "ME()" })).toBe("team is any and assignee is you");
+  expect(errors(spec("{ assignee: notME() }"))).toEqual([
+    expect.stringContaining('"assignee" in "when" of action "assignToMe" is a reference'),
+  ]);
+});
+
+test("a timer never runs an action whose condition names the person signed in", () => {
+  const text = `${spec("{ assignee: not ME() }")}timers:
+  nightly:
+    every: day
+    at: "06:00"
+    on: SupportCase
+    run: assignToMe
+`;
+  expect(errors(text)).toEqual([
+    expect.stringContaining(
+      'runs "assignToMe", whose condition names the person signed in (ME()); a timer runs as the app, for nobody in particular.',
+    ),
+  ]);
 });
 
 test("a reference wants only those forms, and ME() needs a field that refers to User", () => {

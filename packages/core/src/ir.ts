@@ -706,10 +706,10 @@ export type Condition = Record<string, string | boolean | string[]>;
  * inside do not matter ("not ME()", "not ME ()"); the canonical form, or nothing.
  */
 export function referenceWant(text: string): "none" | "any" | "ME()" | "not ME()" | undefined {
-  const bare = text.replace(/\s+/g, "");
-  if (bare === "none" || bare === "any") return bare;
-  if (bare === "ME()") return "ME()";
-  if (bare === "notME()") return "not ME()";
+  const t = text.trim();
+  if (t === "none" || t === "any") return t;
+  if (/^ME\s*\(\s*\)$/.test(t)) return "ME()";
+  if (/^not\s+ME\s*\(\s*\)$/.test(t)) return "not ME()";
   return undefined;
 }
 

@@ -27,7 +27,11 @@ export function readCondition(
   for (const { key, keyNode, value } of mapEntries(ctx, node, what) ?? []) {
     const wanted = wantedOf(value);
     if (wanted === undefined) {
-      ctx.error(value, "invalid-value", `${what} ${SHAPE}`);
+      ctx.error(
+        value,
+        "invalid-value",
+        `${what} ${SHAPE}${reference ? " A reference is none, any, ME() or not ME()." : ""}`,
+      );
       continue;
     }
     if (model && !conditionFits(model, key, wanted, computed, reference)) {
@@ -128,12 +132,11 @@ export function followRenamed(
 
 /** "status is published", "status is investigating or identified", "pinned is true", "assignee is not you". */
 export function conditionText(where: Condition): string {
+  // none and any read as written ("assignee is none"); a choice may have such a value too.
   const said = (v: Condition[string]) => {
     if (Array.isArray(v)) return v.join(" or ");
     if (v === "ME()") return "you";
     if (v === "not ME()") return "not you";
-    if (v === "none") return "empty";
-    if (v === "any") return "set";
     return String(v);
   };
   return Object.entries(where)
