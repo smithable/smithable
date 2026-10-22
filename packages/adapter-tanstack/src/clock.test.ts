@@ -38,6 +38,9 @@ test("a cron expression: lists, ranges, steps, either day field, Sunday as 0 or 
   expect(kit.names({ cron: "0 0 */2 * *" }, "2026-10-01T00:00")).toBe(true);
   expect(kit.names({ cron: "0 0 */2 * *" }, "2026-10-02T00:00")).toBe(false);
   expect(kit.names({ cron: "0 0 1 */3 *" }, "2026-04-01T00:00")).toBe(true);
+  // Monday, Wednesday, Friday: not Sunday as 7.
+  expect(kit.names({ cron: "0 9 * * 1/2" }, "2026-10-25T09:00")).toBe(false);
+  expect(kit.names({ cron: "0 9 * * 5-7" }, "2026-10-25T09:00")).toBe(true);
   // A start with a step runs to the field's last value: 5, 20, 35, 50.
   expect(kit.names({ cron: "5/15 * * * *" }, "2026-10-22T09:35")).toBe(true);
   expect(kit.names({ cron: "5/15 * * * *" }, "2026-10-22T09:30")).toBe(false);

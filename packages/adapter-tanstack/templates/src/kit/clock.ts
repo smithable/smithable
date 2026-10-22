@@ -29,7 +29,10 @@ export function names(clock: Clock, wall: string): boolean {
   const [mi = "*", ho = "*", dom = "*", mon = "*", dow = "*"] = clock.cron.trim().split(/\s+/);
   const inMonth = matches(dom, d, 1, 31);
   // Sunday is 0 or 7.
-  const inWeek = matches(dow, weekday, 0, 7) || (weekday === 0 && matches(dow, 7, 0, 7));
+  // A step runs Monday to Saturday from Sunday as 0; Sunday as 7 only where the field writes 7.
+  const inWeek =
+    matches(dow, weekday, 0, 6) ||
+    (weekday === 0 && /(^|[,-])7($|[,/])/.test(dow) && matches(dow, 7, 0, 7));
   // As cron has it: with both days restricted, either one will do.
   const day = dom !== "*" && dow !== "*" ? inMonth || inWeek : inMonth && inWeek;
   return matches(mi, minute, 0, 59) && matches(ho, hour, 0, 23) && matches(mon, m, 1, 12) && day;
