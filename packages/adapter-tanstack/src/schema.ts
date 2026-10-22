@@ -21,7 +21,6 @@ import {
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
-import { outgoingOf } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -38,6 +37,7 @@ import {
   tableNames,
   threadLists,
 } from "./shared.js";
+import { TIMER_RUNS_TABLE } from "./timers.js";
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
@@ -212,6 +212,7 @@ export const ${n.table}Reads = sqliteTable(
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
+  if (ir.timers.length) imports.add("uniqueIndex");
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
@@ -219,7 +220,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(outgoingOf(ir).length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 

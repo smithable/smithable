@@ -284,6 +284,17 @@ export const UX_SCHEMA: JsonSchema = {
               },
             },
           },
+          filters: {
+            type: "object",
+            description:
+              'A list page\'s filters: shown, the ones shown when the list is first reached; the rest fold behind "More filters".',
+            additionalProperties: false,
+            properties: {
+              shown: strings(
+                "The filters shown at once, from the page's filters in smithable.yml.",
+              ),
+            },
+          },
           record: {
             type: "object",
             description: "The record page: how its lists of related records are shown.",

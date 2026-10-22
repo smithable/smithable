@@ -45,6 +45,7 @@ function entryOf(concept: string): { sub: SubView; path: string[] } | undefined 
     action: "actions",
     query: "queries",
     outgoing: "outgoing",
+    timer: "timers",
     incoming: "incoming",
   }[kind];
   if (area) return { sub: "behavior", path: [area, name] };

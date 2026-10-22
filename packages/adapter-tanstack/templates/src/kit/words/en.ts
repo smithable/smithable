@@ -317,6 +317,14 @@ export const w = {
   thisUser: "this user",
   to: "To",
   today: "Today",
+  /** A date filter's relative values (Upcoming, Past, Today, This week, This month). */
+  upcoming: "Upcoming",
+  past: "Past",
+  thisWeek: "This week",
+  thisMonth: "This month",
+  /** The filters folded away when a list is first reached, and folding them again. */
+  moreFilters: "More filters",
+  fewerFilters: "Fewer filters",
   trashEmpty: "Nothing is in the trash.",
   trashLead: "Deleted records stay here for thirty days, then they are removed for good.",
   trashOf: (plural: string) => `${plural} in the trash`,
@@ -337,6 +345,8 @@ export const w = {
   /** The activity log: a record that is gone, by its id. */
   aDeletedOne: (label: string, id: string) => `a deleted ${label.toLowerCase()} (#${id})`,
   aKey: (id: string) => `a key (#${id})`,
+  /** Who did it, in Activity: a timer of the app (timed-actions.md). */
+  byTimer: (name: string) => `the timer ${name}`,
   aRemovedUser: (id: string) => `a removed user (#${id})`,
   atLeastCharacters: (n: number) => `At least ${n} characters`,
   atMostCharacters: (n: number) => `At most ${n.toLocaleString("en")} characters`,

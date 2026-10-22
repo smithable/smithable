@@ -88,7 +88,8 @@ outgoing:
 - A timer runs as the app, with no viewer, as incoming entries and the daily jobs do: no role's
   grants apply, the action's `set` may change a locked field as an action's may (record-rules.md
   §2), and the Activity line reads "by the timer remind". The records it reaches are all the
-  model's that fit, within nothing else.
+  model's that fit, within nothing else. A record a timer creates (a digest writing a report) has
+  no owner, as one an incoming call creates has none.
 - Time is the app's time zone (`app.timeZone`), daylight saving by the zone; a clock time that
   does not exist on the day it changes runs at the next minute that does, and one that comes
   twice that night runs once, since a run is keyed by the time as written (§5).
@@ -127,7 +128,9 @@ removal of what it names, as outgoing does.
   for the night) is caught up differently by kind: a record timer's due records run late within a
   day, older ones are skipped and noted in Activity, since a reminder for yesterday's class helps
   no one; a clock timer runs once, late, however long the server was down, one run for all the
-  times it missed, since the payroll must close and closing it twice is wrong.
+  times it missed, since the payroll must close and closing it twice is wrong. A timer's first
+  sighting is written down without a run, so a new timer never runs for a time before it was
+  added: a reminder for a class that has already passed, or yesterday's 08:00.
 - Each run goes through the action's data function with no viewer and the timer's name as the
   actor, in its own transaction, the outgoing entries firing as for any action; a failing run is
   noted and tried again next tick, three times, then given up with an Activity line.

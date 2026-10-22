@@ -519,6 +519,50 @@ async function bookingFlow(dir, base) {
  * the studio deletes it and the member is told about it as it was. Mails are sent after the
  * change, so each is waited for in the outbox.
  */
+/**
+ * The staff's list of sessions (filters.md, A 135): it opens on what is to come (the page's
+ * defaultFilter), shown as a chip with All, which shows the past too; the instructor filter waits
+ * behind "More filters" (the ux file's filters.shown) and shows at once with a value.
+ */
+async function sessionsListFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/sessions`);
+    const chips = page.getByRole("list", { name: "Active filters" });
+    await chips
+      .getByRole("listitem")
+      .filter({ hasText: "Starts at: Upcoming" })
+      .waitFor({ timeout: 10000 * P });
+    const rows = () => page.locator("main tbody tr").count();
+    await page
+      .locator("main tbody tr")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    const upcoming = await rows();
+    await chips.getByRole("button", { name: "All", exact: true }).click();
+    await page.waitForURL(/[?&]startsAt=all/, { timeout: 10000 * P });
+    for (let i = 0; i < 50 * P && (await rows()) <= upcoming; i++) await page.waitForTimeout(100);
+    if ((await rows()) <= upcoming) throw new Error("All shows no more sessions than Upcoming");
+    // Folded: the instructor filter until More filters.
+    if (await page.getByRole("group", { name: "Instructor" }).count())
+      throw new Error("the instructor filter is not folded");
+    await page.getByRole("button", { name: "More filters" }).click();
+    await page.getByRole("group", { name: "Instructor" }).waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: the sessions list opens on upcoming ones, a chip with All shows the past too, and the instructor filter waits behind More filters",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("sessions list");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function outgoingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -873,7 +917,19 @@ async function barbersFlow(dir, base) {
     await page.getByLabel(/^Service/).waitFor();
     await choose("Service", "Haircut");
     await choose("Barber", "Elin Sjöberg");
-    await times.first().waitFor({ timeout: 20000 * P });
+    // Late in the evening today's hours are over: then the next day's times.
+    const none = page.getByText("No free times this day.");
+    await times
+      .first()
+      .or(none)
+      .waitFor({ timeout: 20000 * P });
+    if (await none.isVisible()) {
+      await page
+        .locator('[data-kit="slots"] button[aria-pressed]:not([data-part="time"])')
+        .nth(1)
+        .click();
+      await times.first().waitFor({ timeout: 20000 * P });
+    }
   };
   const book = async (name) => {
     await page.getByRole("textbox", { name: "Name *" }).fill(name);
@@ -6219,6 +6275,83 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // Timers (docs/design/timed-actions.md §5): each run as if its time had come, once.
+    if (example === "booking" || example === "invoicing")
+      step(
+        example === "booking"
+          ? "timers run: a reminder for each booking a day before its class, once; a draft post goes out on its date"
+          : "timers run: a sent invoice a week past its due date is overdue, by the timer",
+        () => {
+          const timer = (name, at) => {
+            const r = smithable(dir, "timers", "run", name, "--at", at);
+            if (r.code !== 0) throw new Error(r.out);
+          };
+          if (example === "invoicing") {
+            const [invoice] = query(dir, "select id from invoices order by id limit 1");
+            write(
+              dir,
+              `update invoices set status = 'sent', due_on = '2030-01-01' where id = ${invoice.id}`,
+            );
+            timer("markOverdue", "2030-01-08T12:00:00Z");
+            const [after] = query(dir, `select status from invoices where id = ${invoice.id}`);
+            if (after.status !== "overdue")
+              throw new Error(`the invoice is ${after.status}, not overdue`);
+            const by = query(
+              dir,
+              `select who from audit_log where model = 'Invoice' and record_id = ${invoice.id} order by id desc limit 1`,
+            );
+            if (by[0]?.who !== "timer:markOverdue")
+              throw new Error(`the change is ${by[0]?.who}'s`);
+            return;
+          }
+          // A member's booking of the first session (the sample data has none).
+          const now = Date.now();
+          write(
+            dir,
+            `insert or ignore into user (id, name, email, role, created_at, updated_at) values ('timer-member', 'Timer Member', 'timer-member@example.com', 'member', ${now}, ${now});
+            insert into bookings (session_id, attendee_id, created_at, updated_at) select min(id), 'timer-member', ${now}, ${now} from sessions`,
+          );
+          const [booking] = query(dir, "select session_id as session from bookings limit 1");
+          if (!booking) throw new Error("no booking to remind of");
+          const [{ n: booked }] = query(
+            dir,
+            `select count(*) as n from bookings where session_id = ${booking.session}`,
+          );
+          const [{ at: startsAt }] = query(
+            dir,
+            `select starts_at as at from sessions where id = ${booking.session}`,
+          );
+          write(
+            dir,
+            `update sessions set starts_at = ${Date.parse("2030-01-02T10:00:00Z")} where id = ${booking.session}`,
+          );
+          const reminders = () =>
+            query(dir, "select count(*) as n from outgoing_mail where entry = 'reminder'")[0].n;
+          const before = reminders();
+          timer("remind", "2030-01-01T10:30:00Z");
+          if (reminders() !== before + booked)
+            throw new Error(`${reminders() - before} reminders for ${booked} bookings`);
+          timer("remind", "2030-01-01T10:45:00Z");
+          if (reminders() !== before + booked) throw new Error("a booking was reminded twice");
+          const [post] = query(dir, "select id from posts order by id limit 1");
+          write(
+            dir,
+            `update posts set status = 'draft', published_on = '2030-01-01' where id = ${post.id}`,
+          );
+          timer("publish", "2030-01-01T12:00:00Z");
+          const [out] = query(dir, `select status from posts where id = ${post.id}`);
+          if (out.status !== "published")
+            throw new Error(`the post is ${out.status}, not published`);
+          // As it was, for the checks after this one: the session, no booking, no reminder.
+          write(
+            dir,
+            `update sessions set starts_at = ${startsAt} where id = ${booking.session};
+            delete from outgoing_mail where entry = 'reminder';
+            delete from bookings where attendee_id = 'timer-member';
+            delete from user where id = 'timer-member'`,
+          );
+        },
+      );
     // A copy (actions.md §8): duplicate an invoice with its lines, asking for its own number.
     if (example === "invoicing")
       step(
@@ -6890,6 +7023,7 @@ test("the session cookie's name and attributes", async () => {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
+        await sessionsListFlow(base);
         await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);

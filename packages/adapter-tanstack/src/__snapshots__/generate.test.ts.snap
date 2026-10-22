@@ -4418,7 +4418,7 @@ export const noteAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || noteAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || noteAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -5054,7 +5054,7 @@ export const projectAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || projectAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || projectAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -5616,7 +5616,7 @@ export const taskAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || taskAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || taskAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -7075,9 +7075,15 @@ const getActivity = createServerFn()
     // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
     for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
       named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -8635,9 +8641,15 @@ const getActivity = createServerFn()
     // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
     for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
       named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -9313,15 +9325,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "dfd0f953 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "31bcd99e generated",
+  "src/generated/note.server.ts": "61f4dd51 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "b9eafb15 generated",
+  "src/generated/project.server.ts": "93cf8194 generated",
   "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "3105cd3c generated",
+  "src/generated/task.server.ts": "7a4b55c3 generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "d437282f generated",
@@ -9348,7 +9360,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "aa08bba3 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -9376,7 +9388,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
@@ -9384,7 +9396,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "231b85d7 generated",
-  "src/routes/admin/activity.tsx": "0f07d2d4 generated",
+  "src/routes/admin/activity.tsx": "e816502d generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
   "src/routes/admin/notes/$id.tsx": "5ec1a6f3 generated",
@@ -9417,7 +9429,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "d511ca5b generated",
-  "src/routes/team/activity.tsx": "f5cfba7a generated",
+  "src/routes/team/activity.tsx": "ada4147b generated",
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
@@ -10750,7 +10762,7 @@ export const appointmentAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || appointmentAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || appointmentAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -11219,7 +11231,7 @@ export const barberAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || barberAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || barberAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -11869,7 +11881,7 @@ export const serviceAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || serviceAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || serviceAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -12235,7 +12247,7 @@ export const timeOffAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || timeOffAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || timeOffAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -12966,7 +12978,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13305,7 +13317,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -13757,7 +13769,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -14128,7 +14140,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -14784,10 +14796,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/actions/confirm.ts": "59f19cb6 generated",
   "src/generated/app.ts": "97916622 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "a1bb1a88 generated",
+  "src/generated/appointment.server.ts": "b1563eab generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "f844c103 generated",
+  "src/generated/barber.server.ts": "f0867472 generated",
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "199beb1e generated",
@@ -14795,11 +14807,11 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "93cee7d2 generated",
+  "src/generated/service.server.ts": "5c230645 generated",
   "src/generated/service.ts": "9b30fa43 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "b6dd8e4b generated",
+  "src/generated/time-off.server.ts": "2a3e58ac generated",
   "src/generated/time-off.ts": "b2f38bf7 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
@@ -14813,7 +14825,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
@@ -14826,7 +14838,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Slots.tsx": "0d049297 kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -14852,7 +14864,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bdca463f generated",
@@ -14861,10 +14873,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "bd3451f4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/appointments/$id.tsx": "bb23c6d5 generated",
+  "src/routes/appointments/$id.tsx": "c30c4fd4 generated",
   "src/routes/appointments/index.tsx": "a130fe97 generated",
   "src/routes/appointments/new.tsx": "8c0370e1 generated",
-  "src/routes/barbers/$id.tsx": "2ecbe69b generated",
+  "src/routes/barbers/$id.tsx": "a8ba804e generated",
   "src/routes/barbers/index.tsx": "9a49a0b9 generated",
   "src/routes/barbers/new.tsx": "13d2e8ac generated",
   "src/routes/day/index.tsx": "782a4b6c generated",
@@ -14875,12 +14887,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "bb6e3860 generated",
   "src/routes/privacy/index.tsx": "e303f9ed generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
-  "src/routes/services/$id.tsx": "873469b5 generated",
+  "src/routes/services/$id.tsx": "9f29cc8a generated",
   "src/routes/services/index.tsx": "930745df generated",
   "src/routes/services/new.tsx": "b24c44de generated",
   "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "9d72e5c6 generated",
-  "src/routes/time-off/$id.tsx": "88e2125f generated",
+  "src/routes/time-off/$id.tsx": "27fcb010 generated",
   "src/routes/time-off/index.tsx": "2cac7bcc generated",
   "src/routes/time-off/new.tsx": "be2eaa7b generated",
   "src/start.ts": "ca04f376 kit",
@@ -15058,7 +15070,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/db/schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { Picture } from "#/kit/uploads";
 
 export const user = sqliteTable("user", {
@@ -15215,6 +15227,21 @@ export const outgoingCall = sqliteTable(
     error: text(),
   },
   (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);
+
+export const timerRuns = sqliteTable(
+  "timer_runs",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    timer: text().notNull(),
+    record: integer().notNull(),
+    due: text().notNull(),
+    ranAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** running, done, skipped, gone, failed, given up; seen for a timer's first sighting. */
+    outcome: text().notNull(),
+    tries: integer().notNull().default(0),
+  },
+  (t) => [uniqueIndex("timer_runs_once").on(t.timer, t.record, t.due)],
 );
 
 export const classTypes = sqliteTable("class_types", {
@@ -15441,6 +15468,7 @@ import { sessionData } from "./session.server";
 import { bookingData } from "./booking.server";
 import { postData } from "./post.server";
 import { messageData } from "./message.server";
+import { runPublish, runPublishMany } from "./actions/publish.server";
 
 let counter = 0;
 const next = () => ++counter;
@@ -16022,6 +16050,60 @@ describe("Message", () => {
   });
 });
 
+describe("the publish action", () => {
+  test("admin", async () => {
+    const viewer = signedIn("admin");
+    const others = insertPost(stranger.id, {"status":"draft"});
+    const own = insertPost(viewer.id, {"status":"draft"});
+    expect({
+      others: await can(() => runPublish(viewer, others.id)),
+      own: await can(() => runPublish(viewer, own.id)),
+    }).toEqual({ others: true, own: true });
+  });
+
+  test("member", async () => {
+    const viewer = signedIn("member");
+    const others = insertPost(stranger.id, {"status":"draft"});
+    const othersBefore = JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get());
+    const own = insertPost(viewer.id, {"status":"draft"});
+    expect({
+      others: await can(() => runPublish(viewer, others.id)),
+      own: await can(() => runPublish(viewer, own.id)),
+    }).toEqual({ others: false, own: true });
+    expect(JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("a visitor who has not signed in", async () => {
+    const viewer = null;
+    const others = insertPost(stranger.id, {"status":"draft"});
+    const othersBefore = JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get());
+    expect({
+      others: await can(() => runPublish(viewer, others.id)),
+      own: false,
+    }).toEqual({ others: false, own: false });
+    expect(JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("refused on a record where status is not draft", async () => {
+    const viewer = signedIn("admin");
+    const record = insertPost(viewer.id, {"status":"published"});
+    await expect(runPublish(viewer, record.id)).rejects.toThrow("This cannot be done now.");
+  });
+
+  test("over chosen records, only those it fits and may run on change", async () => {
+    const viewer = signedIn("admin");
+    const fitting = insertPost(viewer.id, {"status":"draft"});
+    const notFitting = insertPost(viewer.id, {"status":"published"});
+    const notFittingBefore = JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, notFitting.id)).get());
+    expect(await runPublishMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, notFitting.id)).get())).toBe(notFittingBefore);
+    const again = insertPost(viewer.id, {"status":"draft"});
+    const againBefore = JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, again.id)).get());
+    await runPublishMany(null, [again.id]).catch(() => undefined);
+    expect(JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, again.id)).get())).toBe(againBefore);
+  });
+});
+
 describe("the audit log", () => {
   test("names who created, changed and deleted a record, and what changed", async () => {
     const viewer = signedIn("admin");
@@ -16073,6 +16155,114 @@ describe("the audit log", () => {
 "
 `;
 
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/actions/publish.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { afterChange } from "#/generated/hooks";
+import { postSettable } from "#/generated/post.schema";
+import { postData } from "#/generated/post.server";
+import { publishAccess, publishFits } from "./publish";
+
+type Row = NonNullable<Awaited<ReturnType<typeof postData.get>>>;
+
+/** The post's new values (only the fields the action sets), worked out on it as it was. */
+function plan(_viewer: Viewer | null, row: Row) {
+  return {
+    id: row.id,
+    values: postSettable.partial().parse({
+      status: "published",
+    }),
+
+  };
+}
+
+/** Runs the "publish" action on the post as the viewer. */
+export async function runPublish(viewer: Viewer | null, id: number) {
+  const row = await postData.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(publishAccess, viewer, row.ownerId);
+  if (!publishFits(row)) throw new Error("This cannot be done now.");
+  const one = plan(viewer, row);
+  return postData.update(viewer, id, one.values, "publish", ["status"]);
+}
+
+/**
+ * Runs the "publish" action on each chosen post it fits and the viewer may run it on
+ * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
+ * them all, and is named.
+ */
+export async function runPublishMany(viewer: Viewer | null, ids: number[]) {
+  const plans: ReturnType<typeof plan>[] = [];
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
+    const row = await postData.get(viewer, id);
+    if (!row || !allows(publishAccess, viewer, row.ownerId) || !publishFits(row)) continue;
+    try {
+      plans.push(plan(viewer, row));
+    } catch (error) {
+      const why = error instanceof Error ? error.message : String(error);
+      throw new Error(\`Post "\${String(row.title ?? row.id)}": \${why}\`);
+    }
+  }
+  const written = db.transaction((tx) => plans.map((p) => {
+      const changed = tx.update(schema.posts).set(p.values).where(eq(schema.posts.id, p.id)).returning().get();
+      audit(tx, viewer, { action: "publish", model: "Post", record: changed.id, fields: ["status"] });
+      const inserted = [
+
+      ] as const;
+
+      return { changed, inserted };
+    }));
+  for (const w of written) {
+    await afterChange("afterUpdate", "Post", w.changed, viewer);
+
+  }
+  return { changed: plans.length, skipped: unique.length - plans.length };
+}
+"
+`;
+
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/actions/publish.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { runPublish, runPublishMany } from "./publish.server";
+
+/** Who may run the "publish" action: whoever may edit the post. */
+export const publishAccess: Rule = { public: false, roles: ["admin"], owner: true };
+
+/** Whether the "publish" action fits the post: it is offered and allowed only then. */
+export function publishFits(row: { status?: unknown }): boolean {
+  return row.status === "draft";
+}
+
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+export const publish = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => runPublish(await writer(), data));
+
+/** The "publish" action on the chosen posts (at most 1,000 at once). */
+export const publishMany = createServerFn({ method: "POST" })
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
+  .handler(async ({ data }) => runPublishMany(await writer(), data.ids));
+"
+`;
+
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/app.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import type { AppUi } from "#/kit/model";
@@ -16107,7 +16297,7 @@ import { instructorUi } from "./instructor";
 import { messageUi } from "./message";
 import { postUi } from "./post";
 import { sessionUi } from "./session";
-
+import { runPublish } from "./actions/publish.server";
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { instructorSchema } from "#/generated/instructor.schema";
 import { sessionSchema } from "#/generated/session.schema";
@@ -16737,6 +16927,12 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 
+/** An action is a key's: a visitor is never offered one, and is refused here too. */
+const keyed = (viewer: Viewer | null): Viewer => {
+  if (!viewer) throw new AccessDenied(false);
+  return viewer;
+};
+
 /** A call's result, or its note when \`where\` names a value no record has. */
 async function none<T>(call: () => Promise<T>): Promise<T | { none: string }> {
   try {
@@ -16853,7 +17049,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       return { description: offerFor(viewer).describe[args.kind as string] };
     case "run":
       switch (args.action) {
-
+    case "publish": {
+      const row = await found(KINDS.Post, viewer, args.id, "change");
+      return postToApi(await runPublish(keyed(viewer), row.id));
+    }
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
       }
@@ -16957,6 +17156,7 @@ import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
 import { type BookingSettable } from "./booking";
+import "./timers.server";
 
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
@@ -17000,7 +17200,7 @@ const BY: string[] = ["session","attendee"];
  * own, whatever the form sent.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
-  if (viewer && bookingAccess.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
+  if ((!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) return given ?? personOf(viewer);
   return personOf(viewer);
 }
 
@@ -17311,7 +17511,7 @@ export const bookingData = {
     if (what === "changed") check(bookingAccess.write, viewer, row.attendeeId);
     checkReferences(viewer, values);
     let changed: typeof schema.bookings.$inferSelect;
-    const updated = { ...values, attendeeId: viewer && bookingAccess.write.roles.includes(viewer.role) ? (values.attendeeId === undefined ? row.attendeeId : values.attendeeId) : personOf(viewer) };
+    const updated = { ...values, attendeeId: (!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))) ? (values.attendeeId === undefined ? row.attendeeId : values.attendeeId) : personOf(viewer) };
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -17480,7 +17680,7 @@ export const getBooking = createServerFn()
 /** Whom a booking can be given to: null for a viewer who can only make their own. */
 export const bookingOwnerOptions = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  return viewer && bookingAccess.write.roles.includes(viewer.role) ? userOptions() : null;
+  return (!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))) ? userOptions() : null;
 });
 
 export const createBooking = createServerFn({ method: "POST" })
@@ -17565,6 +17765,7 @@ import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
 import { classTypeUi, type ClassTypeSettable } from "./class-type";
+import "./timers.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -17597,7 +17798,7 @@ export const classTypeAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || classTypeAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || classTypeAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -18392,6 +18593,7 @@ import { sessionData } from "./session.server";
 import { sessionUi } from "./session";
 import { bookingUi } from "./booking";
 import { instructorUi, type InstructorSettable } from "./instructor";
+import "./timers.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -18424,7 +18626,7 @@ export const instructorAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || instructorAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || instructorAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -19018,6 +19220,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { type MessageSettable } from "./message";
+import "./timers.server";
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
@@ -19029,7 +19232,7 @@ export const messageAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || messageAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || messageAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -19583,6 +19786,12 @@ const ENTRIES: {
   to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
+    name: "reminder",
+    model: "Booking",
+    when: "timer:remind",
+    to: (tx, r) => r.attendeeId == null ? [] : people(tx, eq(schema.user.id, String(r.attendeeId))),
+  },
+  {
     name: "bookingMade",
     model: "Booking",
     when: "created",
@@ -19713,6 +19922,7 @@ import { deletePicture } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type PostSettable } from "./post";
+import "./timers.server";
 
 /** Who may read, create, change and delete posts. */
 export const postAccess: ModelAccess = {
@@ -19724,7 +19934,7 @@ export const postAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || postAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || postAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -20346,6 +20556,7 @@ import { instructorData } from "./instructor.server";
 import { bookingUi } from "./booking";
 import { sessionUi, type SessionSettable } from "./session";
 import { withSessionFormulas } from "./session.formulas";
+import "./timers.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -20377,7 +20588,7 @@ export const sessionAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || sessionAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || sessionAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -20968,6 +21179,192 @@ export const site: LandingSite = {
   ],
   legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
 };
+"
+`;
+
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { and, eq } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import type { Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { log } from "#/kit/log.server";
+import { latestDue, type Clock } from "#/kit/clock";
+import { instantOf, wallTime } from "#/kit/zoned";
+import { publishFits } from "./actions/publish";
+import { runPublish } from "./actions/publish.server";
+import { app } from "./app";
+import { outgoing } from "./outgoing.server";
+import { postData } from "./post.server";
+
+const DAY = 24 * 60 * 60 * 1000;
+/** A run that fails is tried again on the next ticks, this many times in all. */
+const TRIES = 3;
+
+/** The app itself, as a timer runs: no role's grants apply (docs/design/timed-actions.md §2). */
+const as = (timer: string): Viewer => ({ id: \`timer:\${timer}\`, name: "", email: "", role: "", system: true });
+
+interface Due {
+  timer: string;
+  record: number;
+  due: string;
+}
+/** A record timer: runs what is due after \`from\`; counts what fell due before it and after \`late\` without running. */
+type RecordTimer = (now: Date, from: number, late: number) => Promise<number>;
+/** A clock timer: its clock, and its run for one due time. */
+type ClockTimer = { clock: Clock; run: (due: string) => Promise<void> };
+
+const runs = schema.timerRuns;
+const at = (run: Due) => and(eq(runs.timer, run.timer), eq(runs.record, run.record), eq(runs.due, run.due));
+const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).get() !== undefined;
+
+/** Takes a run: false when it is taken already (done, skipped, given up, or running elsewhere). */
+function take(run: Due): boolean {
+  const before = db.select().from(runs).where(at(run)).get();
+  if (before) return before.outcome === "failed";
+  return db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1;
+}
+
+/** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
+async function attempt(run: Due, model: string | undefined, work: () => Promise<string>) {
+  if (!take(run)) return;
+  try {
+    const outcome = await work();
+    db.update(runs).set({ outcome, ranAt: new Date() }).where(at(run)).run();
+  } catch (error) {
+    const tries = (db.select({ tries: runs.tries }).from(runs).where(at(run)).get()?.tries ?? 0) + 1;
+    const given = tries >= TRIES;
+    db.update(runs).set({ outcome: given ? "given up" : "failed", tries, ranAt: new Date() }).where(at(run)).run();
+    log.error("A timer's run failed", { ...run, tries, error });
+    if (given)
+      audit(db, as(run.timer), {
+        action: "timer given up",
+        model,
+        record: run.record || undefined,
+        details: { error: error instanceof Error ? error.message : String(error) },
+      });
+  }
+}
+
+/** When a timer was first seen, written then: a new timer never runs for a time before it. */
+function seen(timer: string, now: Date): number {
+  const row = db.select({ ranAt: runs.ranAt }).from(runs).where(and(eq(runs.timer, timer), eq(runs.record, 0), eq(runs.due, "seen"))).get();
+  if (row) return row.ranAt.getTime();
+  db.insert(runs).values({ timer, record: 0, due: "seen", outcome: "seen", ranAt: now }).onConflictDoNothing().run();
+  return now.getTime();
+}
+
+/** remind: for each record whose time has come, in the window since \`from\`. */
+const remindTimer: RecordTimer = async (now, from, late) => {
+  let missed = 0;
+  for (const row of db.select({ id: schema.bookings.id, at: schema.sessions.startsAt }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).all()) {
+    if (row.at == null) continue;
+    const due = row.at.getTime() - 86400000;
+    if (due > now.getTime()) continue;
+    const run = { timer: "remind", record: row.id, due: new Date(due).toISOString() };
+    if (due <= from) {
+      if (due > late && !ran(run)) missed++;
+      continue;
+    }
+    await attempt(run, "Booking", () => remindRecord(row.id));
+  }
+  return missed;
+};
+
+async function remindRecord(id: number): Promise<string> {
+  db.transaction((tx) => {
+    const now = tx.select().from(schema.bookings).where(eq(schema.bookings.id, id)).get();
+    if (now) outgoing(tx, as("remind"), "Booking", "timer:remind", now);
+  });
+  return "done";
+}
+
+/** publish: for each record whose time has come, in the window since \`from\`. */
+const publishTimer: RecordTimer = async (now, from, late) => {
+  let missed = 0;
+  for (const row of db.select({ id: schema.posts.id, at: schema.posts.publishedOn }).from(schema.posts).where(eq(schema.posts.status, "draft")).all()) {
+    if (row.at == null) continue;
+    const due = instantOf(\`\${row.at}T00:00\`, app.timeZone).getTime();
+    if (due > now.getTime()) continue;
+    const run = { timer: "publish", record: row.id, due: new Date(due).toISOString() };
+    if (due <= from) {
+      if (due > late && !ran(run)) missed++;
+      continue;
+    }
+    await attempt(run, "Post", () => publishRecord(row.id));
+  }
+  return missed;
+};
+
+async function publishRecord(id: number): Promise<string> {
+  const row = await postData.get(as("publish"), id);
+  if (!row) return "gone";
+  // A record its action's condition does not fit is skipped, and Activity says so.
+  if (!publishFits(row)) {
+    audit(db, as("publish"), { action: "timer skipped", model: "Post", record: id, details: { action: "publish" } });
+    return "skipped";
+  }
+  await runPublish(as("publish"), id);
+  return "done";
+}
+
+const RECORD_TIMERS: Record<string, RecordTimer> = {
+  "remind": remindTimer,
+  "publish": publishTimer,
+};
+const CLOCK_TIMERS: Record<string, ClockTimer> = {
+};
+
+/** The last tick, kept as the row of timer "": a server down for a while catches up from it. */
+const LAST = { timer: "", record: 0, due: "tick" };
+
+/** One tick: every timer, what has come due since the last. */
+export async function tick(now = new Date()): Promise<void> {
+  const last = db.select({ ranAt: runs.ranAt }).from(runs).where(at(LAST)).get()?.ranAt.getTime() ?? now.getTime();
+  for (const [name, timer] of Object.entries(RECORD_TIMERS)) {
+    try {
+      const first = seen(name, now);
+      // Due within the last day runs late; older is skipped, said once per tick.
+      const missed = await timer(now, Math.max(first, now.getTime() - DAY), Math.max(first, last - DAY));
+      if (missed) audit(db, as(name), { action: "timer skipped", details: { late: missed } });
+    } catch (error) {
+      log.error("A timer could not run", { timer: name, error });
+    }
+  }
+  for (const [name, timer] of Object.entries(CLOCK_TIMERS)) {
+    try {
+      const since = Math.max(seen(name, now), last);
+      const due = latestDue(timer.clock, new Date(since), now, app.timeZone);
+      if (due) await timer.run(due);
+    } catch (error) {
+      log.error("A timer could not run", { timer: name, error });
+    }
+  }
+  db.insert(runs).values({ ...LAST, outcome: "done", ranAt: now }).onConflictDoUpdate({ target: [runs.timer, runs.record, runs.due], set: { ranAt: now } }).run();
+}
+
+/**
+ * Runs one timer as if its time had come (\`smithable timers run\`): a record timer for what fell
+ * due in the day before \`now\`, a clock timer once, keyed by \`now\`'s minute.
+ */
+export async function runTimer(name: string, now = new Date()): Promise<void> {
+  const record = RECORD_TIMERS[name];
+  if (record) {
+    await record(now, now.getTime() - DAY, now.getTime() - DAY);
+    return;
+  }
+  const clock = CLOCK_TIMERS[name];
+  if (!clock) throw new Error(\`There is no timer \${name}.\`);
+  await clock.run(wallTime(now, app.timeZone));
+}
+
+// Every minute in production, from a second past the minute.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  const next = () =>
+    setTimeout(() => void tick().catch((error) => log.error("The timers' tick failed", { error })).finally(next), 60_000 - (Date.now() % 60_000) + 1000).unref();
+  next();
+}
 "
 `;
 
@@ -21592,9 +21989,15 @@ const getActivity = createServerFn()
         ),
       ],
     ]);
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -23143,7 +23546,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -23517,7 +23920,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -23767,7 +24170,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -23995,7 +24398,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24232,7 +24635,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24646,7 +25049,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -24743,10 +25146,10 @@ import { sessionAccess, sessionData } from "#/generated/session.server";
 import { inArray, and } from "drizzle-orm";
 import { inRange, orderOf } from "#/kit/filter";
 import { app } from "#/generated/app";
+import { withDefaults, type Search, count, listQuery, optional, text } from "#/kit/params";
 import { classTypeData } from "#/generated/class-type.server";
 import { instructorData } from "#/generated/instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
@@ -24760,7 +25163,9 @@ import { Filters } from "#/kit/Filters";
 /** The sessions matching the search and the filters, among those the viewer may read. */
 const searchSessions = createServerFn()
   .validator(listQuery)
-  .handler(async ({ data }) => {
+  .handler(async ({ data: given }) => {
+    // The page's default filters, where the address says nothing ("all" clears one).
+    const data = { ...given, f: withDefaults(given.f ?? {}, { startsAt: "upcoming" }) };
     const viewer = await currentViewer();
     const where = and(
       undefined,
@@ -24828,6 +25233,7 @@ function SessionsPage() {
   { name: "startsAt", label: "Starts at", kind: "range", input: "date" },
 ]}
         values={values}
+        defaults={{ startsAt: "upcoming" }}
         sorts={[
   { value: "startsAt", label: "Starts at, oldest first" },
   { value: "-startsAt", label: "Starts at, newest first" },
@@ -25393,6 +25799,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
   "generated: src/generated/access.test.ts",
+  "generated: src/generated/actions/publish.server.ts",
+  "generated: src/generated/actions/publish.ts",
   "generated: src/generated/app.ts",
   "generated: src/generated/ask.server.ts",
   "generated: src/generated/booking.schema.ts",
@@ -25423,6 +25831,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/generated/session.server.ts",
   "generated: src/generated/session.ts",
   "generated: src/generated/site.ts",
+  "generated: src/generated/timers.server.ts",
   "generated: src/generated/uploads.ts",
   "generated: src/generated/users.ts",
   "kit: src/kit/ActionButton.tsx",
@@ -25462,6 +25871,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
+  "kit: src/kit/clock.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
   "kit: src/kit/filter.ts",
@@ -25581,16 +25991,18 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "7868de01 generated",
+  "src/db/schema.ts": "58a35d99 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "8e151646 generated",
+  "src/generated/access.test.ts": "b9a0719e generated",
+  "src/generated/actions/publish.server.ts": "ea04f420 generated",
+  "src/generated/actions/publish.ts": "b5d2ed98 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "2e7a3e55 generated",
+  "src/generated/ask.server.ts": "79ddc670 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "d0cc5cb5 generated",
-  "src/generated/booking.ts": "3d4fe164 generated",
+  "src/generated/booking.server.ts": "31ec6ba7 generated",
+  "src/generated/booking.ts": "fba53b75 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "1be705ca generated",
+  "src/generated/class-type.server.ts": "b28f1a2d generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -25598,22 +26010,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "3bffc5ce generated",
+  "src/generated/instructor.server.ts": "c00d15f9 generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "420d47d7 generated",
+  "src/generated/message.server.ts": "944e787c generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "fcf6b4e0 generated",
+  "src/generated/outgoing.server.ts": "7f384c6e generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "e8ed4586 generated",
+  "src/generated/post.server.ts": "7cb79277 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "1383e8dc generated",
+  "src/generated/session.server.ts": "0dea4541 generated",
   "src/generated/session.ts": "d120db70 generated",
   "src/generated/site.ts": "592b0fd3 generated",
+  "src/generated/timers.server.ts": "50fbc6d3 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
@@ -25630,7 +26043,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
@@ -25646,13 +26059,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "04614292 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "4ecf379d kit",
   "src/kit/assistant.server.ts": "52ff3483 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/clock.ts": "8f18d8c9 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
@@ -25676,7 +26090,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
@@ -25684,7 +26098,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "5c621ed2 generated",
-  "src/routes/admin/activity.tsx": "62617d51 generated",
+  "src/routes/admin/activity.tsx": "4a76dfa2 generated",
   "src/routes/admin/bookings/$id.tsx": "1941ec5d generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "557a5a18 generated",
@@ -25707,7 +26121,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "16febad1 generated",
   "src/routes/blog/index.tsx": "6b23ad22 generated",
-  "src/routes/class-types/$id.tsx": "f08a457c generated",
+  "src/routes/class-types/$id.tsx": "e5b41057 generated",
   "src/routes/class-types/index.tsx": "fca9fe3b generated",
   "src/routes/class-types/new.tsx": "e9189dbc generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -25715,23 +26129,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "8a4728fe generated",
-  "src/routes/instructors/$id.tsx": "92fb8703 generated",
+  "src/routes/instructors/$id.tsx": "1105deb4 generated",
   "src/routes/instructors/index.tsx": "dfac8649 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
-  "src/routes/messages/$id.tsx": "5b651045 generated",
+  "src/routes/messages/$id.tsx": "9d1f9c82 generated",
   "src/routes/messages/index.tsx": "e4a7b8f3 generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
-  "src/routes/my-bookings/$id.tsx": "dc1b6526 generated",
+  "src/routes/my-bookings/$id.tsx": "50072457 generated",
   "src/routes/my-bookings/index.tsx": "9b16db67 generated",
   "src/routes/my-bookings/new.tsx": "ea212364 generated",
-  "src/routes/posts/$id.tsx": "12fdcf66 generated",
+  "src/routes/posts/$id.tsx": "0c9830f3 generated",
   "src/routes/posts/index.tsx": "759433b7 generated",
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "02dcec4c generated",
-  "src/routes/sessions/$id.tsx": "2511b5a6 generated",
-  "src/routes/sessions/index.tsx": "e4a3d886 generated",
+  "src/routes/sessions/$id.tsx": "72d569e3 generated",
+  "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
@@ -27297,7 +27711,7 @@ const BY: string[] = ["segment","accountManager"];
  * own, whatever the form sent.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
-  if (viewer && customerAccess.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
+  if ((!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role)))) return given ?? personOf(viewer);
   return personOf(viewer);
 }
 
@@ -27598,7 +28012,7 @@ export const customerData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(customerAccess.write, viewer, row.accountManagerId);
     let changed: typeof schema.customers.$inferSelect;
-    const updated = { ...values, accountManagerId: viewer && customerAccess.write.roles.includes(viewer.role) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
+    const updated = { ...values, accountManagerId: (!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role))) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -27959,7 +28373,7 @@ export const customerOptions = createServerFn().handler(async () =>
 /** Whom a customer can be given to: null for a viewer who can only make their own. */
 export const customerOwnerOptions = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  return viewer && customerAccess.write.roles.includes(viewer.role) ? userOptions() : null;
+  return (!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role))) ? userOptions() : null;
 });
 
 export const createCustomer = createServerFn({ method: "POST" })
@@ -28186,7 +28600,7 @@ export const orderAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || orderAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || orderAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -29818,7 +30232,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -30217,7 +30631,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -30754,9 +31168,15 @@ const getActivity = createServerFn()
         ),
       ],
     ]);
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -31432,13 +31852,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "36dcbd67 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "4bb5349e generated",
-  "src/generated/customer.ts": "64ebd6e8 generated",
+  "src/generated/customer.server.ts": "e1d74b6e generated",
+  "src/generated/customer.ts": "8ebe38d3 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "9b207081 generated",
+  "src/generated/order.server.ts": "a25da32a generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -31456,7 +31876,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "0cc2330f kit",
@@ -31468,7 +31888,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Trash.tsx": "26ea3332 kit",
   "src/kit/Users.tsx": "aa08bba3 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "4ecf379d kit",
@@ -31493,7 +31913,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
@@ -31502,20 +31922,20 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "483be48d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "2a5fc923 generated",
+  "src/routes/customers/$id.tsx": "edbb1090 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
   "src/routes/customers/index.tsx": "632d2f8c generated",
   "src/routes/customers/new.tsx": "630db072 generated",
   "src/routes/customers/trash.tsx": "732d5013 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
-  "src/routes/orders/$id.tsx": "a204665c generated",
+  "src/routes/orders/$id.tsx": "06572473 generated",
   "src/routes/orders/index.tsx": "370dfed8 generated",
   "src/routes/orders/new.tsx": "ffa48b2d generated",
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "77b87e28 generated",
-  "src/routes/team/activity.tsx": "d04540a5 generated",
+  "src/routes/team/activity.tsx": "8f471a14 generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
   "src/start.ts": "ca04f376 kit",
@@ -31693,7 +32113,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/db/schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { relations } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { StoredFile } from "#/kit/uploads";
 
 export const user = sqliteTable("user", {
@@ -31850,6 +32270,21 @@ export const outgoingCall = sqliteTable(
     error: text(),
   },
   (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);
+
+export const timerRuns = sqliteTable(
+  "timer_runs",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    timer: text().notNull(),
+    record: integer().notNull(),
+    due: text().notNull(),
+    ranAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** running, done, skipped, gone, failed, given up; seen for a timer's first sighting. */
+    outcome: text().notNull(),
+    tries: integer().notNull().default(0),
+  },
+  (t) => [uniqueIndex("timer_runs_once").on(t.timer, t.record, t.due)],
 );
 
 export const businessProfiles = sqliteTable("business_profiles", {
@@ -32018,6 +32453,7 @@ import { invoiceData } from "./invoice.server";
 import { invoiceLineData } from "./invoice-line.server";
 import { runMarkSent, runMarkSentMany } from "./actions/mark-sent.server";
 import { runMarkPaid, runMarkPaidMany } from "./actions/mark-paid.server";
+import { runMarkOverdue, runMarkOverdueMany } from "./actions/mark-overdue.server";
 
 let counter = 0;
 const next = () => ++counter;
@@ -32506,6 +32942,60 @@ describe("the markPaid action", () => {
   });
 });
 
+describe("the markOverdue action", () => {
+  test("admin", async () => {
+    const viewer = signedIn("admin");
+    const others = insertInvoice(stranger.id, {"status":"sent"});
+    const own = insertInvoice(viewer.id, {"status":"sent"});
+    expect({
+      others: await can(() => runMarkOverdue(viewer, others.id)),
+      own: await can(() => runMarkOverdue(viewer, own.id)),
+    }).toEqual({ others: true, own: true });
+  });
+
+  test("member", async () => {
+    const viewer = signedIn("member");
+    const others = insertInvoice(stranger.id, {"status":"sent"});
+    const othersBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get());
+    const own = insertInvoice(viewer.id, {"status":"sent"});
+    expect({
+      others: await can(() => runMarkOverdue(viewer, others.id)),
+      own: await can(() => runMarkOverdue(viewer, own.id)),
+    }).toEqual({ others: false, own: true });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("a visitor who has not signed in", async () => {
+    const viewer = null;
+    const others = insertInvoice(stranger.id, {"status":"sent"});
+    const othersBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get());
+    expect({
+      others: await can(() => runMarkOverdue(viewer, others.id)),
+      own: false,
+    }).toEqual({ others: false, own: false });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("refused on a record where status is not sent", async () => {
+    const viewer = signedIn("admin");
+    const record = insertInvoice(viewer.id, {"status":"draft"});
+    await expect(runMarkOverdue(viewer, record.id)).rejects.toThrow("This cannot be done now.");
+  });
+
+  test("over chosen records, only those it fits and may run on change", async () => {
+    const viewer = signedIn("admin");
+    const fitting = insertInvoice(viewer.id, {"status":"sent"});
+    const notFitting = insertInvoice(viewer.id, {"status":"draft"});
+    const notFittingBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, notFitting.id)).get());
+    expect(await runMarkOverdueMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, notFitting.id)).get())).toBe(notFittingBefore);
+    const again = insertInvoice(viewer.id, {"status":"sent"});
+    const againBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, again.id)).get());
+    await runMarkOverdueMany(null, [again.id]).catch(() => undefined);
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, again.id)).get())).toBe(againBefore);
+  });
+});
+
 describe("the audit log", () => {
   test("names who created, changed and deleted a record, and what changed", async () => {
     const viewer = signedIn("admin");
@@ -32554,6 +33044,117 @@ describe("the audit log", () => {
     expect(row(oldest.id)).toBeUndefined();
   });
 });
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/mark-overdue.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { outgoing } from "#/generated/outgoing.server";
+import { afterChange } from "#/generated/hooks";
+import { invoiceSettable } from "#/generated/invoice.schema";
+import { invoiceData } from "#/generated/invoice.server";
+import { markOverdueAccess, markOverdueFits } from "./mark-overdue";
+
+type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
+
+/** The invoice's new values (only the fields the action sets), worked out on it as it was. */
+function plan(_viewer: Viewer | null, row: Row) {
+  return {
+    id: row.id,
+    values: invoiceSettable.partial().parse({
+      status: "overdue",
+    }),
+
+  };
+}
+
+/** Runs the "markOverdue" action on the invoice as the viewer. */
+export async function runMarkOverdue(viewer: Viewer | null, id: number) {
+  const row = await invoiceData.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(markOverdueAccess, viewer, row.ownerId);
+  if (!markOverdueFits(row)) throw new Error("This cannot be done now.");
+  const one = plan(viewer, row);
+  return invoiceData.update(viewer, id, one.values, "markOverdue", ["status"]);
+}
+
+/**
+ * Runs the "markOverdue" action on each chosen invoice it fits and the viewer may run it on
+ * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
+ * them all, and is named.
+ */
+export async function runMarkOverdueMany(viewer: Viewer | null, ids: number[]) {
+  const plans: ReturnType<typeof plan>[] = [];
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
+    const row = await invoiceData.get(viewer, id);
+    if (!row || !allows(markOverdueAccess, viewer, row.ownerId) || !markOverdueFits(row)) continue;
+    try {
+      plans.push(plan(viewer, row));
+    } catch (error) {
+      const why = error instanceof Error ? error.message : String(error);
+      throw new Error(\`Invoice "\${String(row.number ?? row.id)}": \${why}\`);
+    }
+  }
+  const written = db.transaction((tx) => plans.map((p) => {
+      const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
+      const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
+      audit(tx, viewer, { action: "markOverdue", model: "Invoice", record: changed.id, fields: ["status"] });
+      outgoing(tx, viewer, "Invoice", "markOverdue", changed, before);
+      const inserted = [
+
+      ] as const;
+
+      return { changed, inserted };
+    }));
+  for (const w of written) {
+    await afterChange("afterUpdate", "Invoice", w.changed, viewer);
+
+  }
+  return { changed: plans.length, skipped: unique.length - plans.length };
+}
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/mark-overdue.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { runMarkOverdue, runMarkOverdueMany } from "./mark-overdue.server";
+
+/** Who may run the "markOverdue" action: whoever may edit the invoice. */
+export const markOverdueAccess: Rule = { public: false, roles: ["admin"], owner: true };
+
+/** Whether the "markOverdue" action fits the invoice: it is offered and allowed only then. */
+export function markOverdueFits(row: { status?: unknown }): boolean {
+  return row.status === "sent";
+}
+
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+export const markOverdue = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => runMarkOverdue(await writer(), data));
+
+/** The "markOverdue" action on the chosen invoices (at most 1,000 at once). */
+export const markOverdueMany = createServerFn({ method: "POST" })
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
+  .handler(async ({ data }) => runMarkOverdueMany(await writer(), data.ids));
 "
 `;
 
@@ -32811,6 +33412,7 @@ import { invoiceLineUi } from "./invoice-line";
 import { invoiceUi } from "./invoice";
 import { runMarkSent } from "./actions/mark-sent.server";
 import { runMarkPaid } from "./actions/mark-paid.server";
+import { runMarkOverdue } from "./actions/mark-overdue.server";
 import { businessProfileSchema } from "#/generated/business-profile.schema";
 import { clientSchema } from "#/generated/client.schema";
 import { invoiceSchema } from "#/generated/invoice.schema";
@@ -33497,6 +34099,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const row = await found(KINDS.Invoice, viewer, args.id, "change");
       return invoiceToApi(await runMarkPaid(keyed(viewer), row.id));
     }
+    case "markOverdue": {
+      const row = await found(KINDS.Invoice, viewer, args.id, "change");
+      return invoiceToApi(await runMarkOverdue(keyed(viewer), row.id));
+    }
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
       }
@@ -33601,6 +34207,7 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { type BusinessProfileSettable } from "./business-profile";
+import "./timers.server";
 
 /** Who may read, create, change and delete business profiles. */
 export const businessProfileAccess: ModelAccess = {
@@ -33612,7 +34219,7 @@ export const businessProfileAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || businessProfileAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || businessProfileAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -34142,6 +34749,7 @@ import { invoiceData } from "./invoice.server";
 import { invoiceUi } from "./invoice";
 import { invoiceLineUi } from "./invoice-line";
 import { clientUi, type ClientSettable } from "./client";
+import "./timers.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -34174,7 +34782,7 @@ export const clientAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || clientAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || clientAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -34885,6 +35493,7 @@ import { clientData } from "./client.server";
 import { invoiceLineUi } from "./invoice-line";
 import { invoiceUi, type InvoiceSettable } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
+import "./timers.server";
 
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -34916,7 +35525,7 @@ export const invoiceAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || invoiceAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || invoiceAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -35631,6 +36240,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { invoiceData } from "./invoice.server";
 import { type InvoiceLineSettable } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
+import "./timers.server";
 
 /** Who may read, create, change and delete invoice lines. */
 export const invoiceLineAccess: ModelAccess = {
@@ -35642,7 +36252,7 @@ export const invoiceLineAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || invoiceLineAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || invoiceLineAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -36333,6 +36943,165 @@ export const site: LandingSite = { home: "/", menu: [] };
 "
 `;
 
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { and, eq } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import type { Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { log } from "#/kit/log.server";
+import { latestDue, type Clock } from "#/kit/clock";
+import { instantOf, wallTime } from "#/kit/zoned";
+import { markOverdueFits } from "./actions/mark-overdue";
+import { runMarkOverdue } from "./actions/mark-overdue.server";
+import { app } from "./app";
+import { invoiceData } from "./invoice.server";
+
+const DAY = 24 * 60 * 60 * 1000;
+/** A run that fails is tried again on the next ticks, this many times in all. */
+const TRIES = 3;
+
+/** The app itself, as a timer runs: no role's grants apply (docs/design/timed-actions.md §2). */
+const as = (timer: string): Viewer => ({ id: \`timer:\${timer}\`, name: "", email: "", role: "", system: true });
+
+interface Due {
+  timer: string;
+  record: number;
+  due: string;
+}
+/** A record timer: runs what is due after \`from\`; counts what fell due before it and after \`late\` without running. */
+type RecordTimer = (now: Date, from: number, late: number) => Promise<number>;
+/** A clock timer: its clock, and its run for one due time. */
+type ClockTimer = { clock: Clock; run: (due: string) => Promise<void> };
+
+const runs = schema.timerRuns;
+const at = (run: Due) => and(eq(runs.timer, run.timer), eq(runs.record, run.record), eq(runs.due, run.due));
+const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).get() !== undefined;
+
+/** Takes a run: false when it is taken already (done, skipped, given up, or running elsewhere). */
+function take(run: Due): boolean {
+  const before = db.select().from(runs).where(at(run)).get();
+  if (before) return before.outcome === "failed";
+  return db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1;
+}
+
+/** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
+async function attempt(run: Due, model: string | undefined, work: () => Promise<string>) {
+  if (!take(run)) return;
+  try {
+    const outcome = await work();
+    db.update(runs).set({ outcome, ranAt: new Date() }).where(at(run)).run();
+  } catch (error) {
+    const tries = (db.select({ tries: runs.tries }).from(runs).where(at(run)).get()?.tries ?? 0) + 1;
+    const given = tries >= TRIES;
+    db.update(runs).set({ outcome: given ? "given up" : "failed", tries, ranAt: new Date() }).where(at(run)).run();
+    log.error("A timer's run failed", { ...run, tries, error });
+    if (given)
+      audit(db, as(run.timer), {
+        action: "timer given up",
+        model,
+        record: run.record || undefined,
+        details: { error: error instanceof Error ? error.message : String(error) },
+      });
+  }
+}
+
+/** When a timer was first seen, written then: a new timer never runs for a time before it. */
+function seen(timer: string, now: Date): number {
+  const row = db.select({ ranAt: runs.ranAt }).from(runs).where(and(eq(runs.timer, timer), eq(runs.record, 0), eq(runs.due, "seen"))).get();
+  if (row) return row.ranAt.getTime();
+  db.insert(runs).values({ timer, record: 0, due: "seen", outcome: "seen", ranAt: now }).onConflictDoNothing().run();
+  return now.getTime();
+}
+
+/** markOverdue: for each record whose time has come, in the window since \`from\`. */
+const markOverdueTimer: RecordTimer = async (now, from, late) => {
+  let missed = 0;
+  for (const row of db.select({ id: schema.invoices.id, at: schema.invoices.dueOn }).from(schema.invoices).where(eq(schema.invoices.status, "sent")).all()) {
+    if (row.at == null) continue;
+    const due = instantOf(\`\${row.at}T00:00\`, app.timeZone).getTime() + 604800000;
+    if (due > now.getTime()) continue;
+    const run = { timer: "markOverdue", record: row.id, due: new Date(due).toISOString() };
+    if (due <= from) {
+      if (due > late && !ran(run)) missed++;
+      continue;
+    }
+    await attempt(run, "Invoice", () => markOverdueRecord(row.id));
+  }
+  return missed;
+};
+
+async function markOverdueRecord(id: number): Promise<string> {
+  const row = await invoiceData.get(as("markOverdue"), id);
+  if (!row) return "gone";
+  // A record its action's condition does not fit is skipped, and Activity says so.
+  if (!markOverdueFits(row)) {
+    audit(db, as("markOverdue"), { action: "timer skipped", model: "Invoice", record: id, details: { action: "markOverdue" } });
+    return "skipped";
+  }
+  await runMarkOverdue(as("markOverdue"), id);
+  return "done";
+}
+
+const RECORD_TIMERS: Record<string, RecordTimer> = {
+  "markOverdue": markOverdueTimer,
+};
+const CLOCK_TIMERS: Record<string, ClockTimer> = {
+};
+
+/** The last tick, kept as the row of timer "": a server down for a while catches up from it. */
+const LAST = { timer: "", record: 0, due: "tick" };
+
+/** One tick: every timer, what has come due since the last. */
+export async function tick(now = new Date()): Promise<void> {
+  const last = db.select({ ranAt: runs.ranAt }).from(runs).where(at(LAST)).get()?.ranAt.getTime() ?? now.getTime();
+  for (const [name, timer] of Object.entries(RECORD_TIMERS)) {
+    try {
+      const first = seen(name, now);
+      // Due within the last day runs late; older is skipped, said once per tick.
+      const missed = await timer(now, Math.max(first, now.getTime() - DAY), Math.max(first, last - DAY));
+      if (missed) audit(db, as(name), { action: "timer skipped", details: { late: missed } });
+    } catch (error) {
+      log.error("A timer could not run", { timer: name, error });
+    }
+  }
+  for (const [name, timer] of Object.entries(CLOCK_TIMERS)) {
+    try {
+      const since = Math.max(seen(name, now), last);
+      const due = latestDue(timer.clock, new Date(since), now, app.timeZone);
+      if (due) await timer.run(due);
+    } catch (error) {
+      log.error("A timer could not run", { timer: name, error });
+    }
+  }
+  db.insert(runs).values({ ...LAST, outcome: "done", ranAt: now }).onConflictDoUpdate({ target: [runs.timer, runs.record, runs.due], set: { ranAt: now } }).run();
+}
+
+/**
+ * Runs one timer as if its time had come (\`smithable timers run\`): a record timer for what fell
+ * due in the day before \`now\`, a clock timer once, keyed by \`now\`'s minute.
+ */
+export async function runTimer(name: string, now = new Date()): Promise<void> {
+  const record = RECORD_TIMERS[name];
+  if (record) {
+    await record(now, now.getTime() - DAY, now.getTime() - DAY);
+    return;
+  }
+  const clock = CLOCK_TIMERS[name];
+  if (!clock) throw new Error(\`There is no timer \${name}.\`);
+  await clock.run(wallTime(now, app.timeZone));
+}
+
+// Every minute in production, from a second past the minute.
+if (import.meta.env.SSR && import.meta.env.PROD) {
+  const next = () =>
+    setTimeout(() => void tick().catch((error) => log.error("The timers' tick failed", { error })).finally(next), 60_000 - (Date.now() % 60_000) + 1000).unref();
+  next();
+}
+"
+`;
+
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/uploads.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // The records' pictures and documents: which data function and access each one goes through (src/routes/files/).
@@ -36772,7 +37541,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -37059,7 +37828,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -37302,7 +38071,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -38332,6 +39101,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
   "generated: src/generated/access.test.ts",
+  "generated: src/generated/actions/mark-overdue.server.ts",
+  "generated: src/generated/actions/mark-overdue.ts",
   "generated: src/generated/actions/mark-paid.server.ts",
   "generated: src/generated/actions/mark-paid.ts",
   "generated: src/generated/actions/mark-sent.server.ts",
@@ -38359,6 +39130,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: src/generated/pages.ts",
   "generated: src/generated/roles.ts",
   "generated: src/generated/site.ts",
+  "generated: src/generated/timers.server.ts",
   "generated: src/generated/uploads.ts",
   "kit: src/kit/ActionButton.tsx",
   "kit: src/kit/ActivityLog.tsx",
@@ -38393,6 +39165,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
+  "kit: src/kit/clock.ts",
   "kit: src/kit/consent.ts",
   "kit: src/kit/csv.ts",
   "kit: src/kit/filter.ts",
@@ -38482,36 +39255,39 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "34fca66d generated",
+  "src/db/schema.ts": "0a45fa1f generated",
   "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "d2fd305f generated",
+  "src/generated/access.test.ts": "2ee3b41d generated",
+  "src/generated/actions/mark-overdue.server.ts": "98d60677 generated",
+  "src/generated/actions/mark-overdue.ts": "0d9e8b05 generated",
   "src/generated/actions/mark-paid.server.ts": "8868fcdf generated",
   "src/generated/actions/mark-paid.ts": "d8e8e230 generated",
   "src/generated/actions/mark-sent.server.ts": "a4615a67 generated",
   "src/generated/actions/mark-sent.ts": "074ce2ea generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "8eb5f996 generated",
+  "src/generated/ask.server.ts": "810be1a4 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "1bcbbb0d generated",
+  "src/generated/business-profile.server.ts": "a9bc6b16 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "ca35b83d generated",
+  "src/generated/client.server.ts": "83ccddc2 generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "62d0247c generated",
+  "src/generated/invoice-line.server.ts": "f7bcb55f generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "3ca0493a generated",
+  "src/generated/invoice.server.ts": "4b5ad493 generated",
   "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "4b29e5a5 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
+  "src/generated/timers.server.ts": "569989c5 generated",
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
@@ -38525,7 +39301,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
@@ -38538,7 +39314,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SelectionBar.tsx": "04614292 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -38546,6 +39322,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/assistant.server.ts": "52ff3483 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/clock.ts": "8f18d8c9 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
@@ -38569,7 +39346,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
@@ -38578,7 +39355,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "8917ea9a generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "c7e4a008 generated",
+  "src/routes/clients/$id.tsx": "350b3d17 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
   "src/routes/clients/new.tsx": "0909bfea generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -38586,10 +39363,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "04978b35 generated",
-  "src/routes/invoice-lines/$id.tsx": "fdf19783 generated",
+  "src/routes/invoice-lines/$id.tsx": "8b97d0fe generated",
   "src/routes/invoice-lines/index.tsx": "49077b68 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
-  "src/routes/invoices/$id.tsx": "9273081c generated",
+  "src/routes/invoices/$id.tsx": "c81cad15 generated",
   "src/routes/invoices/index.tsx": "e953277d generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
   "src/routes/overview/index.tsx": "0f36177f generated",
@@ -40664,7 +41441,7 @@ export const dishAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || dishAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || dishAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -41215,7 +41992,7 @@ export const orderAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || orderAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || orderAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -41661,7 +42438,7 @@ export const orderLineAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || orderLineAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || orderLineAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -42200,7 +42977,7 @@ export const stopAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || stopAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || stopAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -43315,7 +44092,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -43748,7 +44525,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -44334,7 +45111,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -44645,9 +45422,15 @@ const getActivity = createServerFn()
         ),
       ],
     ]);
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -45368,23 +46151,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "edfce461 generated",
+  "src/generated/dish.server.ts": "26d9aa94 generated",
   "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "4d4bac81 generated",
+  "src/generated/order-line.server.ts": "4d01ce54 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "e4bf366f generated",
+  "src/generated/order.server.ts": "3f206de0 generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "844b85db generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "c208fcb8 generated",
+  "src/generated/stop.server.ts": "067de185 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -45399,7 +46182,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "0cc2330f kit",
@@ -45412,7 +46195,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "aa08bba3 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
@@ -45439,7 +46222,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
@@ -45448,7 +46231,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "c9b7fba0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/dishes/$id.tsx": "3ae8d79c generated",
+  "src/routes/dishes/$id.tsx": "e9b50311 generated",
   "src/routes/dishes/index.tsx": "a1df2b33 generated",
   "src/routes/dishes/new.tsx": "3ac97d16 generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -45456,16 +46239,16 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "3c987813 generated",
-  "src/routes/orders/$id.tsx": "97ba757d generated",
+  "src/routes/orders/$id.tsx": "672f3f38 generated",
   "src/routes/orders/index.tsx": "70f7b156 generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
   "src/routes/sign-in.tsx": "708939ab generated",
   "src/routes/sitemap[.]xml.ts": "c3f0b7d5 generated",
-  "src/routes/stops/$id.tsx": "40e092f5 generated",
+  "src/routes/stops/$id.tsx": "893f7544 generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
-  "src/routes/team/activity.tsx": "0f6eab93 generated",
+  "src/routes/team/activity.tsx": "d3324158 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
   "src/routes/where/index.tsx": "61898dc7 generated",
   "src/start.ts": "ca04f376 kit",
@@ -46842,7 +47625,7 @@ export const REVIEWERS: string[] = ["admin"];
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || itemAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || itemAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -48049,7 +48832,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -48505,7 +49288,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -48877,7 +49660,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -49758,7 +50541,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "014e35aa generated",
+  "src/generated/item.server.ts": "7f4cd1d5 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -49778,7 +50561,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
@@ -49791,7 +50574,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "04614292 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "4ecf379d kit",
@@ -49819,14 +50602,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "8a68b445 generated",
+  "src/routes/$id.tsx": "4189a15e generated",
   "src/routes/__root.tsx": "133c6066 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -49834,14 +50617,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "24ab9545 generated",
-  "src/routes/my-items/$id.tsx": "1db8e672 generated",
+  "src/routes/my-items/$id.tsx": "c0ced6db generated",
   "src/routes/my-items/index.tsx": "9a927b2e generated",
   "src/routes/my-items/new.tsx": "0a1bdc48 generated",
   "src/routes/new.tsx": "e97af4c3 generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "e17b4654 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "06067542 generated",
+  "src/routes/saved/$id.tsx": "9841a3f1 generated",
   "src/routes/saved/index.tsx": "5a3f02fe generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "96119430 generated",
@@ -51119,7 +51902,7 @@ export const itemAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || itemAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || itemAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -52116,7 +52899,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -52889,7 +53672,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "a94bc93d generated",
+  "src/generated/item.server.ts": "7a427dec generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -52904,7 +53687,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Combobox.tsx": "16f63d0e kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
@@ -52915,7 +53698,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "04614292 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "4ecf379d kit",
@@ -52940,7 +53723,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
@@ -52951,7 +53734,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c2353742 generated",
-  "src/routes/items/$id.tsx": "15aad64f generated",
+  "src/routes/items/$id.tsx": "001d1444 generated",
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
@@ -56259,7 +57042,7 @@ export const componentAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || componentAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || componentAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -56972,7 +57755,7 @@ export const incidentAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || incidentAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || incidentAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -57612,7 +58395,7 @@ export const incidentUpdateAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || incidentUpdateAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || incidentUpdateAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -58363,7 +59146,7 @@ export const maintenanceAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || maintenanceAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || maintenanceAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -60955,7 +61738,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -61442,7 +62225,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -61914,7 +62697,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -62497,9 +63280,15 @@ const getActivity = createServerFn()
     // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
     for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
       named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -62755,7 +63544,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -63455,20 +64244,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "f81bbe12 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "adca2f53 generated",
+  "src/generated/component.server.ts": "7dbe4c36 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "c19657d7 generated",
+  "src/generated/incident-update.server.ts": "95740af8 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "61aec32e generated",
+  "src/generated/incident.server.ts": "006a49a7 generated",
   "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "23ac5d0f generated",
+  "src/generated/maintenance.server.ts": "e2f2fb68 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "17555166 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -63488,7 +64277,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/Landing.tsx": "565c8de8 kit",
@@ -63503,7 +64292,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "aa08bba3 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
@@ -63531,7 +64320,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
@@ -63548,17 +64337,17 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "f25b8dbb generated",
+  "src/routes/components/$id.tsx": "2a8547fc generated",
   "src/routes/components/index.tsx": "d167b8eb generated",
   "src/routes/components/new.tsx": "bb94e5ee generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "e6010bcb generated",
-  "src/routes/incidents/$id.tsx": "96aceca6 generated",
+  "src/routes/incidents/$id.tsx": "75decb97 generated",
   "src/routes/incidents/index.tsx": "5697fa30 generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
   "src/routes/index.tsx": "98dbe74c generated",
-  "src/routes/maintenance/$id.tsx": "1a54ed4d generated",
+  "src/routes/maintenance/$id.tsx": "dd96b09a generated",
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
   "src/routes/mcp.ts": "0d8813db generated",
@@ -63566,9 +64355,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "708939ab generated",
   "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
-  "src/routes/team/activity.tsx": "916ddbdb generated",
+  "src/routes/team/activity.tsx": "c5f9047a generated",
   "src/routes/team/index.tsx": "f53943cc generated",
-  "src/routes/updates/$id.tsx": "f63d4a31 generated",
+  "src/routes/updates/$id.tsx": "6f71d0c0 generated",
   "src/routes/updates/index.tsx": "544b43a8 generated",
   "src/routes/updates/new.tsx": "9bff0965 generated",
   "src/start.ts": "ca04f376 kit",
@@ -66021,7 +66810,7 @@ export const messageAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || messageAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || messageAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -66848,7 +67637,7 @@ export const supportCaseAccess: ModelAccess = {
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || supportCaseAccess.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || supportCaseAccess.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 
@@ -68305,7 +69094,7 @@ const getHistory = createServerFn()
       .map((r) => ({
         id: r.id,
         at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : w.aRemovedUser(r.who))),
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
         action: r.action,
         fields: r.fields,
         details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
@@ -69133,9 +69922,15 @@ const getActivity = createServerFn()
         ),
       ],
     ]);
-    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
@@ -69769,13 +70564,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "b3cb7e21 generated",
+  "src/generated/message.server.ts": "9a5a978a generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "d9f41429 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "3af98d48 generated",
+  "src/generated/support-case.server.ts": "aba34b31 generated",
   "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
@@ -69792,7 +70587,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "6c41870f kit",
+  "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "0cc2330f kit",
@@ -69804,7 +70599,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "dd81e356 kit",
   "src/kit/Users.tsx": "aa08bba3 kit",
-  "src/kit/access.ts": "4e4f90b5 kit",
+  "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "4ecf379d kit",
@@ -69834,7 +70629,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e9ebf120 kit",
+  "src/kit/words/en.ts": "bdac936f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",
@@ -69843,7 +70638,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "83ba828d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/cases/$id.tsx": "89c51a5c generated",
+  "src/routes/cases/$id.tsx": "e873cd0b generated",
   "src/routes/cases/index.tsx": "891a3c3e generated",
   "src/routes/cases/new.tsx": "2360043b generated",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -69854,7 +70649,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "6a89e0fa generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e3a9f60c generated",
-  "src/routes/team/activity.tsx": "85ed449b generated",
+  "src/routes/team/activity.tsx": "7ddaee84 generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",

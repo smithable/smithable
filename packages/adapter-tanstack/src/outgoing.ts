@@ -32,7 +32,8 @@ import {
 
 /**
  * The entries of the outgoing section a record's change fires: mail, and calls to named targets.
- * Entries on a timer fire from the timers' tick (timed-actions.md §5), not from a write.
+ * Entries on a timer fire from the timers' tick (timed-actions.md §5), not from a write: they are
+ * in the module's table as "timer:<name>", which no write says.
  */
 export function outgoingOf(ir: SpecIR): OutgoingIR[] {
   return ir.outgoing.filter((o) => !("timer" in o.when));
@@ -52,7 +53,7 @@ export function outgoingModule(
   ux: UxIR,
   content: ContentIR | undefined,
 ): string {
-  const entries = outgoingOf(ir);
+  const entries = ir.outgoing;
   const tables = new Set<string>();
   let users = false;
   // A user's name shown in the mail (the schema's user table, not the people() helper).
@@ -223,7 +224,11 @@ ${apiFields(model)
     const model = modelNamed(ir, o.when.model);
     const words = content?.outgoing?.[o.name];
     const when =
-      "event" in o.when ? o.when.event : "action" in o.when ? o.when.action : o.when.timer;
+      "event" in o.when
+        ? o.when.event
+        : "action" in o.when
+          ? o.when.action
+          : `timer:${o.when.timer}`;
     const fits = conditions(o);
     return `  {
     name: ${JSON.stringify(o.name)},

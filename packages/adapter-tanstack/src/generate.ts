@@ -36,7 +36,7 @@ import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formula
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
-import { outgoingModule, outgoingOf } from "./outgoing.js";
+import { outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { hasInspector } from "./pages/data.js";
@@ -63,6 +63,7 @@ import { smokeTests } from "./smoke.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
 import { themeCss } from "./themes.js";
+import { timersModule } from "./timers.js";
 import { rolesModule, usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
 const SCAFFOLD = new Set([
@@ -644,7 +645,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       // The public site's menu and contact details, for its landing pages and public blogs.
       ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
-      ...(outgoingOf(ir).length
+      ...(ir.outgoing.length
         ? [
             generated(
               "src/generated/outgoing.server.ts",
@@ -755,7 +756,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       {
         // Outgoing mail (integrations.md §4.1b): the outbox and its sender.
         files: ["src/kit/outgoing.ts", "src/kit/outgoing.server.ts", "src/kit/call.server.ts"],
-        used: ({ ir }) => outgoingOf(ir).length > 0,
+        used: ({ ir }) => ir.outgoing.length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).
@@ -933,6 +934,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ? [custom(`src/custom/incoming/${kebab(incoming.name)}.ts`, incomingStub(incoming))]
           : []),
       ]),
+  },
+  {
+    key: "timers",
+    // What the app does on a clock (docs/design/timed-actions.md): the minute's tick.
+    kit: [{ files: ["src/kit/clock.ts"], used: ({ ir }) => ir.timers.length > 0 }],
+    files: ({ ir, t }) =>
+      ir.timers.length ? [generated("src/generated/timers.server.ts", timersModule(ir, t))] : [],
   },
   {
     key: "queries",

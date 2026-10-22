@@ -856,7 +856,8 @@ test("a removal leaves onboarding steps without the field, and is refused while 
     ...invoicing,
     spec: invoicing.spec
       .replace(/\nactions:\n[\s\S]*?\n\n/, "\n")
-      // The outgoing mail on markSent goes with the actions.
+      // The timer that runs markOverdue, and the outgoing mail on markSent, go with the actions.
+      .replace(/\n# What the app does on a clock[\s\S]*?\n\n/, "\n")
       .replace(/\noutgoing:\n[\s\S]*?\n\n/, "\n")
       .replace("    actions: [markSent, markPaid]\n", ""),
   };
