@@ -19159,7 +19159,6 @@ import { deleteSession, getSession, sessionUi, updateSession } from "#/generated
 import { sessionSchema } from "#/generated/session.schema";
 import { bookingPlaces, bookingUi, deleteBooking, reserveBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
-import { app } from "#/generated/app";
 import { buttonVariants } from "#/components/ui/button";
 import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
@@ -20270,7 +20269,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "4be9ce95 generated",
   "src/routes/schedule/index.tsx": "ece71910 generated",
-  "src/routes/sessions/$id.tsx": "493e80f0 generated",
+  "src/routes/sessions/$id.tsx": "5ee48cd4 generated",
   "src/routes/sessions/index.tsx": "1a15b581 generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",
