@@ -182,13 +182,38 @@ const crud: PagePattern<"crud"> = {
     if (f && page.pattern.model === f.model) {
       for (const key of ["search", "filters", "sortable"])
         followInList(spec, ["pages", page.id, key], f.from, f.to, 3);
-      // The contact block's user field follows a rename; when the field goes, it mails the owner.
-      if (page.contact && page.contact.to === f.from) {
-        const short = ["pages", page.id, "contact"];
-        const long = [...short, "to"];
-        if (spec.has(long)) spec.set(long, f.to ?? "owner");
-        else if (spec.has(short)) spec.set(short, f.to ?? "owner");
+      // The field's default filter follows its name, and goes with the field.
+      const defaulted = ["pages", page.id, "defaultFilter", f.from];
+      if (spec.has(defaulted)) {
+        if (f.to) spec.renameKey(defaulted, f.to);
+        else spec.removeAndPrune(defaulted, 3);
       }
+    }
+    // A choice's renamed values follow into its default filter; values that are gone leave it,
+    // and a default with none left goes.
+    if (
+      effect.kind === "change-field" &&
+      page.pattern.model === effect.model &&
+      page.defaultFilter?.[effect.field] !== undefined
+    ) {
+      const path = ["pages", page.id, "defaultFilter", effect.field];
+      const kept = [
+        ...new Set(
+          (page.defaultFilter[effect.field] as string)
+            .split(",")
+            .map((v) => effect.renamed?.[v.trim()] ?? v.trim())
+            .filter((v) => !effect.choices || effect.choices.includes(v)),
+        ),
+      ];
+      if (!kept.length) spec.removeAndPrune(path, 3);
+      else spec.set(path, kept.length > 1 ? kept : (kept[0] as string));
+    }
+    // The contact block's user field follows a rename; when the field goes, it mails the owner.
+    if (f && page.pattern.model === f.model && page.contact && page.contact.to === f.from) {
+      const short = ["pages", page.id, "contact"];
+      const long = [...short, "to"];
+      if (spec.has(long)) spec.set(long, f.to ?? "owner");
+      else if (spec.has(short)) spec.set(short, f.to ?? "owner");
     }
     return undefined;
   },

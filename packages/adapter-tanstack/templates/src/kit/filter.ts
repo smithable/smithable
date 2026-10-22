@@ -1,17 +1,34 @@
 // Smithable app kit: the condition for records in a list filter's range (src/kit/Filters.tsx).
-import { and, asc, type Column, desc, gte, lte, type SQL } from "drizzle-orm";
+import { and, asc, type Column, desc, gte, lt, lte, type SQL } from "drizzle-orm";
+import { instantOf, RELATIVE, type Relative, relativeDays } from "./zoned";
 
 /**
  * Records whose value lies in a filter's range, "from..to" with either side left out: numbers
  * (amounts in the currency's units, stored in cents with `scale` 100), or dates as written
  * ("2026-10-05"; a date and time column compares from the start of "from" to the end of "to").
+ * A date filter also takes a relative value (upcoming, past, today, thisWeek, thisMonth), read
+ * when the query runs in the app's time zone: "upcoming" is from this moment, "past" before it.
+ * "all" is no condition.
  */
 export function inRange(
   column: Column,
   text: string,
   kind: "number" | "date" | "instant",
   scale = 1,
+  timeZone?: string,
 ): SQL | undefined {
+  if (text === "all") return undefined;
+  if (kind !== "number" && (RELATIVE as readonly string[]).includes(text)) {
+    const now = new Date();
+    if (kind === "instant" && (text === "upcoming" || text === "past"))
+      return text === "upcoming" ? gte(column, now) : lt(column, now);
+    const { from, to } = relativeDays(text as Relative, now, timeZone);
+    const at = (day: string) => (kind === "date" ? day : instantOf(`${day}T00:00`, timeZone));
+    return and(
+      from === undefined ? undefined : gte(column, at(from)),
+      to === undefined ? undefined : lt(column, at(to)),
+    );
+  }
   const [from = "", to = ""] = text.split("..").map((v) => v.trim());
   const bound = (value: string, end: boolean) => {
     if (!value) return undefined;

@@ -69,10 +69,15 @@ function filterCode(
   ownOnly?: boolean,
   /** The records whose conversation has a message the viewer has not read (conversation.md §1). */
   unread?: boolean,
+  /** The filters shown when the list is first reached (the ux file); the rest fold. */
+  shown?: string[],
 ) {
   const n = names(model, t);
   const conditions: string[] = [];
   const controls: Record<string, unknown>[] = [];
+  // A date filter's relative values are read in the app's time zone.
+  let dated = false;
+  const fold = (name: string) => (shown && !shown.includes(name) ? { folded: true } : {});
   const options: string[] = [];
   const modules: { module: string; data: string }[] = [];
   let ranges = false;
@@ -108,7 +113,7 @@ function filterCode(
       conditions.push(
         `data.f?.owner === "mine" && viewer ? eq(${n.table}.${ownerKey(model)}, viewer.id) : undefined`,
       );
-      controls.push({ name, label: "Mine", kind: "mine" });
+      controls.push({ name, label: "Mine", kind: "mine", ...fold(name) });
       continue;
     }
     const auto = AUTOMATIC[name];
@@ -116,10 +121,11 @@ function filterCode(
     const value = `data.f?.${name}`;
     if (auto) {
       ranges = true;
+      dated = true;
       conditions.push(
-        `${value} ? inRange(${n.table}.${auto.key}, ${value}, "instant") : undefined`,
+        `${value} ? inRange(${n.table}.${auto.key}, ${value}, "instant", 1, app.timeZone) : undefined`,
       );
-      controls.push({ name, label: auto.label, kind: "range", input: "date" });
+      controls.push({ name, label: auto.label, kind: "range", input: "date", ...fold(name) });
       continue;
     }
     if (!field) continue;
@@ -138,6 +144,7 @@ function filterCode(
         options: code(
           `${n.ui}.fields.find((f) => f.name === ${JSON.stringify(dataKey(field))})?.choices`,
         ),
+        ...fold(name),
       });
     } else if (
       field.type.kind === "relation" &&
@@ -157,7 +164,13 @@ function filterCode(
       options.push(
         `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`,
       );
-      controls.push({ name, label, kind: "chips", options: code(`options.${name}`) });
+      controls.push({
+        name,
+        label,
+        kind: "chips",
+        options: code(`options.${name}`),
+        ...fold(name),
+      });
     } else if (
       field.type.kind === "relation" &&
       !field.type.many &&
@@ -174,27 +187,35 @@ function filterCode(
       options.push(
         `${name}: viewer ? db.select({ value: schema.user.id, label: schema.user.name }).from(schema.user).orderBy(asc(schema.user.name)).all() : []`,
       );
-      controls.push({ name, label, kind: "person", options: code(`options.${name}`) });
+      controls.push({
+        name,
+        label,
+        kind: "person",
+        options: code(`options.${name}`),
+        ...fold(name),
+      });
     } else if (field.type.kind === "scalar") {
       const kind = field.type.name;
       if (["int", "decimal", "money", "date", "datetime"].includes(kind)) {
         ranges = true;
         const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
+        if (kind === "date" || kind === "datetime") dated = true;
         conditions.push(
-          `${value} ? inRange(${n.table}.${dataKey(field)}, ${value}, ${how}${kind === "money" ? ", 100" : ""}) : undefined`,
+          `${value} ? inRange(${n.table}.${dataKey(field)}, ${value}, ${how}${kind === "money" ? ", 100" : kind === "date" || kind === "datetime" ? ", 1, app.timeZone" : ""}) : undefined`,
         );
         controls.push({
           name,
           label,
           kind: "range",
           input: kind === "date" || kind === "datetime" ? "date" : "number",
+          ...fold(name),
         });
       } else if (kind === "bool") {
         toggles = true;
         conditions.push(
           `${value} === "true" || ${value} === "false" ? eq(${n.table}.${dataKey(field)}, ${value} === "true") : undefined`,
         );
-        controls.push({ name, label, kind: "toggle" });
+        controls.push({ name, label, kind: "toggle", ...fold(name) });
       }
     }
   }
@@ -241,7 +262,8 @@ function filterCode(
     mine,
     unread,
     favorites,
-    imports: { ranges, lists, titles, people, toggles: toggles || mine },
+    defaults: page.defaultFilter,
+    imports: { ranges, dated, lists, titles, people, toggles: toggles || mine },
   };
 }
 
@@ -260,12 +282,14 @@ export function searchCode(
   /** The list's order until someone sorts it, as an SQL expression (the ux file's sort). */
   order?: string,
   unread?: boolean,
+  /** The filters shown first (the ux file); the rest fold. */
+  shown?: string[],
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
     !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly || unread)
-      ? filterCode(page, model, t, ir, favorites, ownOnly, unread)
+      ? filterCode(page, model, t, ir, favorites, ownOnly, unread, shown)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -317,7 +341,13 @@ export function searchCode(
 /** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
   .validator(listQuery)
-  .handler(async ({ data }) => {
+  .handler(async ({ data${filtering.defaults ? ": given" : ""} }) => {${
+    filtering.defaults
+      ? `
+    // The page's default filters, where the address says nothing ("all" clears one).
+    const data = { ...given, f: withDefaults(given.f ?? {}, ${literal(filtering.defaults)}) };`
+      : ""
+  }
     const viewer = await currentViewer();${
       favorites
         ? `
@@ -440,7 +470,18 @@ export function listParts(
       : undefined;
   const search =
     page.search?.length || filtered
-      ? searchCode(page, model, t, ir, within, favorites, ownOnly, order, Boolean(threadField))
+      ? searchCode(
+          page,
+          model,
+          t,
+          ir,
+          within,
+          favorites,
+          ownOnly,
+          order,
+          Boolean(threadField),
+          ux.pages[page.id]?.filtersShown,
+        )
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
   const searchable = Boolean(page.search?.length);
@@ -486,6 +527,8 @@ export function listParts(
     if (filtering?.imports.people)
       route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
     if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
+    if (filtering?.imports.dated) route.add("#/generated/app", "app");
+    if (filtering?.defaults) route.add("#/kit/params", "withDefaults");
     if (filtering?.imports.titles) route.add("#/kit/format", "titleOf");
     if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");
     for (const t of search.imports.titled) route.add(t.module, t.data);
@@ -662,7 +705,7 @@ ${
   filtering && (filtering.controls.length || filtering.sorts.length)
     ? `      <Filters
         filters={${literal(filtering.controls)}}
-        values={values}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
+        values={${filtering.defaults ? `withDefaults(values, ${literal(filtering.defaults)})` : "values"}}${filtering.defaults ? `\n        defaults={${literal(filtering.defaults)}}` : ""}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
         onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true, resetScroll: false })}
       />
 `

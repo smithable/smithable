@@ -50,6 +50,11 @@ export interface PageUx {
   icon?: Icon;
   /** The table's columns, in order. */
   columns?: string[];
+  /**
+   * The filters shown when the list is first reached; the rest fold behind "More filters" (one
+   * with a value in the address shows anyway). Without it, every filter shows.
+   */
+  filtersShown?: string[];
   /** A second field shown under a column's value, e.g. { email: "phone" }. */
   below?: Record<string, string>;
   /** The list's order until someone sorts it: a field, or "-field" for descending. */
@@ -492,9 +497,34 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form", "record", "sections", "theme"],
+          allowed: ["icon", "table", "form", "record", "sections", "theme", "filters"],
           later: ["detail", "calendar"],
         })) {
+          if (part.key === "filters") {
+            // Which of the page's filters show first; the page's filters are the spec's.
+            const offered = spec.filters ?? [];
+            for (const option of checkKeys(
+              ctx,
+              mapEntries(ctx, part.value, `the filters of ${where}`) ?? [],
+              `the filters of ${where}`,
+              { allowed: ["shown"] },
+            )) {
+              const names = readNameList(ctx, option.value, `"shown" of the filters of ${where}`);
+              const shown: string[] = [];
+              for (const { name, at } of names) {
+                if (!offered.includes(name))
+                  ctx.error(
+                    at,
+                    "unknown-filter",
+                    `${page.key} has no filter named "${name}" to show first; its filters are ${offered.length ? offered.join(", ") : "none"} (smithable.yml).`,
+                    didYouMean(name, offered),
+                  );
+                else if (!shown.includes(name)) shown.push(name);
+              }
+              result.filtersShown = shown;
+            }
+            continue;
+          }
           if (part.key === "sections") {
             result.looks = readSectionLooks(ctx, part.value, spec, where);
             continue;
