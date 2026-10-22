@@ -1,8 +1,15 @@
 import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
+import type { PageIR } from "../ir.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { pageModel } from "../patterns.js";
+import { isOwnSection, pageModel, partSections } from "../patterns.js";
+
+/** Where a page's sections are written: a landing page's under "landing", any other's under "sections". */
+function sectionsPath(page: PageIR): string[] {
+  return ["pages", page.id, page.pattern.kind === "landing" ? "landing" : "sections"];
+}
+
 import { filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
@@ -870,27 +877,44 @@ const addSection: Operation<{
   page: string;
   section: string;
   records?: string;
+  view?: "cards" | "table" | "calendar";
+  starts?: string;
   where?: Record<string, string | boolean | string[]>;
   form?: string;
   button?: string;
   custom?: string;
+  text?: boolean;
 }> = {
   name: "addSection",
-  summary: `Add a section to a landing page: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards). Its texts go in smithable.content.yml.`,
+  summary: `Add a section to a page, below its others: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
   schema: {
     type: "object",
     required: ["page", "section"],
     additionalProperties: false,
     properties: {
-      page: refTo({ ref: "page", label: "Page" }, { description: "The landing page, e.g. home." }),
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home or about." }),
       section: {
         type: "string",
-        description: `A kind (${KINDS.join(", ")}) or, with records, any name.`,
+        description: `A kind (${KINDS.join(", ")}) or, with records, text or custom, any name.`,
       },
       records: refTo(
         { ref: "model", label: "Records of" },
-        { description: "A model whose records the section shows as cards." },
+        { description: "A model whose records the section shows." },
       ),
+      view: {
+        type: "string",
+        enum: ["cards", "table", "calendar"],
+        description: "With records: as cards (the default), a table or a calendar.",
+      },
+      starts: {
+        type: "string",
+        description: "A calendar view: the date field the records are placed by.",
+      },
+      text: {
+        type: "boolean",
+        description:
+          "A text section, any name: a heading and paragraphs from smithable.content.yml.",
+      },
       where: {
         type: "object",
         description:
@@ -914,37 +938,46 @@ const addSection: Operation<{
   positional: ["page", "section"],
   describe: ({ page, section }) => `Add a ${section} section to the ${page} page`,
   destructive: () => false,
-  apply({ spec }, { page, section, records, where, form, button, custom }, ir) {
+  apply({ spec }, { page, section, records, view, starts, where, form, button, custom, text }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) throw new OperationError(`There is no page named "${page}".`);
-    if (existing.pattern.kind !== "landing")
-      throw new OperationError(
-        `Page "${page}" is a ${existing.pattern.kind} page, not a landing page.`,
-      );
-    if (existing.pattern.sections.some((s) => s.name === section))
+    if (existing.sections.some((s) => s.name === section))
       throw new OperationError(`The ${page} page already has a section named "${section}".`);
     if (custom) componentName(custom);
-    if (!records && !custom && !(KINDS as readonly string[]).includes(section))
+    if ([records, custom, text].filter(Boolean).length > 1)
+      throw new OperationError("A section shows records, or is text, or is custom: one of them.");
+    if (!records && !custom && !text && !(KINDS as readonly string[]).includes(section))
       throw new OperationError(
-        `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records.`,
+        `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records, text or custom.`,
       );
     if (where && Object.keys(where).length && !records)
       throw new OperationError('Only a section with records has a "where".');
+    if ((view || starts) && !records)
+      throw new OperationError("Only a section with records has a view.");
+    if (starts && view !== "calendar")
+      throw new OperationError('"starts" goes with the calendar view.');
     const options = {
       ...(records ? { records } : {}),
+      ...(view && view !== "cards" ? { view } : {}),
+      ...(starts ? { starts } : {}),
       ...(where && Object.keys(where).length ? { where: conditionArgs(where) } : {}),
       ...(form ? { form } : {}),
       ...(button ? { button } : {}),
       ...(custom ? { custom } : {}),
+      ...(text ? { text: null } : {}),
     };
-    spec.add(["pages", page, "landing"], section, options);
+    const path = sectionsPath(existing);
+    if (spec.has(path) && spec.get(path) != null) spec.add(path, section, options);
+    else if (spec.has(path)) spec.set(path, { [section]: options });
+    else spec.add(["pages", page], path[2] as string, { [section]: options });
     return [];
   },
 };
 
 const removeSection: Operation<{ page: string; section: string }> = {
   name: "removeSection",
-  summary: "Remove a section from a landing page, with its texts.",
+  summary:
+    "Remove a section from a page, with its texts. A page kind's own part (a crud page's list) stays.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -959,14 +992,21 @@ const removeSection: Operation<{ page: string; section: string }> = {
   destructive: () => false,
   apply({ spec }, { page, section }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
-    if (
-      existing?.pattern.kind !== "landing" ||
-      !existing.pattern.sections.some((s) => s.name === section)
-    )
+    const found = existing?.sections.find((s) => s.name === section);
+    if (!existing || !found)
       throw new OperationError(`The ${page} page has no section named "${section}".`);
-    if (existing.pattern.sections.length === 1)
-      throw new OperationError("A landing page needs at least one section.");
-    spec.remove(["pages", page, "landing", section]);
+    if (isOwnSection(found))
+      throw new OperationError(
+        `The ${section} section is the ${page} page's own, as a ${existing.pattern.kind} page; remove the page or change its kind instead.`,
+      );
+    if (
+      (existing.pattern.kind === "landing" || existing.pattern.kind === "sections") &&
+      partSections(existing).length === 1
+    )
+      throw new OperationError(
+        `A ${existing.pattern.kind === "landing" ? "landing page" : "page of sections"} needs at least one section.`,
+      );
+    spec.remove([...sectionsPath(existing), section]);
     return [{ kind: "remove-section", page, section }];
   },
 };
@@ -1001,19 +1041,18 @@ const setSectionWhere: Operation<{
   destructive: () => false,
   apply({ spec }, { page, section, where }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
-    const found =
-      existing?.pattern.kind === "landing"
-        ? existing.pattern.sections.find((s) => s.name === section)
-        : undefined;
-    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    const found = existing ? partSections(existing).find((s) => s.name === section) : undefined;
+    if (!existing || !found)
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
     if (!found.model)
       throw new OperationError(`The ${section} section shows no records, so it has no "where".`);
-    const path = ["pages", page, "landing", section, "where"];
+    const at = [...sectionsPath(existing), section];
+    const path = [...at, "where"];
     const conditions = conditionArgs(where ?? {});
     if (!Object.keys(conditions).length) {
       if (spec.has(path)) spec.remove(path);
     } else if (spec.has(path)) spec.set(path, conditions);
-    else spec.add(["pages", page, "landing", section], "where", conditions);
+    else spec.add(at, "where", conditions);
     return [];
   },
 };
@@ -1043,13 +1082,10 @@ const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
   destructive: () => false,
   apply({ spec }, { page, pages = [] }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
-    const hero =
-      existing?.pattern.kind === "landing"
-        ? existing.pattern.sections.find((s) => s.kind === "hero")
-        : undefined;
-    if (!hero) throw new OperationError(`The ${page} page has no hero.`);
+    const hero = existing?.sections.find((s) => s.kind === "hero");
+    if (!existing || !hero) throw new OperationError(`The ${page} page has no hero.`);
     if (pages.length > 4) throw new OperationError("A hero has at most four shortcuts.");
-    const at = ["pages", page, "landing", hero.name];
+    const at = [...sectionsPath(existing), hero.name];
     const path = [...at, "shortcuts"];
     if (pages.length === 0) {
       if (spec.has(path)) spec.remove(path);
@@ -1077,7 +1113,7 @@ export const crudOperations: AnyOperation[] = [
 const moveSection: Operation<{ page: string; section: string; before?: string; after?: string }> = {
   name: "moveSection",
   summary:
-    "Move a landing page's section above or below another of its sections: they show in the order written.",
+    "Move a page's section above or below another of its sections: they show in the order written. A page kind's own part moves once its name is among the sections.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -1101,9 +1137,10 @@ const moveSection: Operation<{ page: string; section: string; before?: string; a
   destructive: () => false,
   apply({ spec }, { page, section, before, after }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
-    const names =
-      existing?.pattern.kind === "landing" ? existing.pattern.sections.map((s) => s.name) : [];
-    if (!names.includes(section))
+    // The sections as written: a page kind's own part is among them only when placed by name.
+    const written = existing ? spec.get(sectionsPath(existing)) : undefined;
+    const names = written && typeof written === "object" ? Object.keys(written as object) : [];
+    if (!existing || !names.includes(section))
       throw new OperationError(`The ${page} page has no section named "${section}".`);
     if ((before ? 1 : 0) + (after ? 1 : 0) !== 1)
       throw new OperationError(
@@ -1113,7 +1150,7 @@ const moveSection: Operation<{ page: string; section: string; before?: string; a
     if (!names.includes(other))
       throw new OperationError(`The ${page} page has no section named "${other}".`);
     if (other === section) throw new OperationError("A section cannot be moved beside itself.");
-    spec.move(["pages", page, "landing"], section, before ? { before } : { after: other });
+    spec.move(sectionsPath(existing), section, before ? { before } : { after: other });
     return [];
   },
 };

@@ -115,6 +115,38 @@ const setTheme: Operation<{
   },
 };
 
+const setFrame: Operation<{ page: string; frame: "site" | "app" | "none" | "default" }> = {
+  name: "setFrame",
+  summary:
+    "Which frame a page shows in: site (the public frame with the top menu), app (the workspace with the side menu) or none (the page alone); default returns to its kind's.",
+  schema: {
+    type: "object",
+    required: ["page", "frame"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      frame: {
+        type: "string",
+        enum: ["site", "app", "none", "default"],
+        description:
+          "site: the public frame; app: the workspace; none: no menu and no header; default: the page kind's own.",
+      },
+    },
+  },
+  positional: ["page", "frame"],
+  describe: ({ page, frame }) =>
+    frame === "default"
+      ? `Show the ${page} page in its usual frame`
+      : `Show the ${page} page ${frame === "none" ? "alone, without a frame" : `in the ${frame} frame`}`,
+  destructive: () => false,
+  apply({ ux }, { page, frame }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    put(ux, ["pages", page, "frame"], frame === "default" ? undefined : frame);
+    return [];
+  },
+};
+
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",
   summary: "Choose which fields a page's table shows, in order (none: back to the default).",
@@ -621,6 +653,7 @@ export const uxOperations: AnyOperation[] = [
   addTheme,
   setTheme,
   setSectionLook,
+  setFrame,
   setColumns,
   setRecordList,
   setFieldOrder,

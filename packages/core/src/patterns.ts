@@ -27,6 +27,7 @@ import {
   type ModelIR,
   type OnboardingStep,
   type PageIR,
+  type PageSection,
   type PatternKind,
   type PatternOf,
   SECTION_KINDS,
@@ -122,6 +123,7 @@ export const LANDING_SECTIONS: Record<
   footer: {},
   calculator: {},
   custom: {},
+  text: {},
 };
 
 function readComponent(ctx: ParseContext, value: ParsedNode | null, where: string) {
@@ -246,122 +248,79 @@ const CALCULATOR_SCHEMA: JsonSchema = {
   description: "Inputs and results computed as you type, stored nowhere.",
 };
 
-const landing: PagePattern<"landing"> = {
-  kind: "landing",
-  schema: {
-    type: "object",
-    description: `Sections of a landing page, in order: ${SECTION_KINDS.join(", ")}.`,
-    additionalProperties: {
-      type: ["object", "null"],
-      additionalProperties: false,
-      properties: {
-        records: { type: "string", description: "A model whose records the section shows." },
-        search: {
-          type: "boolean",
-          description: "A records section with a search box, leading to the model's list page.",
-        },
-        filters: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            "A records section's filters (fields of the model), leading to its list page.",
-        },
-        where: {
-          type: "object",
-          description:
-            "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }.",
-        },
-        button: { type: "string", description: "The page the section's button opens." },
-        shortcuts: {
-          type: "array",
-          items: { type: "string" },
-          maxItems: 4,
-          description: "A hero's shortcuts: up to four pages, shown as round icons.",
-        },
-        limit: {
-          type: "integer",
-          minimum: 1,
-          description: "A records section: how many it shows.",
-        },
-        form: {
-          type: "string",
-          description: "A contact section's form: the model visitors add a record of.",
-        },
-        calculator: CALCULATOR_SCHEMA,
-        custom: {
-          type: "string",
-          description: "A section of your own: the component in src/custom/sections/<Name>.tsx.",
-        },
+/** The schema of a page's sections (a landing page's `landing`, any page's `sections`). */
+const SECTIONS_SCHEMA = (of: string): JsonSchema => ({
+  type: "object",
+  description: `Sections of ${of}, in order: ${SECTION_KINDS.join(", ")}.`,
+  additionalProperties: {
+    type: ["object", "null"],
+    additionalProperties: false,
+    properties: {
+      records: { type: "string", description: "A model whose records the section shows." },
+      view: {
+        enum: ["cards", "table", "calendar"],
+        description: "A records section's view: cards (the default), a table, or a calendar.",
+      },
+      starts: {
+        type: "string",
+        description: "A calendar view: the date field the records are placed by.",
+      },
+      text: {
+        type: ["boolean", "null"],
+        description: "A text section: a heading and paragraphs from smithable.content.yml.",
+      },
+      search: {
+        type: "boolean",
+        description: "A records section with a search box, leading to the model's list page.",
+      },
+      filters: {
+        type: "array",
+        items: { type: "string" },
+        description: "A records section's filters (fields of the model), leading to its list page.",
+      },
+      where: {
+        type: "object",
+        description:
+          "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }.",
+      },
+      button: { type: "string", description: "The page the section's button opens." },
+      shortcuts: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 4,
+        description: "A hero's shortcuts: up to four pages, shown as round icons.",
+      },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        description: "A records section: how many it shows.",
+      },
+      form: {
+        type: "string",
+        description: "A contact section's form: the model visitors add a record of.",
+      },
+      calculator: CALCULATOR_SCHEMA,
+      custom: {
+        type: "string",
+        description: "A section of your own: the component in src/custom/sections/<Name>.tsx.",
       },
     },
   },
+});
+
+const landing: PagePattern<"landing"> = {
+  kind: "landing",
+  schema: SECTIONS_SCHEMA("a landing page"),
   example: "landing",
   parse: (ctx, value, where, parsed) => ({
     kind: "landing",
-    sections: readLanding(ctx, value, where, parsed),
+    sections: readSections(ctx, value, where, parsed),
   }),
-  models: (p) => p.sections.flatMap((s) => (s.model ? [s.model] : [])),
+  // Its sections' models, forms, texts and following are every page's (patternInfo).
+  models: () => [],
   icon: "home",
   inMenu: false,
-  parts: (p) => Object.fromEntries(p.sections.map((s) => [s.name, s.kind])),
-  forms: (p) => p.sections.flatMap((s) => (s.form ? [s.form] : [])),
   operations: landingOperations,
-  follow(spec, page, effect) {
-    // A removed page is no longer a hero's button or shortcut (the button falls back to the
-    // app's first page).
-    if (effect.kind === "remove-page") {
-      const linked = page.pattern.sections.filter(
-        (s) => s.button === effect.page || s.shortcuts?.includes(effect.page),
-      );
-      for (const section of linked) {
-        const at = ["pages", page.id, "landing", section.name];
-        if (section.button === effect.page) spec.removeAndPrune([...at, "button"], 4);
-        const rest = section.shortcuts?.filter((p) => p !== effect.page) ?? [];
-        if (section.shortcuts?.includes(effect.page))
-          if (rest.length) spec.set([...at, "shortcuts"], rest);
-          else spec.removeAndPrune([...at, "shortcuts"], 4);
-      }
-      return linked.length
-        ? {
-            note: `the ${page.id} page's ${linked.map((s) => s.name).join(" and ")} no longer ${linked.length > 1 ? "link" : "links"} to it`,
-          }
-        : undefined;
-    }
-    // A records section's condition follows a renamed field, and keeps the field and the values
-    // it names: losing them would silently show every record.
-    if (
-      effect.kind !== "rename-field" &&
-      effect.kind !== "remove-field" &&
-      effect.kind !== "change-field"
-    )
-      return undefined;
-    for (const section of page.pattern.sections) {
-      if (!section.where || section.model !== effect.model) continue;
-      const path = ["pages", page.id, "landing", section.name, "where"];
-      const field = effect.kind === "rename-field" ? effect.from : effect.field;
-      if (!(field in section.where)) continue;
-      const at = `the ${section.name} section of the ${page.id} page`;
-      if (effect.kind === "remove-field")
-        return {
-          refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} fits; change its "where" first.`,
-        };
-      if (effect.kind === "change-field") {
-        const wanted = followRenamed(
-          spec,
-          [...path, field],
-          section.where[field] as Condition[string],
-          effect.renamed,
-        );
-        const lost = lostValues(wanted, effect.choices);
-        if (lost.length)
-          return {
-            refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} is ${lost.join(" or ")}; change its "where" first.`,
-          };
-      }
-      if (effect.kind === "rename-field") spec.renameKey([...path, field], effect.to);
-    }
-    return undefined;
-  },
 };
 
 const dashboard: PagePattern<"dashboard"> = {
@@ -1057,9 +1016,103 @@ const review: PagePattern<"review"> = {
   operations: reviewOperations,
 };
 
+/** A page of parts and no kind (docs/design/page-sections.md §2): its `sections` alone. */
+const sectionsPage: PagePattern<"sections"> = {
+  kind: "sections",
+  schema: SECTIONS_SCHEMA("a page"),
+  example: "sections",
+  parse: () => ({ kind: "sections" }),
+  models: () => [],
+  inMenu: true,
+};
+
+/** Whether a section is a page kind's own (a crud page's list, a dashboard's tiles), not a part. */
+export function isOwnSection(section: PageSection): boolean {
+  return section.own === true;
+}
+
+/** A page's sections that are parts (not the page kind's own): what the generic page adds. */
+export function partSections(page: PageIR): PageSection[] {
+  return (page.sections ?? []).filter((s) => !isOwnSection(s));
+}
+
+/**
+ * Keeps a page's sections in step with an effect elsewhere: a removed page leaves a hero's
+ * button and shortcuts; a records section's condition follows a renamed field, and keeps the
+ * field and the values it names, since losing them would silently show every record.
+ */
+export function followSections(
+  spec: YamlEditor,
+  page: PageIR,
+  effect: Effect,
+): Refusal | Note | undefined {
+  const under = page.pattern.kind === "landing" ? "landing" : "sections";
+  const sections = partSections(page);
+  if (effect.kind === "remove-page") {
+    const linked = sections.filter(
+      (s) => s.button === effect.page || s.shortcuts?.includes(effect.page),
+    );
+    for (const section of linked) {
+      const at = ["pages", page.id, under, section.name];
+      if (section.button === effect.page) spec.removeAndPrune([...at, "button"], 4);
+      const rest = section.shortcuts?.filter((p) => p !== effect.page) ?? [];
+      if (section.shortcuts?.includes(effect.page))
+        if (rest.length) spec.set([...at, "shortcuts"], rest);
+        else spec.removeAndPrune([...at, "shortcuts"], 4);
+    }
+    return linked.length
+      ? {
+          note: `the ${page.id} page's ${linked.map((s) => s.name).join(" and ")} no longer ${linked.length > 1 ? "link" : "links"} to it`,
+        }
+      : undefined;
+  }
+  if (
+    effect.kind !== "rename-field" &&
+    effect.kind !== "remove-field" &&
+    effect.kind !== "change-field"
+  )
+    return undefined;
+  for (const section of sections) {
+    if (section.model === effect.model && section.starts !== undefined) {
+      const path = ["pages", page.id, under, section.name, "starts"];
+      if (effect.kind === "rename-field" && section.starts === effect.from)
+        spec.set(path, effect.to);
+      else if (effect.kind !== "rename-field" && section.starts === effect.field)
+        return {
+          refusal: `The ${section.name} section of the ${page.id} page places ${effect.model} records by ${effect.field}; give it another date first.`,
+        };
+    }
+    if (!section.where || section.model !== effect.model) continue;
+    const path = ["pages", page.id, under, section.name, "where"];
+    const field = effect.kind === "rename-field" ? effect.from : effect.field;
+    if (!(field in section.where)) continue;
+    const at = `the ${section.name} section of the ${page.id} page`;
+    if (effect.kind === "remove-field")
+      return {
+        refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} fits; change its "where" first.`,
+      };
+    if (effect.kind === "change-field") {
+      const wanted = followRenamed(
+        spec,
+        [...path, field],
+        section.where[field] as Condition[string],
+        effect.renamed,
+      );
+      const lost = lostValues(wanted, effect.choices);
+      if (lost.length)
+        return {
+          refusal: `${capitalize(at)} shows only ${effect.model} records where ${field} is ${lost.join(" or ")}; change its "where" first.`,
+        };
+    }
+    if (effect.kind === "rename-field") spec.renameKey([...path, field], effect.to);
+  }
+  return undefined;
+}
+
 export const PAGE_PATTERNS: { [K in PatternKind]: PagePattern<K> } = {
   crud,
   landing,
+  sections: sectionsPage,
   dashboard,
   settings,
   onboarding,
@@ -1080,19 +1133,29 @@ export const PATTERN_KINDS = Object.keys(PAGE_PATTERNS) as PatternKind[];
 export function patternInfo(page: PageIR) {
   const info = PAGE_PATTERNS[page.pattern.kind] as unknown as PagePattern<"crud">;
   const pattern = page.pattern as PatternOf<"crud">;
+  // The page's parts add to what its kind brings: their records, their forms and their texts.
+  const parts = partSections(page);
+  const shown = parts.flatMap((s) => (s.model ? [s.model] : []));
   return {
-    models: () => info.models(pattern),
-    reads: () => (info.reads ?? info.models)(pattern),
+    models: () => [...info.models(pattern), ...shown],
+    reads: () => [...(info.reads ?? info.models)(pattern), ...shown],
     manages: () => info.manages?.(pattern),
     icon: info.icon,
     inMenu: info.inMenu,
     access: info.access,
     routes: (route: string) => info.routes?.(route, pattern) ?? [],
-    parts: () => info.parts?.(pattern) ?? {},
+    parts: () => ({
+      ...info.parts?.(pattern),
+      ...Object.fromEntries(parts.map((s) => [s.name, s.kind])),
+    }),
     queries: () => info.queries?.(pattern) ?? [],
-    forms: () => info.forms?.(pattern) ?? [],
+    forms: () => [
+      ...(info.forms?.(pattern) ?? []),
+      ...parts.flatMap((s) => (s.form ? [s.form] : [])),
+    ],
     follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) =>
-      info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir),
+      info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir) ??
+      followSections(spec, page, effect),
   };
 }
 
@@ -1106,23 +1169,55 @@ export function pageModels(page: PageIR): string[] {
   return [...new Set(patternInfo(page).models())];
 }
 
-/** Landing sections: a section named like its kind (hero, faq, …), or any name with `records`. */
-function readLanding(
+/**
+ * A page's sections (docs/design/page-sections.md §2): a section named like its kind (hero, faq,
+ * …), or any name with `records`, `text`, `calculator` or `custom`. With `own`, the page's
+ * kind, that kind's name places the kind's own section and takes no value; any other page kind
+ * named here is refused, since a flow is written only as a page's kind.
+ */
+export function readSections(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
   parsed: Partial<SpecIR>,
-): LandingSection[] {
-  const sections: LandingSection[] = [];
-  // A records, calculator or custom section is known by its options, not its name.
+  own?: { kind: string; label: string },
+): PageSection[] {
+  const sections: PageSection[] = [];
+  // A records, text, calculator or custom section is known by its options, not its name.
   const named = SECTION_KINDS.filter(
-    (k) => k !== "records" && k !== "calculator" && k !== "custom",
+    (k) => k !== "records" && k !== "calculator" && k !== "custom" && k !== "text",
   );
-  for (const { key: name, keyNode, value } of mapEntries(ctx, node, `the landing of ${where}`) ??
-    []) {
+  const listed = own ? `the sections of ${where}` : `the landing of ${where}`;
+  for (const { key: name, keyNode, value } of mapEntries(ctx, node, listed) ?? []) {
     const sectionWhere = `section "${name}" of ${where}`;
-    // "faq:" with nothing after it is a section with no options.
     const empty = value === null || (isScalarNode(value) && value.value === null);
+    if (own && name === own.kind) {
+      // The page's own section, placed here: a crud page's list, a dashboard's tiles.
+      if (!empty)
+        ctx.error(
+          value,
+          "invalid-value",
+          `"${name}" in ${listed} places the page's own ${own.label} and takes no value.`,
+        );
+      sections.push({ name, kind: own.kind as PageSection["kind"], own: true });
+      continue;
+    }
+    // A page kind named as a section (crud, order, …) is a flow, written only as a page's kind;
+    // calculator and custom are section kinds too, so they pass to the options below.
+    if (
+      (PATTERN_KINDS as readonly string[]).includes(name) &&
+      !(SECTION_KINDS as readonly string[]).includes(name)
+    ) {
+      ctx.error(
+        keyNode,
+        "invalid-key",
+        own
+          ? `"${name}" is a page's kind, not a section of ${own.label.includes(" ") ? "a" : "this"} page: a page has one kind, written as its own key.`
+          : `"${name}" is a page's kind, not a section: write it as its own page.`,
+      );
+      continue;
+    }
+    // "faq:" with nothing after it is a section with no options.
     if (!empty && !isMap(value)) {
       ctx.error(
         value,
@@ -1142,6 +1237,8 @@ function readLanding(
     const options = checkKeys(ctx, entries, sectionWhere, {
       allowed: [
         "records",
+        "view",
+        "starts",
         "search",
         "filters",
         "where",
@@ -1151,14 +1248,62 @@ function readLanding(
         "form",
         "calculator",
         "custom",
+        "text",
+        // A kind as an option gives a section of that kind any name: "visit: { contact: }".
+        ...named,
       ],
-      content: ["title", "subtitle", "text", "items"],
+      content: ["title", "subtitle", "items"],
     });
-    const kindOf = (named as readonly string[]).includes(name) ? (name as SectionKind) : undefined;
+    const byOption = options.find((o) => (named as readonly string[]).includes(o.key));
+    const kindOf = byOption
+      ? (byOption.key as SectionKind)
+      : (named as readonly string[]).includes(name)
+        ? (name as SectionKind)
+        : undefined;
     const allows = kindOf ? LANDING_SECTIONS[kindOf] : {};
-    const section: LandingSection = { name, kind: "records" };
+    const section: PageSection = { name, kind: "records" };
+    let view: { value: string; at: At } | undefined;
+    let starts: { value: string; at: At } | undefined;
     for (const { key, value: option, keyNode: optionKey } of options) {
-      if (key === "custom") {
+      if (byOption && key === byOption.key) {
+        const on = isScalarNode(option) ? option.value : option;
+        if (on !== null && on !== true)
+          ctx.error(
+            option,
+            "invalid-value",
+            `"${key}" in ${sectionWhere} names its kind and is written alone, with nothing after it.`,
+          );
+        if (options.filter((o) => (named as readonly string[]).includes(o.key)).length > 1)
+          ctx.error(optionKey, "invalid-key", `${capitalize(sectionWhere)} can be of one kind.`);
+      } else if (key === "text") {
+        // A text section: a heading and paragraphs, from the content file; nothing else here.
+        const on = isScalarNode(option) ? option.value : option;
+        if (on !== null && on !== true)
+          ctx.error(
+            option,
+            "invalid-value",
+            `"text" in ${sectionWhere} is written alone, with nothing after it.`,
+          );
+        section.kind = "text";
+        if (options.length > 1)
+          ctx.error(
+            optionKey,
+            "invalid-key",
+            `A text section has no other options; its heading and paragraphs are in smithable.content.yml (pages.${where.replace(/^page "(.*)"$/, "$1")}.${name}).`,
+          );
+      } else if (key === "view") {
+        const v = readString(ctx, option, `"view" in ${sectionWhere}`);
+        if (v === "cards" || v === "table" || v === "calendar") view = { value: v, at: option };
+        else if (v !== undefined)
+          ctx.error(
+            option,
+            "invalid-value",
+            `"view" in ${sectionWhere} is cards, table or calendar.`,
+          );
+      } else if (key === "starts") {
+        const v = readString(ctx, option, `"starts" in ${sectionWhere}`);
+        if (v !== undefined) starts = { value: v, at: option };
+      } else if (key === "custom") {
         const component = readComponent(ctx, option, sectionWhere);
         if (component) {
           section.kind = "custom";
@@ -1268,7 +1413,48 @@ function readLanding(
         if (checked.length) section.filters = checked;
       }
     }
-    if (section.kind === "calculator" || section.kind === "custom") {
+    // A view is a records section's; a calendar needs the date field the records are placed by.
+    if ((view || starts) && !section.model) {
+      ctx.error(
+        (view ?? starts)?.at ?? null,
+        "invalid-key",
+        `Only a records section has a view (${sectionWhere} shows no records).`,
+      );
+    } else if (section.model && (view?.value === "calendar" || starts)) {
+      const model = parsed.models?.find((m) => m.name === section.model);
+      const dates =
+        model?.fields.filter(
+          (f) => f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime"),
+        ) ?? [];
+      if (view?.value !== "calendar")
+        ctx.error(
+          starts?.at ?? null,
+          "invalid-key",
+          `"starts" in ${sectionWhere} goes with "view: calendar".`,
+        );
+      else if (starts && model && !dates.some((f) => f.name === starts?.value))
+        ctx.error(
+          starts.at,
+          "unknown-field",
+          `${section.model} has no date field named "${starts.value}" to place its records by.`,
+          didYouMean(
+            starts.value,
+            dates.map((f) => f.name),
+          ),
+        );
+      else if (starts) section.starts = starts.value;
+      else if (dates.length === 1) section.starts = dates[0]?.name;
+      else if (model)
+        ctx.error(
+          view.at,
+          dates.length ? "missing-key" : "invalid-value",
+          dates.length
+            ? `A calendar of ${section.model} records needs "starts": which of ${dates.map((f) => f.name).join(", ")} places them.`
+            : `${section.model} has no date field to place its records in a calendar by.`,
+        );
+    }
+    if (view && section.model) section.view = view.value as PageSection["view"];
+    if (section.kind === "calculator" || section.kind === "custom" || section.kind === "text") {
       sections.push(section);
       continue;
     }
@@ -1277,7 +1463,7 @@ function readLanding(
         ctx.error(
           keyNode,
           "unknown-section",
-          `There is no section kind "${name}". Name a section after its kind, or give it "records: <Model>".`,
+          `There is no section kind "${name}". Name a section after its kind, or give it a kind ("${name}: { faq: }"), "records: <Model>" or "text".`,
           didYouMean(name, named) ?? `Kinds: ${named.join(", ")}.`,
         );
         continue;

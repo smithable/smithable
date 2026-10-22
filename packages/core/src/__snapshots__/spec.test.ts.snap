@@ -217,6 +217,13 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "admin",
@@ -230,6 +237,13 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
         ],
       },
       "route": "/admin",
+      "sections": [
+        {
+          "kind": "data",
+          "name": "data",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -791,6 +805,154 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "schedule",
+          "kind": "hero",
+          "name": "hero",
+          "shortcuts": [
+            "schedule",
+            "blog",
+          ],
+        },
+        {
+          "kind": "records",
+          "model": "ClassType",
+          "name": "classes",
+        },
+        {
+          "calculator": {
+            "examples": [
+              {
+                "expected": {
+                  "saved": 29,
+                  "withoutPass": 128,
+                },
+                "input": {
+                  "classesPerMonth": 8,
+                  "dropIn": 16,
+                  "pass": 99,
+                },
+              },
+            ],
+            "fields": [
+              {
+                "default": 8,
+                "max": 31,
+                "min": 0,
+                "name": "classesPerMonth",
+                "required": false,
+                "type": {
+                  "kind": "scalar",
+                  "name": "int",
+                },
+                "unique": false,
+              },
+              {
+                "default": 16,
+                "min": 0,
+                "name": "dropIn",
+                "required": false,
+                "type": {
+                  "kind": "scalar",
+                  "name": "money",
+                },
+                "unique": false,
+              },
+              {
+                "default": 99,
+                "min": 0,
+                "name": "pass",
+                "required": false,
+                "type": {
+                  "kind": "scalar",
+                  "name": "money",
+                },
+                "unique": false,
+              },
+              {
+                "formula": {
+                  "kind": "binary",
+                  "left": {
+                    "kind": "field",
+                    "name": "classesPerMonth",
+                  },
+                  "op": "*",
+                  "right": {
+                    "kind": "field",
+                    "name": "dropIn",
+                  },
+                },
+                "name": "withoutPass",
+                "required": false,
+                "type": {
+                  "kind": "scalar",
+                  "name": "money",
+                },
+                "unique": false,
+              },
+              {
+                "formula": {
+                  "kind": "binary",
+                  "left": {
+                    "kind": "binary",
+                    "left": {
+                      "kind": "field",
+                      "name": "classesPerMonth",
+                    },
+                    "op": "*",
+                    "right": {
+                      "kind": "field",
+                      "name": "dropIn",
+                    },
+                  },
+                  "op": "-",
+                  "right": {
+                    "kind": "field",
+                    "name": "pass",
+                  },
+                },
+                "name": "saved",
+                "required": false,
+                "type": {
+                  "kind": "scalar",
+                  "name": "money",
+                },
+                "unique": false,
+              },
+            ],
+          },
+          "kind": "calculator",
+          "name": "estimate",
+        },
+        {
+          "kind": "gallery",
+          "name": "gallery",
+        },
+        {
+          "kind": "faq",
+          "name": "faq",
+        },
+        {
+          "button": "schedule",
+          "kind": "callToAction",
+          "name": "callToAction",
+        },
+        {
+          "kind": "records",
+          "model": "Post",
+          "name": "news",
+        },
+        {
+          "form": "Message",
+          "kind": "contact",
+          "name": "contact",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "id": "schedule",
@@ -801,6 +963,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "starts": "startsAt",
       },
       "route": "/schedule",
+      "sections": [
+        {
+          "kind": "calendar",
+          "model": "Session",
+          "name": "calendar",
+          "own": true,
+        },
+      ],
     },
     {
       "filters": [
@@ -814,6 +984,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Session",
       },
       "route": "/sessions",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Session",
+          "name": "crud",
+          "own": true,
+        },
+      ],
       "sortable": [
         "startsAt",
         "capacity",
@@ -829,6 +1007,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "ClassType",
       },
       "route": "/class-types",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "ClassType",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "instructors",
@@ -837,6 +1023,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Instructor",
       },
       "route": "/instructors",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Instructor",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "messages",
@@ -845,6 +1039,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Message",
       },
       "route": "/messages",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Message",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "blog",
@@ -859,6 +1061,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "title": "title",
       },
       "route": "/blog",
+      "sections": [
+        {
+          "kind": "articles",
+          "model": "Post",
+          "name": "articles",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "privacy",
@@ -867,6 +1077,13 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "legal": "privacy",
       },
       "route": "/privacy",
+      "sections": [
+        {
+          "kind": "legal",
+          "name": "legal",
+          "own": true,
+        },
+      ],
     },
     {
       "filters": [
@@ -878,6 +1095,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Post",
       },
       "route": "/posts",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Post",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "my-bookings",
@@ -886,6 +1111,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Booking",
       },
       "route": "/my-bookings",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Booking",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "admin",
@@ -902,6 +1135,13 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         ],
       },
       "route": "/admin",
+      "sections": [
+        {
+          "kind": "data",
+          "name": "data",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -1252,6 +1492,14 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "name",
         "email",
       ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Customer",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "filters": [
@@ -1267,6 +1515,14 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "number",
         "customer",
       ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Order",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "team",
@@ -1276,6 +1532,13 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -1697,6 +1960,30 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "overview",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "features",
+          "name": "features",
+        },
+        {
+          "kind": "pricing",
+          "name": "pricing",
+        },
+        {
+          "kind": "faq",
+          "name": "faq",
+        },
+        {
+          "button": "overview",
+          "kind": "callToAction",
+          "name": "callToAction",
+        },
+      ],
     },
     {
       "id": "overview",
@@ -1750,6 +2037,13 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "kind": "dashboard",
       },
       "route": "/overview",
+      "sections": [
+        {
+          "kind": "tiles",
+          "name": "dashboard",
+          "own": true,
+        },
+      ],
     },
     {
       "actions": [
@@ -1766,6 +2060,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "Invoice",
       },
       "route": "/invoices",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Invoice",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "clients",
@@ -1774,6 +2076,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "Client",
       },
       "route": "/clients",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Client",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "invoice-lines",
@@ -1782,6 +2092,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "InvoiceLine",
       },
       "route": "/invoice-lines",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "InvoiceLine",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "settings",
@@ -1790,6 +2108,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "BusinessProfile",
       },
       "route": "/settings",
+      "sections": [
+        {
+          "kind": "settings",
+          "model": "BusinessProfile",
+          "name": "settings",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "welcome",
@@ -1814,6 +2140,14 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         ],
       },
       "route": "/welcome",
+      "sections": [
+        {
+          "kind": "onboarding",
+          "model": "BusinessProfile",
+          "name": "onboarding",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -2370,6 +2704,13 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         "unitPrice": "unitPrice",
       },
       "route": "/",
+      "sections": [
+        {
+          "kind": "order",
+          "name": "order",
+          "own": true,
+        },
+      ],
     },
     {
       "actions": [
@@ -2387,6 +2728,14 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         "model": "Order",
       },
       "route": "/orders",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Order",
+          "name": "crud",
+          "own": true,
+        },
+      ],
       "sortable": [
         "createdAt",
         "wanted",
@@ -2407,6 +2756,14 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         "model": "Dish",
       },
       "route": "/dishes",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Dish",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "stops",
@@ -2415,6 +2772,14 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         "model": "Stop",
       },
       "route": "/stops",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Stop",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "where",
@@ -2438,6 +2803,22 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         ],
       },
       "route": "/where",
+      "sections": [
+        {
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "records",
+          "limit": 7,
+          "model": "Stop",
+          "name": "stops",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "id": "team",
@@ -2446,6 +2827,13 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -2599,6 +2987,27 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         ],
       },
       "route": "/welcome",
+      "sections": [
+        {
+          "button": "catalog",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "filters": [
+            "category",
+          ],
+          "kind": "records",
+          "limit": 6,
+          "model": "Item",
+          "name": "latest",
+          "search": true,
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "contact": {
@@ -2622,6 +3031,14 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         "description",
         "place",
       ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
       "sortable": [
         "price",
         "createdAt",
@@ -2635,6 +3052,14 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         "model": "Item",
       },
       "route": "/my-items",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "favorites": "only",
@@ -2644,6 +3069,14 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         "model": "Item",
       },
       "route": "/saved",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "review",
@@ -2655,6 +3088,13 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
         ],
       },
       "route": "/review",
+      "sections": [
+        {
+          "kind": "review",
+          "name": "review",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -2767,6 +3207,22 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "items",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "records",
+          "model": "Item",
+          "name": "items",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "filters": [
@@ -2781,6 +3237,14 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
       "search": [
         "name",
         "summary",
+      ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
       ],
     },
   ],
@@ -3243,6 +3707,54 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "history",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "records",
+          "model": "Component",
+          "name": "services",
+        },
+        {
+          "component": "Uptime",
+          "kind": "custom",
+          "name": "uptime",
+        },
+        {
+          "kind": "records",
+          "model": "Incident",
+          "name": "open",
+          "where": {
+            "status": [
+              "investigating",
+              "identified",
+              "monitoring",
+            ],
+          },
+        },
+        {
+          "kind": "records",
+          "limit": 5,
+          "model": "Incident",
+          "name": "recent",
+          "where": {
+            "status": "resolved",
+          },
+        },
+        {
+          "kind": "records",
+          "limit": 3,
+          "model": "Maintenance",
+          "name": "planned",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "id": "history",
@@ -3254,6 +3766,14 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "title": "title",
       },
       "route": "/history",
+      "sections": [
+        {
+          "kind": "articles",
+          "model": "Incident",
+          "name": "articles",
+          "own": true,
+        },
+      ],
     },
     {
       "actions": [
@@ -3270,6 +3790,14 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "model": "Incident",
       },
       "route": "/incidents",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Incident",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "updates",
@@ -3278,6 +3806,14 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "model": "IncidentUpdate",
       },
       "route": "/updates",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "IncidentUpdate",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "components",
@@ -3286,6 +3822,14 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "model": "Component",
       },
       "route": "/components",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Component",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "maintenance",
@@ -3294,6 +3838,14 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "model": "Maintenance",
       },
       "route": "/maintenance",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Maintenance",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "overview",
@@ -3329,6 +3881,13 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "kind": "dashboard",
       },
       "route": "/overview",
+      "sections": [
+        {
+          "kind": "tiles",
+          "name": "dashboard",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "team",
@@ -3337,6 +3896,13 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -3711,6 +4277,14 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
         "subject",
         "customerEmail",
       ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "SupportCase",
+          "name": "crud",
+          "own": true,
+        },
+      ],
       "sortable": [
         "priority",
         "createdAt",
@@ -3723,6 +4297,13 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
         "mode": "manage",
       },
       "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -3846,6 +4427,14 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
         "model": "Customer",
       },
       "route": "/customers",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Customer",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -4515,6 +5104,14 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "title",
         "description",
       ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
       "sortable": [
         "price",
         "createdAt",
@@ -4529,6 +5126,14 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "model": "Item",
       },
       "route": "/saved",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "contact": {
@@ -4541,6 +5146,14 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         "model": "Item",
       },
       "route": "/mine",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Item",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "welcome",
@@ -4566,6 +5179,24 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
         ],
       },
       "route": "/welcome",
+      "sections": [
+        {
+          "button": "catalog",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "filters": [
+            "category",
+            "price",
+          ],
+          "kind": "records",
+          "limit": 8,
+          "model": "Item",
+          "name": "latest",
+          "search": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -4635,6 +5266,14 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
         "model": "Customer",
       },
       "route": "/customers",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Customer",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "invoiceLines",
@@ -4643,6 +5282,14 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
         "model": "InvoiceLine",
       },
       "route": "/invoice-lines",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "InvoiceLine",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "line-admin",
@@ -4651,6 +5298,14 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
         "model": "InvoiceLine",
       },
       "route": "/admin/lines",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "InvoiceLine",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -4780,6 +5435,32 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "invoices",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "features",
+          "name": "features",
+        },
+        {
+          "kind": "records",
+          "limit": 3,
+          "model": "Invoice",
+          "name": "latest",
+        },
+        {
+          "kind": "faq",
+          "name": "faq",
+        },
+        {
+          "button": "overview",
+          "kind": "callToAction",
+          "name": "callToAction",
+        },
+      ],
     },
     {
       "id": "overview",
@@ -4829,6 +5510,13 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         "kind": "dashboard",
       },
       "route": "/overview",
+      "sections": [
+        {
+          "kind": "tiles",
+          "name": "dashboard",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "invoices",
@@ -4837,6 +5525,14 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         "model": "Invoice",
       },
       "route": "/invoices",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Invoice",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "settings",
@@ -4845,6 +5541,14 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         "model": "Invoice",
       },
       "route": "/settings",
+      "sections": [
+        {
+          "kind": "settings",
+          "model": "Invoice",
+          "name": "settings",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "welcome",
@@ -4869,6 +5573,14 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
         ],
       },
       "route": "/welcome",
+      "sections": [
+        {
+          "kind": "onboarding",
+          "model": "Invoice",
+          "name": "onboarding",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [
@@ -5003,6 +5715,14 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
         "model": "Customer",
       },
       "route": "/customers",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Customer",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "orders",
@@ -5011,6 +5731,14 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
         "model": "Order",
       },
       "route": "/orders",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Order",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
@@ -5381,6 +6109,14 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
         "model": "Incident",
       },
       "route": "/incidents",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Incident",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],

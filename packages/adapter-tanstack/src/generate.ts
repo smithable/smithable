@@ -959,10 +959,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 ir.pages.some(
                   (p) =>
                     p.pattern.kind === kind ||
-                    // A landing section may be a calculator too.
-                    (kind === "calculator" &&
-                      p.pattern.kind === "landing" &&
-                      p.pattern.sections.some((s) => s.calculator)),
+                    // A section of any page may be a calculator too.
+                    (kind === "calculator" && p.sections.some((s) => s.calculator)),
                 ),
             },
           ]
@@ -986,15 +984,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         const routes = Object.entries(pageRoutes(page, ctx)).map(([file, content]) =>
           generated(`${dir}/${file}`, content),
         );
-        // A calculator, a page or a landing section: its fields and formulas as modules.
+        // A calculator, a page or a section of one: its fields and formulas as modules.
         const calculators =
           page.pattern.kind === "calculator"
             ? [[page.id, page.pattern.calculator, undefined] as const]
-            : page.pattern.kind === "landing"
-              ? page.pattern.sections.flatMap((s) =>
-                  s.calculator ? [[`${page.id}.${s.name}`, s.calculator, s.name] as const] : [],
-                )
-              : [];
+            : page.sections.flatMap((s) =>
+                s.calculator ? [[`${page.id}.${s.name}`, s.calculator, s.name] as const] : [],
+              );
         const modules = calculators.flatMap(([name, calculator, section]) =>
           Object.entries(
             calculatorFiles(name, calculator, page.id, ctx.ir, ctx.t, ctx.ux, section),
@@ -1009,18 +1005,16 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                   customPageStub(page.pattern.component),
                 ),
               ]
-            : page.pattern.kind === "landing"
-              ? page.pattern.sections.flatMap((s) =>
-                  s.component
-                    ? [
-                        custom(
-                          `src/custom/sections/${s.component}.tsx`,
-                          customSectionStub(s.component),
-                        ),
-                      ]
-                    : [],
-                )
-              : [];
+            : page.sections.flatMap((s) =>
+                s.component
+                  ? [
+                      custom(
+                        `src/custom/sections/${s.component}.tsx`,
+                        customSectionStub(s.component),
+                      ),
+                    ]
+                  : [],
+              );
         return [...actions, ...routes, ...modules, ...own];
       }),
   },

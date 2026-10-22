@@ -434,6 +434,7 @@ const PAGE_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } = {
     "privacy page written from the app: operator, stored personal data, cookies, mail, logs, rights",
   crud: (p) => `list, view, create, edit and delete ${p.model}`,
   landing: (p) => `landing page with ${p.sections.map((s) => s.name).join(", ")}`,
+  sections: () => "page of sections",
   dashboard: (p) => `dashboard with ${p.items.map((i) => i.name).join(", ")}`,
   settings: (p) => `settings: the viewer's ${p.model} record`,
   onboarding: (p) =>

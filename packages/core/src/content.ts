@@ -134,6 +134,8 @@ const SECTION_TEXTS: Record<
   // A calculator section: its heading, the results' heading, and its fields' labels and help.
   calculator: { texts: ["title", "text", "results"], fields: true },
   custom: { texts: ["title", "text"] },
+  // A text section: a heading and its paragraphs.
+  text: { texts: ["title", "text"] },
   // A calculator page's results heading.
   results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").

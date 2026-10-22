@@ -684,9 +684,9 @@ test("addSection and removeSection change a landing page's sections, with their 
   );
   expect(applyOperation(invoicing, "addSection", { page: "home", section: "faq" }).ok).toBe(false);
   expect(applyOperation(invoicing, "addSection", { page: "home", section: "news" }).ok).toBe(false);
-  expect(applyOperation(invoicing, "addSection", { page: "overview", section: "faq" }).ok).toBe(
-    false,
-  );
+  // Any page takes sections beside its kind's own (page-sections.md); its texts go with them.
+  const beside = applyOperation(invoicing, "addSection", { page: "overview", section: "faq" });
+  expect(beside.ok && beside.files.spec).toMatch(/overview:\n(?:.*\n)*?\s+sections:\n\s+faq:\n/);
   const removed = applyOperation(invoicing, "removeSection", { page: "home", section: "faq" });
   expect(removed.ok && removed.files.spec).not.toMatch(/^\s+faq:/m);
   expect(removed.ok && removed.files.content).not.toContain("Can I use my own invoice numbers?");

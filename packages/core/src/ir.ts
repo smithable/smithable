@@ -251,6 +251,8 @@ export interface PageIR extends SemanticText {
   pattern:
     | { kind: "crud"; model: string }
     | { kind: "landing"; sections: LandingSection[] }
+    /** A page of parts and no kind: its `sections` alone (docs/design/page-sections.md §2). */
+    | { kind: "sections" }
     | { kind: "dashboard"; items: DashboardItem[] }
     | { kind: "settings"; model: string }
     | { kind: "onboarding"; model: string; steps: OnboardingStep[] }
@@ -328,6 +330,11 @@ export interface PageIR extends SemanticText {
         /** The field that refers to the user who wrote it, shown with the article. */
         author?: string;
       };
+  /**
+   * The page's parts in order (docs/design/page-sections.md): its kind's own section (a landing
+   * page's are its `landing` map, a dashboard's one `tiles`) and the `sections` written beside it.
+   */
+  sections: PageSection[];
   /** Actions offered on the page, e.g. a "Merge customers" button. */
   actions?: string[];
   /** Fields of the model a list can be searched by. */
@@ -382,13 +389,29 @@ export const SECTION_KINDS = [
   "footer",
   "calculator",
   "custom",
+  "text",
 ] as const;
+/** A part of a page: the landing page's kinds, a text (heading and paragraphs) and a custom one. */
 export type SectionKind = (typeof SECTION_KINDS)[number];
+/**
+ * The section a page's own kind makes (docs/design/page-sections.md §2): a crud page's list, a
+ * dashboard's tiles, a calendar, and so on; every page has it first unless `sections` places it.
+ */
+export type OwnSectionKind = "tiles" | Exclude<PatternKind, "landing" | "dashboard" | "sections">;
 
-/** A section of a landing page; its texts are in smithable.content.yml under its name. */
-export interface LandingSection {
+/**
+ * A section of a page; its texts are in smithable.content.yml under the page and its name. A
+ * landing page's `landing` map is its sections; any page may add more under `sections`.
+ */
+export interface PageSection {
   name: string;
-  kind: SectionKind;
+  kind: SectionKind | OwnSectionKind;
+  /** The page kind's own section (a crud page's list, a dashboard's tiles), not a part added to it. */
+  own?: true;
+  /** A records section's view: cards (the default), a table, or a calendar of its dates. */
+  view?: "cards" | "table" | "calendar";
+  /** The date field a calendar view places the records by. */
+  starts?: string;
   /** The page a hero's or call to action's button opens. */
   button?: string;
   /** A hero's shortcuts: up to four pages, shown as round icons over its lower edge. */
@@ -409,6 +432,8 @@ export interface LandingSection {
   /** A section of your own: the component in src/custom/sections/ (calculator.md §4). */
   component?: string;
 }
+/** The sections of a landing page: the same as any page's. */
+export type LandingSection = PageSection;
 
 /**
  * One tile of a dashboard, over the records the viewer may read: a number (count, sum or
