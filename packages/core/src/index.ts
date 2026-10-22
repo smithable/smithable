@@ -167,6 +167,7 @@ export {
   PATTERN_KINDS,
   pageModel,
   pageModels,
+  partSections,
   patternInfo,
 } from "./patterns.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";

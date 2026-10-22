@@ -344,12 +344,16 @@ export function landingRoute(
       default: {
         // Sections of items show nothing until smithable.content.yml gives them items.
         if (!own.items?.length) return [];
-        const kit = {
-          features: "Features",
-          pricing: "Pricing",
-          testimonials: "Testimonials",
-          faq: "Faq",
-        }[section.kind];
+        const kit = (
+          {
+            features: "Features",
+            pricing: "Pricing",
+            testimonials: "Testimonials",
+            faq: "Faq",
+          } as Partial<Record<string, string>>
+        )[section.kind];
+        // A text section, or a page kind's own part, is the page renderer's (step 2).
+        if (!kit) return [];
         imports.add("#/kit/Landing", kit);
         const heading = own.title
           ? `

@@ -1308,7 +1308,7 @@
     },
     "pages": {
       "type": "object",
-      "description": "The application's pages. Each page uses one pattern: crud, landing, dashboard, settings, onboarding, users, data, review, calendar, calculator, articles, custom, legal or order.",
+      "description": "The application's pages. Each page has one kind (crud, landing, dashboard, settings, onboarding, users, data, review, calendar, calculator, articles, custom, legal or order), sections beside it, or sections alone.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$"
       },
@@ -1384,6 +1384,85 @@
             "required": [
               "order"
             ]
+          },
+          {
+            "required": [
+              "sections"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "crud"
+                  ]
+                },
+                {
+                  "required": [
+                    "landing"
+                  ]
+                },
+                {
+                  "required": [
+                    "dashboard"
+                  ]
+                },
+                {
+                  "required": [
+                    "settings"
+                  ]
+                },
+                {
+                  "required": [
+                    "onboarding"
+                  ]
+                },
+                {
+                  "required": [
+                    "users"
+                  ]
+                },
+                {
+                  "required": [
+                    "data"
+                  ]
+                },
+                {
+                  "required": [
+                    "review"
+                  ]
+                },
+                {
+                  "required": [
+                    "calendar"
+                  ]
+                },
+                {
+                  "required": [
+                    "calculator"
+                  ]
+                },
+                {
+                  "required": [
+                    "articles"
+                  ]
+                },
+                {
+                  "required": [
+                    "custom"
+                  ]
+                },
+                {
+                  "required": [
+                    "legal"
+                  ]
+                },
+                {
+                  "required": [
+                    "order"
+                  ]
+                }
+              ]
+            }
           }
         ],
         "additionalProperties": false,
@@ -1399,7 +1478,7 @@
           },
           "landing": {
             "type": "object",
-            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom.",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -1410,6 +1489,137 @@
                 "records": {
                   "type": "string",
                   "description": "A model whose records the section shows."
+                },
+                "view": {
+                  "enum": [
+                    "cards",
+                    "table",
+                    "calendar"
+                  ],
+                  "description": "A records section's view: cards (the default), a table, or a calendar."
+                },
+                "starts": {
+                  "type": "string",
+                  "description": "A calendar view: the date field the records are placed by."
+                },
+                "text": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A text section: a heading and paragraphs from smithable.content.yml."
+                },
+                "search": {
+                  "type": "boolean",
+                  "description": "A records section with a search box, leading to the model's list page."
+                },
+                "filters": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "A records section's filters (fields of the model), leading to its list page."
+                },
+                "where": {
+                  "type": "object",
+                  "description": "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }."
+                },
+                "button": {
+                  "type": "string",
+                  "description": "The page the section's button opens."
+                },
+                "shortcuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "description": "A hero's shortcuts: up to four pages, shown as round icons."
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "A records section: how many it shows."
+                },
+                "form": {
+                  "type": "string",
+                  "description": "A contact section's form: the model visitors add a record of."
+                },
+                "calculator": {
+                  "type": "object",
+                  "required": [
+                    "fields"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "object",
+                      "description": "Fields as a model's: entered ones are the inputs, formula fields the results.",
+                      "additionalProperties": true
+                    },
+                    "examples": {
+                      "type": "array",
+                      "description": "Inputs and the results they must give; each becomes a test.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "input",
+                          "expected"
+                        ],
+                        "properties": {
+                          "input": {
+                            "type": "object",
+                            "description": "The values entered."
+                          },
+                          "expected": {
+                            "type": "object",
+                            "description": "The results they must give."
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "description": "Inputs and results computed as you type, stored nowhere."
+                },
+                "custom": {
+                  "type": "string",
+                  "description": "A section of your own: the component in src/custom/sections/<Name>.tsx."
+                }
+              }
+            }
+          },
+          "sections": {
+            "type": "object",
+            "description": "Sections of a page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text.",
+            "additionalProperties": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "records": {
+                  "type": "string",
+                  "description": "A model whose records the section shows."
+                },
+                "view": {
+                  "enum": [
+                    "cards",
+                    "table",
+                    "calendar"
+                  ],
+                  "description": "A records section's view: cards (the default), a table, or a calendar."
+                },
+                "starts": {
+                  "type": "string",
+                  "description": "A calendar view: the date field the records are placed by."
+                },
+                "text": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A text section: a heading and paragraphs from smithable.content.yml."
                 },
                 "search": {
                   "type": "boolean",
