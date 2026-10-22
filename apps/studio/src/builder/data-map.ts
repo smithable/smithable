@@ -51,11 +51,19 @@ export function mapOf(ir: SpecIR, auth?: AuthIR): { nodes: MapNode[]; edges: Map
         (u) => u.fields.length === 1 && u.fields[0] === field.name,
       );
       const target = field.type.model;
-      const list = ir.models
-        .find((m) => m.name === target)
-        ?.fields.find(
-          (f) => f.type.kind === "relation" && f.type.many && f.type.model === model.name,
-        );
+      // The list on the other side, when this is the only reference between the two (with two,
+      // which list goes with which is not known here).
+      const single =
+        model.fields.filter(
+          (f) => f.type.kind === "relation" && !f.type.many && f.type.model === target,
+        ).length === 1;
+      const list = !single
+        ? undefined
+        : ir.models
+            .find((m) => m.name === target)
+            ?.fields.find(
+              (f) => f.type.kind === "relation" && f.type.many && f.type.model === model.name,
+            );
       const relation = one ? "one to one" : "many to one";
       edges.push({
         id: `${model.name}.${field.name}`,
