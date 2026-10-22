@@ -6289,11 +6289,22 @@ for (const [index, example] of examples.entries()) {
               throw new Error(`the change is ${by[0]?.who}'s`);
             return;
           }
+          // A member's booking of the first session (the sample data has none).
+          const now = Date.now();
+          write(
+            dir,
+            `insert or ignore into user (id, name, email, role, created_at, updated_at) values ('timer-member', 'Timer Member', 'timer-member@example.com', 'member', ${now}, ${now});
+            insert into bookings (session_id, attendee_id, created_at, updated_at) select min(id), 'timer-member', ${now}, ${now} from sessions`,
+          );
           const [booking] = query(dir, "select session_id as session from bookings limit 1");
           if (!booking) throw new Error("no booking to remind of");
           const [{ n: booked }] = query(
             dir,
             `select count(*) as n from bookings where session_id = ${booking.session}`,
+          );
+          const [{ at: startsAt }] = query(
+            dir,
+            `select starts_at as at from sessions where id = ${booking.session}`,
           );
           write(
             dir,
@@ -6316,6 +6327,14 @@ for (const [index, example] of examples.entries()) {
           const [out] = query(dir, `select status from posts where id = ${post.id}`);
           if (out.status !== "published")
             throw new Error(`the post is ${out.status}, not published`);
+          // As it was, for the checks after this one: the session, no booking, no reminder.
+          write(
+            dir,
+            `update sessions set starts_at = ${startsAt} where id = ${booking.session};
+            delete from outgoing_mail where entry = 'reminder';
+            delete from bookings where attendee_id = 'timer-member';
+            delete from user where id = 'timer-member'`,
+          );
         },
       );
     // A copy (actions.md §8): duplicate an invoice with its lines, asking for its own number.
