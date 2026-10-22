@@ -107,10 +107,8 @@ test("the list route applies the page's defaults and the time zone, and marks fo
   expect(route).toContain('inRange(schema.sessions.places, data.f?.places, "number")');
   expect(route).toContain('import { app } from "#/generated/app";');
   expect(route).toMatch(/import \{ [^}]*withDefaults[^}]* \} from "#\/kit\/params";/);
-  // The kit gets the effective values and the defaults, and which filters fold.
-  expect(route).toContain(
-    'values={withDefaults(values, { startsAt: "upcoming", status: "open,full" })}',
-  );
+  // The kit gets the address as it is and the defaults, and which filters fold.
+  expect(route).toContain("values={values}");
   expect(route).toContain('defaults={{ startsAt: "upcoming", status: "open,full" }}');
   expect(route).toMatch(/name: "places"[^}]*folded: true/);
   expect(route).toMatch(/name: "createdAt"[^}]*folded: true/);

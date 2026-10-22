@@ -571,7 +571,8 @@ function listKeyOperation(
     positional: ["page", "...fields"],
     describe: ({ page, fields }) => describe(page, fields ?? []),
     destructive: () => false,
-    apply({ spec }, { page, fields = [] }, ir) {
+    apply(editors, { page, fields = [] }, ir) {
+      const { spec } = editors;
       if (!ir.pages.some((p) => p.id === page))
         throw new OperationError(`There is no page named "${page}".`);
       const path = ["pages", page, key];
@@ -579,6 +580,21 @@ function listKeyOperation(
         if (spec.has(path)) spec.remove(path);
       } else if (spec.has(path)) spec.set(path, fields);
       else spec.add(["pages", page], key, fields);
+      if (key === "filters") {
+        // A filter that goes takes its default and its place among those shown first with it.
+        const defaults = ["pages", page, "defaultFilter"];
+        for (const name of Object.keys(
+          spec.has(defaults) ? (spec.get(defaults) as Record<string, unknown>) : {},
+        ))
+          if (!fields.includes(name)) spec.removeAndPrune([...defaults, name], 3);
+        const shown = ["pages", page, "filters", "shown"];
+        const ux = editors.ux;
+        if (ux?.has(shown)) {
+          const kept = (ux.get(shown) as string[]).filter((name) => fields.includes(name));
+          if (kept.length) ux.set(shown, kept);
+          else ux.removeAndPrune(shown, 0);
+        }
+      }
       return [];
     },
   };
@@ -644,7 +660,11 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
     const model = ir.models.find((m) => m.name === pageModel(p));
     const problem = model ? filterValueProblem(model, field, value.trim()) : undefined;
     if (problem) throw new OperationError(problem);
-    const parts = value.split(",").map((v) => v.trim());
+    // Several values are a list for a choice or a person; a range keeps its decimal comma.
+    const f = model?.fields.find((x) => x.name === field);
+    const listed =
+      f?.type.kind === "choice" || (f?.type.kind === "relation" && f.type.model === "User");
+    const parts = listed ? value.split(",").map((v) => v.trim()) : [value.trim()];
     const written: YamlValue =
       parts.length > 1 ? parts : value === "true" ? true : value === "false" ? false : value.trim();
     if (spec.has(path)) spec.set(path, written);

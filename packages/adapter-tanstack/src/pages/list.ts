@@ -705,7 +705,7 @@ ${
   filtering && (filtering.controls.length || filtering.sorts.length)
     ? `      <Filters
         filters={${literal(filtering.controls)}}
-        values={${filtering.defaults ? `withDefaults(values, ${literal(filtering.defaults)})` : "values"}}${filtering.defaults ? `\n        defaults={${literal(filtering.defaults)}}` : ""}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
+        values={values}${filtering.defaults ? `\n        defaults={${literal(filtering.defaults)}}` : ""}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
         onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { q, ${favorites === "all" ? "view, " : ""}...next }, replace: true, resetScroll: false })}
       />
 `

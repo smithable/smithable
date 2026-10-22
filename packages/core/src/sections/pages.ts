@@ -240,6 +240,9 @@ function readPage(
         const v = entry.value;
         const text = isScalar(v)
           ? String(v.value ?? "")
+              .split(",")
+              .map((part) => part.trim())
+              .join(",")
           : isSeq(v)
             ? v.items.map((i) => (isScalar(i) ? String(i.value ?? "") : "")).join(",")
             : undefined;
