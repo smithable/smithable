@@ -90,6 +90,14 @@ test("a theme of three colors per mode gets the rest derived, and reads", () => 
   );
   expect(given.theme?.light.accent).toBe("#ffeedd");
   expect(given.theme?.light.primary).toBe(hexOf("oklch(0.51 0.23 277)"));
+  // A bright primary keeps its color; the focus ring made from it steps darker until it shows.
+  const bright = parse(forest.replace('  primary: "#2f6b3a"', '  primary: "#ffcc00"'));
+  expect(bright.diagnostics).toEqual([]);
+  expect(bright.theme?.light.primary).toBe("#ffcc00");
+  expect(
+    contrast(bright.theme?.light.ring as string, bright.theme?.light.card as string),
+  ).toBeGreaterThanOrEqual(3);
+  expect(light.ring).toBe("#2f6b3a");
 });
 
 test("a theme that does not read, or is not a theme, is refused with the reason", () => {
