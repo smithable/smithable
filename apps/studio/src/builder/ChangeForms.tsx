@@ -1401,7 +1401,11 @@ function AddTimer({ spec, run }: FormProps) {
           ]}
         />
       </Label>
-      <Submit label="Add timer" disabled={!label || (byRecord ? !date : false)} />
+      {/* A timer for no records runs an action of its own, or it would do nothing. */}
+      <Submit
+        label="Add timer"
+        disabled={!label || (byRecord ? !date : false) || (!model && !doing)}
+      />
     </Form>
   );
 }

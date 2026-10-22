@@ -27,21 +27,27 @@ export function names(clock: Clock, wall: string): boolean {
     return WEEKDAYS[weekday] === clock.every;
   }
   const [mi = "*", ho = "*", dom = "*", mon = "*", dow = "*"] = clock.cron.trim().split(/\s+/);
-  const inMonth = matches(dom, d);
+  const inMonth = matches(dom, d, 1, 31);
   // Sunday is 0 or 7.
-  const inWeek = matches(dow, weekday) || (weekday === 0 && matches(dow, 7));
+  const inWeek = matches(dow, weekday, 0, 7) || (weekday === 0 && matches(dow, 7, 0, 7));
   // As cron has it: with both days restricted, either one will do.
   const day = dom !== "*" && dow !== "*" ? inMonth || inWeek : inMonth && inWeek;
-  return matches(mi, minute) && matches(ho, hour) && matches(mon, m) && day;
+  return matches(mi, minute, 0, 59) && matches(ho, hour, 0, 23) && matches(mon, m, 1, 12) && day;
 }
 
-/** Whether a cron field ("*", "*\/15", "1-5", "0,30", "8-18/2") takes a value. */
-function matches(field: string, value: number): boolean {
+/**
+ * Whether a cron field ("*", "*\/15", "1-5", "0,30", "8-18/2", "5/15") takes a value; a step
+ * counts from the field's first value (`min`: 1 for the day of the month and the month), and a
+ * start with a step runs to its last (`max`).
+ */
+function matches(field: string, value: number, min: number, max: number): boolean {
   return field.split(",").some((part) => {
     const [range = "*", stepText] = part.split("/");
     const step = stepText ? Number(stepText) : 1;
-    if (range === "*") return value % step === 0;
-    const [from = 0, to = from] = range.split("-").map(Number);
+    if (range === "*") return value >= min && value <= max && (value - min) % step === 0;
+    const [from = min, to = stepText && !range.includes("-") ? max : from] = range
+      .split("-")
+      .map(Number);
     return value >= from && value <= to && (value - from) % step === 0;
   });
 }
