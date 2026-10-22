@@ -68,6 +68,12 @@ export interface PageUx {
   results?: "beside" | "below";
   /** A landing page's own theme: the keys it changes from the app's (docs/design/look.md §1.5). */
   theme?: Partial<UxIR["theme"]>;
+  /**
+   * The frame the page shows in (docs/design/page-sections.md §4): site (the public frame with
+   * the top menu), app (the workspace with the side menu) or none (the page alone). Without it,
+   * the page kind's own: landing and articles pages site, the rest app.
+   */
+  frame?: "site" | "app" | "none";
   /** A landing page's sections' looks, by section name (docs/design/look.md §1.4); the ux file's
    * page-level `sections`, not the form's. */
   looks?: Record<string, SectionLook>;
@@ -536,9 +542,16 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form", "record", "sections", "theme", "filters"],
+          allowed: ["icon", "table", "form", "record", "sections", "theme", "filters", "frame"],
           later: ["detail", "calendar"],
         })) {
+          if (part.key === "frame") {
+            const frame = readString(ctx, part.value, `"frame" of ${where}`);
+            if (frame === "site" || frame === "app" || frame === "none") result.frame = frame;
+            else if (frame !== undefined)
+              ctx.error(part.value, "invalid-value", `"frame" of ${where} is site, app or none.`);
+            continue;
+          }
           if (part.key === "filters") {
             // Which of the page's filters show first; the page's filters are the spec's.
             const offered = spec.filters ?? [];
@@ -746,11 +759,15 @@ function readSectionLooks(
   where: string,
 ): Record<string, SectionLook> {
   const looks: Record<string, SectionLook> = {};
-  if (page.pattern.kind !== "landing") {
-    ctx.error(node, "invalid-key", `"sections" is for a landing page; ${page.id} is not one.`);
+  const sections = page.sections.filter((s) => !s.own);
+  if (sections.length === 0) {
+    ctx.error(
+      node,
+      "invalid-key",
+      `"sections" are looks of a page's sections; ${page.id} has none.`,
+    );
     return looks;
   }
-  const sections = page.pattern.sections;
   for (const entry of mapEntries(ctx, node, `"sections" of ${where}`) ?? []) {
     const section = sections.find((s) => s.name === entry.key);
     if (!section) {

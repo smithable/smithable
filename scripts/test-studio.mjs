@@ -1467,7 +1467,8 @@ try {
     const customers = await entry(await area("pages"), "customers");
     await customers.getByRole("button", { name: "Make this page's code your own" }).click();
     await customers
-      .getByText("the page is now src/custom/pages/customers.tsx")
+      // The notice shows until the files' refresh says the page is its own, which under load may come first.
+      .getByText(/the page is now src\/custom\/pages\/customers\.tsx|This page's code is your own/)
       .waitFor({ timeout: 60000 * P });
     await page
       .getByText("This page's code is your own: src/custom/pages/customers.tsx")

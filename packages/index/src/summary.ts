@@ -18,6 +18,7 @@ import {
   type PatternOf,
   pageAccess,
   pageModel,
+  partSections,
   plural,
   type RoleIR,
   type SpecIR,
@@ -142,7 +143,12 @@ export function summarize(
         model ? `lists ${many(model)}` : "",
         p.pattern.kind === "landing"
           ? `a landing page: ${list(landingWords(p.pattern.sections))}`
-          : (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
+          : p.pattern.kind === "sections"
+            ? `a page of parts: ${list(landingWords(partSections(p)))}`
+            : (PATTERN_WORDS[p.pattern.kind] as (p: PageIR["pattern"]) => string)(p.pattern),
+        p.pattern.kind !== "landing" && p.pattern.kind !== "sections" && partSections(p).length
+          ? `with ${list(landingWords(partSections(p)))}`
+          : "",
         searched.length ? `search by ${list(searched, "or")}` : "",
         filtered.length ? `filter by ${list(filtered, "or")}` : "",
         sorted.length ? `sort by ${list(sorted, "or")}` : "",
@@ -788,6 +794,7 @@ const PATTERN_WORDS: { [K in PatternKind]: (pattern: PatternOf<K>) => string } =
     "a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights",
   crud: () => "",
   landing: (p) => `a landing page: ${list(p.sections.map((s) => humanize(s.name).toLowerCase()))}`,
+  sections: () => "a page of sections",
   dashboard: (p) => `a dashboard: ${list(p.items.map((i) => humanize(i.name).toLowerCase()))}`,
   settings: (p) => `settings: edits your ${humanize(p.model).toLowerCase()}`,
   onboarding: (p) =>

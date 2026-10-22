@@ -336,6 +336,11 @@ export const UX_SCHEMA: JsonSchema = {
               },
             },
           },
+          frame: {
+            enum: ["site", "app", "none"],
+            description:
+              "The frame the page shows in: site (the public frame with the top menu), app (the workspace with the side menu) or none (the page alone). Without it, the page kind's own.",
+          },
           sections: {
             type: "object",
             description:

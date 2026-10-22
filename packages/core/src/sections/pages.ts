@@ -12,12 +12,13 @@ import {
   type FieldIR,
   type ModelIR,
   type PageIR,
+  type PageSection,
   type PatternKind,
   type SpecIR,
   USER_MODEL,
 } from "../ir.js";
 import { capitalize, kebab } from "../naming.js";
-import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
+import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo, readSections } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { checkDefaultFilter, checkFilterFields, checkSortableFields } from "./list-keys.js";
@@ -30,6 +31,37 @@ const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+
 
 /** Routes the generated app uses itself (see the deployment contract). */
 const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/, /^\/files(?:\/|$)/];
+
+/** The page kinds proper: `sections` is every page's, and a page of sections alone. */
+const KINDS = PATTERN_KINDS.filter((k) => k !== "sections");
+
+/** The section a page's kind brings, placed first unless its `sections` name it. */
+function ownSections(pattern: PageIR["pattern"], model: string | undefined): PageSection[] {
+  if (pattern.kind === "landing") return pattern.sections;
+  if (pattern.kind === "sections") return [];
+  if (pattern.kind === "dashboard") return [{ name: "dashboard", kind: "tiles", own: true }];
+  const shown = model ?? ("model" in pattern ? pattern.model : undefined);
+  return [
+    { name: pattern.kind, kind: pattern.kind, own: true, ...(shown ? { model: shown } : {}) },
+  ];
+}
+
+/** What a page kind's own section is called in a message. */
+const OWN_LABELS: Partial<Record<PatternKind, string>> = {
+  crud: "list",
+  dashboard: "tiles",
+  calendar: "calendar",
+  calculator: "calculator",
+  articles: "articles",
+  order: "order form",
+  users: "user list",
+  data: "data view",
+  review: "review list",
+  settings: "form",
+  onboarding: "steps",
+  legal: "privacy text",
+  custom: "component",
+};
 
 export const pagesSection: SpecSection<"pages"> = {
   key: "pages",
@@ -50,11 +82,14 @@ export const pagesSection: SpecSection<"pages"> = {
   },
   schema: {
     type: "object",
-    description: `The application's pages. Each page uses one pattern: ${PATTERN_KINDS.slice(0, -1).join(", ")} or ${PATTERN_KINDS.at(-1)}.`,
+    description: `The application's pages. Each page has one kind (${KINDS.slice(0, -1).join(", ")} or ${KINDS.at(-1)}), sections beside it, or sections alone.`,
     propertyNames: { pattern: NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
-      oneOf: PATTERN_KINDS.map((k) => ({ required: [k] })),
+      oneOf: [
+        ...KINDS.map((k) => ({ required: [k] })),
+        { required: ["sections"], not: { anyOf: KINDS.map((k) => ({ required: [k] })) } },
+      ],
       additionalProperties: false,
       properties: {
         route: {
@@ -198,6 +233,7 @@ function readPage(
   });
   let route = `/${kebab(id)}`;
   let pattern: PageIR["pattern"] | undefined;
+  let sectionsNode: { value: ParsedNode | null; keyNode: ParsedNode } | undefined;
   let actions: string[] | undefined;
   const actionNodes = new Map<string, At>();
   let search: { name: string; at: At }[] | undefined;
@@ -297,31 +333,70 @@ function readPage(
           `"contact" in ${where} is owner, a user field of the model, or { to, keep }.`,
         );
       }
+    } else if (key === "sections") {
+      // Read once the page's kind is known: its own kind's name places its own section.
+      sectionsNode = { value, keyNode: known.find((e) => e.key === key)?.keyNode ?? keyNode };
     } else if (key in PAGE_PATTERNS) {
       pattern = PAGE_PATTERNS[key as PatternKind].parse(ctx, value, where, parsed);
     }
   }
-  const patterns = known.filter((e) => (PATTERN_KINDS as readonly string[]).includes(e.key));
+  const patterns = known.filter((e) => (KINDS as readonly string[]).includes(e.key));
   if (patterns.length > 1) {
     ctx.error(
       patterns[1]?.keyNode ?? keyNode,
       "invalid-key",
-      `${capitalize(where)} can use only one pattern: ${PATTERN_KINDS.join(", ")}.`,
+      `${capitalize(where)} can use only one pattern: ${KINDS.join(", ")}.`,
     );
     return undefined;
   }
+  // A page of parts and no kind: its sections alone (docs/design/page-sections.md §2).
+  if (!pattern && sectionsNode && patterns.length === 0) pattern = { kind: "sections" };
   if (!pattern) {
     if (patterns.length === 0) {
-      const examples = PATTERN_KINDS.map((k) => `"${PAGE_PATTERNS[k].example}"`);
+      const examples = KINDS.map((k) => `"${PAGE_PATTERNS[k].example}"`);
       ctx.error(
         keyNode,
         "missing-pattern",
-        `${capitalize(where)} needs a pattern: ${examples.slice(0, -1).join(", ")} or ${examples.at(-1)}.`,
+        `${capitalize(where)} needs a kind: ${examples.slice(0, -1).join(", ")} or ${examples.at(-1)}; or "sections" alone.`,
       );
     }
     return undefined;
   }
-  const model = patternInfo({ id, route, pattern }).manages();
+  const model = patternInfo({ id, route, pattern, sections: [] }).manages();
+  // The page's sections: its kind's own first, unless the sections name the kind to place it.
+  let sections = ownSections(pattern, model);
+  if (sectionsNode && pattern.kind === "landing") {
+    ctx.error(
+      sectionsNode.keyNode,
+      "invalid-key",
+      `A landing page's sections are under "landing"; add them there (${where}).`,
+    );
+  } else if (sectionsNode) {
+    const own =
+      pattern.kind === "sections"
+        ? {}
+        : { kind: pattern.kind, label: OWN_LABELS[pattern.kind] ?? pattern.kind };
+    const added = readSections(ctx, sectionsNode.value, where, parsed, own);
+    const placed = own ? added.findIndex((s) => s.own) : -1;
+    sections =
+      placed >= 0
+        ? [...added.slice(0, placed), ...sections, ...added.slice(placed + 1)]
+        : [...sections, ...added];
+    // A tile's or a step's name is a text key under the page too, so a section cannot share it.
+    const taken = Object.keys(patternInfo({ id, route, pattern, sections: [] }).parts());
+    for (const section of added.filter((s) => !s.own && taken.includes(s.name)))
+      ctx.error(
+        sectionsNode.keyNode,
+        "duplicate-name",
+        `${capitalize(where)} already has a part named "${section.name}" (a ${pattern.kind === "dashboard" ? "tile" : "step"}); give the section another name.`,
+      );
+    if (pattern.kind === "sections" && sections.length === 0)
+      ctx.error(
+        sectionsNode.keyNode,
+        "missing-key",
+        `${capitalize(where)} has no sections; a page of sections needs at least one, like "story: { text: }" or "team: { records: Instructor }".`,
+      );
+  }
   if (!model)
     for (const e of known.filter((e) =>
       [
@@ -360,6 +435,7 @@ function readPage(
     id,
     route,
     pattern,
+    sections,
     ...(model && actions?.length ? { actions } : {}),
     ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
     ...(checkedFilters ? { filters: checkedFilters } : {}),

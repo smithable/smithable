@@ -245,10 +245,20 @@ test("a page's navigation icon is set with setIcon, or suggested by its model's 
   expect(pageIcon(empty, page("customers"))).toBe("users");
   expect(pageIcon(empty, page("orders"))).toBe("cart");
   expect(
-    pageIcon(empty, { id: "widgets", route: "/", pattern: { kind: "crud", model: "Widget" } }),
+    pageIcon(empty, {
+      id: "widgets",
+      route: "/",
+      pattern: { kind: "crud", model: "Widget" },
+      sections: [],
+    }),
   ).toBe("list");
   expect(
-    pageIcon(empty, { id: "home", route: "/", pattern: { kind: "landing", sections: [] } }),
+    pageIcon(empty, {
+      id: "home",
+      route: "/",
+      pattern: { kind: "landing", sections: [] },
+      sections: [],
+    }),
   ).toBe("home");
   const set = applyOperation({ spec: crm }, "setIcon", { page: "orders", icon: "truck" });
   if (!set.ok) throw new Error(set.message);

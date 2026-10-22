@@ -1,6 +1,6 @@
 # Pages as a list of sections, and a page's frame (design)
 
-Status: proposed 2026-10-22 by Fable, from Johan's questions of 2026-10-21 (a generic way to
+Status: step 1 (core) built 2026-10-22 by Fable (sections on every page, a page of sections, text and view, the frame in the ux file, the operations, the spec reference); steps 2–4 by A follow. Proposed 2026-10-22 by Fable, from Johan's questions of 2026-10-21 (a generic way to
 build a page from existing parts, the same FAQ on two pages, the menu optional on every page; is
 there a point in page kinds once sections exist?) and his decision of 2026-10-22 on the UI
 feedback's point 4: the frame is the page's, not the role's, and staff see the members' pages as

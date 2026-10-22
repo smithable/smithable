@@ -53,6 +53,7 @@ export function dataRoutes(
       id: page.id,
       route: dataRoute(within, name),
       pattern: { kind: "crud", model: name },
+      sections: [{ name: "crud", kind: "crud", own: true, model: name }],
       ...(search.length ? { search } : {}),
     };
     const folder = kebab(plural(name));
