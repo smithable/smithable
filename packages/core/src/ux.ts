@@ -759,11 +759,15 @@ function readSectionLooks(
   where: string,
 ): Record<string, SectionLook> {
   const looks: Record<string, SectionLook> = {};
-  if (page.pattern.kind !== "landing") {
-    ctx.error(node, "invalid-key", `"sections" is for a landing page; ${page.id} is not one.`);
+  const sections = page.sections.filter((s) => !s.own);
+  if (sections.length === 0) {
+    ctx.error(
+      node,
+      "invalid-key",
+      `"sections" are looks of a page's sections; ${page.id} has none.`,
+    );
     return looks;
   }
-  const sections = page.pattern.sections;
   for (const entry of mapEntries(ctx, node, `"sections" of ${where}`) ?? []) {
     const section = sections.find((s) => s.name === entry.key);
     if (!section) {

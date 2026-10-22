@@ -55,7 +55,7 @@ test("each section kind takes its own looks, checked by name and value", () => {
     },
     ir,
   ).diagnostics[0]?.message;
-  expect(notLanding).toBe('"sections" is for a landing page; items is not one.');
+  expect(notLanding).toBe('"sections" are looks of a page\'s sections; items has none.');
 });
 
 test("setSectionLook writes a look, default removes it, a wrong value is refused; a removed section's look goes too", () => {

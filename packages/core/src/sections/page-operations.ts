@@ -864,7 +864,9 @@ const renamePage: Operation<{ from: string; to: string }> = {
 };
 
 /** A landing page's section kinds other than records, which any name can have. */
-const KINDS = SECTION_KINDS.filter((k) => k !== "records" && k !== "calculator" && k !== "custom");
+const KINDS = SECTION_KINDS.filter(
+  (k) => k !== "records" && k !== "calculator" && k !== "custom" && k !== "text",
+);
 
 const componentName = (component: string) => {
   if (!COMPONENT_PATTERN.test(component))
@@ -884,6 +886,7 @@ const addSection: Operation<{
   button?: string;
   custom?: string;
   text?: boolean;
+  kind?: string;
 }> = {
   name: "addSection",
   summary: `Add a section to a page, below its others: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
@@ -915,6 +918,11 @@ const addSection: Operation<{
         description:
           "A text section, any name: a heading and paragraphs from smithable.content.yml.",
       },
+      kind: {
+        type: "string",
+        enum: [...KINDS],
+        description: "A section of this kind under another name, e.g. a second faq called more.",
+      },
       where: {
         type: "object",
         description:
@@ -938,17 +946,28 @@ const addSection: Operation<{
   positional: ["page", "section"],
   describe: ({ page, section }) => `Add a ${section} section to the ${page} page`,
   destructive: () => false,
-  apply({ spec }, { page, section, records, view, starts, where, form, button, custom, text }, ir) {
+  apply(
+    { spec },
+    { page, section, records, view, starts, where, form, button, custom, text, kind },
+    ir,
+  ) {
     const existing = ir.pages.find((p) => p.id === page);
     if (!existing) throw new OperationError(`There is no page named "${page}".`);
     if (existing.sections.some((s) => s.name === section))
       throw new OperationError(`The ${page} page already has a section named "${section}".`);
     if (custom) componentName(custom);
-    if ([records, custom, text].filter(Boolean).length > 1)
-      throw new OperationError("A section shows records, or is text, or is custom: one of them.");
-    if (!records && !custom && !text && !(KINDS as readonly string[]).includes(section))
+    if ([records, custom, text, kind].filter(Boolean).length > 1)
+      throw new OperationError(
+        "A section shows records, or is text, or is custom, or of a kind: one of them.",
+      );
+    const named = kind ?? ((KINDS as readonly string[]).includes(section) ? section : undefined);
+    if (!records && !custom && !text && !named)
       throw new OperationError(
         `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records, text or custom.`,
+      );
+    if ((button || form) && !named)
+      throw new OperationError(
+        "Only a hero, call to action or contact section has a button or a form.",
       );
     if (where && Object.keys(where).length && !records)
       throw new OperationError('Only a section with records has a "where".');
@@ -965,6 +984,7 @@ const addSection: Operation<{
       ...(button ? { button } : {}),
       ...(custom ? { custom } : {}),
       ...(text ? { text: null } : {}),
+      ...(kind ? { [kind]: null } : {}),
     };
     const path = sectionsPath(existing);
     if (spec.has(path) && spec.get(path) != null) spec.add(path, section, options);
@@ -1006,7 +1026,11 @@ const removeSection: Operation<{ page: string; section: string }> = {
       throw new OperationError(
         `A ${existing.pattern.kind === "landing" ? "landing page" : "page of sections"} needs at least one section.`,
       );
-    spec.remove([...sectionsPath(existing), section]);
+    // The last part taken away takes the empty "sections" with it; a landing keeps its map.
+    spec.removeAndPrune(
+      [...sectionsPath(existing), section],
+      existing.pattern.kind === "landing" ? 3 : 2,
+    );
     return [{ kind: "remove-section", page, section }];
   },
 };
@@ -1138,7 +1162,20 @@ const moveSection: Operation<{ page: string; section: string; before?: string; a
   apply({ spec }, { page, section, before, after }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     // The sections as written: a page kind's own part is among them only when placed by name.
-    const written = existing ? spec.get(sectionsPath(existing)) : undefined;
+    let written = existing ? spec.get(sectionsPath(existing)) : undefined;
+    // The page kind's own part is placed by writing its name among the sections, first.
+    const own = existing?.sections.find((s) => s.own);
+    if (existing && own && (section === own.name || before === own.name || after === own.name)) {
+      const has = written && typeof written === "object" && own.name in (written as object);
+      if (!has) {
+        const path = sectionsPath(existing);
+        const rest =
+          written && typeof written === "object" ? (written as Record<string, unknown>) : {};
+        if (spec.has(path)) spec.set(path, { [own.name]: null, ...rest } as YamlValue);
+        else spec.add(["pages", page], path[2] as string, { [own.name]: null });
+        written = spec.get(path);
+      }
+    }
     const names = written && typeof written === "object" ? Object.keys(written as object) : [];
     if (!existing || !names.includes(section))
       throw new OperationError(`The ${page} page has no section named "${section}".`);
@@ -1154,6 +1191,36 @@ const moveSection: Operation<{ page: string; section: string; before?: string; a
     return [];
   },
 };
+
+const addSectionsPage: Operation<{ page: string; route?: string }> = {
+  name: "addSectionsPage",
+  summary:
+    "Add a page of parts and no kind (an about page), starting with a text section; add more with addSection. It is in the main menu.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. about." },
+      route: { type: "string", description: "Defaults to / plus the page name." },
+    },
+  },
+  positional: ["page", "route"],
+  describe: ({ page }) => `Add page ${page}, a page of sections`,
+  destructive: () => false,
+  apply({ spec }, { page, route }, ir) {
+    if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
+    if (ir.pages.some((p) => p.id === page))
+      throw new OperationError(`Page "${page}" already exists.`);
+    const sections = { intro: { text: null } };
+    spec.add(["pages"], page, route ? { route, sections } : { sections });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
+/** Operations of a page of sections. */
+export const sectionsOperations: AnyOperation[] = [addSectionsPage];
 
 export const landingOperations: AnyOperation[] = [
   addLandingPage,

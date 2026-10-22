@@ -56,6 +56,7 @@ import {
   legalOperations,
   orderOperations,
   reviewOperations,
+  sectionsOperations,
   usersOperations,
 } from "./sections/page-operations.js";
 import { didYouMean } from "./suggest.js";
@@ -269,6 +270,17 @@ const SECTIONS_SCHEMA = (of: string): JsonSchema => ({
         type: ["boolean", "null"],
         description: "A text section: a heading and paragraphs from smithable.content.yml.",
       },
+      ...Object.fromEntries(
+        SECTION_KINDS.filter((k) => !["records", "calculator", "custom", "text"].includes(k)).map(
+          (k) => [
+            k,
+            {
+              type: ["boolean", "null"],
+              description: `A ${k} section under another name, written alone.`,
+            },
+          ],
+        ),
+      ),
       search: {
         type: "boolean",
         description: "A records section with a search box, leading to the model's list page.",
@@ -1024,6 +1036,7 @@ const sectionsPage: PagePattern<"sections"> = {
   parse: () => ({ kind: "sections" }),
   models: () => [],
   inMenu: true,
+  operations: sectionsOperations,
 };
 
 /** Whether a section is a page kind's own (a crud page's list, a dashboard's tiles), not a part. */
@@ -1075,9 +1088,9 @@ export function followSections(
   for (const section of sections) {
     if (section.model === effect.model && section.starts !== undefined) {
       const path = ["pages", page.id, under, section.name, "starts"];
-      if (effect.kind === "rename-field" && section.starts === effect.from)
+      if (effect.kind === "rename-field" && section.starts === effect.from && spec.has(path))
         spec.set(path, effect.to);
-      else if (effect.kind !== "rename-field" && section.starts === effect.field)
+      else if (effect.kind === "remove-field" && section.starts === effect.field)
         return {
           refusal: `The ${section.name} section of the ${page.id} page places ${effect.model} records by ${effect.field}; give it another date first.`,
         };
@@ -1153,9 +1166,14 @@ export function patternInfo(page: PageIR) {
       ...(info.forms?.(pattern) ?? []),
       ...parts.flatMap((s) => (s.form ? [s.form] : [])),
     ],
-    follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) =>
-      info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir) ??
-      followSections(spec, page, effect),
+    follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) => {
+      const own = info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir);
+      if (own && "refusal" in own) return own;
+      const parts = followSections(spec, page, effect);
+      if (parts && "refusal" in parts) return parts;
+      if (own && parts) return { note: `${own.note}; ${parts.note}` };
+      return own ?? parts;
+    },
   };
 }
 
@@ -1180,7 +1198,7 @@ export function readSections(
   node: ParsedNode | null,
   where: string,
   parsed: Partial<SpecIR>,
-  own?: { kind: string; label: string },
+  own?: { kind?: string; label?: string },
 ): PageSection[] {
   const sections: PageSection[] = [];
   // A records, text, calculator or custom section is known by its options, not its name.
@@ -1191,29 +1209,34 @@ export function readSections(
   for (const { key: name, keyNode, value } of mapEntries(ctx, node, listed) ?? []) {
     const sectionWhere = `section "${name}" of ${where}`;
     const empty = value === null || (isScalarNode(value) && value.value === null);
-    if (own && name === own.kind) {
+    if (own?.kind && name === own.kind) {
       // The page's own section, placed here: a crud page's list, a dashboard's tiles.
       if (!empty)
         ctx.error(
           value,
           "invalid-value",
-          `"${name}" in ${listed} places the page's own ${own.label} and takes no value.`,
+          `"${name}" in ${listed} places the page's own ${own.label ?? own.kind} and takes no value.`,
         );
       sections.push({ name, kind: own.kind as PageSection["kind"], own: true });
       continue;
     }
     // A page kind named as a section (crud, order, …) is a flow, written only as a page's kind;
     // calculator and custom are section kinds too, so they pass to the options below.
+    // A page kind written as a section with a value ("crud: Session") is a flow: a page, never a
+    // part; the same name with a part's options (records, text) is only a name.
+    const partKeys = ["records", "text", "calculator", "custom", ...named];
+    const makesPart =
+      isMap(value) &&
+      (mapEntries(ctx, value, sectionWhere) ?? []).some((e) => partKeys.includes(e.key));
     if (
       (PATTERN_KINDS as readonly string[]).includes(name) &&
-      !(SECTION_KINDS as readonly string[]).includes(name)
+      !(SECTION_KINDS as readonly string[]).includes(name) &&
+      !makesPart
     ) {
       ctx.error(
         keyNode,
         "invalid-key",
-        own
-          ? `"${name}" is a page's kind, not a section of ${own.label.includes(" ") ? "a" : "this"} page: a page has one kind, written as its own key.`
-          : `"${name}" is a page's kind, not a section: write it as its own page.`,
+        `"${name}" is a page's kind, not a section: a page has one kind, written as its own key${own?.kind ? ` (this page's is ${own.kind})` : ""}.`,
       );
       continue;
     }
@@ -1275,6 +1298,12 @@ export function readSections(
           );
         if (options.filter((o) => (named as readonly string[]).includes(o.key)).length > 1)
           ctx.error(optionKey, "invalid-key", `${capitalize(sectionWhere)} can be of one kind.`);
+        if (options.some((o) => ["records", "calculator", "custom", "text"].includes(o.key)))
+          ctx.error(
+            optionKey,
+            "invalid-key",
+            `${capitalize(sectionWhere)} is a ${key} section, so it shows no records and is not text, a calculator or custom.`,
+          );
       } else if (key === "text") {
         // A text section: a heading and paragraphs, from the content file; nothing else here.
         const on = isScalarNode(option) ? option.value : option;

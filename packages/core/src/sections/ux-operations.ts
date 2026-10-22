@@ -413,9 +413,8 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
   destructive: () => false,
   apply(editors, { page, section, key, value }, ir) {
     const found = ir.pages.find((p) => p.id === page);
-    if (found?.pattern.kind !== "landing")
-      throw new OperationError(`There is no landing page named "${page}".`);
-    const kind = found.pattern.sections.find((s) => s.name === section)?.kind;
+    if (!found) throw new OperationError(`There is no page named "${page}".`);
+    const kind = found.sections.find((s) => s.name === section && !s.own)?.kind;
     if (!kind) throw new OperationError(`${page} has no section named "${section}".`);
     const allowed = SECTION_LOOKS[kind]?.[key];
     if (!allowed)

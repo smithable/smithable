@@ -1509,6 +1509,69 @@
                   ],
                   "description": "A text section: a heading and paragraphs from smithable.content.yml."
                 },
+                "hero": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A hero section under another name, written alone."
+                },
+                "features": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A features section under another name, written alone."
+                },
+                "pricing": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A pricing section under another name, written alone."
+                },
+                "testimonials": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A testimonials section under another name, written alone."
+                },
+                "faq": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A faq section under another name, written alone."
+                },
+                "callToAction": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A callToAction section under another name, written alone."
+                },
+                "contact": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A contact section under another name, written alone."
+                },
+                "gallery": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A gallery section under another name, written alone."
+                },
+                "footer": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A footer section under another name, written alone."
+                },
                 "search": {
                   "type": "boolean",
                   "description": "A records section with a search box, leading to the model's list page."
@@ -1620,6 +1683,69 @@
                     "null"
                   ],
                   "description": "A text section: a heading and paragraphs from smithable.content.yml."
+                },
+                "hero": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A hero section under another name, written alone."
+                },
+                "features": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A features section under another name, written alone."
+                },
+                "pricing": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A pricing section under another name, written alone."
+                },
+                "testimonials": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A testimonials section under another name, written alone."
+                },
+                "faq": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A faq section under another name, written alone."
+                },
+                "callToAction": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A callToAction section under another name, written alone."
+                },
+                "contact": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A contact section under another name, written alone."
+                },
+                "gallery": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A gallery section under another name, written alone."
+                },
+                "footer": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A footer section under another name, written alone."
                 },
                 "search": {
                   "type": "boolean",
