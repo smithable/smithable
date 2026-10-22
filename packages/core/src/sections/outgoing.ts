@@ -5,7 +5,7 @@ import {
   lostValues,
   readCondition,
 } from "../condition.js";
-import { checkKeys, mapEntries, readString } from "../context.js";
+import { checkKeys, mapEntries, readNameList, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
 import type { Condition, ModelIR, OutgoingIR, RecipientIR, StandardActionIR } from "../ir.js";
 import { humanize } from "../naming.js";
@@ -58,7 +58,10 @@ function readWhen(
   };
 }
 
-/** The mail's recipient: owner, a role, or an address on the record (one reference away at most). */
+/**
+ * The mail's recipient: owner, a role, an address on the record (one reference away at most), or
+ * the records of a list field and then the owner or an address of each (`bookings.owner`).
+ */
 function readRecipient(
   text: string,
   model: ModelIR,
@@ -91,11 +94,31 @@ function readRecipient(
     const [first = "", second = ""] = path;
     const ref = model.fields.find((f) => f.name === first);
     const type = ref?.type;
-    if (!ref || type?.kind !== "relation" || type.many)
+    if (!ref || type?.kind !== "relation")
       return {
-        problem: `${model.name}.${first} is not a reference to one record, so "${text}" leads nowhere.`,
+        problem: `${model.name}.${first} is not a reference to one record or a list of them, so "${text}" leads nowhere.`,
       };
     const other = models.find((m) => m.name === type.model);
+    if (type.many) {
+      // Every record of the list: its owner, or an address on it.
+      if (second === "owner")
+        return {
+          recipient: { kind: "list", list: first, model: type.model, each: { kind: "owner" } },
+        };
+      const via = other ? addressOf(other, second) : undefined;
+      if (!via)
+        return {
+          problem: `${type.model}.${second} is not owner, an email field or a field that refers to User, so "${text}" tells nobody.`,
+        };
+      return {
+        recipient: {
+          kind: "list",
+          list: first,
+          model: type.model,
+          each: { kind: "field", field: second, via },
+        },
+      };
+    }
     const via = other ? addressOf(other, second) : undefined;
     if (!via)
       return {
@@ -104,6 +127,55 @@ function readRecipient(
     return { recipient: { kind: "field", path, via } };
   }
   return { problem: `"recipient" goes one reference away at most: "${text}" goes further.` };
+}
+
+/** A recipient as the spec writes it. */
+function recipientText(r: RecipientIR): string {
+  return r.kind === "owner"
+    ? "owner"
+    : r.kind === "role"
+      ? r.role
+      : r.kind === "field"
+        ? r.path.join(".")
+        : `${r.list}.${r.each.kind === "owner" ? "owner" : r.each.field}`;
+}
+
+/**
+ * `fields`: the stored fields of the model whose change counts, only for `<Model> changed`; says
+ * what is wrong otherwise.
+ */
+function readFields(
+  fields: string[],
+  when: When,
+  model: ModelIR,
+): { fields: string[] } | { problem: string } {
+  if (!("event" in when) || when.event !== "changed")
+    return {
+      problem: `"fields" says which fields' change counts, so it goes with "${model.name} changed" only.`,
+    };
+  if (!fields.length) return { problem: `"fields" names at least one field of ${model.name}.` };
+  for (const name of fields) {
+    const f = model.fields.find((x) => x.name === name);
+    if (!f)
+      return {
+        problem: `${model.name} has no field named "${name}".${
+          didYouMean(
+            name,
+            model.fields.map((x) => x.name),
+          )
+            ? ` ${didYouMean(
+                name,
+                model.fields.map((x) => x.name),
+              )}`
+            : ""
+        }`,
+      };
+    if (f.formula)
+      return {
+        problem: `${model.name}.${name} is worked out from other fields, so it never changes by itself; name those.`,
+      };
+  }
+  return { fields: [...new Set(fields)] };
 }
 
 const EVENT_WORDS = { created: "added", changed: "changed", deleted: "deleted" } as const;
@@ -115,11 +187,16 @@ const EVENT_WORDS = { created: "added", changed: "changed", deleted: "deleted" }
 export function outgoingText(o: OutgoingIR, label?: (model: string) => string): string {
   const name = (label ?? ((m: string) => humanize(m).toLowerCase()))(o.when.model);
   const changes = "event" in o.when && o.when.event === "changed" && o.where;
-  const what = changes
-    ? `When a ${name} changes so that ${conditionText(o.where as Condition)}`
-    : "event" in o.when
-      ? `When a ${name} is ${EVENT_WORDS[o.when.event]}${o.where ? ` and ${conditionText(o.where)}` : ""}`
-      : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
+  const watched = o.fields?.length
+    ? o.fields.map((f) => humanize(f).toLowerCase()).join(" or ")
+    : undefined;
+  const what = watched
+    ? `When a ${name}'s ${watched} changes${o.where ? ` so that ${conditionText(o.where as Condition)}` : ""}`
+    : changes
+      ? `When a ${name} changes so that ${conditionText(o.where as Condition)}`
+      : "event" in o.when
+        ? `When a ${name} is ${EVENT_WORDS[o.when.event]}${o.where ? ` and ${conditionText(o.where)}` : ""}`
+        : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
   const to =
     o.to !== "mail"
       ? `tells ${humanize(o.to).toLowerCase()}`
@@ -129,7 +206,9 @@ export function outgoingText(o: OutgoingIR, label?: (model: string) => string): 
           ? "mails its owner"
           : o.recipient.kind === "role"
             ? `mails every ${o.recipient.role}`
-            : `mails ${o.recipient.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
+            : o.recipient.kind === "list"
+              ? `mails every ${(label ?? ((m: string) => humanize(m).toLowerCase()))(o.recipient.model)}'s ${o.recipient.each.kind === "owner" ? "owner" : humanize(o.recipient.each.field).toLowerCase()}`
+              : `mails ${o.recipient.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
   return `${what}: ${to}.`;
 }
 
@@ -151,10 +230,19 @@ const whereSchema = {
     "Only for records with these values, e.g. { status: confirmed }; a change counts when the record comes to fit them.",
 };
 
+const fieldsSchema = {
+  type: "array",
+  items: { type: "string", pattern: FIELD_NAME_PATTERN.source },
+  minItems: 1,
+  description:
+    'For "<Model> changed": only a change of one of these fields counts, e.g. [startsAt].',
+};
+
 const addOutgoing: Operation<{
   outgoing: string;
   when: string;
   where?: Record<string, string | boolean | string[]>;
+  fields?: string[];
   to?: string;
   recipient?: string;
 }> = {
@@ -169,6 +257,7 @@ const addOutgoing: Operation<{
       outgoing: { type: "string", minLength: 1, description: "camelCase name, e.g. bookingMade." },
       when: whenSchema,
       where: whereSchema,
+      fields: fieldsSchema,
       to: {
         type: "string",
         description: '"mail" (the default), or the name of a target whose address is a setting.',
@@ -176,7 +265,7 @@ const addOutgoing: Operation<{
       recipient: {
         type: "string",
         description:
-          'For mail: "owner", a role (admin), an email field of the record (email), a field that refers to User (assignee), or one reference away (customer.email).',
+          'For mail: "owner", a role (admin), an email field of the record (email), a field that refers to User (assignee), one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner).',
       },
     },
   },
@@ -184,7 +273,7 @@ const addOutgoing: Operation<{
   describe: ({ outgoing, when, to, recipient }) =>
     `Add ${outgoing}: when ${when}, ${to && to !== "mail" ? `tell ${to}` : `mail ${recipient ?? "someone"}`}`,
   destructive: () => false,
-  apply({ spec }, { outgoing, when, where, to = "mail", recipient }, ir) {
+  apply({ spec }, { outgoing, when, where, fields, to = "mail", recipient }, ir) {
     if (!FIELD_NAME_PATTERN.test(outgoing))
       throw new OperationError(nameRule("outgoing", outgoing));
     if (ir.outgoing.some((o) => o.name === outgoing))
@@ -197,6 +286,10 @@ const addOutgoing: Operation<{
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
     const model = ir.models.find((m) => m.name === read.when.model) as ModelIR;
+    if (fields) {
+      const f = readFields(fields, read.when, model);
+      if ("problem" in f) throw new OperationError(f.problem);
+    }
     if (to === "mail") {
       if (!recipient)
         throw new OperationError(
@@ -211,6 +304,7 @@ const addOutgoing: Operation<{
     }
     const value: Record<string, YamlValue> = { when };
     if (where && Object.keys(where).length) value.where = conditionArgs(where);
+    if (fields?.length) value.fields = [...new Set(fields)];
     value.to = to;
     if (recipient) value.recipient = recipient;
     if (spec.has(["outgoing"])) spec.add(["outgoing"], outgoing, value);
@@ -255,6 +349,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       properties: {
         when: whenSchema,
         where: whereSchema,
+        fields: fieldsSchema,
         to: {
           type: "string",
           pattern: FIELD_NAME_PATTERN.source,
@@ -264,7 +359,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           type: "string",
           pattern: "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
           description:
-            "For mail: owner, a role, an email field or a field that refers to User, or one reference away (customer.email).",
+            "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner).",
         },
       },
     },
@@ -281,7 +376,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       const where = `outgoing "${key}"`;
       const known = checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-        allowed: ["when", "where", "to", "recipient"],
+        allowed: ["when", "where", "fields", "to", "recipient"],
       });
       const byKey = new Map(known.map((e) => [e.key, e]));
       const whenEntry = byKey.get("when");
@@ -325,6 +420,18 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         const condition = readCondition(ctx, whereEntry.value, `"where" of ${where}`, model);
         if (condition && Object.keys(condition).length) entry.where = condition;
       }
+      const fieldsEntry = byKey.get("fields");
+      if (fieldsEntry) {
+        const names = readNameList(ctx, fieldsEntry.value, `"fields" of ${where}`).map(
+          (n) => n.name,
+        );
+        const f = readFields(names, read.when, model);
+        if ("problem" in f) {
+          ctx.error(fieldsEntry.value, "invalid-outgoing", `${capital(where)}: ${f.problem}`);
+          continue;
+        }
+        entry.fields = f.fields;
+      }
       const recipientEntry = byKey.get("recipient");
       const recipientText = recipientEntry
         ? readString(ctx, recipientEntry.value, `"recipient" of ${where}`)
@@ -366,9 +473,27 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         return {
           refusal: `"${o.name}" under outgoing waits for the action "${effect.action}"; remove it first.`,
         };
+      const list = o.recipient?.kind === "list" ? o.recipient : undefined;
       if (effect.kind === "rename-field") {
         if (o.when.model === effect.model && o.where?.[effect.from] !== undefined)
           spec.renameKey([...at, "where", effect.from], effect.to);
+        if (o.when.model === effect.model && o.fields?.includes(effect.from))
+          spec.set(
+            [...at, "fields"],
+            o.fields.map((f) => (f === effect.from ? effect.to : f)),
+          );
+        if (list && o.when.model === effect.model && list.list === effect.from)
+          spec.set([...at, "recipient"], recipientText({ ...list, list: effect.to }));
+        if (
+          list &&
+          list.model === effect.model &&
+          list.each.kind === "field" &&
+          list.each.field === effect.from
+        )
+          spec.set(
+            [...at, "recipient"],
+            recipientText({ ...list, each: { ...list.each, field: effect.to } }),
+          );
         if (path[0] === effect.from && o.when.model === effect.model)
           spec.set([...at, "recipient"], [effect.to, ...path.slice(1)].join("."));
         if (path.length === 2 && path[1] === effect.from) {
@@ -397,6 +522,21 @@ export const outgoingSection: SpecSection<"outgoing"> = {
             };
         }
         if (o.when.model === effect.model && path[0] === effect.field)
+          return { refusal: uses(effect.model, effect.field) };
+        if (
+          effect.kind === "remove-field" &&
+          o.when.model === effect.model &&
+          o.fields?.includes(effect.field)
+        )
+          return { refusal: uses(effect.model, effect.field) };
+        if (list && o.when.model === effect.model && list.list === effect.field)
+          return { refusal: uses(effect.model, effect.field) };
+        if (
+          list &&
+          list.model === effect.model &&
+          list.each.kind === "field" &&
+          list.each.field === effect.field
+        )
           return { refusal: uses(effect.model, effect.field) };
         if (path.length === 2 && path[1] === effect.field) {
           const ref = ir.models

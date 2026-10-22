@@ -12,6 +12,9 @@ models:
       name: string!
       email: email
       manager: User
+      bookings: Booking[]
+      tier: basic | pro
+      count: { type: int, formula: COUNT(bookings) }
   Booking:
     fields:
       title: string!
@@ -101,6 +104,121 @@ test("outgoing reads an event or an action, a condition, and every kind of recip
     "When a booking is added: mails customer's manager.",
     "When a booking is added: tells status feed.",
   ]);
+});
+
+test("a list field's records, each told; and which fields' change counts", () => {
+  const result = read(`  moved:
+    when: Customer changed
+    fields: [name, email]
+    to: mail
+    recipient: bookings.owner
+  contacts:
+    when: Customer changed
+    fields: [name]
+    where: { tier: pro }
+    to: mail
+    recipient: bookings.contact
+`);
+  expect(result.diagnostics.filter((d) => d.severity !== "note").map((d) => d.message)).toEqual([]);
+  const [moved, contacts] = result.ir?.outgoing ?? [];
+  expect(moved).toEqual({
+    name: "moved",
+    when: { model: "Customer", event: "changed" },
+    fields: ["name", "email"],
+    to: "mail",
+    recipient: { kind: "list", list: "bookings", model: "Booking", each: { kind: "owner" } },
+  });
+  expect(contacts?.recipient).toEqual({
+    kind: "list",
+    list: "bookings",
+    model: "Booking",
+    each: { kind: "field", field: "contact", via: "email" },
+  });
+  expect(outgoingText(moved as never)).toBe(
+    "When a customer's name or email changes: mails every booking's owner.",
+  );
+  expect(outgoingText(contacts as never)).toBe(
+    "When a customer's name changes so that tier is pro: mails every booking's contact.",
+  );
+  const messages = (outgoing: string) => read(outgoing).diagnostics.map((d) => d.message);
+  expect(
+    messages("  x:\n    when: Customer changed\n    to: mail\n    recipient: bookings.title\n"),
+  ).toEqual([expect.stringContaining("Booking.title is not owner, an email field")]);
+  expect(
+    messages(
+      "  x:\n    when: Customer created\n    fields: [name]\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining('goes with "Customer changed" only')]);
+  expect(
+    messages(
+      "  x:\n    when: Customer changed\n    fields: [nome]\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining('Customer has no field named "nome". Did you mean "name"?')]);
+  expect(
+    messages(
+      "  x:\n    when: Customer changed\n    fields: [count]\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining("Customer.count is worked out from other fields")]);
+  expect(
+    messages(
+      "  x:\n    when: Customer changed\n    fields: []\n    to: mail\n    recipient: owner\n",
+    ),
+  ).toEqual([expect.stringContaining("names at least one field")]);
+});
+
+test("addOutgoing with fields and a list recipient; the model's changes follow into both", () => {
+  const files = {
+    spec: SPEC,
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\nroles:\n  admin: { description: Runs it. }\n  staff: { description: Works. }\ndefaultRole: staff\n",
+  };
+  const added = applyOperation(files, "addOutgoing", {
+    outgoing: "moved",
+    when: "Customer changed",
+    fields: ["name"],
+    recipient: "bookings.contact",
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.files.spec).toContain(
+    "outgoing:\n  moved:\n    when: Customer changed\n    fields: [name]\n    to: mail\n    recipient: bookings.contact\n",
+  );
+  const wrong = applyOperation(files, "addOutgoing", {
+    outgoing: "moved",
+    when: "Customer created",
+    fields: ["name"],
+    recipient: "owner",
+  });
+  expect(wrong.ok ? "" : wrong.message).toContain('goes with "Customer changed" only');
+  // The list field renamed on the model, the address renamed on the list's model, a watched field renamed.
+  const list = applyOperation(added.files, "renameField", {
+    model: "Customer",
+    from: "bookings",
+    to: "visits",
+  });
+  if (!list.ok) throw new Error(list.message);
+  expect(list.files.spec).toContain("recipient: visits.contact\n");
+  const each = applyOperation(added.files, "renameField", {
+    model: "Booking",
+    from: "contact",
+    to: "mail",
+  });
+  if (!each.ok) throw new Error(each.message);
+  expect(each.files.spec).toContain("recipient: bookings.mail\n");
+  const watched = applyOperation(added.files, "renameField", {
+    model: "Customer",
+    from: "name",
+    to: "title",
+  });
+  if (!watched.ok) throw new Error(watched.message);
+  expect(watched.files.spec).toContain("fields: [title]\n");
+  // Removing what the entry uses is refused, each with the place.
+  for (const [model, field] of [
+    ["Booking", "contact"],
+    ["Customer", "bookings"],
+    ["Customer", "name"],
+  ]) {
+    const gone = applyOperation(added.files, "removeField", { model, field });
+    expect(gone.ok ? "" : gone.message).toContain(`"moved" under outgoing uses ${model}.${field}`);
+  }
 });
 
 test("what outgoing refuses, each with its reason", () => {

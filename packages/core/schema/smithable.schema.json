@@ -1014,6 +1014,15 @@
             },
             "description": "Only for records with these values, e.g. { status: confirmed }; a change counts when the record comes to fit them."
           },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "minItems": 1,
+            "description": "For \"<Model> changed\": only a change of one of these fields counts, e.g. [startsAt]."
+          },
           "to": {
             "type": "string",
             "pattern": "^[a-z][A-Za-z0-9]*$",
@@ -1022,7 +1031,7 @@
           "recipient": {
             "type": "string",
             "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
-            "description": "For mail: owner, a role, an email field or a field that refers to User, or one reference away (customer.email)."
+            "description": "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner)."
           }
         }
       }

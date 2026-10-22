@@ -7,6 +7,7 @@ const MINUTE = 60_000;
  * Whether an entry counts for what happened (`what`: created, deleted, changed or an action's
  * name). With a condition, a creation, deletion or action counts when the record fits it, and a
  * change when the record fits after it and did not before; an action's change is a change too.
+ * With `fields`, a change counts only when one of them has another value than before.
  */
 export function counts(
   when: string,
@@ -14,12 +15,19 @@ export function counts(
   fits: ((record: Record<string, unknown>) => boolean) | undefined,
   record: Record<string, unknown>,
   before?: Record<string, unknown>,
+  fields?: string[],
 ): boolean {
   if (when === "changed") {
     if (what === "created" || what === "deleted") return false;
+    if (fields && before && !fields.some((f) => !same(record[f], before[f]))) return false;
     return !fits || (fits(record) && !(before && fits(before)));
   }
   return what === when && (!fits || fits(record));
+}
+
+/** Whether two stored values are the same; a date by its instant. */
+function same(a: unknown, b: unknown): boolean {
+  return a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b;
 }
 
 /** The pause before the next try: a minute, then doubling, at most three hours. */
