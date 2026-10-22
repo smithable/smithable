@@ -251,7 +251,7 @@ export const ${n.options} = createServerFn().handler(async () =>
 /** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
 export const ${n.ownerOptions} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  return viewer && ${n.access}.write.roles.includes(viewer.role) ? userOptions() : null;
+  return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? userOptions() : null;
 });
 `
     : "";
@@ -835,7 +835,7 @@ export function dataModule(
   /** Past `closes`, only a role that changes everyone's records adds one. */
   const closedCheck = capacity?.closes
     ? `
-      if (!(viewer && ${n.access}.write.roles.includes(viewer.role))) {
+      if (!(!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role)))) {
         const closesAt = ${deadlineOf("closes", `values.${capacity.per}Id`)};
         if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
       }`
@@ -885,7 +885,7 @@ export function dataModule(
           }${
             capacity.cancelUntil
               ? `
-          if (was && !will && !moving && !(viewer && ${n.access}.write.roles.includes(viewer.role))) {
+          if (was && !will && !moving && !(!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role)))) {
             const cancelUntilAt = ${deadlineOf("cancelUntil", "perId")};
             if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
           }`
@@ -1466,7 +1466,7 @@ ${occ ? occupiesImports() : ""}${[...others]
   .join(
     "",
   )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${
+${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}${
   group.length || roots.length || occ
     ? `
 /** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
@@ -1576,7 +1576,7 @@ ${
     ? `
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
-  if (viewer && (row.ownerId === viewer.id || ${n.access}.read.roles.includes(viewer.role))) return row;
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || ${n.access}.read.roles.includes(viewer.role)))) return row;
   return { ...row, ownerId: null };
 }
 `
@@ -1629,14 +1629,14 @@ ${
 ${
   ownerRequired
     ? `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string {
-  const owner = viewer && ${n.access}.write.roles.includes(viewer.role) ? (given ?? personOf(viewer)) : personOf(viewer);
+  const owner = (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (given ?? personOf(viewer)) : personOf(viewer);
   // The record must have one: a visitor or a key, who is no person, cannot be it.
   if (!owner)
     throw new AccessDenied(viewer !== null, viewer ? "A key owns nothing: name the ${ownerLabel} (${model.ownedBy})." : undefined);
   return owner;
 }`
     : `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
-  if (viewer && ${n.access}.write.roles.includes(viewer.role)) return given ?? personOf(viewer);
+  if ((!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role)))) return given ?? personOf(viewer);
   return personOf(viewer);
 }`
 }
@@ -2186,7 +2186,7 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
           ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
           : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
             // writer never takes it by changing it); anyone else changes only their own.
-            `{ ...values, ${owner}: viewer && ${n.access}.write.roles.includes(viewer.role) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
+            `{ ...values, ${owner}: (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
         : "values"
     };
     try {
@@ -2233,7 +2233,7 @@ ${dropPictures(
             capacity?.cancelUntil
               ? `
         // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records does.
-        if (!(viewer && ${n.access}.delete.roles.includes(viewer.role))) {
+        if (!(!!viewer && (!!viewer.system || ${n.access}.delete.roles.includes(viewer.role)))) {
           const perId = tx.select({ p: ${n.table}.${capacity.per}Id }).from(${n.table}).where(eq(${n.table}.id, id)).get()?.p;
           const cancelUntilAt = perId == null ? undefined : ${deadlineOf("cancelUntil", "perId")};
           if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");

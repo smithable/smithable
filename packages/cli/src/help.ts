@@ -263,6 +263,15 @@ export const COMMANDS: Command[] = [
     text: ["Run the app's tests and remember the results for rule status"],
   },
   {
+    name: "timers",
+    usage: "timers [run <name>]",
+    text: [
+      "List the app's timers, each in a sentence; run <name> runs one as if its time had come",
+      "(--at <time> for another time than now), in the app's own code",
+    ],
+    options: ["at", "dir"],
+  },
+  {
     name: "inspect",
     usage: "inspect [c]",
     text: [

@@ -6082,6 +6082,64 @@ for (const [index, example] of examples.entries()) {
           run("pnpm", ["typecheck"], dir);
         },
       );
+    // Timers (docs/design/timed-actions.md §5): each run as if its time had come, once.
+    if (example === "booking" || example === "invoicing")
+      step(
+        example === "booking"
+          ? "timers run: a reminder for each booking a day before its class, once; a draft post goes out on its date"
+          : "timers run: a sent invoice a week past its due date is overdue, by the timer",
+        () => {
+          const timer = (name, at) => {
+            const r = smithable(dir, "timers", "run", name, "--at", at);
+            if (r.code !== 0) throw new Error(r.out);
+          };
+          if (example === "invoicing") {
+            const [invoice] = query(dir, "select id from invoices order by id limit 1");
+            write(
+              dir,
+              `update invoices set status = 'sent', due_on = '2030-01-01' where id = ${invoice.id}`,
+            );
+            timer("markOverdue", "2030-01-08T12:00:00Z");
+            const [after] = query(dir, `select status from invoices where id = ${invoice.id}`);
+            if (after.status !== "overdue")
+              throw new Error(`the invoice is ${after.status}, not overdue`);
+            const by = query(
+              dir,
+              `select who from audit_log where model = 'Invoice' and record_id = ${invoice.id} order by id desc limit 1`,
+            );
+            if (by[0]?.who !== "timer:markOverdue")
+              throw new Error(`the change is ${by[0]?.who}'s`);
+            return;
+          }
+          const [booking] = query(dir, "select session_id as session from bookings limit 1");
+          if (!booking) throw new Error("no booking to remind of");
+          const [{ n: booked }] = query(
+            dir,
+            `select count(*) as n from bookings where session_id = ${booking.session}`,
+          );
+          write(
+            dir,
+            `update sessions set starts_at = ${Date.parse("2030-01-02T10:00:00Z")} where id = ${booking.session}`,
+          );
+          const reminders = () =>
+            query(dir, "select count(*) as n from outgoing_mail where entry = 'reminder'")[0].n;
+          const before = reminders();
+          timer("remind", "2030-01-01T10:30:00Z");
+          if (reminders() !== before + booked)
+            throw new Error(`${reminders() - before} reminders for ${booked} bookings`);
+          timer("remind", "2030-01-01T10:45:00Z");
+          if (reminders() !== before + booked) throw new Error("a booking was reminded twice");
+          const [post] = query(dir, "select id from posts order by id limit 1");
+          write(
+            dir,
+            `update posts set status = 'draft', published_on = '2030-01-01' where id = ${post.id}`,
+          );
+          timer("publish", "2030-01-01T12:00:00Z");
+          const [out] = query(dir, `select status from posts where id = ${post.id}`);
+          if (out.status !== "published")
+            throw new Error(`the post is ${out.status}, not published`);
+        },
+      );
     // A copy (actions.md §8): duplicate an invoice with its lines, asking for its own number.
     if (example === "invoicing")
       step(

@@ -350,9 +350,15 @@ ${
       named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
 `
     : ""
-}    // A key's line once keys are gone from the app (the API turned off) still says it was a key.
+}    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+    // a timer's line names the timer (docs/design/timed-actions.md §2).
     const removedUser = (id: string) =>
-      named.get(id) ?? (id.startsWith("key:") ? w.aKey(id.slice(4)) : w.aRemovedUser(id));
+      named.get(id) ??
+      (id.startsWith("key:")
+        ? w.aKey(id.slice(4))
+        : id.startsWith("timer:")
+          ? w.byTimer(id.slice(6))
+          : w.aRemovedUser(id));
     const lines = rows.map((r) => {
       const label = r.model ? LABELS[r.model] : undefined;
       const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;

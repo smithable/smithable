@@ -319,6 +319,7 @@ export const w = {
   yesCancelIt: "Ja, avboka",
   aDeletedOne: (label: string, id: string) => `${label.toLowerCase()} #${id} (finns inte längre)`,
   aKey: (id: string) => `en nyckel (#${id})`,
+  byTimer: (name: string) => `timern ${name}`,
   aRemovedUser: (id: string) => `en borttagen användare (#${id})`,
   atLeastCharacters: (n: number) => `Minst ${n} tecken`,
   atMostCharacters: (n: number) => `Högst ${n.toLocaleString("sv")} tecken`,
