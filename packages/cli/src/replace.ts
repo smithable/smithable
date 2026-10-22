@@ -75,6 +75,21 @@ function filesOf(root: string, under = ""): string[] {
   });
 }
 
+/** The route tree the dev server's router reads: it names every route file, so it comes in last. */
+const ROUTE_TREE = join("src", "routeTree.gen.ts");
+
+/**
+ * The order the new app's files come in: the route tree after every other file. The folder's
+ * own order put it first (routeTree.gen.ts before routes/), and a page the preview rendered in
+ * between failed on the tree's import of a route file that was not there yet ("Failed to
+ * resolve import ./routes/items/index from src/routeTree.gen.ts", a hosted workspace claimed
+ * with another app, 2026-10-23); rendered on the server, that page had no client to reload it.
+ */
+export function arrival(paths: Iterable<string>): string[] {
+  const all = [...paths];
+  return [...all.filter((p) => p !== ROUTE_TREE), ...all.filter((p) => p === ROUTE_TREE)];
+}
+
 /**
  * Makes `dir` hold the files `from` holds. What is gone goes first (a database's journal must
  * not meet another database), then each file that differs comes in whole, under a new name
@@ -90,8 +105,9 @@ export function sync(from: string, dir: string): void {
   // files move must find every module that tree names. With the removals first, the old tree
   // named a model's module that was already gone ("Failed to load url
   // /src/generated/item.ts", a replaceable Studio in main's check, 2026-10-11). Written first,
-  // the old tree's modules stay until the new tree and its modules are there.
-  for (const path of wanted) {
+  // the old tree's modules stay until the new tree and its modules are there; and the new tree
+  // comes after the files it names (arrival).
+  for (const path of arrival(wanted)) {
     const source = readFileSync(join(from, path));
     const target = join(dir, path);
     if (existsSync(target) && statSync(target).isFile() && readFileSync(target).equals(source))

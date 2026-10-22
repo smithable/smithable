@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { sync } from "./replace.js";
+import { arrival, sync } from "./replace.js";
 import { tempDir } from "./test-dir.js";
 
 test("a replacement writes what differs by a rename over the file, and removes the rest", () => {
@@ -28,4 +28,20 @@ test("a replacement writes what differs by a rename over the file, and removes t
   expect(readFileSync(join(dir, "src", "custom", "x.ts"), "utf8")).toBe("export {};");
   // Nothing half-written is left beside the files.
   expect(readdirSync(join(dir, "public", "images")).sort()).toEqual(["hero.webp", "logo.webp"]);
+});
+
+test("the route tree comes in after the route files it names", () => {
+  expect(
+    arrival([
+      join("src", "routeTree.gen.ts"),
+      join("src", "routes", "items", "index.tsx"),
+      "smithable.yml",
+      join("src", "routes", "__root.tsx"),
+    ]),
+  ).toEqual([
+    join("src", "routes", "items", "index.tsx"),
+    "smithable.yml",
+    join("src", "routes", "__root.tsx"),
+    join("src", "routeTree.gen.ts"),
+  ]);
 });
