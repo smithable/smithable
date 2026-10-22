@@ -78,7 +78,10 @@ const showInCode = (file: string, path: string) =>
 
 export function WhyAccess({ ir, auth }: { ir: SpecIR; auth: AuthIR }) {
   const subjects = subjectsOf(ir);
-  const [as, setAs] = useState(auth.roles.find((r) => r.name !== "admin")?.name ?? "");
+  const firstRole = auth.roles.find((r) => r.name !== "admin")?.name ?? "";
+  const [chosen, setAs] = useState(firstRole);
+  // A role removed since it was chosen: the first role there is (a visitor stays a visitor).
+  const as = chosen === "" || auth.roles.some((r) => r.name === chosen) ? chosen : firstRole;
   const [subjectKey, setSubjectKey] = useState(subjects[0]?.key ?? "");
   const subject = subjects.find((s) => s.key === subjectKey) ?? subjects[0];
   const [verbChosen, setVerb] = useState<AccessVerb>("open");

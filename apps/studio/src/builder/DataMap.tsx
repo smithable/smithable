@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { AuthIR, SpecIR } from "@smithable/core";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { type MapNode, mapOf, PEOPLE } from "./data-map";
 import { OPEN_PART } from "./NoCode";
 
@@ -119,30 +119,31 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
   const map = useMemo(() => mapOf(ir, auth), [ir, auth]);
   const app = ir.app.name;
   const first = useMemo(() => laidOut(map.nodes, map.edges), [map]);
-  const [nodes, setNodes] = useState<Node<BoxData>[]>(() => {
-    const kept = readPlaces(app);
-    return map.nodes.map((box) => ({
-      id: box.id,
-      type: "box",
-      position: kept[box.id] ?? first[box.id] ?? { x: 0, y: 0 },
-      data: { box, people: box.id === PEOPLE && !ir.models.some((m) => m.name === PEOPLE) },
-    }));
-  });
-  // A kind of record added or removed since: its box comes and goes, the others stay put.
-  const shown = useMemo(() => {
-    const at = new Map(nodes.map((n) => [n.id, n]));
-    return map.nodes.map(
-      (box) =>
-        ({
-          ...(at.get(box.id) ?? {
-            id: box.id,
-            type: "box",
-            position: first[box.id] ?? { x: 0, y: 0 },
-          }),
-          data: { box, people: box.id === PEOPLE && !ir.models.some((m) => m.name === PEOPLE) },
-        }) as Node<BoxData>,
-    );
-  }, [map, nodes, first, ir]);
+  // The boxes for the map as it is now: a box keeps its place, one for a kind of record added
+  // since starts where dagre put it (or where it was last left), a removed one goes.
+  const synced = useCallback(
+    (current: Node<BoxData>[]) => {
+      const at = new Map(current.map((n) => [n.id, n]));
+      const kept = readPlaces(app);
+      return map.nodes.map(
+        (box) =>
+          ({
+            ...(at.get(box.id) ?? {
+              id: box.id,
+              type: "box",
+              position: kept[box.id] ?? first[box.id] ?? { x: 0, y: 0 },
+            }),
+            data: {
+              box,
+              people: box.id === PEOPLE && !ir.models.some((m) => m.name === PEOPLE),
+            },
+          }) as Node<BoxData>,
+      );
+    },
+    [map, first, ir, app],
+  );
+  const [nodes, setNodes] = useState<Node<BoxData>[]>(() => synced([]));
+  const shown = useMemo(() => synced(nodes), [synced, nodes]);
   const edges: Edge[] = map.edges.map((e) => ({
     id: e.id,
     source: e.source,
@@ -164,9 +165,10 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={(changes: NodeChange<Node<BoxData>>[]) =>
-            // On the latest boxes, so changes in one batch build on each other.
+            // On the latest boxes as the map is now, so changes in one batch build on each other
+            // and a box added since moves too.
             setNodes((current) => {
-              const next = applyNodeChanges(changes, current.length ? current : shown);
+              const next = applyNodeChanges(changes, synced(current));
               // A drag ended: the boxes keep their places in this browser.
               if (changes.some((c) => c.type === "position" && c.dragging === false))
                 writePlaces(app, next);
@@ -176,6 +178,7 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
           nodesConnectable={false}
           edgesFocusable={false}
           fitView
+          colorMode="system"
         >
           <Background />
           <Controls showInteractive={false} />
