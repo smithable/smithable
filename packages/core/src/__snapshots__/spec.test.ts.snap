@@ -240,7 +240,24 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
 
 exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 {
-  "actions": [],
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The post is out for everyone to read.",
+      "name": "publish",
+      "on": "Post",
+      "set": [
+        {
+          "field": "status",
+          "value": "published",
+        },
+      ],
+      "when": {
+        "status": "draft",
+      },
+    },
+  ],
   "app": {
     "currency": "EUR",
     "description": "Class schedule and online booking for a small yoga studio.",
@@ -604,6 +621,17 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "name": "reminder",
+      "recipient": {
+        "kind": "owner",
+      },
+      "to": "mail",
+      "when": {
+        "model": "Booking",
+        "timer": "remind",
+      },
+    },
+    {
       "name": "bookingMade",
       "recipient": {
         "kind": "owner",
@@ -907,7 +935,38 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "queries": [],
   "specVersion": "0.1",
-  "timers": [],
+  "timers": [
+    {
+      "name": "remind",
+      "on": "Booking",
+      "schedule": {
+        "kind": "record",
+        "offset": {
+          "amount": 1,
+          "direction": "before",
+          "unit": "day",
+        },
+        "path": [
+          "session",
+          "startsAt",
+        ],
+      },
+    },
+    {
+      "name": "publish",
+      "on": "Post",
+      "run": "publish",
+      "schedule": {
+        "kind": "record",
+        "path": [
+          "publishedOn",
+        ],
+      },
+      "where": {
+        "status": "draft",
+      },
+    },
+  ],
 }
 `;
 
@@ -1322,6 +1381,22 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "sent",
           "overdue",
         ],
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The invoice is late.",
+      "name": "markOverdue",
+      "on": "Invoice",
+      "set": [
+        {
+          "field": "status",
+          "value": "overdue",
+        },
+      ],
+      "when": {
+        "status": "sent",
       },
     },
   ],
@@ -1821,7 +1896,27 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
   ],
   "queries": [],
   "specVersion": "0.1",
-  "timers": [],
+  "timers": [
+    {
+      "name": "markOverdue",
+      "on": "Invoice",
+      "run": "markOverdue",
+      "schedule": {
+        "kind": "record",
+        "offset": {
+          "amount": 7,
+          "direction": "after",
+          "unit": "day",
+        },
+        "path": [
+          "dueOn",
+        ],
+      },
+      "where": {
+        "status": "sent",
+      },
+    },
+  ],
 }
 `;
 

@@ -68,6 +68,19 @@ actions:
     when: { status: [sent, overdue] }
     set: { status: paid }
     intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when: { status: sent }
+    set: { status: overdue }
+    intent: The invoice is late.
+
+# What the app does on a clock: a week after its due date, a sent invoice is overdue.
+timers:
+  markOverdue:
+    on: Invoice
+    at: 7 days after dueOn
+    where: { status: sent }
+    run: markOverdue
 
 outgoing:
   invoiceSent:

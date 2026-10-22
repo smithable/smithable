@@ -64,7 +64,29 @@ models:
       email: email!
       message: text!
 
+actions:
+  publish:
+    on: Post
+    when: { status: draft }
+    set: { status: published }
+    intent: The post is out for everyone to read.
+
+# What the app does on a clock: a reminder the day before, and a post out on its date.
+timers:
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt   # raises its event; the reminder below mails it
+  publish:
+    on: Post
+    at: publishedOn
+    where: { status: draft }
+    run: publish
+
 outgoing:
+  reminder:
+    when: remind
+    to: mail
+    recipient: owner
   bookingMade:
     when: Booking created
     to: mail
