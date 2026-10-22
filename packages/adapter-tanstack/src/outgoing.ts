@@ -19,6 +19,7 @@ import { apiFields, readCode } from "./api.js";
 import { fieldUi } from "./data.js";
 import {
   HEADER,
+  keyOf,
   literal,
   modelNamed,
   names,
@@ -69,6 +70,30 @@ export function outgoingModule(
       return `r.${ownerKey(model)} == null ? [] : ${people(`eq(schema.user.id, String(r.${ownerKey(model)}))`)}`;
     if (recipient.kind === "role")
       return people(`eq(schema.user.role, ${JSON.stringify(recipient.role)})`);
+    if (recipient.kind === "list") {
+      // Every record of the list (the records referring back to this one, none in the trash):
+      // each one's owner, or an address on it; a person is told once.
+      const target = modelNamed(ir, recipient.model);
+      const back = target.fields.find(
+        (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
+      ) as FieldIR;
+      const n = names(target, t);
+      tables.add(n.table);
+      const each = recipient.each;
+      const column =
+        each.kind === "owner"
+          ? ownerKey(target)
+          : each.via === "user"
+            ? `${each.field}Id`
+            : each.field;
+      const where = target.trash
+        ? `and(eq(${n.table}.${back.name}Id, r.id), isNull(${n.table}.deletedAt))`
+        : `eq(${n.table}.${back.name}Id, r.id)`;
+      const rows = `tx.select({ v: ${n.table}.${column} }).from(${n.table}).where(${where}).all()`;
+      if (each.kind === "field" && each.via === "email")
+        return `${rows}.map((x) => ({ email: x.v as string | null }))`;
+      return `((ids) => (ids.length ? ${people("inArray(schema.user.id, ids)")} : []))(${rows}.map((x) => x.v).filter((v) => v != null).map(String))`;
+    }
     const [first, second] = recipient.path;
     if (!second)
       return recipient.via === "email"
@@ -199,7 +224,7 @@ ${apiFields(model)
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
     ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
@@ -210,7 +235,8 @@ ${apiFields(model)
   const drizzle = [
     ...(trashOne || threaded ? ["and"] : []),
     ...(threaded ? ["asc"] : []),
-    ...(ones || users || threaded ? ["eq"] : []),
+    ...(ones || users || threaded || body.includes("eq(") ? ["eq"] : []),
+    ...(body.includes("inArray(") ? ["inArray"] : []),
     ...(trashOne ? ["isNull"] : []),
     ...(users ? ["type SQL"] : []),
   ];
@@ -311,6 +337,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;${mails.length ? "\n  to?: (tx: Tx, r: Row) => Recipient[];" : ""}${calls.length ? "\n  /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */\n  target?: string;" : ""}
 }[] = [
@@ -323,7 +351,7 @@ ${list.join("\n")}
  */
 export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, model: string, what: string, record: Row, before?: Row): void {${threading ? "\n  if (arriving.getStore()?.quiet) return;" : ""}
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;${
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;${
       calls.length
         ? `
     if (entry.target) {

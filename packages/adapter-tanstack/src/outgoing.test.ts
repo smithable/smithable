@@ -17,6 +17,7 @@ const kit = (await import(path)) as {
     fits: ((r: Record<string, unknown>) => boolean) | undefined,
     record: Record<string, unknown>,
     before?: Record<string, unknown>,
+    fields?: string[],
   ): boolean;
   pauseAfter(tries: number): number;
 };
@@ -40,6 +41,42 @@ test("an entry counts when the record comes to fit, not on every edit of one tha
   expect(counts("changed", "created", undefined, {})).toBe(false);
   // Without a condition, every change counts.
   expect(counts("changed", "changed", undefined, { a: 1 }, { a: 1 })).toBe(true);
+  // With fields, only a change of one of them; a date by its instant; with a condition too.
+  const t = new Date("2026-11-01T10:00:00Z");
+  const moved = { startsAt: new Date("2026-11-01T11:00:00Z"), title: "Yoga" };
+  expect(
+    counts("changed", "changed", undefined, moved, { startsAt: t, title: "Yoga" }, ["startsAt"]),
+  ).toBe(true);
+  expect(
+    counts(
+      "changed",
+      "changed",
+      undefined,
+      { startsAt: new Date(t), title: "Pilates" },
+      { startsAt: t, title: "Yoga" },
+      ["startsAt"],
+    ),
+  ).toBe(false);
+  expect(
+    counts(
+      "changed",
+      "changed",
+      undefined,
+      { startsAt: t, title: "Pilates" },
+      { startsAt: t, title: "Yoga" },
+      ["startsAt", "title"],
+    ),
+  ).toBe(true);
+  expect(
+    counts("changed", "changed", shipped, { status: "shipped", n: 2 }, { status: "placed", n: 2 }, [
+      "n",
+    ]),
+  ).toBe(false);
+  expect(
+    counts("changed", "changed", shipped, { status: "shipped", n: 2 }, { status: "placed", n: 1 }, [
+      "n",
+    ]),
+  ).toBe(true);
   // A creation, deletion or action counts when the record fits.
   expect(counts("created", "created", shipped, { status: "placed" })).toBe(false);
   expect(counts("deleted", "deleted", shipped, { status: "shipped" })).toBe(true);
@@ -59,13 +96,39 @@ models:
     fields:
       name: string!
       email: email!
+      orders: Order[]
   Order:
     fields:
       customer: Customer!
       status: placed | shipped
       note: text
       receipt: file
+    trash: true
+  Session:
+    fields:
+      title: string!
+      startsAt: datetime!
+      bookings: Booking[]
+  Booking:
+    fields:
+      session: Session!
+      contact: email
 outgoing:
+  sessionMoved:
+    when: Session changed
+    fields: [startsAt]
+    to: mail
+    recipient: bookings.owner
+  sessionNamed:
+    when: Session changed
+    fields: [title]
+    to: mail
+    recipient: bookings.contact
+  customerMoved:
+    when: Customer changed
+    to: mail
+    recipient: orders.owner
+
   orderShipped:
     when: Order changed
     where: { status: shipped }
@@ -73,6 +136,11 @@ outgoing:
     recipient: customer.email
   orderPlaced:
     when: Order created
+    to: mail
+    recipient: owner
+  orderMoved:
+    when: Order changed
+    fields: [customer, note]
     to: mail
     recipient: owner
 pages:
@@ -93,6 +161,22 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   const file = (p: string) => files.find((f) => f.path === p)?.content ?? "";
   const module = file("src/generated/outgoing.server.ts");
   expect(module).toContain('when: "changed",\n    fits: (r) => r.status === "shipped",');
+  // A list's records, each told: the bookings' owners as people, the contacts as addresses; the
+  // orders of a customer without the trashed ones; only a change of the fields named counts.
+  expect(module).toContain('fields: ["startsAt"],');
+  // A reference is watched by its column.
+  expect(module).toContain('fields: ["customerId","note"],');
+  expect(module).toContain(
+    "((ids) => (ids.length ? people(tx, inArray(schema.user.id, ids)) : []))(tx.select({ v: schema.bookings.ownerId }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id)).all().map((x) => x.v).filter((v) => v != null).map(String))",
+  );
+  expect(module).toContain(
+    "tx.select({ v: schema.bookings.contact }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id)).all().map((x) => ({ email: x.v as string | null }))",
+  );
+  expect(module).toContain(
+    "and(eq(schema.orders.customerId, r.id), isNull(schema.orders.deletedAt))",
+  );
+  expect(module).toContain("counts(entry.when, what, entry.fits, record, before, entry.fields)");
+  expect(module).toMatch(/import \{ and, eq, inArray, isNull(, type SQL)? \} from "drizzle-orm";/);
   // The customer's address, one reference away; the owner's from the users.
   expect(module).toContain(
     "one(tx, schema.customers, schema.customers.id, schema.customers.email, r.customerId)",
@@ -107,11 +191,41 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   expect(data).toContain('outgoing(tx, viewer, "Order", what, after, before);');
   expect(data).toContain('outgoing(tx, viewer, "Order", "deleted", gone);');
   // A model nobody is told about has no calls.
-  expect(file("src/generated/customer.server.ts")).not.toContain("outgoing");
+  expect(files.some((f) => f.path === "src/generated/booking.server.ts")).toBe(true);
+  expect(file("src/generated/booking.server.ts")).not.toContain("outgoing");
   expect(file("src/db/schema.ts")).toContain(
     'export const outgoingMail = sqliteTable(\n  "outgoing_mail"',
   );
   expect(files.some((f) => f.path === "src/kit/outgoing.server.ts")).toBe(true);
+});
+
+test("an app whose only mail goes to a list's addresses still imports what the query needs", () => {
+  const only = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields:
+      title: string!
+      bookings: Booking[]
+  Booking:
+    fields:
+      session: Session!
+      contact: email
+outgoing:
+  named:
+    when: Session changed
+    to: mail
+    recipient: bookings.contact
+pages:
+  sessions: { crud: Session }
+`,
+  }).ir as SpecIR;
+  const files = generateApp(only, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  expect(module).toContain('import { eq } from "drizzle-orm";');
+  expect(module).toContain("where(eq(schema.bookings.sessionId, r.id))");
 });
 
 test("a customer in the trash is neither mailed nor named, and its orders show a dash", () => {

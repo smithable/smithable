@@ -14107,6 +14107,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -14137,7 +14139,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -20126,7 +20128,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "420d47d7 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "3f9a78c9 generated",
+  "src/generated/outgoing.server.ts": "fcf6b4e0 generated",
   "src/generated/pages.ts": "51e69633 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e8ed4586 generated",
@@ -20186,7 +20188,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -30755,6 +30757,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -30773,7 +30777,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -33019,7 +33023,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "3ca0493a generated",
   "src/generated/invoice.ts": "b569c412 generated",
-  "src/generated/outgoing.server.ts": "a3d9b1fc generated",
+  "src/generated/outgoing.server.ts": "4b29e5a5 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -33067,7 +33071,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -36541,6 +36545,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -36579,7 +36585,7 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     if (entry.target) {
       const sent = SENT[model]?.(record);
       if (sent)
@@ -39883,7 +39889,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "e4bf366f generated",
   "src/generated/order.ts": "4fdb55f6 generated",
-  "src/generated/outgoing.server.ts": "d9c810d0 generated",
+  "src/generated/outgoing.server.ts": "844b85db generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
@@ -39931,7 +39937,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -61181,6 +61187,8 @@ const ENTRIES: {
   model: string;
   when: string;
   fits?: (r: Row) => boolean;
+  /** For a change: only one of these fields changing counts. */
+  fields?: string[];
   subject?: string;
   text?: string;
   to?: (tx: Tx, r: Row) => Recipient[];
@@ -61207,7 +61215,7 @@ const ENTRIES: {
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   if (arriving.getStore()?.quiet) return;
   for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before)) continue;
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
     queueMail(
@@ -64253,7 +64261,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "b3cb7e21 generated",
   "src/generated/message.ts": "f4cafefa generated",
-  "src/generated/outgoing.server.ts": "15ea7ea8 generated",
+  "src/generated/outgoing.server.ts": "d9f41429 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
@@ -64303,7 +64311,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "d5af6081 kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "8050efb9 kit",
+  "src/kit/outgoing.ts": "b925c66e kit",
   "src/kit/params.ts": "8833a84a kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",

@@ -556,6 +556,8 @@ export interface OutgoingIR {
    * record fits after it and did not before.
    */
   where?: Condition;
+  /** For `<Model> changed`: only a change of one of these stored fields counts. */
+  fields?: string[];
   /** "mail", or the name of a target (camelCase) whose address and secret are settings. */
   to: string;
   /** For mail: who gets it. */
@@ -571,7 +573,17 @@ export type RecipientIR =
    * An address on the record: an `email` field or a field that refers to User, on the record
    * itself (one name) or one reference away (two: `customer.email`).
    */
-  | { kind: "field"; path: string[]; via: "email" | "user" };
+  | { kind: "field"; path: string[]; via: "email" | "user" }
+  /**
+   * Each record of a list field of the record (`bookings.owner`, `bookings.contact`): its
+   * owner, or an address on it. `model` is the list's model.
+   */
+  | {
+      kind: "list";
+      list: string;
+      model: string;
+      each: { kind: "owner" } | { kind: "field"; field: string; via: "email" | "user" };
+    };
 
 export interface MenuIR {
   name: string;

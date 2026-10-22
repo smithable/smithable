@@ -309,10 +309,15 @@ test("outgoing mail meets the access rules: a visitor-typed address is not maile
 app: { name: X }
 models:
   Message:
-    fields: { name: string!, email: email, message: text! }
+    fields: { name: string!, email: email, message: text!, topic: Topic }
+  Topic:
+    fields:
+      name: string!
+      messages: Message[]
 outgoing:
   thanks: { when: Message created, to: mail, recipient: email }
   told: { when: Message created, to: mail, recipient: staff }
+  topicRenamed: { when: Topic changed, to: mail, recipient: messages.email }
 `,
   }).ir;
   if (!ir) throw new Error("spec");
@@ -325,7 +330,8 @@ outgoing:
       ir,
     ).diagnostics.map((d) => d.code);
   const withVisitors = auth("public: { create: [Message] }\n");
-  expect(withVisitors).toContain("visitor-typed-recipient");
+  // Typed on the record, and typed on each record of a list of them: both are warned about.
+  expect(withVisitors.filter((c) => c === "visitor-typed-recipient")).toHaveLength(2);
   expect(withVisitors).toContain("recipient-cannot-read");
   expect(auth("")).not.toContain("visitor-typed-recipient");
   expect(auth("")).toContain("recipient-cannot-read");
