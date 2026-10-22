@@ -436,6 +436,9 @@ ${
 `;
     return `${HEADER}${imports.render()}${part("Before", before)}${part("After", after)}`;
   }
+  // A page of sections without a hero is headed by its title, as other pages are.
+  const headed = !framed && !sections.some((s) => s.kind === "hero");
+  if (headed) imports.add("#/kit/AppShell", "PageHeader").add("#/generated/pages", "pageUi");
   if (!framed)
     return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
@@ -444,7 +447,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.lengt
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <div data-kit="sections">
+    <div data-kit="sections">${headed ? `\n      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id, 8)} />` : ""}
       ${parts.join("\n      ")}
     </div>
   );

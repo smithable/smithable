@@ -53,6 +53,8 @@ pages:
   const about = file("src/routes/about/index.tsx");
   expect(about).not.toContain("LandingLayout");
   expect(about).toContain('<div data-kit="sections">');
+  // Without a hero, the page is headed by its title, as other pages are.
+  expect(about).toContain('<PageHeader page="about" title={pageUi["about"].title} />');
   expect(about).toContain(
     '<TextSection\n          texts="pages.about.story"\n          id="story"\n          title="Our story"',
   );
