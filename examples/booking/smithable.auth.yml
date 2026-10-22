@@ -19,7 +19,7 @@ admins: [owner@stillwater.example]
 # ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
 # signing in. Never add models that contain personal or business data.
 public:
-  pages: [home, schedule, blog, privacy]    # the landing page, the schedule, the blog, the privacy page
+  pages: [home, schedule, blog, about, privacy]    # the landing page, the schedule, the blog, about us, the privacy page
   read:
     - ClassType
     - Instructor

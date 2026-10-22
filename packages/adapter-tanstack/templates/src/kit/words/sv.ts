@@ -353,6 +353,7 @@ export const w = {
   moveLater: (name: string) => `Flytta ${name} senare`,
   newOne: (label: string) => `Lägg till ${label}`,
   openApp: (app: string) => `Öppna ${app}`,
+  workspace: "Arbetsyta",
   removeIt: (name: string) => `Ta bort ${name}`,
   welcomeTo: (app: string) => `Välkommen till ${app}`,
   you: "(du)",

@@ -374,6 +374,8 @@ export const w = {
   /** "New customer": the page and the button. */
   newOne: (label: string) => `New ${label}`,
   openApp: (app: string) => `Open ${app}`,
+  /** The site frame's link into the app's pages, for one who may open them. */
+  workspace: "Workspace",
   removeIt: (name: string) => `Remove ${name}`,
   welcomeTo: (app: string) => `Welcome to ${app}`,
   you: "(you)",
