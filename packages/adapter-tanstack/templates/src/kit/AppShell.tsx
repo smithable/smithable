@@ -79,7 +79,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         data-kit="drawer"
         className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col rounded-r-xl bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
       >
-        <div className="flex h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
+        <div className="flex min-h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
           <p className="min-w-0 text-lg font-bold [overflow-wrap:anywhere]">
             <AppName {...shell} wrap onNavigate={() => drawer.current?.close()} />
           </p>
