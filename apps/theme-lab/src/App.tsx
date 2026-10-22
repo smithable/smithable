@@ -6,6 +6,7 @@
 import { themeCss } from "@smithable/adapter-tanstack";
 import {
   BUILT_IN_THEMES,
+  contrast,
   emptyUx,
   FONT_WEIGHTS,
   FONTS,
@@ -98,6 +99,12 @@ export function App() {
     [name, text],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  // A background on the wrong side (dark in light mode, pale in dark) cannot read with the
+  // cards that mode makes; a refusal then says so first, in those words.
+  const wrongSide = (["light", "dark"] as const).find((m) => {
+    const bg = writtenColor(text, m, "background");
+    return bg !== undefined && (textOn(bg) === "#ffffff") === (m === "light");
+  });
   // A theme the checks refuse (a primary too close to its background) has no IR, but the
   // controls must stay so the person can change it back: they show the last theme that passed,
   // with the refusal beside them; the frames keep that theme's CSS too. (Johan, 2026-10-17:
@@ -402,6 +409,18 @@ export function App() {
           {signedIn && beside && frame(true)}
         </div>
         <section className="notes">
+          {errors.length > 0 && (
+            <p className="avoid">
+              Not applied: the pages show the last colours that read. What does not:
+            </p>
+          )}
+          {errors.length > 0 && wrongSide && (
+            <p className="avoid">
+              {wrongSide === "light"
+                ? "Light mode needs a light background: a dark one goes in dark mode."
+                : "Dark mode needs a dark background: a light one goes in light mode."}
+            </p>
+          )}
           {errors.map((d) => (
             <p key={`${d.line}-${d.message}`} className="avoid">
               {d.message}
@@ -430,6 +449,16 @@ export function App() {
   );
 }
 
+/** A colour as the file writes it, as hex; undefined when absent or not a colour. */
+function writtenColor(text: string, mode: "light" | "dark", token: string): string | undefined {
+  const raw = getField(text, [mode, token]);
+  return typeof raw === "string" && /^(#[0-9a-f]{6}|oklch\()/i.test(raw) ? hexOf(raw) : undefined;
+}
+
+/** The text that reads best on a background: white on a dark one, ink on a pale one. */
+const textOn = (bg: string) =>
+  contrast("#ffffff", bg) >= contrast("#101522", bg) ? "#ffffff" : "#101522";
+
 /** The fields, grouped as the file is. Each shows the theme's value and writes the file's. */
 function Controls({
   theme,
@@ -451,20 +480,30 @@ function Controls({
       </select>
     </label>
   );
-  const written = (mode: "light" | "dark", token: "primary" | "background") => {
-    const raw = getField(text, [mode, token]);
-    return typeof raw === "string" && /^(#[0-9a-f]{6}|oklch\()/i.test(raw) ? hexOf(raw) : undefined;
-  };
+  const written = (mode: "light" | "dark", token: "primary" | "background" | "foreground") =>
+    writtenColor(text, mode, token);
   const color = (mode: "light" | "dark", token: "primary" | "background") => (
     <label key={`${mode}.${token}`}>
       {mode} {token}
       <input
         type="color"
         value={written(mode, token) ?? hexOf(theme[mode][token])}
-        onChange={(e) => set([mode, token], e.target.value)}
+        onChange={(e) =>
+          token === "background"
+            ? background(mode, e.target.value)
+            : set([mode, token], e.target.value)
+        }
       />
     </label>
   );
+  // A new background: the colours that sit on it are derived from it again, and the text
+  // changes to the one that reads when the file's own no longer does.
+  const background = (mode: "light" | "dark", value: string) => {
+    set([mode, "background"], value);
+    for (const token of ["card", "muted", "border", "accent"]) set([mode, token], undefined);
+    const foreground = written(mode, "foreground") ?? hexOf(theme[mode].foreground);
+    if (contrast(foreground, value) < 4.5) set([mode, "foreground"], textOn(value));
+  };
   // The weights the headings' font has (a weight outside them is refused).
   const [lightest, heaviest] = FONT_WEIGHTS[
     (theme.style.headingFont ?? theme.font) as keyof typeof FONT_WEIGHTS
