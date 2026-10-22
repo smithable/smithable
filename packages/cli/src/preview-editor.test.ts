@@ -106,6 +106,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     {
       getItem: (key: string) => storage[key] ?? null,
       setItem: (key: string, value: string) => {
+        if (storage.blocked) throw new Error("blocked");
         storage[key] = value;
       },
     },
@@ -202,6 +203,13 @@ test("the dev server's overlay that stays has the page loaded again, three times
   brief.later();
   expect(brief.reloads).toHaveLength(0);
   expect(brief.posted.map((m) => m.type)).toEqual(["ready"]);
+  // Where nothing can be stored, nothing is tried again: the overlay stays, no reload.
+  const blocked = page("/orders", storage);
+  storage.blocked = "1";
+  blocked.overlay(true);
+  blocked.later();
+  expect(blocked.reloads).toHaveLength(0);
+  delete storage.blocked;
   // Ten quiet seconds end a row: the next overlay is the first of a new one.
   storage["smithable:overlays"] = "2";
   const quiet = page("/orders", storage);

@@ -364,15 +364,18 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const counted = Object.hasOwn(kept, location.pathname) && Number.isInteger(kept[location.pathname]) ? kept[location.pathname] : 0;
   const tries = crashed ? counted + 1 : 0;
   // A good load, and the fourth crash (shown), forget the address, so a later crash is tried again.
+  // Where nothing can be stored, nothing is tried again either, so no reload goes on forever.
   const remember = (count) => {
     try {
       const rest = Object.fromEntries(Object.entries(kept).filter(([path]) => path !== location.pathname));
       sessionStorage.setItem(CRASHES, JSON.stringify(count ? { ...rest, [location.pathname]: count } : rest));
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   };
   if (crashed) post({ type: "errored", tries });
-  if (crashed && tries <= 3) {
-    remember(tries);
+  if (crashed && tries <= 3 && remember(tries)) {
     // Loaded again once the server renders this page cleanly: its own address, with the
     // page's cookies, answered without the error page's mark (a not-found page counts as clean).
     let asking = false;
@@ -410,7 +413,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const keep = (n) => {
       try {
         sessionStorage.setItem(OVERLAYS, String(n));
-      } catch {}
+        return true;
+      } catch {
+        return false;
+      }
     };
     const overlaid = () => document.querySelectorAll("vite-error-overlay").length > 0;
     let waiting = false;
@@ -431,8 +437,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
           keep(0);
           return;
         }
-        keep(row);
-        location.reload();
+        if (keep(row)) location.reload();
       }, 2000);
     }).observe(document.body, { childList: true });
   }
