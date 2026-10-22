@@ -281,9 +281,19 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
-    if (model.namedBy) {
-      const f = model.fields.find((x) => x.name === model.namedBy);
-      if (f) sentences.push(`A ${one(model)} is known by its ${fieldLabel(model, f)}.`);
+    if (model.nameParts?.length) {
+      // "its class type", "its class type's name", "its start" (record-names.md §5).
+      const words = model.nameParts.flatMap((p) => {
+        const f = model.fields.find((x) => x.name === (p.through ?? p.field));
+        if (!f) return [];
+        if (!p.through) return [`its ${fieldLabel(model, f)}`];
+        const other = ir.models.find((m) => m.name === (f.type as { model?: string }).model);
+        const far = other?.fields.find((x) => x.name === p.field);
+        return [
+          `its ${fieldLabel(model, f)}'s ${far && other ? fieldLabel(other, far) : humanize(p.field).toLowerCase()}`,
+        ];
+      });
+      if (words.length) sentences.push(`A ${one(model)} is named after ${list(words)}.`);
     }
     if (model.thread) {
       const t = model.thread;

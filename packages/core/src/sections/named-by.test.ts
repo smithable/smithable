@@ -44,13 +44,19 @@ test("namedBy must name a stored text field of the model", () => {
   expect(spec(customer("    namedBy: nothing\n")).diagnostics.map((d) => d.code)).toEqual([
     "unknown-field",
   ]);
+  // An amount is a part a name can show (record-names.md); a picture is not.
   const amount = spec(customer("      amount: money\n    namedBy: amount\n"));
-  expect(amount.diagnostics.map((d) => d.code)).toEqual(["invalid-value"]);
-  expect(amount.diagnostics[0]?.message).toContain("a stored string, text or markdown field");
+  expect(amount.diagnostics.map((d) => d.code)).toEqual([]);
+  const photos = spec(customer("      photos: pictures\n    namedBy: photos\n"));
+  expect(photos.diagnostics.map((d) => d.code)).toEqual(["invalid-value"]);
+  expect(photos.diagnostics[0]?.message).toContain("cannot be part of a name");
+  // A computed text may be a part of the name, but is not the one stored field titleField reads.
   const computed = spec(
     customer("      label: { type: string, formula: company }\n    namedBy: label\n"),
   );
-  expect(computed.diagnostics.map((d) => d.code)).toEqual(["invalid-value"]);
+  expect(computed.diagnostics.map((d) => d.code)).toEqual([]);
+  expect(computed.ir?.models[0]?.namedBy).toBeUndefined();
+  expect(computed.ir?.models[0]?.nameParts).toEqual([{ field: "label" }]);
   expect(spec(customer("    namedBy: notes\n")).diagnostics).toEqual([]);
 });
 

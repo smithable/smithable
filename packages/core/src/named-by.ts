@@ -26,7 +26,7 @@ export function writeNamedBy(text: string, ir: SpecIR): { text: string; written:
   const spec = new YamlEditor(text);
   const written: string[] = [];
   for (const model of ir.models) {
-    if (model.namedBy) continue;
+    if (model.namedBy || model.nameParts) continue;
     const named = titleFieldByName(model);
     if (!named || named === titleFieldByRule(model)) continue;
     if (!spec.has(["models", model.name])) continue;

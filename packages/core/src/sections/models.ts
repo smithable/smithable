@@ -29,6 +29,7 @@ import {
   type FieldValue,
   isUpload,
   type ModelIR,
+  type NamePartIR,
   SCALAR_TYPES,
   type SpecIR,
   type ThreadIR,
@@ -42,6 +43,7 @@ import { sensitiveKind, sensitiveMessage } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 import { type FieldShorthand, parseDefault, parseFieldShorthand } from "./field-type.js";
 import { modelOperations, renameInFormulas, renameValuesInFormulas } from "./model-operations.js";
+import { isTextField, nameCircle, partText, readNamePart } from "./name-parts.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 import {
   checkSchedules,
@@ -173,7 +175,7 @@ export const modelsSection: SpecSection<"models"> = {
       followReview(spec, effect.model, effect.field);
       followUnique(spec, effect.model, effect.field);
       followThread(spec, effect.model, effect.field);
-      followNamedBy(spec, effect.model, effect.field);
+      followNameParts(spec, ir, effect.model, effect.field);
       for (const m of ir.models) {
         const c = m.capacity;
         if (!c) continue;
@@ -245,7 +247,7 @@ export const modelsSection: SpecSection<"models"> = {
     followReview(spec, effect.model, effect.from, effect.to);
     followUnique(spec, effect.model, effect.from, effect.to);
     followThread(spec, effect.model, effect.from, effect.to);
-    followNamedBy(spec, effect.model, effect.from, effect.to);
+    followNameParts(spec, ir, effect.model, effect.from, effect.to);
     renameInFormulas(spec, ir, effect.model, effect.from, effect.to);
     if (ir.models.find((m) => m.name === effect.model)?.ownedBy === effect.from)
       spec.set(["models", effect.model, "ownedBy"], effect.to);
@@ -318,9 +320,9 @@ export const modelsSection: SpecSection<"models"> = {
             "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good.",
         },
         namedBy: {
-          type: "string",
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
           description:
-            "The field that names a record, shown as its title wherever one record is shown or referred to: a stored string, text or markdown field. Left out, the first short text field is the title, else the first long text, else the record's number.",
+            "What names a record, its title wherever one record is shown or referred to: a field (a text, a choice, a date, a number, an amount), a reference (that record's own name) or a field one reference away (classType.name), or a list of such parts joined with \" · \" ([classType, startsAt]). Left out, the first short text field is the title, else the first long text, else the record's number.",
         },
         thread: {
           type: "object",
@@ -421,6 +423,7 @@ export const modelsSection: SpecSection<"models"> = {
     if (node === undefined) return [];
     const models: ModelIR[] = [];
     const relationNodes: RelationNodes = new Map();
+    const namedByEntries: [ModelIR, Entry][] = [];
     ctx.define("model", USER_MODEL);
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"models"`) ?? []) {
       if (key === USER_MODEL) {
@@ -437,9 +440,19 @@ export const modelsSection: SpecSection<"models"> = {
         continue;
       }
       ctx.define("model", key);
-      models.push(readModel(ctx, key, keyNode, value, relationNodes));
+      models.push(readModel(ctx, key, keyNode, value, relationNodes, namedByEntries));
     }
     checkRelations(ctx, models, relationNodes);
+    for (const [model, entry] of namedByEntries) readNamedBy(ctx, model, models, entry);
+    for (const [model, entry] of namedByEntries) {
+      const circle = nameCircle(model, models);
+      if (circle)
+        ctx.error(
+          entry.keyNode,
+          "invalid-value",
+          `${model.name}'s name comes back to itself: ${circle.join(" → ")}. One of them must be named by its own fields.`,
+        );
+    }
     checkFormulas(ctx, models);
     checkSchedules(ctx, models);
     return models;
@@ -452,6 +465,8 @@ function readModel(
   keyNode: ParsedNode,
   node: ParsedNode | null,
   relationNodes: RelationNodes,
+  /** Each model's `namedBy`, read once every model is known: a part may be one reference away. */
+  namedByEntries: [ModelIR, Entry][],
 ): ModelIR {
   const model: ModelIR = { name, fields: [] };
   ctx.mark(`model:${name}`, keyNode);
@@ -538,7 +553,7 @@ function readModel(
   const thread = known.find((e) => e.key === "thread");
   if (thread) readThread(ctx, model, thread);
   const namedBy = known.find((e) => e.key === "namedBy");
-  if (namedBy) readNamedBy(ctx, model, namedBy);
+  if (namedBy) namedByEntries.push([model, namedBy]);
   return model;
 }
 
@@ -546,35 +561,88 @@ function readModel(
  * A model's `namedBy` (docs/design/inference.md): the stored string, text or markdown field that
  * names a record. Said outright, so that no rule (and never a field's name) decides the title.
  */
-function readNamedBy(ctx: ParseContext, model: ModelIR, { value, keyNode }: Entry): void {
+function readNamedBy(
+  ctx: ParseContext,
+  model: ModelIR,
+  models: ModelIR[],
+  { value, keyNode }: Entry,
+): void {
   const where = `"namedBy" of "${model.name}"`;
-  const name = readString(ctx, value, where);
-  if (name === undefined) return;
-  const f = model.fields.find((x) => x.name === name);
-  if (!f) {
-    ctx.error(keyNode, "unknown-field", `${model.name} has no field "${name}" (${where}).`);
-    return;
+  const written: { text: string; at: ParsedNode }[] = [];
+  if (isSeq(value)) {
+    for (const item of value.items as ParsedNode[]) {
+      const text = readString(ctx, item, `Each part of ${where}`);
+      if (text !== undefined) written.push({ text, at: item });
+    }
+    if (!written.length) {
+      ctx.error(keyNode, "invalid-value", `${capitalize(where)} lists no parts.`);
+      return;
+    }
+  } else {
+    const text = readString(ctx, value, where);
+    if (text === undefined) return;
+    written.push({ text, at: value as ParsedNode });
   }
-  const text =
-    f.type.kind === "scalar" && ["string", "text", "markdown"].includes(f.type.name) && !f.formula;
-  if (!text) {
-    ctx.error(
-      keyNode,
-      "invalid-value",
-      `${model.name}.${name} cannot name a ${model.name.toLowerCase()}: the title is a stored string, text or markdown field.`,
-    );
-    return;
+  const parts: NamePartIR[] = [];
+  for (const { text, at } of written) {
+    const read = readNamePart(text, model, models);
+    if ("problem" in read) {
+      ctx.error(
+        at,
+        read.code ?? "invalid-value",
+        `${capitalize(where)}: ${read.problem}`,
+        read.hint,
+      );
+      return;
+    }
+    if (parts.some((p) => p.field === read.part.field && p.through === read.part.through)) {
+      ctx.error(at, "duplicate-name", `${capitalize(where)} names ${text} twice.`);
+      return;
+    }
+    parts.push(read.part);
   }
-  model.namedBy = name;
+  model.nameParts = parts;
+  // One stored text field is today's title, read by everything through titleField.
+  const only = parts.length === 1 ? parts[0] : undefined;
+  const f = only && !only.through ? model.fields.find((x) => x.name === only.field) : undefined;
+  if (f && isTextField(f)) model.namedBy = f.name;
   ctx.mark(`namedBy:${model.name}`, keyNode);
 }
 
-/** A field a model's `namedBy` names that is renamed (to) or removed (no to): the setting follows. */
-function followNamedBy(spec: YamlEditor, model: string, field: string, to?: string): void {
-  const path = ["models", model, "namedBy"];
-  if (spec.get(path) !== field) return;
-  if (to) spec.set(path, to);
-  else spec.remove(path);
+/**
+ * A field a name's part names that is renamed (to) or removed (no to): the part follows in every
+ * model's `namedBy`, its own fields and the fields one reference away; a removed part is taken
+ * out, and the key with the last one.
+ */
+function followNameParts(
+  spec: YamlEditor,
+  ir: SpecIR,
+  model: string,
+  field: string,
+  to?: string,
+): void {
+  for (const m of ir.models) {
+    if (!m.nameParts?.length) continue;
+    const path = ["models", m.name, "namedBy"];
+    if (!spec.has(path)) continue;
+    const next = m.nameParts.flatMap((p) => {
+      const refModel = p.through
+        ? (m.fields.find((f) => f.name === p.through)?.type as { model?: string } | undefined)
+            ?.model
+        : undefined;
+      const own = m.name === model && (p.field === field || p.through === field);
+      const far = refModel === model && p.field === field;
+      if (!own && !far) return [p];
+      if (!to) return [];
+      if (own && p.through === field) return [{ ...p, through: to }];
+      return [{ ...p, field: to }];
+    });
+    if (next.length === m.nameParts.length && next.every((p, i) => p === m.nameParts?.[i]))
+      continue;
+    if (!next.length) spec.remove(path);
+    else if (next.length === 1 && next[0]) spec.set(path, partText(next[0]));
+    else spec.set(path, next.map(partText));
+  }
 }
 
 /**

@@ -497,8 +497,18 @@
             "description": "Deleted records stay in a trash for thirty days, where whoever may delete them can restore them; then they are removed for good."
           },
           "namedBy": {
-            "type": "string",
-            "description": "The field that names a record, shown as its title wherever one record is shown or referred to: a stored string, text or markdown field. Left out, the first short text field is the title, else the first long text, else the record's number."
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "What names a record, its title wherever one record is shown or referred to: a field (a text, a choice, a date, a number, an amount), a reference (that record's own name) or a field one reference away (classType.name), or a list of such parts joined with \" · \" ([classType, startsAt]). Left out, the first short text field is the title, else the first long text, else the record's number."
           },
           "thread": {
             "type": "object",

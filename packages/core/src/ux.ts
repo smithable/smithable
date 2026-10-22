@@ -8,9 +8,10 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { FieldIR, ModelIR, PageIR, SpecIR } from "./ir.js";
+import type { FieldIR, ModelIR, NamePartIR, PageIR, SpecIR } from "./ir.js";
 import { capitalize, humanize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
+import { readNamePart } from "./sections/name-parts.js";
 import { didYouMean } from "./suggest.js";
 import { FONTS, type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
 import { threadBindings } from "./thread.js";
@@ -81,6 +82,10 @@ export interface PageUx {
    * a conversation with a reply box (docs/design/conversation.md).
    */
   lists?: Record<string, "thread" | "table">;
+  /** The line under a record's name on cards and in pickers (record-names.md §3): a name part. */
+  subtitle?: NamePartIR;
+  /** Smaller parts after the subtitle. */
+  detail?: NamePartIR[];
 }
 
 /** The ways a field can be entered, chosen by name in the ux file. */
@@ -255,22 +260,56 @@ export function emptyUx(): UxIR {
  * field, so a model without one cannot be a thread; a required field the reply box cannot fill
  * (no default, not filled by the app, not the reference back) is warned about.
  */
-function readRecordLists(
+function readRecord(
   ctx: ParseContext,
   node: ParsedNode | null,
   ir: SpecIR,
   model: ModelIR | undefined,
   where: string,
-): Record<string, "thread" | "table"> {
+): { lists: Record<string, "thread" | "table">; subtitle?: NamePartIR; detail?: NamePartIR[] } {
   const lists: Record<string, "thread" | "table"> = {};
+  let subtitle: NamePartIR | undefined;
+  let detail: NamePartIR[] | undefined;
+  // A line under the name: a part as namedBy takes them, checked against the page's model.
+  const part = (text: string, at: ParsedNode): NamePartIR | undefined => {
+    if (!model) {
+      ctx.error(at, "invalid-key", `${where} shows no records to name.`);
+      return undefined;
+    }
+    const read = readNamePart(text, model, ir.models);
+    if ("problem" in read) {
+      ctx.error(
+        at,
+        read.code ?? "invalid-value",
+        `The record of ${where}: ${read.problem}`,
+        read.hint,
+      );
+      return undefined;
+    }
+    return read.part;
+  };
   for (const option of checkKeys(
     ctx,
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists"],
+      allowed: ["lists", "subtitle", "detail"],
     },
   )) {
+    if (option.key === "subtitle") {
+      const text = readString(ctx, option.value, `"subtitle" of the record of ${where}`);
+      if (text !== undefined) subtitle = part(text, option.value as ParsedNode);
+      continue;
+    }
+    if (option.key === "detail") {
+      detail = readNameList(ctx, option.value, `"detail" of the record of ${where}`).flatMap(
+        ({ name, at }) => {
+          const p = part(name, at as ParsedNode);
+          return p ? [p] : [];
+        },
+      );
+      continue;
+    }
     for (const pair of mapEntries(ctx, option.value, `"lists" of ${where}`) ?? []) {
       const field = model?.fields.find((f) => f.name === pair.key);
       const look = readString(ctx, pair.value, `"${pair.key}" in "lists"`);
@@ -338,7 +377,7 @@ function readRecordLists(
       lists[pair.key] = look;
     }
   }
-  return lists;
+  return { lists, ...(subtitle ? { subtitle } : {}), ...(detail ? { detail } : {}) };
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
@@ -546,7 +585,10 @@ export function validateUx(
             continue;
           }
           if (part.key === "record") {
-            result.lists = readRecordLists(ctx, part.value, ir, model, where);
+            const record = readRecord(ctx, part.value, ir, model, where);
+            if (Object.keys(record.lists).length) result.lists = record.lists;
+            if (record.subtitle) result.subtitle = record.subtitle;
+            if (record.detail?.length) result.detail = record.detail;
             continue;
           }
           if (part.key === "icon") {

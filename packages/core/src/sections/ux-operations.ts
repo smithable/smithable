@@ -2,6 +2,7 @@ import { formatDiagnostic } from "../diagnostics.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
+import { pageModel } from "../patterns.js";
 import { parseTheme } from "../theme.js";
 import {
   CONTROLS,
@@ -13,6 +14,7 @@ import {
   VOICES,
   type Voice,
 } from "../ux.js";
+import { partText, readNamePart } from "./name-parts.js";
 
 /** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
 export function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
@@ -146,6 +148,63 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
     put(editors.ux, ["pages", page, "table", "columns"], columns);
+    return [];
+  },
+};
+
+const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: string[] }> = {
+  name: "setRecordLines",
+  summary:
+    'What a page shows under a record\'s name on cards and in pickers (docs/design/record-names.md §3): a subtitle and detail parts, each a field, a reference or a field one reference away; "none" takes the subtitle away, an empty detail list the details.',
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      subtitle: {
+        type: "string",
+        description: 'The line under the name, e.g. instructor.name; "none" removes it.',
+      },
+      detail: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Smaller parts after it, e.g. classType.level capacity; none given removes them.",
+      },
+    },
+  },
+  positional: ["page", "subtitle"],
+  describe: ({ page, subtitle, detail }) =>
+    subtitle === "none" && !detail?.length
+      ? `Show only the name on the ${page} page's records`
+      : `Under a record's name on the ${page} page, show ${[subtitle && subtitle !== "none" ? subtitle : "", ...(detail ?? [])].filter(Boolean).join(", ")}`,
+  destructive: () => false,
+  apply(editors, { page, subtitle, detail }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (!found) throw new OperationError(`There is no page named "${page}".`);
+    const model = ir.models.find((m) => m.name === pageModel(found));
+    if (!model) throw new OperationError(`The ${page} page shows no records to name.`);
+    if (subtitle === undefined && detail === undefined)
+      throw new OperationError("Say what to show: a subtitle, detail parts, or none.");
+    const check = (text: string) => {
+      const read = readNamePart(text, model, ir.models);
+      if ("problem" in read)
+        throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
+      return partText(read.part);
+    };
+    if (subtitle !== undefined)
+      put(
+        editors.ux,
+        ["pages", page, "record", "subtitle"],
+        subtitle === "none" ? undefined : check(subtitle),
+      );
+    if (detail !== undefined)
+      put(
+        editors.ux,
+        ["pages", page, "record", "detail"],
+        detail.length ? detail.map(check) : undefined,
+      );
     return [];
   },
 };
@@ -632,6 +691,7 @@ export const uxOperations: AnyOperation[] = [
   setSectionLook,
   setColumns,
   setRecordList,
+  setRecordLines,
   setFieldOrder,
   setTone,
   setIcon,
