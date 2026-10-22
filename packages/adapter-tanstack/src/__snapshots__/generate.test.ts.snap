@@ -16936,7 +16936,7 @@ import { sessionName } from "./session.name";
 export function bookingName(row: Record<string, unknown>): string {
   return nameOf(
     [
-      (row.session as Record<string, unknown> | null | undefined) ? sessionName((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>) : "",
+      (row.session as Record<string, unknown> | null | undefined) ? String(((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>).$name ?? sessionName((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>)) : "",
     ],
     \`Booking #\${row.id}\`,
   );
@@ -17044,7 +17044,12 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 export const bookingData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
-    return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => ({ ...row, $name: bookingName(row), session: row.session ? { ...(row.session as Record<string, unknown>), $name: sessionName(row.session as Record<string, unknown>) } : row.session }) as R);
+    return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => {
+      // A referenced record named by its parts is shown as its own model shows it: its parts
+      // the viewer may not read hidden too, one reference further.
+      const shown = { ...row, session: row.session ? sessionData.shownRefs(viewer, [row.session as Record<string, unknown>])[0] : row.session };
+      return { ...shown, $name: bookingName(shown) } as R;
+    });
   },
 
   /** A condition for the bookings the viewer may read. */
@@ -17912,7 +17917,7 @@ export const classTypeData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.classTypes.findFirst({
       where: and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)),
-      with: { sessions: { where: sessionData.readable(viewer), with: { instructor: { columns: { id: true, name: true } } } } },
+      with: { sessions: { where: sessionData.readable(viewer), with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } } } } },
     });
     const found = fetched && classTypeData.shownRefs(viewer, [{ ...fetched, sessions: sessionData.shownRefs(viewer, fetched.sessions) }])[0];
     const row = found && { ...shownTo(viewer, found), sessions: found.sessions.map((r) => sessionData.shownTo(viewer, r)) };
@@ -20358,7 +20363,7 @@ import { app } from "./app";
 export function sessionName(row: Record<string, unknown>): string {
   return nameOf(
     [
-      titleOf((row.classType as Record<string, unknown> | null | undefined)?.name),
+      (row.classType as Record<string, unknown> | null | undefined) ? titleOf((row.classType as Record<string, unknown> | null | undefined)?.name) : "",
       shortWhen(row.startsAt, false, app.timeZone),
     ],
     \`Session #\${row.id}\`,
@@ -20496,7 +20501,12 @@ export const sessionData = {
   shownTo,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
-    return hideRefs(hideRefs(rows, "classType", (ids, c = classTypeData.readable(viewer)) => (c ? db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), c)).all().map((r) => r.id) : ids)), "instructor", (ids, c = instructorData.readable(viewer)) => (c ? db.select({ id: schema.instructors.id }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => ({ ...row, $name: sessionName(row) }) as R);
+    return hideRefs(hideRefs(rows, "classType", (ids, c = classTypeData.readable(viewer)) => (c ? db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), c)).all().map((r) => r.id) : ids)), "instructor", (ids, c = instructorData.readable(viewer)) => (c ? db.select({ id: schema.instructors.id }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => {
+      // A referenced record named by its parts is shown as its own model shows it: its parts
+      // the viewer may not read hidden too, one reference further.
+      const shown = { ...row };
+      return { ...shown, $name: sessionName(shown) } as R;
+    });
   },
 
   /** A condition for the sessions the viewer may read. */
@@ -20745,7 +20755,7 @@ export const sessionData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.sessions.findFirst({
       where: and(eq(schema.sessions.id, id), sessionData.readable(viewer)),
-      with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer), with: { attendee: { columns: { id: true, name: true } } } } },
+      with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer), with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } } } },
     });
     const found = fetched && sessionData.shownRefs(viewer, [{ ...fetched, bookings: bookingData.shownRefs(viewer, fetched.bookings) }])[0];
     const row = found && shownTo(viewer, found);
@@ -20870,7 +20880,8 @@ export const sessionData = {
     if (readScope(sessionAccess.read, viewer) === "none") return [];
     // Named by its parts (record-names.md), with the line under the name a picker shows: ordered
     // by the first part's value.
-    const rows = await db.query.sessions.findMany({ where: sessionData.readable(viewer), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } });
+    // Through shownRefs: a part the viewer may not read names nothing here either.
+    const rows = sessionData.shownRefs(viewer, await db.query.sessions.findMany({ where: sessionData.readable(viewer), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } }));
     return sortRows(
       rows.map((row) => ({ value: row.id, label: sessionName(row), first: row.classType?.name ?? null })),
       "first",
@@ -25649,12 +25660,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "8e151646 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "2e7a3e55 generated",
-  "src/generated/booking.name.ts": "1f717a42 generated",
+  "src/generated/booking.name.ts": "8aaa37e0 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "76008f69 generated",
+  "src/generated/booking.server.ts": "4f2f6797 generated",
   "src/generated/booking.ts": "7230b87e generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "1be705ca generated",
+  "src/generated/class-type.server.ts": "03827a5f generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -25674,9 +25685,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.name.ts": "5b176bca generated",
+  "src/generated/session.name.ts": "c4a953cd generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "8e091166 generated",
+  "src/generated/session.server.ts": "8190c41a generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "592b0fd3 generated",
   "src/generated/uploads.ts": "11494e99 generated",

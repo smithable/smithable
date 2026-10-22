@@ -642,7 +642,7 @@ export function dataModule(
   // lists the listed records the viewer may read, with the titles of what they refer to.
   const withReferences = (m: ModelIR, except?: string) => [
     ...references(m)
-      .filter((f) => f.type.model !== except)
+      .filter((f) => f.type.model !== except || namedThrough(m, f.name))
       .map((f) => {
         const target = modelNamed(ir, f.type.model);
         // With what the lines under m's names read through this reference (record-names.md §3).
@@ -702,12 +702,18 @@ export function dataModule(
   const lined = linesParts(ir, ux, model).length > 0;
   const namedRows = (rows: string) =>
     composedName(model) || composedRefs.length || lined
-      ? `${rows}.map((row) => ({ ...row${composedName(model) ? `, $name: ${nameFunction(model)}(row)` : ""}${lined ? `, $lines: ${linesFunction(model)}(row)` : ""}${composedRefs
-          .map(
-            (f) =>
-              `, ${f.name}: row.${f.name} ? { ...(row.${f.name} as Record<string, unknown>), $name: ${nameFunction(modelNamed(ir, f.type.model))}(row.${f.name} as Record<string, unknown>) } : row.${f.name}`,
-          )
-          .join("")} }) as R)`
+      ? `${rows}.map((row) => {
+      // A referenced record named by its parts is shown as its own model shows it: its parts
+      // the viewer may not read hidden too, one reference further.
+      const shown = { ...row${composedRefs
+        .map((f) => {
+          const target = modelNamed(ir, f.type.model);
+          const data = target === model ? self : names(target, t).data;
+          return `, ${f.name}: row.${f.name} ? ${data}.shownRefs(viewer, [row.${f.name} as Record<string, unknown>])[0] : row.${f.name}`;
+        })
+        .join("")} };
+      return { ...shown${composedName(model) ? `, $name: ${nameFunction(model)}(shown)` : ""}${lined ? `, $lines: ${linesFunction(model)}(shown)` : ""} } as R;
+    })`
       : rows;
   const shownRefsMethod = () => `
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
@@ -2358,7 +2364,8 @@ ${
     if (readScope(${n.access}.read, viewer) === "none") return [];
     // Named by its parts (record-names.md), with the line under the name a picker shows: ordered
     // by the first part's value.
-    const rows = await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model, "", linesParts(ir, ux, model))} });
+    // Through shownRefs: a part the viewer may not read names nothing here either.
+    const rows = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model, "", linesParts(ir, ux, model))} }));
     return sortRows(
       rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${n.label} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
       "first",
@@ -2431,6 +2438,11 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
   setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
 }
 `;
+}
+
+/** Whether a model's name or the lines under it read a reference: it is then loaded, even back to a parent. */
+function namedThrough(model: ModelIR, ref: string): boolean {
+  return (model.nameParts ?? []).some((p) => (p.through ?? p.field) === ref);
 }
 
 /** A composed name's first part, for ordering by it: its value, or a reference's name. */

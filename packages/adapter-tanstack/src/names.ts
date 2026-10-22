@@ -99,14 +99,19 @@ export function nameColumns(
   }
   const nested = [...withs].map(([key, { columns: cols, named: whole }]) => {
     const ref = fieldOf(model, key);
+    const own = [...cols].filter((c) => c !== "id");
     if (ref.type.kind === "relation" && ref.type.model === USER_MODEL)
-      return `${key}: { columns: { id: true, name: true } }`;
+      return `${key}: { columns: { id: true, name: true${own
+        .filter((c) => c !== "name")
+        .map((c) => `, ${c}: true`)
+        .join("")} } }`;
     const target = targetOf(ir, ref) as ModelIR;
-    const paths = [...cols].map((c) => ({ field: c }));
+    const paths = own.map((c) => ({ field: c }));
+    // With whether it is in the trash: a field of a trashed record shows nothing.
     return `${key}: ${
       whole
         ? nameColumns(ir, target, target.trash ? ", deletedAt: true" : "", paths)
-        : `{ columns: { id: true${[...cols].map((c) => `, ${c}: true`).join("")} } }`
+        : `{ columns: { id: true${own.map((c) => `, ${c}: true`).join("")}${target.trash ? ", deletedAt: true" : ""} } }`
     }`;
   });
   const cols = [...columns].map((c) => `${c}: true`).join(", ");
@@ -133,14 +138,17 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): str
         return `String((${expr} as { name?: unknown } | null | undefined)?.name ?? "")`;
       const target = modelNamed(ir, f.type.model);
       const ref = `(${expr} as Record<string, unknown> | null | undefined)`;
+      // One in the trash names nothing (docs/design/trash.md).
+      const live = target.trash ? `${ref} && !${ref}?.deletedAt` : ref;
       if (composed(target)) {
         if (target !== model) imports.push([`./${kebab(target.name)}.name`, nameFunction(target)]);
-        return `${ref} ? ${nameFunction(target)}(${ref} as Record<string, unknown>) : ""`;
+        // As the data functions showed it, when they did: its parts hidden as for the viewer.
+        return `${live} ? String((${ref} as Record<string, unknown>).$name ?? ${nameFunction(target)}(${ref} as Record<string, unknown>)) : ""`;
       }
       const title = titleField(target);
-      if (title === "id") return `${ref} ? \`#\${${ref}?.id}\` : ""`;
+      if (title === "id") return `${live} ? \`#\${${ref}?.id}\` : ""`;
       imports.push(["#/kit/format", "titleOf"]);
-      return `titleOf(${ref}?.${title})`;
+      return `${live} ? titleOf(${ref}?.${title}) : ""`;
     }
     const kind = f.type.kind === "scalar" ? f.type.name : "string";
     if (kind === "date" || kind === "datetime") {
@@ -161,10 +169,19 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): str
   const partCode = (part: NamePartIR) => {
     if (!part.through) return value(fieldOf(model, part.field), `row.${part.field}`, model);
     const ref = fieldOf(model, part.through);
-    const target = targetOf(ir, ref) as ModelIR;
+    const target = targetOf(ir, ref);
+    const via = `(row.${ref.name} as Record<string, unknown> | null | undefined)`;
+    // A user's own field (a person's name), as text.
+    if (!target) {
+      imports.push(["#/kit/format", "titleOf"]);
+      return `titleOf(${via}?.${part.field})`;
+    }
+    // A field of a record in the trash shows nothing.
     return value(
       fieldOf(target, part.field),
-      `(row.${ref.name} as Record<string, unknown> | null | undefined)?.${part.field}`,
+      target.trash
+        ? `(${via}?.deletedAt ? undefined : ${via}?.${part.field})`
+        : `${via}?.${part.field}`,
       target,
     );
   };

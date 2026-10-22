@@ -74,9 +74,15 @@ test("the data functions load what the name needs and set it on what the viewer 
   expect(booking).toContain(
     "session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }",
   );
-  // After the references the viewer may not read are hidden, so a hidden one names nothing.
-  expect(booking).toMatch(
-    /hideRefs\(rows, "session"[^\n]*\.map\(\(row\) => \(\{ \.\.\.row, \$name: bookingName\(row\), session: row\.session \? \{/,
+  // After the references the viewer may not read are hidden, a session is shown as its own
+  // model shows it (its class type hidden there too), and the booking named from that.
+  expect(booking).toContain(
+    "const shown = { ...row, session: row.session ? sessionData.shownRefs(viewer, [row.session as Record<string, unknown>])[0] : row.session };",
+  );
+  expect(booking).toContain("return { ...shown, $name: bookingName(shown) } as R;");
+  // The picker's choices pass through the same hiding.
+  expect(file("src/generated/session.server.ts")).toContain(
+    "const rows = sessionData.shownRefs(viewer, await db.query.sessions.findMany(",
   );
   // The kit reads the composed name under $name.
   expect(file("src/generated/booking.ts")).toContain('titleField: "$name"');
