@@ -121,6 +121,27 @@ test("setDefaultFilter writes a value or takes it away; a renamed, removed or ch
     value: "soon",
   });
   expect(bad.ok ? "" : bad.message).toContain("one of upcoming, past");
+  // A range keeps a decimal comma; a scalar list of values is trimmed when read.
+  const decimal = applyOperation(files, "setDefaultFilter", {
+    page: "sessions",
+    field: "places",
+    value: "2,5..10",
+  });
+  if (!decimal.ok) throw new Error(decimal.message);
+  expect(decimal.files.spec).toContain("      places: 2,5..10\n");
+  expect(read("    defaultFilter: { status: 'open, full' }\n").ir?.pages[0]?.defaultFilter).toEqual(
+    {
+      status: "open,full",
+    },
+  );
+  // A filter taken away takes its default with it.
+  const fewer = applyOperation(more.files, "setFilters", {
+    page: "sessions",
+    fields: ["status", "places"],
+  });
+  if (!fewer.ok) throw new Error(fewer.message);
+  expect(fewer.files.spec).not.toContain("startsAt: upcoming");
+  expect(fewer.files.spec).toContain("      status: [open, full]\n");
   const none = applyOperation(more.files, "setDefaultFilter", {
     page: "sessions",
     field: "startsAt",
@@ -172,6 +193,10 @@ test("the ux file names the filters shown first; setFiltersShown writes it; a fi
   const shown = ux("pages:\n  sessions:\n    filters: { shown: [startsAt, status, startsAt] }\n");
   expect(shown.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
   expect(shown.ux?.pages.sessions?.filtersShown).toEqual(["startsAt", "status"]);
+  // An empty list is no choice: every filter shows.
+  expect(
+    ux("pages:\n  sessions:\n    filters: { shown: [] }\n").ux?.pages.sessions?.filtersShown,
+  ).toBeUndefined();
   const unknown = ux("pages:\n  sessions:\n    filters: { shown: [notes] }\n");
   expect(unknown.diagnostics.map((d) => d.message)).toEqual([
     expect.stringContaining('sessions has no filter named "notes" to show first'),
@@ -201,4 +226,11 @@ test("the ux file names the filters shown first; setFiltersShown writes it; a fi
   const removed = applyOperation(set.files, "removeField", { model: "Session", field: "status" });
   if (!removed.ok) throw new Error(removed.message);
   expect(removed.files.ux).toContain("shown: [startsAt]");
+  // A filter the page no longer offers leaves the shown list too.
+  const fewer = applyOperation(set.files, "setFilters", { page: "sessions", fields: ["status"] });
+  if (!fewer.ok) throw new Error(fewer.message);
+  expect(fewer.files.ux).toContain("shown: [status]");
+  const gone = applyOperation(set.files, "setFilters", { page: "sessions", fields: ["places"] });
+  if (!gone.ok) throw new Error(gone.message);
+  expect(gone.files.ux).not.toContain("shown");
 });

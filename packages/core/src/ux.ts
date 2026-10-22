@@ -521,7 +521,8 @@ export function validateUx(
                   );
                 else if (!shown.includes(name)) shown.push(name);
               }
-              result.filtersShown = shown;
+              // An empty list is no choice: every filter shows.
+              if (shown.length) result.filtersShown = shown;
             }
             continue;
           }

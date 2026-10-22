@@ -7,6 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { withDefaults } from "./params";
 import { tx, w } from "./words";
 
 export interface FilterUi {
@@ -63,7 +64,10 @@ export function Filters({
   const [open, setOpen] = useState(false);
   const id = useId();
   const shown = filters.filter((f) => (f.kind !== "mine" && f.kind !== "unread") || signedIn);
-  const active = shown.filter((f) => values[f.name]);
+  // What is in force: the address, with the page's defaults where it says nothing. The address
+  // is written back as it is, so a default stays implicit and a cleared one ("all") stays cleared.
+  const effective = withDefaults(values, defaults);
+  const active = shown.filter((f) => effective[f.name]);
   const set = (name: string, value: string | undefined) =>
     onChange({
       ...values,
@@ -119,7 +123,7 @@ export function Filters({
               <Filter
                 key={f.name}
                 filter={f}
-                value={values[f.name]}
+                value={effective[f.name]}
                 onChange={(v) => set(f.name, v)}
               />
             ))}
@@ -133,7 +137,7 @@ export function Filters({
               key={f.name}
               className="inline-flex items-center gap-1 rounded-full bg-accent py-1 pr-1 pl-3 text-sm text-accent-foreground"
             >
-              {f.label}: {describe(f, values[f.name] as string)}
+              {f.label}: {describe(f, effective[f.name] as string)}
               {/* Only the × removes it, not a click on its words. */}
               <button
                 type="button"
