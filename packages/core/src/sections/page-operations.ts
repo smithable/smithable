@@ -1,7 +1,9 @@
 import { conditionArgs, conditionText } from "../condition.js";
-import type { YamlEditor } from "../edit.js";
+import type { YamlEditor, YamlValue } from "../edit.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
+import { pageModel } from "../patterns.js";
+import { filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
 
@@ -600,6 +602,59 @@ const setSortable = listKeyOperation(
     fields.length ? `Sort ${page} by ${fields.join(", ")}` : `Remove the sort choice from ${page}`,
 );
 
+const setDefaultFilter: Operation<{ page: string; field: string; value: string }> = {
+  name: "setDefaultFilter",
+  summary:
+    'What a page\'s list is filtered by until the viewer chooses: a filter and its value, as the address carries it (startsAt upcoming; status "open,pending"); "none" takes the default away.',
+  schema: {
+    type: "object",
+    required: ["page", "field", "value"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: refTo(
+        { ref: "field", page: "page", label: "Filter" },
+        { description: "One of the page's filters." },
+      ),
+      value: {
+        type: "string",
+        description:
+          'A date filter: upcoming, past, today, thisWeek, thisMonth or a range (2026-01-01..); a number: a range (10..500); a choice: its values, comma-separated; yes/no: true or false; owner: mine; a person: me or none. "none" removes the default.',
+      },
+    },
+  },
+  positional: ["page", "field", "value"],
+  describe: ({ page, field, value }) =>
+    value === "none"
+      ? `Open ${page} without a default ${field} filter`
+      : `Open ${page} filtered by ${field}: ${value}`,
+  destructive: () => false,
+  apply({ spec }, { page, field, value }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    const path = ["pages", page, "defaultFilter", field];
+    if (value === "none") {
+      if (spec.has(path)) spec.removeAndPrune(path, 3);
+      return [];
+    }
+    if (!p.filters?.includes(field))
+      throw new OperationError(
+        `"${field}" is not among the filters of ${page}${p.filters?.length ? ` (${p.filters.join(", ")})` : ""}; add it with setFilters first.`,
+      );
+    const model = ir.models.find((m) => m.name === pageModel(p));
+    const problem = model ? filterValueProblem(model, field, value.trim()) : undefined;
+    if (problem) throw new OperationError(problem);
+    const parts = value.split(",").map((v) => v.trim());
+    const written: YamlValue =
+      parts.length > 1 ? parts : value === "true" ? true : value === "false" ? false : value.trim();
+    if (spec.has(path)) spec.set(path, written);
+    else if (spec.has(["pages", page, "defaultFilter"]))
+      spec.add(["pages", page, "defaultFilter"], field, written);
+    else spec.add(["pages", page], "defaultFilter", { [field]: written });
+    return [];
+  },
+};
+
 const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
   name: "setFavorites",
   summary:
@@ -992,6 +1047,7 @@ export const crudOperations: AnyOperation[] = [
   addPage,
   setSearch,
   setFilters,
+  setDefaultFilter,
   setSortable,
   setFavorites,
   setContact,

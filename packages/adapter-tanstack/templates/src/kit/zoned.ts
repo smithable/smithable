@@ -49,3 +49,34 @@ export function instantOf(wall: string, timeZone?: string): Date {
   const fits = [before, after].filter(shows).sort((a, b) => a - b);
   return new Date(fits[0] ?? before);
 }
+
+/** A date filter's relative values: resolved when the query runs, in the app's time zone. */
+export const RELATIVE = ["upcoming", "past", "today", "thisWeek", "thisMonth"] as const;
+export type Relative = (typeof RELATIVE)[number];
+
+/** The day `days` after a date ("2026-10-05"), as a date. */
+const shifted = (day: string, days: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * The days a relative value spans, from (inclusive) to (exclusive), as "YYYY-MM-DD" in the
+ * app's time zone; "upcoming" and "past" have one open side. A week starts on Monday.
+ */
+export function relativeDays(
+  value: Relative,
+  now: Date,
+  timeZone?: string,
+): { from?: string; to?: string } {
+  const today = wallTime(now, timeZone).slice(0, 10);
+  if (value === "upcoming") return { from: today };
+  if (value === "past") return { to: today };
+  if (value === "today") return { from: today, to: shifted(today, 1) };
+  if (value === "thisWeek") {
+    const weekday = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7;
+    const monday = shifted(today, -weekday);
+    return { from: monday, to: shifted(monday, 7) };
+  }
+  const first = `${today.slice(0, 7)}-01`;
+  const next = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 1));
+  return { from: first, to: next.toISOString().slice(0, 10) };
+}

@@ -192,6 +192,7 @@ const ux: Companion = {
       for (const path of [
         ["pages", page.id, "table", "columns"],
         ["pages", page.id, "form", "fieldOrder"],
+        ["pages", page.id, "filters", "shown"],
       ]) {
         const list = editor.has(path) ? (editor.get(path) as string[]) : undefined;
         if (!list?.includes(from)) continue;

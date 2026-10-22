@@ -334,6 +334,11 @@ export interface PageIR extends SemanticText {
   search?: string[];
   /** Fields of the model the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle. */
   filters?: string[];
+  /**
+   * Filter values applied when the address says nothing, by filter, as the address writes them
+   * (`{ startsAt: "upcoming", status: "open,pending" }`); "all" in the address clears one.
+   */
+  defaultFilter?: Record<string, string>;
   /** Fields of the model the list can be sorted by, either way, from a "Sort by" control. */
   sortable?: string[];
   /** A heart on each record and a "Saved" view of the list ("all"), or a list of only the viewer's saved records ("only"). */

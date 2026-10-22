@@ -65,6 +65,23 @@ export function field(data: unknown, name: string, max: number): string {
 }
 
 /** An address's checked values, each one optional, as a link may leave any of them out. */
+/**
+ * A list's filters with the page's defaults: a filter the address says nothing about takes its
+ * default, and "all" in the address clears one (so the default can be taken away).
+ */
+export function withDefaults<T extends Record<string, string | undefined>>(
+  given: T,
+  defaults: Record<string, string>,
+): T {
+  const out = { ...given };
+  for (const [name, value] of Object.entries(defaults)) {
+    const key = name as keyof T;
+    if (out[key] === undefined) out[key] = value as T[keyof T];
+    else if (out[key] === "all") delete out[key];
+  }
+  return out;
+}
+
 export function optional<T extends object>(values: T): Partial<T> {
   return values;
 }

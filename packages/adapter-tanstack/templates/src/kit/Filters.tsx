@@ -23,6 +23,8 @@ export interface FilterUi {
   options?: { value: string; label: string }[];
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
+  /** Folded behind "More filters" when the list is first reached (smithable.ux.yml's shown). */
+  folded?: boolean;
 }
 
 export interface SortUi {
@@ -39,6 +41,7 @@ export function Filters({
   sorts = [],
   sort,
   signedIn = false,
+  defaults = {},
   onChange,
 }: {
   filters: FilterUi[];
@@ -47,6 +50,8 @@ export function Filters({
   sort?: string;
   /** Whether the viewer is signed in: only then is there a "Mine". */
   signedIn?: boolean;
+  /** The page's default filters: clearing one writes "all", so the default stays away. */
+  defaults?: Record<string, string>;
   onChange: (next: FilterValues & { sort?: string }) => void;
 }) {
   // The labels in the language now (languages.md §4).
@@ -60,7 +65,11 @@ export function Filters({
   const shown = filters.filter((f) => (f.kind !== "mine" && f.kind !== "unread") || signedIn);
   const active = shown.filter((f) => values[f.name]);
   const set = (name: string, value: string | undefined) =>
-    onChange({ ...values, [name]: value || undefined, sort });
+    onChange({
+      ...values,
+      [name]: value || (defaults[name] !== undefined ? "all" : undefined),
+      sort,
+    });
   return (
     <div data-kit="filters" className="mb-6 space-y-3">
       {/* Phones: the Filters button and the sort, the filters under them; wider: the filters, then the sort. */}

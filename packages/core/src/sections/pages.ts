@@ -1,4 +1,4 @@
-import { isMap, isScalar, type ParsedNode } from "yaml";
+import { isMap, isScalar, isSeq, type ParsedNode } from "yaml";
 import {
   type At,
   checkKeys,
@@ -20,7 +20,7 @@ import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
-import { checkFilterFields, checkSortableFields } from "./list-keys.js";
+import { checkDefaultFilter, checkFilterFields, checkSortableFields } from "./list-keys.js";
 import { NAME_PATTERN, nameRule } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -78,6 +78,13 @@ export const pagesSection: SpecSection<"pages"> = {
           items: { type: "string" },
           description:
             "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
+        },
+        defaultFilter: {
+          type: "object",
+          propertyNames: { pattern: "^[a-z][A-Za-z0-9]*$" },
+          additionalProperties: { type: ["string", "boolean", "array"], items: { type: "string" } },
+          description:
+            'Filter values applied when the address says nothing, by filter, e.g. { startsAt: upcoming }: a date takes upcoming, past, today, thisWeek, thisMonth or a range; "all" in the address clears one.',
         },
         sortable: {
           type: "array",
@@ -176,6 +183,7 @@ function readPage(
       "actions",
       "search",
       "filters",
+      "defaultFilter",
       "sortable",
       "favorites",
       "contact",
@@ -194,6 +202,7 @@ function readPage(
   const actionNodes = new Map<string, At>();
   let search: { name: string; at: At }[] | undefined;
   let filters: { name: string; at: At }[] | undefined;
+  let defaultFilter: { name: string; value: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
   let favorites: PageIR["favorites"] | undefined;
   let mine = false;
@@ -224,6 +233,24 @@ function readPage(
       search = readNameList(ctx, value, `the search of ${where}`);
     } else if (key === "filters") {
       filters = readNameList(ctx, value, `the filters of ${where}`);
+    } else if (key === "defaultFilter") {
+      // Each value as the address carries it: a list of values becomes "a,b", a yes/no "true".
+      defaultFilter = [];
+      for (const entry of mapEntries(ctx, value, `the default filter of ${where}`) ?? []) {
+        const v = entry.value;
+        const text = isScalar(v)
+          ? String(v.value ?? "")
+          : isSeq(v)
+            ? v.items.map((i) => (isScalar(i) ? String(i.value ?? "") : "")).join(",")
+            : undefined;
+        if (text === undefined || text === "")
+          ctx.error(
+            v,
+            "invalid-default-filter",
+            `The default filter of ${where} gives "${entry.key}" a value: a word, a range or a list of values.`,
+          );
+        else defaultFilter.push({ name: entry.key, value: text, at: v });
+      }
     } else if (key === "sortable") {
       sortable = readNameList(ctx, value, `the sortable fields of ${where}`);
     } else if (key === "mine") {
@@ -294,7 +321,16 @@ function readPage(
   const model = patternInfo({ id, route, pattern }).manages();
   if (!model)
     for (const e of known.filter((e) =>
-      ["actions", "search", "filters", "sortable", "favorites", "contact", "mine"].includes(e.key),
+      [
+        "actions",
+        "search",
+        "filters",
+        "defaultFilter",
+        "sortable",
+        "favorites",
+        "contact",
+        "mine",
+      ].includes(e.key),
     ))
       ctx.error(e.keyNode, "invalid-key", `"${e.key}" belongs to a crud page.`);
   // A standard action changes a record of its model, so it is offered on that model's page.
@@ -315,14 +351,27 @@ function readPage(
       `Give it another name, or a "route".`,
     );
   }
+  const checkedFilters =
+    model && filters?.length ? checkFilterFields(ctx, filters, model, parsed, where) : undefined;
   return {
     id,
     route,
     pattern,
     ...(model && actions?.length ? { actions } : {}),
     ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
-    ...(model && filters?.length
-      ? { filters: checkFilterFields(ctx, filters, model, parsed, where) }
+    ...(checkedFilters ? { filters: checkedFilters } : {}),
+    ...(model && defaultFilter?.length
+      ? (() => {
+          const checked = checkDefaultFilter(
+            ctx,
+            defaultFilter,
+            checkedFilters ?? [],
+            model,
+            parsed,
+            where,
+          );
+          return Object.keys(checked).length ? { defaultFilter: checked } : {};
+        })()
       : {}),
     ...(model && sortable?.length
       ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
