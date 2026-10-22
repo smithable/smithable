@@ -985,36 +985,35 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           generated(`${dir}/${file}`, content),
         );
         // A calculator, a page or a section of one: its fields and formulas as modules.
-        const calculators =
-          page.pattern.kind === "calculator"
+        const calculators = [
+          ...(page.pattern.kind === "calculator"
             ? [[page.id, page.pattern.calculator, undefined] as const]
-            : page.sections.flatMap((s) =>
-                s.calculator ? [[`${page.id}.${s.name}`, s.calculator, s.name] as const] : [],
-              );
+            : []),
+          ...page.sections.flatMap((s) =>
+            s.calculator ? [[`${page.id}.${s.name}`, s.calculator, s.name] as const] : [],
+          ),
+        ];
         const modules = calculators.flatMap(([name, calculator, section]) =>
           Object.entries(
             calculatorFiles(name, calculator, page.id, ctx.ir, ctx.t, ctx.ux, section),
           ).map(([path, content]) => generated(path, content)),
         );
         // A page or section of your own: its component, created once (calculator.md §4).
-        const own =
-          page.pattern.kind === "custom"
+        const own = [
+          ...(page.pattern.kind === "custom"
             ? [
                 custom(
                   `src/custom/pages/${page.pattern.component}.tsx`,
                   customPageStub(page.pattern.component),
                 ),
               ]
-            : page.sections.flatMap((s) =>
-                s.component
-                  ? [
-                      custom(
-                        `src/custom/sections/${s.component}.tsx`,
-                        customSectionStub(s.component),
-                      ),
-                    ]
-                  : [],
-              );
+            : []),
+          ...page.sections.flatMap((s) =>
+            s.component
+              ? [custom(`src/custom/sections/${s.component}.tsx`, customSectionStub(s.component))]
+              : [],
+          ),
+        ];
         return [...actions, ...routes, ...modules, ...own];
       }),
   },

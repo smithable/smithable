@@ -374,7 +374,7 @@ function readPage(
   } else if (sectionsNode) {
     const own =
       pattern.kind === "sections"
-        ? undefined
+        ? {}
         : { kind: pattern.kind, label: OWN_LABELS[pattern.kind] ?? pattern.kind };
     const added = readSections(ctx, sectionsNode.value, where, parsed, own);
     const placed = own ? added.findIndex((s) => s.own) : -1;
@@ -382,6 +382,14 @@ function readPage(
       placed >= 0
         ? [...added.slice(0, placed), ...sections, ...added.slice(placed + 1)]
         : [...sections, ...added];
+    // A tile's or a step's name is a text key under the page too, so a section cannot share it.
+    const taken = Object.keys(patternInfo({ id, route, pattern, sections: [] }).parts());
+    for (const section of added.filter((s) => !s.own && taken.includes(s.name)))
+      ctx.error(
+        sectionsNode.keyNode,
+        "duplicate-name",
+        `${capitalize(where)} already has a part named "${section.name}" (a ${pattern.kind === "dashboard" ? "tile" : "step"}); give the section another name.`,
+      );
     if (pattern.kind === "sections" && sections.length === 0)
       ctx.error(
         sectionsNode.keyNode,

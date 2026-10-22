@@ -232,3 +232,68 @@ test("a page's frame is the ux file's, set by setFrame; default returns it", () 
   expect(back.ok && back.files.ux).not.toContain("frame");
   expect(applyOperation({ spec }, "setFrame", { page: "nowhere", frame: "app" }).ok).toBe(false);
 });
+
+test("a kind under another name, the own part placed by moveSection, the last part pruned, a page of sections added", () => {
+  const more = applyOperation({ spec }, "addSection", {
+    page: "about",
+    section: "more",
+    kind: "faq",
+  });
+  if (!more.ok) throw new Error(more.message);
+  expect(more.files.spec).toContain("      more:\n        faq:\n");
+  expect(
+    read(more.files.spec)
+      .ir?.pages.find((p) => p.id === "about")
+      ?.sections.at(-1),
+  ).toEqual({
+    name: "more",
+    kind: "faq",
+  });
+  expect(
+    codes(
+      spec.replace(
+        "faq:\n      visit",
+        "faq:\n      both: { faq: , records: Instructor }\n      visit",
+      ),
+    ),
+  ).toContainEqual(expect.stringContaining("is a faq section, so it shows no records"));
+  // The crud page's own list, unplaced, is written among the sections when moved.
+  const fresh = spec.replace("      crud:\n", "");
+  const placed = applyOperation({ spec: fresh }, "moveSection", {
+    page: "sessions",
+    section: "crud",
+    after: "notice",
+  });
+  if (!placed.ok) throw new Error(placed.message);
+  expect(
+    read(placed.files.spec)
+      .ir?.pages.find((p) => p.id === "sessions")
+      ?.sections.map((s) => s.name),
+  ).toEqual(["notice", "crud", "faq"]);
+  // Removing the only part of a kind's page takes the empty sections key with it.
+  const one = applyOperation(
+    { spec: spec.replace("      notice: { text: }\n      crud:\n      faq:\n", "      faq:\n") },
+    "removeSection",
+    {
+      page: "sessions",
+      section: "faq",
+    },
+  );
+  if (!one.ok) throw new Error(one.message);
+  expect(one.files.spec).toContain("  sessions:\n    crud: Session\n  planning:");
+  const page = applyOperation({ spec }, "addSectionsPage", { page: "visit", route: "/visit-us" });
+  if (!page.ok) throw new Error(page.message);
+  expect(page.files.spec).toContain(
+    "  visit:\n    route: /visit-us\n    sections:\n      intro:\n        text:\n",
+  );
+  expect(read(page.files.spec).diagnostics).toEqual([]);
+  // A page kind's name with a part's options is only a name.
+  expect(
+    codes(
+      spec.replace(
+        "      faq:\n      visit",
+        "      calendar: { records: Session, view: table }\n      visit",
+      ),
+    ),
+  ).toEqual([]);
+});

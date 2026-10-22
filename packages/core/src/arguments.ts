@@ -3,7 +3,7 @@
 import type { SpecIR } from "./ir.js";
 import { humanize } from "./naming.js";
 import type { ArgRef } from "./operation.js";
-import { pageModel, partSections } from "./patterns.js";
+import { pageModel } from "./patterns.js";
 
 /**
  * The names `ref` can take, as [value, label], given the other arguments so far (a field's
@@ -56,7 +56,7 @@ export function namesFor(
       return ir.incoming.map((i) => [i.name, humanize(i.name)]);
     case "section": {
       const page = ir.pages.find((p) => p.id === one(ref.page));
-      return page ? partSections(page).map((s) => [s.name, humanize(s.name)]) : [];
+      return page ? page.sections.map((s) => [s.name, humanize(s.name)]) : [];
     }
   }
 }
