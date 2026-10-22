@@ -118,5 +118,9 @@ pages:
   schedule:
     title: Class schedule
     subtitle: A little time, just for you.
+  my-bookings:
+    cancelling:
+      title: Can't come after all?
+      text: Open the booking and cancel it before the class starts, so the mat goes to someone else.
   sessions:
     title: Sessions

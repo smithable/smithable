@@ -4,10 +4,11 @@ import {
   emptyUx,
   isUpload,
   kebab,
+  partSections,
   type SpecIR,
-  type UxIR,
   storesFiles,
   translationMap,
+  type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -965,6 +966,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 // The site's frame (LandingLayout) is the landing kit's: a public blog or
                 // catalog uses it without a landing page.
                 (kind === "landing" && hasSite(ir, auth, ux)) ||
+                // Parts beside a kind's own page are the landing's sections.
+                (kind === "landing" && ir.pages.some((p) => partSections(p).length > 0)) ||
                 // The owner's notice on a record (ReviewNotice) is the review kit's too.
                 (kind === "review" && hasSignIn(auth) && ir.models.some((m) => m.review)) ||
                 ir.pages.some(

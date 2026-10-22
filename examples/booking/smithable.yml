@@ -152,6 +152,8 @@ pages:
     filters: [status]
   my-bookings:                        # a member's own bookings (private access)
     crud: Booking
+    sections:
+      cancelling: { text: }             # a note under the list
   admin:
     data: all                      # every model, for administrators
 
