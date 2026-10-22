@@ -132,6 +132,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return themeLab(io, Number(values.port ?? 4330), {
       ...(values.project ? { project: values.project } : {}),
       ...(values.app ? { app: values.app } : {}),
+      ...(values.starter ? { starter: values.starter } : {}),
     });
   if (command === "theme") {
     if (!values.from) {

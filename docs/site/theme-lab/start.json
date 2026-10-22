@@ -1,20 +1,185 @@
 {
-  "frames": [
+  "starters": [
     {
-      "label": "Landing",
-      "path": "/frames/landing.html"
+      "name": "booking",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/booking/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/booking/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/booking/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/booking/record.html"
+        }
+      ]
     },
     {
-      "label": "List",
-      "path": "/frames/list.html"
+      "name": "api",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/api/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/api/list.html"
+        }
+      ]
     },
     {
-      "label": "Form",
-      "path": "/frames/form.html"
+      "name": "crm",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/crm/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/crm/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/crm/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/crm/record.html"
+        }
+      ]
     },
     {
-      "label": "Record",
-      "path": "/frames/record.html"
+      "name": "invoicing",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/invoicing/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/invoicing/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/invoicing/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/invoicing/record.html"
+        }
+      ]
+    },
+    {
+      "name": "kiosk",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/kiosk/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/kiosk/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/kiosk/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/kiosk/record.html"
+        }
+      ]
+    },
+    {
+      "name": "marketplace",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/marketplace/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/marketplace/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/marketplace/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/marketplace/record.html"
+        }
+      ]
+    },
+    {
+      "name": "records",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/records/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/records/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/records/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/records/record.html"
+        }
+      ]
+    },
+    {
+      "name": "status",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/status/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/status/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/status/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/status/record.html"
+        }
+      ]
+    },
+    {
+      "name": "support",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/support/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/support/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/support/form.html"
+        },
+        {
+          "label": "Record",
+          "path": "/frames/support/record.html"
+        }
+      ]
     }
   ]
 }
