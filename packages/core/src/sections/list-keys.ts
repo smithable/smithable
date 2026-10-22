@@ -33,6 +33,96 @@ export const sortableBy = (field: FieldIR): boolean =>
       !["text", "markdown"].includes(field.type.name) &&
       !isUpload(field)));
 
+/** A date filter's relative values, resolved when the query runs, in the app's time zone. */
+export const RELATIVE_DATES = ["upcoming", "past", "today", "thisWeek", "thisMonth"] as const;
+
+const DATE_RANGE = /^(?:\d{4}-\d{2}-\d{2})?\.\.(?:\d{4}-\d{2}-\d{2})?$/;
+const NUMBER_RANGE = /^(?:-?\d+(?:[.,]\d+)?)?\.\.(?:-?\d+(?:[.,]\d+)?)?$/;
+
+/**
+ * What is wrong with a filter's value as the address would carry it (a default filter's), or
+ * nothing: a date takes a relative word or a range, a number a range, a choice its values, yes/no
+ * true or false, the owner "mine", a person "me" or "none"; a reference to another record takes
+ * no default, since an id changes with the data.
+ */
+export function filterValueProblem(
+  model: ModelIR,
+  name: string,
+  value: string,
+): string | undefined {
+  const range = (text: string, re: RegExp, kind: string) =>
+    re.test(text) && text !== ".."
+      ? undefined
+      : `"${name}" is ${kind}, so its default is a range like ${kind === "a date" ? "2026-01-01..2026-12-31" : "10..500"}, either side left out${kind === "a date" ? `, or one of ${RELATIVE_DATES.join(", ")}` : ""}; "${value}" is neither.`;
+  if (name === "owner")
+    return value === "mine" ? undefined : `"owner" filters to "mine" only; "${value}" is not that.`;
+  if (name === "createdAt" || name === "updatedAt")
+    return (RELATIVE_DATES as readonly string[]).includes(value)
+      ? undefined
+      : range(value, DATE_RANGE, "a date");
+  const field = model.fields.find((f) => f.name === name);
+  if (!field) return `${model.name} has no field named "${name}".`;
+  if (field.type.kind === "choice") {
+    const values = field.type.values;
+    const wrong = value.split(",").find((v) => !values.includes(v.trim()));
+    return wrong === undefined
+      ? undefined
+      : `"${name}" is one of ${values.join(", ")}; "${wrong}" is not.`;
+  }
+  if (field.type.kind === "relation")
+    return field.type.model === "User"
+      ? value.split(",").every((v) => v.trim() === "me" || v.trim() === "none")
+        ? undefined
+        : `"${name}" refers to a person: its default is "me", "none" or both; "${value}" is neither.`
+      : `"${name}" refers to a record, whose id changes with the data: it takes no default.`;
+  if (field.type.kind === "scalar") {
+    const kind = field.type.name;
+    if (kind === "bool")
+      return value === "true" || value === "false"
+        ? undefined
+        : `"${name}" is yes or no: its default is true or false; "${value}" is neither.`;
+    if (kind === "date" || kind === "datetime")
+      return (RELATIVE_DATES as readonly string[]).includes(value)
+        ? undefined
+        : range(value, DATE_RANGE, "a date");
+    if (RANGE.includes(kind)) return range(value, NUMBER_RANGE, "a number");
+  }
+  return `"${name}" is not a filter.`;
+}
+
+/**
+ * A page's default filter, checked: each key one of the page's filters, each value one its
+ * filter takes; the valid ones.
+ */
+export function checkDefaultFilter(
+  ctx: ParseContext,
+  entries: { name: string; value: string; at: At }[],
+  filters: string[],
+  model: string,
+  parsed: Partial<SpecIR>,
+  where: string,
+): Record<string, string> {
+  const target = parsed.models?.find((m) => m.name === model);
+  const out: Record<string, string> = {};
+  if (!target) return out;
+  for (const { name, value, at } of entries) {
+    if (!filters.includes(name)) {
+      ctx.error(
+        at,
+        "invalid-default-filter",
+        `"${name}" is not among the filters of ${where}, so it has no default; add it to "filters" first.`,
+        didYouMean(name, filters),
+      );
+      continue;
+    }
+    const problem = filterValueProblem(target, name, value);
+    if (problem)
+      ctx.error(at, "invalid-default-filter", `The default filter of ${where}: ${problem}`);
+    else out[name] = value;
+  }
+  return out;
+}
+
 /** A model's fields a list could be filtered by, in the model's order. */
 export const filterableFields = (model: ModelIR): string[] =>
   model.fields.filter(filterable).map((f) => f.name);

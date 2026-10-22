@@ -549,6 +549,42 @@ const setSort: Operation<{ page: string; field: string }> = {
   },
 };
 
+const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
+  name: "setFiltersShown",
+  summary:
+    'Which of a page\'s filters show when the list is first reached; the rest fold behind "More filters" (no fields: every filter shows).',
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      fields: {
+        type: "array",
+        items: { type: "string" },
+        description: "Filters of the page (smithable.yml's filters), in the order shown.",
+      },
+    },
+  },
+  positional: ["page", "...fields"],
+  describe: ({ page, fields }) =>
+    fields?.length
+      ? `Show the ${fields.join(", ")} ${fields.length > 1 ? "filters" : "filter"} of ${page} first`
+      : `Show every filter of ${page}`,
+  destructive: () => false,
+  apply(editors, { page, fields = [] }, ir) {
+    pageNamed(ir, page);
+    const offered = ir.pages.find((p) => p.id === page)?.filters ?? [];
+    const wrong = fields.find((f) => !offered.includes(f));
+    if (wrong !== undefined)
+      throw new OperationError(
+        `${page} has no filter named "${wrong}"; its filters are ${offered.length ? offered.join(", ") : "none"}.`,
+      );
+    put(editors.ux, ["pages", page, "filters", "shown"], [...new Set(fields)]);
+    return [];
+  },
+};
+
 const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
   name: "addTheme",
   summary: "Add a theme of the project's own (themes/<name>.yml), and use it with --use.",
@@ -607,4 +643,5 @@ export const uxOperations: AnyOperation[] = [
   setAiBadge,
   setAssistantVoice,
   setSort,
+  setFiltersShown,
 ];
