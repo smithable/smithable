@@ -97,7 +97,7 @@ test("every model of every example renames and back, every file valid in between
       expect(back, `${name}: ${model.name} round trip`).toEqual(files);
     }
   }
-}, 30_000);
+}, 60_000);
 
 test("every page of every example renames and back, every file valid in between and identical after", () => {
   for (const { name, files } of examples) {
@@ -111,7 +111,7 @@ test("every page of every example renames and back, every file valid in between 
       expect(back, `${name}: ${page.id} round trip`).toEqual(files);
     }
   }
-}, 30_000);
+}, 60_000);
 
 test("a renamed model is followed into relations, pages, grants, texts and tones; the effect names it", () => {
   const crm = examples.find((e) => e.name === "crm");

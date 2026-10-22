@@ -173,6 +173,42 @@ const ux: Companion = {
       if (to) editor.renameKey(tones, `${m}.${to}`);
       else editor.removeAndPrune(tones, 0);
     }
+    // The lines under a record's name (record-names.md §3): a part of the page's model, or one
+    // reference away; a removed part is taken out, the key with the last one.
+    for (const page of ir.pages) {
+      const owner = ir.models.find((x) => x.name === pageModel(page));
+      if (!owner) continue;
+      const at = ["pages", page.id, "record"];
+      const follow = (text: string): string | undefined => {
+        const [first = "", second] = text.split(".");
+        const ref = owner.fields.find((f) => f.name === first);
+        const refModel = ref?.type.kind === "relation" ? ref.type.model : undefined;
+        const own = owner.name === m && first === from;
+        const far = second !== undefined && refModel === m && second === from;
+        if (!own && !far) return text;
+        if (!to) return undefined;
+        return own ? [to, ...(second ? [second] : [])].join(".") : `${first}.${to}`;
+      };
+      const subtitle = editor.has([...at, "subtitle"])
+        ? editor.get([...at, "subtitle"])
+        : undefined;
+      if (typeof subtitle === "string" && follow(subtitle) !== subtitle) {
+        const next = follow(subtitle);
+        if (next) editor.set([...at, "subtitle"], next);
+        else editor.removeAndPrune([...at, "subtitle"], 0);
+      }
+      const detail = editor.has([...at, "detail"]) ? editor.get([...at, "detail"]) : undefined;
+      if (Array.isArray(detail)) {
+        const next = (detail as string[]).flatMap((d) => {
+          const f = follow(d);
+          return f ? [f] : [];
+        });
+        if (next.length !== detail.length || next.some((d, i) => d !== detail[i])) {
+          if (next.length) editor.set([...at, "detail"], next);
+          else editor.removeAndPrune([...at, "detail"], 0);
+        }
+      }
+    }
     for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
       // A list shown as a thread follows its field, and goes with it.
       const listed = ["pages", page.id, "record", "lists", from];

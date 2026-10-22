@@ -652,7 +652,8 @@ test("a valid draft that a visitor would find broken goes back to the model once
   });
   expect(fine.kind).toBe("draft");
   expect(prompts).toHaveLength(1);
-});
+  // A whole draft round trip: seconds on a loaded machine, so not vitest's five.
+}, 30_000);
 
 test("a Swedish description sets the app's language before the model answers, and a repeat is skipped", async () => {
   const draft = await draftProjectByOperations({

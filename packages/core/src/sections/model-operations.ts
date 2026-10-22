@@ -23,6 +23,7 @@ import {
 import { pageModel } from "../patterns.js";
 import { parseFieldShorthand } from "./field-type.js";
 import { readDeadline } from "./models.js";
+import { partText, readNamePart } from "./name-parts.js";
 import { FIELD_NAME_PATTERN, MODEL_NAME_PATTERN, nameRule } from "./names.js";
 import { scheduleOperations } from "./schedule-operations.js";
 import { put } from "./ux-operations.js";
@@ -1034,28 +1035,38 @@ const setThread: Operation<{
   },
 };
 
-const setNamedBy: Operation<{ model: string; field?: string; none?: boolean }> = {
+const setNamedBy: Operation<{ model: string; parts?: string[]; field?: string; none?: boolean }> = {
   name: "setNamedBy",
   summary:
-    "Say which field names a record of a model, its title wherever one record is shown or referred to (a stored string, text or markdown field); --none leaves it to the rule again (the first short text, else the first long text).",
+    'Say what names a record of a model, its title wherever one record is shown or referred to: one part or several (a field, a reference for that record\'s own name, or a field one reference away like classType.name), joined with " · "; --none leaves it to the rule again (the first short text, else the first long text).',
   schema: {
     type: "object",
     required: ["model"],
     additionalProperties: false,
     properties: {
       model: refTo({ ref: "model", label: "Kind of record" }),
-      field: refTo({ ref: "field", model: "model", label: "Field" }),
+      parts: {
+        type: "array",
+        items: { type: "string" },
+        description: "The parts in order, e.g. classType startsAt, or one: company, or session.",
+      },
+      field: refTo(
+        { ref: "field", model: "model", label: "Field" },
+        { description: "One part: the same as parts with one item." },
+      ),
       none: {
         type: "boolean",
         description: "true removes the setting: the rule picks the title again.",
       },
     },
   },
-  positional: ["model", "field"],
-  describe: ({ model, field, none }) =>
-    none ? `Let the rule say what names a ${model}` : `A ${model} is named by its ${field}`,
+  positional: ["model", "parts"],
+  describe: ({ model, parts, field, none }) =>
+    none
+      ? `Let the rule say what names a ${model}`
+      : `A ${model} is named by its ${(parts ?? (field ? [field] : [])).join(" · ")}`,
   destructive: () => false,
-  apply({ spec }, { model, field, none }, ir) {
+  apply({ spec }, { model, parts, field, none }, ir) {
     const found = ir.models.find((m) => m.name === model);
     if (!found) throw new OperationError(`There is no model named "${model}".`);
     const path = ["models", model, "namedBy"];
@@ -1064,17 +1075,17 @@ const setNamedBy: Operation<{ model: string; field?: string; none?: boolean }> =
       spec.remove(path);
       return [];
     }
-    if (field === undefined)
-      throw new OperationError("Say which field names the record (or --none).");
-    const f = found.fields.find((x) => x.name === field);
-    if (!f) throw new OperationError(`${model} has no field "${field}".`);
-    if (
-      !(f.type.kind === "scalar" && ["string", "text", "markdown"].includes(f.type.name)) ||
-      f.formula
-    )
-      throw new OperationError(`${model}.${field} is not a stored string, text or markdown field.`);
-    if (spec.has(path)) spec.set(path, field);
-    else spec.add(["models", model], "namedBy", field);
+    const written = [...(parts ?? []), ...(field ? [field] : [])];
+    if (!written.length)
+      throw new OperationError("Say what names the record: one part or several (or --none).");
+    const read = written.map((text) => {
+      const r = readNamePart(text, found, ir.models);
+      if ("problem" in r) throw new OperationError(`${r.problem}${r.hint ? ` ${r.hint}` : ""}`);
+      return partText(r.part);
+    });
+    const value = read.length === 1 ? (read[0] as string) : read;
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["models", model], "namedBy", value);
     return [];
   },
 };

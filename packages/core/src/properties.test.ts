@@ -92,7 +92,8 @@ describe.each(examples)("%s", (example) => {
       }),
       runs,
     );
-  });
+    // Hundreds of runs over a whole spec: seconds on a loaded machine, so not vitest's five.
+  }, 60_000);
 
   test.each(["auth", "ux", "content", "context"])(
     "an edited %s file never crashes its validator",
@@ -113,6 +114,7 @@ describe.each(examples)("%s", (example) => {
         runs,
       );
     },
+    60_000,
   );
 });
 

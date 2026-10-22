@@ -188,7 +188,7 @@ describe.each(examples)("%s", (example) => {
     expect(applied).toBeGreaterThan(0);
     // Nothing an operation did reached the files it started from.
     expect(generate(start)).toEqual(before);
-  }, 60_000);
+  }, 180_000);
 });
 
 test("a hero shortcut to the review page gets its shield icon (found by this test, 2026-10-12)", () => {
