@@ -917,7 +917,19 @@ async function barbersFlow(dir, base) {
     await page.getByLabel(/^Service/).waitFor();
     await choose("Service", "Haircut");
     await choose("Barber", "Elin Sjöberg");
-    await times.first().waitFor({ timeout: 20000 * P });
+    // Late in the evening today's hours are over: then the next day's times.
+    const none = page.getByText("No free times this day.");
+    await times
+      .first()
+      .or(none)
+      .waitFor({ timeout: 20000 * P });
+    if (await none.isVisible()) {
+      await page
+        .locator('[data-kit="slots"] button[aria-pressed]:not([data-part="time"])')
+        .nth(1)
+        .click();
+      await times.first().waitFor({ timeout: 20000 * P });
+    }
   };
   const book = async (name) => {
     await page.getByRole("textbox", { name: "Name *" }).fill(name);
