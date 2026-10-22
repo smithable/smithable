@@ -295,6 +295,16 @@ export const UX_SCHEMA: JsonSchema = {
                   "By list field: table (the default) or thread, a conversation with a reply box, e.g. { messages: thread }.",
                 additionalProperties: { enum: ["thread", "table"] },
               },
+              subtitle: {
+                type: "string",
+                description:
+                  "The line under a record's name on cards and in pickers: a field, a reference or a field one reference away (instructor.name).",
+              },
+              detail: {
+                type: "array",
+                items: { type: "string" },
+                description: "Smaller parts after the subtitle, e.g. [classType.level, capacity].",
+              },
             },
           },
           form: {

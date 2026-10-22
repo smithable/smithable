@@ -190,10 +190,10 @@ pages:
   expect(await run(["validate", dir, "--explain"], io)).toBe(0);
   const text = out.join("");
   expect(text).toContain(
-    "Ticket: the title is title (by rule: the first short text, else the first long text, else the number)",
+    "Ticket: named by title (by rule: the first short text, else the first long text, else the number)",
   );
   expect(text).toContain("  unique: code (per owner)");
-  expect(text).toContain("Note: the title is body (by rule");
+  expect(text).toContain("Note: named by body (by rule");
   expect(text).toContain("  as a conversation: the message is body, nobody named (by rule)");
   expect(text).toContain("close (on Ticket): run by admin, customer, the record's owner");
   // --write: what the rules settled goes into the spec, which then says it all.
@@ -214,5 +214,5 @@ pages:
   expect(out.join("")).toContain("Nothing was left to the rules");
   out.length = 0;
   expect(await run(["validate", dir, "--explain"], io)).toBe(0);
-  expect(out.join("")).toContain("Ticket: the title is title (as written)");
+  expect(out.join("")).toContain("Ticket: named by title (namedBy)");
 });

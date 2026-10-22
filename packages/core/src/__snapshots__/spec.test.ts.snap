@@ -698,6 +698,7 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
   ],
   "queries": [],
   "specVersion": "0.1",
+  "timers": [],
 }
 `;
 

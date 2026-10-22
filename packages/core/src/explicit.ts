@@ -31,7 +31,7 @@ export function writeExplicit(
   for (const model of ir.models) {
     const path = ["models", model.name];
     if (!spec.has(path)) continue;
-    if (!model.namedBy) {
+    if (!model.namedBy && !model.nameParts) {
       const by = titleFieldByRule(model);
       if (by !== "id") {
         spec.add(path, "namedBy", by);

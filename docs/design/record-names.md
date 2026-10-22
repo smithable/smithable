@@ -1,5 +1,7 @@
 # A record's name from its parts (design)
 
+Status: step 1 (core) built 2026-10-22 by Fable (namedBy parts in the IR beside the one-field title, the circle check, setNamedBy with parts, the summary and --explain words, the ux record lines with setRecordLines and their follow); A's adapter, kit and starter step follows (§7, step 2).
+
 From the tester's report of 2026-10-17 (B1, "make every booking understandable") and A 131 item 7.
 A session is shown as "Session #12" wherever one is chosen or referred to: in the booking form's
 picker, My bookings, the confirmation mail, the staff's lists. Nothing a person decides on should

@@ -198,6 +198,7 @@ export {
   filterableFields,
   sortableBy,
 } from "./sections/list-keys.js";
+export { partText, readNamePart } from "./sections/name-parts.js";
 export { type NameKind, nameProblem } from "./sections/names.js";
 export { outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";

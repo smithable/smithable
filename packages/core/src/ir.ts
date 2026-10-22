@@ -23,6 +23,16 @@ export interface SpecIR {
   extensions?: Record<string, unknown>;
 }
 
+/**
+ * One part of a record's name (record-names.md §1): a field of the model, or, with `through`
+ * (a reference field), a field of the referenced record. A reference alone names that record by
+ * its own name.
+ */
+export interface NamePartIR {
+  field: string;
+  through?: string;
+}
+
 /** Semantic free text: meaning for AI and developers, never shown to visitors. */
 export interface SemanticText {
   description?: string;
@@ -75,10 +85,17 @@ export interface ModelIR extends SemanticText {
   /** A `User` field that owns the record instead of the automatic owner. */
   ownedBy?: string;
   /**
-   * The field that names a record (`namedBy: company`): its title wherever one record is shown or
-   * referred to. Left out, the rule picks it from the fields' types and order (core's titleField).
+   * The one stored text field that names a record (`namedBy: company`): its title wherever one
+   * record is shown or referred to (core's titleField). Set only when the name is that one field;
+   * left out, the rule picks it from the fields' types and order.
    */
   namedBy?: string;
+  /**
+   * A record's name as written (docs/design/record-names.md §1): parts joined with " · ", each a
+   * field of the model, a reference (that record's own name) or a field one reference away. Set
+   * whenever the spec writes `namedBy`; the generated app's formatter composes the name from it.
+   */
+  nameParts?: NamePartIR[];
   /** At most `max` records per record `per` refers to (a booking's places in a session). */
   capacity?: CapacityIR;
   /** Its records are people (or rooms, chairs) whose time is booked (docs/design/appointments.md). */
