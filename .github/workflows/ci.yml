@@ -120,7 +120,10 @@ jobs:
     needs: scope
     if: needs.scope.outputs.full == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, smithable]
-    timeout-minutes: 90
+    # The job's clock runs while it waits for its turn in the gate queue, up to an hour a gate on
+    # a loaded machine; the runner's minutes are free, so the limit is a guard against a hung
+    # run, not a budget (2026-10-22: a ninety-minute limit cancelled runs behind four gates).
+    timeout-minutes: 300
     permissions: { contents: read }
     env:
       # The generated apps' commits need an identity; the machine's own global config is left alone.
