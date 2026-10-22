@@ -563,6 +563,16 @@ async function sessionsListFlow(base) {
   }
 }
 
+/** A mail's text as written: soft line breaks joined and =XX bytes decoded (UTF-8). */
+function quotedPrintable(raw) {
+  return Buffer.from(
+    raw
+      .replace(/=\r?\n/g, "")
+      .replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16))),
+    "latin1",
+  ).toString("utf8");
+}
+
 async function outgoingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -574,7 +584,7 @@ async function outgoingFlow(dir, base) {
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const all = mails();
     if (all.length !== count + 1) throw new Error(`${what}: ${all.length - count} mails, not one`);
-    return readFileSync(join(outbox, all.at(-1)), "utf8").replace(/=\r?\n/g, "");
+    return quotedPrintable(readFileSync(join(outbox, all.at(-1)), "latin1"));
   };
   try {
     await signInAs(page, base, "member");
