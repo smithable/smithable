@@ -280,9 +280,9 @@ export function App() {
         <strong>Theme lab</strong>
         {!!start?.starters.length && (
           <label>
-            Starter{" "}
+            App{" "}
             <select
-              aria-label="Starter"
+              aria-label="App"
               value={start.starter}
               disabled={!!making && !making.startsWith("Not ")}
               onChange={(e) => void switchTo(e.target.value)}
