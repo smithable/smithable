@@ -404,6 +404,31 @@ async function calendarFlow(base) {
  * and sees it among their bookings; the admin then finds it full and cannot lower its places
  * below one; the member cancels and the place is free again.
  */
+/**
+ * Opens the first class this week (or next week, late on a Sunday) still open for booking:
+ * the starter's classes close when they start. Its place in the list and its week's address,
+ * for the flows to open the same class again.
+ */
+async function openClass(page, panel) {
+  for (const week of [0, 1]) {
+    if (week) await page.getByRole("button", { name: "Next", exact: true }).first().click();
+    const buttons = page.locator("section ol button");
+    await buttons.first().waitFor({ timeout: 10000 * P });
+    const schedule = page.url();
+    for (let i = 0; i < (await buttons.count()); i++) {
+      await buttons.nth(i).click();
+      await panel
+        .getByText(/places? left$|^No mats left$/)
+        .first()
+        .waitFor({ timeout: 10000 * P });
+      if (!(await panel.getByText(/^Booking closed at /).count())) return { nth: i, schedule };
+      await panel.getByRole("button", { name: "Close" }).click();
+      await panel.waitFor({ state: "hidden", timeout: 10000 * P });
+    }
+  }
+  throw new Error("no class open for booking this week or next");
+}
+
 async function bookingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -412,10 +437,8 @@ async function bookingFlow(dir, base) {
     write(dir, "UPDATE sessions SET capacity = 1");
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
-    const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 * P });
-    const title = (await session.locator("span").first().innerText()).trim();
-    await session.click();
+    const { nth, schedule } = await openClass(page, panel);
+    const session = (p) => p.locator("section ol button").nth(nth);
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
@@ -429,8 +452,8 @@ async function bookingFlow(dir, base) {
       throw new Error("not one booking in My bookings");
     // The admin opens the same session on its page: full, and its places cannot go below one.
     await signInAs(page, base, "admin");
-    await open(page, `${base}/schedule`);
-    await page.locator("section ol button", { hasText: title }).first().click();
+    await open(page, schedule);
+    await session(page).click();
     await page.waitForURL(/\/sessions\/\d+$/);
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
     if (await page.getByRole("button", { name: "Book a mat" }).count())
@@ -451,8 +474,8 @@ async function bookingFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     // The member cancels; the place is free again.
     await signInAs(page, base, "member");
-    await open(page, `${base}/schedule`);
-    await page.locator("section ol button", { hasText: title }).first().click();
+    await open(page, schedule);
+    await session(page).click();
     await panel.getByRole("button", { name: "Cancel booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
@@ -475,7 +498,7 @@ async function bookingFlow(dir, base) {
     );
     write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
     await panel.getByRole("button", { name: "Close" }).click();
-    await page.locator("section ol button", { hasText: title }).first().click();
+    await session(page).click();
     await panel.getByText(/^Cancelling closed at /).waitFor({ timeout: 10000 * P });
     if (await panel.getByRole("button", { name: "Cancel booking" }).count())
       throw new Error("a started class still offers to cancel");
@@ -486,8 +509,8 @@ async function bookingFlow(dir, base) {
     const visit = await (
       await browser.newContext({ viewport: { width: 1440, height: 1000 } })
     ).newPage();
-    await open(visit, `${base}/schedule`);
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await open(visit, schedule);
+    await session(visit).click();
     await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
     const picked = new URL(visit.url()).searchParams.get("open");
     await visit.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).click();
@@ -503,7 +526,7 @@ async function bookingFlow(dir, base) {
     // Close takes the class out of the address; one opened on the schedule is closed by Back.
     await again.getByRole("button", { name: "Close" }).click();
     await visit.waitForURL((url) => !url.searchParams.has("open"), { timeout: 10000 * P });
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await session(visit).click();
     await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
     await visit.goBack();
     await visit.waitForURL((url) => url.pathname === "/schedule" && !url.searchParams.has("open"), {
@@ -511,7 +534,7 @@ async function bookingFlow(dir, base) {
     });
     await again.waitFor({ state: "hidden", timeout: 10000 * P });
     // Cancelled again, so the checks after this one find the class as they expect it.
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await session(visit).click();
     await again.getByRole("button", { name: "Cancel booking" }).click();
     await again.getByRole("button", { name: "Yes, cancel it" }).click();
     await again.getByRole("button", { name: "Book a mat" }).waitFor({ timeout: 10000 * P });
@@ -597,7 +620,7 @@ async function outgoingFlow(dir, base) {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     let count = mails().length;
-    await page.locator("section ol button").first().click();
+    await openClass(page, panel);
     await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
     const made = await next(count, "the booking");
