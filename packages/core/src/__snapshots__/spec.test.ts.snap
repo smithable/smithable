@@ -650,6 +650,27 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         ],
       },
       "route": "/",
+      "sections": [
+        {
+          "button": "appointments",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "records",
+          "model": "Service",
+          "name": "services",
+        },
+        {
+          "kind": "records",
+          "model": "Barber",
+          "name": "barbers",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
     },
     {
       "actions": [
@@ -665,6 +686,14 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "model": "Appointment",
       },
       "route": "/appointments",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Appointment",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "day",
@@ -676,6 +705,14 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "title": "name",
       },
       "route": "/day",
+      "sections": [
+        {
+          "kind": "calendar",
+          "model": "Appointment",
+          "name": "calendar",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "services",
@@ -684,6 +721,14 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "model": "Service",
       },
       "route": "/services",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Service",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "barbers",
@@ -692,6 +737,14 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "model": "Barber",
       },
       "route": "/barbers",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Barber",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "time-off",
@@ -700,6 +753,14 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "model": "TimeOff",
       },
       "route": "/time-off",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "TimeOff",
+          "name": "crud",
+          "own": true,
+        },
+      ],
     },
     {
       "id": "privacy",
@@ -708,6 +769,13 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
         "legal": "privacy",
       },
       "route": "/privacy",
+      "sections": [
+        {
+          "kind": "legal",
+          "name": "legal",
+          "own": true,
+        },
+      ],
     },
   ],
   "queries": [],
