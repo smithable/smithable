@@ -103,6 +103,16 @@ export interface CapacityIR {
   max: number | string;
   /** Only records with these choice or yes/no values count. */
   where?: Condition;
+  /** Until when a record may be added (docs/design/booking.md §6): a date-time of the referenced record, with a notice period before it. */
+  closes?: DeadlineIR;
+  /** Until when a record's owner may delete it; roles that delete everyone's pass. */
+  cancelUntil?: DeadlineIR;
+}
+
+/** A deadline: a date-time field of the referenced record ("session.startsAt"), as it is or a period before it. */
+export interface DeadlineIR {
+  field: string;
+  before?: { amount: number; unit: "minutes" | "hours" | "days" };
 }
 
 export interface ScheduleIR {

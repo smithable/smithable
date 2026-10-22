@@ -96,6 +96,103 @@ test("renames follow into a capacity; a removal it counts on is refused", () => 
   });
 });
 
+test("closes and cancelUntil: a date-time of the referenced record, as it is or a period before", () => {
+  const both = read(
+    "capacity: { per: session, max: 3, closes: 2 hours before session.startsAt, cancelUntil: session.startsAt }",
+  );
+  expect(both.diagnostics).toEqual([]);
+  expect(both.ir?.models[1]?.capacity).toEqual({
+    per: "session",
+    max: 3,
+    closes: { field: "session.startsAt", before: { amount: 2, unit: "hours" } },
+    cancelUntil: { field: "session.startsAt" },
+  });
+  expect(
+    read("capacity: { per: session, max: 3, closes: 1 day before session.startsAt }").ir?.models[1]
+      ?.capacity?.closes,
+  ).toEqual({
+    field: "session.startsAt",
+    before: { amount: 1, unit: "days" },
+  });
+  // The shape, then what it names: a date-time of the referenced record, through per.
+  expect(codes("capacity: { per: session, max: 3, closes: startsAt }")).toEqual([
+    "error invalid-value",
+  ]);
+  expect(
+    codes("capacity: { per: session, max: 3, closes: 0 hours before session.startsAt }"),
+  ).toEqual(["error invalid-value"]);
+  expect(codes("capacity: { per: session, max: 3, closes: soon }")).toEqual([
+    "error invalid-value",
+  ]);
+  expect(codes("capacity: { per: session, max: 3, closes: session.capacity }")).toEqual([
+    "error invalid-capacity",
+  ]);
+  expect(codes("capacity: { per: session, max: 3, cancelUntil: status }")).toEqual([
+    "error invalid-value",
+  ]);
+});
+
+test("a deadline follows a renamed reference or date-time, and refuses the removal of the date-time", () => {
+  const files = {
+    spec: spec(
+      "capacity: { per: session, max: 3, closes: 2 hours before session.startsAt, cancelUntil: session.startsAt }",
+    ),
+  };
+  const time = applyOperation(files, "renameField", {
+    model: "Session",
+    from: "startsAt",
+    to: "beginsAt",
+  });
+  expect(time.ok && time.files.spec).toContain("closes: 2 hours before session.beginsAt");
+  expect(time.ok && time.files.spec).toContain("cancelUntil: session.beginsAt");
+  const ref = applyOperation(files, "renameField", {
+    model: "Booking",
+    from: "session",
+    to: "class",
+  });
+  expect(ref.ok && ref.files.spec).toContain("closes: 2 hours before class.startsAt");
+  expect(
+    applyOperation(files, "removeField", { model: "Session", field: "startsAt" }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("counts on Session.startsAt"),
+  });
+});
+
+test("setCapacity writes the deadlines and refuses a malformed one", () => {
+  const files = { spec: spec("") };
+  const set = applyOperation(files, "setCapacity", {
+    model: "Booking",
+    per: "session",
+    max: "3",
+    closes: "2 hours before session.startsAt",
+    cancelUntil: "session.startsAt",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.spec).toContain(
+    "    capacity:\n      per: session\n      max: 3\n      closes: 2 hours before session.startsAt\n      cancelUntil: session.startsAt\n",
+  );
+  expect(validateSpec({ path: "smithable.yml", text: set.files.spec }).diagnostics).toEqual([]);
+  const lifted = applyOperation({ ...files, ...set.files }, "setCapacity", {
+    model: "Booking",
+    per: "session",
+    max: "3",
+    closes: "none",
+  });
+  expect(lifted.ok && lifted.files.spec).not.toContain("closes:");
+  expect(
+    applyOperation(files, "setCapacity", {
+      model: "Booking",
+      per: "session",
+      max: "3",
+      closes: "two hours before",
+    }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("2 hours before session.startsAt"),
+  });
+});
+
 test("setCapacity sets and removes a model's capacity", () => {
   const files = { spec: spec("") };
   const set = applyOperation(files, "setCapacity", {

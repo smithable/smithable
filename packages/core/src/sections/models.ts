@@ -22,6 +22,7 @@ import {
 import {
   type CapacityIR,
   conditionFits,
+  type DeadlineIR,
   type FieldExample,
   type FieldIR,
   type FieldType,
@@ -181,7 +182,9 @@ export const modelsSection: SpecSection<"models"> = {
         const uses =
           (m.name === effect.model &&
             (c.per === effect.field || (c.where && effect.field in c.where))) ||
-          (target === effect.model && c.max === `${c.per}.${effect.field}`);
+          (target === effect.model &&
+            (c.max === `${c.per}.${effect.field}` ||
+              [c.closes, c.cancelUntil].some((d) => d?.field === `${c.per}.${effect.field}`)));
         if (uses)
           return {
             refusal: `${m.name}'s capacity counts on ${effect.model}.${effect.field}; change the capacity first.`,
@@ -265,6 +268,19 @@ export const modelsSection: SpecSection<"models"> = {
         c.max === `${c.per}.${effect.from}`
       )
         spec.set([...path, "max"], `${c.per}.${effect.to}`);
+      // A deadline follows the reference renamed on this model, or its date-time renamed on the referenced model.
+      for (const key of ["closes", "cancelUntil"] as const) {
+        const deadline = c[key];
+        if (!deadline) continue;
+        const [ref, field] = deadline.field.split(".");
+        const next =
+          m.name === effect.model && ref === effect.from
+            ? `${effect.to}.${field}`
+            : target === effect.model && ref === c.per && field === effect.from
+              ? `${c.per}.${effect.to}`
+              : undefined;
+        if (next) spec.set([...path, key], deadlineText({ ...deadline, field: next }));
+      }
     }
     return undefined;
   },
@@ -378,6 +394,16 @@ export const modelsSection: SpecSection<"models"> = {
               oneOf: [{ type: "integer", minimum: 1 }, { type: "string" }],
               description:
                 'A whole number, or a whole-number field of the referenced record, "reference.field".',
+            },
+            closes: {
+              type: "string",
+              description:
+                'Until when a record may be added: a date-time of the referenced record ("session.startsAt"), as it is or a period before it ("2 hours before session.startsAt").',
+            },
+            cancelUntil: {
+              type: "string",
+              description:
+                "Until when a record's owner may delete it (\"24 hours before session.startsAt\"); roles that delete everyone's pass.",
             },
             where: {
               type: "object",
@@ -1101,7 +1127,9 @@ function readCapacity(
   const where = `the capacity of "${model}"`;
   const entries = mapEntries(ctx, node, where);
   if (!entries) return undefined;
-  const known = checkKeys(ctx, entries, where, { allowed: ["per", "max", "where"] });
+  const known = checkKeys(ctx, entries, where, {
+    allowed: ["per", "max", "where", "closes", "cancelUntil"],
+  });
   const per = known.find((e) => e.key === "per");
   const max = known.find((e) => e.key === "max");
   if (!per || !max) {
@@ -1131,7 +1159,45 @@ function readCapacity(
     ? readCondition(ctx, conditions.value, `"where" in ${where}`)
     : undefined;
   if (condition) result.where = condition;
+  for (const key of ["closes", "cancelUntil"] as const) {
+    const entry = known.find((e) => e.key === key);
+    if (!entry) continue;
+    const text = readString(ctx, entry.value, `"${key}" in ${where}`);
+    if (text === undefined) return undefined;
+    const deadline = readDeadline(text);
+    if (!deadline) {
+      ctx.error(
+        entry.value,
+        "invalid-value",
+        `"${key}" in ${where} is a date-time of the ${perName} record ("${perName}.startsAt"), as it is or a period before it ("2 hours before ${perName}.startsAt": minutes, hours or days).`,
+      );
+      return undefined;
+    }
+    result[key] = deadline;
+  }
   return result;
+}
+
+/** A deadline as written: "session.startsAt", or "2 hours before session.startsAt". */
+export function readDeadline(text: string): DeadlineIR | undefined {
+  const m =
+    /^(?:(\d+) (minute|minutes|hour|hours|day|days) before )?([A-Za-z_]\w*\.[A-Za-z_]\w*)$/.exec(
+      text.trim(),
+    );
+  if (!m) return undefined;
+  const field = m[3] as string;
+  if (!m[1]) return { field };
+  const amount = Number(m[1]);
+  if (amount < 1 || !Number.isSafeInteger(amount)) return undefined;
+  const unit = `${(m[2] as string).replace(/s$/, "")}s` as "minutes" | "hours" | "days";
+  return { field, before: { amount, unit } };
+}
+
+/** A deadline as the spec writes it. */
+export function deadlineText(deadline: DeadlineIR): string {
+  if (!deadline.before) return deadline.field;
+  const { amount, unit } = deadline.before;
+  return `${amount} ${amount === 1 ? unit.slice(0, -1) : unit} before ${deadline.field}`;
 }
 
 /** A model's capacity names its own fields and the referenced model's: checked once all are parsed. */
@@ -1192,6 +1258,32 @@ function checkCapacity(ctx: ParseContext, models: ModelIR[], model: ModelIR): vo
         at,
         "invalid-capacity",
         `"where" in ${where}: "${name}" must be a choice field of ${model.name} with one of its values (or a list of them), or a yes/no field with true or false.`,
+      );
+      delete model.capacity;
+      return;
+    }
+  }
+  for (const key of ["closes", "cancelUntil"] as const) {
+    const deadline = capacity[key];
+    if (!deadline) continue;
+    const [ref, field, ...rest] = deadline.field.split(".");
+    const found =
+      ref === capacity.per && rest.length === 0
+        ? target?.fields.find((f) => f.name === field)
+        : undefined;
+    if (found?.type.kind !== "scalar" || found.type.name !== "datetime" || found.formula) {
+      ctx.error(
+        at,
+        "invalid-capacity",
+        `"${key}" in ${where} must name a date-time of the ${target?.name ?? "referenced"} record, like "${capacity.per}.startsAt".`,
+        target
+          ? didYouMean(
+              field ?? "",
+              target.fields
+                .filter((f) => f.type.kind === "scalar" && f.type.name === "datetime" && !f.formula)
+                .map((f) => `${capacity.per}.${f.name}`),
+            )
+          : undefined,
       );
       delete model.capacity;
       return;

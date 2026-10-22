@@ -37,6 +37,39 @@ const auth = validateAuth(
 const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
 const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
 
+test("the deadlines are read from the referenced record in the write's transaction; staff pass", () => {
+  const timed = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace(
+      "capacity: { per: session, max: session.capacity, where: { status: confirmed } }",
+      "capacity: { per: session, max: session.capacity, closes: 2 hours before session.startsAt, cancelUntil: session.startsAt }",
+    ),
+  }).ir as SpecIR;
+  const made = generateApp(timed, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const booking = made.find((f) => f.path === "src/generated/booking.server.ts")?.content ?? "";
+  expect(booking).toContain("if (!(viewer && bookingAccess.write.roles.includes(viewer.role))) {");
+  expect(booking).toContain("return at ? new Date(at.getTime() - 7200000) : undefined;");
+  expect(booking).toContain('throw new Conflict("closed")');
+  expect(booking).toContain("if (!(viewer && bookingAccess.delete.roles.includes(viewer.role))) {");
+  expect(booking).toContain("return at ? new Date(at.getTime() - 0) : undefined;");
+  expect(booking).toContain('throw new Conflict("cancel-closed")');
+  // A change: a move or an entry into the count is checked like a new record; leaving it is a cancel.
+  expect(booking).toContain("const counted = (_r: Record<string, unknown>) => true;");
+  // With a where, the row is read.
+  expect(file("src/generated/booking.server.ts")).toContain(
+    'const counted = (r: Record<string, unknown>) => r.status === "confirmed";',
+  );
+  expect(booking).toContain("if (will && (moving || !was)) {");
+  expect(booking).toContain(
+    "if (was && !will && !moving && !(viewer && bookingAccess.write.roles.includes(viewer.role))) {",
+  );
+  // The places tell the block the deadlines.
+  const module = made.find((f) => f.path === "src/generated/booking.ts")?.content ?? "";
+  expect(module).toContain("closesAt: closesAt?.toISOString() ?? null,");
+  // Without deadlines nothing of it is written.
+  expect(file("src/generated/booking.server.ts")).not.toContain('Conflict("closed")');
+});
+
 test("a capacity is checked in the write's transaction, and the referenced record guards its number", () => {
   const booking = file("src/generated/booking.server.ts");
   expect(booking).toContain("row = db.transaction((tx) => {");
@@ -73,7 +106,9 @@ test("without a capacity nothing of it is generated", () => {
 test("the reservation block: a session's page books and cancels through the data functions; no sample places", () => {
   // Numbers only, never whose: the places counted over every booking, and the viewer's own.
   const data = file("src/generated/booking.server.ts");
-  expect(data).toContain("places(sessionId: number): { taken: number; max: number }");
+  expect(data).toContain(
+    "places(sessionId: number): { taken: number; max: number; closesAt?: Date; cancelUntilAt?: Date }",
+  );
   expect(data).toContain('eq(schema.bookings.status, "confirmed")');
   expect(data).toContain("mine(viewer: Viewer, sessionId: number)");
   const module = file("src/generated/booking.ts");
