@@ -1478,7 +1478,7 @@ ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${[
+${composedName(model) && referenced ? 'import { sortRows } from "#/kit/model";\n' : ""}${[
   ...new Set([
     ...(composedName(model) ? [model] : []),
     ...composedRefs.map((f) => modelNamed(ir, f.type.model)),
@@ -2344,7 +2344,19 @@ ${
 `
       }
   /** Choices for fields that refer to a ${n.label.toLowerCase()}: the ones the viewer may read. */
-  options(viewer: Viewer | null) {
+${
+  composedName(model)
+    ? `  async options(viewer: Viewer | null) {
+    if (readScope(${n.access}.read, viewer) === "none") return [];
+    // Named by its parts (record-names.md): ordered by the first one's value.
+    const rows = await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model)} });
+    return sortRows(
+      rows.map((row) => ({ value: row.id, label: ${nameFunction(model)}(row), first: ${firstPart(model, ir)} })),
+      "first",
+    ).map(({ value, label }) => ({ value, label }));
+  },
+`
+    : `  options(viewer: Viewer | null) {
     if (readScope(${n.access}.read, viewer) === "none") return [];
     return db
       .select({ value: ${n.table}.id, label: ${
@@ -2361,6 +2373,7 @@ ${
       .all();
   },
 `
+}`
     : ""
 }};
 `;
@@ -2409,6 +2422,20 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
   setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
 }
 `;
+}
+
+/** A composed name's first part, for ordering by it: its value, or a reference's name. */
+function firstPart(model: ModelIR, ir: SpecIR): string {
+  const part = model.nameParts?.[0];
+  if (!part) return "row.id";
+  if (part.through) return `row.${part.through}?.${part.field} ?? null`;
+  const f = model.fields.find((x) => x.name === part.field);
+  if (f?.type.kind !== "relation") return `row.${part.field} ?? null`;
+  if (f.type.model === USER_MODEL) return `row.${part.field}?.name ?? null`;
+  const target = modelNamed(ir, f.type.model);
+  return composedName(target)
+    ? `row.${part.field} ? ${nameFunction(target)}(row.${part.field}) : null`
+    : `row.${part.field}?.${titleField(target)} ?? null`;
 }
 
 /** A field written as Markdown. */

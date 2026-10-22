@@ -3,8 +3,10 @@
 // it through src/kit/outgoing.server.ts. The data functions and actions call it.
 import {
   type ContentIR,
+  camel,
   type FieldIR,
   isUpload,
+  kebab,
   type ModelIR,
   type OutgoingIR,
   pageModel,
@@ -17,7 +19,9 @@ import {
 } from "@smithable/core";
 import { apiFields, readCode } from "./api.js";
 import { fieldUi } from "./data.js";
+import { nameColumns, nameFunction } from "./names.js";
 import {
+  composedName,
   HEADER,
   keyOf,
   literal,
@@ -63,6 +67,12 @@ export function outgoingModule(
     tables.add(n.table);
     // A record in the trash is gone to the mail too: no address, no title (docs/design/trash.md).
     return `one(tx, ${n.table}, ${n.table}.id, ${n.table}.${column}, ${id}${target.trash ? `, ${n.table}.deletedAt` : ""})`;
+  };
+  // Records named by their parts (record-names.md), read with what their name needs.
+  const composedUsed = new Set<ModelIR>();
+  const namedOne = (target: ModelIR, id: string) => {
+    composedUsed.add(target);
+    return `${camel(target.name)}Named(tx, ${id})`;
   };
   const people = (where: string) => {
     users = true;
@@ -133,6 +143,7 @@ export function outgoingModule(
       return `String(one(tx, schema.user, schema.user.id, schema.user.name, r.${f.name}Id) ?? "—")`;
     }
     const target = modelNamed(ir, f.type.model);
+    if (composedName(target)) return namedOne(target, `r.${f.name}Id as number | null`);
     const title = relatedTitle(ir, target.name);
     return title === "id"
       ? `r.${f.name}Id == null ? "—" : \`#\${r.${f.name}Id}\``
@@ -187,8 +198,8 @@ ${lines.join("\n")}
     thread: thread(tx, ${JSON.stringify(thread.owner.name)}, ${thread.record}, ${thread.address}),
   }),`;
     }
-    return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) ? "tx" : "_tx"}, r) => ({
-    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${title === "id" ? "#${r.id}" : `\${${shownTitle(model, `r.${title} ?? r.id`)}}`}\`,
+    return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) || composedName(model) ? "tx" : "_tx"}, r) => ({
+    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${composedName(model) ? `\${${namedOne(model, "r.id as number")}}` : title === "id" ? "#${r.id}" : `\${${shownTitle(model, `r.${title} ?? r.id`)}}`}\`,
     fields: [
 ${lines.join("\n")}
     ],${page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
@@ -252,11 +263,22 @@ ${apiFields(model)
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
 ${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}import { counts } from "#/kit/outgoing";
-import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
+${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
-type Tx = Pick<typeof db, "select" | "insert">;
+type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
-${
+${[...composedUsed]
+  .map(
+    (m) => `
+/** A ${t.modelLabel(m).toLowerCase()}'s name, read with what it needs (record-names.md); one in the trash is gone. */
+function ${camel(m.name)}Named(tx: Tx, id: number | null): string {
+  if (id == null) return "—";
+  const row = tx.query.${names(m, t).tableKey}.findFirst({ where: (t, { eq }) => eq(t.id, id), ...${nameColumns(ir, m, m.trash ? ", deletedAt: true" : "")} }).sync();
+  return row${m.trash ? " && !row.deletedAt" : ""} ? ${nameFunction(m)}(row) : "—";
+}
+`,
+  )
+  .join("")}${
   ones
     ? `
 /** One column of the record with the id, inside the transaction${trashOne ? "; nothing of one in the trash" : ""}. */
