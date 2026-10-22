@@ -13,6 +13,12 @@ import {
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
+  // The dev server's error overlay, put up by the test; the observers watching for it, and the
+  // timers the runtime sets, run by hand.
+  const overlay = { shown: false };
+  const observers: (() => void)[] = [];
+  const timers = new Map<number, () => void>();
+  let timerId = 0;
   // One rule for the dark color scheme, as the app's styles have; and the development sign-in's buttons.
   const darkRule = { media: { mediaText: "(prefers-color-scheme: dark)" } };
   const clicked: string[] = [];
@@ -59,7 +65,9 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
           ? signInButtons
           : selector === "[data-kit=error]" && crashed
             ? [{}]
-            : [],
+            : selector === "vite-error-overlay" && overlay.shown
+              ? [{}]
+              : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
@@ -74,6 +82,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     "setInterval",
     "setTimeout",
     "clearInterval",
+    "clearTimeout",
     "MutationObserver",
     "sessionStorage",
     RUNTIME,
@@ -83,9 +92,15 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     { pushState() {}, replaceState() {} },
     { pathname: at, search: "", reload: () => reloads.push(1) },
     (tick: () => void) => ticks.push(tick),
+    (timer: () => void) => timers.set(++timerId, timer) && timerId,
     noop,
-    noop,
+    (id: number) => timers.delete(id),
     class {
+      callback: () => void;
+      constructor(callback: () => void) {
+        this.callback = callback;
+        observers.push(callback);
+      }
       observe() {}
     },
     {
@@ -109,6 +124,17 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     reloads,
     tick: () => {
       for (const t of [...ticks]) t();
+    },
+    /** The dev server puts up (or takes down) its error overlay. */
+    overlay: (shown: boolean) => {
+      overlay.shown = shown;
+      for (const o of observers) o();
+    },
+    /** The timers set so far run, once each. */
+    later: () => {
+      const due = [...timers.values()];
+      timers.clear();
+      for (const t of due) t();
     },
     /** The owner presses the app's Sign out. */
     signOut: () => {
@@ -149,6 +175,42 @@ test("a page that crashed while the app updated is loaded again, three times, th
   await settle();
   expect(odd.reloads).toHaveLength(1);
   expect(JSON.parse(storage["smithable:crashes"] ?? "{}")).toEqual({ "/toString": 1 });
+});
+
+test("the dev server's overlay that stays has the page loaded again, three times in a row", () => {
+  const storage: Record<string, string> = {};
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const p = page("/orders", storage);
+    expect(p.posted.map((m) => m.type)).toEqual(["ready"]);
+    p.overlay(true);
+    p.later();
+    expect(p.posted.map((m) => m.type)).toEqual(["ready", "errored"]);
+    expect(p.reloads).toHaveLength(1);
+    expect(storage["smithable:overlays"]).toBe(String(attempt));
+  }
+  // The fourth in a row is left as it is, and the row forgotten.
+  const shown = page("/orders", storage);
+  shown.overlay(true);
+  shown.later();
+  expect(shown.posted.map((m) => m.type)).toEqual(["ready", "errored"]);
+  expect(shown.reloads).toHaveLength(0);
+  expect(storage["smithable:overlays"]).toBe("0");
+  // An overlay the server takes down by itself (the file arrived) means no reload.
+  const brief = page("/orders", storage);
+  brief.overlay(true);
+  brief.overlay(false);
+  brief.later();
+  expect(brief.reloads).toHaveLength(0);
+  expect(brief.posted.map((m) => m.type)).toEqual(["ready"]);
+  // Ten quiet seconds end a row: the next overlay is the first of a new one.
+  storage["smithable:overlays"] = "2";
+  const quiet = page("/orders", storage);
+  quiet.later();
+  expect(storage["smithable:overlays"]).toBe("0");
+  quiet.overlay(true);
+  quiet.later();
+  expect(quiet.reloads).toHaveLength(1);
+  expect(storage["smithable:overlays"]).toBe("1");
 });
 
 test("the preview signs in whenever it shows the sign-in page, until the owner signs out", () => {

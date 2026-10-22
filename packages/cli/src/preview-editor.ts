@@ -395,6 +395,46 @@ if (typeof window !== "undefined" && window.parent !== window) {
   } else {
     if (counted) remember(0);
     post({ type: "ready" });
+    // The dev server's own error overlay (a page updated while the app was still writing a file
+    // it imports) that stays two seconds is treated the same way: the page is loaded again, up
+    // to three times in a row (ten quiet seconds end a row), then it is left as it is.
+    const OVERLAYS = "smithable:overlays";
+    const overlays = () => {
+      try {
+        const n = Number(sessionStorage.getItem(OVERLAYS));
+        return Number.isInteger(n) ? n : 0;
+      } catch {
+        return 0;
+      }
+    };
+    const keep = (n) => {
+      try {
+        sessionStorage.setItem(OVERLAYS, String(n));
+      } catch {}
+    };
+    const overlaid = () => document.querySelectorAll("vite-error-overlay").length > 0;
+    let waiting = false;
+    let quiet = setTimeout(() => keep(0), 10000);
+    new MutationObserver(() => {
+      if (waiting || !overlaid()) return;
+      waiting = true;
+      clearTimeout(quiet);
+      setTimeout(() => {
+        waiting = false;
+        if (!overlaid()) {
+          quiet = setTimeout(() => keep(0), 10000);
+          return;
+        }
+        const row = overlays() + 1;
+        post({ type: "errored", tries: row });
+        if (row > 3) {
+          keep(0);
+          return;
+        }
+        keep(row);
+        location.reload();
+      }, 2000);
+    }).observe(document.body, { childList: true });
   }
 }
 `;
