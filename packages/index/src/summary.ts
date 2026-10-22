@@ -23,6 +23,7 @@ import {
   type SpecIR,
   type SpecPlugin,
   type StandardActionIR,
+  timerText,
   USER_MODEL,
   type UxIR,
   type Voice,
@@ -443,6 +444,20 @@ export function summarize(
           return model ? one(model) : humanize(name).toLowerCase();
         }),
         ...(subject ? [`The mail's subject is “${subject}”.`] : []),
+      ],
+    });
+  }
+
+  // What the app does on a clock: one sentence each.
+  for (const t of ir.timers) {
+    sections.push({
+      concept: `timer:${t.name}`,
+      title: humanize(t.name),
+      sentences: [
+        timerText(t, (name) => {
+          const model = modelNamed(name);
+          return model ? one(model) : humanize(name).toLowerCase();
+        }),
       ],
     });
   }

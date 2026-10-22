@@ -30,9 +30,12 @@ import {
   type Texts,
 } from "./shared.js";
 
-/** The entries of the outgoing section: mail, and calls to named targets. */
+/**
+ * The entries of the outgoing section a record's change fires: mail, and calls to named targets.
+ * Entries on a timer fire from the timers' tick (timed-actions.md §5), not from a write.
+ */
 export function outgoingOf(ir: SpecIR): OutgoingIR[] {
-  return ir.outgoing;
+  return ir.outgoing.filter((o) => !("timer" in o.when));
 }
 
 /** Whether a change to the model's records may tell someone: its writes call `outgoing`. */
@@ -219,7 +222,8 @@ ${apiFields(model)
   const list = entries.map((o) => {
     const model = modelNamed(ir, o.when.model);
     const words = content?.outgoing?.[o.name];
-    const when = "event" in o.when ? o.when.event : o.when.action;
+    const when =
+      "event" in o.when ? o.when.event : "action" in o.when ? o.when.action : o.when.timer;
     const fits = conditions(o);
     return `  {
     name: ${JSON.stringify(o.name)},

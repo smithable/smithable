@@ -27,6 +27,7 @@ const NAMES = {
   query: [FIELD_NAME_PATTERN, "Query name", LOWER, '"churnRisk"'],
   outgoing: [FIELD_NAME_PATTERN, "Outgoing name", LOWER, '"bookingMade"'],
   incoming: [FIELD_NAME_PATTERN, "Incoming name", LOWER, '"monitorDown"'],
+  timer: [FIELD_NAME_PATTERN, "Timer name", LOWER, '"remind"'],
   role: [FIELD_NAME_PATTERN, "Role name", LOWER, '"staff"'],
   page: [NAME_PATTERN, "Page name", DASHED, '"orders" or "my-bookings"'],
   menu: [NAME_PATTERN, "Menu name", DASHED, '"main"'],

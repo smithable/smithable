@@ -10,6 +10,8 @@ export interface SpecIR {
   app: AppIR;
   models: ModelIR[];
   actions: ActionIR[];
+  /** What the app does on a clock (timed-actions.md): events raised at a time, running actions. */
+  timers: TimerIR[];
   /** Mails and calls the app makes when something happens to a record (integrations.md §4). */
   outgoing: OutgoingIR[];
   /** Addresses other services call, each making a record or handing the call to code (integrations.md §3). */
@@ -550,12 +552,60 @@ export type IncomingValueIR =
   | { field: string; formula: Expr; text: string }
   | { field: string; template: string };
 
+/** When a clock timer runs: a day, the weekdays, a week or a month (their first day), or one weekday. */
+export const TIMER_EVERY = [
+  "day",
+  "weekday",
+  "week",
+  "month",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+export type TimerEvery = (typeof TIMER_EVERY)[number];
+
+export type TimerScheduleIR =
+  /** At a date-time of the record: `path` is a field of `on`, or a reference then its field; with an offset. */
+  | {
+      kind: "record";
+      path: string[];
+      offset?: { amount: number; unit: "minute" | "hour" | "day"; direction: "before" | "after" };
+    }
+  /** On a clock: `every` and a time "HH:MM", in the app's time zone. */
+  | { kind: "every"; every: TimerEvery; at: string }
+  /** A five-field cron expression, in the app's time zone. */
+  | { kind: "cron"; cron: string };
+
+/**
+ * A timer (docs/design/timed-actions.md): an event the app raises itself at a time, running an
+ * action over the records the time has come for; `outgoing` listens to it by name. Delivery is
+ * never the timer's.
+ */
+export interface TimerIR {
+  name: string;
+  /** The records it runs for; a clock timer running a custom action has none. */
+  on?: string;
+  /** Only the records that fit. */
+  where?: Condition;
+  /** A standard action of `on` (run for each record), or a custom action (run once). Without it the timer only raises its event. */
+  run?: string;
+  schedule: TimerScheduleIR;
+}
+
 export interface OutgoingIR {
   name: string;
-  /** A record of `model` created, changed or deleted; or the standard action `action` (on `model`) ran. */
+  /**
+   * A record of `model` created, changed or deleted; the standard action `action` (on `model`) ran;
+   * or the timer `timer` (whose records are `model`'s) came for a record.
+   */
   when:
     | { model: string; event: "created" | "changed" | "deleted" }
-    | { model: string; action: string };
+    | { model: string; action: string }
+    | { model: string; timer: string };
   /**
    * Only for records that fit: a creation or deletion when the record fits, a change when the
    * record fits after it and did not before.
