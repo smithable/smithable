@@ -1492,7 +1492,14 @@ import { refusal } from "#/kit/log.server";
 ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/kit/model";\n' : ""}${[
   ...new Set([
     ...(composedName(model) || lined ? [model] : []),
-    ...composedRefs.map((f) => modelNamed(ir, f.type.model)),
+    // A referenced record is named by its own model's shownRefs; its name function is called
+    // here only for the picker's order, when the name's first part is that reference.
+    ...composedRefs
+      .map((f) => modelNamed(ir, f.type.model))
+      .filter(
+        (m) =>
+          composedName(model) && referenced && firstPart(model, ir).includes(`${nameFunction(m)}(`),
+      ),
   ]),
 ]
   .map(

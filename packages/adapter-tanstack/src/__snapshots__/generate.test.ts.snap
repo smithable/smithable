@@ -16969,7 +16969,6 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { bookingName } from "./booking.name";
-import { sessionName } from "./session.name";
 import { outgoing } from "#/generated/outgoing.server";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
@@ -25662,7 +25661,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/ask.server.ts": "2e7a3e55 generated",
   "src/generated/booking.name.ts": "8aaa37e0 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "4f2f6797 generated",
+  "src/generated/booking.server.ts": "1e783eb8 generated",
   "src/generated/booking.ts": "7230b87e generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "03827a5f generated",
