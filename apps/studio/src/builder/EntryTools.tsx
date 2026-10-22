@@ -85,11 +85,21 @@ export function ImportRecords({ model, run }: { model: string; run: Run }) {
  */
 export function OwnCode({ page, own }: { page: string; own: boolean }) {
   const [said, setSaid] = useState<{ ok: boolean; text: string }>();
+  // What the customize said stays in view once the page is the person's own: the files' refresh
+  // may say so before the call has answered.
+  const status = said && (
+    <p role="status" className={said.ok ? "text-xs text-muted" : "text-xs text-red-700"}>
+      {said.text}
+    </p>
+  );
   if (own)
     return (
-      <p className="text-xs text-quiet">
-        This page's code is your own: src/custom/pages/{page}.tsx, opened in your own editor.
-      </p>
+      <div className="space-y-1">
+        {status}
+        <p className="text-xs text-quiet">
+          This page's code is your own: src/custom/pages/{page}.tsx, opened in your own editor.
+        </p>
+      </div>
     );
   return (
     <div className="space-y-1">
@@ -119,11 +129,7 @@ export function OwnCode({ page, own }: { page: string; own: boolean }) {
           About custom code
         </a>
       </p>
-      {said && (
-        <p role="status" className={said.ok ? "text-xs text-muted" : "text-xs text-red-700"}>
-          {said.text}
-        </p>
-      )}
+      {status}
     </div>
   );
 }
