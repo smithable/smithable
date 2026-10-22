@@ -245,6 +245,17 @@ export function App() {
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
+  /** No code or Code on screen: in the place of the other one, or the first place when neither is. */
+  const workIn = (mode: "nocode" | "code") => {
+    if (slotOf(mode) !== undefined) return;
+    const other = mode === "code" ? "nocode" : "code";
+    const at = slotOf(other) ?? shown[0] ?? 0;
+    setArrangement({
+      ...arrangement,
+      slots: arrangement.slots.map((s, i) => (i === at ? mode : s)) as typeof arrangement.slots,
+    });
+  };
+
   // The spec the preview shows now, for what a change touches (refresh).
   const shownIR = useRef<Spec["ir"]>(undefined);
   // The newest change the preview has had: a "changed" without a new one (a file edited by hand,
@@ -590,7 +601,31 @@ export function App() {
             ))}
           </fieldset>
         ) : (
-          <LayoutBar arrangement={arrangement} onChange={setArrangement} />
+          <>
+            <LayoutBar arrangement={arrangement} onChange={setArrangement} />
+            {/* No code or Code, back and forth in one click: the one chosen takes the other's
+                place (Johan, 2026-10-23). */}
+            <fieldset className="flex rounded-md bg-subtle p-0.5">
+              <legend className="sr-only">Way of working</legend>
+              {(["nocode", "code"] as const).map((mode) => (
+                <label
+                  key={mode}
+                  className={cx(
+                    "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                    slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={slotOf(mode) !== undefined}
+                    onChange={() => workIn(mode)}
+                  />
+                  {WINDOW_NAMES[mode]}
+                </label>
+              ))}
+            </fieldset>
+          </>
         )}
         {narrow && !project.making && <PhoneSettingsButton settings={phone} onChange={setPhone} />}
         <div className="ml-auto flex items-center gap-3">

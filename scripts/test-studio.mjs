@@ -1034,7 +1034,10 @@ try {
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
-      await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
+      // How it was made, without the model's use or cost (Johan, 2026-10-23).
+      await trace.getByText(/^local model · /).waitFor();
+      if (await trace.getByText(/ tokens/).count())
+        throw new Error("Changes shows a model's tokens");
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
       await trace

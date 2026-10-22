@@ -499,14 +499,12 @@ export function Trace({
                 {group.length > 1 && e.request ? `You asked: ${e.request}` : text(e)}
               </span>
               <span className="mt-0.5 block text-xs text-quiet">
-                {/* The Builder (words given) says only when, and the model's use where there was
-                    one; Studio says how every change was made, and the files. */}
-                {!words || e.tokens > 0 ? (
+                {/* The Builder (words given) says only when; Studio says how every change was made
+                    and the files. A model's use and its cost are not shown here (Johan, 2026-10-23). */}
+                {!words ? (
                   <>
                     {e.isUndo ? "undo" : e.engine}
-                    {e.model ? ` (${e.model})` : ""} · {e.tokens.toLocaleString("en")} tokens
-                    {e.cost ? ` · ${e.currency === "USD" ? "$" : "€"}${e.cost.toFixed(4)}` : ""}
-                    {!words && e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
+                    {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
                   </>
                 ) : null}
                 {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
