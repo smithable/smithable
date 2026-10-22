@@ -52,7 +52,12 @@ const setTheme: Operation<{
           'A background color like "#f5efe6" (a wash in light and dark mode), or "none".',
       },
       font: { type: "string", description: `${FONTS.join(", ")}, or "none".` },
-      density: { type: "string", enum: ["comfortable", "compact"] },
+      density: {
+        type: "string",
+        enum: ["comfortable", "standard", "compact", "none"],
+        description:
+          'How much space the lists and forms take; on a page, "none" returns to the app\'s.',
+      },
       motion: {
         type: "string",
         enum: ["none", "subtle", "lively"],
@@ -100,6 +105,10 @@ const setTheme: Operation<{
         `Only a landing page has a theme of its own; there is no landing page "${page}".`,
       );
     const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
+    if (page === undefined && args.density === "none")
+      throw new OperationError(
+        "The app's density is comfortable, standard or compact; \"none\" returns a landing page's density to the app's.",
+      );
     // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
     // For motion alone, "none" is a value: no motion.
     if (args.preset !== undefined)

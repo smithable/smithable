@@ -202,7 +202,11 @@ test("a companion file is helped from its own schema, with the spec's names", ()
   expect(ux("smithableUx: 0.1\npages:\n  orders:\n    table:\n      columns: [‸")).toEqual(
     expect.arrayContaining(["number", "customer", "status", "total"]),
   );
-  expect(ux("smithableUx: 0.1\ntheme:\n  density: ‸")).toEqual(["comfortable", "compact"]);
+  expect(ux("smithableUx: 0.1\ntheme:\n  density: ‸")).toEqual([
+    "comfortable",
+    "standard",
+    "compact",
+  ]);
   // The preset: the built-in themes and the project's own; a landing page's own theme too.
   const own = (marked: string) => {
     const offset = marked.indexOf("‸");

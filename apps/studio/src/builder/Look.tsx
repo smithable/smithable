@@ -122,6 +122,7 @@ export function Look({
           value={theme.density}
           options={[
             ["comfortable", "Comfortable"],
+            ["standard", "Standard"],
             ["compact", "Compact"],
           ]}
           onChange={(density) => run("setTheme", { density })}

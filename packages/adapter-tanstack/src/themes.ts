@@ -17,6 +17,7 @@ const HEADER =
 /** Control and row sizes per density; touch screens always get 44 px targets. */
 const DENSITY = {
   comfortable: { control: "2.75rem", row: "4rem", cell: "1rem", card: "1.5rem" },
+  standard: { control: "2.5rem", row: "3.5rem", cell: "0.875rem", card: "1.25rem" },
   compact: { control: "2.25rem", row: "3.25rem", cell: "0.75rem", card: "1.25rem" },
 };
 

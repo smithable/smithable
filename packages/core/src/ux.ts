@@ -28,7 +28,7 @@ export interface UxIR {
     /** A background color like "#f5efe6": a pale wash in light mode, a deep one in dark. */
     background?: string;
     font?: string;
-    density: "comfortable" | "compact";
+    density: "comfortable" | "standard" | "compact";
     /** How much the app moves; a visitor's reduced-motion setting always wins. */
     motion: "none" | "subtle" | "lively";
   };
@@ -750,9 +750,14 @@ function readTheme(
     } else if (entry.key === "density") {
       const density = readString(ctx, entry.value, `"density"`);
       densityGiven = true;
-      if (density === "comfortable" || density === "compact") target.density = density;
+      if (density === "comfortable" || density === "standard" || density === "compact")
+        target.density = density;
       else if (density !== undefined)
-        ctx.error(entry.value, "invalid-value", `"density" must be comfortable or compact.`);
+        ctx.error(
+          entry.value,
+          "invalid-value",
+          `"density" must be comfortable, standard or compact.`,
+        );
     } else if (entry.key === "motion") {
       const motion = readString(ctx, entry.value, `"motion"`);
       motionGiven = true;

@@ -55,6 +55,7 @@
         "density": {
           "enum": [
             "comfortable",
+            "standard",
             "compact"
           ],
           "description": "How much space the lists and forms take."
@@ -316,6 +317,7 @@
               "density": {
                 "enum": [
                   "comfortable",
+                  "standard",
                   "compact"
                 ],
                 "description": "The page's density."

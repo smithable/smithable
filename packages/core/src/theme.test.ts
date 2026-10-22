@@ -65,6 +65,10 @@ test("a theme of three colors per mode gets the rest derived, and reads", () => 
     motion: "subtle",
   });
   expect(parse(`${forest}motion: lively\n`).theme?.motion).toBe("lively");
+  expect(parse(`${forest}density: standard\n`).theme?.density).toBe("standard");
+  expect(parse(`${forest}density: tight\n`).diagnostics.map((d) => d.message)).toEqual([
+    '"density" is comfortable, standard or compact.',
+  ]);
   const light = theme?.light as Record<string, string>;
   expect(Object.keys(light)).toHaveLength(28);
   expect(light.primary).toBe("#2f6b3a");
