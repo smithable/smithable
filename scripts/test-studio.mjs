@@ -601,8 +601,14 @@ try {
       const map = page.getByRole("region", { name: "Data map" });
       for (const box of ["Customer", "Order", "User"])
         await map.locator(`[data-map-box="${box}"]`).waitFor({ timeout: 30000 * P });
-      if ((await map.locator(".react-flow__edge").count()) < 3)
+      // An order refers to its customer; the account manager owns a customer; an order is its
+      // maker's, said in its box.
+      if ((await map.locator(".react-flow__edge").count()) < 2)
         throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
+      await map
+        .locator('[data-map-box="Order"]')
+        .getByText("Each is its maker's own.")
+        .waitFor({ timeout: 10000 * P });
       await map
         .locator('[data-map-box="Customer"]')
         .getByRole("button", { name: "Customer" })

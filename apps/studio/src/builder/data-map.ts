@@ -8,6 +8,8 @@ export const PEOPLE = USER_MODEL;
 
 export interface MapNode {
   id: string;
+  /** Its records are their maker's (sign-in, no ownedBy): said in the box, not by an arrow. */
+  madeBy?: boolean;
   /** Each field as a name and what it holds: a kind of value, a choice, or the record it refers to. */
   fields: { name: string; holds: string }[];
 }
@@ -46,20 +48,15 @@ export function mapOf(ir: SpecIR, auth?: AuthIR): { nodes: MapNode[]; edges: Map
         kind: owner ? "owner" : "reference",
       });
     }
-    // Without ownedBy, a record is its maker's when people sign in.
-    if (signIn && !model.ownedBy)
-      edges.push({
-        id: `${model.name}.owner`,
-        source: model.name,
-        target: PEOPLE,
-        label: "made by (owns it)",
-        kind: "owner",
-      });
   }
-  const people = edges.some((e) => e.target === PEOPLE);
+  // Without ownedBy, a record is its maker's when people sign in: a line in its box (an arrow to
+  // the people from every such box crossed the others).
+  const madeBy = (name: string) => signIn && !ir.models.find((m) => m.name === name)?.ownedBy;
+  const people = edges.some((e) => e.target === PEOPLE) || ir.models.some((m) => madeBy(m.name));
   const nodes: MapNode[] = [
     ...ir.models.map((m) => ({
       id: m.name,
+      ...(madeBy(m.name) ? { madeBy: true } : {}),
       fields: m.fields.map((f) => ({ name: f.name, holds: holds(f) })),
     })),
     ...(people && !ir.models.some((m) => m.name === PEOPLE) ? [{ id: PEOPLE, fields: [] }] : []),
