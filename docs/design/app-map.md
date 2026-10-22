@@ -13,10 +13,12 @@ entries, custom code marked opaque) and a Mermaid export of the same data come a
   and a box for the people who sign in (`User`) when a field refers to them or a record is
   someone's.
 - An arrow per reference a field stores, from the record that stores it, labelled with the
-  field; a list is that arrow's other side and gets none of its own. Whose a record is, dashed:
-  the `ownedBy` field's arrow is marked "(owns it)", and without `ownedBy`, under sign-in, an
-  arrow "made by (owns it)" to the people.
-- The first layout is dagre's, top to bottom (No code's column is tall and narrow); a box moved by hand keeps its place in this
+  field; a list is that arrow's other side and gets none of its own. Whose a record is: the
+  `ownedBy` field's arrow is dashed and marked "(owns it)"; without `ownedBy`, under sign-in, the
+  box says "Each is its maker's own" (an arrow to the people from every such box crossed the
+  others).
+- The first layout is dagre's, top to bottom (No code's column is tall and narrow); a box moved
+  by hand keeps its place in this
   browser (localStorage, per app). A box's name opens Behavior at that kind of record.
 - React Flow and dagre (MIT) are Studio's only; generated apps never get them.
 - Built: `apps/studio/src/builder/data-map.ts` (the content, unit-tested on the CRM) and

@@ -100,6 +100,9 @@ function Box({ data }: NodeProps<Node<BoxData>>) {
           </button>
         )}
       </div>
+      {box.madeBy && (
+        <p className="border-t border-line px-2 py-1 text-muted">Each is its maker's own.</p>
+      )}
       {open && (
         <ul className="border-t border-line px-2 py-1" style={{ lineHeight: `${ROW}px` }}>
           {box.fields.map((f) => (

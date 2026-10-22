@@ -23,9 +23,12 @@ test("the CRM's map: its kinds of record and the people, references and ownershi
     label: "accountManager (owns it)",
     kind: "owner",
   });
-  expect(edges).toContainEqual(
-    expect.objectContaining({ id: "Order.owner", target: "User", label: "made by (owns it)" }),
-  );
+  // An order is whoever made it: said in its box, not by an arrow to the people.
+  expect(nodes.find((n) => n.id === "Order")?.madeBy).toBe(true);
+  expect(nodes.find((n) => n.id === "Customer")?.madeBy).toBeUndefined();
+  expect(edges.filter((e) => e.target === "User").map((e) => e.id)).toEqual([
+    "Customer.accountManager",
+  ]);
   // Each field is listed with what it holds.
   expect(nodes[0]?.fields).toContainEqual({ name: "accountManager", holds: "→ User" });
 });
@@ -35,5 +38,6 @@ test("without sign-in a record is not its maker's: only ownedBy says whose it is
   expect(edges.filter((e) => e.kind === "owner").map((e) => e.id)).toEqual([
     "Customer.accountManager",
   ]);
+  expect(nodes.some((n) => n.madeBy)).toBe(false);
   expect(nodes.map((n) => n.id)).toContain("User");
 });
