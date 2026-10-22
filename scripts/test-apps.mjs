@@ -588,7 +588,8 @@ async function outgoingFlow(dir, base) {
       /^To: dev-member@/m,
       /^Subject: Your booking$/m,
       /Thank you for booking/,
-      /Session: #\d+/,
+      // A session is named by its class and its start (record-names.md).
+      /Session: \S.* · /,
       /\/my-bookings\/\d+/,
     ])
       if (!part.test(made))
@@ -597,9 +598,10 @@ async function outgoingFlow(dir, base) {
       dir,
       "select id, session_id as session from bookings order by id desc limit 1",
     );
-    const [{ other }] = query(
+    // A session of another class, chosen by what the picker shows.
+    const [{ otherClass }] = query(
       dir,
-      `select id as other from sessions where id != ${session} order by id limit 1`,
+      `select c.name as otherClass from sessions s join class_types c on c.id = s.class_type_id where s.class_type_id != (select class_type_id from sessions where id = ${session}) order by s.id limit 1`,
     );
 
     // The studio moves it to another session: the member is told, the admin (who changed it) not.
@@ -607,15 +609,25 @@ async function outgoingFlow(dir, base) {
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
     const field = page.getByLabel(/^Session/);
-    if ((await field.evaluate((e) => e.tagName)) === "SELECT")
-      await field.selectOption({ label: `#${other}` });
-    else await chooseRecord(page, /^Session/, `#${other}`);
+    let label;
+    if ((await field.evaluate((e) => e.tagName)) === "SELECT") {
+      label = await field.evaluate(
+        (e, c) => [...e.options].find((o) => o.text.startsWith(c))?.text ?? "",
+        otherClass,
+      );
+      await field.selectOption({ label });
+    } else {
+      await page.getByRole("combobox", { name: /^Session/ }).fill(otherClass);
+      const option = page.getByRole("option").filter({ hasText: otherClass }).first();
+      label = (await option.innerText()).split("\n")[0].trim();
+      await option.click();
+    }
     await page.getByRole("button", { name: "Save changes" }).click();
     const changed = await next(count, "the change");
     if (
       !/^To: dev-member@/m.test(changed) ||
       !/^Subject: Your booking was changed$/m.test(changed) ||
-      !changed.includes(`Session: #${other}`)
+      !changed.includes(`Session: ${label}`)
     )
       throw new Error(`the change's mail: ${changed.slice(0, 600)}`);
 
@@ -629,7 +641,7 @@ async function outgoingFlow(dir, base) {
     if (
       !/^To: dev-member@/m.test(gone) ||
       !/^Subject: Your booking was cancelled$/m.test(gone) ||
-      !gone.includes(`Session: #${other}`)
+      !gone.includes(`Session: ${label}`)
     )
       throw new Error(`the deletion's mail: ${gone.slice(0, 600)}`);
 
