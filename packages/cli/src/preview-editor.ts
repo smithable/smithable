@@ -131,6 +131,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
         walk(sheet.cssRules);
       } catch {}
     }
+    // An app of this version shows dark by its <html data-appearance> (src/kit/appearance.ts).
+    document.documentElement.dataset.appearance = scheme;
+    document.documentElement.style.colorScheme = scheme;
   };
   // The theme lab signs itself in through the app's development sign-in (a button for each
   // role, there only in development): asked from the page this preview is in on this machine,

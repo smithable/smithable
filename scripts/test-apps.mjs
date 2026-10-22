@@ -4204,9 +4204,36 @@ async function visualChecks(dir, base) {
         problems.push(`the theme's motion is missing (${motion.join(", ")})`);
     }
     await page.emulateMedia({ reducedMotion: "no-preference" });
+    // The visitor's appearance (src/kit/appearance.ts): System follows the device as it changes;
+    // a choice is kept, and shown from the first paint after a reload; System again forgets it.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ colorScheme: "light" });
+    await open(page, `${base}${paths[0]}`);
+    const shownAs = () => page.evaluate(() => document.documentElement.dataset.appearance);
+    const picker = page.locator('[data-part="appearance"] select >> visible=true').first();
+    const expectShown = async (mode, when) => {
+      for (let i = 0; i < 20 && (await shownAs()) !== mode; i++)
+        await new Promise((r) => setTimeout(r, 100));
+      if ((await shownAs()) !== mode)
+        problems.push(`appearance: ${when}, shown as ${await shownAs()}`);
+    };
+    await expectShown("light", "a light device");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expectShown("dark", "the device turned dark");
+    await page.emulateMedia({ colorScheme: "light" });
+    await picker.selectOption("dark");
+    await expectShown("dark", "Dark chosen on a light device");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    if ((await shownAs()) !== "dark")
+      problems.push(
+        `appearance: Dark chosen, not shown before the app's code (${await shownAs()})`,
+      );
+    await page.locator("body[data-hydrated=true]").waitFor();
+    await picker.selectOption("system");
+    await expectShown("light", "System chosen again on a light device");
     const ok = problems.length === 0;
     console.log(
-      `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling; the theme's motion, none under "reduce motion"${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
+      `  ${ok ? "✓" : "✗"} visual checks: ${paths.length} pages, light and dark, desktop and phone: no accessibility violations or sideways scrolling; the theme's motion, none under "reduce motion"; the appearance System, Light or Dark, a choice kept from the first paint${ok ? "" : `\n    ${problems.slice(0, 10).join("\n    ")}`}`,
     );
     if (!ok) failures.push("visual checks");
   } finally {

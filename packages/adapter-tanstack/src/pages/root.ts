@@ -185,11 +185,12 @@ export function rootRoute(
   const pageRoutes = [...ir.pages]
     .sort((a, b) => b.route.length - a.route.length || (a.route < b.route ? -1 : 1))
     .map((p) => [p.route, p.id]);
-  return `${HEADER}import { createRootRoute, HeadContent, Scripts${signIn ? ", useRouter" : ""}, useRouterState } from "@tanstack/react-router";
+  return `${HEADER}import { createRootRoute, HeadContent, Scripts, ScriptOnce${signIn ? ", useRouter" : ""}, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
+import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
@@ -307,8 +308,10 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
 `
     : ""
 }  return (
-    <html lang=${t.translated ? "{language()}" : JSON.stringify(t.language)}>
+    // data-appearance is set by the head's script before React takes over (src/kit/appearance.ts).
+    <html lang=${t.translated ? "{language()}" : JSON.stringify(t.language)} suppressHydrationWarning>
       <head>
+        <ScriptOnce children={APPEARANCE_SCRIPT} />
         <HeadContent />${t.translated ? "\n        <Alternates path={pathname} />" : ""}
       </head>
       <body data-page={pageOf(pathname)} data-hydrated={hydrated ? "true" : undefined}>

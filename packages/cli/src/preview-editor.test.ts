@@ -70,7 +70,12 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
               : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
-    documentElement: { toggleAttribute() {}, scrollHeight: 3000 },
+    documentElement: {
+      toggleAttribute() {},
+      scrollHeight: 3000,
+      dataset: {} as Record<string, string>,
+      style: {} as Record<string, string>,
+    },
     readyState: "loading",
   };
   const noop = () => 0;
@@ -119,6 +124,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     theme: () => document.getElementById("sm-theme")?.textContent,
     head,
     darkRule,
+    root: document.documentElement,
     clicked,
     scrolled,
     posted,
@@ -261,11 +267,14 @@ test("only from the page the preview is in, on this machine", () => {
 });
 
 test("a frame in one mode: the app's dark rules always apply, or never", () => {
-  const { send, darkRule } = page();
+  const { send, darkRule, root } = page();
   send({ type: "smithable:theme-css", css: "a{}", mode: "dark" });
   expect(darkRule.media.mediaText).toBe("all");
+  // An app of this version: its <html data-appearance>, which its dark rules follow.
+  expect(root.dataset.appearance).toBe("dark");
   send({ type: "smithable:theme-css", css: "a{}", mode: "light" });
   expect(darkRule.media.mediaText).toBe("not all");
+  expect(root.dataset.appearance).toBe("light");
 });
 
 test("the lab signs in through the development sign-in's button for the role it asks", () => {
