@@ -80,3 +80,17 @@ test("only lively motion moves a landing page: its sections rise into view and t
   expect(css("subtle")).toContain("--landing-motion: none;");
   expect(css("lively")).toMatch(/prefers-reduced-motion: reduce[^}]*--landing-motion: none;/);
 });
+
+test("the three densities size the kit's controls, rows, cells and cards; standard sits between", () => {
+  const css = (density: "comfortable" | "standard" | "compact") =>
+    themeCss({ ...emptyUx(), theme: { ...emptyUx().theme, density } });
+  const root = (text: string, name: string) =>
+    new RegExp(`:root \\{[^}]*--${name}: ([^;]+);`).exec(text)?.[1];
+  const sizes = (density: "comfortable" | "standard" | "compact") =>
+    ["control-height", "row-height", "cell-padding", "card-padding"].map((n) =>
+      root(css(density), n),
+    );
+  expect(sizes("comfortable")).toEqual(["2.75rem", "4rem", "1rem", "1.5rem"]);
+  expect(sizes("standard")).toEqual(["2.5rem", "3.5rem", "0.875rem", "1.25rem"]);
+  expect(sizes("compact")).toEqual(["2.25rem", "3.25rem", "0.75rem", "1.25rem"]);
+});

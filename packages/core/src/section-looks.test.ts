@@ -127,6 +127,18 @@ test("a landing page may have a theme of its own, set with setTheme --page; othe
   expect(set.files.ux).toContain("home:\n    theme:\n      preset: playful");
   const back = applyOperation(set.files, "setTheme", { page: "home", preset: "none" });
   expect(back.ok && back.files.ux).not.toContain("playful");
+  // A page's density likewise: a third value, and "none" returns it to the app's.
+  const dense = applyOperation({ spec }, "setTheme", { page: "home", density: "standard" });
+  expect(dense.ok && dense.files.ux).toContain("home:\n    theme:\n      density: standard");
+  const undense = applyOperation(dense.ok ? dense.files : { spec }, "setTheme", {
+    page: "home",
+    density: "none",
+  });
+  expect(undense.ok && undense.files.ux).not.toContain("density");
+  expect(applyOperation({ spec }, "setTheme", { density: "none" })).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("comfortable, standard or compact"),
+  });
   expect(applyOperation({ spec }, "setTheme", { page: "items", preset: "playful" })).toMatchObject({
     ok: false,
   });

@@ -245,7 +245,7 @@ export const UX_SCHEMA: JsonSchema = {
           },
         },
         density: {
-          enum: ["comfortable", "compact"],
+          enum: ["comfortable", "standard", "compact"],
           description: "How much space the lists and forms take.",
         },
         motion: {
@@ -340,7 +340,10 @@ export const UX_SCHEMA: JsonSchema = {
             properties: {
               preset: text("A built-in theme or one of the project's."),
               brand: { type: "object", description: "The colours and font, as the app's brand." },
-              density: { enum: ["comfortable", "compact"], description: "The page's density." },
+              density: {
+                enum: ["comfortable", "standard", "compact"],
+                description: "The page's density.",
+              },
               motion: { enum: ["none", "subtle", "lively"], description: "The page's motion." },
             },
           },

@@ -90,6 +90,21 @@ tones:
     });
   });
 
+  test("the third density, standard, reads like the other two", () => {
+    const { ux, diagnostics } = validateUx(
+      { path: "smithable.ux.yml", text: "smithableUx: 0.1\ntheme: { density: standard }\n" },
+      ir,
+    );
+    expect(diagnostics).toEqual([]);
+    expect(ux?.theme.density).toBe("standard");
+    expect(
+      validateUx(
+        { path: "smithable.ux.yml", text: "smithableUx: 0.1\ntheme: { density: tight }\n" },
+        ir,
+      ).diagnostics.map((d) => d.message),
+    ).toEqual(['"density" must be comfortable, standard or compact.']);
+  });
+
   test("mistakes are reported, with suggestions", () => {
     expect(codes("theme: {}")).toEqual(["invalid-version"]);
     expect(

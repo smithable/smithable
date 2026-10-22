@@ -57,7 +57,7 @@ export interface ThemeIR {
   font: string;
   radius: string;
   shadow: string;
-  density: "comfortable" | "compact";
+  density: "comfortable" | "standard" | "compact";
   /** How much the app moves: none, subtle (short fades and slides) or lively (a little more). */
   motion: "none" | "subtle" | "lively";
   /** The most chroma a brand color keeps on this theme (quiet themes stay quiet). */
@@ -233,11 +233,11 @@ export function parseTheme(file: { path: string; text: string }): {
       `"shadow" is none, soft or raised.`,
     );
   const density = optional("density") ?? "comfortable";
-  if (density !== "comfortable" && density !== "compact")
+  if (density !== "comfortable" && density !== "standard" && density !== "compact")
     ctx.error(
       byKey.get("density")?.value ?? root,
       "invalid-value",
-      `"density" is comfortable or compact.`,
+      `"density" is comfortable, standard or compact.`,
     );
   const motion = optional("motion") ?? "subtle";
   if (motion !== "none" && motion !== "subtle" && motion !== "lively")
