@@ -641,6 +641,8 @@ try {
         .locator('[data-nav-box="team"]')
         .getByText("Opens: yes")
         .waitFor({ timeout: 10000 * P });
+      // The whole tree in view, as the map's own fit button shows it, before a name is clicked.
+      await map.locator(".react-flow__controls-fitview").click();
       await map
         .locator('[data-nav-box="customers"]')
         .getByRole("button", { name: "customers" })
@@ -659,6 +661,7 @@ try {
       const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
       await merge.getByText("custom code").waitFor({ timeout: 30000 * P });
       await merge.getByText(/^Merge a duplicate customer/).waitFor({ timeout: 10000 * P });
+      await map.locator(".react-flow__controls-fitview").click();
       await merge.getByRole("button", { name: "mergeCustomers" }).click();
       await page
         .getByRole("tab", { name: "Behavior", selected: true })

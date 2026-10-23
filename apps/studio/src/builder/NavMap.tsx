@@ -23,7 +23,7 @@ import { OPEN_PART } from "./NoCode";
 import { type NavPage, navOf, type Verdict } from "./nav-map";
 
 const WIDTH = 190;
-const HEIGHT = 64;
+const HEIGHT = 76;
 
 const WORD: Record<Verdict, string> = { allowed: "yes", denied: "no", conditional: "depends" };
 const TONE: Record<Verdict, string> = {
@@ -151,6 +151,8 @@ export function NavMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
       </div>
       <div className="h-full rounded border border-line">
         <ReactFlow
+          // Made again for another role, so the view fits the boxes again (fitView is the first draw's).
+          key={who}
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
