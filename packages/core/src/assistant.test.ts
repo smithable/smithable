@@ -288,10 +288,12 @@ test("few tokens: every starter's tools and summary stay within a budget", () =>
       { scope: "app" },
     );
     // About 3.6 characters a token. The tools do not grow with the app; the summary is a line
-    // a model. A change that makes either heavier should be a decision, not an accident.
+    // a model. A change that makes either heavier should be a decision, not an accident (the
+    // base grew by 20 on 2026-10-23 for an action's condition on the person, "Only when
+    // assignee is not you", which the support starter now says).
     expect(JSON.stringify(offer.tools).length, `${starter}: tools`).toBeLessThan(4000);
     expect(offer.summary.length, `${starter}: summary`).toBeLessThan(
-      300 + 260 * starterIr.models.length,
+      320 + 260 * starterIr.models.length,
     );
   }
 });

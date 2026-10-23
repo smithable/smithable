@@ -584,7 +584,7 @@ export function listParts(
   }
   const owner = `row.${ownerKey(model)}`;
   const fits = (a: (typeof many)[number]) =>
-    `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row)`;
+    `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row, viewer)`;
   view.add("#/generated/app", "app").add(n.module, n.ui).add("#/kit/words", "w");
   if (!within) view.add("#/generated/pages", "pageUi");
   if (actions.length) view.add("#/kit/access", "allows");
@@ -781,7 +781,7 @@ ${
               .map(
                 (
                   a,
-                ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row) && (
+                ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
             )}`,
               )

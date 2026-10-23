@@ -299,6 +299,19 @@ function readTimer(
       return undefined;
     }
     ctx.reference("action", action.name, at("run"));
+    // A timer runs as the app, for nobody in particular: a condition on the person signed in
+    // (ME(), not ME()) would hold for everyone or no one.
+    if (
+      !action.custom &&
+      Object.values(action.when ?? {}).some((w) => w === "ME()" || w === "not ME()")
+    ) {
+      ctx.error(
+        at("run"),
+        "invalid-timer",
+        `${capitalize(where)} runs "${run}", whose condition names the person signed in (ME()); a timer runs as the app, for nobody in particular. Run an action whose condition names no person.`,
+      );
+      return undefined;
+    }
     if (action.custom) {
       if (model) {
         ctx.error(

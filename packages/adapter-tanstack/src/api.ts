@@ -807,7 +807,7 @@ function toolsModule(
     const a = actionNames(action);
     const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
     const asks = askedFields(action).length ? `, asks: ${a.asks}` : "";
-    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
+    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never, viewer: { id: string } | null) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
   });
   // Out of the trash, as a built-in action per kind with a trash (docs/design/trash.md).
   const restores = models
@@ -1159,7 +1159,7 @@ ${
   confirms
     ? `
 /** Each action Ask may propose: the kind it runs on, its rule, when it fits, its name in words. */
-const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never) => boolean; label: string; asks?: { parse: (input: unknown) => unknown } }> = {
+const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never, viewer: { id: string } | null) => boolean; label: string; asks?: { parse: (input: unknown) => unknown } }> = {
 ${proposals.join("\n")}
 };
 
@@ -1196,7 +1196,7 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     const kind = KINDS[run.kind];
     const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
-    if (!run.fits(row as never)) throw new BadInput("This cannot be done now.");
+    if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");
     // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.
     if (run.asks) {
       try {

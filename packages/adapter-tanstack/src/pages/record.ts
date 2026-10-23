@@ -511,7 +511,7 @@ export function detailRoute(
   const buttons = [
     ...offered.map(
       (a) =>
-        `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row) && (
+        `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
             )}`,
     ),

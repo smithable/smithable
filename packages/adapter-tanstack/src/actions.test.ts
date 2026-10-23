@@ -13,6 +13,7 @@ const generate = (
   action: string,
   content = emptyContent(),
   status = "status: open | done",
+  authMore = "",
 ) => {
   const ir = validateSpec({
     path: "smithable.yml",
@@ -32,7 +33,7 @@ pages:
   const auth = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+      text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n${authMore}`,
     },
     ir,
   ).auth as AuthIR;
@@ -138,4 +139,44 @@ test("a form's change needs write on the record; an action checked its own acces
   const close = generate("close", "{ on: Task, set: { status: done } }");
   const data = close("src/generated/task.server.ts");
   expect(data).toContain('if (what === "changed") check(taskAccess.write, viewer, row.ownerId);');
+});
+
+test("an action's condition on a reference reads the stored key and the viewer: not ME() is anyone's but theirs, or nobody's", () => {
+  const take = generate(
+    "assignToMe",
+    "{ on: Task, when: { assignee: not ME() }, set: { assignee: ME() } }",
+    emptyContent(),
+    "assignee: User",
+  );
+  const module = take("src/generated/actions/assign-to-me.ts");
+  expect(module).toContain(
+    "export function assignToMeFits(row: { assigneeId?: unknown }, viewer: { id: string } | null): boolean {\n  return (viewer == null || row.assigneeId !== viewer.id);\n}",
+  );
+  expect(take("src/generated/actions/assign-to-me.server.ts")).toContain("Fits(row, viewer)");
+  expect(take("src/routes/tasks/$id.tsx")).toContain("Fits(row, viewer)");
+  // Ask proposing the action checks the condition with the viewer too.
+  const asked = generate(
+    "assignToMe",
+    "{ on: Task, when: { assignee: not ME() }, set: { assignee: ME() } }",
+    emptyContent(),
+    "assignee: User",
+    "assistant: { for: signed-in, may: change }\n",
+  )("src/generated/ask.server.ts");
+  expect(asked).toContain(
+    "fits: assignToMeFits as (row: never, viewer: { id: string } | null) => boolean",
+  );
+  expect(asked).toContain("run.fits(row as never, viewer)");
+  const release = generate(
+    "release",
+    "{ on: Task, when: { assignee: ME() }, set: { assignee: } }",
+    emptyContent(),
+    "assignee: User",
+  );
+  expect(release("src/generated/actions/release.ts")).toContain(
+    "return viewer != null && row.assigneeId === viewer.id;",
+  );
+  const plain = generate("finish", "{ on: Task, when: { status: open }, set: { status: done } }");
+  expect(plain("src/generated/actions/finish.ts")).toContain(
+    'finishFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {\n  return row.status === "open";',
+  );
 });
