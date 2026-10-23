@@ -613,29 +613,50 @@ export function dataModule(
       ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
   );
   // A name of parts is searched through its references too (record-names.md §2): a word in the
-  // text a part reads on the referenced record, among those the viewer may read, out of the trash.
-  const nameSearch = (composedName(model) ? (model.nameParts ?? []) : []).flatMap((part) => {
-    const ref = stored.find((x) => x.name === (part.through ?? part.field));
-    if (ref?.type.kind !== "relation" || ref.type.model === USER_MODEL) return [];
-    const target = modelNamed(ir, ref.type.model);
+  // text the name reads on a referenced record, one the viewer may read and out of the trash; a
+  // reference named by parts in turn by those parts, all decided here (names never loop, core).
+  const searchModels = new Set<ModelIR>();
+  const textual = (f?: FieldIR) =>
+    f?.type.kind === "scalar" &&
+    ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name);
+  const among = (target: ModelIR, condition: string) => {
     const tt = names(target, t).table;
-    // A reference named by parts in turn: a word its own search finds (never back to itself).
-    if (!part.through && composedName(target))
-      return target !== model && isPaged(target)
-        ? [
-            `inArray(${n.table}.${dataKey(ref)}, db.select({ id: ${tt}.id }).from(${tt}).where(${names(target, t).data}.fitting(viewer, undefined, word)))`,
-          ]
-        : [];
-    const field = part.through ?? titleField(target);
-    const text = target.fields.find((x) => x.name === field);
-    if (text?.type.kind !== "scalar") return [];
-    if (!["string", "text", "markdown", "email", "phone", "url"].includes(text.type.name))
-      return [];
+    if (target !== model) searchModels.add(target);
     const data = target === model ? self : names(target, t).data;
-    return [
-      `inArray(${n.table}.${dataKey(ref)}, db.select({ id: ${tt}.id }).from(${tt}).where(and(contains([${tt}.${field}], word), ${data}.readable(viewer)${target.trash ? `, isNull(${tt}.deletedAt)` : ""})))`,
-    ];
-  });
+    return `db.select({ id: ${tt}.id }).from(${tt}).where(and(${condition}, ${data}.readable(viewer)${target.trash ? `, isNull(${tt}.deletedAt)` : ""}))`;
+  };
+  const nameWords = (m: ModelIR, table: string, top: boolean): string[] => {
+    if (!composedName(m)) {
+      const title = titleField(m);
+      return textual(m.fields.find((x) => x.name === title))
+        ? [`contains([${table}.${title}], word)`]
+        : [];
+    }
+    return (m.nameParts ?? []).flatMap((part) => {
+      const ref = m.fields.find((x) => x.name === (part.through ?? part.field));
+      if (ref?.type.kind !== "relation")
+        return !top && textual(ref) ? [`contains([${table}.${part.field}], word)`] : [];
+      if (ref.type.model === USER_MODEL) return [];
+      const target = modelNamed(ir, ref.type.model);
+      const tt = names(target, t).table;
+      const inner = part.through
+        ? textual(target.fields.find((x) => x.name === part.field))
+          ? [`contains([${tt}.${part.field}], word)`]
+          : []
+        : nameWords(target, tt, false);
+      if (!inner.length) return [];
+      return [
+        `inArray(${table}.${dataKey(ref)}, ${among(target, inner.length === 1 ? (inner[0] as string) : `or(${inner.join(", ")})`)})`,
+      ];
+    });
+  };
+  const nameSearch = paged ? nameWords(model, n.table, true) : [];
+  const wordCode = wordFits(
+    searched.length
+      ? [`contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)`]
+      : [],
+    nameSearch,
+  );
   // A reference given by its record's title, resolved among the records the viewer may read
   // (where that model is read a page at a time too, so it has named()).
   const namedRefs = (paged ? stored : []).flatMap((f) => {
@@ -769,6 +790,7 @@ export function dataModule(
   const uploadFields = model.fields.filter(isUpload);
   for (const ref of refs)
     if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
+  for (const m of searchModels) others.add(m);
   const withClause = (entries: string[], indent: string) =>
     entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
@@ -836,7 +858,7 @@ export function dataModule(
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
     ...(nameSearch.some((c) => c.includes("isNull(")) ? ["isNull"] : []),
-    ...(nameSearch.length && (searched.length || nameSearch.length > 1) ? ["or"] : []),
+    ...(wordCode.includes("or(") ? ["or"] : []),
     ...(occ ? OCCUPIES_DRIZZLE : []),
     ...(occ &&
     (model.trash ||
@@ -2142,7 +2164,7 @@ ${
       ${self}.readable(viewer),
       whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map(${wordFits(searched.length ? [`contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)`] : [], nameSearch)}),
+      ...wordsOf(search).map(${wordCode}),
     );
   },
 `

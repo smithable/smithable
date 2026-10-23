@@ -170,8 +170,19 @@ test("a search finds a record by the words of its name, through its references",
   expect(file("src/generated/session.server.ts")).toContain(
     "...wordsOf(search).map((word) => inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer))))),",
   );
-  // A booking named by its session: what the session's own search finds.
+  // A booking named by its session: by the session's own parts, each among what the viewer may read.
   expect(file("src/generated/booking.server.ts")).toContain(
-    "...wordsOf(search).map((word) => inArray(schema.bookings.sessionId, db.select({ id: schema.sessions.id }).from(schema.sessions).where(sessionData.fitting(viewer, undefined, word)))),",
+    "...wordsOf(search).map((word) => inArray(schema.bookings.sessionId, db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer)))), sessionData.readable(viewer))))),",
+  );
+  // A part read through a reference searches that field, out of the trash.
+  const venues = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Venue:\n    trash: true\n    fields:\n      name: string!\n      city: string\n  Gig:\n    namedBy: [venue.city, day]\n    fields:\n      venue: Venue!\n      day: date!\npages:\n  gigs:\n    crud: Gig\n",
+  }).ir as SpecIR;
+  const gig = generateApp(venues, { smithableVersion: "0.0.0", auth: asked, ux }).find(
+    (f) => f.path === "src/generated/gig.server.ts",
+  )?.content;
+  expect(gig).toContain(
+    "...wordsOf(search).map((word) => inArray(schema.gigs.venueId, db.select({ id: schema.venues.id }).from(schema.venues).where(and(contains([schema.venues.city], word), venueData.readable(viewer), isNull(schema.venues.deletedAt))))),",
   );
 });
