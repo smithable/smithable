@@ -1682,9 +1682,12 @@ ${
   ownerRequired
     ? `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string {
   const owner = (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (given ?? personOf(viewer)) : personOf(viewer);
-  // The record must have one: a visitor or a key, who is no person, cannot be it.
+  // The record must have one: a visitor, a key or a timer, who is no person, cannot be it.
   if (!owner)
-    throw new AccessDenied(viewer !== null, viewer ? "A key owns nothing: name the ${ownerLabel} (${model.ownedBy})." : undefined);
+    throw new AccessDenied(
+      viewer !== null,
+      viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\` : undefined,
+    );
   return owner;
 }`
     : `function ownerFor(viewer: Viewer | null, given: string | null | undefined): string | null {
