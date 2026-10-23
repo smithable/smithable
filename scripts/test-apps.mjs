@@ -691,7 +691,8 @@ async function outgoingFlow(dir, base) {
     // The studio moves the booked session to another time: the form asks first, saying what
     // changes and who is told (A 134); then each booking's member gets a mail.
     await open(page, `${base}/sessions/${session}`);
-    const startsAt = page.getByLabel("Starts at", { exact: true });
+    // Its label carries the required mark ("Starts at *"), so not exact.
+    const startsAt = page.getByLabel(/^Starts at/);
     const was = await startsAt.inputValue();
     const later = new Date(`${was}:00Z`);
     later.setUTCDate(later.getUTCDate() + 1);
