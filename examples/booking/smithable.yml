@@ -45,6 +45,8 @@ models:
     capacity:                           # a session never has more bookings than its capacity
       per: session
       max: session.capacity
+      closes: session.startsAt          # booking until the class starts
+      cancelUntil: session.startsAt     # and cancelling (e.g. "2 hours before session.startsAt")
 
   Post:
     description: News and articles on the studio's blog.

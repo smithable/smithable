@@ -992,6 +992,12 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
     },
     {
       "capacity": {
+        "cancelUntil": {
+          "field": "session.startsAt",
+        },
+        "closes": {
+          "field": "session.startsAt",
+        },
         "max": "session.capacity",
         "per": "session",
       },
