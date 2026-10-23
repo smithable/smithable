@@ -803,7 +803,11 @@ export function FieldShapeForm({
       ) : (
         <SpecNote label="In the spec:" text={`${field.name}: ${type}`} />
       )}
-      <Submit label="Change field" disabled={type === shorthandOf(field)} />
+      {/* Where it is unique is no part of the shorthand: a change of it alone is a change too. */}
+      <Submit
+        label="Change field"
+        disabled={type === shorthandOf(field) && !uniqueRule(shape.unique, field.unique)}
+      />
     </Form>
   );
 }
