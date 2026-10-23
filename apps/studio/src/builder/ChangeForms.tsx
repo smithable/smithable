@@ -19,8 +19,8 @@ import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Check, Input, Label, Select } from "../ui";
-import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 import { CustomCode, customFile } from "./custom-code";
+import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 
 /**
  * Applies an operation; `confirm` accepts a loss of data the user has already seen, and `file`
