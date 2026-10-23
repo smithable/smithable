@@ -236,7 +236,7 @@ const CHANGES = [
   ["setNavigation", "Menu order"],
   ["addTile", "A dashboard tile"],
   ["removePage", "Remove a page"],
-  ["addSection", "A section on a landing page"],
+  ["addSection", "A section on a page"],
   ["removeSection", "Remove a section"],
   ["addAction", "An action"],
   ["setAction", "Change an action"],
@@ -1569,8 +1569,9 @@ function AddTile({ spec, run }: FormProps) {
   );
 }
 
-/** The kinds of landing section, as the form offers them. */
+/** The kinds of section, as the form offers them (page-sections.md §2). */
 const SECTIONS: [string, string][] = [
+  ["text", "Text: a heading and paragraphs"],
   ["hero", "Hero: a heading, a text and a button"],
   ["features", "Features"],
   ["pricing", "Pricing"],
@@ -1615,19 +1616,22 @@ function OwnComponent({
 }
 
 function AddSection({ spec, run }: FormProps) {
-  const landings = (spec.ir?.pages ?? []).filter((p) => p.pattern.kind === "landing");
+  // Any page may have sections (page-sections.md): a landing page first, as the likeliest.
+  const pages = [...(spec.ir?.pages ?? [])].sort(
+    (a, b) => Number(b.pattern.kind === "landing") - Number(a.pattern.kind === "landing"),
+  );
   const models = spec.ir?.models ?? [];
-  const [page, setPage] = useState(landings[0]?.id ?? "");
-  const [kind, setKind] = useState("contact");
+  const [page, setPage] = useState(pages[0]?.id ?? "");
+  const [kind, setKind] = useState("text");
   const [label, setLabel] = useState("");
   const [model, setModel] = useState(models[0]?.name ?? "");
   const [form, setForm] = useState("");
   const [component, setComponent] = useState("");
   const records = kind === "records";
   const own = kind === "custom";
-  const section = records || own ? identifier(label) : kind;
-  if (!landings.length)
-    return <p className="text-sm text-muted">The app has no landing page yet.</p>;
+  const text = kind === "text";
+  const section = records || own || text ? identifier(label) : kind;
+  if (!pages.length) return <p className="text-sm text-muted">The app has no page yet.</p>;
   return (
     <Form
       onSubmit={() =>
@@ -1637,15 +1641,16 @@ function AddSection({ spec, run }: FormProps) {
           ...(records ? { records: model } : {}),
           ...(own ? { custom: component || pascal(section) } : {}),
           ...(kind === "contact" && form ? { form } : {}),
+          ...(text ? { text: true } : {}),
         })
       }
     >
-      <Label text="Landing page">
+      <Label text="Page">
         <Select
-          aria-label="Landing page"
+          aria-label="Page"
           value={page}
           onChange={(e) => setPage(e.target.value)}
-          options={landings.map((p) => [p.id, humanize(p.id)])}
+          options={pages.map((p) => [p.id, humanize(p.id)])}
         />
       </Label>
       <Label text="Section" hint="Its texts are changed in place in the preview">
@@ -1673,6 +1678,16 @@ function AddSection({ spec, run }: FormProps) {
             onChange={setComponent}
           />
         </>
+      )}
+      {text && (
+        <Label text="Name">
+          <Input
+            aria-label="Section name"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Our story"
+          />
+        </Label>
       )}
       {records && (
         <>

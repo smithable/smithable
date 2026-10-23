@@ -194,6 +194,21 @@ export function Look({
                   run={run}
                 />
               )}
+              {page.pattern.kind !== "landing" && page.pattern.kind !== "onboarding" && (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span>Frame</span>
+                  <Select
+                    aria-label={`Frame of ${humanize(page.id)}`}
+                    value={ux.pages[page.id]?.frame ?? "default"}
+                    onChange={(e) => run("setFrame", { page: page.id, frame: e.target.value })}
+                    options={FRAME_CHOICES}
+                    className="w-44"
+                  />
+                </div>
+              )}
+              {page.pattern.kind !== "landing" && page.sections.length > 1 && (
+                <SectionOrder page={page.id} sections={page.sections} run={run} />
+              )}
               {page.pattern.kind === "landing" && (
                 <LandingLook
                   page={page.id}
@@ -713,6 +728,60 @@ function FormLook({
   );
 }
 
+/** A page's sections in the order written: each moves past its neighbour (page-sections.md §2). */
+function SectionOrder({
+  page,
+  sections,
+  run,
+}: {
+  page: string;
+  sections: { name: string }[];
+  run: Run;
+}) {
+  const title = humanize(page);
+  return (
+    <ul aria-label={`Sections of ${title}`} className="space-y-1 text-sm">
+      {sections.map((section, i) => {
+        const name = humanize(section.name);
+        const move = (other: string | undefined, where: "before" | "after") => {
+          if (other) void run("moveSection", { page, section: section.name, [where]: other });
+        };
+        return (
+          <li key={section.name} className="flex items-center gap-2">
+            <span className="flex-1">{name}</span>
+            <button
+              type="button"
+              aria-label={`Move ${name} up`}
+              disabled={i === 0}
+              onClick={() => move(sections[i - 1]?.name, "before")}
+              className="px-1 disabled:opacity-30"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${name} down`}
+              disabled={i === sections.length - 1}
+              onClick={() => move(sections[i + 1]?.name, "after")}
+              className="px-1 disabled:opacity-30"
+            >
+              ↓
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** A page's frame (page-sections.md §4): as its kind has it, or the one chosen. */
+const FRAME_CHOICES: [string, string][] = [
+  ["default", "As its kind"],
+  ["site", "The site's, with a top menu"],
+  ["app", "The workspace's, with the side menu"],
+  ["none", "None: no menu"],
+];
+
 /** A landing page's own theme and each section's look (look.md §1.4–1.5). */
 function LandingLook({
   page,
@@ -743,38 +812,7 @@ function LandingLook({
           className="w-44"
         />
       </div>
-      {/* The sections show in the order written: each moves past its neighbour. */}
-      <ul aria-label={`Sections of ${title}`} className="space-y-1">
-        {sections.map((section, i) => {
-          const name = humanize(section.name);
-          const move = (other: string | undefined, where: "before" | "after") => {
-            if (other) void run("moveSection", { page, section: section.name, [where]: other });
-          };
-          return (
-            <li key={section.name} className="flex items-center gap-2">
-              <span className="flex-1">{name}</span>
-              <button
-                type="button"
-                aria-label={`Move ${name} up`}
-                disabled={i === 0}
-                onClick={() => move(sections[i - 1]?.name, "before")}
-                className="px-1 disabled:opacity-30"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                aria-label={`Move ${name} down`}
-                disabled={i === sections.length - 1}
-                onClick={() => move(sections[i + 1]?.name, "after")}
-                className="px-1 disabled:opacity-30"
-              >
-                ↓
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <SectionOrder page={page} sections={sections} run={run} />
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
           const label = `${humanize(key)} of ${humanize(section.name)}`;

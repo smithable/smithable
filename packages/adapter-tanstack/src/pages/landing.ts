@@ -30,9 +30,14 @@ import {
   type Texts,
   titleField,
 } from "../shared.js";
-import { LUCIDE } from "./root.js";
+import { LUCIDE, workspaceEntries } from "./root.js";
 
-/** A landing page: its sections in order, with texts from smithable.content.yml or derived ones. */
+/**
+ * A landing page: its sections in order, with texts from smithable.content.yml or derived ones.
+ * A page of sections with no kind (docs/design/page-sections.md) is laid out the same way without
+ * a frame of its own (framed false): the root gives it the page's frame. The parts beside a
+ * kind's own page are a module of their own (framed "parts", partsModule).
+ */
 export function landingRoute(
   page: PageIR,
   sections: LandingSection[],
@@ -40,16 +45,21 @@ export function landingRoute(
   t: Texts,
   auth: AuthIR,
   ux: UxIR,
+  framed: boolean | "parts" = true,
 ): string {
   const text = (name: string) => t.section(page.id, name);
   const component = `${pascal(page.id)}Page`;
-  const imports = importList()
-    .add("@tanstack/react-router", "createFileRoute")
-    .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "guardPage")
-    .add("#/kit/Landing", "LandingLayout")
-    .add("#/kit/words", "w")
-    .add("#/generated/site", "site");
+  const imports = importList();
+  if (framed !== "parts")
+    imports
+      .add("@tanstack/react-router", "createFileRoute")
+      .add("#/generated/pages", "pageAccess")
+      .add("#/kit/access", "guardPage");
+  if (framed === true)
+    imports
+      .add("#/kit/Landing", "LandingLayout")
+      .add("#/kit/words", "w")
+      .add("#/generated/site", "site");
   const routeOf = (id: string | undefined) => ir.pages.find((p) => p.id === id)?.route;
   // Into the app: the first page in the navigation that is not a landing page.
   const appPage = ir.navigation
@@ -62,7 +72,8 @@ export function landingRoute(
     to
       ? `{{ to: ${JSON.stringify(to)}, label: ${expression ? label : JSON.stringify(label)} }}`
       : "{undefined}";
-  const records = sections.filter((s) => s.model);
+  // A kind's own part (its list) is the kind's page, which loads its own records.
+  const records = sections.filter((s) => s.model && !s.own);
   const loaders = [...new Set(records.map((s) => s.model as string))].map((name) => {
     const n = names(modelNamed(ir, name), t);
     imports.add(n.module, n.list);
@@ -298,6 +309,16 @@ export function landingRoute(
         />`,
         ];
       }
+      case "text": {
+        // A heading and paragraphs; nothing until the content file gives it words.
+        if (!own.title && !own.text) return [];
+        imports.add("#/kit/Landing", "TextSection");
+        return [
+          `${open("TextSection")}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
+        />`,
+        ];
+      }
       case "custom": {
         // The project's own component (src/custom/sections/), with the section's texts.
         const c = section.component;
@@ -352,7 +373,7 @@ export function landingRoute(
             faq: "Faq",
           } as Partial<Record<string, string>>
         )[section.kind];
-        // A text section, or a page kind's own part, is the page renderer's (step 2).
+        // A page kind's own part is the kind's page itself.
         if (!kit) return [];
         imports.add("#/kit/Landing", kit);
         const heading = own.title
@@ -388,9 +409,60 @@ export function landingRoute(
         texts: `pages.${page.id}.${footerSection.name}`,
       })}}`
     : "";
-  const header = hasSignIn(auth)
-    ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
-    : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
+  if (framed === "parts") {
+    // Before the kind's own part, and after it.
+    const at = sections.findIndex((s) => s.own);
+    const before = sections.slice(0, Math.max(at, 0)).flatMap(sectionParts);
+    const after = sections.slice(at + 1).flatMap(sectionParts);
+    const all = [...before, ...after];
+    if (all.some((p) => p.includes("pageAccess["))) imports.add("#/generated/pages", "pageAccess");
+    if (needsViewer(all)) imports.add("@tanstack/react-router", "useRouteContext");
+    const viewer = needsViewer(all)
+      ? `  const { viewer } = useRouteContext({ from: "__root__" });\n`
+      : "";
+    const part = (name: string, parts: string[]) => `
+/** The page's parts ${name === "Before" ? "before" : "after"} its own. */
+export function ${name}() {
+${
+  parts.length
+    ? `${parts.some((p) => p.includes("viewer)")) ? viewer : ""}  return (
+    <>
+      ${parts.join("\n      ")}
+    </>
+  );`
+    : "  return null;"
+}
+}
+`;
+    return `${HEADER}${imports.render()}${part("Before", before)}${part("After", after)}`;
+  }
+  // A page of sections without a hero is headed by its title, as other pages are.
+  const headed = !framed && !sections.some((s) => s.kind === "hero");
+  if (headed) imports.add("#/kit/AppShell", "PageHeader").add("#/generated/pages", "pageUi");
+  if (!framed)
+    return `${HEADER}${imports.render()}
+export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
+});
+
+function ${component}() {
+${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+    <div data-kit="sections">${headed ? `\n      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id, 8)} />` : ""}
+      ${parts.join("\n      ")}
+    </div>
+  );
+}
+`;
+  // With pages in the site's frame (page-sections.md §4), one signed in is offered the workspace
+  // when they may open a page of it, as the site frame does; otherwise the app's first page.
+  const sited = ir.pages.some((p) => ux.pages[p.id]?.frame === "site");
+  const workspace = sited && hasSignIn(auth) ? workspaceEntries(ir, ux, auth) : [];
+  if (workspace.length) imports.add("#/kit/access", "allows");
+  const header = workspace.length
+    ? `viewer ? ((page) => (page ? { to: page.to, label: w.workspace } : undefined))(([${workspace.join(", ")}] as const).find((p) => allows(p.access, viewer))) : { to: "/sign-in", label: w.signIn }`
+    : hasSignIn(auth)
+      ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
+      : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
   imports.add("#/generated/app", "app");
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
@@ -399,7 +471,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.lengt
 
 function ${component}() {
 ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName={app.name}${t.logo} link={${header}}${footer} site={site}>
+    <LandingLayout appName={app.name}${t.logo} link={${header}}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );
@@ -412,18 +484,29 @@ ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(au
  * visitors may open, in the spec's order) and the contact details of the landing page's contact
  * section, for the header and the footer.
  */
-export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
+export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
   const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
   const home = landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+  // With the pages in the site frame (page-sections.md §4): one visitors may not open is in the
+  // menu of those who may.
+  const inSite = (p: PageIR) => ux.pages[p.id]?.frame === "site";
   const menu = ir.pages
     .filter(
       (p) =>
-        auth.public.pages.includes(p.id) &&
+        (auth.public.pages.includes(p.id) || inSite(p)) &&
         p.pattern.kind !== "landing" &&
         p.pattern.kind !== "legal" &&
+        !["app", "none"].includes(ux.pages[p.id]?.frame ?? "") &&
         !p.route.includes("$"),
     )
-    .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
+    .map((p) => ({
+      to: p.route,
+      label: code(t.pageTitleOf(p.id)),
+      ...(auth.public.pages.includes(p.id)
+        ? {}
+        : { access: code(`pageAccess[${JSON.stringify(p.id)}]`) }),
+    }));
+  const guarded = menu.some((m) => "access" in m);
   // The privacy page: a footer line, beside the cookie settings.
   const legal = ir.pages
     .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
@@ -438,7 +521,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
       texts?.[k] ? [[k, texts[k] as string]] : [],
     ),
   );
-  return `${HEADER}import type { LandingSite } from "#/kit/Landing";
+  return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? '\nimport { pageAccess } from "#/generated/pages";' : ""}
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = ${literal({
@@ -459,3 +542,6 @@ function kept(where: Condition | undefined): string {
   );
   return conditions.length ? `.filter((row) => ${conditions.join(" && ")})` : "";
 }
+
+/** Whether the parts read the viewer (a shortcut shown only to those who may open its page). */
+const needsViewer = (parts: string[]) => parts.some((p) => p.includes("viewer)"));
