@@ -607,18 +607,16 @@ export function dataModule(
                 : "text";
     return `${f.name}: { kind: "${kind}", column: ${column} }`;
   });
-  const searched = stored.filter(
-    (f) =>
-      f.type.kind === "scalar" &&
-      ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
-  );
+  // A stored text column, searched by words (a computed one is not in the table).
+  const textual = (f?: FieldIR) =>
+    !f?.formula &&
+    f?.type.kind === "scalar" &&
+    ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name);
+  const searched = stored.filter(textual);
   // A name of parts is searched through its references too (record-names.md §2): a word in the
   // text the name reads on a referenced record, one the viewer may read and out of the trash; a
   // reference named by parts in turn by those parts, all decided here (names never loop, core).
   const searchModels = new Set<ModelIR>();
-  const textual = (f?: FieldIR) =>
-    f?.type.kind === "scalar" &&
-    ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name);
   const among = (target: ModelIR, condition: string) => {
     const tt = names(target, t).table;
     if (target !== model) searchModels.add(target);
@@ -626,7 +624,9 @@ export function dataModule(
     return `db.select({ id: ${tt}.id }).from(${tt}).where(and(${condition}, ${data}.readable(viewer)${target.trash ? `, isNull(${tt}.deletedAt)` : ""}))`;
   };
   const nameWords = (m: ModelIR, table: string, top: boolean): string[] => {
+    // The model's own text is in `searched` already.
     if (!composedName(m)) {
+      if (top) return [];
       const title = titleField(m);
       return textual(m.fields.find((x) => x.name === title))
         ? [`contains([${table}.${title}], word)`]

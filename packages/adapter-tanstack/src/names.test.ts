@@ -177,12 +177,21 @@ test("a search finds a record by the words of its name, through its references",
   // A part read through a reference searches that field, out of the trash.
   const venues = validateSpec({
     path: "smithable.yml",
-    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Venue:\n    trash: true\n    fields:\n      name: string!\n      city: string\n  Gig:\n    namedBy: [venue.city, day]\n    fields:\n      venue: Venue!\n      day: date!\npages:\n  gigs:\n    crud: Gig\n",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Venue:\n    trash: true\n    fields:\n      name: string!\n      city: string\n      where: { type: string, formula: 'CONCAT(name, \" \", city)' }\n  Gig:\n    namedBy: [venue.city, venue.where, day]\n    fields:\n      venue: Venue!\n      day: date!\npages:\n  gigs:\n    crud: Gig\n",
   }).ir as SpecIR;
   const gig = generateApp(venues, { smithableVersion: "0.0.0", auth: asked, ux }).find(
     (f) => f.path === "src/generated/gig.server.ts",
   )?.content;
   expect(gig).toContain(
     "...wordsOf(search).map((word) => inArray(schema.gigs.venueId, db.select({ id: schema.venues.id }).from(schema.venues).where(and(contains([schema.venues.city], word), venueData.readable(viewer), isNull(schema.venues.deletedAt))))),",
+  );
+  // A computed part is not in the table, so it is not searched; a venue's own list searches its
+  // stored texts once.
+  expect(gig).not.toContain("schema.venues.where");
+  const venue = generateApp(venues, { smithableVersion: "0.0.0", auth: asked, ux }).find(
+    (f) => f.path === "src/generated/venue.server.ts",
+  )?.content;
+  expect(venue).toContain(
+    "...wordsOf(search).map((word) => contains([schema.venues.name, schema.venues.city], word)),",
   );
 });
