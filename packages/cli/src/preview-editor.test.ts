@@ -248,11 +248,14 @@ test("a theme's CSS from the lab replaces the app's until reload, its fonts at V
   const css = '@import "@fontsource-variable/fraunces";\n:root {\n  --radius: 0;\n}';
   send({ type: "smithable:theme-css", css });
   expect(theme()).toBe(
-    '@import "/node_modules/@fontsource-variable/fraunces/index.css";\n:root {\n  --radius: 0;\n}',
+    '@import "/node_modules/@fontsource-variable/fraunces/index.css";\n:root {\n  --radius: 0;\n}\n[data-part="appearance"] { display: none !important; }',
   );
   // A second one replaces the first, still last in the head.
   send({ type: "smithable:theme-css", css: ":root { --radius: 4px; }" }, "http://127.0.0.1:8410");
-  expect(theme()).toBe(":root { --radius: 4px; }");
+  // The app's own appearance picker is hidden beside the lab's Light and Dark.
+  expect(theme()).toBe(
+    ':root { --radius: 4px; }\n[data-part="appearance"] { display: none !important; }',
+  );
   expect(head.filter((e) => e.id === "sm-theme")).toHaveLength(1);
   expect(head.at(-1)?.id).toBe("sm-theme");
 });

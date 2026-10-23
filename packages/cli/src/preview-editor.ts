@@ -98,10 +98,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
       sheet = document.createElement("style");
       sheet.id = "sm-theme";
     }
+    // The lab's Light and Dark choose the frame's mode: the app's own picker is not offered.
     sheet.textContent = event.data.css.replace(
       /@import "(@fontsource-variable\\/[a-z0-9-]+)";/g,
       '@import "/node_modules/$1/index.css";',
-    );
+    ) + '\\n[data-part="appearance"] { display: none !important; }';
     // Last in the head, so its variables win over the app's theme.css.
     document.head.append(sheet);
     // A frame shown in one mode (the theme lab's light and dark frames): every rule for the dark
