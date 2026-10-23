@@ -16,8 +16,4 @@ public:
   pages: [home, privacy]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 defaultRole: staff
-api:
-  models: [Component, Incident]
-  actions: [resolve]
-  assistants: true
 admins: [johan@smithable.ai]

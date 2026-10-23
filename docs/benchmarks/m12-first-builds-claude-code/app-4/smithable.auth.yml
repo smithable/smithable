@@ -4,10 +4,14 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: Lends their tools and borrows from neighbors.
+    pages: all
+    create: all
 assistant:
   for: signed-in
 public:
   pages: [home, tools, privacy]
   read: [Tool]
+defaultRole: member
 admins: [johan@smithable.ai]

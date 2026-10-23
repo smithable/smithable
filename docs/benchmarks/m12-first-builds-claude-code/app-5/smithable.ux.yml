@@ -4,11 +4,9 @@ pages:
     table:
       columns: [name, category, inStock, unit, reorderLevel, supplier, lastCounted]
       sort: name
-    icon: package
   suppliers:
     table:
       columns: [name, contactName, email, phone]
       sort: name
-    icon: truck
 theme:
   preset: cafe

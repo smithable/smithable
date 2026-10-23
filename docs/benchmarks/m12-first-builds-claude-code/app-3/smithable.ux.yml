@@ -3,9 +3,6 @@ pages:
   payments:
     table:
       sort: -paidOn
-  invoices:
-    table:
-      columns: [number, client, issuedOn, dueOn, status, total, balance]
 theme:
   preset: modern
 tones:

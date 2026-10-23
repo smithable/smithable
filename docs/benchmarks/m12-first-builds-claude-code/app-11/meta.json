@@ -4,6 +4,6 @@
   "wordStarter": "status",
   "questions": [
     "Who should be able to see the status page without signing in?",
-    "How should the API be split into parts that each show their own status?"
+    "How should the API be split into components on the page?"
   ]
 }

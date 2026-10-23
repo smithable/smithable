@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
-  name: Club Site
-  description: A football club's site with its teams, players, fixtures and results.
-  timezone: Europe/Mariehamn
+  name: Riverside FC
+  description: The club's site with its teams, players, fixtures and results.
+  timezone: Europe/London
 models:
   Team:
     fields:
@@ -10,7 +10,7 @@ models:
       ageGroup: string
       coach: string
       photo: picture
-      about: text
+      description: text
       players: Player[]
       matches: Match[]
   Player:
@@ -30,7 +30,7 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      ground: string
+      location: string
       competition: string
       status: scheduled | played | postponed | cancelled
       goalsFor:
@@ -40,31 +40,33 @@ models:
         type: int
         min: 0
       report: text
+    namedBy: [team, opponent, kickoff]
 pages:
   matches:
     crud: Match
-    filters: [team, venue, status]
     search: [opponent, competition]
+    filters: [team, status, venue, kickoff]
     actions: [recordResult, postpone]
   teams:
     crud: Team
   players:
     crud: Player
-    filters: [team, position]
     search: [name]
+    filters: [team, position]
   home:
     route: /
     landing:
       hero:
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
       results:
         records: Match
+        view: table
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
       footer:
   privacy:
@@ -79,11 +81,11 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match that has been played.
+    intent: Enter the final score of a match.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a scheduled match as postponed.
+    intent: Mark a match as postponed.

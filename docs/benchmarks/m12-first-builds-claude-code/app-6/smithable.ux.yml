@@ -1,22 +1,18 @@
 smithableUx: 0.1
-pages:
-  jobs:
-    table:
-      columns: [title, employer, trade, jobType, location, closesOn, status]
-    icon: briefcase
-  myApplications:
-    icon: file
-  applications:
-    icon: clipboard
 tones:
   Job.status:
     open: success
-    closed: warning
+    filled: warning
   Application.status:
-    shortlisted: warning
     accepted: success
-    declined: danger
+    rejected: danger
+    reviewing: warning
+pages:
+  jobs:
+    icon: briefcase
+  applications:
+    icon: clipboard
+  myApplications:
+    icon: file
 theme:
   preset: corporate
-  brand:
-    primary: "#1d4ed8"

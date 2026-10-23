@@ -4,7 +4,7 @@
   "wordStarter": "invoicing",
   "questions": [
     "Who opens tickets?",
-    "Can people who opened a ticket follow it and reply?",
-    "Besides tickets and their messages, what else should be tracked?"
+    "Can the people who reported an issue follow their ticket and reply to it?",
+    "Besides priority and assignee, what should a ticket hold?"
   ]
 }

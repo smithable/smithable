@@ -2,24 +2,19 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Welcome to the club
-      subtitle: Our teams, our players, every fixture and every result in one place.
-      button: See fixtures and results
+      title: Riverside FC
+      subtitle: Our teams, our players, every fixture and result.
+      button: See the fixtures
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    fixtures:
-      title: Upcoming fixtures
+    upcoming:
+      title: Upcoming matches
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
-actions:
-  recordResult:
-    label: Record result
-  postpone:
-    label: Postpone
 logo:
   src: images/logo.webp
   alt: A football

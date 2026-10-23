@@ -1,16 +1,12 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: "Tickets for the IT team: their priorities and who handles them."
-  currency: EUR
-  timezone: Europe/Stockholm
+  description: "Tickets for the IT team: their priorities, who handles them and the notes on each."
 models:
-  SupportCase:
+  Ticket:
     fields:
       subject: string!
-      customerEmail:
-        type: email!
-        locked: true
+      requesterEmail: email
       status: open | inProgress | closed | reopened
       priority:
         type: int!
@@ -32,11 +28,11 @@ models:
         by: app
         default: ME()
       attachments: files
-      supportCase: SupportCase!
+      ticket: Ticket!
 pages:
   tickets:
-    crud: SupportCase
-    search: [subject, customerEmail]
+    crud: Ticket
+    search: [subject, requesterEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
     actions: [assignToMe, assignTo, startWork, close, reopen]
@@ -44,31 +40,31 @@ pages:
     users: manage
 actions:
   assignToMe:
-    on: SupportCase
+    on: Ticket
     set:
       assignee: ME()
     intent: "Take the ticket: you become its assignee."
   assignTo:
-    on: SupportCase
+    on: Ticket
     set:
       assignee:
     intent: Give the ticket to someone on the team.
   startWork:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, reopened]
     set:
       status: inProgress
     intent: Someone is working on the ticket now; it needs an assignee.
   close:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, inProgress, reopened]
     set:
       status: closed
-    intent: The issue is solved.
+    intent: The problem is solved.
   reopen:
-    on: SupportCase
+    on: Ticket
     when:
       status: closed
     set:

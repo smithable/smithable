@@ -2,10 +2,17 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Ideas worth the trip
+      subtitle: Browse the talks, meet the speakers and save your seat at the sessions you don't want to miss.
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
+    lineup:
+      title: Speakers
+    callToAction:
+      title: Seats are limited
+      text: Sign in and register for the talks you want to attend.
 logo:
   src: images/logo.webp
   alt: A ticket

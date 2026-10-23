@@ -1,9 +1,8 @@
 smithable: 0.1
 app:
-  name: Ledgerly
-  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
+  name: Billfold
+  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments you receive."
   currency: EUR
-  timezone: Europe/Stockholm
 models:
   Client:
     fields:
@@ -26,8 +25,7 @@ models:
       amount: money!
       paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
-      reference: string
-      note: text
+      note: string
       invoice: Invoice!
   Invoice:
     fields:
@@ -49,6 +47,11 @@ models:
         type: money
         formula: total - paidAmount
 pages:
+  clients:
+    crud: Client
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
   overview:
     dashboard:
       received:
@@ -62,19 +65,9 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
       latest:
         list: Invoice
         limit: 5
-  clients:
-    crud: Client
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
-  invoice-lines:
-    crud: InvoiceLine
   home:
     route: /
     landing:
@@ -83,14 +76,14 @@ pages:
       features:
       faq:
       callToAction:
-        button: overview
+        button: invoices
   privacy:
     route: /privacy
     legal: privacy
   invoices:
     crud: Invoice
     filters: [client, status]
-    actions: [markSent, markPaid]
+    actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
     on: Invoice
@@ -105,12 +98,21 @@ actions:
       status: [sent, overdue]
     set:
       status: paid
-    add:
-      Payment:
-        amount:
-        paidOn: TODAY()
-        method:
-    intent: The client paid the invoice; the payment is recorded with it.
+    intent: The client paid the invoice in full.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+timers:
+  markOverdue:
+    on: Invoice
+    at: 1 day after dueOn
+    where:
+      status: sent
+    run: markOverdue
 outgoing:
   invoiceSent:
     when: markSent

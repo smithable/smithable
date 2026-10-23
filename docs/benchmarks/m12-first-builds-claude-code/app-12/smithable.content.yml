@@ -1,23 +1,5 @@
 smithableContent: 0.1
-models:
-  Component:
-    label: Service
-    pluralLabel: Services
-  Incident:
-    fields:
-      component:
-        label: Service
-    label: Outage
-    pluralLabel: Outages
-  IncidentUpdate:
-    fields:
-      incident:
-        label: Outage
 pages:
-  components:
-    title: Services
-  incidents:
-    title: Outages
   home:
     hero:
       image:
