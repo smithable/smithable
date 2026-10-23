@@ -43,6 +43,12 @@ interface ModelFormProps<S extends z.ZodType> {
   trash?: boolean;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
+  /**
+   * Mails a change of these fields (none: of any field) sends to the records of one of the
+   * record's lists (a session moved: each booking's member): saving such a change asks first,
+   * saying what changes and how many are told.
+   */
+  tells?: { fields: string[]; list: string; label: string }[];
   /** Fields shown with their preset value but not changed here, e.g. the invoice a new line is on. */
   fixed?: string[];
   /** These fields first, in this order; the others follow. */
@@ -67,6 +73,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     trash,
     readOnly,
     fixed,
+    tells,
   } = props;
   const all = presented(props.ui, props);
   // A field the app fills is never in the form, only on the record's page (record-rules.md §1);
@@ -96,6 +103,14 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const [inUse, setInUse] = useState<InUse>();
   const [busy, setBusy] = useState(false);
   const confirmDelete = useRef<HTMLDialogElement>(null);
+  // A change that tells people, waiting for the person to confirm it (A 134).
+  const confirmTell = useRef<HTMLDialogElement>(null);
+  const [telling, setTelling] = useState<{
+    values: z.output<S>;
+    changes: { label: string; from: string; to: string }[];
+    count: number;
+    label: string;
+  }>();
   // Ids unique to this form: a page may show the same form twice (a row's action dialog in the
   // phone list and in the table), and a label must reach its own field.
   const formId = useId();
@@ -141,17 +156,56 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     const wrong = ui.fields.filter((f) => messages[f.name]).map((f) => f.name);
     setSummary(wrong);
     if (ok && result.success) {
-      leaving.current = true;
-      const saved = await run(() => onSubmit(result.data));
-      // A form that stays after its save (a dialog's, a page that does not move on) guards again,
-      // from what was saved.
-      leaving.current = false;
-      if (saved) setStart(inputs);
+      // A change that tells people asks first (A 134).
+      const tell = initial && tellsOf(result.data as Record<string, unknown>);
+      if (tell) {
+        setTelling({ values: result.data, ...tell });
+        confirmTell.current?.showModal();
+      } else await save(result.data);
       return;
     }
     // The first field to fix gets the focus; the summary over the form is read out.
     const first = wrong[0];
     if (first) document.getElementById(`${formId}field-${first}`)?.focus();
+  }
+
+  async function save(values: z.output<S>) {
+    leaving.current = true;
+    const saved = await run(() => onSubmit(values));
+    // A form that stays after its save (a dialog's, a page that does not move on) guards again,
+    // from what was saved.
+    leaving.current = false;
+    if (saved) setStart(inputs);
+  }
+
+  /** What a save would tell people: the fields it changes and how many records hear of it. */
+  function tellsOf(values: Record<string, unknown>) {
+    const same = (a: unknown, b: unknown) =>
+      a instanceof Date || b instanceof Date
+        ? new Date(a as Date).getTime() === new Date(b as Date).getTime()
+        : (a ?? null) === (b ?? null);
+    for (const tell of tells ?? []) {
+      // The list as the page loaded it: what this person may read of it, which for a role that
+      // may change the record but not read all its records is fewer than are mailed.
+      const count = (initial?.[tell.list] as unknown[] | undefined)?.length ?? 0;
+      // No fields named: a change of any field mails.
+      const changed = ui.fields.filter(
+        (f) =>
+          (!tell.fields.length || tell.fields.includes(f.name)) &&
+          !same(values[f.name], initial?.[f.name]),
+      );
+      if (count && changed.length)
+        return {
+          count,
+          label: tell.label,
+          changes: changed.map((f) => ({
+            label: f.label,
+            from: formatValue(f, initial?.[f.name], app),
+            to: formatValue(f, values[f.name], app),
+          })),
+        };
+    }
+    return undefined;
   }
 
   /**
@@ -478,6 +532,45 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               }}
               onClose={() => setInUse(undefined)}
             />
+          )}
+          {tells && (
+            <dialog
+              ref={confirmTell}
+              aria-labelledby={`${formId}tell`}
+              className="m-auto w-[calc(100%-2.5rem)] max-w-md rounded-lg border bg-card p-card text-card-foreground backdrop:bg-black/50"
+            >
+              <h2 id={`${formId}tell`} className="text-lg font-semibold">
+                {w.saveTheChange}
+              </h2>
+              <ul className="mt-2 space-y-1">
+                {telling?.changes.map((c) => (
+                  <li key={c.label}>
+                    {c.label}: {c.from} → {c.to}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-muted-foreground">
+                {telling && w.eachIsTold(telling.count, telling.label)}
+              </p>
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => confirmTell.current?.close()}
+                >
+                  {w.cancel}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    confirmTell.current?.close();
+                    if (telling) void save(telling.values);
+                  }}
+                >
+                  {submitLabel}
+                </Button>
+              </div>
+            </dialog>
           )}
           {onDelete && !trash && (
             // Opening it focuses Cancel, the first button; Escape closes it.

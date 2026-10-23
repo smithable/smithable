@@ -283,6 +283,11 @@ export const w = {
   role: "Role",
   rulesStillAnswer: "Questions the rules read are still answered.",
   saveChanges: "Save changes",
+  /** The question before saving a change that mails people (a session moved). */
+  saveTheChange: "Save the change?",
+  /** Who a change tells: one mail per record of the list, and how many ("each of its bookings (3)"). */
+  eachIsTold: (n: number, label: string) =>
+    `The change is mailed to each of its ${label.toLowerCase()} (${n}).`,
   saved: "Saved",
   saving: "Saving…",
   search: "Search…",

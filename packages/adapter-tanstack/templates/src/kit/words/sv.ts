@@ -272,6 +272,9 @@ export const w = {
   role: "Roll",
   rulesStillAnswer: "Frågor som reglerna kan läsa besvaras fortfarande.",
   saveChanges: "Spara ändringar",
+  saveTheChange: "Spara ändringen?",
+  eachIsTold: (n: number, label: string) =>
+    `Ändringen mejlas till var och en av dess ${label.toLowerCase()} (${n}).`,
   saved: "Sparade",
   saving: "Sparar…",
   search: "Sök…",

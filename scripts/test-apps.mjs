@@ -688,6 +688,26 @@ async function outgoingFlow(dir, base) {
 
     // The studio moves it to another session: the member is told, the admin (who changed it) not.
     await signInAs(page, base, "admin");
+    // The studio moves the booked session to another time: the form asks first, saying what
+    // changes and who is told (A 134); then each booking's member gets a mail.
+    await open(page, `${base}/sessions/${session}`);
+    // Its label carries the required mark ("Starts at *"), so not exact.
+    const startsAt = page.getByLabel(/^Starts at/);
+    const was = await startsAt.inputValue();
+    const later = new Date(`${was}:00Z`);
+    later.setUTCDate(later.getUTCDate() + 1);
+    await startsAt.fill(later.toISOString().slice(0, 16));
+    count = mails().length;
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
+    const ask = page.getByRole("dialog", { name: "Save the change?" });
+    await ask.getByText(/^Starts at: .+ → .+$/).waitFor({ timeout: 10000 * P });
+    await ask
+      .getByText("The change is mailed to each of its bookings (1).", { exact: true })
+      .waitFor();
+    await ask.getByRole("button", { name: "Save changes", exact: true }).click();
+    const moved = await next(count, "the move");
+    if (!/^To: dev-member@/m.test(moved) || !/^Subject: Your class has a new time$/m.test(moved))
+      throw new Error(`the move's mail: ${moved.slice(0, 600)}`);
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
     const field = page.getByLabel(/^Session/);
@@ -736,7 +756,7 @@ async function outgoingFlow(dir, base) {
     if (lines.length !== 3 || !lines.every((l) => l.details.includes("dev-member@")))
       throw new Error(`Activity: ${JSON.stringify(lines)}`);
     console.log(
-      "  ✓ outgoing mail: a booking mails the member a confirmation; the studio's change and deletion mail the member (the deleted booking as it was), never the admin who made them; each is in Activity",
+      "  ✓ outgoing mail: a booking mails the member a confirmation; moving the booked session asks first (what changes, who is told) and mails the member; the studio's change and deletion mail the member (the deleted booking as it was), never the admin who made them; each is in Activity",
     );
   } catch (error) {
     console.log(
