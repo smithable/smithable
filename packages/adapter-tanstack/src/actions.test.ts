@@ -13,6 +13,7 @@ const generate = (
   action: string,
   content = emptyContent(),
   status = "status: open | done",
+  authMore = "",
 ) => {
   const ir = validateSpec({
     path: "smithable.yml",
@@ -32,7 +33,7 @@ pages:
   const auth = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+      text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n${authMore}`,
     },
     ir,
   ).auth as AuthIR;
@@ -153,6 +154,18 @@ test("an action's condition on a reference reads the stored key and the viewer: 
   );
   expect(take("src/generated/actions/assign-to-me.server.ts")).toContain("Fits(row, viewer)");
   expect(take("src/routes/tasks/$id.tsx")).toContain("Fits(row, viewer)");
+  // Ask proposing the action checks the condition with the viewer too.
+  const asked = generate(
+    "assignToMe",
+    "{ on: Task, when: { assignee: not ME() }, set: { assignee: ME() } }",
+    emptyContent(),
+    "assignee: User",
+    "assistant: { for: signed-in, may: change }\n",
+  )("src/generated/ask.server.ts");
+  expect(asked).toContain(
+    "fits: assignToMeFits as (row: never, viewer: { id: string } | null) => boolean",
+  );
+  expect(asked).toContain("run.fits(row as never, viewer)");
   const release = generate(
     "release",
     "{ on: Task, when: { assignee: ME() }, set: { assignee: } }",
