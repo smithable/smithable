@@ -13,6 +13,7 @@ pages:
   # The members' pages in the site frame, for staff too (page-sections.md §4).
   schedule: { frame: site }
   my-bookings: { frame: site }
+  about: { frame: site }
   sessions:
     filters: { shown: [startsAt, classType] }   # the instructor behind "More filters"
     table:
