@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Neighbor Tools
-  description: A tool library where neighbors lend each other tools.
+  name: Shed Share
+  description: Neighbors lend each other tools instead of each buying their own.
   currency: EUR
 models:
   Tool:
@@ -9,28 +9,18 @@ models:
       title: string!
       photos: pictures!
       description: text!
-      category: garden | power | hand | ladders | cleaning | other
+      category: power | garden | hand | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
     review: [photos]
-  Loan:
-    fields:
-      tool: Tool!
-      borrower: User!
-      lentOn: date!
-      dueOn: date
-      status: out | returned
-      returnedOn:
-        type: date
-        by: app
-      note: text
 pages:
   tools:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
+    sortable: [title, createdAt]
     favorites: true
     contact: owner
   myTools:
@@ -39,31 +29,32 @@ pages:
   saved:
     crud: Tool
     favorites: only
-  loans:
-    crud: Loan
-    filters: [status, tool]
-    actions: [markReturned]
   review:
     review: all
   home:
     route: /welcome
     landing:
       hero:
-      footer:
+        shortcuts: [tools]
       latest:
         records: Tool
-        where:
-          available: true
+      footer:
   privacy:
     route: /privacy
     legal: privacy
 actions:
-  markReturned:
-    on: Loan
+  lendOut:
+    on: Tool
     when:
-      status: out
+      available: true
     set:
-      status: returned
-      returnedOn: TODAY()
-    intent: Record that the borrowed tool has come back.
-navigation: [tools, myTools, loans, saved, review]
+      available: false
+    intent: Mark a tool as lent to a neighbor.
+  markReturned:
+    on: Tool
+    when:
+      available: false
+    set:
+      available: true
+    intent: Mark a lent tool as back and available again.
+navigation: [tools, myTools, saved, review]

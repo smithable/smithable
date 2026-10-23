@@ -2,10 +2,26 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Borrow the drill, skip the store
+      subtitle: Shed Share lets neighbors lend each other tools. Find what you need nearby, or put your own idle tools to good use.
+      button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
+    latest:
+      title: Recently shared tools
+  tools:
+    title: Tools
+  myTools:
+    title: My tools
+  saved:
+    title: Saved
+actions:
+  lendOut:
+    label: Lend out
+  markReturned:
+    label: Mark returned
 logo:
   src: images/logo.webp
   alt: A toolbox
