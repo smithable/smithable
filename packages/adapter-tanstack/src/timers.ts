@@ -55,6 +55,7 @@ export function timersModule(ir: SpecIR, t: Texts): string {
   const action = (name: string | undefined) => ir.actions.find((a) => a.name === name);
   let events = false;
   let zoned = false;
+  let aliased = false;
   const fns = ir.timers.map((timer) => {
     const model = timer.on ? modelNamed(ir, timer.on) : undefined;
     const run = action(timer.run);
@@ -64,9 +65,13 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     const forRecord = model ? recordRun(timer, model, run, told, t, use) : "";
     if (timer.schedule.kind === "record") {
       const m = model as ModelIR;
-      const { query, instant: at, date } = recordQuery(timer, m, ir, drizzle);
       const offset = timer.schedule.offset;
       const sign = offset?.direction === "before" ? "-" : "+";
+      // The record's time, shifted by its offset, is the due time: the query reads only those due
+      // in the window (from the earlier of `from` and `late` to now).
+      const shiftMs = offset ? (sign === "-" ? -1 : 1) * offset.amount * UNIT_MS[offset.unit] : 0;
+      const { query, instant: at, date, prelude } = recordQuery(timer, m, ir, drizzle, shiftMs);
+      if (prelude) aliased = true;
       // Days before or after a date are calendar days: the day moved, then its midnight in the
       // app's zone, so a clock change between them moves nothing.
       const days = date && offset?.unit === "day";
@@ -78,7 +83,7 @@ export function timersModule(ir: SpecIR, t: Texts): string {
       return `
 /** ${timer.name}: for each record whose time has come, in the window since \`from\`. */
 const ${camel(timer.name)}Timer: RecordTimer = async (now, from, late) => {
-  let missed = 0;
+  let missed = 0;${prelude}
   for (const row of ${query}) {
     if (row.at == null) continue;
     const due = ${instant}${shift};
@@ -140,7 +145,7 @@ const ${camel(timer.name)}Timer: ClockTimer = {
   const lines = [...imports]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([module, what]) => `import { ${[...what].sort().join(", ")} } from "${module}";`);
-  return `${HEADER}import { ${[...drizzle].sort().join(", ")} } from "drizzle-orm";
+  return `${HEADER}import { ${[...drizzle].sort().join(", ")} } from "drizzle-orm";${aliased ? '\nimport { alias } from "drizzle-orm/sqlite-core";' : ""}
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import type { Viewer } from "#/kit/access";
@@ -298,17 +303,33 @@ function recordQuery(
   model: ModelIR,
   ir: SpecIR,
   drizzle: Set<string>,
-): { query: string; instant: string; date: boolean } {
+  shiftMs: number,
+): { query: string; instant: string; date: boolean; prelude: string } {
   const schedule = timer.schedule as Extract<TimerIR["schedule"], { kind: "record" }>;
   const table = tableRef(model);
   const [first, second] = schedule.path;
   const ref = second ? (model.fields.find((f) => f.name === first) as FieldIR) : undefined;
   const target = ref?.type.kind === "relation" ? modelNamed(ir, ref.type.model) : model;
   const field = target.fields.find((f) => f.name === (second ?? first)) as FieldIR;
-  const targetTable = tableRef(target);
+  // A reference to a record of the same model (a parent's date) joins the table to itself: under
+  // another name.
+  const self = Boolean(ref) && target === model;
+  const prelude = self ? `\n  const referenced = alias(${table}, "referenced");` : "";
+  const targetTable = self ? "referenced" : tableRef(target);
+  const date = field.type.kind === "scalar" && field.type.name === "date";
+  const column = `${targetTable}.${dataKey(field)}`;
+  // A date-time is read only where it falls due in the window: due = its time plus the offset.
+  const bounds = date
+    ? []
+    : [
+        `gt(${column}, new Date(Math.min(from, late) - (${shiftMs})))`,
+        `lte(${column}, new Date(now.getTime() - (${shiftMs})))`,
+      ];
+  if (bounds.length) drizzle.add("gt").add("lte");
   const conditions = [
     ...(model.trash ? [`isNull(${table}.deletedAt)`] : []),
-    ...(target !== model && target.trash ? [`isNull(${targetTable}.deletedAt)`] : []),
+    ...(ref && target.trash ? [`isNull(${targetTable}.deletedAt)`] : []),
+    ...bounds,
     ...conditionCode(timer.where, model, table, drizzle),
   ];
   if (conditions.some((c) => c.startsWith("isNull"))) drizzle.add("isNull");
@@ -318,12 +339,12 @@ function recordQuery(
   const where = conditions.length
     ? `.where(${conditions.length > 1 ? `and(${conditions.join(", ")})` : conditions[0]})`
     : "";
-  const date = field.type.kind === "scalar" && field.type.name === "date";
   return {
-    query: `db.select({ id: ${table}.id, at: ${targetTable}.${dataKey(field)} }).from(${table})${join}${where}.all()`,
+    query: `db.select({ id: ${table}.id, at: ${column} }).from(${table})${join}${where}.all()`,
     // A date is its day's start in the app's zone.
     instant: date ? "instantOf(`${row.at}T00:00`, app.timeZone).getTime()" : "row.at.getTime()",
     date,
+    prelude,
   };
 }
 

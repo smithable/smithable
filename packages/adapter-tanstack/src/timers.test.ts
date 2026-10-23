@@ -62,7 +62,7 @@ outgoing:
   const timers = file("src/generated/timers.server.ts");
   // A date one reference away, with its offset, among the records that fit.
   expect(timers).toContain(
-    'db.select({ id: schema.bookings.id, at: schema.sessions.startsAt }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(eq(schema.bookings.status, "confirmed")).all()',
+    'db.select({ id: schema.bookings.id, at: schema.sessions.startsAt }).from(schema.bookings).innerJoin(schema.sessions, eq(schema.bookings.sessionId, schema.sessions.id)).where(and(gt(schema.sessions.startsAt, new Date(Math.min(from, late) - (-86400000))), lte(schema.sessions.startsAt, new Date(now.getTime() - (-86400000))), eq(schema.bookings.status, "confirmed"))).all()',
   );
   expect(timers).toContain("const due = row.at.getTime() - 86400000;");
   // The event for outgoing, in the record's own transaction.
@@ -106,4 +106,34 @@ test("an app without timers has no tick, no table and no clock", () => {
   const files = generateApp(ir, { smithableVersion: "0.0.0", auth });
   expect(files.some((f) => f.path.includes("timers") || f.path === "src/kit/clock.ts")).toBe(false);
   expect(files.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("timer_runs");
+});
+
+test("a date on a parent record of the same model is read through another name for the table", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Tasks }
+models:
+  Task:
+    fields:
+      title: string
+      dueAt: datetime
+      parent: Task
+timers:
+  nudge:
+    on: Task
+    at: 1 hour before parent.dueAt
+`,
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    { path: "smithable.auth.yml", text: "smithableAuth: 0.1\nsignIn: none\n" },
+    ir,
+  ).auth as AuthIR;
+  const timers =
+    generateApp(ir, { smithableVersion: "0.0.0", auth }).find(
+      (f) => f.path === "src/generated/timers.server.ts",
+    )?.content ?? "";
+  expect(timers).toContain('import { alias } from "drizzle-orm/sqlite-core";');
+  expect(timers).toContain('const referenced = alias(schema.tasks, "referenced");');
+  expect(timers).toContain(".innerJoin(referenced, eq(schema.tasks.parentId, referenced.id))");
 });
