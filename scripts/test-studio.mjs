@@ -2114,7 +2114,7 @@ try {
     },
   );
   await step(
-    "Behavior adds a kind of record and a field, renames the field and a page and changes the field's type, through their operations",
+    "Behavior adds a kind of record and a field, renames the field and a page and changes the field's type and where it is unique, through their operations",
     async () => {
       await sub("Behavior");
       const app = page.getByRole("region", { name: "What the app does" });
@@ -2175,6 +2175,19 @@ try {
       // Another type may lose values, so it is confirmed first.
       await page.getByRole("button", { name: "Apply anyway" }).click();
       await waitFile("homepage: url");
+      // Where it is unique (uniqueness.md): a scope is the field's own key, through setFieldRules,
+      // and back to not unique.
+      await homepage
+        .getByLabel("Unique", { exact: true })
+        .selectOption({ label: "Unique in the whole app" });
+      await homepage.getByRole("button", { name: "Change field" }).click();
+      await waitFile("unique: app");
+      await homepage.getByLabel("Unique", { exact: true }).selectOption({ label: "Not unique" });
+      await homepage.getByRole("button", { name: "Change field" }).click();
+      for (let i = 0; i < 60 * P && readFileSync(file, "utf8").includes("unique: app"); i++)
+        await new Promise((r) => setTimeout(r, 1000));
+      if (readFileSync(file, "utf8").includes("unique: app"))
+        throw new Error("Not unique did not take the scope away");
       // A page is renamed through renamePage, its references following; and back again.
       // The pages' own entries, not a customer's list of orders.
       const pages = await area("pages");

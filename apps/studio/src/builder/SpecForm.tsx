@@ -77,6 +77,7 @@ const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path:
           ...(renames.length ? { renames } : {}),
         })
       }
+      rule={(unique) => run("setFieldRules", { model: String(model), field: String(name), unique })}
     />
   );
 };
