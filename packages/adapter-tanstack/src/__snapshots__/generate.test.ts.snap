@@ -17169,10 +17169,12 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { bookingName } from "./booking.name";
 import { outgoing } from "#/generated/outgoing.server";
+import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
+import { classTypeData } from "./class-type.server";
 import { type BookingSettable } from "./booking";
 import "./timers.server";
 
@@ -17469,7 +17471,7 @@ export const bookingData = {
       bookingData.readable(viewer),
       whereOf(FILTERABLE, where, viewer ? eq(schema.bookings.attendeeId, viewer.id) : undefined, viewer?.id, {}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map(() => sql\`false\`),
+      ...wordsOf(search).map((word) => inArray(schema.bookings.sessionId, db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer)))), sessionData.readable(viewer))))),
     );
   },
 
@@ -20627,6 +20629,7 @@ import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { sortRows } from "#/kit/model";
 import { sessionName } from "./session.name";
+import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
@@ -20972,7 +20975,7 @@ export const sessionData = {
       sessionData.readable(viewer),
       whereOf(FILTERABLE, where, viewer ? eq(schema.sessions.ownerId, viewer.id) : undefined, viewer?.id, {classType: { find: (text: string) => classTypeData.named(viewer, text), titles: () => classTypeData.titles(viewer) }, instructor: { find: (text: string) => instructorData.named(viewer, text), titles: () => instructorData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map(() => sql\`false\`),
+      ...wordsOf(search).map((word) => inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer))))),
     );
   },
 
@@ -21113,7 +21116,7 @@ export const sessionData = {
     // Through shownRefs: a part the viewer may not read names nothing here either.
     const rows = sessionData.shownRefs(viewer, await db.query.sessions.findMany({ where: sessionData.readable(viewer), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } }));
     return sortRows(
-      rows.map((row) => ({ value: row.id, label: sessionName(row), first: row.classType?.name ?? null })),
+      rows.map((row) => ({ value: row.id, label: sessionName(row), first: row.classType ? (row.classType.name ?? null) : null })),
       "first",
     ).map(({ value, label }) => ({ value, label }));
   },
@@ -26198,7 +26201,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/ask.server.ts": "79ddc670 generated",
   "src/generated/booking.name.ts": "8aaa37e0 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "85ecf78d generated",
+  "src/generated/booking.server.ts": "ae779adb generated",
   "src/generated/booking.ts": "ed726ce3 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "ee5b40ec generated",
@@ -26223,7 +26226,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "c4a953cd generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "d72b6b23 generated",
+  "src/generated/session.server.ts": "c0760840 generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "01c0e4f8 generated",

@@ -607,10 +607,55 @@ export function dataModule(
                 : "text";
     return `${f.name}: { kind: "${kind}", column: ${column} }`;
   });
-  const searched = stored.filter(
-    (f) =>
-      f.type.kind === "scalar" &&
-      ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
+  // A stored text column, searched by words (a computed one is not in the table).
+  const textual = (f?: FieldIR) =>
+    !f?.formula &&
+    f?.type.kind === "scalar" &&
+    ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name);
+  const searched = stored.filter(textual);
+  // A name of parts is searched through its references too (record-names.md §2): a word in the
+  // text the name reads on a referenced record, one the viewer may read and out of the trash; a
+  // reference named by parts in turn by those parts, all decided here (names never loop, core).
+  const searchModels = new Set<ModelIR>();
+  const among = (target: ModelIR, condition: string) => {
+    const tt = names(target, t).table;
+    if (target !== model) searchModels.add(target);
+    const data = target === model ? self : names(target, t).data;
+    return `db.select({ id: ${tt}.id }).from(${tt}).where(and(${condition}, ${data}.readable(viewer)${target.trash ? `, isNull(${tt}.deletedAt)` : ""}))`;
+  };
+  const nameWords = (m: ModelIR, table: string, top: boolean): string[] => {
+    // The model's own text is in `searched` already.
+    if (!composedName(m)) {
+      if (top) return [];
+      const title = titleField(m);
+      return textual(m.fields.find((x) => x.name === title))
+        ? [`contains([${table}.${title}], word)`]
+        : [];
+    }
+    return (m.nameParts ?? []).flatMap((part) => {
+      const ref = m.fields.find((x) => x.name === (part.through ?? part.field));
+      if (ref?.type.kind !== "relation")
+        return !top && textual(ref) ? [`contains([${table}.${part.field}], word)`] : [];
+      if (ref.type.model === USER_MODEL) return [];
+      const target = modelNamed(ir, ref.type.model);
+      const tt = names(target, t).table;
+      const inner = part.through
+        ? textual(target.fields.find((x) => x.name === part.field))
+          ? [`contains([${tt}.${part.field}], word)`]
+          : []
+        : nameWords(target, tt, false);
+      if (!inner.length) return [];
+      return [
+        `inArray(${table}.${dataKey(ref)}, ${among(target, inner.length === 1 ? (inner[0] as string) : `or(${inner.join(", ")})`)})`,
+      ];
+    });
+  };
+  const nameSearch = paged ? nameWords(model, n.table, true) : [];
+  const wordCode = wordFits(
+    searched.length
+      ? [`contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)`]
+      : [],
+    nameSearch,
   );
   // A reference given by its record's title, resolved among the records the viewer may read
   // (where that model is read a page at a time too, so it has named()).
@@ -643,7 +688,7 @@ export function dataModule(
   // lists the listed records the viewer may read, with the titles of what they refer to.
   const withReferences = (m: ModelIR, except?: string) => [
     ...references(m)
-      .filter((f) => f.type.model !== except || namedThrough(m, f.name))
+      .filter((f) => f.type.model !== except || namedThrough(ir, ux, m, f.name))
       .map((f) => {
         const target = modelNamed(ir, f.type.model);
         // With what the lines under m's names read through this reference (record-names.md §3).
@@ -745,6 +790,7 @@ export function dataModule(
   const uploadFields = model.fields.filter(isUpload);
   for (const ref of refs)
     if (ref.type.model !== model.name) others.add(modelNamed(ir, ref.type.model));
+  for (const m of searchModels) others.add(m);
   const withClause = (entries: string[], indent: string) =>
     entries.length ? `\n${indent}with: { ${entries.join(", ")} },` : "";
   const compute = (expr: string) => (formulas ? `${withFormulasName(model)}(${expr})` : expr);
@@ -811,6 +857,8 @@ export function dataModule(
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
+    ...(nameSearch.some((c) => c.includes("isNull(")) ? ["isNull"] : []),
+    ...(wordCode.includes("or(") ? ["or"] : []),
     ...(occ ? OCCUPIES_DRIZZLE : []),
     ...(occ &&
     (model.trash ||
@@ -1509,7 +1557,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2116,7 +2164,7 @@ ${
       ${self}.readable(viewer),
       whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map(${searched.length ? `(word) => contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)` : "() => sql`false`"}),
+      ...wordsOf(search).map(${wordCode}),
     );
   },
 `
@@ -2451,23 +2499,38 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
 `;
 }
 
+/** A search word's condition: any of the conditions, none at all finding nothing. */
+function wordFits(own: string[], through: string[]): string {
+  const all = [...own, ...through];
+  if (!all.length) return "() => sql`false`";
+  return `(word) => ${all.length === 1 ? all[0] : `or(${all.join(", ")})`}`;
+}
+
 /** Whether a model's name or the lines under it read a reference: it is then loaded, even back to a parent. */
-function namedThrough(model: ModelIR, ref: string): boolean {
-  return (model.nameParts ?? []).some((p) => (p.through ?? p.field) === ref);
+function namedThrough(ir: SpecIR, ux: UxIR, model: ModelIR, ref: string): boolean {
+  return [...(model.nameParts ?? []), ...linesParts(ir, ux, model)].some(
+    (p) => (p.through ?? p.field) === ref,
+  );
 }
 
 /** A composed name's first part, for ordering by it: its value, or a reference's name. */
 function firstPart(model: ModelIR, ir: SpecIR): string {
   const part = model.nameParts?.[0];
   if (!part) return "row.id";
-  if (part.through) return `row.${part.through}?.${part.field} ?? null`;
-  const f = model.fields.find((x) => x.name === part.field);
+  const f = model.fields.find((x) => x.name === (part.through ?? part.field));
+  // A record in the trash names nothing, so it sorts as an empty part (docs/design/trash.md).
+  const live = (ref: string) =>
+    f?.type.kind === "relation" && f.type.model !== USER_MODEL && modelNamed(ir, f.type.model).trash
+      ? `${ref} && !${ref}.deletedAt`
+      : ref;
+  if (part.through)
+    return `${live(`row.${part.through}`)} ? (row.${part.through}.${part.field} ?? null) : null`;
   if (f?.type.kind !== "relation") return `row.${part.field} ?? null`;
   if (f.type.model === USER_MODEL) return `row.${part.field}?.name ?? null`;
   const target = modelNamed(ir, f.type.model);
   return composedName(target)
-    ? `row.${part.field} ? ${nameFunction(target)}(row.${part.field}) : null`
-    : `row.${part.field}?.${titleField(target)} ?? null`;
+    ? `${live(`row.${part.field}`)} ? ${nameFunction(target)}(row.${part.field}) : null`
+    : `${live(`row.${part.field}`)} ? (row.${part.field}.${titleField(target)} ?? null) : null`;
 }
 
 /** A field written as Markdown. */
