@@ -19,7 +19,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { AuthIR, SpecIR } from "@smithable/core";
 import { useCallback, useMemo, useState } from "react";
+import { Button } from "../ui";
 import { type MapNode, mapOf, PEOPLE } from "./data-map";
+import { dataMermaid } from "./mermaid";
 import { OPEN_PART } from "./NoCode";
 
 const WIDTH = 200;
@@ -148,6 +150,7 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
     [map, first, ir, app],
   );
   const [nodes, setNodes] = useState<Node<BoxData>[]>(() => synced([]));
+  const [copied, setCopied] = useState(false);
   const shown = useMemo(() => synced(nodes), [synced, nodes]);
   const edges: Edge[] = map.edges.map((e) => ({
     id: e.id,
@@ -160,10 +163,20 @@ export function DataMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
   }));
   return (
     <section aria-label="Data map" className="h-[70vh] min-h-96 p-3">
-      <p className="mb-2 text-xs text-muted">
-        The kinds of record and how they refer to each other; a dashed arrow says whose a record is.
-        Drag a box to move it; a name opens it in Behavior.
-      </p>
+      <div className="mb-2 flex items-end justify-between gap-2">
+        <p className="text-xs text-muted">
+          The kinds of record and how they refer to each other; a dashed arrow says whose a record
+          is. Drag a box to move it; a name opens it in Behavior.
+        </p>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            void navigator.clipboard.writeText(dataMermaid(map)).then(() => setCopied(true))
+          }
+        >
+          {copied ? "Copied" : "Copy as Mermaid"}
+        </Button>
+      </div>
       <div className="h-full rounded border border-line">
         <ReactFlow
           nodes={shown}

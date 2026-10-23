@@ -623,6 +623,33 @@ try {
         .waitFor({ timeout: 10000 * P });
     },
   );
+  await step(
+    "the Navigation map: the menu's pages, what opens as a role and as a visitor, a name opens Behavior",
+    async () => {
+      await sub("Navigation");
+      const map = page.getByRole("region", { name: "Navigation map" });
+      for (const box of ["customers", "orders", "team"])
+        await map.locator(`[data-nav-box="${box}"]`).waitFor({ timeout: 30000 * P });
+      // The team page is the administrators': closed to sales, open to an admin.
+      await map.getByLabel("As").selectOption("sales");
+      await map
+        .locator('[data-nav-box="team"]')
+        .getByText("Opens: no")
+        .waitFor({ timeout: 10000 * P });
+      await map.getByLabel("As").selectOption("admin");
+      await map
+        .locator('[data-nav-box="team"]')
+        .getByText("Opens: yes")
+        .waitFor({ timeout: 10000 * P });
+      await map
+        .locator('[data-nav-box="customers"]')
+        .getByRole("button", { name: "customers" })
+        .click();
+      await page
+        .getByRole("tab", { name: "Behavior", selected: true })
+        .waitFor({ timeout: 10000 * P });
+    },
+  );
 
   await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",
