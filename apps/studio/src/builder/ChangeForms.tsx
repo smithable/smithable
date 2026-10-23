@@ -19,6 +19,7 @@ import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Check, Input, Label, Select } from "../ui";
+import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 import { CustomCode, customFile } from "./custom-code";
 
 /**
@@ -81,7 +82,7 @@ interface FieldShape {
   values: string;
   target: string;
   required: boolean;
-  unique: boolean;
+  unique: UniqueChoice;
   /** The rest of a shorthand the form does not edit, e.g. " = 0". */
   rest?: string;
 }
@@ -93,8 +94,7 @@ function shapeOf(field: FieldIR): FieldShape {
     values: t.kind === "choice" ? t.values.join(", ") : "",
     target: t.kind === "relation" ? t.model : "",
     required: field.required,
-    // The box says whether it is unique; where (owner or app) stays the field's own key for now.
-    unique: Boolean(field.unique),
+    unique: uniqueOf(field.unique),
   };
 }
 
@@ -109,7 +109,7 @@ function parseShape(type: string, models: string[]): FieldShape {
         .join(", "),
       target: "",
       required: false,
-      unique: false,
+      unique: "no",
     };
   const [, base = "string", bang, unique, rest] = /^\s*(\w+)(!?)(\s+unique)?(.*)$/.exec(type) ?? [];
   const relation = models.includes(base) || base === "User";
@@ -118,7 +118,7 @@ function parseShape(type: string, models: string[]): FieldShape {
     values: "",
     target: relation ? base : (models[0] ?? ""),
     required: bang === "!",
-    unique: Boolean(unique),
+    unique: unique ? "yes" : "no",
     rest: rest?.trim() ? rest : undefined,
   };
 }
@@ -144,7 +144,7 @@ function shorthand(shape: FieldShape, keepDefault?: FieldIR): string {
     keepDefault?.default !== undefined && shapeOf(keepDefault).kind === shape.kind
       ? ` = ${keepDefault.default}`
       : "";
-  return `${type}${shape.required ? "!" : ""}${shape.unique ? " unique" : ""}${shape.rest ?? kept}`;
+  return `${type}${shape.required ? "!" : ""}${shape.unique === "yes" ? " unique" : ""}${shape.rest ?? kept}`;
 }
 
 /** The controls for a field's kind of value, its choices or link, and its modifiers. */
@@ -197,14 +197,20 @@ function FieldShapeControls({
             checked={shape.required}
             onChange={(required) => set({ required })}
           />
-          <Check
-            className="text-sm"
-            text="Unique"
-            tip="No two records may have the same value here; the form says so when one already does."
-            checked={shape.unique}
-            onChange={(unique) => set({ unique })}
-          />
         </div>
+      )}
+      {shape.kind !== "choice" && (
+        <Label
+          text="Unique"
+          hint="No two records with the same value here: among one owner's records, in the whole app, or as who may read them says"
+        >
+          <Select
+            aria-label="Unique"
+            value={shape.unique}
+            onChange={(e) => set({ unique: e.target.value as UniqueChoice })}
+            options={UNIQUE}
+          />
+        </Label>
       )}
     </>
   );
@@ -232,6 +238,7 @@ const CHANGES = [
   ["addModel", "Add a kind of record"],
   ["addPage", "Add a page"],
   ["setSearch", "Search on a page"],
+  ["setUnique", "Fields unique together"],
   ["grant", "Who can do what"],
   ["setNavigation", "Menu order"],
   ["addTile", "A dashboard tile"],
@@ -297,6 +304,7 @@ export function ChangeForms({ spec, run, prefill }: { spec: Spec; run: Run; pref
         {change === "importRecords" && <ImportRecords spec={spec} run={runAndReset} />}
         {change === "addPage" && <AddPage spec={spec} run={runAndReset} initial={initial} />}
         {change === "setSearch" && <SetSearch spec={spec} run={runAndReset} />}
+        {change === "setUnique" && <SetUnique spec={spec} run={runAndReset} />}
         {change === "grant" && <Grant spec={spec} run={runAndReset} />}
         {change === "setNavigation" && <SetNavigation spec={spec} run={runAndReset} />}
         {change === "addTile" && <AddTile spec={spec} run={runAndReset} />}
@@ -633,9 +641,17 @@ function AddField({ spec, run, initial, inPlace }: FormProps) {
   const [inList, setInList] = useState(true);
   return (
     <Form
-      onSubmit={() =>
-        run("addField", { model, field: name, type, ...(list && inList ? { list: true } : {}) })
-      }
+      onSubmit={async () => {
+        const made = await run("addField", {
+          model,
+          field: name,
+          type,
+          ...(list && inList ? { list: true } : {}),
+        });
+        // Unique per owner or in the whole app is the field's own key, set once it exists.
+        const rule = uniqueRule(shape.unique);
+        return made && rule ? run("setFieldRules", { model, field: name, unique: rule }) : made;
+      }}
     >
       {!inPlace && (
         <Label text="Kind of record">
@@ -709,6 +725,7 @@ function ChangeField({ spec, run, initial }: FormProps) {
                 ...(renames.length ? { renames } : {}),
               })
             }
+            rule={(unique) => run("setFieldRules", { model, field: field.name, unique })}
           />
         ))}
     </div>
@@ -721,6 +738,7 @@ export function FieldShapeForm({
   type: proposed,
   describe,
   run,
+  rule,
 }: {
   field: FieldIR;
   models: string[];
@@ -730,6 +748,8 @@ export function FieldShapeForm({
   describe?: (type: string) => string;
   /** The new type, and for a choice field what records holding a value that goes get ("old=new"). */
   run: (type: string, renames: string[]) => Promise<boolean>;
+  /** setFieldRules --unique, for where a value is unique (owner or app): the field's own key. */
+  rule: (unique: string) => Promise<boolean>;
 }) {
   const [shape, setShape] = useState(() =>
     proposed ? parseShape(proposed, models) : shapeOf(field),
@@ -755,7 +775,18 @@ export function FieldShapeForm({
     (v) => `${v}=${becomes[v] ?? (field.required ? (values[0] ?? "") : "")}`,
   );
   return (
-    <Form onSubmit={() => run(type, renames)}>
+    <Form
+      onSubmit={async () => {
+        const unique = uniqueRule(shape.unique, field.unique);
+        // Only where it is unique changed: that rule alone, one change.
+        const same =
+          shorthand({ ...shape, unique: "no" }, field) ===
+          shorthand({ ...shapeOf(field), unique: "no" }, field);
+        if (unique && same && !renames.length) return rule(unique);
+        const changed = await run(type, renames);
+        return changed && unique ? rule(unique) : changed;
+      }}
+    >
       <FieldShapeControls shape={shape} onChange={setShape} models={models} />
       {gone.map((v) => (
         <Label key={v} text={`Records with “${v}” get`}>
@@ -1201,6 +1232,100 @@ function ImportRecords({ spec, run }: FormProps) {
       <Button type="submit" disabled={!text || !preview?.ok}>
         Import
       </Button>
+    </Form>
+  );
+}
+
+/**
+ * Fields unique together (docs/design/uniqueness.md): a customer's invoice numbers. Two or more
+ * stored fields, none unique by itself; the rules there are, each with Remove.
+ */
+function SetUnique({ spec, run }: FormProps) {
+  const models = spec.ir?.models ?? [];
+  const [modelName, setModel] = useState(models[0]?.name ?? "");
+  const model = models.find((m) => m.name === modelName);
+  const eligible = (model?.fields ?? []).filter(
+    (f) =>
+      !f.formula &&
+      !f.unique &&
+      !(f.type.kind === "relation" && f.type.many) &&
+      !(f.type.kind === "scalar" && ["picture", "pictures", "file", "files"].includes(f.type.name)),
+  );
+  const [fields, setFields] = useState<string[]>([]);
+  const [scope, setScope] = useState("");
+  const where = (s: true | "owner" | "app") =>
+    s === "owner" ? ", per owner" : s === "app" ? ", in the whole app" : "";
+  return (
+    <Form
+      onSubmit={() =>
+        run("setUnique", { model: modelName, fields, ...(scope ? { scope } : {}) }).then((ok) => {
+          if (ok) setFields([]);
+          return ok;
+        })
+      }
+    >
+      <Label text="Kind of record">
+        <Select
+          aria-label="Kind of record"
+          value={modelName}
+          onChange={(e) => {
+            setModel(e.target.value);
+            setFields([]);
+          }}
+          options={models.map((m) => [m.name, humanize(m.name)])}
+        />
+      </Label>
+      {(model?.unique ?? []).length > 0 && (
+        <ul aria-label="Unique together now" className="space-y-1 text-sm">
+          {(model?.unique ?? []).map((rule) => (
+            <li key={rule.fields.join()} className="flex items-center justify-between gap-2">
+              <span>
+                {rule.fields.map(humanize).join(" and ")}
+                {where(rule.scope)}
+              </span>
+              <Button
+                variant="ghost"
+                className="h-6 text-xs"
+                onClick={() =>
+                  run("setUnique", { model: modelName, fields: rule.fields, remove: true })
+                }
+              >
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <fieldset className="space-y-1">
+        <legend className="text-xs font-medium text-muted">No two records with the same</legend>
+        {eligible.map((f) => (
+          <label key={f.name} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={fields.includes(f.name)}
+              onChange={(e) =>
+                setFields(
+                  e.target.checked ? [...fields, f.name] : fields.filter((x) => x !== f.name),
+                )
+              }
+            />
+            {humanize(f.name)}
+          </label>
+        ))}
+      </fieldset>
+      <Label text="Where">
+        <Select
+          aria-label="Where"
+          value={scope}
+          onChange={(e) => setScope(e.target.value)}
+          options={[
+            ["", "As who may read them says"],
+            ["owner", "Among one owner's records"],
+            ["app", "In the whole app"],
+          ]}
+        />
+      </Label>
+      <Submit label="Make them unique together" disabled={fields.length < 2} />
     </Form>
   );
 }
