@@ -1,10 +1,11 @@
-// The nine themes added to the built-in presets on 2026-10-04 (the theme lab's three styles,
-// docs/design/theme-lab.md §6, after them, and at the end the three candidates of 2026-10-18 from
-// a tester's report, warm-service, quiet-workspace and ink-and-brass): rule-made candidates
-// (scripts/theme-candidates.mjs) that Johan picked from their sheets. Each is a theme file as a
-// project would write one (docs/spec/v0.1.md, Themes), with seven colors per mode; theme.ts
-// parses them with the same parser and checks as a project's own, and derives the rest. To
-// change one, change its text here: nothing else names its colors.
+// The fifteen themes after the first four presets: nine added on 2026-10-04, rule-made
+// candidates (scripts/theme-candidates.mjs) that Johan picked from their sheets; the theme lab's
+// three styles (docs/design/theme-lab.md §6); and at the end the three candidates of 2026-10-18
+// from a tester's report, warm-service, quiet-workspace and ink-and-brass. Each is a theme file as
+// a project would write one (docs/spec/v0.1.md, Themes), with seven colors per mode, or more where
+// it names colors otherwise derived (the three of 2026-10-18 name thirteen); theme.ts parses them
+// with the same parser and checks as a project's own, and derives the rest. To change one, change
+// its text here: nothing else names its colors.
 
 export const THEME_LIBRARY: Record<string, string> = {
   coastal: `# coastal: from the rule-made candidate coastal-2 (primary hue 190), picked by Johan 2026-10-04.

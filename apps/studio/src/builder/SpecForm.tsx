@@ -113,6 +113,9 @@ const leadsTo = (path: Path, target: Path | undefined) =>
  * the spec, Content the content file (docs/design/studio-v3.md §1, §5); `open` opens the form
  * down to one part.
  */
+/** The companion files' format version keys, never shown in a form. */
+const COMPANION_VERSIONS = ["smithableAuth", "smithableUx", "smithableContent", "smithableContext"];
+
 export function SpecForm({
   files,
   run,
@@ -318,8 +321,11 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
     }
     case "group": {
       const own = (value ?? {}) as Record<string, unknown>;
-      // A key the schema hides (the spec format version) is not shown.
-      const shown = control.keys.filter(([, s]) => s["x-hidden"] !== true);
+      // A key the schema hides (the spec format version) is not shown, nor a companion file's
+      // version line (smithableContent: 0.1 and the like).
+      const shown = control.keys.filter(
+        ([key, s]) => s["x-hidden"] !== true && !COMPANION_VERSIONS.includes(key),
+      );
       const set = shown.filter(([key]) => own[key] !== undefined);
       const unset = shown.filter(([key]) => own[key] === undefined);
       // A group of kinds (a page) names the kind it is: chosen when it was added, then fixed.

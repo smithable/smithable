@@ -2,12 +2,11 @@
 smithableUx: 0.1
 
 theme:
-  preset: playful
+  preset: ink-and-brass
 
 pages:
   home:
     sections:
-      hero: { layout: split, image: right }   # the text beside the picture
       classes: { layout: cards }
       faq: { layout: accordion }
   sessions:

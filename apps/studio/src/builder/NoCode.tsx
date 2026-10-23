@@ -67,7 +67,12 @@ function Summary({
   onJump: (at: { sub: SubView; path: string[] }) => void;
 }) {
   const [all, setAll] = useState(false);
-  const shown = all ? sections : sections.slice(0, 3);
+  // Folded, a few lines, so what follows the description is in view (Johan, 2026-10-23).
+  const SECTIONS = 2;
+  const SENTENCES = 3;
+  const shown = all ? sections : sections.slice(0, SECTIONS);
+  const more =
+    sections.length > SECTIONS || shown.some((section) => section.sentences.length > SENTENCES);
   const jump = (at: { sub: SubView; path: string[] } | undefined, text: string, key: string) =>
     at ? (
       <button
@@ -88,20 +93,22 @@ function Summary({
         return (
           <div key={section.concept} className="space-y-1">
             <h3 className="font-medium">{jump(at, section.title, "title")}</h3>
-            {section.sentences.map((sentence, i) => {
-              // A field's own line leads to the field; the others to their part.
-              const field = section.fields?.find((f) => f.text === sentence.replace(/^- /, ""));
-              const to =
-                field && at ? { sub: at.sub, path: [...at.path, "fields", field.field] } : at;
-              return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences are by their place
-                <p key={i}>{jump(to, sentence.replace(/^- /, ""), `s${i}`)}</p>
-              );
-            })}
+            {(all ? section.sentences : section.sentences.slice(0, SENTENCES)).map(
+              (sentence, i) => {
+                // A field's own line leads to the field; the others to their part.
+                const field = section.fields?.find((f) => f.text === sentence.replace(/^- /, ""));
+                const to =
+                  field && at ? { sub: at.sub, path: [...at.path, "fields", field.field] } : at;
+                return (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences are by their place
+                  <p key={i}>{jump(to, sentence.replace(/^- /, ""), `s${i}`)}</p>
+                );
+              },
+            )}
           </div>
         );
       })}
-      {sections.length > 3 && (
+      {more && (
         <button
           type="button"
           className="text-xs text-accent underline"

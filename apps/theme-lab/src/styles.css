@@ -50,6 +50,8 @@ aside label {
 aside input:not([type="color"]),
 aside select {
   width: 130px;
+  /* A text field's padding inside the width, as a select's is: the two line up. */
+  box-sizing: border-box;
 }
 main {
   grid-area: main;

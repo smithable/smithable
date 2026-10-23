@@ -239,7 +239,7 @@ const CHANGES = [
   ["addSection", "A section on a landing page"],
   ["removeSection", "Remove a section"],
   ["addAction", "An action"],
-  ["setAction", "Change what an action says"],
+  ["setAction", "Change an action"],
   ["removeAction", "Remove an action"],
   ["addTimer", "A timer: something the app does at a time"],
   ["removeTimer", "Remove a timer"],
@@ -430,16 +430,71 @@ const actionPicker = (spec: Spec) => (value: string, set: (value: string) => voi
  * What an action says: its intent, starting from the one it has, so a change never clears or
  * overwrites it by accident; choosing another action brings that one's intent.
  */
+/**
+ * An action as it is, to change (Johan, 2026-10-23): its intent, and for a standard action the
+ * records it is for and the values it sets, one field a line ("status: todo | doing"). Who may
+ * run it is in Who can; its button's words in Content. Only what was changed is sent.
+ */
 function SetActionIntent({ spec, run }: FormProps) {
   const actions = spec.ir?.actions ?? [];
-  const intentOf = (name: string) => actions.find((a) => a.name === name)?.intent ?? "";
-  const [action, setAction] = useState(actions[0]?.name ?? "");
-  const [intent, setIntent] = useState(intentOf(actions[0]?.name ?? ""));
+  const found = (name: string) => actions.find((a) => a.name === name);
+  const intentOf = (name: string) => found(name)?.intent ?? "";
+  const whenOf = (name: string) => {
+    const a = found(name);
+    return Object.entries((a && "when" in a ? a.when : undefined) ?? {})
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(" | ") : String(v)}`)
+      .join("\n");
+  };
+  const setOf = (name: string) => {
+    const a = found(name);
+    return (a && "set" in a ? a.set : [])
+      .map((v) =>
+        "value" in v
+          ? `${v.field}: ${String(v.value)}`
+          : "text" in v
+            ? `${v.field}: ${v.text}`
+            : "me" in v
+              ? `${v.field}: ME()`
+              : `${v.field}:`,
+      )
+      .join("\n");
+  };
+  const first = actions[0]?.name ?? "";
+  const [action, setAction] = useState(first);
+  const [intent, setIntent] = useState(intentOf(first));
+  const [when, setWhen] = useState(whenOf(first));
+  const [set, setSet] = useState(setOf(first));
+  const standard = (() => {
+    const a = found(action);
+    return Boolean(a && !a.custom);
+  })();
+  /** "field: value" lines as an object; "a | b" a list where a condition takes one. */
+  const read = (text: string, lists: boolean) =>
+    Object.fromEntries(
+      text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const at = line.indexOf(":");
+          const key = (at < 0 ? line : line.slice(0, at)).trim();
+          const value = at < 0 ? "" : line.slice(at + 1).trim();
+          const many = lists && value.includes("|");
+          return [key, many ? value.split("|").map((v) => v.trim()) : value];
+        }),
+    );
+  const changed = {
+    ...(intent !== intentOf(action) ? { intent } : {}),
+    ...(standard && when !== whenOf(action) ? { when: read(when, true) } : {}),
+    ...(standard && set !== setOf(action) ? { set: read(set, false) } : {}),
+  };
   return (
-    <Form onSubmit={() => run("setAction", { action, intent })}>
+    <Form onSubmit={() => run("setAction", { action, ...changed })}>
       {actionPicker(spec)(action, (name) => {
         setAction(name);
         setIntent(intentOf(name));
+        setWhen(whenOf(name));
+        setSet(setOf(name));
       })}
       <Label
         text="Intent"
@@ -447,7 +502,35 @@ function SetActionIntent({ spec, run }: FormProps) {
       >
         <Input aria-label="Intent" value={intent} onChange={(e) => setIntent(e.target.value)} />
       </Label>
-      <Submit label="Change action" disabled={!action || intent === intentOf(action)} />
+      {standard && (
+        <>
+          <Label
+            text="For records with"
+            hint="One field a line, e.g. status: todo | doing; empty means every record"
+          >
+            <textarea
+              aria-label="For records with"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-line bg-panel p-2 font-mono text-xs"
+            />
+          </Label>
+          <Label text="It sets" hint="One field a line, e.g. status: done or doneOn: TODAY()">
+            <textarea
+              aria-label="It sets"
+              value={set}
+              onChange={(e) => setSet(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-line bg-panel p-2 font-mono text-xs"
+            />
+          </Label>
+        </>
+      )}
+      <p className="text-xs text-quiet">
+        Who may run it is in Who can; the words on its button are in Content.
+      </p>
+      <Submit label="Change action" disabled={!action || !Object.keys(changed).length} />
     </Form>
   );
 }

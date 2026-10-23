@@ -123,7 +123,7 @@ test("the reservation block: a session's page books and cancels through the data
   );
   const page = file("src/routes/sessions/$id.tsx");
   expect(page).toContain(
-    "<Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />",
+    "<Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} timeZone={app.timeZone} />",
   );
   expect(files.some((f) => f.path === "src/kit/Reserve.tsx")).toBe(true);
   expect(file("src/db/seed.ts")).not.toContain("db.insert(bookings)");
@@ -151,6 +151,6 @@ test("the block's words come from the content file", () => {
   ).content;
   const app = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
   expect(app.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).toContain(
-    'cancel={deleteBooking} bookLabel="Book a mat" fullLabel="No mats left" />',
+    'cancel={deleteBooking} bookLabel="Book a mat" fullLabel="No mats left" timeZone={app.timeZone} />',
   );
 });
