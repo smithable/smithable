@@ -154,3 +154,24 @@ pages:
     "first: row.venue && !row.venue.deletedAt ? (row.venue.name ?? null) : null",
   );
 });
+
+test("a search finds a record by the words of its name, through its references", () => {
+  // Ask reads a page at a time, so the data functions search.
+  const asked = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {} }\nassistant: { for: signed-in }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const out = generateApp(ir, { smithableVersion: "0.0.0", auth: asked, ux });
+  const file = (path: string) => out.find((f) => f.path === path)?.content ?? "";
+  // A session by its class type's name, among the class types the viewer may read.
+  expect(file("src/generated/session.server.ts")).toContain(
+    "...wordsOf(search).map((word) => inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer))))),",
+  );
+  // A booking named by its session: what the session's own search finds.
+  expect(file("src/generated/booking.server.ts")).toContain(
+    "...wordsOf(search).map((word) => inArray(schema.bookings.sessionId, db.select({ id: schema.sessions.id }).from(schema.sessions).where(sessionData.fitting(viewer, undefined, word)))),",
+  );
+});

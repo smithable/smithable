@@ -612,6 +612,30 @@ export function dataModule(
       f.type.kind === "scalar" &&
       ["string", "text", "markdown", "email", "phone", "url"].includes(f.type.name),
   );
+  // A name of parts is searched through its references too (record-names.md §2): a word in the
+  // text a part reads on the referenced record, among those the viewer may read, out of the trash.
+  const nameSearch = (composedName(model) ? (model.nameParts ?? []) : []).flatMap((part) => {
+    const ref = stored.find((x) => x.name === (part.through ?? part.field));
+    if (ref?.type.kind !== "relation" || ref.type.model === USER_MODEL) return [];
+    const target = modelNamed(ir, ref.type.model);
+    const tt = names(target, t).table;
+    // A reference named by parts in turn: a word its own search finds (never back to itself).
+    if (!part.through && composedName(target))
+      return target !== model && isPaged(target)
+        ? [
+            `inArray(${n.table}.${dataKey(ref)}, db.select({ id: ${tt}.id }).from(${tt}).where(${names(target, t).data}.fitting(viewer, undefined, word)))`,
+          ]
+        : [];
+    const field = part.through ?? titleField(target);
+    const text = target.fields.find((x) => x.name === field);
+    if (text?.type.kind !== "scalar") return [];
+    if (!["string", "text", "markdown", "email", "phone", "url"].includes(text.type.name))
+      return [];
+    const data = target === model ? self : names(target, t).data;
+    return [
+      `inArray(${n.table}.${dataKey(ref)}, db.select({ id: ${tt}.id }).from(${tt}).where(and(contains([${tt}.${field}], word), ${data}.readable(viewer)${target.trash ? `, isNull(${tt}.deletedAt)` : ""})))`,
+    ];
+  });
   // A reference given by its record's title, resolved among the records the viewer may read
   // (where that model is read a page at a time too, so it has named()).
   const namedRefs = (paged ? stored : []).flatMap((f) => {
@@ -811,6 +835,8 @@ export function dataModule(
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
     ...(capacity ? ["ne"] : []),
+    ...(nameSearch.some((c) => c.includes("isNull(")) ? ["isNull"] : []),
+    ...(nameSearch.length && (searched.length || nameSearch.length > 1) ? ["or"] : []),
     ...(occ ? OCCUPIES_DRIZZLE : []),
     ...(occ &&
     (model.trash ||
@@ -1509,7 +1535,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && searched.length) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2116,7 +2142,7 @@ ${
       ${self}.readable(viewer),
       whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map(${searched.length ? `(word) => contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)` : "() => sql`false`"}),
+      ...wordsOf(search).map(${wordFits(searched.length ? [`contains([${searched.map((f) => `${n.table}.${f.name}`).join(", ")}], word)`] : [], nameSearch)}),
     );
   },
 `
@@ -2449,6 +2475,13 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
   setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
 }
 `;
+}
+
+/** A search word's condition: any of the conditions, none at all finding nothing. */
+function wordFits(own: string[], through: string[]): string {
+  const all = [...own, ...through];
+  if (!all.length) return "() => sql`false`";
+  return `(word) => ${all.length === 1 ? all[0] : `or(${all.join(", ")})`}`;
 }
 
 /** Whether a model's name or the lines under it read a reference: it is then loaded, even back to a parent. */
