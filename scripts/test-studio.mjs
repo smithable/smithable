@@ -659,7 +659,7 @@ try {
       await sub("What happens");
       const map = page.getByRole("region", { name: "What happens" });
       const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
-      await merge.getByText("custom code").waitFor({ timeout: 30000 * P });
+      await merge.getByText("custom code", { exact: true }).waitFor({ timeout: 30000 * P });
       await merge.getByText(/^Merge a duplicate customer/).waitFor({ timeout: 10000 * P });
       await map.locator(".react-flow__controls-fitview").click();
       await merge.getByRole("button", { name: "mergeCustomers" }).click();
