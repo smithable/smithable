@@ -32,7 +32,7 @@ import {
   names,
   ownerKey,
   references,
-  relatedTitle,
+  shownTitleKey,
   type Texts,
   titleField,
 } from "./shared.js";
@@ -776,7 +776,7 @@ function toolsModule(
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const refs = model.fields
       .filter((f) => f.type.kind === "relation" && !f.type.many)
-      .map((f) => [f.name, relatedTitle(ir, (f.type as { model: string }).model)]);
+      .map((f) => [f.name, shownTitleKey(ir, (f.type as { model: string }).model)]);
     const searched = model.fields
       .filter(
         (f) =>
@@ -800,7 +800,7 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(titleField(model))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
@@ -927,7 +927,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -935,13 +935,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -990,7 +995,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */

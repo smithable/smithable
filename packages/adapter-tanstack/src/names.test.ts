@@ -36,6 +36,8 @@ pages:
     crud: Session
   bookings:
     crud: Booking
+  schedule:
+    calendar: { model: Session }
 `,
 }).ir as SpecIR;
 const auth = validateAuth(
@@ -57,7 +59,9 @@ const file = (path: string) => files.find((f) => f.path === path)?.content ?? ""
 
 test("a name of parts is a function of its own, composed one reference at a time", () => {
   const session = file("src/generated/session.name.ts");
-  expect(session).toContain("export function sessionName(row: Record<string, unknown>): string {");
+  expect(session).toContain(
+    "export function sessionName(row: Record<string, unknown>, leave: readonly string[] = []): string {",
+  );
   expect(session).toContain("shortWhen(row.startsAt, false, app.timeZone)");
   expect(session).toContain("`Session #${row.id}`");
   // The booking is named as its session is.
@@ -193,5 +197,37 @@ test("a search finds a record by the words of its name, through its references",
   )?.content;
   expect(venue).toContain(
     "...wordsOf(search).map((word) => contains([schema.venues.name, schema.venues.city], word)),",
+  );
+});
+
+test("Ask names a record of parts, and a reference to one, as its page does", () => {
+  const asked = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {} }\nassistant: { for: signed-in }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const ask =
+    generateApp(ir, { smithableVersion: "0.0.0", auth: asked, ux }).find(
+      (f) => f.path === "src/generated/ask.server.ts",
+    )?.content ?? "";
+  expect(ask).toContain(
+    'Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "$name", refs: {"session":"$name"}',
+  );
+  expect(ask).toContain('if (field === "$name") return row.$name ?? null;');
+  // Its sentences to a person say "name", never the key.
+  expect(ask).toContain(
+    'const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);',
+  );
+  expect(ask).not.toContain("Give its whole ${kind.title}");
+});
+
+test("a calendar names a record without the start it is placed by", () => {
+  expect(file("src/generated/session.name.ts")).toContain(
+    "export function sessionName(row: Record<string, unknown>, leave: readonly string[] = []): string {",
+  );
+  expect(files.find((f) => f.path === "src/routes/schedule/index.tsx")?.content).toContain(
+    'title: sessionName(row as Record<string, unknown>, ["startsAt"]),',
   );
 });

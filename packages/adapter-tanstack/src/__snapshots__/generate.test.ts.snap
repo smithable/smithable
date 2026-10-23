@@ -2914,7 +2914,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -2922,13 +2922,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -2973,7 +2978,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -4204,7 +4209,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -4212,13 +4217,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -4263,7 +4273,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -9318,12 +9328,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "0f455bad generated",
+  "src/generated/ask.server.ts": "da272edd generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
-  "src/generated/mcp.server.ts": "dfd0f953 generated",
+  "src/generated/mcp.server.ts": "1bdaf3df generated",
   "src/generated/note.schema.ts": "a44e751a generated",
   "src/generated/note.server.ts": "61f4dd51 generated",
   "src/generated/note.ts": "bf579f2a generated",
@@ -16877,8 +16887,8 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 const KINDS = {
   ClassType: { data: classTypeData, toApi: classTypeToApi, fromApi: classTypeFromApi, title: "name", refs: {}, searched: ["name","summary"], lists: {"sessions":{"kind":"Session","ref":"classType"}} as Record<string, { kind: string; ref: string }>, label: "class type", named: (viewer: Viewer | null, text: string) => classTypeData.named(viewer, text) },
   Instructor: { data: instructorData, toApi: instructorToApi, fromApi: instructorFromApi, title: "name", refs: {}, searched: ["name","bio"], lists: {"sessions":{"kind":"Session","ref":"instructor"}} as Record<string, { kind: string; ref: string }>, label: "instructor", named: (viewer: Viewer | null, text: string) => instructorData.named(viewer, text) },
-  Session: { data: sessionData, toApi: sessionToApi, fromApi: sessionFromApi, title: "id", refs: {"classType":"name","instructor":"name"}, searched: [], lists: {"bookings":{"kind":"Booking","ref":"session"}} as Record<string, { kind: string; ref: string }>, label: "session", named: undefined },
-  Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "id", refs: {"session":"id","attendee":"name"}, searched: [], lists: {} as Record<string, { kind: string; ref: string }>, label: "booking", named: undefined },
+  Session: { data: sessionData, toApi: sessionToApi, fromApi: sessionFromApi, title: "$name", refs: {"classType":"name","instructor":"name"}, searched: [], lists: {"bookings":{"kind":"Booking","ref":"session"}} as Record<string, { kind: string; ref: string }>, label: "session", named: undefined },
+  Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "$name", refs: {"session":"$name","attendee":"name"}, searched: [], lists: {} as Record<string, { kind: string; ref: string }>, label: "booking", named: undefined },
   Post: { data: postData, toApi: postToApi, fromApi: postFromApi, title: "title", refs: {}, searched: ["title","address","summary","body"], lists: {} as Record<string, { kind: string; ref: string }>, label: "post", named: (viewer: Viewer | null, text: string) => postData.named(viewer, text) },
   Message: { data: messageData, toApi: messageToApi, fromApi: messageFromApi, title: "name", refs: {}, searched: ["name","email","message"], lists: {} as Record<string, { kind: string; ref: string }>, label: "message", named: (viewer: Viewer | null, text: string) => messageData.named(viewer, text) },
 };
@@ -16901,7 +16911,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -16909,13 +16919,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -16960,7 +16975,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -17131,12 +17146,16 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { nameOf } from "#/kit/format";
 import { sessionName } from "./session.name";
 
-/** A booking's name: session (smithable.yml's namedBy). */
-export function bookingName(row: Record<string, unknown>): string {
+/**
+ * A booking's name: session (smithable.yml's namedBy). \`leave\`: parts a
+ * page already shows another way (a calendar's start), left out.
+ */
+export function bookingName(row: Record<string, unknown>, leave: readonly string[] = []): string {
+  const parts: [string, string][] = [
+    ["session", (row.session as Record<string, unknown> | null | undefined) ? String(((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>).$name ?? sessionName((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>)) : ""],
+  ];
   return nameOf(
-    [
-      (row.session as Record<string, unknown> | null | undefined) ? String(((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>).$name ?? sessionName((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>)) : "",
-    ],
+    parts.filter(([part]) => !leave.includes(part)).map(([, words]) => words),
     \`Booking #\${row.id}\`,
   );
 }
@@ -20590,13 +20609,17 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { nameOf, shortWhen, titleOf } from "#/kit/format";
 import { app } from "./app";
 
-/** A session's name: classType · startsAt (smithable.yml's namedBy). */
-export function sessionName(row: Record<string, unknown>): string {
+/**
+ * A session's name: classType · startsAt (smithable.yml's namedBy). \`leave\`: parts a
+ * page already shows another way (a calendar's start), left out.
+ */
+export function sessionName(row: Record<string, unknown>, leave: readonly string[] = []): string {
+  const parts: [string, string][] = [
+    ["classType", (row.classType as Record<string, unknown> | null | undefined) ? titleOf((row.classType as Record<string, unknown> | null | undefined)?.name) : ""],
+    ["startsAt", shortWhen(row.startsAt, false, app.timeZone)],
+  ];
   return nameOf(
-    [
-      (row.classType as Record<string, unknown> | null | undefined) ? titleOf((row.classType as Record<string, unknown> | null | undefined)?.name) : "",
-      shortWhen(row.startsAt, false, app.timeZone),
-    ],
+    parts.filter(([part]) => !leave.includes(part)).map(([, words]) => words),
     \`Session #\${row.id}\`,
   );
 }
@@ -25147,7 +25170,7 @@ const getRange = createServerFn()
         id: row.id,
         start: row.startsAt,
         end: new Date(row.startsAt.getTime() + (minutes.get(row.classTypeId) ?? 60) * 60_000),
-        title: sessionName(row as Record<string, unknown>),
+        title: sessionName(row as Record<string, unknown>, ["startsAt"]),
       })),
       // Records are made on their page: the viewer must be able to open it, too.
       canCreate: allows(sessionAccess.create, viewer) && allows(pageAccess["sessions"], viewer),
@@ -26198,8 +26221,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.server.ts": "7e85fad8 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "79ddc670 generated",
-  "src/generated/booking.name.ts": "8aaa37e0 generated",
+  "src/generated/ask.server.ts": "17e35bce generated",
+  "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
   "src/generated/booking.server.ts": "ae779adb generated",
   "src/generated/booking.ts": "ed726ce3 generated",
@@ -26224,7 +26247,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.name.ts": "c4a953cd generated",
+  "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
   "src/generated/session.server.ts": "c0760840 generated",
   "src/generated/session.ts": "2a8dc93c generated",
@@ -26348,7 +26371,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
-  "src/routes/schedule/index.tsx": "5b08bdec generated",
+  "src/routes/schedule/index.tsx": "4e34a634 generated",
   "src/routes/sessions/$id.tsx": "ef68b353 generated",
   "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
@@ -27558,7 +27581,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -27566,13 +27589,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -27611,7 +27639,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -32054,7 +32082,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "36dcbd67 generated",
+  "src/generated/ask.server.ts": "d86f1857 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "e1d74b6e generated",
@@ -34148,7 +34176,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -34156,13 +34184,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -34207,7 +34240,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -39501,7 +39534,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "d94b7633 generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "810be1a4 generated",
+  "src/generated/ask.server.ts": "1a1987b0 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "a9bc6b16 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -47461,7 +47494,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -47469,13 +47502,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -47514,7 +47552,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -50773,7 +50811,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "63f51ab2 generated",
+  "src/generated/ask.server.ts": "c79b8246 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
@@ -51760,7 +51798,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -51768,13 +51806,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -51813,7 +51856,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -53903,7 +53946,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "41a8fc86 generated",
+  "src/generated/ask.server.ts": "c1b182b6 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
@@ -57003,7 +57046,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -57011,13 +57054,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -57062,7 +57110,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -60595,7 +60643,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -60603,13 +60651,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -60654,7 +60707,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -64478,7 +64531,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "f81bbe12 generated",
+  "src/generated/ask.server.ts": "918064e2 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
   "src/generated/component.server.ts": "7dbe4c36 generated",
   "src/generated/component.ts": "04dc29d8 generated",
@@ -64495,7 +64548,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "e2f2fb68 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "17555166 generated",
+  "src/generated/mcp.server.ts": "4a6498a6 generated",
   "src/generated/pages.ts": "89e62230 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
@@ -66660,7 +66713,7 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
@@ -66668,13 +66721,18 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
   return row;
 }
 
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
+
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
   const title = (kind.refs as Record<string, string>)[field];
   const related = row[field] as Record<string, unknown> | null | undefined;
+  // A name of parts, as the data functions set it on the rows they give (record-names.md).
+  if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -66719,7 +66777,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */
@@ -70796,7 +70854,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.server.ts": "44c4920d generated",
   "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "8c32c143 generated",
+  "src/generated/ask.server.ts": "32ae626b generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
