@@ -2150,10 +2150,12 @@ try {
       await waitFile("homepage: url");
       // Where it is unique (uniqueness.md): a scope is the field's own key, through setFieldRules,
       // and back to not unique.
-      await homepage.getByLabel("Unique").selectOption({ label: "Unique in the whole app" });
+      await homepage
+        .getByLabel("Unique", { exact: true })
+        .selectOption({ label: "Unique in the whole app" });
       await homepage.getByRole("button", { name: "Change field" }).click();
       await waitFile("unique: app");
-      await homepage.getByLabel("Unique").selectOption({ label: "Not unique" });
+      await homepage.getByLabel("Unique", { exact: true }).selectOption({ label: "Not unique" });
       await homepage.getByRole("button", { name: "Change field" }).click();
       for (let i = 0; i < 60 * P && readFileSync(file, "utf8").includes("unique: app"); i++)
         await new Promise((r) => setTimeout(r, 1000));
