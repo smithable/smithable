@@ -44,11 +44,13 @@ export const FRAME_RUNTIME = String.raw`(() => {
         sheet = document.createElement("style");
         sheet.id = "sm-theme";
       }
-      // The fonts' bare imports become the lab's copies.
-      sheet.textContent = css.replace(
-        /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
-        '@import "../fonts/$1/index.css";',
-      );
+      // The fonts' bare imports become the lab's copies. The lab's Light and Dark choose the
+      // frame's mode, so the app's own appearance picker is not offered beside them.
+      sheet.textContent =
+        css.replace(
+          /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
+          '@import "../fonts/$1/index.css";',
+        ) + '\n[data-part="appearance"] { display: none !important; }';
       document.head.append(sheet);
       if (mode === "light" || mode === "dark") scheme = mode;
       if (scheme) applyScheme();
