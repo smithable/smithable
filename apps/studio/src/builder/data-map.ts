@@ -47,9 +47,8 @@ export function mapOf(ir: SpecIR, auth?: AuthIR): { nodes: MapNode[]; edges: Map
       // A list is the other side of a reference: drawn once, from the record that stores it.
       if (field.type.kind !== "relation" || field.type.many) continue;
       const owner = field.name === model.ownedBy;
-      const one = (model.unique ?? []).some(
-        (u) => u.fields.length === 1 && u.fields[0] === field.name,
-      );
+      // Unique on its own is the field's own word; the model's rules hold two or more fields.
+      const one = Boolean(field.unique);
       const target = field.type.model;
       // The list on the other side, when this is the only reference between the two (with two,
       // which list goes with which is not known here).
