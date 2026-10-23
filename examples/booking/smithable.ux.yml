@@ -7,6 +7,7 @@ theme:
 pages:
   home:
     sections:
+      hero: { layout: cover }          # the picture across the width, the text on the theme's color
       classes: { layout: cards }
       faq: { layout: accordion }
   # The members' pages in the site frame, for staff too (page-sections.md §4).
