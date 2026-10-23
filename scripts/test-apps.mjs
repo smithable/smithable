@@ -377,8 +377,14 @@ async function calendarFlow(base) {
     // An admin clicks an empty hour: the new session's start is that hour.
     await signInAs(page, base, "admin");
     await open(page, `${base}/schedule`);
-    // Signed in, the same page is in the app's frame.
-    await page.locator('[data-kit="app-shell"]').waitFor({ timeout: 10000 * P });
+    // Signed in, the page keeps the site's frame (page-sections.md §4), with the way into the
+    // workspace for staff.
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Workspace" })
+      .waitFor({ timeout: 10000 * P });
+    if (await page.locator('[data-kit="app-shell"]').count())
+      throw new Error("an admin sees the schedule in the app's frame, not the site's");
     const slot = page.getByRole("button", { name: /^New session, .* at 07:00$/ }).first();
     const label = await slot.getAttribute("aria-label");
     await slot.click();
@@ -387,7 +393,7 @@ async function calendarFlow(base) {
     if (!starts.endsWith("T07:00"))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
-      "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, the schedule is in the app's frame, and an admin's click on an empty hour starts a new session then",
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, it keeps the site's frame with a Workspace link, and an admin's click on an empty hour starts a new session then",
     );
   } catch (error) {
     console.log(
