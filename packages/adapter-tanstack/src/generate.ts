@@ -4,9 +4,11 @@ import {
   emptyUx,
   isUpload,
   kebab,
+  partSections,
   type SpecIR,
   storesFiles,
   translationMap,
+  type UxIR,
 } from "@smithable/core";
 import { accessTestSource } from "./access-test.js";
 import {
@@ -644,7 +646,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("src/generated/custom.ts", CUSTOM_PROPS),
       generated("src/generated/pages.ts", pagesModule(ir, t, auth)),
       // The public site's menu and contact details, for its landing pages and public blogs.
-      ...(hasSite(ir, auth) ? [generated("src/generated/site.ts", siteModule(ir, t, auth))] : []),
+      ...(hasSite(ir, auth, ux)
+        ? [generated("src/generated/site.ts", siteModule(ir, t, auth, ux))]
+        : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
       ...(ir.outgoing.length
         ? [
@@ -963,10 +967,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         ? [
             {
               files: g.kit,
-              used: ({ ir, auth }) =>
+              used: ({ ir, auth, ux }) =>
                 // The site's frame (LandingLayout) is the landing kit's: a public blog or
                 // catalog uses it without a landing page.
-                (kind === "landing" && hasSite(ir, auth)) ||
+                (kind === "landing" && hasSite(ir, auth, ux)) ||
+                // Parts beside a kind's own page are the landing's sections.
+                (kind === "landing" && ir.pages.some((p) => partSections(p).length > 0)) ||
                 // The owner's notice on a record (ReviewNotice) is the review kit's too.
                 (kind === "review" && hasSignIn(auth) && ir.models.some((m) => m.review)) ||
                 ir.pages.some(
@@ -1050,10 +1056,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
 ];
 
 /** Whether the app has a public site: a landing page, a public blog, or a public catalog at "/". */
-function hasSite(ir: SpecIR, auth: AuthIR): boolean {
+function hasSite(ir: SpecIR, auth: AuthIR, ux: UxIR): boolean {
   return ir.pages.some(
     (p) =>
       p.pattern.kind === "landing" ||
+      ux.pages[p.id]?.frame === "site" ||
       publicArticles(p, { auth }) ||
       (p.route === "/" && p.pattern.kind === "crud" && auth.public.pages.includes(p.id)),
   );

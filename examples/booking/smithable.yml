@@ -143,6 +143,11 @@ pages:
     crud: Message
   blog:                               # the studio's articles, for visitors too
     articles: Post
+  about:                              # a page of parts: the story, who teaches, questions
+    sections:
+      story: { text: }
+      team: { records: Instructor }
+      faq:
   privacy:
     route: /privacy
     legal: privacy                      # written from the app: who runs it, what it stores, cookies, mail
@@ -151,6 +156,8 @@ pages:
     filters: [status]
   my-bookings:                        # a member's own bookings (private access)
     crud: Booking
+    sections:
+      cancelling: { text: }             # a note under the list
   admin:
     data: all                      # every model, for administrators
 
@@ -160,5 +167,5 @@ navigation:
   schedule: [schedule, my-bookings, sessions]
   messages: [messages]
   studioSetup: [class-types, instructors]
-  website: [blog, posts, home]
+  website: [blog, about, posts, home]
   admin: [admin]

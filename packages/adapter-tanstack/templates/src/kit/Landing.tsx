@@ -23,6 +23,7 @@ import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
+import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { PicturePlaceholder } from "./ModelTable";
 import { textMarker } from "./model";
@@ -31,6 +32,8 @@ import { tx, w } from "./words";
 export interface LandingLink {
   to: LinkProps["to"];
   label: string;
+  /** Who may open it, for a menu entry not every visitor sees (a members' page in the site frame). */
+  access?: Rule;
 }
 
 /** A hero's shortcut: a page, shown as a round icon with its title under it. */
@@ -62,6 +65,8 @@ function LandingLayoutView({
   link,
   footer,
   site,
+  viewer,
+  onSignOut,
   children,
 }: {
   appName: string;
@@ -70,10 +75,14 @@ function LandingLayoutView({
   link?: LandingLink;
   footer?: LandingFooter;
   site?: LandingSite;
+  /** Who is signed in: the menu shows the pages they may open. */
+  viewer?: Viewer | null;
+  /** Signing out, for one signed in who sees the site frame (a member). */
+  onSignOut?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const menu = site?.menu ?? [];
+  const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
@@ -144,6 +153,15 @@ function LandingLayoutView({
               <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
                 {link.label}
               </Link>
+            )}
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className={buttonVariants({ variant: "ghost" })}
+              >
+                {w.signOut}
+              </button>
             )}
             {menu.length > 0 && (
               <button
@@ -306,6 +324,44 @@ function SectionView({
         </p>
       )}
       <div className={text ? "mt-8" : title ? "mt-6" : undefined}>{children}</div>
+    </section>
+  );
+}
+
+/** A text section: a heading and paragraphs (a blank line between them in the content file). */
+function TextSectionView({
+  texts,
+  id,
+  title,
+  text,
+}: {
+  id: string;
+  title?: string;
+  text?: string;
+  texts?: string;
+}) {
+  return (
+    <section
+      {...sectionHooks(texts)}
+      aria-labelledby={title ? `${id}-title` : undefined}
+      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-10"
+    >
+      {title && (
+        <h2
+          id={`${id}-title`}
+          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)]"
+          {...mark(texts, "title")}
+        >
+          {title}
+        </h2>
+      )}
+      {text && (
+        <div className="mt-3 max-w-2xl space-y-3 text-lg" {...mark(texts, "text")}>
+          {text.split(/\n\s*\n/).map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1276,6 +1332,10 @@ export function LandingLayout(props: Parameters<typeof LandingLayoutView>[0]) {
 
 export function Section(props: Parameters<typeof SectionView>[0]) {
   return SectionView(translated(props));
+}
+
+export function TextSection(props: Parameters<typeof TextSectionView>[0]) {
+  return TextSectionView(translated(props));
 }
 
 export function Hero(props: Parameters<typeof HeroView>[0]) {

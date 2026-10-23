@@ -1173,6 +1173,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "name": "website",
       "pages": [
         "blog",
+        "about",
         "posts",
         "home",
       ],
@@ -1654,6 +1655,28 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       ],
     },
     {
+      "id": "about",
+      "pattern": {
+        "kind": "sections",
+      },
+      "route": "/about",
+      "sections": [
+        {
+          "kind": "text",
+          "name": "story",
+        },
+        {
+          "kind": "records",
+          "model": "Instructor",
+          "name": "team",
+        },
+        {
+          "kind": "faq",
+          "name": "faq",
+        },
+      ],
+    },
+    {
       "id": "privacy",
       "pattern": {
         "kind": "legal",
@@ -1700,6 +1723,10 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "model": "Booking",
           "name": "crud",
           "own": true,
+        },
+        {
+          "kind": "text",
+          "name": "cancelling",
         },
       ],
     },

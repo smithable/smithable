@@ -9388,7 +9388,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
@@ -13652,7 +13652,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/appointments", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/appointments", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Harbour Cuts"
@@ -14826,7 +14826,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -14864,7 +14864,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bdca463f generated",
@@ -14884,7 +14884,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "bb6e3860 generated",
+  "src/routes/index.tsx": "760c0d6b generated",
   "src/routes/privacy/index.tsx": "e303f9ed generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "9f29cc8a generated",
@@ -19904,6 +19904,7 @@ export const pageAccess = {
   instructors: { public: false, roles: ["admin"], owner: false },
   messages: { public: false, roles: ["admin"], owner: false },
   blog: { public: true, roles: ["admin", "member"], owner: false },
+  about: { public: true, roles: ["admin", "member"], owner: false },
   privacy: { public: true, roles: ["admin", "member"], owner: false },
   posts: { public: false, roles: ["admin"], owner: false },
   "my-bookings": { public: false, roles: ["admin", "member"], owner: false },
@@ -19925,6 +19926,7 @@ export const pageUi = {
   instructors: { title: "Instructors" },
   messages: { title: "Messages" },
   blog: { title: "Blog" },
+  about: { title: "About" },
   privacy: { title: "Privacy" },
   posts: { title: "Posts" },
   "my-bookings": { title: "My bookings" },
@@ -21262,6 +21264,7 @@ export const site: LandingSite = {
   menu: [
     { to: "/schedule", label: pageUi["schedule"].title },
     { to: "/blog", label: pageUi["blog"].title },
+    { to: "/about", label: pageUi["about"].title },
   ],
   legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
 };
@@ -21734,7 +21737,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { createRootRoute, HeadContent, Scripts, ScriptOnce, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { BookOpen, Calendar, House, Layers, Mail, Users } from "lucide-react";
+import { BookOpen, Calendar, House, Layers, List, Mail, Users } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -21813,6 +21816,12 @@ const menus: MenuUi[] = [
         access: pageAccess["blog"],
       },
       {
+        to: "/about",
+        label: pageUi["about"].title,
+        icon: List,
+        access: pageAccess["about"],
+      },
+      {
         to: "/posts",
         label: pageUi["posts"].title,
         icon: BookOpen,
@@ -21843,7 +21852,7 @@ const landingRoutes = ["/"];
 /** Public articles: their list and each article have the site's frame. */
 const siteRoutes = ["/blog"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/schedule", "/privacy", "/sign-in"];
+const visitorRoutes = ["/schedule", "/about", "/privacy", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -21854,6 +21863,7 @@ const pageRoutes: [string, string][] = [
   ["/schedule", "schedule"],
   ["/sessions", "sessions"],
   ["/privacy", "privacy"],
+  ["/about", "about"],
   ["/admin", "admin"],
   ["/posts", "posts"],
   ["/blog", "blog"],
@@ -21958,6 +21968,45 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  );
+}
+"
+`;
+
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/about/index.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute } from "@tanstack/react-router";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
+import { guardPage } from "#/kit/access";
+import { listInstructors, instructorUi } from "#/generated/instructor";
+import { RecordCards } from "#/kit/Landing";
+import { Users } from "lucide-react";
+import { PageHeader } from "#/kit/AppShell";
+
+export const Route = createFileRoute("/about/")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["about"], context.viewer, location.href),
+  head: () => pageHead("about"),
+  loader: async () => ({ instructors: (await listInstructors()).rows }),
+  component: AboutPage,
+});
+
+function AboutPage() {
+  const data = Route.useLoaderData();
+  return (
+    <div data-kit="sections">
+      <PageHeader page="about" title={pageUi["about"].title} />
+      <RecordCards
+          texts="pages.about.team"
+          id="team"
+          icon={Users}
+          title={instructorUi.pluralLabel}
+          cards={data.instructors.slice(0, 6).map((row) => ({
+            key: row.id,
+            title: String(row.name),
+            picture: row.portrait ? { src: \`/files/instructor/\${row.id}/portrait\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated } : undefined,
+          }))}
+        />
+    </div>
   );
 }
 "
@@ -23933,7 +23982,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/schedule", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/schedule", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Stillwater Yoga"
@@ -24577,6 +24626,21 @@ function BookingPage() {
 "
 `;
 
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/my-bookings/-my-bookings-parts.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+
+/** The page's parts before its own. */
+export function Before() {
+  return null;
+}
+
+/** The page's parts after its own. */
+export function After() {
+  return null;
+}
+"
+`;
+
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/routes/my-bookings/index.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
@@ -24603,6 +24667,7 @@ const listBookings = createServerFn()
     const viewer = await currentViewer();
     return { ...(await bookingData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(bookingAccess.create, viewer) };
   });
+import { After as PartsAfter, Before as PartsBefore } from "./-my-bookings-parts";
 
 export const Route = createFileRoute("/my-bookings/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["my-bookings"], context.viewer, location.href),
@@ -24610,7 +24675,13 @@ export const Route = createFileRoute("/my-bookings/")({
   validateSearch: (s: Search) => optional({ page: count(s.page) }),
   loaderDeps: ({ search }) => ({ page: search.page }),
   loader: ({ deps }) => listBookings({ data: { page: deps.page } }),
-  component: MyBookingsPage,
+  component: () => (
+    <>
+      <PartsBefore />
+      <MyBookingsPage />
+      <PartsAfter />
+    </>
+  ),
 });
 
 function MyBookingsPage() {
@@ -25021,7 +25092,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /schedule\\nAllow: /blog\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /schedule\\nAllow: /blog\\nAllow: /about\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -25563,7 +25634,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 import { postData } from "#/generated/post.server";
 
-const PAGES = ["/","/schedule","/blog","/privacy"];
+const PAGES = ["/","/schedule","/blog","/about","/privacy"];
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -25776,7 +25847,7 @@ test.beforeAll(async ({ browser }) => {
     for (const route of routes) await open(route);
     await context.close();
   };
-  await warm(undefined, ["/", "/schedule", "/blog", "/privacy"]);
+  await warm(undefined, ["/", "/schedule", "/blog", "/about", "/privacy"]);
   await warm("admin", ["/sessions", "/class-types", "/instructors", "/messages", "/posts", "/my-bookings", "/admin"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
@@ -25789,6 +25860,9 @@ test("Schedule opens for a visitor", async ({ page }) => {
 });
 test("Blog opens for a visitor", async ({ page }) => {
   await visit(page, "/blog");
+});
+test("About opens for a visitor", async ({ page }) => {
+  await visit(page, "/about");
 });
 test("Privacy opens for a visitor", async ({ page }) => {
   await visit(page, "/privacy");
@@ -26025,6 +26099,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/lib/viewer.server.ts",
   "kit: src/router.tsx",
   "generated: src/routes/__root.tsx",
+  "generated: src/routes/about/index.tsx",
   "generated: src/routes/admin/activity.tsx",
   "generated: src/routes/admin/bookings/$id.tsx",
   "generated: src/routes/admin/bookings/index.tsx",
@@ -26063,6 +26138,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/routes/messages/index.tsx",
   "generated: src/routes/messages/new.tsx",
   "generated: src/routes/my-bookings/$id.tsx",
+  "generated: src/routes/my-bookings/-my-bookings-parts.tsx",
   "generated: src/routes/my-bookings/index.tsx",
   "generated: src/routes/my-bookings/new.tsx",
   "generated: src/routes/posts/$id.tsx",
@@ -26139,7 +26215,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "944e787c generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "f761374d generated",
-  "src/generated/pages.ts": "51e69633 generated",
+  "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "7cb79277 generated",
   "src/generated/post.ts": "3b8935b4 generated",
@@ -26149,7 +26225,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.schema.ts": "ea859e10 generated",
   "src/generated/session.server.ts": "d72b6b23 generated",
   "src/generated/session.ts": "2a8dc93c generated",
-  "src/generated/site.ts": "592b0fd3 generated",
+  "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "01c0e4f8 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/users.ts": "cc5c380e generated",
@@ -26169,7 +26245,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
@@ -26214,14 +26290,15 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "5c621ed2 generated",
+  "src/routes/__root.tsx": "afdfd239 generated",
+  "src/routes/about/index.tsx": "85782241 generated",
   "src/routes/admin/activity.tsx": "db85c43e generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
@@ -26252,7 +26329,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "8a4728fe generated",
+  "src/routes/index.tsx": "3d503243 generated",
   "src/routes/instructors/$id.tsx": "1105deb4 generated",
   "src/routes/instructors/index.tsx": "dfac8649 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
@@ -26260,23 +26337,24 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/index.tsx": "e4a7b8f3 generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
   "src/routes/my-bookings/$id.tsx": "25f5ed59 generated",
-  "src/routes/my-bookings/index.tsx": "9b16db67 generated",
+  "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
+  "src/routes/my-bookings/index.tsx": "b344332d generated",
   "src/routes/my-bookings/new.tsx": "ea212364 generated",
   "src/routes/posts/$id.tsx": "0c9830f3 generated",
   "src/routes/posts/index.tsx": "759433b7 generated",
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
-  "src/routes/robots[.]txt.ts": "4be9ce95 generated",
+  "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "5b08bdec generated",
   "src/routes/sessions/$id.tsx": "ef68b353 generated",
   "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",
-  "src/routes/sitemap[.]xml.ts": "ea541ca6 generated",
+  "src/routes/sitemap[.]xml.ts": "8e02c178 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "b5e9eef0 generated",
-  "tests/smoke.spec.ts": "785d6529 generated",
+  "tests/smoke.spec.ts": "55edf3d4 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -32037,7 +32115,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
@@ -37928,7 +38006,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Invoicely"
@@ -39458,7 +39536,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -39501,7 +39579,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
@@ -39517,7 +39595,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "04978b35 generated",
+  "src/routes/index.tsx": "44f38eee generated",
   "src/routes/invoice-lines/$id.tsx": "8b97d0fe generated",
   "src/routes/invoice-lines/index.tsx": "49077b68 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
@@ -45809,7 +45887,7 @@ function WherePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/orders", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.where.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/orders", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.where.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.where.hero"
           title="Kiosken"
@@ -46338,7 +46416,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -46377,7 +46455,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
@@ -46405,7 +46483,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/new.tsx": "1a880670 generated",
   "src/routes/team/activity.tsx": "d3324158 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
-  "src/routes/where/index.tsx": "61898dc7 generated",
+  "src/routes/where/index.tsx": "fad54d7e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "b5e9eef0 generated",
@@ -50217,7 +50295,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Torget"
@@ -50718,7 +50796,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -50757,7 +50835,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
@@ -50784,7 +50862,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
-  "src/routes/welcome/index.tsx": "7c4525c4 generated",
+  "src/routes/welcome/index.tsx": "48643259 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "b5e9eef0 generated",
@@ -52993,7 +53071,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/items", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/items", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Our Collection"
@@ -53844,7 +53922,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -53878,7 +53956,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
@@ -53888,7 +53966,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "cf62494b generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "c2353742 generated",
+  "src/routes/index.tsx": "c5bb01c1 generated",
   "src/routes/items/$id.tsx": "001d1444 generated",
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
@@ -62752,7 +62830,7 @@ function HomePage() {
   const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Northwind Status"
@@ -64435,7 +64513,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/Landing.tsx": "565c8de8 kit",
+  "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
@@ -64475,7 +64553,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
@@ -64501,7 +64579,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "345c12e1 generated",
   "src/routes/incidents/index.tsx": "df2fa48e generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
-  "src/routes/index.tsx": "98dbe74c generated",
+  "src/routes/index.tsx": "a4ae6e1f generated",
   "src/routes/maintenance/$id.tsx": "dd96b09a generated",
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
@@ -70784,7 +70862,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "94b32a34 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",
