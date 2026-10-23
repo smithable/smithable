@@ -1039,8 +1039,7 @@ try {
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
-      // How it was made, without the model's use or cost (Johan, 2026-10-23).
-      await trace.getByText(/^local model · /).waitFor();
+      // Without the model's use or cost under it (Johan, 2026-10-23).
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");
       // Opened, it says what changed in words.
