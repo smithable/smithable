@@ -1,0 +1,108 @@
+import { type AuthIR, type SpecIR, validateAuth, validateSpec, validateUx } from "@smithable/core";
+import { expect, test } from "vitest";
+import { generateApp } from "./generate.js";
+
+// A record's name from its parts (docs/design/record-names.md, step 2): a session named by its
+// class type and its start, a booking by its session, and the line a picker shows under a name.
+const ir = validateSpec({
+  path: "smithable.yml",
+  text: `smithable: 0.1
+app: { name: Studio }
+models:
+  ClassType:
+    fields:
+      name: string!
+      level: beginner | advanced
+  Instructor:
+    fields:
+      name: string!
+  Session:
+    namedBy: [classType, startsAt]
+    fields:
+      classType: ClassType!
+      instructor: Instructor
+      startsAt: datetime!
+  Booking:
+    namedBy: session
+    fields:
+      session: Session!
+outgoing:
+  booked:
+    when: Booking created
+    to: mail
+    recipient: admin
+pages:
+  sessions:
+    crud: Session
+  bookings:
+    crud: Booking
+`,
+}).ir as SpecIR;
+const auth = validateAuth(
+  {
+    path: "smithable.auth.yml",
+    text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {} }\n",
+  },
+  ir,
+).auth as AuthIR;
+const ux = validateUx(
+  {
+    path: "smithable.ux.yml",
+    text: "smithableUx: 0.1\npages:\n  sessions:\n    record: { subtitle: instructor.name, detail: [classType.level] }\n",
+  },
+  ir,
+).ux;
+const files = generateApp(ir, { smithableVersion: "0.0.0", auth, ux });
+const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+
+test("a name of parts is a function of its own, composed one reference at a time", () => {
+  const session = file("src/generated/session.name.ts");
+  expect(session).toContain("export function sessionName(row: Record<string, unknown>): string {");
+  expect(session).toContain("shortWhen(row.startsAt, false, app.timeZone)");
+  expect(session).toContain("`Session #${row.id}`");
+  // The booking is named as its session is.
+  const booking = file("src/generated/booking.name.ts");
+  expect(booking).toContain('import { sessionName } from "./session.name";');
+  // The level's label comes from the model's description, written once there.
+  expect(session).toContain('classTypeUi.fields.find((f) => f.name === "level")');
+  // A model named by one stored text field has no name module: its title column, as before.
+  expect(files.some((f) => f.path === "src/generated/class-type.name.ts")).toBe(false);
+});
+
+test("the data functions load what the name needs and set it on what the viewer may read", () => {
+  const booking = file("src/generated/booking.server.ts");
+  expect(booking).toContain(
+    "session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }",
+  );
+  // After the references the viewer may not read are hidden, a session is shown as its own
+  // model shows it (its class type hidden there too), and the booking named from that.
+  expect(booking).toContain(
+    "const shown = { ...row, session: row.session ? sessionData.shownRefs(viewer, [row.session as Record<string, unknown>])[0] : row.session };",
+  );
+  expect(booking).toContain("return { ...shown, $name: bookingName(shown) } as R;");
+  // The picker's choices pass through the same hiding.
+  expect(file("src/generated/session.server.ts")).toContain(
+    "const rows = sessionData.shownRefs(viewer, await db.query.sessions.findMany(",
+  );
+  // The kit reads the composed name under $name.
+  expect(file("src/generated/booking.ts")).toContain('titleField: "$name"');
+});
+
+test("the picker's choices are named by their parts, with the page's subtitle under each", () => {
+  const session = file("src/generated/session.server.ts");
+  expect(session).toContain("async options(viewer: Viewer | null) {");
+  expect(session).toContain("label: sessionName(row)");
+  expect(session).toContain("detail: sessionLines(row).subtitle");
+  expect(file("src/generated/session.name.ts")).toContain(
+    "subtitle: titleOf((row.instructor as Record<string, unknown> | null | undefined)?.name) || undefined,",
+  );
+});
+
+test("a mail and the record's page say the name", () => {
+  const outgoing = file("src/generated/outgoing.server.ts");
+  expect(outgoing).toContain("subject: `Booking: ${bookingNamed(tx, r.id as number)}`");
+  expect(outgoing).toContain("function bookingNamed(tx: Tx, id: number | null): string {");
+  expect(file("src/routes/sessions/$id.tsx")).toContain(
+    "sessionName(row as Record<string, unknown>)",
+  );
+});

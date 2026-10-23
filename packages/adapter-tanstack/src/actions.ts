@@ -28,9 +28,9 @@ import {
   modelNamed,
   names,
   ownerKey,
-  relatedTitle,
   SCHEMA_IMPORT,
   sequenceEntries,
+  shownTitleKey,
   type Texts,
 } from "./shared.js";
 
@@ -154,7 +154,7 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
         ? { choices: field.type.values.map((value) => ({ value, label: humanize(value) })) }
         : {}),
       ...(field.type.kind === "relation"
-        ? { relation: { key: field.name, titleField: relatedTitle(ir, field.type.model) } }
+        ? { relation: { key: field.name, titleField: shownTitleKey(ir, field.type.model) } }
         : {}),
     })),
   };

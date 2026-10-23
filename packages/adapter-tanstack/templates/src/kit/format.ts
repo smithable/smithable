@@ -21,6 +21,33 @@ export function titleOf(value: unknown): string {
   return line.length > 60 ? `${line.slice(0, 59).trimEnd()}…` : line;
 }
 
+/**
+ * A date or date-time as a record's name says it (docs/design/record-names.md §1), short:
+ * "Mon 19 Oct, 08:00", a date alone "Mon 19 Oct". Nothing for no value.
+ */
+export function shortWhen(value: unknown, dateOnly: boolean, timeZone?: string): string {
+  if (value === null || value === undefined || value === "") return "";
+  const instant = dateOnly
+    ? new Date(`${String(value)}T00:00:00Z`)
+    : value instanceof Date
+      ? value
+      : new Date(String(value));
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    ...(dateOnly
+      ? { timeZone: "UTC" }
+      : { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone }),
+  }).format(instant);
+}
+
+/** A record's name from its parts' words, " · " between them, the empty ones left out. */
+export function nameOf(parts: string[], fallback: string): string {
+  const shown = parts.filter(Boolean);
+  return shown.length ? shown.join(" · ") : fallback;
+}
+
 /** Text for showing a stored value in tables and headings. */
 export function formatValue(field: FieldUi, value: unknown, app: AppUi): string {
   if (value === null || value === undefined || value === "") return "—";
