@@ -167,13 +167,13 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   // A reference is watched by its column.
   expect(module).toContain('fields: ["customerId","note"],');
   expect(module).toContain(
-    "((ids) => (ids.length ? people(tx, inArray(schema.user.id, ids)) : []))(tx.select({ v: schema.bookings.ownerId }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id)).all().map((x) => x.v).filter((v) => v != null).map(String))",
+    "((ids) => (ids.length ? people(tx, inArray(schema.user.id, ids)) : []))(tx.select({ v: schema.bookings.ownerId }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id as number)).all().map((x) => x.v).filter((v) => v != null).map(String))",
   );
   expect(module).toContain(
-    "tx.select({ v: schema.bookings.contact }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id)).all().map((x) => ({ email: x.v as string | null }))",
+    "tx.select({ v: schema.bookings.contact }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id as number)).all().map((x) => ({ email: x.v as string | null }))",
   );
   expect(module).toContain(
-    "and(eq(schema.orders.customerId, r.id), isNull(schema.orders.deletedAt))",
+    "and(eq(schema.orders.customerId, r.id as number), isNull(schema.orders.deletedAt))",
   );
   expect(module).toContain("counts(entry.when, what, entry.fits, record, before, entry.fields)");
   expect(module).toMatch(/import \{ and, eq, inArray, isNull(, type SQL)? \} from "drizzle-orm";/);
@@ -225,7 +225,7 @@ pages:
   const files = generateApp(only, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
   expect(module).toContain('import { eq } from "drizzle-orm";');
-  expect(module).toContain("where(eq(schema.bookings.sessionId, r.id))");
+  expect(module).toContain("where(eq(schema.bookings.sessionId, r.id as number))");
 });
 
 test("a customer in the trash is neither mailed nor named, and its orders show a dash", () => {

@@ -358,6 +358,7 @@ export function detailRoute(
 ): string {
   const n = names(model, t);
   const order = fieldOrder(page, model, ux, t);
+  const tells = changeTells(model, t, ir);
   const component = `${model.name}Page`;
   const title = titleField(model);
   // A long title (a message's words) heads the page cut to its first line.
@@ -652,7 +653,7 @@ function ${component}() {
         app={app}
         schema={${n.schema}}${order}
         initial={row}
-        readOnly={!canWrite}
+        readOnly={!canWrite}${tells.length ? `\n        tells={${JSON.stringify(tells)}}` : ""}
 ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await ${n.update}({ data: { id: row.id, values } });
@@ -705,6 +706,23 @@ ${
  * subject and the sender as reply-to, limited like other writes; the recipient's address never
  * leaves the server. With `keep`, a copy is stored through that model's create rule.
  */
+/**
+ * Who a change tells, for the form to ask first (A 134): each mail on a change of these fields
+ * that goes to the records of one of the record's lists, with that list's label.
+ */
+function changeTells(model: ModelIR, t: Texts, ir: SpecIR) {
+  return ir.outgoing.flatMap((o) => {
+    const r = o.recipient;
+    if (o.to !== "mail" || r?.kind !== "list" || !o.fields?.length) return [];
+    if (!("event" in o.when) || o.when.event !== "changed" || o.when.model !== model.name)
+      return [];
+    const list = model.fields.find((f) => f.name === r.list) as FieldIR;
+    return [
+      { fields: o.fields, list: r.list, label: t.field(model, list).label ?? humanize(r.list) },
+    ];
+  });
+}
+
 function contactParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
   const contact = page.contact as { to: string; keep?: string };
   const n = names(model, t);

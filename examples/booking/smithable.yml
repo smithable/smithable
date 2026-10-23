@@ -103,6 +103,11 @@ outgoing:
     when: Booking deleted
     to: mail
     recipient: owner
+  sessionMoved:
+    when: Session changed
+    fields: [startsAt]                # only a new time counts
+    to: mail
+    recipient: bookings.owner        # one mail per booking, to the member who booked
 
 pages:
   home:

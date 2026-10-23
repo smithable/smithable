@@ -1230,6 +1230,25 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Booking",
       },
     },
+    {
+      "fields": [
+        "startsAt",
+      ],
+      "name": "sessionMoved",
+      "recipient": {
+        "each": {
+          "kind": "owner",
+        },
+        "kind": "list",
+        "list": "bookings",
+        "model": "Booking",
+      },
+      "to": "mail",
+      "when": {
+        "event": "changed",
+        "model": "Session",
+      },
+    },
   ],
   "pages": [
     {

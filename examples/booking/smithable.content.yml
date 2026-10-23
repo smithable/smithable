@@ -19,6 +19,9 @@ outgoing:
   bookingCancelled:
     subject: Your booking was cancelled
     text: Your booking was cancelled. Here it is as it was.
+  sessionMoved:
+    subject: Your class has a new time
+    text: The studio moved a class you booked. Here it is with its new time.
 
 menus:
   schedule: { label: Schedule }

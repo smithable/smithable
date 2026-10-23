@@ -101,8 +101,8 @@ export function outgoingModule(
             ? `${each.field}Id`
             : each.field;
       const where = target.trash
-        ? `and(eq(${n.table}.${back.name}Id, r.id), isNull(${n.table}.deletedAt))`
-        : `eq(${n.table}.${back.name}Id, r.id)`;
+        ? `and(eq(${n.table}.${back.name}Id, r.id as number), isNull(${n.table}.deletedAt))`
+        : `eq(${n.table}.${back.name}Id, r.id as number)`;
       const rows = `tx.select({ v: ${n.table}.${column} }).from(${n.table}).where(${where}).all()`;
       if (each.kind === "field" && each.via === "email")
         return `${rows}.map((x) => ({ email: x.v as string | null }))`;
