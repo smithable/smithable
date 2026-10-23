@@ -68,13 +68,21 @@ outgoing:
   // The event for outgoing, in the record's own transaction.
   expect(timers).toContain('outgoing(tx, as("remind"), "Booking", "timer:remind", now)');
   // A date is its day's start in the app's zone; the action where it fits, else a skip in Activity.
-  expect(timers).toContain("instantOf(`${row.at}T00:00`, app.timeZone).getTime() + 604800000");
+  // A week after a date is seven calendar days, then that day's midnight in the app's zone.
+  expect(timers).toContain(
+    "instantOf(`${new Date(Date.parse(`${row.at}T00:00:00Z`) + 604800000).toISOString().slice(0, 10)}T00:00`, app.timeZone).getTime()",
+  );
   expect(timers).toContain('if (!markOverdueFits(row, as("markOverdue"))) {');
   expect(timers).toContain('await runMarkOverdue(as("markOverdue"), id);');
   // A retry, or a run a stopped process left running, is taken by one tick only.
   expect(timers).toContain(
     'lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, stale)))',
   );
+  // A failed clock run is tried again by its time; one left running on its last try is given up.
+  expect(timers).toContain(
+    'for (const run of again) if (run.due !== due && run.due !== "seen") await timer.run(run.due);',
+  );
+  expect(timers).toContain("gte(runs.tries, TRIES - 1)");
   // A clock timer running a custom action, once.
   expect(timers).toContain('clock: {"every":"monday","at":"08:00"}');
   expect(timers).toContain('await digest({} as DigestInput, as("weekly"));');

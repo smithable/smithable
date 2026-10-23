@@ -51,7 +51,7 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     for (const w of what) set.add(w);
     imports.set(module, set);
   };
-  const drizzle = new Set(["and", "eq", "lt", "or", "sql"]);
+  const drizzle = new Set(["and", "eq", "gte", "lt", "or", "sql"]);
   const action = (name: string | undefined) => ir.actions.find((a) => a.name === name);
   let events = false;
   let zoned = false;
@@ -64,12 +64,17 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     const forRecord = model ? recordRun(timer, model, run, told, t, use) : "";
     if (timer.schedule.kind === "record") {
       const m = model as ModelIR;
-      const { query, instant } = recordQuery(timer, m, ir, drizzle);
-      if (instant.includes("instantOf")) zoned = true;
+      const { query, instant: at, date } = recordQuery(timer, m, ir, drizzle);
       const offset = timer.schedule.offset;
-      const shift = offset
-        ? ` ${offset.direction === "before" ? "-" : "+"} ${offset.amount * UNIT_MS[offset.unit]}`
-        : "";
+      const sign = offset?.direction === "before" ? "-" : "+";
+      // Days before or after a date are calendar days: the day moved, then its midnight in the
+      // app's zone, so a clock change between them moves nothing.
+      const days = date && offset?.unit === "day";
+      const instant = days
+        ? `instantOf(\`\${new Date(Date.parse(\`\${row.at}T00:00:00Z\`) ${sign} ${offset.amount * UNIT_MS.day}).toISOString().slice(0, 10)}T00:00\`, app.timeZone).getTime()`
+        : at;
+      if (instant.includes("instantOf")) zoned = true;
+      const shift = offset && !days ? ` ${sign} ${offset.amount * UNIT_MS[offset.unit]}` : "";
       return `
 /** ${timer.name}: for each record whose time has come, in the window since \`from\`. */
 const ${camel(timer.name)}Timer: RecordTimer = async (now, from, late) => {
@@ -170,9 +175,20 @@ ${record.length ? "const ran = (run: Due) => db.select({ id: runs.id }).from(run
  * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
  * running elsewhere.
  */
-function take(run: Due): boolean {
+function take(run: Due, model: string | undefined): boolean {
   if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
   const stale = new Date(Date.now() - STALE);
+  // Left running on its last try: given up, as a failing last try is.
+  if (
+    db
+      .update(runs)
+      .set({ outcome: "given up", tries: TRIES, ranAt: new Date() })
+      .where(and(at(run), eq(runs.outcome, "running"), lt(runs.ranAt, stale), gte(runs.tries, TRIES - 1)))
+      .run().changes === 1
+  ) {
+    audit(db, as(run.timer), { action: "timer given up", model, record: run.record || undefined, details: { error: "left running by a process that stopped" } });
+    return false;
+  }
   return (
     db
       .update(runs)
@@ -184,7 +200,7 @@ function take(run: Due): boolean {
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
 async function attempt(run: Due, model: string | undefined, work: () => Promise<string>) {
-  if (!take(run)) return;
+  if (!take(run, model)) return;
   try {
     const outcome = await work();
     db.update(runs).set({ outcome, ranAt: new Date() }).where(at(run)).run();
@@ -237,6 +253,14 @@ export async function tick(now = new Date()): Promise<void> {
       const since = Math.max(seen(name, now), last);
       const due = latestDue(timer.clock, new Date(since), now, app.timeZone);
       if (due) await timer.run(due);
+      // A run that failed (or was left running) at an earlier time is tried again by its time:
+      // the next ticks look only after the last one.
+      const again = db
+        .selectDistinct({ due: runs.due })
+        .from(runs)
+        .where(and(eq(runs.timer, name), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, new Date(now.getTime() - STALE))))))
+        .all();
+      for (const run of again) if (run.due !== due && run.due !== "seen") await timer.run(run.due);
     } catch (error) {
       log.error("A timer could not run", { timer: name, error });
     }
@@ -274,7 +298,7 @@ function recordQuery(
   model: ModelIR,
   ir: SpecIR,
   drizzle: Set<string>,
-): { query: string; instant: string } {
+): { query: string; instant: string; date: boolean } {
   const schedule = timer.schedule as Extract<TimerIR["schedule"], { kind: "record" }>;
   const table = tableRef(model);
   const [first, second] = schedule.path;
@@ -299,6 +323,7 @@ function recordQuery(
     query: `db.select({ id: ${table}.id, at: ${targetTable}.${dataKey(field)} }).from(${table})${join}${where}.all()`,
     // A date is its day's start in the app's zone.
     instant: date ? "instantOf(`${row.at}T00:00`, app.timeZone).getTime()" : "row.at.getTime()",
+    date,
   };
 }
 
