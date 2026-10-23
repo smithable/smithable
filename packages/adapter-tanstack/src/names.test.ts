@@ -195,3 +195,21 @@ test("a search finds a record by the words of its name, through its references",
     "...wordsOf(search).map((word) => contains([schema.venues.name, schema.venues.city], word)),",
   );
 });
+
+test("Ask names a record of parts, and a reference to one, as its page does", () => {
+  const asked = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {} }\nassistant: { for: signed-in }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const ask =
+    generateApp(ir, { smithableVersion: "0.0.0", auth: asked, ux }).find(
+      (f) => f.path === "src/generated/ask.server.ts",
+    )?.content ?? "";
+  expect(ask).toContain(
+    'Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "$name", refs: {"session":"$name"}',
+  );
+  expect(ask).toContain('if (field === "$name") return row.$name ?? null;');
+});
