@@ -927,13 +927,16 @@ async function found(kind: Kind, viewer: Viewer | null, id: unknown, verb = "rea
     const exact = fits.filter((r) => r.title.toLowerCase() === id.toLowerCase());
     const pick = exact.length === 1 ? exact : fits;
     if (pick.length > 1)
-      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${kind.title} or its id.\`);
+      throw new BadInput(\`"\${id}" fits several: \${pick.slice(0, 5).map((r) => \`\${r.title} (\${r.id})\`).join(", ")}. Give its whole \${titleWord(kind)} or its id.\`);
     key = pick[0]?.id;
   }
   const row = key === undefined ? null : await kind.data.get(viewer, key);
   if (!row) throw new NotFound(\`No \${kind.label} \${String(id)} that you may \${verb}; find it first.\`);
   return row;
 }
+
+/** The title's word in a sentence: a name of parts is the record's name. */
+const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);
 
 /** A field's value in a row: a reference as its id and title, nothing else changed. */
 function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unknown>, field: string): unknown {
@@ -943,7 +946,7 @@ function shown(kind: Kind, row: Record<string, unknown>, api: Record<string, unk
   if (field === "$name") return row.$name ?? null;
   if (title && related && typeof related === "object")
     return related.deletedAt ? { id: related.id, inTrash: true } : { id: related.id, title: related[title] };
-  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${kind.title}.\` : ""}\`);
+  if (!(field in api)) throw new BadInput(\`There is no field "\${field}". Fields: \${Object.keys(api).join(", ")}.\${field === "title" ? \` The title field is \${titleWord(kind)}.\` : ""}\`);
   return api[field];
 }
 
@@ -992,7 +995,7 @@ async function whyNone(kind: Kind, viewer: Viewer | null, args: Record<string, u
   // Nothing found by a search: say where it looked, the nearest titles, and how a reference is matched instead.
   const refs = Object.keys(kind.refs);
   const near = "titles" in kind.data ? nearest(args.search, kind.data.titles(viewer)) : [];
-  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${kind.title}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
+  return \`Nothing has every word of "\${args.search}" in \${kind.searched.join(", ") || "the texts"}.\${near.length ? \` The nearest \${titleWord(kind)}s: \${near.join(", ")}.\` : ""}\${refs.length ? \` A \${refs[0]} is matched with where, e.g. {"\${refs[0]}": "…"}.\` : ""}\`;
 }
 
 /** Calls one tool as the key's role, or as a visitor without a key. */

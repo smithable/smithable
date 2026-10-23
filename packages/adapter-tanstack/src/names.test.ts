@@ -36,6 +36,8 @@ pages:
     crud: Session
   bookings:
     crud: Booking
+  schedule:
+    calendar: { model: Session }
 `,
 }).ir as SpecIR;
 const auth = validateAuth(
@@ -57,7 +59,9 @@ const file = (path: string) => files.find((f) => f.path === path)?.content ?? ""
 
 test("a name of parts is a function of its own, composed one reference at a time", () => {
   const session = file("src/generated/session.name.ts");
-  expect(session).toContain("export function sessionName(row: Record<string, unknown>): string {");
+  expect(session).toContain(
+    "export function sessionName(row: Record<string, unknown>, leave: readonly string[] = []): string {",
+  );
   expect(session).toContain("shortWhen(row.startsAt, false, app.timeZone)");
   expect(session).toContain("`Session #${row.id}`");
   // The booking is named as its session is.
@@ -212,4 +216,18 @@ test("Ask names a record of parts, and a reference to one, as its page does", ()
     'Booking: { data: bookingData, toApi: bookingToApi, fromApi: bookingFromApi, title: "$name", refs: {"session":"$name"}',
   );
   expect(ask).toContain('if (field === "$name") return row.$name ?? null;');
+  // Its sentences to a person say "name", never the key.
+  expect(ask).toContain(
+    'const titleWord = (kind: Kind) => (kind.title === "$name" ? "name" : kind.title);',
+  );
+  expect(ask).not.toContain("Give its whole ${kind.title}");
+});
+
+test("a calendar names a record without the start it is placed by", () => {
+  expect(file("src/generated/session.name.ts")).toContain(
+    "export function sessionName(row: Record<string, unknown>, leave: readonly string[] = []): string {",
+  );
+  expect(files.find((f) => f.path === "src/routes/schedule/index.tsx")?.content).toContain(
+    'title: sessionName(row as Record<string, unknown>, ["startsAt"]),',
+  );
 });

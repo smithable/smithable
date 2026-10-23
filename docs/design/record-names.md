@@ -118,3 +118,7 @@ session picker shows the instructor under each.
    access as for references today), every place in §2 reading it, the `record` lines on cards and
    pickers; the booking starter's values; tests (an inaccessible part left out; a name in a mail;
    the picker's subtitle) and pictures of the picker, My bookings and a session page.
+
+Follow-ups after step 2 (2026-10-23): Ask and the API resolve a record given by its title through
+the title column (`named`), so a record of parts cannot yet be given by its shown name; a mail is
+written once for all its recipients, so a name is not yet read with each recipient's access (§4).

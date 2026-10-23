@@ -107,7 +107,10 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   if (!pattern.title && composedName(model)) imports.add(`${n.module}.name`, nameFunction(model));
   const title =
     titleOf(pattern.title ? field(pattern.title) : undefined) ??
-    (composedName(model) ? `${nameFunction(model)}(row as Record<string, unknown>)` : undefined) ??
+    // Without the parts the calendar shows by where the record sits: its start and end.
+    (composedName(model)
+      ? `${nameFunction(model)}(row as Record<string, unknown>, ${JSON.stringify([starts.name, ...(pattern.ends ? [pattern.ends] : [])])})`
+      : undefined) ??
     (own !== "id" ? titleOf(field(own)) : undefined) ??
     titleOf(model.fields.find((f) => f.required && f.type.kind === "relation" && !f.type.many)) ??
     `\`${n.label} #\${row.id}\``;

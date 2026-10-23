@@ -192,12 +192,16 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): str
     imports.push(["#/kit/format", "nameOf"]);
     const parts = model.nameParts ?? [];
     code += `
-/** A ${label.toLowerCase()}'s name: ${words(parts)} (smithable.yml's namedBy). */
-export function ${nameFunction(model)}(row: Record<string, unknown>): string {
+/**
+ * A ${label.toLowerCase()}'s name: ${words(parts)} (smithable.yml's namedBy). \`leave\`: parts a
+ * page already shows another way (a calendar's start), left out.
+ */
+export function ${nameFunction(model)}(row: Record<string, unknown>, leave: readonly string[] = []): string {
+  const parts: [string, string][] = [
+    ${parts.map((p) => `[${JSON.stringify(p.through ? `${p.through}.${p.field}` : p.field)}, ${partCode(p)}]`).join(",\n    ")},
+  ];
   return nameOf(
-    [
-      ${parts.map(partCode).join(",\n      ")},
-    ],
+    parts.filter(([part]) => !leave.includes(part)).map(([, words]) => words),
     \`${label} #\${row.id}\`,
   );
 }
