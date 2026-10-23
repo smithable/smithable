@@ -226,6 +226,10 @@ pages:
   const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
   expect(module).toContain('import { eq } from "drizzle-orm";');
   expect(module).toContain("where(eq(schema.bookings.sessionId, r.id as number))");
+  // A mail on any change of a session: saving any changed field asks first (A 134).
+  expect(files.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).toContain(
+    'tells={[{"fields":[],"list":"bookings","label":"Bookings"}]}',
+  );
 });
 
 test("a customer in the trash is neither mailed nor named, and its orders show a dash", () => {

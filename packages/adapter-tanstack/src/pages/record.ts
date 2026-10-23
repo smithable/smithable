@@ -707,18 +707,23 @@ ${
  * leaves the server. With `keep`, a copy is stored through that model's create rule.
  */
 /**
- * Who a change tells, for the form to ask first (A 134): each mail on a change of these fields
- * that goes to the records of one of the record's lists, with that list's label.
+ * Who a change tells, for the form to ask first (A 134): each mail on a change (of its `fields`;
+ * without them, of any field) that goes to the records of one of the record's lists, with that
+ * list's label. An empty `fields` tells the form any changed field counts.
  */
 function changeTells(model: ModelIR, t: Texts, ir: SpecIR) {
   return ir.outgoing.flatMap((o) => {
     const r = o.recipient;
-    if (o.to !== "mail" || r?.kind !== "list" || !o.fields?.length) return [];
+    if (o.to !== "mail" || r?.kind !== "list") return [];
     if (!("event" in o.when) || o.when.event !== "changed" || o.when.model !== model.name)
       return [];
     const list = model.fields.find((f) => f.name === r.list) as FieldIR;
     return [
-      { fields: o.fields, list: r.list, label: t.field(model, list).label ?? humanize(r.list) },
+      {
+        fields: o.fields ?? [],
+        list: r.list,
+        label: t.field(model, list).label ?? humanize(r.list),
+      },
     ];
   });
 }

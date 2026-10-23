@@ -44,9 +44,9 @@ interface ModelFormProps<S extends z.ZodType> {
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
   /**
-   * Mails a change of these fields sends to the records of one of the record's lists (a session
-   * moved: each booking's member): saving such a change asks first, saying what changes and how
-   * many are told.
+   * Mails a change of these fields (none: of any field) sends to the records of one of the
+   * record's lists (a session moved: each booking's member): saving such a change asks first,
+   * saying what changes and how many are told.
    */
   tells?: { fields: string[]; list: string; label: string }[];
   /** Fields shown with their preset value but not changed here, e.g. the invoice a new line is on. */
@@ -185,9 +185,14 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         ? new Date(a as Date).getTime() === new Date(b as Date).getTime()
         : (a ?? null) === (b ?? null);
     for (const tell of tells ?? []) {
+      // The list as the page loaded it: what this person may read of it, which for a role that
+      // may change the record but not read all its records is fewer than are mailed.
       const count = (initial?.[tell.list] as unknown[] | undefined)?.length ?? 0;
+      // No fields named: a change of any field mails.
       const changed = ui.fields.filter(
-        (f) => tell.fields.includes(f.name) && !same(values[f.name], initial?.[f.name]),
+        (f) =>
+          (!tell.fields.length || tell.fields.includes(f.name)) &&
+          !same(values[f.name], initial?.[f.name]),
       );
       if (count && changed.length)
         return {
