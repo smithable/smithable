@@ -140,13 +140,18 @@ jobs:
       - run: pnpm exec playwright install chromium
       # Three examples at a time: the runner shares the machine with the sessions' own work.
       - run: SESSION=ci GATE_AHEAD_MAX=99 TEST_APPS_PORT=8600 TEST_STUDIO_PORT=8610 TEST_APPS_CONCURRENCY=3 scripts/gate.sh
-        env: { npm_config_frozen_lockfile: "false", pnpm_config_frozen_lockfile: "false" }
+        # Its temporary files in the runner's own folder: /tmp holds the sessions' private ones,
+        # which a glob over it cannot read (the failure picture was never uploaded).
+        env:
+          npm_config_frozen_lockfile: "false"
+          pnpm_config_frozen_lockfile: "false"
+          TMPDIR: ${{ runner.temp }}
       # The picture Studio's test takes of a failed step.
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: studio-failure
-          path: /tmp/smithable-studio-*/failure.png
+          path: ${{ runner.temp }}/smithable-studio-*/failure.png
           if-no-files-found: ignore
 
   # Twice a day a main that passed everything goes to the beta (Johan, 2026-10-11): the cloud's
