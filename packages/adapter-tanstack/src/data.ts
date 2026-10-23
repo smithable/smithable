@@ -643,7 +643,7 @@ export function dataModule(
   // lists the listed records the viewer may read, with the titles of what they refer to.
   const withReferences = (m: ModelIR, except?: string) => [
     ...references(m)
-      .filter((f) => f.type.model !== except || namedThrough(m, f.name))
+      .filter((f) => f.type.model !== except || namedThrough(ir, ux, m, f.name))
       .map((f) => {
         const target = modelNamed(ir, f.type.model);
         // With what the lines under m's names read through this reference (record-names.md §3).
@@ -2452,22 +2452,30 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
 }
 
 /** Whether a model's name or the lines under it read a reference: it is then loaded, even back to a parent. */
-function namedThrough(model: ModelIR, ref: string): boolean {
-  return (model.nameParts ?? []).some((p) => (p.through ?? p.field) === ref);
+function namedThrough(ir: SpecIR, ux: UxIR, model: ModelIR, ref: string): boolean {
+  return [...(model.nameParts ?? []), ...linesParts(ir, ux, model)].some(
+    (p) => (p.through ?? p.field) === ref,
+  );
 }
 
 /** A composed name's first part, for ordering by it: its value, or a reference's name. */
 function firstPart(model: ModelIR, ir: SpecIR): string {
   const part = model.nameParts?.[0];
   if (!part) return "row.id";
-  if (part.through) return `row.${part.through}?.${part.field} ?? null`;
-  const f = model.fields.find((x) => x.name === part.field);
+  const f = model.fields.find((x) => x.name === (part.through ?? part.field));
+  // A record in the trash names nothing, so it sorts as an empty part (docs/design/trash.md).
+  const live = (ref: string) =>
+    f?.type.kind === "relation" && f.type.model !== USER_MODEL && modelNamed(ir, f.type.model).trash
+      ? `${ref} && !${ref}.deletedAt`
+      : ref;
+  if (part.through)
+    return `${live(`row.${part.through}`)} ? (row.${part.through}.${part.field} ?? null) : null`;
   if (f?.type.kind !== "relation") return `row.${part.field} ?? null`;
   if (f.type.model === USER_MODEL) return `row.${part.field}?.name ?? null`;
   const target = modelNamed(ir, f.type.model);
   return composedName(target)
-    ? `row.${part.field} ? ${nameFunction(target)}(row.${part.field}) : null`
-    : `row.${part.field}?.${titleField(target)} ?? null`;
+    ? `${live(`row.${part.field}`)} ? ${nameFunction(target)}(row.${part.field}) : null`
+    : `${live(`row.${part.field}`)} ? (row.${part.field}.${titleField(target)} ?? null) : null`;
 }
 
 /** A field written as Markdown. */

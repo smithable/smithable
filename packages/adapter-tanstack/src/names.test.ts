@@ -106,3 +106,51 @@ test("a mail and the record's page say the name", () => {
     "sessionName(row as Record<string, unknown>)",
   );
 });
+
+// A parent named on its child's page, and a part in the trash (the follow-ups of record-names.md's step 2).
+test("a line back to a parent is loaded, and a trashed part sorts as empty", () => {
+  const more = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Desk }
+models:
+  Venue:
+    trash: true
+    fields:
+      name: string!
+  Ticket:
+    namedBy: [venue, title]
+    fields:
+      venue: Venue
+      title: string
+      tasks: Task[]
+  Task:
+    fields:
+      title: string!
+      ticket: Ticket!
+pages:
+  tickets:
+    crud: Ticket
+  tasks:
+    crud: Task
+`,
+  }).ir as SpecIR;
+  const moreUx = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  tasks:\n    record: { subtitle: ticket.title }\n",
+    },
+    more,
+  ).ux;
+  const out = generateApp(more, { smithableVersion: "0.0.0", auth, ux: moreUx });
+  const of = (path: string) => out.find((f) => f.path === path)?.content ?? "";
+  const ticket = of("src/generated/ticket.server.ts");
+  // A task's line reads its ticket, so a ticket's page loads its tasks' tickets back.
+  expect(ticket).toContain(
+    "tasks: { where: taskData.readable(viewer), with: { ticket: { columns: { id: true, title: true }",
+  );
+  // The picker sorts by the venue's name only while the venue is out of the trash.
+  expect(ticket).toContain(
+    "first: row.venue && !row.venue.deletedAt ? (row.venue.name ?? null) : null",
+  );
+});
