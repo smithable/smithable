@@ -2,12 +2,11 @@
 smithableUx: 0.1
 
 theme:
-  preset: playful
+  preset: ink-and-brass
 
 pages:
   home:
     sections:
-      hero: { layout: split, image: right }   # the text beside the picture
       classes: { layout: cards }
       faq: { layout: accordion }
   # The members' pages in the site frame, for staff too (page-sections.md §4).
@@ -16,6 +15,8 @@ pages:
   about: { frame: site }
   sessions:
     filters: { shown: [startsAt, classType] }   # the instructor behind "More filters"
+    # Under a session's name where there is room: who teaches it, and its level.
+    record: { subtitle: instructor.name, detail: [classType.level] }
     table:
       columns: [classType, startsAt, instructor, placesLeft, capacity]
       sort: startsAt

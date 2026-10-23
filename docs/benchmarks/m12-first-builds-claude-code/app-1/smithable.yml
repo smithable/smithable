@@ -1,17 +1,8 @@
 smithable: 0.1
 app:
-  name: Juniper Yoga Studio
+  name: Willow Flow Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: EUR
-  timezone: Europe/Stockholm
 models:
-  ClassType:
-    fields:
-      name: string!
-      summary: text
-      level: allLevels | beginner | advanced
-      durationMinutes: int! = 60
-      sessions: Session[]
   Instructor:
     fields:
       name: string!
@@ -20,7 +11,6 @@ models:
       sessions: Session[]
   Session:
     fields:
-      classType: ClassType!
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
@@ -28,6 +18,7 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
+      classType: ClassType!
   Booking:
     fields:
       session: Session! unique
@@ -36,27 +27,26 @@ models:
     capacity:
       per: session
       max: session.capacity
-  Message:
+  ClassType:
     fields:
       name: string!
-      email: email!
-      message: text!
+      summary: text
+      level: allLevels | beginner | advanced
+      durationMinutes: int! = 60
+      sessions: Session[]
 pages:
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, instructors]
       footer:
-      classes:
-        records: ClassType
       teachers:
         records: Instructor
       faq:
+      classes:
+        records: ClassType
       callToAction:
         button: schedule
-      contact:
-        form: Message
   schedule:
     calendar:
       model: Session
@@ -65,24 +55,37 @@ pages:
     crud: Booking
   sessions:
     crud: Session
-    filters: [classType, instructor, startsAt]
     sortable: [startsAt, capacity]
-  class-types:
-    crud: ClassType
-    filters: [level]
+    filters: [classType, instructor, startsAt]
+    defaultFilter:
+      startsAt: upcoming
   instructors:
     crud: Instructor
-  messages:
-    crud: Message
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
+  class-types:
+    crud: ClassType
+    filters: [level]
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner
+  reminder:
+    when: remind
+    to: mail
+    recipient: owner
+timers:
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt
 navigation:
-  main: [home, schedule, my-bookings, sessions, class-types, instructors, messages, privacy, admin]
+  main: [home, schedule, my-bookings, sessions, instructors, privacy, class-types]
   schedule: [schedule, my-bookings, sessions]
-  messages: [messages]
-  studioSetup: [class-types, instructors]
   website: [home]
-  admin: [admin]
+  studioSetup: [class-types, instructors]

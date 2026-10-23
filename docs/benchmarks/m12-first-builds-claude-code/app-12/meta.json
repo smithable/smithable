@@ -4,6 +4,7 @@
   "wordStarter": "status",
   "questions": [
     "Who posts outages and updates?",
-    "Should the page also announce planned maintenance ahead of time?"
+    "Should the page also announce planned maintenance ahead of time?",
+    "Can visitors subscribe to get notified about new incidents?"
   ]
 }

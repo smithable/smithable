@@ -15,10 +15,12 @@ import {
 } from "@smithable/core";
 import { hasSignIn, roleLabels } from "../auth.js";
 import { hasKeys } from "../keys.js";
+import { nameColumns, nameFunction } from "../names.js";
 import { outgoingOf } from "../outgoing.js";
 import {
   attr,
   code,
+  composedName,
   dataRoute,
   type GenContext,
   guard,
@@ -276,7 +278,10 @@ import { db } from "#/db";
 import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
 ${models.length ? SCHEMA_IMPORT : ""}
 import { app } from "#/generated/app";
-${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}import { pageAccess } from "#/generated/pages";
+${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}${models
+  .filter(({ model }) => composedName(model))
+  .map(({ model, n }) => `import { ${nameFunction(model)} } from "${n.module}.name";\n`)
+  .join("")}import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -329,8 +334,19 @@ const getActivity = createServerFn()
     ];
     const titles = new Map<string, Map<number, string>>([
 ${models
-  .map(
-    ({ model, n, title }) => `      [
+  .map(({ model, n, title }) =>
+    // A name made of parts (record-names.md): read with what it needs, named by its function.
+    composedName(model)
+      ? `      [
+        ${JSON.stringify(model.name)},
+        new Map(
+          db.query.${n.tableKey}
+            .findMany({ where: (t, { inArray }) => inArray(t.id, ids(${JSON.stringify(model.name)})), ...${nameColumns(ir, model)} })
+            .sync()
+            .map((r) => [r.id, ${nameFunction(model)}(r)]),
+        ),
+      ],`
+      : `      [
         ${JSON.stringify(model.name)},
         new Map(
           db

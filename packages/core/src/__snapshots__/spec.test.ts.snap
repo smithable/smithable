@@ -989,9 +989,23 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         },
       ],
       "name": "Session",
+      "nameParts": [
+        {
+          "field": "classType",
+        },
+        {
+          "field": "startsAt",
+        },
+      ],
     },
     {
       "capacity": {
+        "cancelUntil": {
+          "field": "session.startsAt",
+        },
+        "closes": {
+          "field": "session.startsAt",
+        },
         "max": "session.capacity",
         "per": "session",
       },
@@ -1019,6 +1033,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         },
       ],
       "name": "Booking",
+      "nameParts": [
+        {
+          "field": "session",
+        },
+      ],
       "ownedBy": "attendee",
     },
     {

@@ -12,8 +12,10 @@ import {
   USER_MODEL,
 } from "@smithable/core";
 import { reserveElement } from "../data.js";
+import { nameFunction } from "../names.js";
 import {
   attr,
+  composedName,
   dataKey,
   dataRoute,
   type GenContext,
@@ -25,6 +27,7 @@ import {
   modelNamed,
   names,
   relatedTitle,
+  shownTitleKey,
   titleField,
 } from "../shared.js";
 
@@ -94,14 +97,17 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   const titleOf = (f: FieldIR | undefined): string | undefined => {
     if (!f) return undefined;
     if (f.type.kind !== "relation") return `String(row.${f.name} ?? "")`;
-    const title = relatedTitle(ir, f.type.model);
+    const title = shownTitleKey(ir, f.type.model);
     return f.type.model === USER_MODEL || title !== "id"
       ? `String(row.${f.name}?.${title} ?? "")`
       : `\`#\${row.${f.name}Id}\``;
   };
   const own = titleField(model);
+  // A name made of parts (record-names.md) by its function.
+  if (!pattern.title && composedName(model)) imports.add(`${n.module}.name`, nameFunction(model));
   const title =
     titleOf(pattern.title ? field(pattern.title) : undefined) ??
+    (composedName(model) ? `${nameFunction(model)}(row as Record<string, unknown>)` : undefined) ??
     (own !== "id" ? titleOf(field(own)) : undefined) ??
     titleOf(model.fields.find((f) => f.required && f.type.kind === "relation" && !f.type.many)) ??
     `\`${n.label} #\${row.id}\``;

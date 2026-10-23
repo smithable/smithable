@@ -245,9 +245,9 @@ try {
     "the bar's three windows add Smith with Changes under it, kept after a reload",
     async () => {
       await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
-      await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
       await page.reload();
-      await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
       await page.getByText("No changes yet.").waitFor();
     },
   );
@@ -329,7 +329,7 @@ try {
     await note.waitFor();
     await note.getByRole("button", { name: "Dismiss" }).click();
     await page.reload();
-    await page.getByRole("heading", { name: "Smith", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
@@ -605,6 +605,11 @@ try {
       // maker's, said in its box.
       if ((await map.locator(".react-flow__edge").count()) < 2)
         throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
+      // The line says how the two relate (Johan, 2026-10-23).
+      await map
+        .getByText(/· many to one/)
+        .first()
+        .waitFor({ timeout: 10000 * P });
       await map
         .locator('[data-map-box="Order"]')
         .getByText("Each is its maker's own.")
@@ -1034,7 +1039,9 @@ try {
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
-      await trace.getByText(/local model \(fake-model\) · [\d,]+ tokens/).waitFor();
+      // Without the model's use or cost under it (Johan, 2026-10-23).
+      if (await trace.getByText(/ tokens/).count())
+        throw new Error("Changes shows a model's tokens");
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
       await trace
@@ -1046,6 +1053,10 @@ try {
   await step(
     "Smith's ready prompts are answered by Studio: the app in short with a way to each part, how to publish",
     async () => {
+      // Smith greets as an assistant does, by rule, with the app's name.
+      await page
+        .getByText(/^Hi! How can I help you with your .+ app\?$/)
+        .waitFor({ timeout: 10000 * P });
       const prompts = page.getByRole("group", { name: "Ready prompts" });
       await prompts.getByRole("button", { name: "How do I publish?" }).click();
       const how = page.getByRole("region", { name: "How to publish" });
@@ -1100,12 +1111,12 @@ try {
         null,
         { timeout: 10000 * P },
       );
-      await pick("Smith");
+      await pick("Ask agent Smith");
       await page.getByLabel("Describe a change").waitFor();
       // Changes is under Smith on a phone: its tab beside his.
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();
-      await page.getByRole("tab", { name: "Smith", exact: true }).click();
+      await page.getByRole("tab", { name: "Ask agent Smith", exact: true }).click();
       await pick("No code");
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
       await page.setViewportSize({ width: 1920, height: 1000 });

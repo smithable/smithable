@@ -9342,17 +9342,17 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -9369,14 +9369,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -9388,7 +9388,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
@@ -9965,7 +9965,7 @@ function insertBarber(owner: string | null, values: Record<string, unknown> = {}
 }
 
 function timeOffValues(owner: string | null) {
-  return { barberId: insertBarber(owner).id, from: new Date("2026-01-15T10:00:00Z"), until: new Date("2026-01-15T10:00:00Z"), note: null } as const;
+  return { barberId: insertBarber(owner).id, from: new Date("2099-01-15T10:00:00Z"), until: new Date("2099-01-15T10:00:00Z"), note: null } as const;
 }
 
 function insertTimeOff(owner: string | null, values: Record<string, unknown> = {}) {
@@ -14789,7 +14789,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "81cf488e generated",
   "src/db/seed.ts": "aeda6345 generated",
-  "src/generated/access.test.ts": "9e5c3643 generated",
+  "src/generated/access.test.ts": "5b7039fb generated",
   "src/generated/actions/cancel.server.ts": "17e8e159 generated",
   "src/generated/actions/cancel.ts": "1bae0072 generated",
   "src/generated/actions/confirm.server.ts": "fb453863 generated",
@@ -14818,10 +14818,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
@@ -14829,7 +14829,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -14846,12 +14846,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "b925c66e kit",
@@ -14864,7 +14864,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bdca463f generated",
@@ -15539,7 +15539,7 @@ function insertInstructor(owner: string | null, values: Record<string, unknown> 
 
 function sessionValues(owner: string | null) {
   const n = next();
-  return { classTypeId: insertClassType(owner).id, instructorId: insertInstructor(owner).id, startsAt: new Date("2026-01-15T10:00:00Z"), capacity: n } as const;
+  return { classTypeId: insertClassType(owner).id, instructorId: insertInstructor(owner).id, startsAt: new Date("2099-01-15T10:00:00Z"), capacity: n } as const;
 }
 
 function insertSession(owner: string | null, values: Record<string, unknown> = {}) {
@@ -17126,6 +17126,23 @@ export async function ask(viewer: Viewer | null, question: string): Promise<Answ
 "
 `;
 
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/booking.name.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { nameOf } from "#/kit/format";
+import { sessionName } from "./session.name";
+
+/** A booking's name: session (smithable.yml's namedBy). */
+export function bookingName(row: Record<string, unknown>): string {
+  return nameOf(
+    [
+      (row.session as Record<string, unknown> | null | undefined) ? String(((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>).$name ?? sessionName((row.session as Record<string, unknown> | null | undefined) as Record<string, unknown>)) : "",
+    ],
+    \`Booking #\${row.id}\`,
+  );
+}
+"
+`;
+
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/booking.schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createInsertSchema } from "drizzle-zod";
@@ -17150,6 +17167,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { bookingName } from "./booking.name";
 import { outgoing } from "#/generated/outgoing.server";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
@@ -17225,7 +17243,12 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 export const bookingData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
-    return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids));
+    return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => {
+      // A referenced record named by its parts is shown as its own model shows it: its parts
+      // the viewer may not read hidden too, one reference further.
+      const shown = { ...row, session: row.session ? sessionData.shownRefs(viewer, [row.session as Record<string, unknown>])[0] : row.session };
+      return { ...shown, $name: bookingName(shown) } as R;
+    });
   },
 
   /** A condition for the bookings the viewer may read. */
@@ -17249,7 +17272,7 @@ export const bookingData = {
     if (readScope(bookingAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const rows = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: and(bookingData.readable(viewer), where),
-      with: { session: { columns: { id: true } }, attendee: { columns: { id: true, name: true } } },
+      with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [desc(t.id)],
       limit,
     }));
@@ -17267,7 +17290,7 @@ export const bookingData = {
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
     const rows = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: condition,
-      with: { session: { columns: { id: true } }, attendee: { columns: { id: true, name: true } } },
+      with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: size,
       offset: (at - 1) * size,
@@ -17289,7 +17312,7 @@ export const bookingData = {
     const total = db.select({ n: count() }).from(schema.bookings).where(condition).get()?.n ?? 0;
     const rows = bookingData.shownRefs(viewer, await db.query.bookings.findMany({
       where: condition,
-      with: { session: { columns: { id: true } }, attendee: { columns: { id: true, name: true } } },
+      with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } },
       orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
       limit: options.limit ?? 100,
       offset: options.offset ?? 0,
@@ -17414,7 +17437,7 @@ export const bookingData = {
    * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
    */
   async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
-    const rows = await db.query.bookings.findMany({ where: condition, with: { session: { columns: { id: true } }, attendee: { columns: { id: true, name: true } } }, limit: 10001 });
+    const rows = await db.query.bookings.findMany({ where: condition, with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } }, limit: 10001 });
     if (rows.length > 10000)
       throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
     return rows.map((row) => row as Record<string, unknown>);
@@ -17459,7 +17482,7 @@ export const bookingData = {
   /** How many of a session's places are taken, and how many it has: numbers only, never whose. */
   places(sessionId: number): { taken: number; max: number; closesAt?: Date; cancelUntilAt?: Date } {
     const taken = db.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, sessionId))).get()?.n ?? 0;
-    return { taken, max: (db.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, sessionId)).get()?.n ?? 0), closesAt: undefined, cancelUntilAt: undefined };
+    return { taken, max: (db.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, sessionId)).get()?.n ?? 0), closesAt: (() => { const at = db.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, sessionId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })(), cancelUntilAt: (() => { const at = db.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, sessionId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })() };
   },
 
   /** The viewer's own booking for a session, if they have one. */
@@ -17470,7 +17493,7 @@ export const bookingData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.bookings.findFirst({
       where: and(eq(schema.bookings.id, id), bookingData.readable(viewer)),
-      with: { session: { columns: { id: true } }, attendee: { columns: { id: true, name: true } } },
+      with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } },
     });
     const row = fetched && bookingData.shownRefs(viewer, [fetched])[0];
     return row ? row : null;
@@ -17485,6 +17508,10 @@ export const bookingData = {
       row = db.transaction((tx) => {
       const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId))).get()?.n ?? 0;
       if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
+      if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+        const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+        if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+      }
         const made = tx.insert(schema.bookings).values({ ...values, attendeeId: ownerFor(viewer, values.attendeeId) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Booking", record: made.id });
         outgoing(tx, viewer, "Booking", "created", made);
@@ -17526,6 +17553,14 @@ export const bookingData = {
           if (will && (moving || !was)) {
             const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, perId), ne(schema.bookings.id, id))).get()?.n ?? 0;
             if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.n ?? 0)) throw new Conflict("full");
+            if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+              const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+              if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+            }
+          }
+          if (was && !will && !moving && !(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+            const cancelUntilAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+            if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
           }
         }
         const after = tx.update(schema.bookings).set(updated).where(eq(schema.bookings.id, id)).returning().get();
@@ -17554,6 +17589,12 @@ export const bookingData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         if (!tx.select({ id: schema.bookings.id }).from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get())
           throw new AccessDenied(viewer !== null);
+        // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records does.
+        if (!(!!viewer && (!!viewer.system || bookingAccess.delete.roles.includes(viewer.role)))) {
+          const perId = tx.select({ p: schema.bookings.sessionId }).from(schema.bookings).where(eq(schema.bookings.id, id)).get()?.p;
+          const cancelUntilAt = perId == null ? undefined : (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+          if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+        }
         const gone = tx.delete(schema.bookings).where(eq(schema.bookings.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Booking", record: id, title: gone.id });
@@ -17625,15 +17666,16 @@ async function writer() {
 
 /** Booking records as the kit reads them. */
 export type BookingRow = typeof schema.bookings.$inferSelect & {
-  session?: { id: number } | null;
+  session?: { id: number; $name?: string } | null;
   attendee?: { id: string; name: string } | null;
+  $name?: string;
 };
 
 export const bookingUi: RecordUi<BookingRow> = {
   model: "Booking",
   label: "Booking",
   pluralLabel: "Bookings",
-  titleField: "id",
+  titleField: "$name",
   columns: ["sessionId", "attendeeId"],
   fields: [
     {
@@ -17641,8 +17683,8 @@ export const bookingUi: RecordUi<BookingRow> = {
       label: "Session",
       kind: "relation",
       required: true,
-      relation: { key: "session", titleField: "id" },
-      get: (row) => (row.session ? \`#\${row.session.id}\` : null),
+      relation: { key: "session", titleField: "$name" },
+      get: (row) => row.session?.$name ?? null,
     },
     {
       name: "attendeeId",
@@ -18093,7 +18135,7 @@ export const classTypeData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.classTypes.findFirst({
       where: and(eq(schema.classTypes.id, id), classTypeData.readable(viewer)),
-      with: { sessions: { where: sessionData.readable(viewer), with: { instructor: { columns: { id: true, name: true } } } } },
+      with: { sessions: { where: sessionData.readable(viewer), with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } } } } },
     });
     const found = fetched && classTypeData.shownRefs(viewer, [{ ...fetched, sessions: sessionData.shownRefs(viewer, fetched.sessions) }])[0];
     const row = found && { ...shownTo(viewer, found), sessions: found.sessions.map((r) => sessionData.shownTo(viewer, r)) };
@@ -19745,10 +19787,26 @@ import type { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
 import { counts } from "#/kit/outgoing";
+import { sessionName } from "./session.name";
+import { bookingName } from "./booking.name";
 import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
 
-type Tx = Pick<typeof db, "select" | "insert">;
+type Tx = Pick<typeof db, "select" | "insert" | "query">;
 type Row = Record<string, unknown>;
+
+/** A session's name, read with what it needs (record-names.md); one in the trash is gone. */
+function sessionNamed(tx: Tx, id: number | null): string {
+  if (id == null) return "—";
+  const row = tx.query.sessions.findFirst({ where: (t, { eq }) => eq(t.id, id), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } }).sync();
+  return row ? sessionName(row) : "—";
+}
+
+/** A booking's name, read with what it needs (record-names.md); one in the trash is gone. */
+function bookingNamed(tx: Tx, id: number | null): string {
+  if (id == null) return "—";
+  const row = tx.query.bookings.findFirst({ where: (t, { eq }) => eq(t.id, id), ...{ columns: { id: true }, with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } } } }).sync();
+  return row ? bookingName(row) : "—";
+}
 
 /** One column of the record with the id, inside the transaction. */
 function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
@@ -19764,9 +19822,9 @@ function people(tx: Tx, where: SQL): Recipient[] {
 /** Each model's record as a mail shows it: the subject, its fields, its page. */
 const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
   "Booking": (tx, r) => ({
-    subject: \`Booking: #\${r.id}\`,
+    subject: \`Booking: \${bookingNamed(tx, r.id as number)}\`,
     fields: [
-      ["Session", r.sessionId == null ? "—" : \`#\${r.sessionId}\`],
+      ["Session", sessionNamed(tx, r.sessionId as number | null)],
       ["Attendee", String(one(tx, schema.user, schema.user.id, schema.user.name, r.attendeeId) ?? "—")],
     ],
     link: \`/my-bookings/\${r.id}\`,
@@ -20525,6 +20583,24 @@ export function withSessionFormulas<T extends Row>(row: T): T & { placesLeft: nu
 "
 `;
 
+exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/session.name.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { nameOf, shortWhen, titleOf } from "#/kit/format";
+import { app } from "./app";
+
+/** A session's name: classType · startsAt (smithable.yml's namedBy). */
+export function sessionName(row: Record<string, unknown>): string {
+  return nameOf(
+    [
+      (row.classType as Record<string, unknown> | null | undefined) ? titleOf((row.classType as Record<string, unknown> | null | undefined)?.name) : "",
+      shortWhen(row.startsAt, false, app.timeZone),
+    ],
+    \`Session #\${row.id}\`,
+  );
+}
+"
+`;
+
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/session.schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createInsertSchema } from "drizzle-zod";
@@ -20549,6 +20625,8 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { sortRows } from "#/kit/model";
+import { sessionName } from "./session.name";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
@@ -20653,7 +20731,12 @@ export const sessionData = {
   shownTo,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
-    return hideRefs(hideRefs(rows, "classType", (ids, c = classTypeData.readable(viewer)) => (c ? db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), c)).all().map((r) => r.id) : ids)), "instructor", (ids, c = instructorData.readable(viewer)) => (c ? db.select({ id: schema.instructors.id }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), c)).all().map((r) => r.id) : ids));
+    return hideRefs(hideRefs(rows, "classType", (ids, c = classTypeData.readable(viewer)) => (c ? db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(inArray(schema.classTypes.id, ids), c)).all().map((r) => r.id) : ids)), "instructor", (ids, c = instructorData.readable(viewer)) => (c ? db.select({ id: schema.instructors.id }).from(schema.instructors).where(and(inArray(schema.instructors.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => {
+      // A referenced record named by its parts is shown as its own model shows it: its parts
+      // the viewer may not read hidden too, one reference further.
+      const shown = { ...row };
+      return { ...shown, $name: sessionName(shown) } as R;
+    });
   },
 
   /** A condition for the sessions the viewer may read. */
@@ -20902,7 +20985,7 @@ export const sessionData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.sessions.findFirst({
       where: and(eq(schema.sessions.id, id), sessionData.readable(viewer)),
-      with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer), with: { attendee: { columns: { id: true, name: true } } } } },
+      with: { classType: { columns: { id: true, name: true } }, instructor: { columns: { id: true, name: true } }, bookings: { where: bookingData.readable(viewer), with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } }, attendee: { columns: { id: true, name: true } } } } },
     });
     const found = fetched && sessionData.shownRefs(viewer, [{ ...fetched, bookings: bookingData.shownRefs(viewer, fetched.bookings) }])[0];
     const row = found && shownTo(viewer, found);
@@ -21023,14 +21106,16 @@ export const sessionData = {
   },
 
   /** Choices for fields that refer to a session: the ones the viewer may read. */
-  options(viewer: Viewer | null) {
+  async options(viewer: Viewer | null) {
     if (readScope(sessionAccess.read, viewer) === "none") return [];
-    return db
-      .select({ value: schema.sessions.id, label: sql<string>\`'Session #' || \${schema.sessions.id}\` })
-      .from(schema.sessions)
-      .where(sessionData.readable(viewer))
-      .orderBy(schema.sessions.id)
-      .all();
+    // Named by its parts (record-names.md), with the line under the name a picker shows: ordered
+    // by the first part's value.
+    // Through shownRefs: a part the viewer may not read names nothing here either.
+    const rows = sessionData.shownRefs(viewer, await db.query.sessions.findMany({ where: sessionData.readable(viewer), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } }));
+    return sortRows(
+      rows.map((row) => ({ value: row.id, label: sessionName(row), first: row.classType?.name ?? null })),
+      "first",
+    ).map(({ value, label }) => ({ value, label }));
   },
 };
 "
@@ -21065,13 +21150,14 @@ export type SessionRow = typeof schema.sessions.$inferSelect & {
   classType?: { id: number; name: string } | null;
   instructor?: { id: number; name: string } | null;
   placesLeft?: unknown;
+  $name?: string;
 };
 
 export const sessionUi: RecordUi<SessionRow> = {
   model: "Session",
   label: "Session",
   pluralLabel: "Sessions",
-  titleField: "id",
+  titleField: "$name",
   columns: ["classTypeId", "instructorId", "startsAt", "capacity", "placesLeft"],
   fields: [
     {
@@ -21187,7 +21273,7 @@ export const site: LandingSite = {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
@@ -21229,9 +21315,20 @@ const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).g
  * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
  * running elsewhere.
  */
-function take(run: Due): boolean {
+function take(run: Due, model: string | undefined): boolean {
   if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
   const stale = new Date(Date.now() - STALE);
+  // Left running on its last try: given up, as a failing last try is.
+  if (
+    db
+      .update(runs)
+      .set({ outcome: "given up", tries: TRIES, ranAt: new Date() })
+      .where(and(at(run), eq(runs.outcome, "running"), lt(runs.ranAt, stale), gte(runs.tries, TRIES - 1)))
+      .run().changes === 1
+  ) {
+    audit(db, as(run.timer), { action: "timer given up", model, record: run.record || undefined, details: { error: "left running by a process that stopped" } });
+    return false;
+  }
   return (
     db
       .update(runs)
@@ -21243,7 +21340,7 @@ function take(run: Due): boolean {
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
 async function attempt(run: Due, model: string | undefined, work: () => Promise<string>) {
-  if (!take(run)) return;
+  if (!take(run, model)) return;
   try {
     const outcome = await work();
     db.update(runs).set({ outcome, ranAt: new Date() }).where(at(run)).run();
@@ -21352,6 +21449,14 @@ export async function tick(now = new Date()): Promise<void> {
       const since = Math.max(seen(name, now), last);
       const due = latestDue(timer.clock, new Date(since), now, app.timeZone);
       if (due) await timer.run(due);
+      // A run that failed (or was left running) at an earlier time is tried again by its time:
+      // the next ticks look only after the last one.
+      const again = db
+        .selectDistinct({ due: runs.due })
+        .from(runs)
+        .where(and(eq(runs.timer, name), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, new Date(now.getTime() - STALE))))))
+        .all();
+      for (const run of again) if (run.due !== due && run.due !== "seen") await timer.run(run.due);
     } catch (error) {
       log.error("A timer could not run", { timer: name, error });
     }
@@ -21923,6 +22028,8 @@ import { sessionUi } from "#/generated/session";
 import { bookingUi } from "#/generated/booking";
 import { postUi } from "#/generated/post";
 import { messageUi } from "#/generated/message";
+import { sessionName } from "#/generated/session.name";
+import { bookingName } from "#/generated/booking.name";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -22008,23 +22115,19 @@ const getActivity = createServerFn()
       [
         "Session",
         new Map(
-          db
-            .select({ id: schema.sessions.id, title: schema.sessions.id })
-            .from(schema.sessions)
-            .where(inArray(schema.sessions.id, ids("Session")))
-            .all()
-            .map((r) => [r.id, String(r.title ?? r.id)]),
+          db.query.sessions
+            .findMany({ where: (t, { inArray }) => inArray(t.id, ids("Session")), ...{ columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } })
+            .sync()
+            .map((r) => [r.id, sessionName(r)]),
         ),
       ],
       [
         "Booking",
         new Map(
-          db
-            .select({ id: schema.bookings.id, title: schema.bookings.id })
-            .from(schema.bookings)
-            .where(inArray(schema.bookings.id, ids("Booking")))
-            .all()
-            .map((r) => [r.id, String(r.title ?? r.id)]),
+          db.query.bookings
+            .findMany({ where: (t, { inArray }) => inArray(t.id, ids("Booking")), ...{ columns: { id: true }, with: { session: { columns: { id: true, startsAt: true }, with: { classType: { columns: { id: true, name: true } } } } } } })
+            .sync()
+            .map((r) => [r.id, bookingName(r)]),
         ),
       ],
       [
@@ -22152,6 +22255,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { bookingUi, deleteBooking, getBooking, updateBooking } from "#/generated/booking";
 import { bookingSchema } from "#/generated/booking.schema";
+import { bookingName } from "#/generated/booking.name";
 import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/access";
@@ -22176,7 +22280,7 @@ function BookingPage() {
   const back = () => navigate({ to: "/admin/bookings" });
   return (
     <>
-      <PageHeader title={\`Booking #\${row.id}\`} />
+      <PageHeader title={bookingName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -23176,6 +23280,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { deleteSession, getSession, sessionUi, updateSession } from "#/generated/session";
 import { sessionSchema } from "#/generated/session.schema";
+import { sessionName } from "#/generated/session.name";
 import { bookingUi } from "#/generated/booking";
 import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
@@ -23202,7 +23307,7 @@ function SessionPage() {
   const back = () => navigate({ to: "/admin/sessions" });
   return (
     <>
-      <PageHeader title={\`Session #\${row.id}\`} />
+      <PageHeader title={sessionName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -24433,6 +24538,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { bookingUi, deleteBooking, getBooking, updateBooking } from "#/generated/booking";
 import { bookingSchema } from "#/generated/booking.schema";
+import { bookingName } from "#/generated/booking.name";
 import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/access";
@@ -24483,7 +24589,7 @@ function BookingPage() {
   const back = () => navigate({ to: "/my-bookings" });
   return (
     <>
-      <PageHeader title={\`Booking #\${row.id}\`} />
+      <PageHeader title={bookingName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -25018,6 +25124,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { bookingPlaces, reserveBooking, deleteBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
 import { classTypeData } from "#/generated/class-type.server";
+import { sessionName } from "#/generated/session.name";
 
 /** The sessions whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
@@ -25037,7 +25144,7 @@ const getRange = createServerFn()
         id: row.id,
         start: row.startsAt,
         end: new Date(row.startsAt.getTime() + (minutes.get(row.classTypeId) ?? 60) * 60_000),
-        title: String(row.classType?.name ?? ""),
+        title: sessionName(row as Record<string, unknown>),
       })),
       // Records are made on their page: the viewer must be able to open it, too.
       canCreate: allows(sessionAccess.create, viewer) && allows(pageAccess["sessions"], viewer),
@@ -25076,7 +25183,7 @@ function SchedulePage() {
         timeZone={app.timeZone}
         dateOnly={false}
         newLabel={w.newOne("session")}
-        details={(id) => <Reserve id={id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />}
+        details={(id) => <Reserve id={id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} timeZone={app.timeZone} />}
         onNavigate={(next, replace) => navigate({ to: "/schedule", search: next, replace })}
         onOpen={canOpen ? (id) => navigate({ to: "/sessions/$id", params: { id: String(id) } }) : undefined}
         onCreate={
@@ -25102,6 +25209,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
 import { deleteSession, getSession, sessionUi, updateSession } from "#/generated/session";
 import { sessionSchema } from "#/generated/session.schema";
+import { sessionName } from "#/generated/session.name";
 import { bookingPlaces, bookingUi, deleteBooking, reserveBooking } from "#/generated/booking";
 import { Reserve } from "#/kit/Reserve";
 import { buttonVariants } from "#/components/ui/button";
@@ -25156,7 +25264,7 @@ function SessionPage() {
   const back = () => navigate({ to: "/sessions" });
   return (
     <>
-      <PageHeader title={\`Session #\${row.id}\`} />
+      <PageHeader title={sessionName(row as Record<string, unknown>)} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -25181,7 +25289,7 @@ function SessionPage() {
         }
       />
       <section className="mt-10 max-w-3xl">
-        <Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} />
+        <Reserve id={row.id} load={bookingPlaces} book={reserveBooking} cancel={deleteBooking} timeZone={app.timeZone} />
       </section>
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -25889,6 +25997,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/generated/actions/publish.ts",
   "generated: src/generated/app.ts",
   "generated: src/generated/ask.server.ts",
+  "generated: src/generated/booking.name.ts",
   "generated: src/generated/booking.schema.ts",
   "generated: src/generated/booking.server.ts",
   "generated: src/generated/booking.ts",
@@ -25913,6 +26022,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "generated: src/generated/post.ts",
   "generated: src/generated/roles.ts",
   "generated: src/generated/session.formulas.ts",
+  "generated: src/generated/session.name.ts",
   "generated: src/generated/session.schema.ts",
   "generated: src/generated/session.server.ts",
   "generated: src/generated/session.ts",
@@ -26081,16 +26191,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "58a35d99 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "b9a0719e generated",
+  "src/generated/access.test.ts": "55ac05e0 generated",
   "src/generated/actions/publish.server.ts": "7e85fad8 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "79ddc670 generated",
+  "src/generated/booking.name.ts": "8aaa37e0 generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "31ec6ba7 generated",
-  "src/generated/booking.ts": "fba53b75 generated",
+  "src/generated/booking.server.ts": "85ecf78d generated",
+  "src/generated/booking.ts": "ed726ce3 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "b28f1a2d generated",
+  "src/generated/class-type.server.ts": "ee5b40ec generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -26103,31 +26214,32 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "944e787c generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "7f384c6e generated",
+  "src/generated/outgoing.server.ts": "f761374d generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "7cb79277 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
+  "src/generated/session.name.ts": "c4a953cd generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "0dea4541 generated",
-  "src/generated/session.ts": "d120db70 generated",
+  "src/generated/session.server.ts": "d72b6b23 generated",
+  "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "994514da generated",
-  "src/generated/timers.server.ts": "880888f7 generated",
+  "src/generated/timers.server.ts": "86cf5fe1 generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/users.ts": "cc5c380e generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
@@ -26138,11 +26250,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
-  "src/kit/Reserve.tsx": "42d5e5ae kit",
+  "src/kit/Reserve.tsx": "dece58a5 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "04614292 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
@@ -26154,17 +26266,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "52ff3483 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
-  "src/kit/clock.ts": "8f18d8c9 kit",
+  "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "b925c66e kit",
@@ -26178,7 +26290,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
@@ -26187,8 +26299,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "afdfd239 generated",
   "src/routes/about/index.tsx": "85782241 generated",
-  "src/routes/admin/activity.tsx": "4a76dfa2 generated",
-  "src/routes/admin/bookings/$id.tsx": "1941ec5d generated",
+  "src/routes/admin/activity.tsx": "db85c43e generated",
+  "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "557a5a18 generated",
   "src/routes/admin/class-types/$id.tsx": "5e020c24 generated",
@@ -26204,7 +26316,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/$id.tsx": "db7551c8 generated",
   "src/routes/admin/posts/index.tsx": "26384ffe generated",
   "src/routes/admin/posts/new.tsx": "3e7419c5 generated",
-  "src/routes/admin/sessions/$id.tsx": "54a7b3fa generated",
+  "src/routes/admin/sessions/$id.tsx": "5c4f43b0 generated",
   "src/routes/admin/sessions/index.tsx": "c0419765 generated",
   "src/routes/admin/sessions/new.tsx": "91d9748d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -26224,7 +26336,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/$id.tsx": "9d1f9c82 generated",
   "src/routes/messages/index.tsx": "e4a7b8f3 generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
-  "src/routes/my-bookings/$id.tsx": "50072457 generated",
+  "src/routes/my-bookings/$id.tsx": "25f5ed59 generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
   "src/routes/my-bookings/index.tsx": "b344332d generated",
   "src/routes/my-bookings/new.tsx": "ea212364 generated",
@@ -26233,8 +26345,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "4cb40f09 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
-  "src/routes/schedule/index.tsx": "02dcec4c generated",
-  "src/routes/sessions/$id.tsx": "72d569e3 generated",
+  "src/routes/schedule/index.tsx": "5b08bdec generated",
+  "src/routes/sessions/$id.tsx": "ef68b353 generated",
   "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",
@@ -31960,16 +32072,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -31987,13 +32099,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -32003,7 +32115,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
@@ -32614,7 +32726,7 @@ function insertClient(owner: string | null, values: Record<string, unknown> = {}
 
 function invoiceValues(owner: string | null) {
   const n = next();
-  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2026-01-15", dueOn: "2026-01-15", status: "draft", contract: null } as const;
+  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2099-01-15", dueOn: "2099-01-15", status: "draft", contract: null } as const;
 }
 
 function insertInvoice(owner: string | null, values: Record<string, unknown> = {}) {
@@ -37035,7 +37147,7 @@ export const site: LandingSite = { home: "/", menu: [] };
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/timers.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import type { Viewer } from "#/kit/access";
@@ -37076,9 +37188,20 @@ const ran = (run: Due) => db.select({ id: runs.id }).from(runs).where(at(run)).g
  * process that stopped (counted as a failed try). False when it is done, skipped, given up, or
  * running elsewhere.
  */
-function take(run: Due): boolean {
+function take(run: Due, model: string | undefined): boolean {
   if (db.insert(runs).values({ ...run, outcome: "running" }).onConflictDoNothing().run().changes === 1) return true;
   const stale = new Date(Date.now() - STALE);
+  // Left running on its last try: given up, as a failing last try is.
+  if (
+    db
+      .update(runs)
+      .set({ outcome: "given up", tries: TRIES, ranAt: new Date() })
+      .where(and(at(run), eq(runs.outcome, "running"), lt(runs.ranAt, stale), gte(runs.tries, TRIES - 1)))
+      .run().changes === 1
+  ) {
+    audit(db, as(run.timer), { action: "timer given up", model, record: run.record || undefined, details: { error: "left running by a process that stopped" } });
+    return false;
+  }
   return (
     db
       .update(runs)
@@ -37090,7 +37213,7 @@ function take(run: Due): boolean {
 
 /** Runs one due thing once; a failure is tried again next tick, then given up with a line in Activity. */
 async function attempt(run: Due, model: string | undefined, work: () => Promise<string>) {
-  if (!take(run)) return;
+  if (!take(run, model)) return;
   try {
     const outcome = await work();
     db.update(runs).set({ outcome, ranAt: new Date() }).where(at(run)).run();
@@ -37122,7 +37245,7 @@ const markOverdueTimer: RecordTimer = async (now, from, late) => {
   let missed = 0;
   for (const row of db.select({ id: schema.invoices.id, at: schema.invoices.dueOn }).from(schema.invoices).where(eq(schema.invoices.status, "sent")).all()) {
     if (row.at == null) continue;
-    const due = instantOf(\`\${row.at}T00:00\`, app.timeZone).getTime() + 604800000;
+    const due = instantOf(\`\${new Date(Date.parse(\`\${row.at}T00:00:00Z\`) + 604800000).toISOString().slice(0, 10)}T00:00\`, app.timeZone).getTime();
     if (due > now.getTime()) continue;
     const run = { timer: "markOverdue", record: row.id, due: new Date(due).toISOString() };
     if (due <= from) {
@@ -37173,6 +37296,14 @@ export async function tick(now = new Date()): Promise<void> {
       const since = Math.max(seen(name, now), last);
       const due = latestDue(timer.clock, new Date(since), now, app.timeZone);
       if (due) await timer.run(due);
+      // A run that failed (or was left running) at an earlier time is tried again by its time:
+      // the next ticks look only after the last one.
+      const again = db
+        .selectDistinct({ due: runs.due })
+        .from(runs)
+        .where(and(eq(runs.timer, name), lt(runs.tries, TRIES), or(eq(runs.outcome, "failed"), and(eq(runs.outcome, "running"), lt(runs.ranAt, new Date(now.getTime() - STALE))))))
+        .all();
+      for (const run of again) if (run.due !== due && run.due !== "seen") await timer.run(run.due);
     } catch (error) {
       log.error("A timer could not run", { timer: name, error });
     }
@@ -39359,7 +39490,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "0a45fa1f generated",
   "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "2ee3b41d generated",
+  "src/generated/access.test.ts": "d18de62d generated",
   "src/generated/actions/mark-overdue.server.ts": "33566007 generated",
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
   "src/generated/actions/mark-paid.server.ts": "bcae8c0b generated",
@@ -39389,16 +39520,16 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
-  "src/generated/timers.server.ts": "70bb88e9 generated",
+  "src/generated/timers.server.ts": "7d92e9c8 generated",
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -39407,7 +39538,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -39424,17 +39555,17 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/assistant.server.ts": "52ff3483 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
-  "src/kit/clock.ts": "8f18d8c9 kit",
+  "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "b925c66e kit",
@@ -39448,7 +39579,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
@@ -40084,7 +40215,7 @@ function insertOrderLine(owner: string | null, values: Record<string, unknown> =
 
 function stopValues(_owner: string | null) {
   const n = next();
-  return { place: \`Stop place \${n}\`, day: "2026-01-15", hours: \`Stop hours \${n}\`, note: null } as const;
+  return { place: \`Stop place \${n}\`, day: "2099-01-15", hours: \`Stop hours \${n}\`, note: null } as const;
 }
 
 function insertStop(owner: string | null, values: Record<string, unknown> = {}) {
@@ -46237,7 +46368,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
-  "src/generated/access.test.ts": "cf2bd0ff generated",
+  "src/generated/access.test.ts": "ae254a9d generated",
   "src/generated/actions/accept.server.ts": "873be1fd generated",
   "src/generated/actions/accept.ts": "38e5215d generated",
   "src/generated/actions/back-on.server.ts": "1c453792 generated",
@@ -46278,16 +46409,16 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "61bb9677 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -46305,13 +46436,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "b925c66e kit",
@@ -46324,7 +46455,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
@@ -50655,10 +50786,10 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -50667,7 +50798,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -50685,13 +50816,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -50704,7 +50835,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
@@ -51095,7 +51226,7 @@ async function reads(
 
 function itemValues(_owner: string | null) {
   const n = next();
-  return { name: \`Item name \${n}\`, summary: null, kind: "general", link: null, addedOn: "2026-01-15" } as const;
+  return { name: \`Item name \${n}\`, summary: null, kind: "general", link: null, addedOn: "2099-01-15" } as const;
 }
 
 function insertItem(owner: string | null, values: Record<string, unknown> = {}) {
@@ -53767,7 +53898,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "3f96f60a generated",
   "src/db/seed.ts": "71825882 generated",
-  "src/generated/access.test.ts": "6338c554 generated",
+  "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "41a8fc86 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -53783,17 +53914,17 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Landing.tsx": "97de941d kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -53809,13 +53940,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -53825,7 +53956,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
@@ -54362,7 +54493,7 @@ function insertComponent(owner: string | null, values: Record<string, unknown> =
 
 function incidentValues(_owner: string | null) {
   const n = next();
-  return { title: \`Incident title \${n}\`, status: "investigating", componentId: null, detectedAt: new Date("2026-01-15T10:00:00Z"), resolvedAt: null, summary: null } as const;
+  return { title: \`Incident title \${n}\`, status: "investigating", componentId: null, detectedAt: new Date("2099-01-15T10:00:00Z"), resolvedAt: null, summary: null } as const;
 }
 
 function insertIncident(owner: string | null, values: Record<string, unknown> = {}) {
@@ -54375,7 +54506,7 @@ function insertIncident(owner: string | null, values: Record<string, unknown> = 
 
 function incidentUpdateValues(owner: string | null) {
   const n = next();
-  return { incidentId: insertIncident(owner).id, at: new Date("2026-01-15T10:00:00Z"), status: "investigating", message: \`IncidentUpdate message \${n}\` } as const;
+  return { incidentId: insertIncident(owner).id, at: new Date("2099-01-15T10:00:00Z"), status: "investigating", message: \`IncidentUpdate message \${n}\` } as const;
 }
 
 function insertIncidentUpdate(owner: string | null, values: Record<string, unknown> = {}) {
@@ -54388,7 +54519,7 @@ function insertIncidentUpdate(owner: string | null, values: Record<string, unkno
 
 function maintenanceValues(_owner: string | null) {
   const n = next();
-  return { title: \`Maintenance title \${n}\`, componentId: null, startsAt: new Date("2026-01-15T10:00:00Z"), endsAt: new Date("2026-01-15T10:00:00Z"), description: null } as const;
+  return { title: \`Maintenance title \${n}\`, componentId: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), description: null } as const;
 }
 
 function insertMaintenance(owner: string | null, values: Record<string, unknown> = {}) {
@@ -64335,7 +64466,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "e81eeda4 kit",
   "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "2df13645 generated",
+  "src/generated/access.test.ts": "41f7c3b5 generated",
   "src/generated/actions/identified.server.ts": "14da46dc generated",
   "src/generated/actions/identified.ts": "08a14f22 generated",
   "src/generated/actions/monitoring.server.ts": "081af354 generated",
@@ -64371,11 +64502,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -64386,7 +64517,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -64405,14 +64536,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -64422,7 +64553,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
@@ -70682,17 +70813,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "d69cf210 kit",
+  "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "127fa9a4 kit",
-  "src/kit/Combobox.tsx": "16f63d0e kit",
+  "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/ModelForm.tsx": "0d9cc3c5 kit",
-  "src/kit/ModelTable.tsx": "0cc2330f kit",
+  "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -70711,13 +70842,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/filter.ts": "ead526ad kit",
-  "src/kit/format.ts": "7a009d27 kit",
+  "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "1170a5e4 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
-  "src/kit/model.ts": "d5af6081 kit",
+  "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "d48092fa kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "b925c66e kit",
@@ -70731,7 +70862,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4b4d9938 kit",
+  "src/kit/words/en.ts": "c245491f kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",

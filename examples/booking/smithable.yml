@@ -28,6 +28,7 @@ models:
 
   Session:
     description: One scheduled occurrence of a class.
+    namedBy: [classType, startsAt]     # "Hatha · Mon 19 Oct, 08:00"
     fields:
       classType: ClassType!
       instructor: Instructor!
@@ -38,6 +39,7 @@ models:
 
   Booking:
     description: A member's place in a session.
+    namedBy: session                   # named as its session is
     fields:
       session: Session!  unique         # private access: one booking per member and session
       attendee: User                    # whose place it is: staff book for a member, a member for themselves
@@ -45,6 +47,8 @@ models:
     capacity:                           # a session never has more bookings than its capacity
       per: session
       max: session.capacity
+      closes: session.startsAt          # booking until the class starts
+      cancelUntil: session.startsAt     # and cancelling (e.g. "2 hours before session.startsAt")
 
   Post:
     description: News and articles on the studio's blog.

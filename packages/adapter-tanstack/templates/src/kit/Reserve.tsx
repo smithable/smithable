@@ -15,6 +15,21 @@ export interface Places {
   mine?: number;
   canBook: boolean;
   signedIn: boolean;
+  /** When booking closes and when cancelling does (ISO times), where the capacity says so. */
+  closesAt?: string | null;
+  cancelUntilAt?: string | null;
+}
+
+/** A deadline in the app's time zone: its time alone today, its day and time otherwise. */
+function deadline(iso: string, timeZone: string | undefined): string {
+  const at = new Date(iso);
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone });
+  return new Intl.DateTimeFormat(undefined, {
+    ...(day(at) === day(new Date()) ? {} : { weekday: "short", day: "numeric", month: "short" }),
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  }).format(at);
 }
 
 export function Reserve({
@@ -26,6 +41,7 @@ export function Reserve({
   cancelLabel = w.cancelBooking,
   fullLabel = w.full,
   bookedLabel = w.youAreBooked,
+  timeZone,
 }: {
   /** The record whose places these are (the session). */
   id: number;
@@ -37,6 +53,8 @@ export function Reserve({
   cancelLabel?: string;
   fullLabel?: string;
   bookedLabel?: string;
+  /** The app's time zone, for the deadlines. */
+  timeZone?: string;
 }) {
   const [places, setPlaces] = useState<Places | null>();
   const [busy, setBusy] = useState(false);
@@ -77,6 +95,12 @@ export function Reserve({
   const here =
     typeof window === "undefined" ? "/" : window.location.pathname + window.location.search;
   const full = places.left === 0;
+  // The capacity's deadlines (the booking starter: until the class starts): said before them,
+  // and past them the button goes and the sentence says when it closed.
+  const past = (iso?: string | null) => Boolean(iso && Date.parse(iso) <= Date.now());
+  const bookingClosed = past(places.closesAt);
+  const cancellingClosed = past(places.cancelUntilAt);
+  const note = (text: string) => <p className="text-sm text-muted-foreground">{text}</p>;
 
   return (
     <div data-kit="reserve" className="space-y-3">
@@ -89,7 +113,9 @@ export function Reserve({
             <CircleCheck aria-hidden className="size-5 shrink-0" />
             {bookedLabel}
           </p>
-          {asking ? (
+          {cancellingClosed && places.cancelUntilAt ? (
+            note(w.cancellingClosedAt(deadline(places.cancelUntilAt, timeZone)))
+          ) : asking ? (
             <div className="flex flex-wrap items-center gap-2">
               <span>{w.cancelYourBooking}</span>
               <Button
@@ -110,11 +136,17 @@ export function Reserve({
               </Button>
             </div>
           ) : (
-            <Button type="button" variant="outline" onClick={() => setAsking(true)}>
-              {cancelLabel}
-            </Button>
+            <>
+              <Button type="button" variant="outline" onClick={() => setAsking(true)}>
+                {cancelLabel}
+              </Button>
+              {places.cancelUntilAt &&
+                note(w.cancelUntil(deadline(places.cancelUntilAt, timeZone)))}
+            </>
           )}
         </div>
+      ) : bookingClosed && places.closesAt ? (
+        note(w.bookingClosedAt(deadline(places.closesAt, timeZone)))
       ) : !places.signedIn ? (
         <AppLink
           href={`/sign-in?redirect=${encodeURIComponent(here)}`}
@@ -123,9 +155,12 @@ export function Reserve({
           {w.signInToBook}
         </AppLink>
       ) : places.canBook && !full ? (
-        <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
-          {busy ? w.booking : bookLabel}
-        </Button>
+        <>
+          <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
+            {busy ? w.booking : bookLabel}
+          </Button>
+          {places.closesAt && note(w.bookUntil(deadline(places.closesAt, timeZone)))}
+        </>
       ) : null}
       {failure && (
         <p role="alert" className="flex items-center gap-2 text-sm text-destructive">

@@ -3,7 +3,8 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin: all
+  admin:
+    description: Conference organizers. Manage the talks and speakers.
   member:
     description: An attendee who registers for talks.
     pages: [my-registrations]
@@ -11,7 +12,7 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, talks, speakers, privacy]
+  pages: [home, schedule, speakers, privacy]
   read: [Talk, Speaker]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -15,13 +15,12 @@ models:
   Ingredient:
     fields:
       name: string! unique
-      supplier: Supplier
-      category: flour | sugar | dairy | eggs | fats | yeast | flavorings | fruitAndNuts | packaging | other
-      unit: kg | g | l | ml | pieces
+      category: flour | sugar | dairy | eggs | fats | leavening | flavoring | fruitAndNuts | packaging | other
+      unit: kg | g | l | ml | pieces | packs
       inStock: decimal! = 0
       reorderLevel: decimal = 0
-      costPerUnit: money
-      storage: dry | chilled | frozen
+      supplier: Supplier
+      storage: dry | fridge | freezer
       lastCounted: date = TODAY()
       notes: text
 pages:
@@ -29,9 +28,9 @@ pages:
     crud: Ingredient
     search: [name, notes]
     filters: [category, supplier, storage]
-    sortable: [name, inStock, lastCounted]
   suppliers:
     crud: Supplier
     search: [name, contactName, email]
   team:
     users: manage
+navigation: [ingredients, suppliers, team]

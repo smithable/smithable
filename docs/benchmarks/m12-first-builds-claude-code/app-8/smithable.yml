@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Conference Hub
-  description: "Registration for a conference: browse the talks and speakers, and save your seat at the talks you want to attend."
+  description: Talk schedule, speakers and attendee registration for a conference.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -20,7 +20,6 @@ models:
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      track: general | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -35,28 +34,27 @@ models:
       per: talk
       max: talk.capacity
 pages:
-  talks:
-    crud: Talk
-    filters: [track, speaker, startsAt]
-    sortable: [startsAt, title]
   schedule:
     calendar:
       model: Talk
       starts: startsAt
+  talks:
+    crud: Talk
+    filters: [speaker, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+    sortable: [startsAt, capacity]
   speakers:
     crud: Speaker
-    search: [name, company]
   my-registrations:
     crud: Registration
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, talks, speakers]
+        shortcuts: [schedule, speakers]
       footer:
-      talks:
-        records: Talk
-      speakers:
+      lineup:
         records: Speaker
       faq:
       callToAction:
@@ -67,7 +65,7 @@ pages:
   admin:
     data: all
 navigation:
-  main: [talks, schedule, speakers, my-registrations, home, privacy, admin]
-  program: [schedule, talks, speakers, my-registrations]
+  main: [schedule, talks, speakers, my-registrations, home, privacy, admin]
+  conference: [schedule, my-registrations, talks, speakers]
   website: [home]
   admin: [admin]

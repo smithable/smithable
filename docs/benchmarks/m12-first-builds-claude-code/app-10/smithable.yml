@@ -1,26 +1,27 @@
 smithable: 0.1
 app:
-  name: Family Kitchen
-  description: The family's recipes with their ingredients, and the shopping lists for cooking them.
+  name: Family Recipes
+  description: A family's shared recipe collection, with each recipe's ingredients and the shopping lists for the week.
   timezone: Europe/Mariehamn
 models:
   Recipe:
     fields:
       name: string!
       summary: text
-      photo: picture
-      category: main | starter | dessert | baking | breakfast | drink
+      category: main | starter | side | dessert | baking | breakfast | drink
       servings: int = 4
       minutes: int
+      photo: picture
       instructions: markdown
-      link: url
       favorite: bool
+      source: url
       ingredients: Ingredient[]
   Ingredient:
     fields:
       recipe: Recipe!
       name: string!
-      quantity: string
+      amount: string
+      note: string
   ShoppingList:
     fields:
       name: string!
@@ -31,29 +32,41 @@ models:
     fields:
       list: ShoppingList!
       name: string!
-      quantity: string
+      amount: string
+      recipe: Recipe
       bought: bool
 pages:
   recipes:
     crud: Recipe
-    search: [name, summary]
+    search: [name, summary, category]
     filters: [category, favorite]
   shoppingLists:
     crud: ShoppingList
-    filters: [status]
-    actions: [finishShopping]
-  family:
+    filters: [status, shopOn]
+    defaultFilter:
+      status: open
+    actions: [markDone, reopen]
+  team:
     users: manage
 actions:
+  markDone:
+    on: ShoppingList
+    when:
+      status: open
+    set:
+      status: done
+    intent: Mark a shopping list as done once the shopping is finished.
+  reopen:
+    on: ShoppingList
+    when:
+      status: done
+    set:
+      status: open
+    intent: Open a finished shopping list again.
   markBought:
     on: ShoppingItem
     when:
       bought: false
     set:
       bought: true
-  finishShopping:
-    on: ShoppingList
-    when:
-      status: open
-    set:
-      status: done
+    intent: Tick off an item once it is in the basket.

@@ -190,9 +190,9 @@ async function open(page, url) {
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
-async function chooseRecord(page, label, name) {
+async function chooseRecord(page, label, name, exact = false) {
   await page.getByRole("combobox", { name: label }).fill(name.slice(0, 5));
-  await page.getByRole("option", { name }).click();
+  await page.getByRole("option", { name, exact }).click();
 }
 
 /** Signs in through the development sign-in on the sign-in page. */
@@ -324,15 +324,18 @@ async function calendarFlow(base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
     await open(page, `${base}/schedule`);
-    const week = page.getByRole("heading", { level: 2 }).first();
-    const shown = await week.innerText();
-    const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 * P });
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/week.png`, fullPage: true });
-    // A visitor gets the session's details in a panel.
+    // A visitor gets the session's details in a panel: a class still open for booking.
+    const week = page.getByRole("heading", { level: 2 }).first();
+    await page
+      .locator("section ol button")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    const shown = await week.innerText();
+    const { nth } = await openClass(page, page.getByRole("dialog"));
+    const session = page.locator("section ol button").nth(nth);
     const title = (await session.locator("span").first().innerText()).trim();
-    await session.click();
     await page
       .getByRole("dialog")
       .getByRole("heading", { name: title })
@@ -410,6 +413,31 @@ async function calendarFlow(base) {
  * and sees it among their bookings; the admin then finds it full and cannot lower its places
  * below one; the member cancels and the place is free again.
  */
+/**
+ * Opens the first class this week (or next week, late on a Sunday) still open for booking:
+ * the starter's classes close when they start. Its place in the list and its week's address,
+ * for the flows to open the same class again.
+ */
+async function openClass(page, panel) {
+  for (const week of [0, 1]) {
+    if (week) await page.getByRole("button", { name: "Next", exact: true }).first().click();
+    const buttons = page.locator("section ol button");
+    await buttons.first().waitFor({ timeout: 10000 * P });
+    const schedule = page.url();
+    for (let i = 0; i < (await buttons.count()); i++) {
+      await buttons.nth(i).click();
+      await panel
+        .getByText(/places? left$|^No mats left$/)
+        .first()
+        .waitFor({ timeout: 10000 * P });
+      if (!(await panel.getByText(/^Booking closed at /).count())) return { nth: i, schedule };
+      await panel.getByRole("button", { name: "Close" }).click();
+      await panel.waitFor({ state: "hidden", timeout: 10000 * P });
+    }
+  }
+  throw new Error("no class open for booking this week or next");
+}
+
 async function bookingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -420,10 +448,8 @@ async function bookingFlow(dir, base) {
     write(dir, "UPDATE sessions SET capacity = 1");
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
-    const session = page.locator("section ol button").first();
-    await session.waitFor({ timeout: 10000 * P });
-    const title = (await session.locator("span").first().innerText()).trim();
-    await session.click();
+    const { nth, schedule } = await openClass(page, panel);
+    const session = (p) => p.locator("section ol button").nth(nth);
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
@@ -452,11 +478,11 @@ async function bookingFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     await page.getByRole("heading", { name: "Who teaches" }).waitFor();
     step = "the staff's schedule";
-    await open(page, `${base}/schedule`);
+    await open(page, schedule);
     // Staff see the schedule as members do, with the way into the workspace.
     await page.getByRole("link", { name: "Workspace" }).waitFor({ timeout: 10000 * P });
     step = "the session's page from the schedule";
-    await page.locator("section ol button", { hasText: title }).first().click();
+    await session(page).click();
     await page.waitForURL(/\/sessions\/\d+$/);
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
     if (await page.getByRole("button", { name: "Book a mat" }).count())
@@ -477,8 +503,8 @@ async function bookingFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     // The member cancels; the place is free again.
     await signInAs(page, base, "member");
-    await open(page, `${base}/schedule`);
-    await page.locator("section ol button", { hasText: title }).first().click();
+    await open(page, schedule);
+    await session(page).click();
     await panel.getByRole("button", { name: "Cancel booking" }).click();
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
@@ -490,13 +516,33 @@ async function bookingFlow(dir, base) {
     await panel.getByRole("button", { name: "Yes, cancel it" }).click();
     await panel.getByText(/^1 of 1 place left$/).waitFor({ timeout: 10000 * P });
     await panel.getByRole("button", { name: "Book a mat" }).waitFor();
+    // Booking and cancelling close when the class starts (closes, cancelUntil: its start): the
+    // block says until when; once it has started the member can no longer cancel here.
+    await panel.getByRole("button", { name: "Book a mat" }).click();
+    await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
+    await panel.getByText(/^Cancel until /).waitFor({ timeout: 10000 * P });
+    const [booked] = query(
+      dir,
+      "SELECT s.id, s.starts_at AS at FROM sessions s JOIN bookings b ON b.session_id = s.id",
+    );
+    write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
+    // Its place in the week moved with its start: it is opened by its address (no Close first,
+    // whose step back in the history would cut this navigation short).
+    const moved = new URL(schedule);
+    moved.searchParams.set("open", String(booked.id));
+    await open(page, moved.toString());
+    await panel.getByText(/^Cancelling closed at /).waitFor({ timeout: 10000 * P });
+    if (await panel.getByRole("button", { name: "Cancel booking" }).count())
+      throw new Error("a started class still offers to cancel");
+    write(dir, `DELETE FROM bookings WHERE session_id = ${booked.id}`);
+    write(dir, `UPDATE sessions SET starts_at = ${booked.at} WHERE id = ${booked.id}`);
     // A visitor picks the class, signs in from its panel and finds the same class open, books it
     // once, and Back closes the panel before leaving the schedule.
     const visit = await (
       await browser.newContext({ viewport: { width: 1440, height: 1000 } })
     ).newPage();
-    await open(visit, `${base}/schedule`);
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await open(visit, schedule);
+    await session(visit).click();
     await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
     const picked = new URL(visit.url()).searchParams.get("open");
     await visit.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).click();
@@ -512,7 +558,7 @@ async function bookingFlow(dir, base) {
     // Close takes the class out of the address; one opened on the schedule is closed by Back.
     await again.getByRole("button", { name: "Close" }).click();
     await visit.waitForURL((url) => !url.searchParams.has("open"), { timeout: 10000 * P });
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await session(visit).click();
     await visit.waitForURL(/[?&]open=\d+/, { timeout: 10000 * P });
     await visit.goBack();
     await visit.waitForURL((url) => url.pathname === "/schedule" && !url.searchParams.has("open"), {
@@ -520,13 +566,13 @@ async function bookingFlow(dir, base) {
     });
     await again.waitFor({ state: "hidden", timeout: 10000 * P });
     // Cancelled again, so the checks after this one find the class as they expect it.
-    await visit.locator("section ol button", { hasText: title }).first().click();
+    await session(visit).click();
     await again.getByRole("button", { name: "Cancel booking" }).click();
     await again.getByRole("button", { name: "Yes, cancel it" }).click();
     await again.getByRole("button", { name: "Book a mat" }).waitFor({ timeout: 10000 * P });
     await visit.context().close();
     console.log(
-      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place); a visitor's chosen class is open again after signing in, booked once, and Back closes it",
+      "  ✓ browser: a member books a place and sees it in My bookings; the admin finds the session full, the member named in its bookings, and cannot lower its places below the bookings; the member cancels and the place is free again, books it again and cancels again (bookings in the trash hold no place); the block says until when one may cancel, and once the class has started it cannot be cancelled here; a visitor's chosen class is open again after signing in, booked once, and Back closes it",
     );
   } catch (error) {
     console.log(
@@ -589,6 +635,16 @@ async function sessionsListFlow(base) {
   }
 }
 
+/** A mail's text as written: soft line breaks joined and =XX bytes decoded (UTF-8). */
+function quotedPrintable(raw) {
+  return Buffer.from(
+    raw
+      .replace(/=\r?\n/g, "")
+      .replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16))),
+    "latin1",
+  ).toString("utf8");
+}
+
 async function outgoingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -600,13 +656,13 @@ async function outgoingFlow(dir, base) {
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const all = mails();
     if (all.length !== count + 1) throw new Error(`${what}: ${all.length - count} mails, not one`);
-    return readFileSync(join(outbox, all.at(-1)), "utf8").replace(/=\r?\n/g, "");
+    return quotedPrintable(readFileSync(join(outbox, all.at(-1)), "latin1"));
   };
   try {
     await signInAs(page, base, "member");
     await open(page, `${base}/schedule`);
     let count = mails().length;
-    await page.locator("section ol button").first().click();
+    await openClass(page, panel);
     await panel.getByRole("button", { name: "Book a mat" }).click();
     await panel.getByText("You're booked").waitFor({ timeout: 10000 * P });
     const made = await next(count, "the booking");
@@ -614,7 +670,8 @@ async function outgoingFlow(dir, base) {
       /^To: dev-member@/m,
       /^Subject: Your booking$/m,
       /Thank you for booking/,
-      /Session: #\d+/,
+      // A session is named by its class and its start (record-names.md).
+      /Session: \S.* · /,
       /\/my-bookings\/\d+/,
     ])
       if (!part.test(made))
@@ -623,9 +680,10 @@ async function outgoingFlow(dir, base) {
       dir,
       "select id, session_id as session from bookings order by id desc limit 1",
     );
-    const [{ other }] = query(
+    // A session of another class, chosen by what the picker shows.
+    const [{ otherClass }] = query(
       dir,
-      `select id as other from sessions where id != ${session} order by id limit 1`,
+      `select c.name as otherClass from sessions s join class_types c on c.id = s.class_type_id where s.class_type_id != (select class_type_id from sessions where id = ${session}) order by s.id limit 1`,
     );
 
     // The studio moves it to another session: the member is told, the admin (who changed it) not.
@@ -633,15 +691,25 @@ async function outgoingFlow(dir, base) {
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
     const field = page.getByLabel(/^Session/);
-    if ((await field.evaluate((e) => e.tagName)) === "SELECT")
-      await field.selectOption({ label: `#${other}` });
-    else await chooseRecord(page, /^Session/, `#${other}`);
+    let label;
+    if ((await field.evaluate((e) => e.tagName)) === "SELECT") {
+      label = await field.evaluate(
+        (e, c) => [...e.options].find((o) => o.text.startsWith(c))?.text ?? "",
+        otherClass,
+      );
+      await field.selectOption({ label });
+    } else {
+      await page.getByRole("combobox", { name: /^Session/ }).fill(otherClass);
+      const option = page.getByRole("option").filter({ hasText: otherClass }).first();
+      label = (await option.innerText()).split("\n")[0].trim();
+      await option.click();
+    }
     await page.getByRole("button", { name: "Save changes" }).click();
     const changed = await next(count, "the change");
     if (
       !/^To: dev-member@/m.test(changed) ||
       !/^Subject: Your booking was changed$/m.test(changed) ||
-      !changed.includes(`Session: #${other}`)
+      !changed.includes(`Session: ${label}`)
     )
       throw new Error(`the change's mail: ${changed.slice(0, 600)}`);
 
@@ -655,7 +723,7 @@ async function outgoingFlow(dir, base) {
     if (
       !/^To: dev-member@/m.test(gone) ||
       !/^Subject: Your booking was cancelled$/m.test(gone) ||
-      !gone.includes(`Session: #${other}`)
+      !gone.includes(`Session: ${label}`)
     )
       throw new Error(`the deletion's mail: ${gone.slice(0, 600)}`);
 

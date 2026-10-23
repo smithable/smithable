@@ -6,7 +6,6 @@ pages:
     icon: book
   shoppingLists:
     table:
-      columns: [name, shopOn, status]
       sort: -shopOn
     icon: cart
 tones:

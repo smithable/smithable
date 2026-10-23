@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "marketplace",
   "questions": [
-    "Who can post jobs?",
-    "Who can see the jobs and apply?",
-    "What should an application include?"
+    "Who posts the jobs?",
+    "What can visitors see without signing in?",
+    "Who can apply, and what goes into an application?"
   ]
 }

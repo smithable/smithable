@@ -10,7 +10,8 @@ interface ComboboxProps {
   id: string;
   /** The chosen record's id as text, or "" for none. */
   value: string;
-  options: { value: string | number; label: string }[];
+  /** A choice's detail is a line under its name, and is searched too (record-names.md §3). */
+  options: { value: string | number; label: string; detail?: string }[];
   required: boolean;
   invalid: boolean;
   describedBy?: string;
@@ -39,7 +40,9 @@ export function Combobox({
   const [active, setActive] = useState(0);
   const typed = text !== labelOf(value);
   const shown = typed
-    ? options.filter((o) => o.label.toLowerCase().includes(text.trim().toLowerCase()))
+    ? options.filter((o) =>
+        `${o.label} ${o.detail ?? ""}`.toLowerCase().includes(text.trim().toLowerCase()),
+      )
     : options;
 
   const choose = (v: string) => {
@@ -131,6 +134,11 @@ export function Combobox({
                 }}
               >
                 {option.label}
+                {option.detail && (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {option.detail}
+                  </span>
+                )}
               </div>
             ))}
           </div>

@@ -132,7 +132,11 @@ export type Row = { id: number } & Record<string, unknown>;
 
 /** Choices for a reference field, keyed by the field's name, e.g. { customerId: [...] }. */
 /** Each field's choices; null for a field not the viewer's to fill (an owner they cannot choose). */
-export type Options = Record<string, { value: number | string; label: string }[] | null>;
+/** A choice's `detail`: a line under its name where there is room (the ux file's record subtitle). */
+export type Options = Record<
+  string,
+  { value: number | string; label: string; detail?: string }[] | null
+>;
 
 /**
  * Marks a visible text with where its wording is kept, e.g. "pages.customers.title", so the

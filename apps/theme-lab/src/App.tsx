@@ -280,9 +280,9 @@ export function App() {
         <strong>Theme lab</strong>
         {!!start?.starters.length && (
           <label>
-            Starter{" "}
+            App{" "}
             <select
-              aria-label="Starter"
+              aria-label="App"
               value={start.starter}
               disabled={!!making && !making.startsWith("Not ")}
               onChange={(e) => void switchTo(e.target.value)}
@@ -294,7 +294,7 @@ export function App() {
           </label>
         )}
         <label>
-          Start from{" "}
+          Start from theme{" "}
           <select onChange={(e) => startFrom(e.target.value)} defaultValue="modern">
             <optgroup label="Built in">
               {BUILT_IN_THEMES.map((t) => (
@@ -329,9 +329,7 @@ export function App() {
           Show the motion
         </button>
         <button type="button" disabled={!theme || errors.length > 0} onClick={save}>
-          {PUBLIC
-            ? "Download"
-            : `Save${start ? (start.project ? " to the project" : ` to ${start.target}/themes`) : ""}`}
+          {PUBLIC ? "Download" : start?.project ? "Save to the project" : "Save theme"}
         </button>
         {saved && <span role="status">{saved}</span>}
       </header>

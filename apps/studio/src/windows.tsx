@@ -14,7 +14,7 @@ export const WINDOW_NAMES: Record<SlotContent, string> = {
   nocode: "No code",
   code: "Code",
   preview: "Preview",
-  smith: "Smith",
+  smith: "Ask agent Smith",
   changes: "Changes",
   "smith+changes": "Smith, with Changes under it",
 };
