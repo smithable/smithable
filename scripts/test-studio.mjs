@@ -1357,10 +1357,29 @@ try {
     }
     if (!existsSync(join(dir, "public", "images", "logo.png")))
       throw new Error("the logo's file was not written under public/images/");
+    // A 138: when the logo never shows, say which half is stale: what the dev server renders
+    // for the frame's address and what it gives the browser for the root route.
     await preview
       .locator('img[data-part="logo"][src="/images/logo.png"] >> visible=true')
       .first()
-      .waitFor({ timeout: 60000 * P });
+      .waitFor({ timeout: 60000 * P })
+      .catch(async (error) => {
+        const at = (await page.locator('iframe[title="App preview"]').getAttribute("src")) ?? "/";
+        const app = `http://localhost:${port + 1}`;
+        const text = (path) =>
+          page
+            .context()
+            .request.get(new URL(path, app).toString())
+            .then(
+              (r) => r.text(),
+              () => "",
+            );
+        const html = await text(at);
+        const root = await text("/src/routes/__root.tsx");
+        throw new Error(
+          `no logo in the preview (frame at ${at}; the server's page ${html.includes('data-part="logo"') ? "has" : "lacks"} it, the root module ${/logo/.test(root) ? "has" : "lacks"} it): ${error.message.split("\n")[0]}`,
+        );
+      });
     await look("Logo").getByRole("button", { name: "Remove" }).click();
     for (let i = 0; /^logo:/m.test(content()); i++) {
       if (i === 60 * P) throw new Error("Remove did not take the logo away");
