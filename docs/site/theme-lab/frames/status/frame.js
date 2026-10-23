@@ -26,6 +26,9 @@
       }
     };
     for (const sheet of document.styleSheets) walk(sheet.cssRules);
+    // A page saved from an app of this version shows dark by its <html data-appearance>.
+    document.documentElement.dataset.appearance = scheme;
+    document.documentElement.style.colorScheme = scheme;
   };
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || event.origin !== location.origin) return;

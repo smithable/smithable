@@ -588,7 +588,7 @@ function Controls({
           <input value={theme.radius} onChange={(e) => set(["radius"], e.target.value)} />
         </label>
         {choice("shadow", ["shadow"], shadow, Object.keys(SHADOWS))}
-        {choice("density", ["density"], theme.density, ["comfortable", "compact"])}
+        {choice("density", ["density"], theme.density, ["comfortable", "standard", "compact"])}
         {choice("motion", ["motion"], theme.motion, ["none", "subtle", "lively"])}
         <p className="hint" data-motion-note>
           {MOTION_NOTES[theme.motion]}

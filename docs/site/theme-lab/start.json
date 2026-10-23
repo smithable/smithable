@@ -35,6 +35,23 @@
       ]
     },
     {
+      "name": "barbers",
+      "frames": [
+        {
+          "label": "Landing",
+          "path": "/frames/barbers/landing.html"
+        },
+        {
+          "label": "List",
+          "path": "/frames/barbers/list.html"
+        },
+        {
+          "label": "Form",
+          "path": "/frames/barbers/form.html"
+        }
+      ]
+    },
+    {
       "name": "crm",
       "frames": [
         {
