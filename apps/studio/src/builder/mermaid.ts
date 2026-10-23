@@ -1,5 +1,6 @@
 // The app map as Mermaid (A 127, docs/design/app-map.md): the same content the views draw, as a
 // flowchart to paste into a document or an issue. No layout of its own: Mermaid lays it out.
+import type { BehaviourEdge, BehaviourNode } from "./behaviour-map";
 import type { MapEdge, MapNode } from "./data-map";
 import type { NavPage, Verdict } from "./nav-map";
 
@@ -37,5 +38,26 @@ export function navMermaid(nav: { menus: string[]; pages: NavPage[] }, who: stri
     const menu = p.menu === undefined ? -1 : nav.menus.indexOf(p.menu);
     lines.push(menu >= 0 ? `  menu_${menu} --> ${id("p", p.id)}` : `  app -.-> ${id("p", p.id)}`);
   }
+  return `${lines.join("\n")}\n`;
+}
+
+const SHAPE: Record<BehaviourNode["kind"], [string, string]> = {
+  model: ["[", "]"],
+  action: ["(", ")"],
+  custom: ["[[", "]]"],
+  timer: ["([", "])"],
+  outgoing: [">", "]"],
+};
+
+export function behaviourMermaid(map: { nodes: BehaviourNode[]; edges: BehaviourEdge[] }): string {
+  const lines = ["flowchart TB"];
+  for (const n of map.nodes) {
+    const [open, close] = SHAPE[n.kind];
+    lines.push(`  ${id("b", n.id)}${open}${text([n.title, ...n.lines].join("<br/>"))}${close}`);
+  }
+  for (const e of map.edges)
+    lines.push(
+      `  ${id("b", e.source)} -->${e.label ? `|${text(e.label)}|` : ""} ${id("b", e.target)}`,
+    );
   return `${lines.join("\n")}\n`;
 }

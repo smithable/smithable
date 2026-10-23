@@ -652,6 +652,20 @@ try {
   );
 
   await step(
+    "What happens: the CRM's custom action as code Studio does not read, with what it is for; a name opens Behavior",
+    async () => {
+      await sub("What happens");
+      const map = page.getByRole("region", { name: "What happens" });
+      const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
+      await merge.getByText("custom code").waitFor({ timeout: 30000 * P });
+      await merge.getByText(/^Merge a duplicate customer/).waitFor({ timeout: 10000 * P });
+      await merge.getByRole("button", { name: "mergeCustomers" }).click();
+      await page
+        .getByRole("tab", { name: "Behavior", selected: true })
+        .waitFor({ timeout: 10000 * P });
+    },
+  );
+  await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",
     async () => {
       const authFile = join(dir, "smithable.auth.yml");

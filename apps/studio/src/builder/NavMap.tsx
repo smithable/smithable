@@ -2,7 +2,6 @@
 // as a tree, and for a role chosen above it (or a visitor) whether each page may be opened and its
 // records read, from core's explainAccess. A page's name opens it in Behavior; "Copy as Mermaid"
 // gives the same tree as text. Nothing is changed from the map.
-import { graphlib, layout } from "@dagrejs/dagre";
 import {
   Background,
   Controls,
@@ -18,6 +17,7 @@ import "@xyflow/react/dist/style.css";
 import type { AuthIR, SpecIR } from "@smithable/core";
 import { useMemo, useState } from "react";
 import { Button, Label, Select } from "../ui";
+import { laidOut } from "./map-layout";
 import { navMermaid } from "./mermaid";
 import { OPEN_PART } from "./NoCode";
 import { type NavPage, navOf, type Verdict } from "./nav-map";
@@ -112,16 +112,12 @@ export function NavMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
       markerEnd: { type: MarkerType.ArrowClosed },
       labelStyle: { fontSize: 11 },
     }));
-    const g = new graphlib.Graph();
-    g.setGraph({ rankdir: "TB", nodesep: 32, ranksep: 70 });
-    g.setDefaultEdgeLabel(() => ({}));
-    for (const b of boxes) g.setNode(b.id, { width: WIDTH, height: HEIGHT });
-    for (const e of lines) g.setEdge(e.source, e.target);
-    layout(g);
-    for (const b of boxes) {
-      const at = g.node(b.id);
-      b.position = { x: at.x - WIDTH / 2, y: at.y - HEIGHT / 2 };
-    }
+    const at = laidOut(
+      boxes.map((b) => b.id),
+      lines,
+      { width: WIDTH, height: HEIGHT },
+    );
+    for (const b of boxes) b.position = at[b.id] ?? b.position;
     return { nodes: boxes, edges: lines };
   }, [nav, who]);
   const [copied, setCopied] = useState(false);
