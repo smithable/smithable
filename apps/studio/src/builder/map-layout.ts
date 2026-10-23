@@ -10,7 +10,8 @@ export function laidOut(
   const g = new graphlib.Graph();
   g.setGraph({ rankdir: "TB", nodesep: 32, ranksep: 70 });
   g.setDefaultEdgeLabel(() => ({}));
-  for (const id of ids) g.setNode(id, size);
+  // A label of its own for each node: dagre writes the node's place onto it.
+  for (const id of ids) g.setNode(id, { ...size });
   for (const e of edges)
     if (ids.includes(e.source) && ids.includes(e.target)) g.setEdge(e.source, e.target);
   layout(g);

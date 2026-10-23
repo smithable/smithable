@@ -58,3 +58,16 @@ test("a custom action is a box of its own, its code not read; Mermaid draws it a
     'b_action_mergeCustomers[["mergeCustomers<br/>custom code"]]',
   );
 });
+
+test("the layout gives each box a place of its own", async () => {
+  const { laidOut } = await import("./map-layout");
+  const at = laidOut(
+    ["a", "b", "c"],
+    [
+      { source: "a", target: "b" },
+      { source: "a", target: "c" },
+    ],
+    { width: 100, height: 40 },
+  );
+  expect(new Set(Object.values(at).map((p) => `${p.x},${p.y}`)).size).toBe(3);
+});
