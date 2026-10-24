@@ -46,6 +46,8 @@ export interface LandingFooter {
   text?: string;
   links: { label?: string; link?: string }[];
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }
 
 /** The page frame: the app's name, a link into the app, the sections and the footer. */
@@ -290,8 +292,29 @@ const sectionHooks = (texts: string | undefined) => ({
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
+/**
+ * A section's heading block: at the start or centered, as the theme's headings.align says
+ * (--heading-align, --heading-inline), its lead centered under the title with it.
+ */
+const HEADER =
+  "[text-align:var(--heading-align,start)] [&>p]:[margin-inline:var(--heading-inline,0)]";
+
+/** The short line over a section's title, in the primary color. */
+function Eyebrow({ texts, children }: { texts?: string; children: string }) {
+  return (
+    <p
+      data-part="eyebrow"
+      className="mb-2 text-sm font-semibold tracking-wide text-primary uppercase"
+      {...mark(texts, "eyebrow")}
+    >
+      {children}
+    </p>
+  );
+}
+
 function SectionView({
   texts,
+  eyebrow,
   id,
   title,
   text,
@@ -302,6 +325,8 @@ function SectionView({
   text?: string;
   children: React.ReactNode;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   return (
     <section
@@ -309,19 +334,24 @@ function SectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
     >
-      {title && (
-        <h2
-          id={`${id}-title`}
-          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
-          {...mark(texts, "title")}
-        >
-          {title}
-        </h2>
-      )}
-      {text && (
-        <p className="mt-3 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "text")}>
-          {text}
-        </p>
+      {(eyebrow || title || text) && (
+        <div data-part="header" className={HEADER}>
+          {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
+          {title && (
+            <h2
+              id={`${id}-title`}
+              className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
+              {...mark(texts, "title")}
+            >
+              {title}
+            </h2>
+          )}
+          {text && (
+            <p className="mt-3 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "text")}>
+              {text}
+            </p>
+          )}
+        </div>
       )}
       <div className={text ? "mt-8" : title ? "mt-6" : undefined}>{children}</div>
     </section>
@@ -331,6 +361,7 @@ function SectionView({
 /** A text section: a heading and paragraphs (a blank line between them in the content file). */
 function TextSectionView({
   texts,
+  eyebrow,
   id,
   title,
   text,
@@ -339,6 +370,8 @@ function TextSectionView({
   title?: string;
   text?: string;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   return (
     <section
@@ -346,6 +379,11 @@ function TextSectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-10"
     >
+      {eyebrow && (
+        <div data-part="header" className={HEADER}>
+          <Eyebrow texts={texts}>{eyebrow}</Eyebrow>
+        </div>
+      )}
       {title && (
         <h2
           id={`${id}-title`}
@@ -376,6 +414,7 @@ export interface LandingImage {
 
 function HeroView({
   texts,
+  eyebrow,
   title,
   subtitle,
   link,
@@ -401,6 +440,8 @@ function HeroView({
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const after = useId();
   // A link to where the next section starts, so it works by keyboard and without JavaScript.
@@ -435,6 +476,15 @@ function HeroView({
   );
   const text = (
     <div>
+      {eyebrow && (
+        <p
+          data-part="eyebrow"
+          className="mb-4 text-sm font-semibold tracking-wide uppercase opacity-90"
+          {...mark(texts, "eyebrow")}
+        >
+          {eyebrow}
+        </p>
+      )}
       <h1
         className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
         {...mark(texts, "title")}
@@ -578,6 +628,7 @@ function HeroView({
 
 function FeaturesView({
   texts,
+  eyebrow,
   title,
   text,
   items,
@@ -589,6 +640,8 @@ function FeaturesView({
   /** Items side by side on wide screens: 2, 3 or 4. */
   columns?: 2 | 3 | 4;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const grid = {
     2: "sm:grid-cols-2",
@@ -596,7 +649,7 @@ function FeaturesView({
     4: "sm:grid-cols-2 lg:grid-cols-4",
   }[columns];
   return (
-    <Section id="features" texts={texts} title={title} text={text}>
+    <Section id="features" texts={texts} eyebrow={eyebrow} title={title} text={text}>
       <ul className={cn("grid gap-4", grid)}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
@@ -619,14 +672,23 @@ function FeaturesView({
   );
 }
 
+/** How many cards or pictures stand side by side on wide screens. */
+const COLUMNS = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-3 lg:grid-cols-4",
+};
+
 /** Records shown as cards, e.g. the classes a studio offers. */
 function RecordCardsView({
   texts,
+  eyebrow,
   id,
   title,
   text,
   cards,
   layout = "cards",
+  columns,
   icon,
   door,
 }: {
@@ -648,9 +710,13 @@ function RecordCardsView({
   }[];
   /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
   layout?: "cards" | "list" | "grid";
+  /** Cards or pictures side by side on wide screens: 2, 3 or 4 (cards 3, grid 4 when not said). */
+  columns?: 2 | 3 | 4;
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
   /**
    * A catalog's door: a search box and filter chips that open the model's list (`to`) with
    * the same address state, e.g. /?q=sofa or /?category=furniture.
@@ -704,7 +770,7 @@ function RecordCardsView({
     </>
   );
   return (
-    <Section id={id} texts={texts} title={title} text={text}>
+    <Section id={id} texts={texts} eyebrow={eyebrow} title={title} text={text}>
       {door && (
         <div data-part="door" className="mb-8 space-y-4">
           {door.search && (
@@ -757,7 +823,7 @@ function RecordCardsView({
           ))}
         </ul>
       ) : layout === "grid" ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className={cn("grid grid-cols-2 gap-3", COLUMNS[columns ?? 4])}>
           {cards.map((card) => (
             <li key={card.key} className="relative">
               <figure className="space-y-2">
@@ -771,7 +837,7 @@ function RecordCardsView({
           ))}
         </ul>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className={cn("grid gap-4", COLUMNS[columns ?? 3])}>
           {cards.map((card) => (
             <li key={card.key}>
               <Card
@@ -796,6 +862,7 @@ function RecordCardsView({
 
 function PricingView({
   texts,
+  eyebrow,
   title,
   text,
   plans,
@@ -816,11 +883,13 @@ function PricingView({
   }[];
   link?: LandingLink;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const forward = (name?: string) =>
     Boolean(highlight && name && name.trim().toLowerCase() === highlight.trim().toLowerCase());
   return (
-    <Section id="pricing" texts={texts} title={title} text={text}>
+    <Section id="pricing" texts={texts} eyebrow={eyebrow} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, i) => (
           <li key={plan.name}>
@@ -884,6 +953,7 @@ function PricingView({
 
 function TestimonialsView({
   texts,
+  eyebrow,
   title,
   items,
   layout = "cards",
@@ -893,6 +963,8 @@ function TestimonialsView({
   /** cards: side by side; carousel: a row that scrolls sideways; one: the first quote, large. */
   layout?: "cards" | "carousel" | "one";
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const quote = (item: (typeof items)[number], i: number, large = false) => (
     <figure className={cn("space-y-4", large && "mx-auto max-w-3xl text-center")}>
@@ -913,7 +985,7 @@ function TestimonialsView({
   );
   const first = items[0];
   return (
-    <Section id="testimonials" texts={texts} title={title}>
+    <Section id="testimonials" texts={texts} eyebrow={eyebrow} title={title}>
       {layout === "one" && first ? (
         quote(first, 0, true)
       ) : (
@@ -947,6 +1019,7 @@ function TestimonialsView({
 /** Questions that open in place; the browser handles the keyboard and the expanded state. */
 function FaqView({
   texts,
+  eyebrow,
   title,
   items,
   layout = "accordion",
@@ -956,10 +1029,12 @@ function FaqView({
   /** accordion: answers open on a click; list: every answer shown. */
   layout?: "accordion" | "list";
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   if (layout === "list")
     return (
-      <Section id="faq" texts={texts} title={title}>
+      <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
         <dl className="max-w-3xl space-y-6">
           {items.map((item, i) => (
             <div key={item.question}>
@@ -975,7 +1050,7 @@ function FaqView({
       </Section>
     );
   return (
-    <Section id="faq" texts={texts} title={title}>
+    <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
       <div className="max-w-3xl divide-y border-y">
         {items.map((item, i) => (
           <details key={item.question} className="group">
@@ -1006,6 +1081,8 @@ function CallToActionView({
   text?: string;
   link?: LandingLink;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   return (
     <section
@@ -1043,6 +1120,7 @@ function CallToActionView({
  */
 function ContactView({
   texts,
+  eyebrow,
   title,
   text,
   address,
@@ -1065,6 +1143,8 @@ function ContactView({
    */
   form?: (sent: () => void, human: () => boolean) => React.ReactNode;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const [sent, setSent] = useState(false);
   const trap = useRef<HTMLInputElement>(null);
@@ -1137,6 +1217,7 @@ function ContactView({
     <Section
       id="contact"
       texts={texts}
+      eyebrow={eyebrow}
       title={title ?? (form ? w.contactUs : undefined)}
       text={text}
     >
@@ -1176,6 +1257,7 @@ function ContactView({
 /** Pictures in a grid; one opens large in a lightbox, with the arrow keys to move on. */
 function GalleryView({
   texts,
+  eyebrow,
   title,
   text,
   items,
@@ -1184,6 +1266,8 @@ function GalleryView({
   text?: string;
   items: { image?: LandingImage; caption?: string }[];
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   const pictures = items.filter((i): i is { image: LandingImage; caption?: string } =>
     Boolean(i.image),
@@ -1193,7 +1277,7 @@ function GalleryView({
   const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
   const current = pictures[open];
   return (
-    <Section id="gallery" texts={texts} title={title} text={text}>
+    <Section id="gallery" texts={texts} eyebrow={eyebrow} title={title} text={text}>
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {pictures.map((item, i) => (
           <li key={item.image.src}>
@@ -1293,6 +1377,7 @@ function GalleryView({
 
 /** The keys whose texts a person reads: those go through tx; addresses, records and markers do not. */
 const TEXT_KEYS = new Set([
+  "eyebrow",
   "title",
   "subtitle",
   "text",

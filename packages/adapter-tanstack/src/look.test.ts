@@ -90,3 +90,52 @@ test("without any of it the routes are as before", () => {
     "sortRows",
   );
 });
+
+test("a landing section's eyebrow and a records section's columns reach the page as props", () => {
+  const site = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Bistro }
+models:
+  Dish: { fields: { name: string! } }
+pages:
+  home:
+    route: /
+    landing: { hero: {}, dishes: { records: Dish }, faq: {} }
+  dishes: { crud: Dish }
+`,
+  }).ir as SpecIR;
+  const looks = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  home:\n    sections: { dishes: { layout: grid, columns: 2 } }\n",
+    },
+    site,
+  ).ux;
+  const texts =
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: "smithableContent: 0.1\npages:\n  home:\n    hero: { eyebrow: Open daily }\n    dishes: { eyebrow: Popular dishes, title: Favorite meals }\n",
+      },
+      site,
+    ).content ?? emptyContent();
+  const page =
+    generateApp(site, {
+      smithableVersion: "0.0.0",
+      auth: validateAuth(
+        {
+          path: "smithable.auth.yml",
+          text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home, dishes], read: [Dish] }\n",
+        },
+        site,
+      ).auth as AuthIR,
+      content: texts,
+      ux: looks,
+    }).find((f) => f.path === "src/routes/index.tsx")?.content ?? "";
+  expect(page).toContain('eyebrow="Open daily"');
+  expect(page).toContain('eyebrow="Popular dishes"');
+  expect(page).toContain("columns={2}");
+  // The FAQ has no eyebrow in the content file, so it gets none.
+  expect(page.match(/eyebrow=/g)).toHaveLength(2);
+});

@@ -31,15 +31,18 @@ const ux = (sections: string) =>
 
 test("each section kind takes its own looks, checked by name and value", () => {
   const read = ux(
-    "{ hero: { layout: split, image: left }, features: { columns: 4 }, items: { layout: grid }, faq: { layout: list } }",
+    "{ hero: { layout: split, image: left }, features: { columns: 4 }, items: { layout: grid, columns: 2 }, faq: { layout: list } }",
   );
   expect(read.diagnostics).toEqual([]);
   expect(read.ux?.pages.home?.looks).toEqual({
     hero: { layout: "split", image: "left" },
     features: { columns: 4 },
-    items: { layout: "grid" },
+    items: { layout: "grid", columns: 2 },
     faq: { layout: "list" },
   });
+  expect(ux("{ items: { columns: 5 } }").diagnostics.map((d) => d.message)).toContain(
+    '"columns" of the look of items on page "home" is one of 3, 2, 4.',
+  );
   const messages = ux(
     "{ hero: { layout: wavy }, footer: { layout: list }, nope: {} }",
   ).diagnostics.map((d) => d.message);

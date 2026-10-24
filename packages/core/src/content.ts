@@ -75,6 +75,8 @@ export interface PageContent {
 }
 
 export interface SectionContent {
+  /** A short line over the title (a hero's or a section's). */
+  eyebrow?: string;
   title?: string;
   subtitle?: string;
   text?: string;
@@ -116,26 +118,26 @@ const SECTION_TEXTS: Record<
   string,
   { texts: string[]; items?: string[]; image?: true; fields?: true }
 > = {
-  hero: { texts: ["title", "subtitle", "button"], image: true },
-  features: { texts: ["title", "text"], items: ["title", "text"] },
-  records: { texts: ["title", "text"] },
+  hero: { texts: ["eyebrow", "title", "subtitle", "button"], image: true },
+  features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
+  records: { texts: ["eyebrow", "title", "text"] },
   pricing: {
-    texts: ["title", "text"],
+    texts: ["eyebrow", "title", "text"],
     items: ["name", "price", "period", "text", "features", "button"],
   },
-  testimonials: { texts: ["title"], items: ["quote", "name", "role"] },
-  faq: { texts: ["title"], items: ["question", "answer"] },
+  testimonials: { texts: ["eyebrow", "title"], items: ["quote", "name", "role"] },
+  faq: { texts: ["eyebrow", "title"], items: ["question", "answer"] },
   callToAction: { texts: ["title", "text", "button"] },
   // Opening hours one per line; "thanks" is shown once a visitor has sent the form.
   contact: {
-    texts: ["title", "text", "address", "phone", "email", "hours", "button", "thanks"],
+    texts: ["eyebrow", "title", "text", "address", "phone", "email", "hours", "button", "thanks"],
   },
-  gallery: { texts: ["title", "text"], items: ["image", "caption"] },
+  gallery: { texts: ["eyebrow", "title", "text"], items: ["image", "caption"] },
   // A calculator section: its heading, the results' heading, and its fields' labels and help.
   calculator: { texts: ["title", "text", "results"], fields: true },
   custom: { texts: ["title", "text"] },
   // A text section: a heading and its paragraphs.
-  text: { texts: ["title", "text"] },
+  text: { texts: ["eyebrow", "title", "text"] },
   // A calculator page's results heading.
   results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").

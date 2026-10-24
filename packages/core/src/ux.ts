@@ -158,7 +158,7 @@ export const SECTION_LOOKS: Partial<
 > = {
   hero: { layout: ["split", "centered", "plain", "cover"], image: ["right", "left"] },
   features: { columns: [3, 2, 4] },
-  records: { layout: ["cards", "list", "grid"] },
+  records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4] },
   testimonials: { layout: ["cards", "carousel", "one"] },
   pricing: { highlight: "text" },
   faq: { layout: ["accordion", "list"] },

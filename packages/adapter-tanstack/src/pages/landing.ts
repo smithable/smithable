@@ -91,9 +91,11 @@ export function landingRoute(
           `\n          ${key === "image" ? "imageSide" : key}=${typeof value === "number" ? `{${value}}` : attr(String(value))}`,
       )
       .join("");
-    const open = (component: string) =>
-      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}`;
     const own = text(section.name);
+    // The short line over a section's title (look-references.md), when the content file has one.
+    const eyebrow = own.eyebrow ? `\n          eyebrow=${attr(own.eyebrow)}` : "";
+    const open = (component: string) =>
+      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}${eyebrow}`;
     switch (section.kind) {
       case "hero":
         imports.add("#/kit/Landing", "Hero");

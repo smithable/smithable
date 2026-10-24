@@ -68,7 +68,7 @@ const SAMPLE = `(() => {
     return c ? [[hex(c), el.textContent.trim().length]] : [];
   }))[0] ?? null;
   const chroma = ([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b);
-  const buttons = [...document.querySelectorAll('button, [role="button"], input[type="submit"], a[class*="btn"], a[class*="button"], a[class*="cta"]')]
+  const buttons = [...document.querySelectorAll('button, [role="button"], input[type="submit"], a')]
     .filter(visible)
     .flatMap((el) => {
       const s = getComputedStyle(el);
@@ -111,6 +111,12 @@ const SAMPLE = `(() => {
 
 /** The fonts a theme may name, and which families each stands in for. */
 const FONT_MATCHES: [string, RegExp][] = [
+  // A hosted font by its own name first, so a site in DM Sans keeps DM Sans.
+  ["DM Sans", /^dm sans/i],
+  ["Outfit", /outfit|urbanist|plus jakarta|jost|sora/i],
+  ["Fraunces", /^fraunces/i],
+  ["Source Serif 4", /^source serif/i],
+  ["Archivo Narrow", /^archivo narrow/i],
   [
     "Nunito Sans",
     /nunito|quicksand|varela|comfortaa|poppins|rubik|mulish|manrope|dm sans|lexend|rounded/i,

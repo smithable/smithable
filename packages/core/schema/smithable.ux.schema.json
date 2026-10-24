@@ -46,9 +46,10 @@
                 "Source Serif 4",
                 "Fraunces",
                 "Archivo Narrow",
-                "DM Sans"
+                "DM Sans",
+                "Outfit"
               ],
-              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans."
+              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit."
             }
           }
         },
@@ -291,6 +292,14 @@
                         "grid"
                       ],
                       "description": "One of cards, list, grid; the first is the default."
+                    },
+                    "columns": {
+                      "enum": [
+                        3,
+                        2,
+                        4
+                      ],
+                      "description": "One of 3, 2, 4; the first is the default."
                     }
                   }
                 },
