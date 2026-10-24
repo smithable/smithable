@@ -21,6 +21,7 @@ import {
   refusalOf,
 } from "@smithable/index";
 import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
+import { smallTalk } from "./small-talk.js";
 
 export interface ProposedOperation {
   op: string;
@@ -50,7 +51,8 @@ Answer with JSON only:
 - {"kind":"operations","operations":[{"op":"<operation>","args":{…}}]} when the request clearly means one change (one or more operations).
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
 - {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
-- {"kind":"none","reason":"…"} when no operation can do it. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
+- {"kind":"answer","text":"…"} also for a greeting, thanks or other small talk: one or two friendly sentences, like a chat, that suggest something to change or ask about this app. Never answer "none" to small talk.
+- {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
 A record belongs to whoever created it. When the request says it belongs to, is handled by or is the responsibility of a person named in the record, that is setOwner with the record's User field (add the field first when there is none); access for "owner" then means that person.
@@ -215,6 +217,9 @@ export async function proposeChange(options: {
   const usage: Usage[] = [];
   // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
   // operations get the same dry run and host check; when they do not apply, a model reads it.
+  // Tier 0 for small talk: a greeting or thanks is answered like a chat, by rule (A 151).
+  const talk = smallTalkTier(files, options.request);
+  if (talk) return { kind: "answer", text: talk, concepts: [], usage, generator: "small talk" };
   // Tier 0 for questions: what the spec answers on its own (who can, what is, is it public…).
   const answered = questionTier(files, options.request);
   if (answered)
@@ -327,6 +332,12 @@ function phraseTier(files: ProjectFiles, request: string) {
       ? undefined
       : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
   return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
+}
+
+/** A greeting, thanks or small talk, answered by rule with the app's own names (tier 0). */
+function smallTalkTier(files: ProjectFiles, request: string) {
+  const options = files.plugins ? { plugins: files.plugins } : {};
+  return smallTalk(request, validateSpec({ path: "smithable.yml", text: files.spec }, options).ir);
 }
 
 /** A question about the app the index answers without a model (tier 0). */

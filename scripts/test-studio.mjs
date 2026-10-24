@@ -1035,6 +1035,19 @@ try {
     },
   );
 
+  await step(
+    "a greeting to Smith is answered like a chat, with something to try, and changes nothing",
+    async () => {
+      const before = (await project()).files.spec;
+      await page.getByLabel("Describe a change").fill("Hi");
+      await page.getByRole("button", { name: "Make the change" }).click();
+      await page
+        .getByRole("list", { name: "Thread" })
+        .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
+        .waitFor({ timeout: 30000 * P });
+      if ((await project()).files.spec !== before) throw new Error("the spec changed");
+    },
+  );
   await step("a question about the app is answered from the spec, not applied", async () => {
     const before = (await project()).files.spec;
     await page.getByLabel("Describe a change").fill("Who can add orders?");
