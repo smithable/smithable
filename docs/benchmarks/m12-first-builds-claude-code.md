@@ -1,6 +1,6 @@
-# M12 first builds: claude-code (2026-10-24)
+# M12 first builds: claude-code (2026-10-24; 1 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 11 type-check, 102,969 tokens (98,139 in, 4,830 out), €0.0000 + $0.5239 (as Claude Code reports it); 10 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 12 type-check, 102,969 tokens (98,139 in, 4,830 out), €0.0000 + $0.5239 (as Claude Code reports it); 10 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
@@ -10,7 +10,7 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | A tool library where neighbors lend each other tools. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 12 s |
 | An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 9 s |
 | A job board for a local union, with job posts and applications. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 10 s |
-| A football club's site: teams, players, matches and results. | records | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 11 s |
+| A football club's site: teams, players, matches and results. *(rerun 2026-10-24)* | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 14 s |
 | Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 49,068 | 2,389 | $0.0825 | 0 | 1 | 33 s |
 | A help desk for an IT team: tickets, priorities and who handles them. | support | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 8 s |
 | A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 9 s |
@@ -497,13 +497,13 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 136 files (136 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-gOnstj/app-7. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-9YfqDO/app-7. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-gOnstj/app-7
+  cd /tmp/smithable-bench-m12-9YfqDO/app-7
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-gOnstj/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-9YfqDO/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
