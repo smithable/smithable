@@ -6601,7 +6601,7 @@ import { account, invitation, session, user, verification } from "#/db/schema";
 import { app } from "#/generated/app";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
-import { codeAllowed } from "#/kit/limit";
+import { codeAllowed, count } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { w } from "#/kit/words";
@@ -6613,7 +6613,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["admin@team-tasks.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -6714,7 +6714,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -6742,6 +6742,8 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // Refusals are counted per address, so trying address after address is slowed down.
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
@@ -6771,7 +6773,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -9420,7 +9429,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1efcad71 generated",
+  "src/lib/auth.ts": "e4b1ddd6 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -12625,7 +12634,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@harbourcuts.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -12698,7 +12707,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -12741,7 +12750,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -14896,7 +14912,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "bdca463f generated",
+  "src/lib/auth.ts": "d47f6028 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -21626,7 +21642,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@stillwater.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -21699,7 +21715,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -21742,7 +21758,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -26371,7 +26394,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d7f55210 generated",
+  "src/lib/auth.ts": "11bc860d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -30086,7 +30109,7 @@ import { account, invitation, session, user, verification } from "#/db/schema";
 import { app } from "#/generated/app";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
-import { codeAllowed } from "#/kit/limit";
+import { codeAllowed, count } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { w } from "#/kit/words";
@@ -30099,7 +30122,7 @@ function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
 const ALLOWED_DOMAINS = ["acme.example"];
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@acme.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -30202,7 +30225,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -30230,6 +30253,8 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // Refusals are counted per address, so trying address after address is slowed down.
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
@@ -30259,7 +30284,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -32214,7 +32246,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8e3d7b24 generated",
+  "src/lib/auth.ts": "ba810a9d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -37484,7 +37516,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@invoicely.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -37557,7 +37589,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -37600,7 +37632,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -39690,7 +39729,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "4a80e875 generated",
+  "src/lib/auth.ts": "3f17bcfe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -43992,7 +44031,7 @@ import { account, invitation, session, user, verification } from "#/db/schema";
 import { app } from "#/generated/app";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
-import { codeAllowed } from "#/kit/limit";
+import { codeAllowed, count } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { w } from "#/kit/words";
@@ -44004,7 +44043,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@kiosken.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -44105,7 +44144,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -44133,6 +44172,8 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // Refusals are counted per address, so trying address after address is slowed down.
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
@@ -44162,7 +44203,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -46566,7 +46614,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "68f64f85 generated",
+  "src/lib/auth.ts": "0e2f98fa generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -48934,7 +48982,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["owner@torget.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -49007,7 +49055,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -49050,7 +49098,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -50958,7 +51013,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "eeec5afa generated",
+  "src/lib/auth.ts": "0e5c5ad7 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -52853,7 +52908,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = [];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -52926,7 +52981,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -52969,7 +53024,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -54091,7 +54153,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "a84aa70c generated",
+  "src/lib/auth.ts": "99dd6921 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -61352,7 +61414,7 @@ import { account, invitation, session, user, verification } from "#/db/schema";
 import { app } from "#/generated/app";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
-import { codeAllowed } from "#/kit/limit";
+import { codeAllowed, count } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { w } from "#/kit/words";
@@ -61364,7 +61426,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["ops@northwind.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -61465,7 +61527,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -61493,6 +61555,8 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // Refusals are counted per address, so trying address after address is slowed down.
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
@@ -61522,7 +61586,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -64705,7 +64776,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "46f9008f generated",
+  "src/lib/auth.ts": "aa5c1a9c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -69054,7 +69125,7 @@ import { account, invitation, session, user, verification } from "#/db/schema";
 import { app } from "#/generated/app";
 import { ADDRESS_HEADER } from "#/kit/address.server";
 import { audit } from "#/kit/audit.server";
-import { codeAllowed } from "#/kit/limit";
+import { codeAllowed, count } from "#/kit/limit";
 import { log } from "#/kit/log.server";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { w } from "#/kit/words";
@@ -69066,7 +69137,7 @@ export const PROVIDERS = ["email"];
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-/** These addresses become admins when they first sign in. */
+/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ["support@harbour.example"];
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -69167,7 +69238,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -69195,6 +69266,8 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // Refusals are counted per address, so trying address after address is slowed down.
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }
@@ -69224,7 +69297,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {
@@ -71042,7 +71122,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d9bca5ab generated",
+  "src/lib/auth.ts": "96150250 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",

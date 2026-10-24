@@ -60,6 +60,12 @@ test("the demo sign-in is gated by DEMO_SIGN_IN at run time, beside the developm
     "emailAndPassword: { enabled: import.meta.env.DEV || demoSignIn, disableSignUp: true }",
   );
   expect(lib).toContain('!(demoSignIn && email.startsWith("demo-"))');
+  expect(lib).toContain(
+    'current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())',
+  );
+  expect(lib).toContain(
+    '"session_token", "session_data", "dont_remember", "state", "account_data"',
+  );
   const route = files("src/routes/sign-in.tsx");
   expect(route).toContain("if (!import.meta.env.DEV && !demoSignIn)");
   expect(route).toContain(

@@ -34,7 +34,7 @@ export interface AuthIR {
   roles: RoleIR[];
   /** The role new users get. */
   defaultRole: string;
-  /** Email addresses that become admins when they first sign in. */
+  /** Email addresses that become admins when they sign in (also one added later). */
   admins: string[];
   public: {
     pages: string[];
