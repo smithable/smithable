@@ -98,7 +98,7 @@ test("the picker's choices are named by their parts, with the page's subtitle un
   expect(session).toContain("label: sessionName(row)");
   expect(session).toContain("detail: sessionLines(row).subtitle");
   expect(file("src/generated/session.name.ts")).toContain(
-    "subtitle: titleOf((row.instructor as Record<string, unknown> | null | undefined)?.name) || undefined,",
+    "subtitle: (titleOf((row.instructor as Record<string, unknown> | null | undefined)?.name)) || undefined,",
   );
 });
 
@@ -230,4 +230,20 @@ test("a calendar names a record without the start it is placed by", () => {
   expect(files.find((f) => f.path === "src/routes/schedule/index.tsx")?.content).toContain(
     'title: sessionName(row as Record<string, unknown>, ["startsAt"]),',
   );
+});
+
+test("a reference as the subtitle is bracketed before its fallback, so the app type-checks", () => {
+  const byReference = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  sessions:\n    record: { subtitle: instructor }\n",
+    },
+    ir,
+  ).ux;
+  const lines =
+    generateApp(ir, { smithableVersion: "0.0.0", auth, ux: byReference }).find(
+      (f) => f.path === "src/generated/session.name.ts",
+    )?.content ?? "";
+  // A reference's part is a ternary: without the brackets `|| undefined` binds to its "" arm.
+  expect(lines).toMatch(/subtitle: \(\(row\.instructor .*\) \|\| undefined,/);
 });

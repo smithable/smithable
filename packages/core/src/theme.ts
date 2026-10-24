@@ -163,7 +163,11 @@ const LIGHT_TEXT = "#ffffff";
  * (background, foreground, primary): the rest is derived as a brand color is, and every pair
  * the kit puts together is checked for contrast.
  */
-export function parseTheme(file: { path: string; text: string }): {
+export function parseTheme(
+  file: { path: string; text: string },
+  /** "warning": text that may not read is said, not refused (the theme lab, Johan 2026-10-24). */
+  options: { contrast?: "error" | "warning" } = {},
+): {
   theme?: ThemeIR;
   diagnostics: Diagnostic[];
 } {
@@ -295,7 +299,9 @@ export function parseTheme(file: { path: string; text: string }): {
         mode,
       );
       for (const problem of checkContrast(modes[mode]))
-        ctx.error(node, "theme-contrast", `In "${mode}", ${problem}`);
+        if (options.contrast === "warning")
+          ctx.warning(node, "theme-contrast", `In "${mode}", ${problem}`);
+        else ctx.error(node, "theme-contrast", `In "${mode}", ${problem}`);
     }
   }
   if (ctx.diagnostics.some((d) => d.severity === "error")) return { diagnostics: ctx.diagnostics };
@@ -452,14 +458,23 @@ const PAIRS: [text: TokenName, on: TokenName, ratio: number][] = [
   ["ring", "card", 3],
 ];
 
+/** The pairs that may not read: the text's colour, the one it is on, their ratio and the one needed. */
+export function lowContrast(
+  tokens: Tokens,
+): { text: TokenName; on: TokenName; got: number; needed: number }[] {
+  return PAIRS.flatMap(([text, on, needed]) => {
+    const got = contrast(hexOf(tokens[text]), hexOf(tokens[on]));
+    return got < needed ? [{ text, on, got, needed }] : [];
+  });
+}
+
 /** What does not read, as sentences naming the pair and its ratio; empty when all is well. */
 export function checkContrast(tokens: Tokens): string[] {
-  return PAIRS.flatMap(([text, on, ratio]) => {
-    const got = contrast(hexOf(tokens[text]), hexOf(tokens[on]));
-    return got < ratio
-      ? [`${text} on ${on} is ${got.toFixed(1)}:1; it needs ${ratio}:1 to read.`]
-      : [];
-  });
+  // Rounded down, so a ratio just under the one needed never reads as reaching it ("4.5 needs 4.5").
+  return lowContrast(tokens).map(
+    ({ text, on, got, needed }) =>
+      `${text} on ${on} is ${(Math.floor(got * 10) / 10).toFixed(1)}:1; it needs ${needed}:1 to read.`,
+  );
 }
 
 /**
