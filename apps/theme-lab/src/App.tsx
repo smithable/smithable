@@ -11,6 +11,7 @@ import {
   FONT_WEIGHTS,
   FONTS,
   hexOf,
+  lowContrast,
   parseTheme,
   SHADOWS,
   STYLE_VALUES,
@@ -95,7 +96,8 @@ export function App() {
 
   const name = /^name:\s*(\S+)/m.exec(text)?.[1] ?? "my-theme";
   const { theme, diagnostics } = useMemo(
-    () => parseTheme({ path: `themes/${name}.yml`, text }),
+    // Every colour applies; text that may be hard to read is said, never refused (Johan, 2026-10-24).
+    () => parseTheme({ path: `themes/${name}.yml`, text }, { contrast: "warning" }),
     [name, text],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
@@ -408,15 +410,22 @@ export function App() {
         </div>
         <section className="notes">
           {errors.length > 0 && (
+            // Only a file that cannot make a theme (a colour that is no colour): never a choice of colours.
             <p className="avoid">
-              Not applied: the pages show the last colours that read. What does not:
+              Not applied yet: the pages show the last theme that worked. What to fix:
             </p>
           )}
-          {errors.length > 0 && wrongSide && (
+          {theme &&
+            hardToRead(theme).map((line) => (
+              <p key={line} className="avoid" data-warning="">
+                {line}
+              </p>
+            ))}
+          {wrongSide && (
             <p className="avoid">
               {wrongSide === "light"
-                ? "Light mode needs a light background: a dark one goes in dark mode."
-                : "Dark mode needs a dark background: a light one goes in light mode."}
+                ? "Light mode usually has a light background; with a dark one, some text may be hard to read."
+                : "Dark mode usually has a dark background; with a light one, some text may be hard to read."}
             </p>
           )}
           {errors.map((d) => (
@@ -448,6 +457,31 @@ export function App() {
 }
 
 /** A colour as the file writes it, as hex; undefined when absent or not a colour. */
+/** Where each colour pair is used, in words a non-designer knows (no colour names, no ratios). */
+const WHERE: Record<string, string> = {
+  background: "the text on the page",
+  card: "the text on cards",
+  primary: "the text on the main buttons",
+  secondary: "the text on the other buttons",
+  muted: "the quieter text, such as hints and dates,",
+  accent: "the text on highlighted rows and menu items",
+  sidebar: "the text in the side menu",
+  destructive: "the text on delete buttons",
+  success: "the text on the green badges",
+  warning: "the text on the warning badges",
+};
+
+/** The theme's pairs that may not read, one plain sentence each: a warning, never a refusal. */
+function hardToRead(theme: ThemeIR): string[] {
+  return (["light", "dark"] as const).flatMap((mode) =>
+    lowContrast(theme[mode]).map(({ text, on }) =>
+      text === "ring"
+        ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
+        : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+    ),
+  );
+}
+
 function writtenColor(text: string, mode: "light" | "dark", token: string): string | undefined {
   const raw = getField(text, [mode, token]);
   return typeof raw === "string" && /^(#[0-9a-f]{6}|oklch\()/i.test(raw) ? hexOf(raw) : undefined;

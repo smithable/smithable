@@ -108,8 +108,8 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   const [telling, setTelling] = useState<{
     values: z.output<S>;
     changes: { label: string; from: string; to: string }[];
-    count: number;
-    label: string;
+    /** Each list the save mails: how many records it has and what they are called. */
+    told: { count: number; label: string }[];
   }>();
   // Ids unique to this form: a page may show the same form twice (a row's action dialog in the
   // phone list and in the table), and a label must reach its own field.
@@ -180,10 +180,16 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
 
   /** What a save would tell people: the fields it changes and how many records hear of it. */
   function tellsOf(values: Record<string, unknown>) {
+    // A list (a gallery's pictures, several choices) is the same when its items are.
     const same = (a: unknown, b: unknown) =>
       a instanceof Date || b instanceof Date
         ? new Date(a as Date).getTime() === new Date(b as Date).getTime()
-        : (a ?? null) === (b ?? null);
+        : Array.isArray(a) || Array.isArray(b)
+          ? JSON.stringify(a ?? []) === JSON.stringify(b ?? [])
+          : (a ?? null) === (b ?? null);
+    const changes = new Map<string, { label: string; from: string; to: string }>();
+    const told: { count: number; label: string }[] = [];
+    // Every list the save mails, each said, with every field it changes that counts for one.
     for (const tell of tells ?? []) {
       // The list as the page loaded it: what this person may read of it, which for a role that
       // may change the record but not read all its records is fewer than are mailed.
@@ -194,18 +200,16 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           (!tell.fields.length || tell.fields.includes(f.name)) &&
           !same(values[f.name], initial?.[f.name]),
       );
-      if (count && changed.length)
-        return {
-          count,
-          label: tell.label,
-          changes: changed.map((f) => ({
-            label: f.label,
-            from: formatValue(f, initial?.[f.name], app),
-            to: formatValue(f, values[f.name], app),
-          })),
-        };
+      if (!count || !changed.length) continue;
+      told.push({ count, label: tell.label });
+      for (const f of changed)
+        changes.set(f.name, {
+          label: f.label,
+          from: formatValue(f, initial?.[f.name], app),
+          to: formatValue(f, values[f.name], app),
+        });
     }
-    return undefined;
+    return told.length ? { changes: [...changes.values()], told } : undefined;
   }
 
   /**
@@ -549,9 +553,11 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-muted-foreground">
-                {telling && w.eachIsTold(telling.count, telling.label)}
-              </p>
+              {telling?.told.map((t) => (
+                <p key={t.label} className="mt-2 text-muted-foreground">
+                  {w.eachIsTold(t.count, t.label)}
+                </p>
+              ))}
               <div className="mt-6 flex flex-wrap justify-end gap-3">
                 <Button
                   type="button"

@@ -5,7 +5,9 @@ import {
   BUILT_IN_THEMES,
   checkContrast,
   FONTS,
+  lowContrast,
   parseTheme,
+  type Tokens,
   themeNamed,
   themeThumbnail,
   withBackground,
@@ -181,4 +183,28 @@ test("the ux file's background: a color, set by setTheme, refused when not a col
     code: "invalid-color",
     message: '"background" must be a color like "#2563eb".',
   });
+});
+
+test("for the theme lab, text that may not read is a warning: the theme is made and every colour applies", () => {
+  const text = forest.replace('  foreground: "#1f2a1f"', '  foreground: "#c0c8c0"');
+  const lab = parseTheme({ path: "themes/forest.yml", text }, { contrast: "warning" });
+  expect(lab.theme).toBeDefined();
+  const said = lab.diagnostics.find((d) => d.code === "theme-contrast");
+  expect(said?.severity).toBe("warning");
+  // The pairs, for the lab to say in its own words.
+  expect(lowContrast(lab.theme?.light as Tokens)).toContainEqual(
+    expect.objectContaining({ text: "foreground", on: "background", needed: 4.5 }),
+  );
+});
+
+test("a ratio just under the one needed is rounded down, never shown as reaching it", () => {
+  // #767676 on white is 4.54:1; #777777 on white is 4.48:1, which toFixed(1) would print as 4.5.
+  const tokens = {
+    ...BUILT_IN_THEMES[0]?.light,
+    foreground: "#777777",
+    background: "#ffffff",
+  } as Tokens;
+  expect(checkContrast(tokens).find((p) => p.startsWith("foreground on background"))).toBe(
+    "foreground on background is 4.4:1; it needs 4.5:1 to read.",
+  );
 });
