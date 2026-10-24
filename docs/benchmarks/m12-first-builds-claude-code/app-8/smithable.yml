@@ -1,21 +1,19 @@
 smithable: 0.1
 app:
-  name: Conference Hub
-  description: Talk schedule, speakers and attendee registration for a conference.
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: Confer
+  description: "Talks, speakers and registration for a conference: attendees sign up and reserve their seat at the talks they want to hear."
 models:
   Speaker:
     fields:
       name: string!
       company: string
       bio: markdown
-      portrait: picture
+      photo: picture
       talks: Talk[]
   Talk:
     fields:
       title: string!
-      abstract: markdown
+      summary: text
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
@@ -29,32 +27,36 @@ models:
     fields:
       talk: Talk! unique
       attendee: User
+    namedBy: talk
     ownedBy: attendee
     capacity:
       per: talk
       max: talk.capacity
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
 pages:
-  schedule:
-    calendar:
-      model: Talk
-      starts: startsAt
   talks:
     crud: Talk
     filters: [speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
-    sortable: [startsAt, capacity]
+    search: [title, room]
   speakers:
     crud: Speaker
   my-registrations:
     crud: Registration
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, speakers]
       footer:
-      lineup:
+      programme:
+        records: Talk
+      speakerList:
         records: Speaker
       faq:
       callToAction:
@@ -65,7 +67,7 @@ pages:
   admin:
     data: all
 navigation:
-  main: [schedule, talks, speakers, my-registrations, home, privacy, admin]
-  conference: [schedule, my-registrations, talks, speakers]
+  main: [talks, speakers, my-registrations, schedule, home, privacy, admin]
+  programme: [schedule, talks, speakers, my-registrations]
   website: [home]
   admin: [admin]

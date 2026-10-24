@@ -1,21 +1,21 @@
-# M12 first builds: claude-code (2026-10-23)
+# M12 first builds: claude-code (2026-10-24)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 12 type-check, 756,370 tokens (726,789 in, 29,581 out), €0.0000 + $1.3682 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 11 type-check, 102,969 tokens (98,139 in, 4,830 out), €0.0000 + $0.5239 (as Claude Code reports it); 10 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
-| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 97,230 | 3,180 | $0.4836 | 0 | 2 | 194 s |
-| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 120 s |
-| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 97,214 | 4,105 | $0.1441 | 0 | 2 | 141 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 47,292 | 1,980 | $0.0601 | 0 | 1 | 140 s |
-| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 47,096 | 1,235 | $0.0436 | 0 | 1 | 122 s |
-| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 47,291 | 2,836 | $0.0772 | 0 | 1 | 157 s |
-| A football club's site: teams, players, matches and results. | records | yes | yes | 96,394 | 3,793 | $0.1219 | 0 | 1 | 154 s |
-| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 48,801 | 2,079 | $0.0741 | 0 | 1 | 123 s |
-| A help desk for an IT team: tickets, priorities and who handles them. | support | yes | yes | 47,794 | 1,515 | $0.0548 | 0 | 1 | 104 s |
-| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 47,090 | 1,445 | $0.0478 | 0 | 1 | 120 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 102,351 | 4,826 | $0.1812 | 0 | 1 | 137 s |
-| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 48,236 | 2,587 | $0.0798 | 0 | 1 | 98 s |
+| A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 49,071 | 2,441 | $0.4414 | 0 | 1 | 39 s |
+| A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 12 s |
+| Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 0 | 0 | €0.0000 | 2 | 2 | 13 s |
+| A tool library where neighbors lend each other tools. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 12 s |
+| An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 9 s |
+| A job board for a local union, with job posts and applications. | marketplace | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 10 s |
+| A football club's site: teams, players, matches and results. | records | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 11 s |
+| Event registration for a conference: talks, speakers and attendees. | booking | yes | yes | 49,068 | 2,389 | $0.0825 | 0 | 1 | 33 s |
+| A help desk for an IT team: tickets, priorities and who handles them. | support | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 8 s |
+| A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 9 s |
+| A status page for our API, with incidents and planned maintenance. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 8 s |
+| A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 9 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code/](m12-first-builds-claude-code/), one folder per description (app-1 …).
 
@@ -26,14 +26,14 @@ Each created app's four spec files are in [m12-first-builds-claude-code/](m12-fi
 
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | booking | 3 | 4 / 6 (has 4) | 7 / 11 (has 7) | 0 / 1 (has 0) | private; admin, member (member) | none | pages home, schedule, privacy; read Instructor, Session, ClassType; create none | 2 (no-timezone, operator-unknown) | none |  | none | 3 / 4 | mentions visitors; landing page |
+| 1 | booking | 3 | 5 / 6 (has 5) | 9 / 12 (has 9) | 0 / 1 (has 0) | private; admin, member (member) | none | pages home, schedule, privacy; read ClassType, Instructor, Session; create Message | 2 (no-timezone, operator-unknown) | none |  | none | 3 / 5 | mentions visitors; landing page |
 | 2 | ? (words: crm) | 0 | 0 / 0 (has 6) | 0 / 0 (has 5) | 0 / 0 (has 1) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none |  | none | 0 / 6 | no mention; no landing page |
 | 3 | invoicing | 2 | 3 / 4 (has 4) | 4 / 7 (has 6) | 3 / 3 (has 3) | private; admin, member (member) | none | pages home, privacy; read none; create none | 1 (operator-unknown) | none |  | none | 3 / 4 | no mention; landing page |
 | 4 | marketplace (words: records) | 3 | 0 / 1 (has 1) | 3 / 5 (has 6) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, tools, privacy; read Tool; create none | 1 (operator-unknown) | none |  | none | 0 / 1 | no mention; landing page |
 | 5 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
 | 6 | marketplace | 3 | 0 / 1 (has 2) | 1 / 5 (has 6) | 0 / 0 (has 5) | private; admin, staff, member (member) | none | pages home, jobs; read Job; create none | 1 (operator-unknown) | none |  | none | 0 / 2 | no mention; landing page |
 | 7 | records | 3 | 0 / 1 (has 3) | 1 / 2 (has 5) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, matches, teams, players, privacy; read Match, Team, Player; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | mentions visitors; landing page |
-| 8 | booking (words: records) | 3 | 0 / 6 (has 3) | 4 / 11 (has 7) | 0 / 1 (has 0) | private; admin, member (member) | none | pages home, schedule, speakers, privacy; read Talk, Speaker; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | no mention; landing page |
+| 8 | booking (words: records) | 3 | 0 / 6 (has 3) | 4 / 12 (has 7) | 0 / 1 (has 0) | private; admin, member (member) | none | pages home, schedule, talks, speakers, privacy; read Talk, Speaker; create none | 2 (no-timezone, operator-unknown) | none |  | none | 0 / 3 | no mention; landing page |
 | 9 | support (words: invoicing) | 3 | 1 / 2 (has 2) | 1 / 2 (has 2) | 5 / 5 (has 5) | shared; admin, agent (agent) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
 | 10 | records | 3 | 0 / 1 (has 4) | 0 / 2 (has 3) | 0 / 0 (has 3) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 4 | no mention; no landing page |
 | 11 | status | 2 | 4 / 4 (has 4) | 7 / 8 (has 8) | 3 / 3 (has 3) | shared; admin, staff (staff) | none | pages home, privacy; read Component, Incident, IncidentUpdate, Maintenance; create none | 1 (operator-unknown) | none |  | none | 4 / 4 | no mention; landing page |
@@ -47,17 +47,27 @@ Each created app's four spec files are in [m12-first-builds-claude-code/](m12-fi
 ### 1. A booking site for a yoga studio, with classes, teachers and online booking.
 
 ```text
-Willow Flow Yoga
+Open Sky Yoga
   Class schedule, teachers and online booking for a yoga studio.
 
 Pages
-  - Home (a landing page: hero, teachers, faq, class types, call to action and footer)
+  - Home (a landing page: hero, class types, teachers, faq, call to action, contact and footer)
   - Schedule (a calendar of sessions by week or month)
   - My bookings (lists bookings)
-  - Sessions (lists sessions; filter by class type, teacher or starts at; sort by starts at or capacity; only for admins)
-  - Teachers (lists teachers; only for admins; visitors see teachers on the Home page)
-  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Sessions (lists sessions; filter by class type, teacher or starts at; only for admins)
   - Class types (lists class types; filter by level; only for admins; visitors see class types on the Home page)
+  - Teachers (lists teachers; only for admins; visitors see teachers on the Home page)
+  - Messages (lists messages; only for admins)
+  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
+  - Admin (every kind of record, to find, open, change and delete; only for admins)
+
+Class types
+  Class types have:
+  - a name (required)
+  - a summary
+  - a level (all levels, beginner or advanced, all levels by default)
+  - duration minutes (a whole number, required, 60 by default)
+  Each class type lists its sessions.
 
 Teachers
   Teachers have:
@@ -68,12 +78,13 @@ Teachers
 
 Sessions
   Sessions have:
+  - a class type (a class type, required)
   - a teacher (a teacher, required)
   - starts at (a date and time, required)
   - a capacity (a whole number, required, 12 by default)
-  - a class type (a class type, required)
   Each session lists its bookings.
   The places left is calculated as the capacity minus the number of its bookings.
+  A session is named after its class type and its starts at.
 
 Bookings
   Bookings have:
@@ -81,14 +92,15 @@ Bookings
   Each booking can have an attendee (a user).
   The attendee owns the booking.
   At most the session's capacity bookings per session.
+  A booking is added until the session's starts at.
+  Its owner deletes it until the session's starts at.
+  A booking is named after its session.
 
-Class types
-  Class types have:
+Messages
+  Messages have:
   - a name (required)
-  - a summary
-  - a level (all levels, beginner or advanced, all levels by default)
-  - duration minutes (a whole number, required, 60 by default)
-  Each class type lists its sessions.
+  - an email (required)
+  - a message (required)
 
 Booking made
   When a booking is added: mails its owner.
@@ -96,33 +108,27 @@ Booking made
 Booking cancelled
   When a booking is deleted: mails its owner.
 
-Reminder
-  When the timer “Remind” comes for a booking: mails its owner.
-
-Remind
-  A day before a booking's session's starts at: raises its event, for outgoing to tell someone.
-
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
-  - admin: everything
+  - admin (Studio staff. Manage the schedule, classes and teachers): everything
   - member (A student who books classes): opens the my bookings page; adds bookings
   New users get the member role.
-  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading instructors, reading sessions and reading class types.
+  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors, reading sessions and adding messages.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 149 files (149 changed, 0 removed).
+Generated 172 files (172 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-1. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-1. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-1
+  cd /tmp/smithable-bench-m12-gOnstj/app-1
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-1/smithable.yml:52:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+/tmp/smithable-bench-m12-gOnstj/app-1/smithable.yml:50:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
     hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
-/tmp/smithable-bench-m12-mO0Jne/app-1/smithable.content.yml:11:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-1/smithable.content.yml:11:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 2. A CRM for a small sales team: companies, contacts, deals and follow-ups.
@@ -145,9 +151,9 @@ Added follow-ups with a name and notes: say what else they hold.
 The starter let only acme.example addresses sign in (a sample domain no one has); that limit is gone.
 Generated 140 files (139 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-2. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-2. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-2
+  cd /tmp/smithable-bench-m12-gOnstj/app-2
   smithable studio
 
 or only run the app with smithable run.
@@ -235,13 +241,13 @@ Sign-in and access
 Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 151 files (151 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-3. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-3. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-3
+  cd /tmp/smithable-bench-m12-gOnstj/app-3
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-3/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 4. A tool library where neighbors lend each other tools.
@@ -289,13 +295,13 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 135 files (135 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-4
+  cd /tmp/smithable-bench-m12-gOnstj/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
@@ -342,9 +348,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 117 files (117 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-5. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-5. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-5
+  cd /tmp/smithable-bench-m12-gOnstj/app-5
   smithable studio
 
 or only run the app with smithable run.
@@ -416,13 +422,13 @@ Sign-in and access
 Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 142 files (142 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-6. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-6. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-6
+  cd /tmp/smithable-bench-m12-gOnstj/app-6
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-6/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 7. A football club's site: teams, players, matches and results.
@@ -489,29 +495,29 @@ Sign-in and access
   Open to anyone without signing in: the home page, the matches page, the teams page, the players page, the privacy page, reading matches, reading teams and reading players.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 134 files (134 changed, 0 removed).
+Generated 136 files (136 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-7. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-7. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-7
+  cd /tmp/smithable-bench-m12-gOnstj/app-7
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-7/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 8. Event registration for a conference: talks, speakers and attendees.
 
 ```text
-Conference Hub
-  Talk schedule, speakers and attendee registration for a conference.
+Confer
+  Talks, speakers and registration for a conference: attendees sign up and reserve their seat at the talks they want to hear.
 
 Pages
-  - Home (a landing page: hero, speakers, faq, call to action and footer)
-  - Schedule (a calendar of talks by week or month)
-  - Talks (lists talks; filter by speaker or starts at; sort by starts at or capacity; only for admins)
+  - Home (a landing page: hero, talks, speakers, faq, call to action and footer)
+  - Talks (lists talks; search by title or room; filter by speaker or starts at)
   - Speakers (lists speakers)
   - My registrations (lists registrations)
+  - Schedule (a calendar of talks by week or month)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
   - Admin (every kind of record, to find, open, change and delete; only for admins)
 
@@ -520,13 +526,13 @@ Speakers
   - a name (required)
   - a company
   - a bio (formatted text)
-  - a portrait (picture)
+  - a photo (picture)
   Each speaker lists its talks.
 
 Talks
   Talks have:
   - a title (required)
-  - an abstract (formatted text)
+  - a summary
   - a speaker (a speaker, required)
   - starts at (a date and time, required)
   - duration minutes (a whole number, required, 45 by default)
@@ -541,26 +547,31 @@ Registrations
   Each registration can have an attendee (a user).
   The attendee owns the registration.
   At most the talk's capacity registrations per talk.
+  A registration is added until the talk's starts at.
+  Its owner deletes it until the talk's starts at.
+  A registration is named after its talk.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone sees, changes and deletes only their own records.
   Roles:
-  - admin (Conference organizers. Manage the talks and speakers): everything
-  - member (An attendee who registers for talks): opens the my registrations page; adds registrations
+  - admin: everything
+  - member (An attendee who registers for talks): opens the my registrations page, the schedule page, the talks page and the speakers page; adds registrations
   New users get the member role.
-  Open to anyone without signing in: the home page, the schedule page, the speakers page, the privacy page, reading talks and reading speakers.
+  Open to anyone without signing in: the home page, the schedule page, the talks page, the speakers page, the privacy page, reading talks and reading speakers.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 148 files (148 changed, 0 removed).
+Generated 149 files (149 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-8. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-8. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-8
+  cd /tmp/smithable-bench-m12-gOnstj/app-8
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-8/smithable.yml:50:14  warning  Page "schedule" is a calendar, but the app has no time zone: records are placed in UTC.
+    hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
+/tmp/smithable-bench-m12-gOnstj/app-8/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 9. A help desk for an IT team: tickets, priorities and who handles them.
@@ -622,9 +633,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 132 files (132 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-9. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-9. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-9
+  cd /tmp/smithable-bench-m12-gOnstj/app-9
   smithable studio
 
 or only run the app with smithable run.
@@ -699,9 +710,9 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, logo.webp.
 Generated 139 files (139 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-10. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-10. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-10
+  cd /tmp/smithable-bench-m12-gOnstj/app-10
   smithable studio
 
 or only run the app with smithable run.
@@ -780,13 +791,13 @@ Sign-in and access
 Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 144 files (144 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-11. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-11. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-11
+  cd /tmp/smithable-bench-m12-gOnstj/app-11
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-11/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
@@ -863,11 +874,11 @@ Sign-in and access
 Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 160 files (160 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-mO0Jne/app-12. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-gOnstj/app-12. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-mO0Jne/app-12
+  cd /tmp/smithable-bench-m12-gOnstj/app-12
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-mO0Jne/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-gOnstj/app-12/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
