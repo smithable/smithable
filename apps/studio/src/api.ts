@@ -236,7 +236,17 @@ export const api = {
   previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),
   /** Starts the preview's server again; `why` goes to the log. */
   previewRestart: (why?: string) => call<{ ok: boolean }>("/api/preview/restart", { why }),
-  ask: (request: string) => call<Proposal>("/api/ask", { request }),
+  /** A request, with the conversation so far and the docs' parts found for it (A 152). */
+  ask: (
+    request: string,
+    around: {
+      conversation?: { request: string; reply: string }[];
+      docs?: { title: string; url: string; text: string }[];
+    } = {},
+  ) => call<Proposal>("/api/ask", { request, ...around }),
+  /** Smith's thread lines that left no change, kept by Studio while it runs; one more with `line`. */
+  said: (line?: { request: string; reply: string }) =>
+    call<{ said: { at: string; request: string; reply: string }[] }>("/api/said", line),
   applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
   /** Calls `onEvent` for every change and log line the daemon reports. */
   /** Tries again to make the described app, as it was asked. */

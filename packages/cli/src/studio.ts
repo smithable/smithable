@@ -578,6 +578,12 @@ export async function studio(
 
   /** The last proposal a model made, waiting to be applied or dropped. */
   let pending: { id: string; request: string; proposal: Proposal } | undefined;
+  /**
+   * Smith's thread lines that left no change (answers, questions, discarded proposals; A 152):
+   * the same in every tab and after a reload, while Studio runs. Kept in memory only, never in
+   * the project, so nothing of a conversation is committed.
+   */
+  let said: { at: string; request: string; reply: string }[] = [];
   /** Whether the project may still be replaced by another app (once; see the option). */
   let replaceable = options.replaceable === true;
   /**
@@ -971,14 +977,51 @@ export async function studio(
           return json({ ok: false, message: (error as Error).message });
         }
       }
+      if (url.pathname === "/api/said") {
+        if (req.method === "POST") {
+          const { request, reply } = await body();
+          if (typeof request === "string" && typeof reply === "string")
+            said = [
+              ...said,
+              {
+                at: new Date().toISOString(),
+                request: request.slice(0, 2000),
+                reply: reply.slice(0, 4000),
+              },
+            ].slice(-40);
+        }
+        return json({ said });
+      }
       if (req.method === "POST" && url.pathname === "/api/ask") {
-        // A model proposes; nothing changes until the proposal is applied.
-        const { request } = await body();
+        // A model proposes; nothing changes until the proposal is applied. The conversation so
+        // far and the docs' parts the page found go with the request (A 152), each cut short.
+        const { request, conversation, docs } = await body();
+        const text = (value: unknown, max: number) =>
+          typeof value === "string" ? value.slice(0, max) : undefined;
+        const turns = (Array.isArray(conversation) ? conversation.slice(-6) : []).flatMap(
+          (turn: { request?: unknown; reply?: unknown } | null) => {
+            const [asked, reply] = [text(turn?.request, 500), text(turn?.reply, 500)];
+            return asked !== undefined && reply !== undefined ? [{ request: asked, reply }] : [];
+          },
+        );
+        const parts = (Array.isArray(docs) ? docs.slice(0, 3) : []).flatMap(
+          (part: { title?: unknown; url?: unknown; text?: unknown } | null) => {
+            const [title, at, words] = [
+              text(part?.title, 200),
+              text(part?.url, 300),
+              text(part?.text, 1200),
+            ];
+            return title && at && words ? [{ title, url: at, text: words }] : [];
+          },
+        );
         const quiet = { out: () => {}, err: (t: string) => log(t) };
         // A proposal shown and never applied was declined.
         if (pending) proposalOutcome(dir, pending.id, "declined");
         const id = randomUUID();
-        const proposal = await proposeFor(dir, quiet, String(request ?? ""), id);
+        const proposal = await proposeFor(dir, quiet, String(request ?? ""), id, {
+          conversation: turns,
+          docs: parts,
+        });
         pending = proposal ? { id, request: String(request), proposal } : undefined;
         if (!proposal)
           return json({ kind: "failed", message: "The spec has errors.", usage: "", id });

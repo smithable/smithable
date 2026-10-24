@@ -865,7 +865,7 @@ function toolsModule(
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
 ${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
-${app ? `${worded.size ? 'import type { AskFilter, AskKind } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
@@ -1145,13 +1145,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer

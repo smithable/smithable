@@ -11,8 +11,11 @@ import { expect, test } from "vitest";
 
 // The kit file is the app's own; it is loaded as the app would have it, not compiled here.
 const path: string = "../templates/src/kit/ask.ts";
-const { readQuestion } = (await import(path)) as {
+const { readQuestion, smallTalk, suggestions, turnsOf } = (await import(path)) as {
   readQuestion: (question: string, kinds: unknown[]) => Record<string, unknown> | undefined;
+  smallTalk: (question: string) => string | undefined;
+  suggestions: (kinds: unknown[]) => string[];
+  turnsOf: (value: unknown) => { question: string; answer: string }[];
 };
 
 const raw = import.meta.glob("../../../examples/*/smithable*.yml", {
@@ -168,4 +171,22 @@ test("of the bench's hundred questions that only read, the rules answer about th
   ];
   for (const [starter, asked] of questions)
     for (const question of asked) expect(ask(question, kindsOf(starter)), question).toBeDefined();
+});
+
+test("a chat: small talk by rule, questions to try that the rules read, earlier turns cut short", () => {
+  expect(smallTalk("Hi!")).toBe("Hello! Ask me about the records you can see here.");
+  expect(smallTalk("thanks a lot")).toMatch(/welcome/);
+  expect(smallTalk("What can you do?")).toMatch(/^I answer questions/);
+  expect(smallTalk("how many customers")).toBeUndefined();
+  const tries = suggestions(crm);
+  expect(tries.length).toBeGreaterThan(1);
+  // Each one is read by the rules, so trying it costs nothing.
+  for (const question of tries) expect(ask(question), question).toBeDefined();
+  const turns = turnsOf([
+    ...Array.from({ length: 8 }, (_, i) => ({ question: `q${i}`, answer: "x".repeat(900) })),
+    { question: 1, answer: "not a turn" },
+  ]);
+  expect(turns.map((t) => t.question)).toEqual(["q3", "q4", "q5", "q6", "q7"]);
+  expect(turns[0]?.answer.length).toBe(500);
+  expect(turnsOf("nope")).toEqual([]);
 });

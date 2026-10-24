@@ -3947,6 +3947,27 @@ async function askPanelFlow(dir, base) {
     if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
     if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
       throw new Error("Ask does not say answers may come from an AI");
+    // A chat (A 152): small talk is answered by rule with questions to try; one picked is asked,
+    // and the conversation stays on a reload.
+    await sheet.getByLabel("Question").fill("Hi!");
+    await sheet.getByRole("button", { name: "Ask", exact: true }).click();
+    const hello = sheet.locator("[data-answer]").nth(1);
+    await hello
+      .getByText("Hello! Ask me about the records you can see here.")
+      .waitFor({ timeout: 10000 * P });
+    await hello
+      .getByRole("button", { name: /^How many .+ are there\?$/ })
+      .first()
+      .click();
+    await sheet
+      .locator("[data-answer]")
+      .nth(2)
+      .getByText("From your records")
+      .waitFor({ timeout: 10000 * P });
+    // The button opens the sheet once the page runs in the browser.
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await sheet.locator("[data-answer]").nth(2).getByText("From your records").waitFor();
     // may: change: the model's proposal is a card in the app's words, made only once confirmed.
     await sheet.getByLabel("Question").fill("start the newsletter draft");
     await sheet.getByRole("button", { name: "Ask", exact: true }).click();
@@ -3973,7 +3994,7 @@ async function askPanelFlow(dir, base) {
     if (await page.getByRole("button", { name: "Ask", exact: true }).count())
       throw new Error("a visitor has Ask");
     console.log(
-      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
+      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a greeting is answered by rule with questions to try, one picked is answered, and the conversation stays on a reload; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
     );
   } catch (error) {
     console.log(

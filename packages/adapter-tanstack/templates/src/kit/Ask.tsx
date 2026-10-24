@@ -1,11 +1,14 @@
 // Smithable app kit: "Ask" for the people who use the app (docs/design/assistant.md §4 and §6): a
 // button that opens a sheet with a question field; the answer is worked out by the app with what
-// the person may read, marked as from the records or by an AI, and can be read aloud.
+// the person may read, marked as from the records or by an AI, and can be read aloud. A chat
+// (A 152): oldest first, earlier turns go with each question, and the conversation stays for the
+// browser tab, kept by person, so a reload keeps it and signing out forgets it.
 import { Sparkles } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import type { Turn } from "./ask";
 import type { Answer } from "./assistant.server";
 import { Shown } from "./Inspector";
 import { w } from "./words";
@@ -18,12 +21,81 @@ export interface AskTexts {
   about?: string;
 }
 
+/** One question and what came of it. */
+interface Asked {
+  question: string;
+  answer?: Answer;
+  failed?: string;
+}
+
+/**
+ * Where the tab keeps a person's conversation, by who, so nobody else's shows: `ask:<who>`
+ * holds `{ asked }`, the turns oldest first; an open flow's state (docs/design/ask-flows.md
+ * §2) goes beside them in the same object, so the server keeps no session.
+ */
+const KEPT = "ask:";
+interface Kept {
+  asked: Asked[];
+}
+
+const kept = (who: string): Asked[] => {
+  try {
+    const found = JSON.parse(sessionStorage.getItem(KEPT + who) ?? "{}") as Partial<Kept>;
+    return Array.isArray(found.asked) ? found.asked : [];
+  } catch {
+    return [];
+  }
+};
+
+/** What a call gave, in a line: a number, or how many rows and the first ones' names. */
+function brief(result: unknown): string {
+  if (typeof result !== "object" || result === null) return JSON.stringify(result ?? null);
+  const { rows, total } = result as { rows?: unknown; total?: unknown };
+  if (Array.isArray(rows)) {
+    const names = rows.slice(0, 5).map((row) => {
+      const values = Object.values((row ?? {}) as Record<string, unknown>);
+      const named =
+        (row as { title?: unknown } | null)?.title ?? values.find((v) => typeof v === "string");
+      return String(named ?? "");
+    });
+    return `${rows.length}: ${names.filter(Boolean).join(", ")}`;
+  }
+  if (typeof total === "number" && Object.keys(result).length === 1) return String(total);
+  return JSON.stringify(result).slice(0, 200);
+}
+
+/** A turn as the model reads it again: the words shown, else each call and what it gave in a line. */
+const turnOf = (a: Asked): Turn => ({
+  question: a.question,
+  answer:
+    a.answer?.text ??
+    a.failed ??
+    (a.answer?.steps.length
+      ? a.answer.steps
+          .map((s) => `${s.tool} ${JSON.stringify(s.args)} → ${s.error ?? brief(s.result)}`)
+          .join("; ")
+      : undefined) ??
+    a.answer?.note ??
+    "",
+});
+
+/** Forgets every conversation the tab keeps: at sign-out, when Ask may not be shown again. */
+export function forgetAsked() {
+  try {
+    for (const key of Object.keys(sessionStorage))
+      if (key.startsWith(KEPT)) sessionStorage.removeItem(key);
+  } catch {}
+}
+
 export function Ask({
+  who,
   ask,
   confirm,
   texts = {},
 }: {
-  ask: (question: string) => Promise<Answer>;
+  /** Who is asking (a person's id, or "visitor"): whose conversation the tab keeps. */
+  who: string;
+  ask: (question: string, turns: Turn[]) => Promise<Answer>;
   /** With may: change: makes a proposed change once the person confirms it. */
   confirm?: (proposal: string) => Promise<unknown>;
   texts?: AskTexts;
@@ -31,23 +103,54 @@ export function Ask({
   const name = texts.name ?? w.ask;
   const sheet = useRef<HTMLDialogElement>(null);
   const [question, setQuestion] = useState("");
-  const [asked, setAsked] = useState<{ question: string; answer?: Answer; failed?: string }[]>([]);
+  const [asked, setAsked] = useState<Asked[]>([]);
   const [busy, setBusy] = useState(false);
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const q = question.trim();
+  const end = useRef<HTMLLIElement>(null);
+  // The tab's conversation for this person, once the page runs in the browser; another person's
+  // (signed out, or someone else signed in) is forgotten.
+  useEffect(() => {
+    try {
+      for (const key of Object.keys(sessionStorage))
+        if (key.startsWith(KEPT) && key !== KEPT + who) sessionStorage.removeItem(key);
+    } catch {}
+    setAsked(kept(who));
+  }, [who]);
+  // Who asks now, for an answer that comes after a sign-out or another person's sign-in.
+  const asking = useRef(who);
+  asking.current = who;
+  const keep = (asker: string, turn: Asked) => {
+    if (asker !== asking.current) return;
+    setAsked((list) => {
+      const next = [...list, turn].slice(-20);
+      try {
+        const found = JSON.parse(sessionStorage.getItem(KEPT + asker) ?? "{}") as Partial<Kept>;
+        sessionStorage.setItem(KEPT + asker, JSON.stringify({ ...found, asked: next }));
+      } catch {}
+      return next;
+    });
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the newest answer, when one comes
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" });
+  }, [asked.length]);
+  const send = async (q: string) => {
     if (!q || busy) return;
     setBusy(true);
+    const asker = who;
     try {
-      const answer = await ask(q);
-      setAsked((list) => [{ question: q, answer }, ...list]);
+      const answer = await ask(q, asked.map(turnOf));
+      keep(asker, { question: q, answer });
       setQuestion("");
     } catch (error) {
       const failed = error instanceof Error ? error.message : String(error);
-      setAsked((list) => [{ question: q, failed }, ...list]);
+      keep(asker, { question: q, failed });
     } finally {
       setBusy(false);
     }
+  };
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void send(question.trim());
   };
   return (
     <>
@@ -81,6 +184,52 @@ export function Ask({
               {texts.about && <p className="text-muted-foreground">{texts.about}</p>}
             </div>
           )}
+          <ol className="space-y-3">
+            {asked.map((a, i) => (
+              <li
+                // biome-ignore lint/suspicious/noArrayIndexKey: a conversation's turns by their place
+                key={i}
+                ref={i === asked.length - 1 ? end : undefined}
+                data-answer
+                className="space-y-2"
+              >
+                <p className="ml-8 rounded-lg bg-muted px-3 py-2 text-sm">{a.question}</p>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {(a.answer?.source === "records" || a.answer?.source === "ai") && (
+                    <div className="flex justify-end">
+                      {a.answer.source === "records" ? (
+                        <Badge variant="success">{w.fromYourRecords}</Badge>
+                      ) : (
+                        <Badge>{w.ai}</Badge>
+                      )}
+                    </div>
+                  )}
+                  {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
+                  {a.answer && <Shown answer={a.answer} trace={false} confirm={confirm} />}
+                  {/* Questions to try, after the latest answer only: picked, one is asked. */}
+                  {i === asked.length - 1 && a.answer?.suggestions?.length ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{w.tryAsking}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {a.answer.suggestions.map((s) => (
+                          <Button
+                            key={s}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void send(s)}
+                          >
+                            {s}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ol>
           <form onSubmit={submit} className="space-y-2">
             <div className="flex gap-2">
               <Input
@@ -96,25 +245,6 @@ export function Ask({
             </div>
             <p className="text-xs text-muted-foreground">{w.aiMayBeWrong}</p>
           </form>
-          <ol className="space-y-3">
-            {asked.map((a, i) => (
-              <li
-                key={`${asked.length - i}`}
-                data-answer
-                className="space-y-2 rounded-lg border p-3"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-medium">{a.question}</p>
-                  {a.answer?.source === "records" && (
-                    <Badge variant="success">{w.fromYourRecords}</Badge>
-                  )}
-                  {a.answer?.source === "ai" && <Badge>{w.ai}</Badge>}
-                </div>
-                {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
-                {a.answer && <Shown answer={a.answer} trace={false} confirm={confirm} />}
-              </li>
-            ))}
-          </ol>
         </div>
       </dialog>
     </>

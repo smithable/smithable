@@ -2281,7 +2281,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -3129,13 +3129,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -6844,7 +6845,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { Consent } from "#/kit/Consent";
@@ -6908,8 +6910,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -6945,6 +6950,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -6973,7 +6980,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -9328,7 +9335,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "da272edd generated",
+  "src/generated/ask.server.ts": "e34342b2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
@@ -9354,7 +9361,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -9374,8 +9381,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -9398,14 +9405,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "1efcad71 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "231b85d7 generated",
+  "src/routes/__root.tsx": "d036a1bb generated",
   "src/routes/admin/activity.tsx": "e816502d generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
@@ -14874,7 +14881,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bdca463f generated",
@@ -16288,7 +16295,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -17123,13 +17130,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -21793,7 +21801,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { LandingLayout } from "#/kit/Landing";
@@ -21940,8 +21949,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -21977,6 +21989,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -22013,7 +22027,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent privacy="/privacy" />
         <Scripts />
       </body>
@@ -26247,7 +26261,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.server.ts": "7e85fad8 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "17e35bce generated",
+  "src/generated/ask.server.ts": "d376aa05 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
   "src/generated/booking.server.ts": "ae779adb generated",
@@ -26288,7 +26302,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
@@ -26314,8 +26328,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -26342,14 +26356,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d7f55210 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "afdfd239 generated",
+  "src/routes/__root.tsx": "b9438c31 generated",
   "src/routes/about/index.tsx": "85782241 generated",
   "src/routes/admin/activity.tsx": "db85c43e generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
@@ -27143,7 +27157,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -27823,13 +27837,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -30300,7 +30315,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { Consent } from "#/kit/Consent";
@@ -30376,8 +30392,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -30413,6 +30432,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -30441,7 +30462,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -32108,7 +32129,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "d86f1857 generated",
+  "src/generated/ask.server.ts": "f4067148 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "e1d74b6e generated",
@@ -32131,7 +32152,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -32150,8 +32171,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -32172,14 +32193,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8e3d7b24 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "483be48d generated",
+  "src/routes/__root.tsx": "01060509 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "edbb1090 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
@@ -33654,7 +33675,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -34418,13 +34439,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -37631,7 +37653,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { LandingLayout } from "#/kit/Landing";
@@ -37715,8 +37738,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -37752,6 +37778,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -37788,7 +37816,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -39560,7 +39588,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "d94b7633 generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "1a1987b0 generated",
+  "src/generated/ask.server.ts": "697f1567 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "a9bc6b16 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -39590,7 +39618,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -39613,8 +39641,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -39641,14 +39669,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "4a80e875 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "8917ea9a generated",
+  "src/routes/__root.tsx": "d287a838 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "350b3d17 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
@@ -46517,7 +46545,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "68f64f85 generated",
@@ -47123,7 +47151,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -47713,13 +47741,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -49223,7 +49252,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { LandingLayout } from "#/kit/Landing";
@@ -49301,8 +49331,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -49338,6 +49371,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -49374,7 +49409,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -50837,7 +50872,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "c79b8246 generated",
+  "src/generated/ask.server.ts": "6dbe9365 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
@@ -50855,7 +50890,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
@@ -50877,8 +50912,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -50902,7 +50937,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "eeec5afa generated",
@@ -50910,7 +50945,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "4189a15e generated",
-  "src/routes/__root.tsx": "133c6066 generated",
+  "src/routes/__root.tsx": "fb4e1e0e generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -51440,7 +51475,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -52017,13 +52052,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -52986,7 +53022,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { LandingLayout } from "#/kit/Landing";
@@ -53038,8 +53075,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -53075,6 +53115,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -53111,7 +53153,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -53972,7 +54014,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "c1b182b6 generated",
+  "src/generated/ask.server.ts": "79563eb7 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
@@ -53988,7 +54030,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -54006,8 +54048,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -54028,14 +54070,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a84aa70c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "cf62494b generated",
+  "src/routes/__root.tsx": "5e4c2437 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c5bb01c1 generated",
@@ -56526,7 +56568,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -57288,13 +57330,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -61535,7 +61578,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { LandingLayout } from "#/kit/Landing";
@@ -61640,8 +61684,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -61677,6 +61724,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -61713,7 +61762,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -64557,7 +64606,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "918064e2 generated",
+  "src/generated/ask.server.ts": "bc392b9b generated",
   "src/generated/component.schema.ts": "8a49641f generated",
   "src/generated/component.server.ts": "7dbe4c36 generated",
   "src/generated/component.ts": "04dc29d8 generated",
@@ -64587,7 +64636,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -64612,8 +64661,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -64635,14 +64684,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "46f9008f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f3935f13 generated",
+  "src/routes/__root.tsx": "b94262ff generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -66287,7 +66336,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 // answers a question as the signed-in person: the wording rules first, then the host's model
 // (visitors: the rules only). Every call goes through the data functions, as a page's do.
 import { AccessDenied, type Viewer } from "#/kit/access";
-import type { AskFilter, AskKind } from "#/kit/ask";
+import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -66959,13 +67008,14 @@ export function asks(viewer: Viewer | null): boolean {
 }
 
 /** A question answered as the person asking (or a visitor), with what they may read and do. */
-export async function ask(viewer: Viewer | null, question: string): Promise<Answer> {
+export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
+    turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -69230,7 +69280,8 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
+import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
 import { Consent } from "#/kit/Consent";
@@ -69294,8 +69345,11 @@ const getViewer = createServerFn().handler(async () => {
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));
 
 export const Route = createRootRoute({
   // Every page knows who is signed in; pages check their access with it.
@@ -69331,6 +69385,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -69359,7 +69415,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask ask={(question) => askApp({ data: { question } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -70880,7 +70936,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.server.ts": "44c4920d generated",
   "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "32ae626b generated",
+  "src/generated/ask.server.ts": "24f16a0a generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
@@ -70902,7 +70958,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "127fa9a4 kit",
+  "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -70922,8 +70978,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "4ecf379d kit",
-  "src/kit/assistant.server.ts": "52ff3483 kit",
+  "src/kit/ask.ts": "f4e59e1f kit",
+  "src/kit/assistant.server.ts": "987c0d24 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -70949,14 +71005,14 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "40b33a2c kit",
   "src/kit/where.ts": "f7928322 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ff85402b kit",
+  "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d9bca5ab generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "83ba828d generated",
+  "src/routes/__root.tsx": "07b6bb15 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "c5ea4e91 generated",
   "src/routes/cases/index.tsx": "f7f09d40 generated",

@@ -102,6 +102,7 @@ export async function proposeFor(
   io: Io,
   request: string,
   id: string = randomUUID(),
+  around: Pick<Parameters<typeof proposeChange>[0], "conversation" | "docs"> = {},
 ): Promise<Proposal | undefined> {
   const { ir, auth } = loadSpec(dir, io);
   if (!ir || !auth) return undefined;
@@ -125,6 +126,7 @@ export async function proposeFor(
     context,
     providers,
     anyConfigured: aiProviders().length > 0,
+    ...around,
     // What only the project's data can tell: a new required field on a table with rows.
     check: (before, after, effects) => {
       const [was, will] = [irOf(before.spec), irOf(after.spec)];

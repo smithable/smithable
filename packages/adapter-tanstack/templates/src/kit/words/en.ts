@@ -261,6 +261,26 @@ export const w = {
   previousPicture: "Previous picture",
   privacy: "Privacy",
   proposedNote: "Shown to the person to confirm; nothing is changed yet.",
+  /**
+   * Ask's small talk (A 152): a greeting, thanks or "what can you do" answered by rule, with no
+   * model, and questions to try that lead back to the app's records.
+   */
+  chatGreeting: /^(?:hi|hello|hey|hiya|howdy|good (?:morning|afternoon|evening|day))$/,
+  chatThanks: /^(?:(?:many )?thanks|thank you|thx|ty|cheers)(?: (?:so|very) much| a lot)?$/,
+  chatHow: /^(?:how are you(?: doing| today)?|how's it going)$/,
+  chatWho: /^(?:who are you|what are you|what can you do|what do you do|help|what can i ask)$/,
+  chatBye: /^(?:bye|goodbye|see you|that's all|no thanks)$/,
+  chatOk: /^(?:ok|okay|cool|nice|great|good|perfect)$/,
+  chatHello: "Hello! Ask me about the records you can see here.",
+  chatWelcome: "You're welcome! Anything else you'd like to know?",
+  chatWell: "I'm well, thank you. What would you like to know?",
+  chatAbout:
+    "I answer questions about the records you may see here: how many there are, which ones, and what they add up to.",
+  chatGoodbye: "Bye for now.",
+  chatNext: "Good. What would you like to know next?",
+  tryAsking: "Try asking:",
+  howManyAre: (plural: string) => `How many ${plural} are there?`,
+  perField: (plural: string, field: string) => `${plural} per ${field}`,
   /** Ask's answer checks (ask-checks.md §3): a claim that a change was made, or that there is none. */
   doneWords:
     /\b(?:I(?:'ve| have)? (?:added|changed|renamed|updated|marked|created|deleted|removed|saved|moved)|(?:has|have) been (?:added|changed|renamed|updated|marked|created|deleted|removed|saved|moved))\b|^done\b/im,
