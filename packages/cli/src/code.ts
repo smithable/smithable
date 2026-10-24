@@ -201,6 +201,17 @@ export async function runCoder(
   }
   const started = Date.now();
   let usage: Usage;
+  // Outside the area, or in it as a link or by a path that leads out of it.
+  const root = realpathSync(dir);
+  const areaRoot = resolve(root, task.area);
+  const outsideArea = (path: string) => {
+    if (path !== task.area && !path.startsWith(`${task.area}/`)) return true;
+    const full = join(dir, path);
+    if (lstatSync(full, { throwIfNoEntry: false })?.isSymbolicLink()) return true;
+    if (!existsSync(full)) return false;
+    const real = realpathSync(full);
+    return real !== areaRoot && !real.startsWith(`${areaRoot}${sep}`);
+  };
   // Git's config and hooks are not in the diff: on any failure they are put back as they were.
   const restoreGitConfig = saveGitConfig(dir);
   try {
@@ -213,9 +224,7 @@ export async function runCoder(
       .filter(([path, stamp]) => before.get(path) !== stamp)
       .map(([p]) => p);
     touched.push(...[...before.keys()].filter((path) => !after.has(path)));
-    const strays = touched.filter(
-      (path) => path !== task.area && !path.startsWith(`${task.area}/`),
-    );
+    const strays = touched.filter(outsideArea);
     if (strays.length) {
       const repaired = repair(dir, strays);
       throw new Error(`it changed ${strays.slice(0, 5).join(", ")}${repaired}`);
@@ -231,19 +240,7 @@ export async function runCoder(
   // What the coder used is reported whatever happens next.
   io.out(`${usageLine([usage])}\n`);
   const changed = changedFiles(dir);
-  const root = realpathSync(dir);
-  const areaRoot = resolve(root, task.area);
-  const outside = changed.filter((path) => {
-    if (path !== task.area && !path.startsWith(`${task.area}/`)) return true;
-    const full = join(dir, path);
-    const stat = lstatSync(full, { throwIfNoEntry: false });
-    if (stat?.isSymbolicLink()) return true;
-    if (existsSync(full)) {
-      const real = realpathSync(full);
-      if (real !== areaRoot && !real.startsWith(`${areaRoot}${sep}`)) return true;
-    }
-    return false;
-  });
+  const outside = changed.filter(outsideArea);
   if (outside.length > 0) {
     discard();
     io.err(
@@ -376,6 +373,7 @@ function saveGitConfig(dir: string): () => void {
     existsSync(join(dir, path)) ? readFileSync(join(dir, path)) : null;
   const savedConfig = readGit(".git/config");
   const savedAttrs = readGit(".git/info/attributes");
+  const savedExclude = readGit(".git/info/exclude");
 
   return () => {
     if (existsSync(hooks)) {
@@ -387,6 +385,7 @@ function saveGitConfig(dir: string): () => void {
       content ? writeFileSync(join(dir, path), content) : rmSync(join(dir, path), { force: true });
     writeGit(".git/config", savedConfig);
     writeGit(".git/info/attributes", savedAttrs);
+    writeGit(".git/info/exclude", savedExclude);
   };
 }
 

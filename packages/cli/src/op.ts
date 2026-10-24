@@ -6,9 +6,10 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
@@ -113,6 +114,20 @@ export function op(
     if (!(error instanceof OperationError)) throw error;
     io.err(`${error.message}\n`);
     return 2;
+  }
+  // A file to import named on the command line is the person's own choice, wherever it is: its
+  // text goes in. A path that comes any other way (Studio, MCP, a model) must be in the project.
+  if (
+    operation.name === "importRecords" &&
+    typeof args.from === "string" &&
+    args.text === undefined
+  ) {
+    const file = resolve(dir, args.from);
+    if (!existsSync(file) || !statSync(file).isFile()) {
+      io.err(`There is no file ${args.from}.\n`);
+      return 1;
+    }
+    args = { ...args, text: readFileSync(file, "utf8") };
   }
   return runOperation(dir, io, operation.name, args, flags);
 }

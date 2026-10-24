@@ -66,7 +66,10 @@ function spawned(command: string, args: string[]): [string, string[], { shell?: 
   if (!/^[a-zA-Z0-9._-]+$/.test(command)) throw new Error(`Not a command name: ${command}`);
   const odd = args.find((a) => /["%\r\n]/.test(a));
   if (odd !== undefined) throw new Error(`Windows' shell would not read this as text: ${odd}`);
-  const quoted = args.map((a) => (a === "" || /[\s&|<>^()!,;=]/.test(a) ? `"${a}"` : a));
+  // Backslashes before the closing quote are doubled, or the quote would be read as text.
+  const quoted = args.map((a) =>
+    a === "" || /[\s&|<>^()!,;=]/.test(a) ? `"${a.replace(/(\\+)$/, "$1$1")}"` : a,
+  );
   return [command, quoted, { shell: true }];
 }
 

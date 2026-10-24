@@ -98,6 +98,8 @@ function normalizeV6(address: string): string {
   if (emptyIndex !== -1) {
     const nonEmpties = parts.filter((p) => p !== "").length;
     const missing = 8 - nonEmpties;
+    // "::" stands for at least one group: more than eight in all is no address.
+    if (missing < 1) return ip;
     const before = parts.slice(0, emptyIndex).filter((p) => p !== "");
     const after = parts.slice(emptyIndex + 1).filter((p) => p !== "");
     parts = [...before, ...Array(missing).fill("0"), ...after];
@@ -116,6 +118,7 @@ export function isPrivate(ip: string): boolean {
     if (
       v6.startsWith("0000:0000:0000:0000:0000:ffff:") ||
       v6.startsWith("0064:ff9b:0000:0000:0000:0000:") ||
+      v6.startsWith("0000:0000:0000:0000:ffff:0000:") ||
       (v6.startsWith("0000:0000:0000:0000:0000:0000:") &&
         v6 !== "0000:0000:0000:0000:0000:0000:0000:0001" &&
         v6 !== "0000:0000:0000:0000:0000:0000:0000:0000")
@@ -138,6 +141,7 @@ export function isPrivate(ip: string): boolean {
         v6.startsWith("2001:0db8:") ||
         // 6to4 and Teredo carry an IPv4 address that may be a private one.
         v6.startsWith("2002:") ||
+        v6.startsWith("0064:ff9b:0001:") ||
         v6.startsWith("2001:0000:")
       );
     }
@@ -161,7 +165,8 @@ export function isPrivate(ip: string): boolean {
       (a ?? 0) >= 224
     );
   }
-  return false;
+  // Neither form of address: refused, never guessed at.
+  return true;
 }
 
 interface CheckedResponse {
@@ -234,6 +239,8 @@ export async function get(
     if (response.status < 300 || response.status >= 400 || !location) return { response, url: at };
     response.stream.resume();
     const next = new URL(location, at);
+    if (next.protocol !== "https:" && next.protocol !== "http:")
+      throw new PageError(`${at.href} redirects to an address that is not a web page.`);
     if (next.hostname.replace(/^www\./, "") !== url.hostname.replace(/^www\./, ""))
       throw new PageError(`${at.href} redirects to another site (${next.hostname}).`);
     at = next;

@@ -62,6 +62,8 @@ function normalizeV6(address: string): string {
   if (emptyIndex !== -1) {
     const nonEmpties = parts.filter((p) => p !== "").length;
     const missing = 8 - nonEmpties;
+    // "::" stands for at least one group: more than eight in all is no address.
+    if (missing < 1) return ip;
     const before = parts.slice(0, emptyIndex).filter((p) => p !== "");
     const after = parts.slice(emptyIndex + 1).filter((p) => p !== "");
     parts = [...before, ...Array(missing).fill("0"), ...after];
@@ -84,6 +86,7 @@ export function privateAddress(ip: string): boolean {
     if (
       v6.startsWith("0000:0000:0000:0000:0000:ffff:") ||
       v6.startsWith("0064:ff9b:0000:0000:0000:0000:") ||
+      v6.startsWith("0000:0000:0000:0000:ffff:0000:") ||
       (v6.startsWith("0000:0000:0000:0000:0000:0000:") &&
         v6 !== "0000:0000:0000:0000:0000:0000:0000:0001" &&
         v6 !== "0000:0000:0000:0000:0000:0000:0000:0000")
@@ -106,6 +109,7 @@ export function privateAddress(ip: string): boolean {
         v6.startsWith("2001:0db8:") ||
         // 6to4 and Teredo carry an IPv4 address that may be a private one.
         v6.startsWith("2002:") ||
+        v6.startsWith("0064:ff9b:0001:") ||
         v6.startsWith("2001:0000:")
       );
     }
@@ -129,5 +133,6 @@ export function privateAddress(ip: string): boolean {
       (a ?? 0) >= 224
     );
   }
-  return false;
+  // Neither form of address: refused, never guessed at.
+  return true;
 }

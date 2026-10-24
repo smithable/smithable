@@ -6,6 +6,7 @@
 import type { Viewer } from "./access";
 import { bodyOf, callerOf, problem, refusalOf } from "./api.server";
 import { writeAllowed } from "./limit";
+import { originOf } from "./origin";
 import { type Offer, offered } from "./tools";
 
 export type { Offer, Tool } from "./tools";
@@ -41,13 +42,14 @@ export async function handleMcp(
     offer = server.offerFor(viewer);
     if (!viewer && !(caller.keyless && offer.tools.length))
       return problem(401, "A valid key is needed: Authorization: Bearer <key>.");
+    // A visitor's call from a page is one of the app's own pages: its scheme and host.
     const origin = request.headers.get("origin");
     if (!viewer && origin) {
-      let originHost: string | undefined;
+      let from: string | undefined;
       try {
-        originHost = new URL(origin).host;
+        from = new URL(origin).origin;
       } catch {}
-      if (!originHost || originHost !== request.headers.get("host"))
+      if (from !== originOf(request))
         return problem(403, "Visitors may not call /mcp from another origin.");
     }
     body = await bodyOf(request);
