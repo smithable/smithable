@@ -22,25 +22,54 @@ concurrency:
   group: publish
   cancel-in-progress: false
 jobs:
-  publish:
+  pack:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     # The inputs reach the shell as variables, never pasted into a command.
     env:
       VERSION: ${{ inputs.version }}
-      DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: node scripts/set-version.mjs "$VERSION"
       - run: pnpm build
       - run: pnpm test
-      # Staged publishing needs npm 11.15 or later.
-      - run: npm install --global npm@^11.15.0 && npm --version
       # pnpm packs each package, turning its workspace: references into the version above.
-      - run: pnpm -r --filter "./packages/*" pack --pack-destination "$RUNNER_TEMP/packed"
+      - run: mkdir -p "$RUNNER_TEMP/packed" && pnpm -r --filter "./packages/*" pack --pack-destination "$RUNNER_TEMP/packed"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packed-packages
+          path: ${{ runner.temp }}/packed/*.tgz
+
+  # Apart from the build, so the job that may publish runs no code of the repository; a real
+  # publish only from main.
+  publish:
+    needs: pack
+    if: github.ref == 'refs/heads/main' || inputs.dry_run == true
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      VERSION: ${{ inputs.version }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      # Only for .node-version: nothing of the repository runs in this job, which can publish.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .node-version
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: packed-packages
+          path: ${{ runner.temp }}/packed
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      # Staged publishing needs npm 11.15 or later.
+      - run: npm install --global npm@11.15.0 && npm --version
       - name: Stage each package (or a dry run)
         run: |
           # npm refuses a prerelease (0.2.0-rc.1) without a tag; it goes to next, so latest stays the release.

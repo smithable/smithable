@@ -95,8 +95,10 @@ plain_docs() {
     | sed -n '/# plain docs: begin/,/# plain docs: end/s/^ *- "\(.*\)"$/\1/p')
   [ ${#globs[@]} -gt 0 ] || return 1
   for glob in "${globs[@]}"; do excludes+=(":(glob,exclude)$glob"); done
-  [ -n "$(git diff --name-only "$base" "$head")" ] || return 1
-  [ -z "$(git diff --name-only "$base" "$head" -- . "${excludes[@]}")" ] || return 1
+  [ -n "$(git diff --name-only --no-renames "$base" "$head")" ] || return 1
+  [ -z "$(git diff --name-only --no-renames "$base" "$head" -- . "${excludes[@]}")" ] || return 1
+  # Refuse symlinks (120000) or executables (100755) in the plain docs fast path.
+  if git diff --raw --no-renames "$base" "$head" | grep -qE '^:[0-9]+ (120000|100755) '; then return 1; fi
   local name
   while read -r gone; do
     [ -n "$gone" ] || continue
@@ -162,7 +164,7 @@ rebase_generated() {
     pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard FETCH_HEAD; echo "#$pr: $t failed after the rebase."; return 1; }
   done
   if [ -n "$(git status --porcelain)" ]; then
-    git add -A
+    git add "packages/adapter-tanstack/src/templates.gen.ts" "packages/cli/src/starters.gen.ts" "packages/adapter-tanstack/src/__snapshots__/generate.test.ts.snap"
     git commit -q -s -m "Rebased on main: generated files refreshed"
   fi
   git push -q --force-with-lease origin "$branch"
