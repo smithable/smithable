@@ -15,6 +15,7 @@ import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask } from "./builder/Ask";
 import { NoCode, OPEN_PART } from "./builder/NoCode";
+import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
 import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
@@ -245,8 +246,11 @@ export function App() {
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
+  // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
+  const [visualize, setVisualize] = useState(false);
   /** No code or Code on screen: in the place of the other one, or the first place when neither is. */
   const workIn = (mode: "nocode" | "code") => {
+    setVisualize(false);
     if (slotOf(mode) !== undefined) return;
     const other = mode === "code" ? "nocode" : "code";
     const at = slotOf(other) ?? shown[0] ?? 0;
@@ -624,6 +628,20 @@ export function App() {
                   {WINDOW_NAMES[mode]}
                 </label>
               ))}
+              <label
+                className={cx(
+                  "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                  visualize ? "bg-panel shadow-xs" : "text-muted",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={visualize}
+                  onChange={() => setVisualize(!visualize)}
+                />
+                Visualize
+              </label>
             </fieldset>
           </>
         )}
@@ -804,7 +822,7 @@ export function App() {
         // and only placed, so its frame is made once and keeps its page whatever moves; a window
         // in no slot shown is not drawn, except the preview, hidden.
         <main
-          className="grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0"
+          className="relative grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0"
           style={gridOf(layout, shown)}
         >
           <div
@@ -965,6 +983,22 @@ export function App() {
               </div>
             );
           })}
+          {visualize && (
+            // Over the whole window below the header; the windows keep their state underneath.
+            <div className="absolute inset-0 z-20">
+              <Visualize
+                ir={spec.ir}
+                auth={spec.auth}
+                onOpen={(concept) => {
+                  workIn("nocode");
+                  // After No code is on screen to hear it.
+                  setTimeout(() =>
+                    window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: concept })),
+                  );
+                }}
+              />
+            </div>
+          )}
         </main>
       )}
     </div>

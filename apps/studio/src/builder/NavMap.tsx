@@ -15,11 +15,10 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { AuthIR, SpecIR } from "@smithable/core";
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import { Button, Label, Select } from "../ui";
-import { laidOut } from "./map-layout";
+import { laidOut, MapView, useDirection } from "./map-layout";
 import { navMermaid } from "./mermaid";
-import { OPEN_PART } from "./NoCode";
 import { type NavPage, navOf, type Verdict } from "./nav-map";
 
 const WIDTH = 190;
@@ -35,6 +34,7 @@ const TONE: Record<Verdict, string> = {
 type BoxData = { label: string; page?: NavPage };
 
 function Box({ data }: NodeProps<Node<BoxData>>) {
+  const view = useContext(MapView);
   const { label, page } = data;
   return (
     <div
@@ -42,16 +42,14 @@ function Box({ data }: NodeProps<Node<BoxData>>) {
       className={`rounded border bg-panel px-2 py-1.5 text-xs shadow-sm ${page ? TONE[page.open] : "border-line font-semibold"}`}
       style={{ width: WIDTH }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={view.horizontal ? Position.Left : Position.Top} />
       {page ? (
         <>
           <button
             type="button"
             className="nodrag font-semibold text-accent hover:underline"
             title={`Open the ${page.id} page in Behavior`}
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: `page:${page.id}` }))
-            }
+            onClick={() => view.open(`page:${page.id}`)}
           >
             {page.id}
           </button>
@@ -65,14 +63,25 @@ function Box({ data }: NodeProps<Node<BoxData>>) {
       ) : (
         label
       )}
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={view.horizontal ? Position.Right : Position.Bottom} />
     </div>
   );
 }
 
 const nodeTypes = { box: Box };
 
-export function NavMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
+export function NavMap({
+  ir,
+  auth,
+  onOpen,
+}: {
+  ir: SpecIR;
+  auth?: AuthIR;
+  onOpen: (concept: string) => void;
+}) {
+  // The box's shape sets the direction: top to bottom when it is taller, left to right when wider.
+  const box = useRef<HTMLDivElement>(null);
+  const direction = useDirection(box);
   const signIn = Boolean(auth && auth.signIn !== "none");
   const roles = auth?.roles.map((r) => r.name) ?? [];
   // A role's view, or a visitor's (""); an app without sign-in is everyone's.
@@ -116,13 +125,14 @@ export function NavMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
       boxes.map((b) => b.id),
       lines,
       { width: WIDTH, height: HEIGHT },
+      direction,
     );
     for (const b of boxes) b.position = at[b.id] ?? b.position;
     return { nodes: boxes, edges: lines };
-  }, [nav, who]);
+  }, [nav, who, direction]);
   const [copied, setCopied] = useState(false);
   return (
-    <section aria-label="Navigation map" className="h-[70vh] min-h-96 p-3">
+    <section aria-label="Navigation map" className="flex h-full min-h-0 flex-col p-3">
       <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
         <p className="text-xs text-muted">
           The menus and their pages, and whether each page opens and its records can be read; a
@@ -149,23 +159,25 @@ export function NavMap({ ir, auth }: { ir: SpecIR; auth?: AuthIR }) {
           </Button>
         </div>
       </div>
-      <div className="h-full rounded border border-line">
-        <ReactFlow
-          // Made again for another role, so the view fits the boxes again (fitView is the first draw's).
-          key={who}
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          nodesConnectable={false}
-          nodesDraggable={false}
-          edgesFocusable={false}
-          fitView
-          fitViewOptions={{ padding: 0.15 }}
-          colorMode="system"
-        >
-          <Background />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+      <div ref={box} className="min-h-0 flex-1 rounded border border-line">
+        <MapView.Provider value={{ horizontal: direction === "LR", open: onOpen }}>
+          <ReactFlow
+            // Made again for another role, so the view fits the boxes again (fitView is the first draw's).
+            key={`${who}:${direction}`}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            nodesConnectable={false}
+            nodesDraggable={false}
+            edgesFocusable={false}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+            colorMode="system"
+          >
+            <Background />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </MapView.Provider>
       </div>
     </section>
   );

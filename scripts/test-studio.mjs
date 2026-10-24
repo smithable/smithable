@@ -597,6 +597,8 @@ try {
   await step(
     "the Data map: a box per kind of record, arrows between them, a name opens Behavior",
     async () => {
+      // The app map is Visualize's, over the whole window (A 150).
+      await page.locator("label", { hasText: /^Visualize$/ }).click();
       await sub("Data map");
       const map = page.getByRole("region", { name: "Data map" });
       for (const box of ["Customer", "Order", "User"])
@@ -626,6 +628,8 @@ try {
   await step(
     "the Navigation map: the menu's pages, what opens as a role and as a visitor, a name opens Behavior",
     async () => {
+      // The app map is Visualize's, over the whole window (A 150).
+      await page.locator("label", { hasText: /^Visualize$/ }).click();
       await sub("Navigation");
       const map = page.getByRole("region", { name: "Navigation map" });
       for (const box of ["customers", "orders", "team"])
@@ -656,6 +660,8 @@ try {
   await step(
     "What happens: the CRM's custom action as code Studio does not read, with what it is for; a name opens Behavior",
     async () => {
+      // The app map is Visualize's, over the whole window (A 150).
+      await page.locator("label", { hasText: /^Visualize$/ }).click();
       await sub("What happens");
       const map = page.getByRole("region", { name: "What happens" });
       const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
