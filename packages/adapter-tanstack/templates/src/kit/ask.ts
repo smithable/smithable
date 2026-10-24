@@ -5,6 +5,8 @@
 // accounted for: a question the rules do not fully read is left to the model, never guessed at.
 // Pure: the app's words (its kinds of record, their fields and values) come in as `kinds`.
 
+import { w } from "./words";
+
 export type AskFilter =
   | { field: string; by: "value"; values: string[]; labels?: Record<string, string> }
   | { field: string; by: "yesNo" | "number" | "date" | "text" }
@@ -332,4 +334,59 @@ export function readQuestion(question: string, kinds: AskKind[]): ToolCall | und
   const per = done(readRecords(all, kinds));
   if (per?.by) return { tool: "measure", kind: per.kind.model, ...filled(per.where), by: per.by };
   return undefined;
+}
+
+/** An earlier turn of a conversation with Ask, as the page keeps it (A 152). */
+export interface Turn {
+  question: string;
+  /** What came of it, in short: the words shown, or the calls made. */
+  answer: string;
+}
+
+/** How many earlier turns go with a question, and how long each may be. */
+const TURNS = 6;
+const TURN_MAX = 500;
+
+/** The earlier turns a page sent, checked by hand: the last few, each cut short. */
+export function turnsOf(value: unknown): Turn[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(-TURNS)
+    .flatMap((t: { question?: unknown; answer?: unknown } | null) =>
+      typeof t?.question === "string" && typeof t.answer === "string"
+        ? [{ question: t.question.slice(0, TURN_MAX), answer: t.answer.slice(0, TURN_MAX) }]
+        : [],
+    );
+}
+
+/**
+ * Small talk answered by rule (A 152): a greeting, thanks, "what can you do", in the app's
+ * language, with no model; nothing for anything else.
+ */
+export function smallTalk(question: string): string | undefined {
+  const said = question
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}' ]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const replies: [RegExp, string][] = [
+    [w.chatGreeting, w.chatHello],
+    [w.chatThanks, w.chatWelcome],
+    [w.chatHow, w.chatWell],
+    [w.chatWho, w.chatAbout],
+    [w.chatBye, w.chatGoodbye],
+    [w.chatOk, w.chatNext],
+  ];
+  return replies.find(([words]) => words.test(said))?.[1];
+}
+
+/**
+ * Questions to try, from the kinds the person may read (A 152): a count of the first two and a
+ * number split by a field, which the rules read, so trying one costs nothing.
+ */
+export function suggestions(kinds: AskKind[]): string[] {
+  const counts = kinds.slice(0, 2).map((k) => w.howManyAre(k.pluralLabel.toLowerCase()));
+  const split = kinds.find((k) => k.by.some((b) => k.fields.some((f) => f.name === b)));
+  const by = split?.fields.find((f) => split.by.includes(f.name));
+  return split && by ? [...counts, w.perField(split.pluralLabel, by.label.toLowerCase())] : counts;
 }

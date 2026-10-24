@@ -20,22 +20,15 @@ import { ASK_SMITH, HANDED } from "./Wizard";
  */
 /** Where the words box keeps a request not yet sent. */
 const DRAFT = "smithable:ask-draft";
-/** Where the thread keeps what left no change (answers, questions, discarded proposals). */
-const SAID = "smithable:ask-said";
-
-/** A line of the thread the change log does not hold: what was asked, and what came of it. */
+/**
+ * A line of the thread the change log does not hold: what was asked, and what came of it.
+ * Studio's server keeps them while it runs (A 152), so every tab and a reload show the same.
+ */
 interface Said {
   at: string;
   request: string;
   reply: string;
 }
-const readSaid = (): Said[] => {
-  try {
-    return JSON.parse(sessionStorage.getItem(SAID) ?? "[]") as Said[];
-  } catch {
-    return [];
-  }
-};
 
 export function Ask({
   example,
@@ -91,13 +84,19 @@ export function Ask({
   // The last request and when, for the follow-up rule: a short line or one that leans on it
   // ("yes", "the second one", "also for orders") goes with it; anything else stands alone.
   const last = useRef<{ text: string; at: number; question: boolean }>(undefined);
-  const [said, setSaidState] = useState(readSaid);
+  const [said, setSaid] = useState<Said[]>([]);
+  useEffect(() => {
+    void api.said().then(
+      (kept) => setSaid(kept.said),
+      () => undefined,
+    );
+  }, []);
   const say = (request: string, reply: string) => {
-    const next = [...said, { at: new Date().toISOString(), request, reply }].slice(-40);
-    setSaidState(next);
-    try {
-      sessionStorage.setItem(SAID, JSON.stringify(next));
-    } catch {}
+    setSaid((list) => [...list, { at: new Date().toISOString(), request, reply }]);
+    void api.said({ request, reply }).then(
+      (kept) => setSaid(kept.said),
+      () => undefined,
+    );
   };
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState("");
@@ -147,16 +146,38 @@ export function Ask({
     setOutput("");
     setLocal(undefined);
     setDocs(undefined);
-    // Smith looks in the docs too for a question (studio-v3.md §2), beside the app's answer.
+    // Smith looks in the docs too for a question (studio-v3.md §2): the parts found are shown
+    // beside the answer, and go with the question so the model answers from them (A 152).
     // Only the latest question's hits are shown, however the index's loading falls.
     const asked = ++docsAsked.current;
-    if (trace && asksTheDocs(text))
-      void docsIndex().then(
-        (index) => asked === docsAsked.current && setDocs(searchDocs(index, text)),
-        () => asked === docsAsked.current && setDocs("unreachable"),
+    let found: DocsHit[] = [];
+    if (trace && asksTheDocs(text)) {
+      const searched = docsIndex().then(
+        (index) => {
+          const hits = searchDocs(index, text);
+          if (asked === docsAsked.current) setDocs(hits);
+          return hits;
+        },
+        () => {
+          if (asked === docsAsked.current) setDocs("unreachable");
+          return [];
+        },
       );
+      // The question waits a moment for the docs, not longer: Smith answers without them then.
+      found = await Promise.race([
+        searched,
+        new Promise<DocsHit[]>((done) => setTimeout(() => done([]), 2500)),
+      ]);
+    }
     try {
-      const next = await api.ask(text);
+      const next = await api.ask(text, {
+        conversation: trace
+          ? threadLines(trace, said, words)
+              .slice(-6)
+              .map(({ request, reply }) => ({ request: request ?? "", reply }))
+          : [],
+        docs: found.map(({ title, url, text }) => ({ title, url, text })),
+      });
       last.current = { text, at: Date.now(), question: next.kind === "question" };
       setProposal(next);
       // An answer or a refusal is the end of that request: it goes into the thread.
@@ -337,7 +358,23 @@ export function Ask({
  * asked that left no change. Nothing new is stored but those lines.
  */
 function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; words?: Words }) {
-  const lines = [
+  const lines = threadLines(trace, said, words);
+  if (!lines.length) return <p className="text-sm text-quiet">Nothing asked or changed yet.</p>;
+  return (
+    <ol aria-label="Thread" className="space-y-2 text-sm">
+      {lines.map((line) => (
+        <li key={`${line.at}|${line.reply}`} className="space-y-1">
+          {line.request && <p className="ml-6 rounded-md bg-subtle px-2 py-1">{line.request}</p>}
+          <p className="text-muted">{line.reply}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** The thread's lines, oldest first: the change log's latest with what left no change. */
+function threadLines(trace: TraceEntry[], said: Said[], words?: Words) {
+  return [
     ...trace.slice(0, 30).map((t) => {
       const plain = t.operation && words?.(t.operation.op, t.operation.args);
       const what = plain ?? t.description;
@@ -355,17 +392,6 @@ function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; wor
     }),
     ...said,
   ].sort((a, b) => a.at.localeCompare(b.at));
-  if (!lines.length) return <p className="text-sm text-quiet">Nothing asked or changed yet.</p>;
-  return (
-    <ol aria-label="Thread" className="space-y-2 text-sm">
-      {lines.map((line) => (
-        <li key={`${line.at}|${line.reply}`} className="space-y-1">
-          {line.request && <p className="ml-6 rounded-md bg-subtle px-2 py-1">{line.request}</p>}
-          <p className="text-muted">{line.reply}</p>
-        </li>
-      ))}
-    </ol>
-  );
 }
 
 /** What Smith answers by himself (studio-v3.md §2), from the app and its checks. */

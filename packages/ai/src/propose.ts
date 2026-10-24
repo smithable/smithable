@@ -53,6 +53,8 @@ Answer with JSON only:
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
 - {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
 - {"kind":"answer","text":"…"} also for a greeting, thanks or other small talk: one or two friendly sentences, like a chat, that suggest something to change or ask about this app. Never answer "none" to small talk.
+- {"kind":"answer","text":"…"} for a question about how Smithable works when parts of its docs come with the request: answer from them in one to three sentences and name the page.
+- {"kind":"answer","text":"…"} for a question not about this app or Smithable: one sentence, then lead back with something to change or ask about this app.
 - {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
@@ -213,6 +215,10 @@ export async function proposeChange(options: {
    * fill. A message sends the proposal back for repair like any other error.
    */
   check?: (before: ProjectFiles, after: ProjectFiles, effects: Effect[]) => string | undefined;
+  /** The conversation so far, oldest first (A 152): what a follow-up is read by. */
+  conversation?: { request: string; reply: string }[];
+  /** Parts of docs.smithable.ai the person's browser found for a question, to answer from. */
+  docs?: { title: string; url: string; text: string }[];
 }): Promise<Proposal> {
   const { files, context, providers } = options;
   const usage: Usage[] = [];
@@ -266,8 +272,15 @@ export async function proposeChange(options: {
     };
   let problem = "";
   let none: string | undefined;
+  const said = (options.conversation ?? [])
+    .map((turn) => `Person: ${turn.request}\nSmith: ${turn.reply}`)
+    .join("\n");
+  const docs = (options.docs ?? []).map((d) => `${d.title} (${d.url}): ${d.text}`).join("\n");
+  const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${docs ? `\n\nFrom Smithable's docs:\n${docs}` : ""}`;
   for (const [index, provider] of providers.entries()) {
-    const { system, user, operations } = promptFor(provider, context, files.plugins);
+    const prompted = promptFor(provider, context, files.plugins);
+    const { system, operations } = prompted;
+    const user = prompted.user + around;
     const schema = answerSchema(operations);
     const fallbackSchema = answerSchema(operations, false);
     let prompt = user;

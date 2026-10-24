@@ -214,7 +214,7 @@ import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
@@ -268,8 +268,11 @@ ${
 
 /** A question to "Ask", answered as the person signed in (or a visitor), with what they may read. */
 const askApp = createServerFn({ method: "POST" })
-  .validator((data: unknown) => ({ question: field(data, "question", 500) }))
-  .handler(async ({ data }) => ask(await currentViewer(), data.question));${
+  .validator((data: unknown) => ({
+    question: field(data, "question", 500),
+    turns: turnsOf((data as { turns?: unknown } | null)?.turns),
+  }))
+  .handler(async ({ data }) => ask(await currentViewer(), data.question, data.turns));${
     confirming
       ? `
 
@@ -391,7 +394,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask ask={(question) => askApp({ data: { question } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
+${asking ? `        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
         <Scripts />
       </body>
     </html>

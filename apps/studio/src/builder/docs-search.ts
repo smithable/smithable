@@ -15,6 +15,8 @@ export interface DocsHit {
   title: string;
   url: string;
   line: string;
+  /** The part's words, for Smith to answer from (A 152). */
+  text: string;
 }
 
 let loading: Promise<DocsIndex> | undefined;
@@ -75,6 +77,7 @@ export function searchDocs(index: DocsIndex, question: string, count = 3): DocsH
       title: page === h.heading ? page : `${page} › ${h.heading}`,
       url: `${DOCS}/${url}${h.id ? `#${h.id}` : ""}`,
       line: h.text.length > 180 ? `${h.text.slice(0, 180)}…` : h.text,
+      text: h.text.slice(0, 1200),
     };
   });
 }

@@ -1042,7 +1042,7 @@ try {
   );
 
   await step(
-    "a greeting to Smith is answered like a chat, with something to try, and changes nothing",
+    "a greeting to Smith is answered like a chat, with something to try, changes nothing, and is kept by Studio",
     async () => {
       const before = (await project()).files.spec;
       await page.getByLabel("Describe a change").fill("Hi");
@@ -1052,6 +1052,10 @@ try {
         .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
         .waitFor({ timeout: 30000 * P });
       if ((await project()).files.spec !== before) throw new Error("the spec changed");
+      // Studio keeps the thread while it runs, for a reload or another tab (A 152).
+      const kept = await page.evaluate(() => fetch("/api/said").then((r) => r.json()));
+      if (!kept.said.some((line) => line.request === "Hi" && /^Hello! I'm Smith/.test(line.reply)))
+        throw new Error(`Studio kept ${JSON.stringify(kept)}`);
     },
   );
   await step("a question about the app is answered from the spec, not applied", async () => {
