@@ -82,7 +82,8 @@ async function body(stream: IncomingMessage, max: number, what: string): Promise
 function normalizeV6(address: string): string {
   // A zone ("fe80::1%eth0") names the interface, not the address.
   const ip = address.replace(/%.*$/, "");
-  if (!ip.includes(":")) return ip;
+  // Two "::" is no address: left as it is, so the check refuses it.
+  if (!ip.includes(":") || (ip.match(/::/g) ?? []).length > 1) return ip;
   let parts = ip.toLowerCase().split(":");
   const last = parts[parts.length - 1];
   if (last?.includes(".")) {
