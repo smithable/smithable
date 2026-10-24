@@ -161,7 +161,7 @@ const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
 const setAdmins: Operation<{ admins: string[] }> = {
   name: "setAdmins",
   summary:
-    "Say who the administrators are, by email address: they become admins when they first sign in, and may always sign in.",
+    "Say who the administrators are, by email address: they become admins when they sign in, also an address added later, and may always sign in.",
   schema: {
     type: "object",
     required: ["admins"],

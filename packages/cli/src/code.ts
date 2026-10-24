@@ -1,6 +1,14 @@
 import { spawn } from "node:child_process";
-import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { allowedBy, type Location, parsePolicy, type Usage } from "@smithable/ai";
 import { buildContext } from "@smithable/index";
 import { usageLine } from "./ask.js";
@@ -193,25 +201,36 @@ export async function runCoder(
   }
   const started = Date.now();
   let usage: Usage;
-  // Git's undo does not reach its hooks: on any failure they are put back as they were.
-  const hooks = saveHooks(dir);
+  // Outside the area, or in it as a link or by a path that leads out of it.
+  const root = realpathSync(dir);
+  const areaRoot = resolve(root, task.area);
+  const outsideArea = (path: string) => {
+    if (path !== task.area && !path.startsWith(`${task.area}/`)) return true;
+    const full = join(dir, path);
+    if (lstatSync(full, { throwIfNoEntry: false })?.isSymbolicLink()) return true;
+    if (!existsSync(full)) return false;
+    const real = realpathSync(full);
+    return real !== areaRoot && !real.startsWith(`${areaRoot}${sep}`);
+  };
+  // Git's config and hooks are not in the diff: on any failure they are put back as they were.
+  const restoreGitConfig = saveGitConfig(dir);
   try {
     const before = watched(dir);
     usage = await coder.run(dir, task.prompt, task.area);
     const after = watched(dir);
-    // Ignored files, installed packages, build output, the dev database and Git's hooks are not
+    // Ignored files, installed packages, build output, the dev database and Git's config/hooks are not
     // in the diff: they must not change either.
     const touched = [...after]
       .filter(([path, stamp]) => before.get(path) !== stamp)
       .map(([p]) => p);
     touched.push(...[...before.keys()].filter((path) => !after.has(path)));
-    const strays = touched.filter((path) => !path.startsWith(`${task.area}/`));
+    const strays = touched.filter(outsideArea);
     if (strays.length) {
       const repaired = repair(dir, strays);
       throw new Error(`it changed ${strays.slice(0, 5).join(", ")}${repaired}`);
     }
   } catch (error) {
-    hooks();
+    restoreGitConfig();
     discard();
     io.err(
       `The coder failed: ${error instanceof Error ? error.message : String(error)}\nNothing was changed.\n`,
@@ -221,7 +240,7 @@ export async function runCoder(
   // What the coder used is reported whatever happens next.
   io.out(`${usageLine([usage])}\n`);
   const changed = changedFiles(dir);
-  const outside = changed.filter((path) => !path.startsWith(`${task.area}/`));
+  const outside = changed.filter(outsideArea);
   if (outside.length > 0) {
     discard();
     io.err(
@@ -300,6 +319,9 @@ function watched(dir: string): Map<string, string> {
     return `${s.mtimeMs}:${s.size}`;
   };
   const out = new Map(ignored.map((p) => [p, stamp(join(dir, p))]));
+  for (const gitFile of [".git/config", ".git/info/attributes", ".git/info/exclude"]) {
+    out.set(gitFile, stamp(join(dir, gitFile)));
+  }
   const hooks = join(dir, ".git", "hooks");
   if (existsSync(hooks))
     for (const h of readdirSync(hooks)) out.set(`.git/hooks/${h}`, stamp(join(hooks, h)));
@@ -339,18 +361,31 @@ function repair(dir: string, changed: string[]): string {
   return done.length ? `; ${done.join("; ")}` : "";
 }
 
-/** Git's hooks as they are now; the function returned puts them back exactly so. */
-function saveHooks(dir: string): () => void {
+/** Git's hooks and config as they are now; the function returned puts them back exactly so. */
+function saveGitConfig(dir: string): () => void {
   const hooks = join(dir, ".git", "hooks");
-  const saved = new Map(
+  const savedHooks = new Map(
     existsSync(hooks)
       ? readdirSync(hooks).map((h) => [h, readFileSync(join(hooks, h))] as const)
       : [],
   );
+  const readGit = (path: string) =>
+    existsSync(join(dir, path)) ? readFileSync(join(dir, path)) : null;
+  const savedConfig = readGit(".git/config");
+  const savedAttrs = readGit(".git/info/attributes");
+  const savedExclude = readGit(".git/info/exclude");
+
   return () => {
-    if (!existsSync(hooks)) return;
-    for (const h of readdirSync(hooks)) if (!saved.has(h)) rmSync(join(hooks, h), { force: true });
-    for (const [h, content] of saved) writeFileSync(join(hooks, h), content);
+    if (existsSync(hooks)) {
+      for (const h of readdirSync(hooks))
+        if (!savedHooks.has(h)) rmSync(join(hooks, h), { force: true });
+      for (const [h, content] of savedHooks) writeFileSync(join(hooks, h), content);
+    }
+    const writeGit = (path: string, content: Buffer | null) =>
+      content ? writeFileSync(join(dir, path), content) : rmSync(join(dir, path), { force: true });
+    writeGit(".git/config", savedConfig);
+    writeGit(".git/info/attributes", savedAttrs);
+    writeGit(".git/info/exclude", savedExclude);
   };
 }
 

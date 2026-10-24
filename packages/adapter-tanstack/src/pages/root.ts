@@ -505,7 +505,7 @@ ${imports.join("\n")}${imports.length ? "\n" : ""}
 const PAGES = ${JSON.stringify(pages.map((p) => p.route))};
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {

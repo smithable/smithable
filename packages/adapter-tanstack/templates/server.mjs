@@ -128,6 +128,19 @@ serve({
         else if (response.headers.get("Content-Type")?.startsWith("text/html"))
           response.headers.set("Cache-Control", "no-store");
       }
+
+      // A picture opened on its own runs nothing: an SVG with a script in it is only a picture.
+      const path = new URL(request.url).pathname;
+      if (
+        response.ok &&
+        (path.startsWith("/images/") || path.startsWith("/uploads/") || path.endsWith(".svg"))
+      ) {
+        response.headers.set(
+          "Content-Security-Policy",
+          "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+        );
+      }
+
       return response;
     },
     staticMiddleware({ dir: new URL("./dist/client", import.meta.url).pathname }),

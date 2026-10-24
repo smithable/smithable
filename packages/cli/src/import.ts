@@ -2,8 +2,16 @@
 // it with core's readRecords, looks references up in the development database and adds every
 // record in one transaction, or none. The model's hooks do not run (an import is not thousands
 // of creates) and no access rule is checked per record: importing is a project-time step.
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   fieldColumn,
@@ -47,11 +55,20 @@ export function prepareImport(
   const refusals: ImportRefusal[] = [];
   let text = "";
   if ("text" in effect.source) text = effect.source.text;
-  else {
+  if ("path" in effect.source) {
+    const root = realpathSync(dir);
     const path = resolve(dir, effect.source.path);
-    if (!existsSync(path))
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    if (
+      effect.source.path.includes("..") ||
+      !path.startsWith(`${resolve(dir)}${sep}`) ||
+      stat?.isSymbolicLink() ||
+      (stat && (!stat.isFile() || !realpathSync(path).startsWith(`${root}${sep}`)))
+    ) {
+      refusals.push({ line: 0, message: "The import file must be inside the project." });
+    } else if (!stat) {
       refusals.push({ line: 0, message: `There is no file ${effect.source.path}.` });
-    else text = readFileSync(path, "utf8");
+    } else text = readFileSync(path, "utf8");
   }
   const read = readRecords(text, model, content, effect.map);
   refusals.push(...read.refusals);
@@ -186,9 +203,13 @@ export function importOwner(
   }
 }
 
-const importPath = (id: string) => join("data", ".smithable", "imports", `${id}.csv`);
+const SAFE_IMPORT_ID = /^[a-z0-9_-]+$/i;
+const importPath = (id: string) => {
+  if (!SAFE_IMPORT_ID.test(id)) throw new Error(`Invalid import id: ${id}`);
+  return join("data", ".smithable", "imports", `${id}.csv`);
+};
 
-/** Keeps the imported file beside the checkpoint, so undo and a replay have it. */
+/** Keeps the raw CSV under data/.smithable/imports/ so redo can run it again; returns the path. */
 export function keepImport(dir: string, id: string, text: string): string {
   const path = importPath(id);
   mkdirSync(dirname(join(dir, path)), { recursive: true });
@@ -198,5 +219,6 @@ export function keepImport(dir: string, id: string, text: string): string {
 
 /** Forgets the kept file of an import that was rolled back. */
 export function dropImport(dir: string, id: string): void {
+  if (!SAFE_IMPORT_ID.test(id)) return;
   rmSync(join(dir, importPath(id)), { force: true });
 }

@@ -108,7 +108,7 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db";
 import { ${tables} } from "#/db/schema";${closed || email ? '\nimport { app } from "#/generated/app";' : ""}
 import { ADDRESS_HEADER } from "#/kit/address.server";
-import { audit } from "#/kit/audit.server";${email ? '\nimport { codeAllowed } from "#/kit/limit";\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
+import { audit } from "#/kit/audit.server";${email || refuses ? `\nimport { ${[...(email ? ["codeAllowed"] : []), ...(refuses ? ["count"] : [])].join(", ")} } from "#/kit/limit";` : ""}${email ? '\nimport { log } from "#/kit/log.server";\nimport { mailConfigured, sendMail } from "#/kit/mail";' : ""}
 import { w } from "#/kit/words";
 
 /** Sign-in providers in button order; each needs its keys in the environment (see the README). */
@@ -118,7 +118,7 @@ export const PROVIDERS = ${JSON.stringify(providers)};
 function signedInAs(userId: string) {
   return db.select({ id: user.id, role: user.role }).from(user).where(eq(user.id, userId)).get() ?? null;
 }
-${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains.map((d) => d.toLowerCase()))};\n` : ""}/** These addresses become admins when they first sign in. */
+${allowedDomains ? `const ALLOWED_DOMAINS = ${JSON.stringify(allowedDomains.map((d) => d.toLowerCase()))};\n` : ""}/** These addresses become admins when they sign in, also one added after its account was made. */
 const ADMINS: string[] = ${JSON.stringify(auth.admins.map((a) => a.toLowerCase()))};
 /** A user a sign-in provider made with an address it has not confirmed (a code by mail confirms it). */
 const unconfirmed = (path: string | undefined, verified: unknown) =>
@@ -228,7 +228,7 @@ export const auth = betterAuth({
           // A __Host- cookie must say Path=/ itself: a browser refuses one that does not.
           defaultCookieAttributes: { secure: true, path: "/" },
           cookies: Object.fromEntries(
-            ["session_token", "session_data", "dont_remember", "state"].map((name) => [
+            ["session_token", "session_data", "dont_remember", "state", "account_data"].map((name) => [
               name,
               { name: \`__Host-better-auth.\${name}\`, attributes: { secure: true, path: "/" } },
             ]),
@@ -258,6 +258,8 @@ export const auth = betterAuth({
               ? `
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
+            // The same address refused again and again is slowed down (its mails, its audit lines).
+            count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
           }`
@@ -270,7 +272,14 @@ export const auth = betterAuth({
     // Signing in and out are in the audit log, as the person who did it.
     session: {
       create: {
-        after: async (session) => audit(db, signedInAs(session.userId), { action: "signed in" }),
+        after: async (session) => {
+          // An address the auth file lists becomes an admin when it signs in, also one added
+          // after its account was made; never one its sign-in has not proven.
+          const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+            db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
+          audit(db, signedInAs(session.userId), { action: "signed in" });
+        },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
       delete: {

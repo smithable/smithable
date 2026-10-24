@@ -618,9 +618,13 @@ import { receiptFor } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
+  deleteFile,
+  deletePicture,
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
+  type Picture,
   roomFor,
+  type StoredFile,
   saveFile,
   savePicture,
   scanned,
@@ -671,7 +675,15 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
             throw error;
           }
           const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, (stored as { file: string }).file) };
-          await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+          try {
+            await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+          } catch (error) {
+            // The record did not take it: the file it would have had goes again.
+            const still = ${n.data}.uses((stored as { file: string }).file);
+            if (field.kind === "file") deleteFile(stored as StoredFile, still);
+            else deletePicture(stored as Picture, still);
+            throw error;
+          }
           return stored;
         }),
     },
@@ -911,7 +923,7 @@ ${entries.join("\n")}
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -1199,7 +1211,8 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
   if (tool === "run") {
     const run = Object.hasOwn(RUNS, String(args.action)) ? RUNS[String(args.action)] : undefined;
     if (!run) throw new NotFound(\`There is no action "\${String(args.action)}".\`);
-    const kind = KINDS[run.kind];
+    const kind = Object.hasOwn(KINDS, run.kind) ? KINDS[run.kind] : undefined;
+    if (!kind) throw new NotFound(\`There is no kind "\${run.kind}".\`);
     const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
     if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");

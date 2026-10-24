@@ -207,7 +207,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Email addresses that get the admin role when they first sign in, and may always sign in."
+      "description": "Email addresses that get the admin role when they sign in, also one added later, and may always sign in."
     },
     "public": {
       "type": "object",

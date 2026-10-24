@@ -7,7 +7,8 @@ export function originOf(request: Request): string {
   // The proxy's own value: the last of a list it added to.
   const last = (name: string) => request.headers.get(name)?.split(",").at(-1)?.trim();
   const forwardedHost = process.env.TRUST_PROXY === "1" ? last("x-forwarded-host") : undefined;
-  if (forwardedHost) {
+  // Only a host name or address with a port: nothing else is put in a link.
+  if (forwardedHost && /^(?:[A-Za-z0-9.-]+|\[[0-9a-fA-F:]+\])(?::\d{1,5})?$/.test(forwardedHost)) {
     const said = last("x-forwarded-proto")?.toLowerCase();
     const proto = said === "http" || said === "https" ? said : url.protocol.replace(":", "");
     return `${proto}://${forwardedHost}`;

@@ -316,6 +316,21 @@ test("a target's settings, and the addresses the guard refuses", () => {
     "198.18.0.1",
     "203.0.113.5",
     "2001:db8::1",
+    // The same written out longer, which a pattern on the short form missed.
+    "0:0:0:0:0:ffff:7f00:1",
+    "0000:0000:0000:0000:0000:ffff:127.0.0.1",
+    "0:0:0:0:0:0:0:1",
+    "FE80:0:0:0:0:0:0:1",
+    // With a zone, through 6to4 or Teredo, or not an address at all.
+    "fe80::1%eth0",
+    "2002:7f00:1::1",
+    "2001:0:4136:e378::1",
+    "1::2::3",
+    // Nine groups, the local NAT64 prefix, and the translated form.
+    "1:2:3:4:5:6:7:8::9",
+    "64:ff9b:1::7f00:1",
+    "::ffff:0:127.0.0.1",
+    "not an address",
   ])
     expect(privateAddress(ip), ip).toBe(true);
   for (const ip of [

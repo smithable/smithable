@@ -888,8 +888,8 @@ export async function studio(
           return json({ ok: true, output: "Nothing to change.", unchanged: true });
         // A picture the change brings (the Look tab's logo): under public/images/, at most 2 MB.
         const given = file as { path?: unknown; data?: unknown } | undefined;
-        const bytes =
-          typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
+        let bytes = typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
+
         if (
           given &&
           (typeof given.path !== "string" ||
@@ -897,7 +897,7 @@ export async function studio(
             !bytes ||
             bytes.byteLength === 0 ||
             bytes.byteLength > 2 * 1024 * 1024)
-        )
+        ) {
           return json(
             {
               ok: false,
@@ -905,6 +905,25 @@ export async function studio(
             },
             400,
           );
+        }
+
+        if (given?.path && typeof given.path === "string" && given.path.endsWith(".svg") && bytes) {
+          let text = bytes.toString("utf8");
+          // Remove obvious script tags and objects, but XML is complex to sanitize via regex.
+          // Note: Full defense relies on the production server applying CSP headers or serving as an attachment.
+          text = text
+            .replace(
+              /<(script|foreignObject|iframe|object|embed|animate|set|handler)[\s\S]*?(<\/\1>|\/>|>)/gi,
+              "",
+            )
+            .replace(/\bon[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "") // Remove on* handlers
+            .replace(
+              /(?:href|xlink:href)\s*=\s*['"]?(?:&#[xX]?[0-9a-fA-F]+;|javascript:|data:text\/html)[^'">\s]*/gi,
+              "",
+            ); // strip javascript and XML entity obfuscated javascript
+          bytes = Buffer.from(text, "utf8");
+        }
+
         const asked = new Date().toISOString();
         const packages = installed();
         const result = await capture((io) =>

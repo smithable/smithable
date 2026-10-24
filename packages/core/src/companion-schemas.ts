@@ -122,7 +122,7 @@ export const AUTH_SCHEMA: JsonSchema = {
     },
     defaultRole: text("The role new users get; never admin."),
     admins: strings(
-      "Email addresses that get the admin role when they first sign in, and may always sign in.",
+      "Email addresses that get the admin role when they sign in, also one added later, and may always sign in.",
     ),
     public: {
       type: "object",

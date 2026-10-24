@@ -1,7 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { resolvePlugin, type SpecPlugin, YamlEditor } from "@smithable/core";
+
+export const PLUGIN_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 const require = createRequire(import.meta.url);
 
@@ -10,7 +12,7 @@ const require = createRequire(import.meta.url);
  * name (letters, digits, dashes and underscores), never a path out of the project ("../x").
  */
 export function pluginPath(dir: string, name: string): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name))
+  if (!PLUGIN_NAME.test(name))
     throw new Error(`A plugin's name is letters, digits, dashes and underscores, not "${name}".`);
   return join(dir, "smithable", "plugins", name, "plugin.mjs");
 }
@@ -33,9 +35,14 @@ export function loadPlugins(dir: string, extra: string[] = []): SpecPlugin[] {
     ...declaredPlugins(dir),
     ...extra.filter((n) => !declaredPlugins(dir).includes(n)),
   ];
+  if (names.length === 0) return [];
+  const root = realpathSync(dir);
   return names.flatMap((name) => {
     const path = pluginPath(dir, name);
     if (!existsSync(path)) throw new Error(`Plugin "${name}" is declared but ${path} is missing.`);
+    if (lstatSync(path).isSymbolicLink() || !realpathSync(path).startsWith(`${root}${sep}`)) {
+      throw new Error(`Plugin "${name}" must be a regular file inside the project.`);
+    }
     return [resolvePlugin((require(path) as { default?: unknown }).default, path)];
   });
 }

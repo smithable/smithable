@@ -66,11 +66,16 @@ const PREVIEW_CONFIG = join("data", ".smithable", "preview.vite.config.mjs");
 const stays = (path: string) =>
   path === PREVIEW_CONFIG || ["node_modules", ".git"].includes(path.split(sep)[0] ?? "");
 
-/** Every file under `root`, as paths from it; what `stays` is left out. */
+/** Every file under `root`, as paths from it; what `stays` is left out. Refuses symlinks. */
 function filesOf(root: string, under = ""): string[] {
   return readdirSync(join(root, under), { withFileTypes: true }).flatMap((entry) => {
     const path = join(under, entry.name);
     if (stays(path)) return [];
+    if (entry.isSymbolicLink()) throw new Error(`Symlinks are not allowed: ${path}`);
+    const resolved = resolve(root, path);
+    // Explicitly verify we stay within the source directory even without symlinks
+    if (!resolved.startsWith(`${resolve(root)}${sep}`))
+      throw new Error(`Path escaped root: ${path}`);
     return entry.isDirectory() ? filesOf(root, path) : [path];
   });
 }

@@ -41,17 +41,36 @@ export function targetSettings(target: string): { url: string; secret: string } 
   return { url: `${name}_URL`, secret: `${name}_SECRET` };
 }
 
-/**
- * The IPv4 address inside an IPv6 one that only carries it (::ffff:a.b.c.d, ::ffff:7f00:1, the
- * NAT64 prefix 64:ff9b::, the old ::a.b.c.d), as a.b.c.d; or nothing.
- */
-function carriedV4(ip: string): string | undefined {
-  const m =
-    /^(?:::ffff:|64:ff9b::|::)(?:(\d+\.\d+\.\d+\.\d+)|([0-9a-f]{1,4}):([0-9a-f]{1,4}))$/i.exec(ip);
-  if (!m) return undefined;
-  if (m[1]) return m[1];
-  const [hi, lo] = [Number.parseInt(m[2] ?? "", 16), Number.parseInt(m[3] ?? "", 16)];
-  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+/** An IPv6 address written out in full (eight groups of four), so no short form slips past. */
+function normalizeV6(address: string): string {
+  // A zone ("fe80::1%eth0") names the interface, not the address.
+  const ip = address.replace(/%.*$/, "");
+  // Two "::" is no address: left as it is, so the check refuses it.
+  if (!ip.includes(":") || (ip.match(/::/g) ?? []).length > 1) return ip;
+  let parts = ip.toLowerCase().split(":");
+  const last = parts[parts.length - 1];
+  if (last?.includes(".")) {
+    const v4 = last.split(".").map(Number);
+    if (v4.length === 4 && v4.every((n) => n >= 0 && n <= 255)) {
+      parts.pop();
+      parts.push(((v4[0] ?? 0) * 256 + (v4[1] ?? 0)).toString(16));
+      parts.push(((v4[2] ?? 0) * 256 + (v4[3] ?? 0)).toString(16));
+    }
+  }
+
+  const emptyIndex = parts.indexOf("");
+  if (emptyIndex !== -1) {
+    const nonEmpties = parts.filter((p) => p !== "").length;
+    const missing = 8 - nonEmpties;
+    // "::" stands for at least one group: more than eight in all is no address.
+    if (missing < 1) return ip;
+    const before = parts.slice(0, emptyIndex).filter((p) => p !== "");
+    const after = parts.slice(emptyIndex + 1).filter((p) => p !== "");
+    parts = [...before, ...Array(missing).fill("0"), ...after];
+  }
+
+  if (parts.length !== 8) return ip;
+  return parts.map((p) => (p || "0").padStart(4, "0")).join(":");
 }
 
 /**
@@ -60,9 +79,45 @@ function carriedV4(ip: string): string | undefined {
  * guard). An IPv6 address that carries an IPv4 one is judged by that.
  */
 export function privateAddress(ip: string): boolean {
-  const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(carriedV4(ip) ?? ip);
-  if (v4) {
-    const [a, b, c] = [Number(v4[1]), Number(v4[2]), Number(v4[3])];
+  const v6 = normalizeV6(ip);
+  // Not an IPv6 address written out in full: refused, never guessed at.
+  if (v6.includes(":") && !/^(?:[0-9a-f]{4}:){7}[0-9a-f]{4}$/.test(v6)) return true;
+  if (v6.includes(":")) {
+    if (
+      v6.startsWith("0000:0000:0000:0000:0000:ffff:") ||
+      v6.startsWith("0064:ff9b:0000:0000:0000:0000:") ||
+      v6.startsWith("0000:0000:0000:0000:ffff:0000:") ||
+      (v6.startsWith("0000:0000:0000:0000:0000:0000:") &&
+        v6 !== "0000:0000:0000:0000:0000:0000:0000:0001" &&
+        v6 !== "0000:0000:0000:0000:0000:0000:0000:0000")
+    ) {
+      const parts = v6.split(":");
+      const hi = Number.parseInt(parts[6] ?? "0", 16);
+      const lo = Number.parseInt(parts[7] ?? "0", 16);
+      ip = `${Math.floor(hi / 256)}.${hi % 256}.${Math.floor(lo / 256)}.${lo % 256}`;
+    } else {
+      return (
+        v6 === "0000:0000:0000:0000:0000:0000:0000:0000" ||
+        v6 === "0000:0000:0000:0000:0000:0000:0000:0001" ||
+        v6.startsWith("fc") ||
+        v6.startsWith("fd") ||
+        v6.startsWith("fe8") ||
+        v6.startsWith("fe9") ||
+        v6.startsWith("fea") ||
+        v6.startsWith("feb") ||
+        v6.startsWith("ff") ||
+        v6.startsWith("2001:0db8:") ||
+        // 6to4 and Teredo carry an IPv4 address that may be a private one.
+        v6.startsWith("2002:") ||
+        v6.startsWith("0064:ff9b:0001:") ||
+        v6.startsWith("2001:0000:")
+      );
+    }
+  }
+
+  const v4Match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip);
+  if (v4Match) {
+    const [a, b, c] = [Number(v4Match[1]), Number(v4Match[2]), Number(v4Match[3])];
     return (
       a === 0 ||
       a === 10 ||
@@ -75,20 +130,9 @@ export function privateAddress(ip: string): boolean {
       (a === 198 && (b === 18 || b === 19)) ||
       (a === 198 && b === 51 && c === 100) ||
       (a === 203 && b === 0 && c === 113) ||
-      a >= 224
+      (a ?? 0) >= 224
     );
   }
-  const v6 = ip.toLowerCase();
-  return (
-    v6 === "::" ||
-    v6 === "::1" ||
-    v6.startsWith("fc") ||
-    v6.startsWith("fd") ||
-    /^fe[89ab]/.test(v6) ||
-    v6.startsWith("ff") ||
-    // Documentation addresses, and any other IPv4 carrier not read above.
-    v6.startsWith("2001:db8:") ||
-    v6.startsWith("::ffff:") ||
-    v6.startsWith("64:ff9b:")
-  );
+  // Neither form of address: refused, never guessed at.
+  return true;
 }

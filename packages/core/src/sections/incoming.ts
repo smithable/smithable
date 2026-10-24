@@ -772,11 +772,22 @@ export const incomingSection: SpecSection<"incoming"> = {
     if (node === undefined) return [];
     const models = parsed.models ?? [];
     const incoming: IncomingIR[] = [];
+    const seenLower = new Set<string>();
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"incoming"`) ?? []) {
       if (!FIELD_NAME_PATTERN.test(key)) {
         ctx.error(keyNode, "invalid-name", nameRule("incoming", key));
         continue;
       }
+      const lower = key.toLowerCase();
+      if (seenLower.has(lower)) {
+        ctx.error(
+          keyNode,
+          "duplicate-incoming",
+          `There is already an incoming call named "${key}" (names are case-insensitive).`,
+        );
+        continue;
+      }
+      seenLower.add(lower);
       ctx.define("incoming", key);
       const read = readIncoming(ctx, key, keyNode, value, models);
       if (read) incoming.push(read);

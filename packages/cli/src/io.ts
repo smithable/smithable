@@ -56,23 +56,34 @@ export function timed(what: string, since: number): void {
     process.stderr.write(`[time] ${what}: ${Date.now() - since} ms\n`);
 }
 
+/**
+ * How a command runs. On Windows pnpm and npx are .cmd files, which need cmd.exe: the command is
+ * a plain name, each argument is quoted for cmd, and one cmd would read as more than text (a
+ * quote, a percent sign, a new line) is refused rather than run. Elsewhere there is no shell.
+ */
+function spawned(command: string, args: string[]): [string, string[], { shell?: boolean }] {
+  if (process.platform !== "win32") return [command, args, {}];
+  if (!/^[a-zA-Z0-9._-]+$/.test(command)) throw new Error(`Not a command name: ${command}`);
+  const odd = args.find((a) => /["%\r\n]/.test(a));
+  if (odd !== undefined) throw new Error(`Windows' shell would not read this as text: ${odd}`);
+  // Backslashes before the closing quote are doubled, or the quote would be read as text.
+  const quoted = args.map((a) =>
+    a === "" || /[\s&|<>^()!,;=]/.test(a) ? `"${a.replace(/(\\+)$/, "$1$1")}"` : a,
+  );
+  return [command, quoted, { shell: true }];
+}
+
 /** Runs a command and shows its output only when it fails (a tool that talks while it works). */
 export function execQuiet(command: string, args: string[], cwd: string): number {
-  const result = spawnSync(command, args, {
-    cwd,
-    encoding: "utf8",
-    shell: process.platform === "win32",
-  });
+  const [run, given, shell] = spawned(command, args);
+  const result = spawnSync(run, given, { cwd, encoding: "utf8", ...shell });
   if (result.status !== 0) process.stderr.write(`${result.stdout ?? ""}${result.stderr ?? ""}`);
   return result.status ?? 1;
 }
 
 /** Runs a command with inherited output. Returns its exit code. */
 export function exec(command: string, args: string[], cwd: string): number {
-  const result = spawnSync(command, args, {
-    cwd,
-    stdio: childStdio,
-    shell: process.platform === "win32",
-  });
+  const [run, given, shell] = spawned(command, args);
+  const result = spawnSync(run, given, { cwd, stdio: childStdio, ...shell });
   return result.status ?? 1;
 }

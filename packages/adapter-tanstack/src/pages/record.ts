@@ -775,7 +775,7 @@ const contact${model.name} = createServerFn({ method: "POST" })
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}${page.route === "/" ? "" : page.route}/\${row.id}\`;
     await sendMail({
       to: to.email,
-      replyTo: \`\${sender.name} <\${sender.email}>\`,
+      replyTo: \`"\${sender.name.replace(/["\\\\<>\\r\\n]/g, "")}" <\${sender.email}>\`,
       subject: \`About “\${name}”\`,
       text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
     });${kn ? `\n    await ${kn.data}.create(viewer, { ${kept.join(", ")} });` : ""}

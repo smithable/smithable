@@ -167,8 +167,10 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
 import { ${action.name} as implementation } from "${a.custom}";
 import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
+import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { ${a.input}, type ${a.inputType} } from "./${kebab(action.name)}.input";
 
 export type { ${a.inputType} } from "./${kebab(action.name)}.input";
@@ -186,6 +188,8 @@ export const ${action.name} = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     check(${a.access}, viewer);
+    // A custom action changes things like any form: limited per person and address.
+    writeAllowed(viewer, getRequestHeaders());
 ${records
   .map(
     (f, i) =>
