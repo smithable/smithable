@@ -4,10 +4,10 @@
 // the other tokens derived as core derives them, made readable where they are not, and added
 // through the addTheme operation. Deterministic, no model. A theme has no layout: it copies how
 // a site looks, never how it is built.
+import { lookup } from "node:dns/promises";
 import { contrast, gamutMap, hexOf, hexToRgb, parseTheme, rgbToOklch } from "@smithable/core";
-import { allowedByRobots } from "./from-page.js";
+import { allowedByRobots, get, isPrivate } from "./from-page.js";
 import type { Io } from "./io.js";
-import { runOperation } from "./op.js";
 import { VERSION } from "./version.js";
 
 /** What a page looks like in one color scheme, as its computed styles say. */
@@ -228,10 +228,13 @@ export function themeFromLook(
   return { text, notes };
 
   function file() {
-    return `# From ${url}, read ${today} by smithable theme --from.
+    const cleanUrl = url.replace(/[\n#]/g, "");
+    const cleanFamily = family?.replace(/[\n#]/g, "");
+    const cleanHeading = source.headingFont?.replace(/[\n#]/g, "");
+    return `# From ${cleanUrl}, read ${today} by smithable theme --from.
 smithableTheme: 0.1
 name: ${name}
-font: ${font ?? "Inter"}                  # the site's: ${family ?? "unknown"}${source.headingFont && source.headingFont !== family ? `, headings ${source.headingFont}` : ""}
+font: ${font ?? "Inter"}                  # the site's: ${cleanFamily ?? "unknown"}${cleanHeading && cleanHeading !== cleanFamily ? `, headings ${cleanHeading}` : ""}
 radius: ${source.radius ?? 8}px
 shadow: ${source.shadowShare > 0.5 ? "soft" : "none"}
 light:
@@ -252,8 +255,16 @@ export async function themeFrom(
   let url: URL;
   try {
     url = new URL(address);
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error();
   } catch {
     io.err(`"${address}" is not a web address; it starts with https://.\n`);
+    return 2;
+  }
+  try {
+    const addrs = await lookup(url.hostname, { all: true, verbatim: true });
+    if (addrs.length === 0 || addrs.some((a) => isPrivate(a.address))) throw new Error();
+  } catch {
+    io.err(`"${url.hostname}" is a private or unreachable address.\n`);
     return 2;
   }
   const name =
@@ -264,13 +275,21 @@ export async function themeFrom(
       .replace(/[^a-z0-9]+/g, "-");
   const agent = `Mozilla/5.0 (compatible; Smithable/${VERSION}; +https://smithable.ai)`;
   try {
-    const robots = await fetch(new URL("/robots.txt", url), {
-      headers: { "user-agent": agent },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (robots.ok && !allowedByRobots(await robots.text(), url.pathname)) {
-      io.err(`${url.hostname}'s robots.txt asks not to read ${url.pathname}.\n`);
-      return 1;
+    const { response: robots } = await get(
+      new URL("/robots.txt", url),
+      AbortSignal.timeout(5000),
+      agent,
+    );
+    if (robots.ok) {
+      const chunks: Buffer[] = [];
+      for await (const c of robots.stream) chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+      const text = Buffer.concat(chunks).toString("utf8");
+      if (!allowedByRobots(text, url.pathname)) {
+        io.err(`${url.hostname}'s robots.txt asks not to read ${url.pathname}.\n`);
+        return 1;
+      }
+    } else {
+      robots.stream.resume();
     }
   } catch {}
   // A browser is needed to see the page as it looks: Playwright, when it is installed.
@@ -290,6 +309,33 @@ export async function themeFrom(
     const context = await browser.newContext({
       userAgent: agent,
       viewport: { width: 1280, height: 900 },
+    });
+    const hostAllowed = new Map<string, Promise<boolean>>();
+    await context.route("**/*", (route) => {
+      let u: URL;
+      try {
+        u = new URL(route.request().url());
+      } catch {
+        void route.abort();
+        return;
+      }
+      if (u.protocol === "data:" || u.protocol === "blob:") {
+        void route.continue();
+        return;
+      }
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        void route.abort();
+        return;
+      }
+      const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+      let checked = hostAllowed.get(host);
+      if (!checked) {
+        checked = lookup(host, { all: true, verbatim: true })
+          .then((addrs) => addrs.length > 0 && !addrs.some((a) => isPrivate(a.address)))
+          .catch(() => false);
+        hostAllowed.set(host, checked);
+      }
+      void checked.then((ok) => (ok ? route.continue() : route.abort()));
     });
     const page = await context.newPage();
     const read = async (colorScheme: "light" | "dark") => {
@@ -319,6 +365,7 @@ export async function themeFrom(
     io.err(`${text}\nThe theme read from the site does not pass the checks.\n`);
     return 1;
   }
+  const { runOperation } = await import("./op.js");
   return runOperation(
     dir,
     io,
@@ -331,6 +378,14 @@ export async function themeFrom(
 /** What themeFrom needs of a Playwright browser. */
 interface Browser {
   newContext(options: object): Promise<{
+    route(
+      url: string,
+      handler: (route: {
+        request(): { url(): string };
+        abort(): Promise<void>;
+        continue(): Promise<void>;
+      }) => void,
+    ): Promise<void>;
     newPage(): Promise<{
       emulateMedia(options: object): Promise<void>;
       goto(url: string, options: object): Promise<unknown>;

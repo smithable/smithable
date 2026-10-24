@@ -316,6 +316,11 @@ test("a target's settings, and the addresses the guard refuses", () => {
     "198.18.0.1",
     "203.0.113.5",
     "2001:db8::1",
+    // The same written out longer, which a pattern on the short form missed.
+    "0:0:0:0:0:ffff:7f00:1",
+    "0000:0000:0000:0000:0000:ffff:127.0.0.1",
+    "0:0:0:0:0:0:0:1",
+    "FE80:0:0:0:0:0:0:1",
   ])
     expect(privateAddress(ip), ip).toBe(true);
   for (const ip of [

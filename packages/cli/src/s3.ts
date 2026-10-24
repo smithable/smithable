@@ -58,7 +58,8 @@ export class S3 {
       const xml = await response.text();
       if (!response.ok) throw new Error(`Listing ${prefix} failed: ${response.status} ${xml}`);
       keys.push(...[...xml.matchAll(/<Key>([^<]*)<\/Key>/g)].map((m) => unescapeXml(m[1] ?? "")));
-      token = /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml)?.[1];
+      const rawToken = /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml)?.[1];
+      token = rawToken ? unescapeXml(rawToken) : undefined;
     } while (token);
     return keys;
   }
