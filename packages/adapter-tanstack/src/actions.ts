@@ -15,7 +15,7 @@ import {
   titleField,
   USER_MODEL,
 } from "@smithable/core";
-import { textBounds } from "./data.js";
+import { checksLoaded, hasLocks, textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
@@ -471,13 +471,16 @@ export function standardActionServer(
       .map((e) => `, ${e}`)
       .join("");
   const sequenced = adds.map(({ target, tn }) => numbered(target, tn.table)).join("");
-  const writes = (
-    p: string,
-  ) => `{${toldAbout(ir, model.name) ? `\n      const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();` : ""}
-      const changed = tx.update(${n.table}).set(${p}.values).where(eq(${n.table}.id, ${p}.id)).returning().get();
+  // The record as it was, its change checked as update() checks one (A 153), the action's own
+  // set freeing what it may change although locked; access is the action's, checked before.
+  const writes = (p: string) => `{
+      const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = ${n.data}.checkUpdate(tx, viewer, ${p}.id, ${p}.values, before${checksLoaded(model) ? `, ${p}.loaded` : ""}${hasLocks(model) ? `, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)}` : ""});
+      const changed = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
-${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer)${numbered(target, tn.table)} }).returning().get(),`).join("\n")}
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${tn.data}.checkCreate(tx, viewer, { ...${p}.added${i}, ${ownerKey(target)}: personOf(viewer) })${numbered(target, tn.table)} }).returning().get(),`).join("\n")}
       ] as const;
 ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });${tell(target.name, '"created"', `inserted[${i}]`)}`).join("\n")}
       return { changed, inserted };
@@ -493,14 +496,14 @@ import { audit } from "#/kit/audit.server";
 ${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.settable} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
-${adds.map(({ tn }) => `import { ${tn.settable} } from "${tn.module}.schema";\nimport { ${tn.access} } from "${tn.module}.server";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${[...new Map(adds.map(({ target, tn }) => [target.name, tn])).values()].map((tn) => `import { ${tn.settable} } from "${tn.module}.schema";\n${tn.data === n.data ? `import { ${tn.access} } from "${tn.module}.server";` : `import { ${tn.access}, ${tn.data} } from "${tn.module}.server";`}\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
 type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
 
 /** The ${label}'s new values (only the fields the action sets${asked ? " and asks for" : ""})${adds.length ? " and the records it adds" : ""}, worked out on it as it was. */
 function plan(${all.some((v) => v.includes("viewer")) ? "viewer" : "_viewer"}: Viewer | null, row: Row${askedParam}) {
   return {
-    id: row.id,
+    id: row.id,${checksLoaded(model) ? "\n    // As the page loads it, its formulas worked out: what a rule on a computed field reads.\n    loaded: row as Record<string, unknown>," : ""}
     values: ${n.settable}.partial().parse({
 ${values.map((v) => `      ${v}`).join("\n")}
     }),
@@ -735,7 +738,7 @@ import { audit } from "#/kit/audit.server";
 ${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...lists.map((l) => l.listed.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
-${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}.schema";\n`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
+${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}.schema";\n${l.ln.data === n.data ? "" : `import { ${l.ln.data} } from "${l.ln.module}.server";\n`}`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
 /** Makes a copy of the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}; returns the copy's id. */
 export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}): Promise<number> {
@@ -763,12 +766,13 @@ ${lists
   .join("\n")}
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
-    const created = tx.insert(${n.table}).values({ ...values, ${ownerKey(model)}: personOf(viewer)${numbered(model, n.table)} }).returning().get();
+    // A copy is checked as a new record is (A 153): its rules, capacity and time.
+    const created = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, { ...values, ${ownerKey(model)}: personOf(viewer) })${numbered(model, n.table)} }).returning().get();
     audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });${toldAbout(ir, model.name) ? `\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, "created", created);\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, ${JSON.stringify(action.name)}, created);` : ""}
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
-      const copy = tx.insert(${l.ln.table}).values({ ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer)${numbered(l.listed, l.ln.table)} }).returning().get();
+      const copy = tx.insert(${l.ln.table}).values({ ...${l.ln.data}.checkCreate(tx, viewer, { ...item, ${l.back.name}Id: created.id, ${ownerKey(l.listed)}: personOf(viewer) })${numbered(l.listed, l.ln.table)} }).returning().get();
       audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });${toldAbout(ir, l.listed.name) ? `\n      outgoing(tx, viewer, ${JSON.stringify(l.listed.name)}, "created", copy);` : ""}
       return copy;
     });`,

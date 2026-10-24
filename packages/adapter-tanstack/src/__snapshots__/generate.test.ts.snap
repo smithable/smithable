@@ -1022,7 +1022,10 @@ export async function runCompleteMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.tasks).set(p.values).where(eq(schema.tasks.id, p.id)).returning().get();
+      const before = tx.select().from(schema.tasks).where(eq(schema.tasks.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = taskData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.tasks).set(checked).where(eq(schema.tasks.id, p.id)).returning().get();
       audit(tx, viewer, { action: "complete", model: "Task", record: changed.id, fields: ["status"] });
       const inserted = [
 
@@ -1130,7 +1133,10 @@ export async function runReopenMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.tasks).set(p.values).where(eq(schema.tasks.id, p.id)).returning().get();
+      const before = tx.select().from(schema.tasks).where(eq(schema.tasks.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = taskData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.tasks).set(checked).where(eq(schema.tasks.id, p.id)).returning().get();
       audit(tx, viewer, { action: "reopen", model: "Task", record: changed.id, fields: ["status"] });
       const inserted = [
 
@@ -4419,6 +4425,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
 import { type NoteSettable } from "./note";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete notes. */
 export const noteAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
@@ -4501,6 +4510,30 @@ export const noteData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.notes.id }).from(schema.notes).where(sql\`\${schema.notes.attachment} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new note must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: NoteSettable): NoteSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<NoteSettable>, before: typeof schema.notes.$inferSelect): Partial<NoteSettable> {
+    const updated = checkFiles(viewer, given, before);
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the notes the viewer may read. */
@@ -4748,11 +4781,11 @@ export const noteData = {
 
   async create(viewer: Viewer | null, values: NoteSettable) {
     check(noteAccess.create, viewer);
-    values = checkFiles(viewer, values);
-    checkReferences(viewer, values);
     let row: typeof schema.notes.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = noteData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.notes).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Note", record: made.id });
         return made;
@@ -4776,8 +4809,6 @@ export const noteData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(noteAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ attachment: schema.notes.attachment }).from(schema.notes).where(eq(schema.notes.id, id)).get());
-    checkReferences(viewer, values);
     let changed: typeof schema.notes.$inferSelect;
     const updated = values;
     try {
@@ -4785,7 +4816,8 @@ export const noteData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.notes).set(updated).where(eq(schema.notes.id, id)).returning().get();
+        const checked = noteData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.notes).set(checked).where(eq(schema.notes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Note", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -5034,7 +5066,7 @@ import { taskUi } from "./task";
 import { noteUi } from "./note";
 import { projectUi, type ProjectSettable } from "./project";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -5103,6 +5135,27 @@ export const projectData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new project must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ProjectSettable): ProjectSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ProjectSettable>, _before: typeof schema.projects.$inferSelect): Partial<ProjectSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the projects the viewer may read. */
@@ -5350,7 +5403,9 @@ export const projectData = {
     check(projectAccess.create, viewer);
     let row: typeof schema.projects.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = projectData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.projects).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Project", record: made.id });
         return made;
@@ -5381,7 +5436,8 @@ export const projectData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.projects).set(updated).where(eq(schema.projects.id, id)).returning().get();
+        const checked = projectData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.projects).set(checked).where(eq(schema.projects.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Project", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -5617,6 +5673,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { projectData } from "./project.server";
 import { type TaskSettable } from "./task";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete tasks. */
 export const taskAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
@@ -5689,6 +5748,29 @@ export const taskData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "project", (ids, c = projectData.readable(viewer)) => (c ? db.select({ id: schema.projects.id }).from(schema.projects).where(and(inArray(schema.projects.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new task must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: TaskSettable): TaskSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<TaskSettable>, _before: typeof schema.tasks.$inferSelect): Partial<TaskSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the tasks the viewer may read. */
@@ -5936,10 +6018,11 @@ export const taskData = {
 
   async create(viewer: Viewer | null, values: TaskSettable) {
     check(taskAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.tasks.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = taskData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.tasks).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Task", record: made.id });
         return made;
@@ -5963,7 +6046,6 @@ export const taskData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(taskAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.tasks.$inferSelect;
     const updated = values;
     try {
@@ -5971,7 +6053,8 @@ export const taskData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.tasks).set(updated).where(eq(schema.tasks.id, id)).returning().get();
+        const checked = taskData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.tasks).set(checked).where(eq(schema.tasks.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Task", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -9350,9 +9433,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/db/schema.ts": "b75b1ab6 generated",
   "src/db/seed.ts": "224df43d generated",
   "src/generated/access.test.ts": "130041c9 generated",
-  "src/generated/actions/complete.server.ts": "550fbe39 generated",
+  "src/generated/actions/complete.server.ts": "d78604b0 generated",
   "src/generated/actions/complete.ts": "cdd6a4a8 generated",
-  "src/generated/actions/reopen.server.ts": "186345bf generated",
+  "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
@@ -9363,15 +9446,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "1386dc52 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "3199a3c0 generated",
+  "src/generated/note.server.ts": "0fe30be9 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "4b4f617f generated",
+  "src/generated/project.server.ts": "2b01e0a0 generated",
   "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "168c9bd2 generated",
+  "src/generated/task.server.ts": "c588a679 generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "d437282f generated",
@@ -10532,7 +10615,9 @@ export async function runCancelMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.appointments).where(eq(schema.appointments.id, p.id)).get();
-      const changed = tx.update(schema.appointments).set(p.values).where(eq(schema.appointments.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = appointmentData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.appointments).set(checked).where(eq(schema.appointments.id, p.id)).returning().get();
       audit(tx, viewer, { action: "cancel", model: "Appointment", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Appointment", "cancel", changed, before);
       const inserted = [
@@ -10643,7 +10728,9 @@ export async function runConfirmMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.appointments).where(eq(schema.appointments.id, p.id)).get();
-      const changed = tx.update(schema.appointments).set(p.values).where(eq(schema.appointments.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = appointmentData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.appointments).set(checked).where(eq(schema.appointments.id, p.id)).returning().get();
       audit(tx, viewer, { action: "confirm", model: "Appointment", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Appointment", "confirm", changed, before);
       const inserted = [
@@ -10743,7 +10830,7 @@ import { serviceData } from "./service.server";
 import { barberData } from "./barber.server";
 import { type AppointmentSettable } from "./appointment";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** The time a barber is booked by (smithable.yml, models.Barber.schedule). */
@@ -10831,6 +10918,34 @@ export const appointmentData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(hideRefs(rows, "service", (ids, c = serviceData.readable(viewer)) => (c ? db.select({ id: schema.services.id }).from(schema.services).where(and(inArray(schema.services.id, ids), c)).all().map((r) => r.id) : ids)), "barber", (ids, c = barberData.readable(viewer)) => (c ? db.select({ id: schema.barbers.id }).from(schema.barbers).where(and(inArray(schema.barbers.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new appointment must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(tx: Tx, viewer: Viewer | null, given: AppointmentSettable): AppointmentSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    checkTime(tx, { status: "requested", ...values });
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(tx: Tx, viewer: Viewer | null, id: number, given: Partial<AppointmentSettable>, before: typeof schema.appointments.$inferSelect): Partial<AppointmentSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    // A change that moves the time it takes (or takes time again) is checked like a new one.
+    const moving: Record<string, unknown> = updated;
+    if (!holdsTime(before) || ["barberId", "startsAt", "serviceId", "status"].some((k) => k in moving && JSON.stringify(moving[k]) !== JSON.stringify(before[k as keyof typeof before])))
+      checkTime(tx, { ...before, ...updated }, id);
+    return updated;
   },
 
   /** A condition for the appointments the viewer may read. */
@@ -10932,12 +11047,11 @@ export const appointmentData = {
 
   async create(viewer: Viewer | null, values: AppointmentSettable) {
     check(appointmentAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.appointments.$inferSelect;
     try {
-      // The time's check and the insert in one transaction: two people cannot both take the same time.
+      // The checks and the insert in one transaction: two people cannot both take the same time.
       row = db.transaction((tx) => {
-        checkTime(tx, { status: "requested", ...values });
+        values = appointmentData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.appointments).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Appointment", record: made.id });
         outgoing(tx, viewer, "Appointment", "created", made);
@@ -10962,7 +11076,6 @@ export const appointmentData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(appointmentAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.appointments.$inferSelect;
     const updated = values;
     try {
@@ -10970,11 +11083,8 @@ export const appointmentData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.appointments).where(and(eq(schema.appointments.id, id), appointmentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        // A change that moves the time it takes (or takes time again) is checked like a new one.
-        const moving: Record<string, unknown> = updated;
-        if (!holdsTime(before) || ["barberId", "startsAt", "serviceId", "status"].some((k) => k in moving && JSON.stringify(moving[k]) !== JSON.stringify(before[k as keyof typeof before])))
-          checkTime(tx, { ...before, ...updated }, id);
-        const after = tx.update(schema.appointments).set(updated).where(eq(schema.appointments.id, id)).returning().get();
+        const checked = appointmentData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.appointments).set(checked).where(eq(schema.appointments.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Appointment", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "Appointment", what, after, before);
         return after;
@@ -11238,7 +11348,7 @@ import { timeOffUi } from "./time-off";
 import { appointmentUi } from "./appointment";
 import { barberUi, type BarberSettable } from "./barber";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -11293,6 +11403,28 @@ export const barberData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new barber must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: BarberSettable): BarberSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<BarberSettable>, before: typeof schema.barbers.$inferSelect): Partial<BarberSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+    return updated;
   },
 
   /** A condition for the barbers the viewer may read. */
@@ -11353,10 +11485,11 @@ export const barberData = {
 
   async create(viewer: Viewer | null, values: BarberSettable) {
     check(barberAccess.create, viewer);
-    values = checkFiles(viewer, values);
     let row: typeof schema.barbers.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = barberData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.barbers).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Barber", record: made.id });
         return made;
@@ -11380,7 +11513,6 @@ export const barberData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(barberAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ portrait: schema.barbers.portrait }).from(schema.barbers).where(eq(schema.barbers.id, id)).get());
     let changed: typeof schema.barbers.$inferSelect;
     const updated = values;
     try {
@@ -11388,7 +11520,8 @@ export const barberData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.barbers).where(and(eq(schema.barbers.id, id), barberData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.barbers).set(updated).where(eq(schema.barbers.id, id)).returning().get();
+        const checked = barberData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.barbers).set(checked).where(eq(schema.barbers.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Barber", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -11889,7 +12022,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { appointmentUi } from "./appointment";
 import { serviceUi, type ServiceSettable } from "./service";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -11930,6 +12063,27 @@ export const serviceData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new service must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ServiceSettable): ServiceSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ServiceSettable>, _before: typeof schema.services.$inferSelect): Partial<ServiceSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the services the viewer may read. */
@@ -11991,7 +12145,9 @@ export const serviceData = {
     check(serviceAccess.create, viewer);
     let row: typeof schema.services.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = serviceData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.services).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Service", record: made.id });
         return made;
@@ -12022,7 +12178,8 @@ export const serviceData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.services).where(and(eq(schema.services.id, id), serviceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.services).set(updated).where(eq(schema.services.id, id)).returning().get();
+        const checked = serviceData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.services).set(checked).where(eq(schema.services.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Service", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -12275,6 +12432,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { barberData } from "./barber.server";
 import { type TimeOffSettable } from "./time-off";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete time offs. */
 export const timeOffAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -12314,6 +12474,29 @@ export const timeOffData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "barber", (ids, c = barberData.readable(viewer)) => (c ? db.select({ id: schema.barbers.id }).from(schema.barbers).where(and(inArray(schema.barbers.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new time off must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: TimeOffSettable): TimeOffSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<TimeOffSettable>, _before: typeof schema.timeOffs.$inferSelect): Partial<TimeOffSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the time offs the viewer may read. */
@@ -12376,10 +12559,11 @@ export const timeOffData = {
 
   async create(viewer: Viewer | null, values: TimeOffSettable) {
     check(timeOffAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.timeOffs.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = timeOffData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.timeOffs).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "TimeOff", record: made.id });
         return made;
@@ -12403,7 +12587,6 @@ export const timeOffData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(timeOffAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.timeOffs.$inferSelect;
     const updated = values;
     try {
@@ -12411,7 +12594,8 @@ export const timeOffData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.timeOffs).where(and(eq(schema.timeOffs.id, id), timeOffData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.timeOffs).set(updated).where(eq(schema.timeOffs.id, id)).returning().get();
+        const checked = timeOffData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.timeOffs).set(checked).where(eq(schema.timeOffs.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "TimeOff", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -14835,16 +15019,16 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/db/schema.ts": "81cf488e generated",
   "src/db/seed.ts": "aeda6345 generated",
   "src/generated/access.test.ts": "5b7039fb generated",
-  "src/generated/actions/cancel.server.ts": "17e8e159 generated",
+  "src/generated/actions/cancel.server.ts": "2de134e2 generated",
   "src/generated/actions/cancel.ts": "1bae0072 generated",
-  "src/generated/actions/confirm.server.ts": "fb453863 generated",
+  "src/generated/actions/confirm.server.ts": "af0013e0 generated",
   "src/generated/actions/confirm.ts": "f4df37ea generated",
   "src/generated/app.ts": "97916622 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "b1563eab generated",
+  "src/generated/appointment.server.ts": "0a5311b1 generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "f0867472 generated",
+  "src/generated/barber.server.ts": "2d15e0eb generated",
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "199beb1e generated",
@@ -14852,11 +15036,11 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "5c230645 generated",
+  "src/generated/service.server.ts": "884e4f6e generated",
   "src/generated/service.ts": "9b30fa43 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "2a3e58ac generated",
+  "src/generated/time-off.server.ts": "88b263ff generated",
   "src/generated/time-off.ts": "b2f38bf7 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "f6ab24a6 kit",
@@ -16255,7 +16439,10 @@ export async function runPublishMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.posts).set(p.values).where(eq(schema.posts.id, p.id)).returning().get();
+      const before = tx.select().from(schema.posts).where(eq(schema.posts.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = postData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.posts).set(checked).where(eq(schema.posts.id, p.id)).returning().get();
       audit(tx, viewer, { action: "publish", model: "Post", record: changed.id, fields: ["status"] });
       const inserted = [
 
@@ -17233,6 +17420,9 @@ import { classTypeData } from "./class-type.server";
 import { type BookingSettable } from "./booking";
 import "./timers.server";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -17306,6 +17496,54 @@ export const bookingData = {
       const shown = { ...row, session: row.session ? sessionData.shownRefs(viewer, [row.session as Record<string, unknown>])[0] : row.session };
       return { ...shown, $name: bookingName(shown) } as R;
     });
+  },
+
+  /**
+   * What a new booking must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(tx: Tx, viewer: Viewer | null, given: BookingSettable): BookingSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId))).get()?.n ?? 0;
+    if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
+    if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+      const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+      if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+    }
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(tx: Tx, viewer: Viewer | null, id: number, given: Partial<BookingSettable>, before: typeof schema.bookings.$inferSelect): Partial<BookingSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+    const values = updated;
+      {
+        const counted = (_r: Record<string, unknown>) => true;
+        const perId = values.sessionId ?? before.sessionId;
+        const moving = values.sessionId !== undefined && values.sessionId !== before.sessionId;
+        const was = counted(before);
+        const will = counted({ ...before, ...updated });
+        if (will && (moving || !was)) {
+          const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, perId), ne(schema.bookings.id, id))).get()?.n ?? 0;
+          if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.n ?? 0)) throw new Conflict("full");
+          if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+            const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+            if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+          }
+        }
+        if (was && !will && !moving && !(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
+          const cancelUntilAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+          if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+        }
+      }
+    return updated;
   },
 
   /** A condition for the bookings the viewer may read. */
@@ -17558,17 +17796,11 @@ export const bookingData = {
 
   async create(viewer: Viewer | null, values: BookingSettable) {
     check(bookingAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.bookings.$inferSelect;
     try {
-      // The count and the insert in one transaction: two people cannot both take the last place.
+      // The checks and the insert in one transaction: two people cannot both take the last place.
       row = db.transaction((tx) => {
-      const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, values.sessionId))).get()?.n ?? 0;
-      if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.n ?? 0)) throw new Conflict("full");
-      if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
-        const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
-        if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
-      }
+        values = bookingData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.bookings).values({ ...values, attendeeId: ownerFor(viewer, values.attendeeId) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Booking", record: made.id });
         outgoing(tx, viewer, "Booking", "created", made);
@@ -17593,7 +17825,6 @@ export const bookingData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(bookingAccess.write, viewer, row.attendeeId);
-    checkReferences(viewer, values);
     let changed: typeof schema.bookings.$inferSelect;
     const updated = { ...values, attendeeId: (!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))) ? (values.attendeeId === undefined ? row.attendeeId : values.attendeeId) : personOf(viewer) };
     try {
@@ -17601,26 +17832,8 @@ export const bookingData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        {
-          const counted = (_r: Record<string, unknown>) => true;
-          const perId = values.sessionId ?? before.sessionId;
-          const moving = values.sessionId !== undefined && values.sessionId !== before.sessionId;
-          const was = counted(before);
-          const will = counted({ ...before, ...updated });
-          if (will && (moving || !was)) {
-            const taken = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, perId), ne(schema.bookings.id, id))).get()?.n ?? 0;
-            if (taken >= (tx.select({ n: schema.sessions.capacity }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.n ?? 0)) throw new Conflict("full");
-            if (!(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
-              const closesAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
-              if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
-            }
-          }
-          if (was && !will && !moving && !(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role)))) {
-            const cancelUntilAt = (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
-            if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
-          }
-        }
-        const after = tx.update(schema.bookings).set(updated).where(eq(schema.bookings.id, id)).returning().get();
+        const checked = bookingData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.bookings).set(checked).where(eq(schema.bookings.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "Booking", what, after, before);
         return after;
@@ -17866,7 +18079,7 @@ import { bookingUi } from "./booking";
 import { classTypeUi, type ClassTypeSettable } from "./class-type";
 import "./timers.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -17937,6 +18150,27 @@ export const classTypeData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new class type must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ClassTypeSettable): ClassTypeSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ClassTypeSettable>, _before: typeof schema.classTypes.$inferSelect): Partial<ClassTypeSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the class types the viewer may read. */
@@ -18203,7 +18437,9 @@ export const classTypeData = {
     check(classTypeAccess.create, viewer);
     let row: typeof schema.classTypes.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = classTypeData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.classTypes).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "ClassType", record: made.id });
         return made;
@@ -18234,7 +18470,8 @@ export const classTypeData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.classTypes).set(updated).where(eq(schema.classTypes.id, id)).returning().get();
+        const checked = classTypeData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.classTypes).set(checked).where(eq(schema.classTypes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "ClassType", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -18694,7 +18931,7 @@ import { bookingUi } from "./booking";
 import { instructorUi, type InstructorSettable } from "./instructor";
 import "./timers.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -18776,6 +19013,28 @@ export const instructorData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new instructor must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: InstructorSettable): InstructorSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<InstructorSettable>, before: typeof schema.instructors.$inferSelect): Partial<InstructorSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+    return updated;
   },
 
   /** A condition for the instructors the viewer may read. */
@@ -19040,10 +19299,11 @@ export const instructorData = {
 
   async create(viewer: Viewer | null, values: InstructorSettable) {
     check(instructorAccess.create, viewer);
-    values = checkFiles(viewer, values);
     let row: typeof schema.instructors.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = instructorData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.instructors).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Instructor", record: made.id });
         return made;
@@ -19067,7 +19327,6 @@ export const instructorData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(instructorAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ portrait: schema.instructors.portrait }).from(schema.instructors).where(eq(schema.instructors.id, id)).get());
     let changed: typeof schema.instructors.$inferSelect;
     const updated = values;
     try {
@@ -19075,7 +19334,8 @@ export const instructorData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.instructors).set(updated).where(eq(schema.instructors.id, id)).returning().get();
+        const checked = instructorData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.instructors).set(checked).where(eq(schema.instructors.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Instructor", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -19321,6 +19581,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { type MessageSettable } from "./message";
 import "./timers.server";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -19370,6 +19633,27 @@ export const messageData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new message must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: MessageSettable): MessageSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<MessageSettable>, _before: typeof schema.messages.$inferSelect): Partial<MessageSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the messages the viewer may read. */
@@ -19638,7 +19922,9 @@ export const messageData = {
     if (viewer === null && (made?.n ?? 0) >= 10000) throw new AccessDenied(false);
     let row: typeof schema.messages.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = messageData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.messages).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Message", record: made.id });
         return made;
@@ -19669,7 +19955,8 @@ export const messageData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.messages).set(updated).where(eq(schema.messages.id, id)).returning().get();
+        const checked = messageData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.messages).set(checked).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -20060,6 +20347,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { type PostSettable } from "./post";
 import "./timers.server";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete posts. */
 export const postAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true, where: { status: "published" } },
@@ -20125,6 +20415,28 @@ export const postData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new post must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: PostSettable): PostSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<PostSettable>, before: typeof schema.posts.$inferSelect): Partial<PostSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+    return updated;
   },
 
   /** A condition for the posts the viewer may read. */
@@ -20389,10 +20701,11 @@ export const postData = {
 
   async create(viewer: Viewer | null, values: PostSettable) {
     check(postAccess.create, viewer);
-    values = checkFiles(viewer, values);
     let row: typeof schema.posts.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = postData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.posts).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Post", record: made.id });
         return made;
@@ -20416,7 +20729,6 @@ export const postData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(postAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ cover: schema.posts.cover }).from(schema.posts).where(eq(schema.posts.id, id)).get());
     let changed: typeof schema.posts.$inferSelect;
     const updated = values;
     try {
@@ -20424,7 +20736,8 @@ export const postData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.posts).set(updated).where(eq(schema.posts.id, id)).returning().get();
+        const checked = postData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.posts).set(checked).where(eq(schema.posts.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Post", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -20720,7 +21033,7 @@ import { sessionUi, type SessionSettable } from "./session";
 import { withSessionFormulas } from "./session.formulas";
 import "./timers.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -20819,6 +21132,33 @@ export const sessionData = {
       const shown = { ...row };
       return { ...shown, $name: sessionName(shown) } as R;
     });
+  },
+
+  /**
+   * What a new session must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: SessionSettable): SessionSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(tx: Tx, viewer: Viewer | null, id: number, given: Partial<SessionSettable>, _before: typeof schema.sessions.$inferSelect): Partial<SessionSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+    const values = updated;
+    if (values.capacity != null) {
+      const booked = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0;
+      if (values.capacity < booked) throw new Conflict(\`booked:\${booked}\`);
+    }
+    return updated;
   },
 
   /** A condition for the sessions the viewer may read. */
@@ -21079,10 +21419,11 @@ export const sessionData = {
 
   async create(viewer: Viewer | null, values: SessionSettable) {
     check(sessionAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.sessions.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = sessionData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.sessions).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Session", record: made.id });
         outgoing(tx, viewer, "Session", "created", made);
@@ -21107,19 +21448,15 @@ export const sessionData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(sessionAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.sessions.$inferSelect;
     const updated = values;
     try {
       changed = db.transaction((tx) => {
-      if (values.capacity != null) {
-        const booked = tx.select({ n: count() }).from(schema.bookings).where(and(eq(schema.bookings.sessionId, id))).get()?.n ?? 0;
-        if (values.capacity < booked) throw new Conflict(\`booked:\${booked}\`);
-      }
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.sessions).set(updated).where(eq(schema.sessions.id, id)).returning().get();
+        const checked = sessionData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.sessions).set(checked).where(eq(schema.sessions.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["placesLeft"].includes(k))) });
         outgoing(tx, viewer, "Session", what, after, before);
         return after;
@@ -26293,16 +26630,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/schema.ts": "58a35d99 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "55ac05e0 generated",
-  "src/generated/actions/publish.server.ts": "7e85fad8 generated",
+  "src/generated/actions/publish.server.ts": "ecb9a2f6 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "88b814a0 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "b33c786a generated",
+  "src/generated/booking.server.ts": "d60caf17 generated",
   "src/generated/booking.ts": "ed726ce3 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "01f7eaeb generated",
+  "src/generated/class-type.server.ts": "00d73d14 generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -26310,21 +26647,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "f40b133a generated",
+  "src/generated/instructor.server.ts": "6b2e9ac0 generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "a58dcb17 generated",
+  "src/generated/message.server.ts": "e1a37127 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "7985fe8c generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "e81e7350 generated",
+  "src/generated/post.server.ts": "ce740b8c generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "0dc17c94 generated",
+  "src/generated/session.server.ts": "96f88852 generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "01c0e4f8 generated",
@@ -27957,7 +28294,7 @@ import { orderUi } from "./order";
 import { customerUi, type CustomerSettable } from "./customer";
 import "./trash.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -28035,6 +28372,27 @@ export const customerData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new customer must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: CustomerSettable): CustomerSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<CustomerSettable>, _before: typeof schema.customers.$inferSelect): Partial<CustomerSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the customers the viewer may read. */
@@ -28300,7 +28658,9 @@ export const customerData = {
     check(customerAccess.create, viewer);
     let row: typeof schema.customers.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = customerData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.customers).values({ ...values, accountManagerId: ownerFor(viewer, values.accountManagerId) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Customer", record: made.id });
         return made;
@@ -28331,7 +28691,8 @@ export const customerData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.customers).set(updated).where(eq(schema.customers.id, id)).returning().get();
+        const checked = customerData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.customers).set(checked).where(eq(schema.customers.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Customer", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -28888,7 +29249,7 @@ import { type OrderSettable } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import "./trash.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
@@ -28979,6 +29340,29 @@ export const orderData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "customer", (ids, c = customerData.readable(viewer)) => (c ? db.select({ id: schema.customers.id }).from(schema.customers).where(and(inArray(schema.customers.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new order must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: OrderSettable): OrderSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<OrderSettable>, _before: typeof schema.orders.$inferSelect): Partial<OrderSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the orders the viewer may read. */
@@ -29245,10 +29629,11 @@ export const orderData = {
 
   async create(viewer: Viewer | null, values: OrderSettable) {
     check(orderAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.orders.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = orderData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Order", record: made.id });
         return made;
@@ -29272,7 +29657,6 @@ export const orderData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.orders.$inferSelect;
     const updated = values;
     try {
@@ -29280,7 +29664,8 @@ export const orderData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.orders).set(updated).where(eq(schema.orders.id, id)).returning().get();
+        const checked = orderData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["shippingCost"].includes(k))) });
         return after;
       });
@@ -32182,13 +32567,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "9675d6b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "492d0e6c generated",
+  "src/generated/customer.server.ts": "611c2893 generated",
   "src/generated/customer.ts": "8ebe38d3 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "d7ee0d54 generated",
+  "src/generated/order.server.ts": "5685c42e generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -33434,7 +33819,9 @@ export async function runMarkOverdueMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
-      const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markOverdue", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markOverdue", changed, before);
       const inserted = [
@@ -33545,7 +33932,9 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
-      const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markPaid", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markPaid", changed, before);
       const inserted = [
@@ -33656,7 +34045,9 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
-      const changed = tx.update(schema.invoices).set(p.values).where(eq(schema.invoices.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markSent", changed, before);
       const inserted = [
@@ -34545,6 +34936,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { type BusinessProfileSettable } from "./business-profile";
 import "./timers.server";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete business profiles. */
 export const businessProfileAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -34596,6 +34990,27 @@ export const businessProfileData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new business profile must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: BusinessProfileSettable): BusinessProfileSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<BusinessProfileSettable>, _before: typeof schema.businessProfiles.$inferSelect): Partial<BusinessProfileSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the business profiles the viewer may read. */
@@ -34835,7 +35250,9 @@ export const businessProfileData = {
     check(businessProfileAccess.create, viewer);
     let row: typeof schema.businessProfiles.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = businessProfileData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.businessProfiles).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "BusinessProfile", record: made.id });
         return made;
@@ -34866,7 +35283,8 @@ export const businessProfileData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.businessProfiles).set(updated).where(eq(schema.businessProfiles.id, id)).returning().get();
+        const checked = businessProfileData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.businessProfiles).set(checked).where(eq(schema.businessProfiles.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "BusinessProfile", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -35087,7 +35505,7 @@ import { invoiceLineUi } from "./invoice-line";
 import { clientUi, type ClientSettable } from "./client";
 import "./timers.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -35158,6 +35576,27 @@ export const clientData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new client must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ClientSettable): ClientSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ClientSettable>, _before: typeof schema.clients.$inferSelect): Partial<ClientSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the clients the viewer may read. */
@@ -35417,7 +35856,9 @@ export const clientData = {
     check(clientAccess.create, viewer);
     let row: typeof schema.clients.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = clientData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.clients).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Client", record: made.id });
         return made;
@@ -35448,7 +35889,8 @@ export const clientData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.clients).set(updated).where(eq(schema.clients.id, id)).returning().get();
+        const checked = clientData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.clients).set(checked).where(eq(schema.clients.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Client", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -35831,7 +36273,7 @@ import { invoiceUi, type InvoiceSettable } from "./invoice";
 import { withInvoiceFormulas } from "./invoice.formulas";
 import "./timers.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -35935,6 +36377,30 @@ export const invoiceData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.invoices.id }).from(schema.invoices).where(sql\`\${schema.invoices.contract} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new invoice must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: InvoiceSettable): InvoiceSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<InvoiceSettable>, before: typeof schema.invoices.$inferSelect): Partial<InvoiceSettable> {
+    const updated = checkFiles(viewer, given, before);
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the invoices the viewer may read. */
@@ -36210,11 +36676,11 @@ export const invoiceData = {
 
   async create(viewer: Viewer | null, values: InvoiceSettable) {
     check(invoiceAccess.create, viewer);
-    values = checkFiles(viewer, values);
-    checkReferences(viewer, values);
     let row: typeof schema.invoices.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = invoiceData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.invoices).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Invoice", record: made.id });
         outgoing(tx, viewer, "Invoice", "created", made);
@@ -36239,8 +36705,6 @@ export const invoiceData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(invoiceAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ contract: schema.invoices.contract }).from(schema.invoices).where(eq(schema.invoices.id, id)).get());
-    checkReferences(viewer, values);
     let changed: typeof schema.invoices.$inferSelect;
     const updated = values;
     try {
@@ -36248,7 +36712,8 @@ export const invoiceData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.invoices).set(updated).where(eq(schema.invoices.id, id)).returning().get();
+        const checked = invoiceData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
         outgoing(tx, viewer, "Invoice", what, after, before);
         return after;
@@ -36578,6 +37043,9 @@ import { type InvoiceLineSettable } from "./invoice-line";
 import { withInvoiceLineFormulas } from "./invoice-line.formulas";
 import "./timers.server";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete invoice lines. */
 export const invoiceLineAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -36648,6 +37116,29 @@ export const invoiceLineData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "invoice", (ids, c = invoiceData.readable(viewer)) => (c ? db.select({ id: schema.invoices.id }).from(schema.invoices).where(and(inArray(schema.invoices.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new invoice line must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: InvoiceLineSettable): InvoiceLineSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<InvoiceLineSettable>, _before: typeof schema.invoiceLines.$inferSelect): Partial<InvoiceLineSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the invoice lines the viewer may read. */
@@ -36908,10 +37399,11 @@ export const invoiceLineData = {
 
   async create(viewer: Viewer | null, values: InvoiceLineSettable) {
     check(invoiceLineAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.invoiceLines.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = invoiceLineData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.invoiceLines).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "InvoiceLine", record: made.id });
         return made;
@@ -36935,7 +37427,6 @@ export const invoiceLineData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(invoiceLineAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.invoiceLines.$inferSelect;
     const updated = values;
     try {
@@ -36943,7 +37434,8 @@ export const invoiceLineData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.invoiceLines).set(updated).where(eq(schema.invoiceLines.id, id)).returning().get();
+        const checked = invoiceLineData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.invoiceLines).set(checked).where(eq(schema.invoiceLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
         return after;
       });
@@ -39638,30 +40130,30 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/schema.ts": "0a45fa1f generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d18de62d generated",
-  "src/generated/actions/mark-overdue.server.ts": "33566007 generated",
+  "src/generated/actions/mark-overdue.server.ts": "a437fc92 generated",
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
-  "src/generated/actions/mark-paid.server.ts": "bcae8c0b generated",
+  "src/generated/actions/mark-paid.server.ts": "3fe1938a generated",
   "src/generated/actions/mark-paid.ts": "9047ea54 generated",
-  "src/generated/actions/mark-sent.server.ts": "d94b7633 generated",
+  "src/generated/actions/mark-sent.server.ts": "46da1dda generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "e381fb12 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "d281d629 generated",
+  "src/generated/business-profile.server.ts": "2394bb3d generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "d089683b generated",
+  "src/generated/client.server.ts": "768541de generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "e7c15106 generated",
+  "src/generated/invoice-line.server.ts": "b2aabced generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "1b7d2c56 generated",
+  "src/generated/invoice.server.ts": "2d2c76c1 generated",
   "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "4b29e5a5 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -41099,7 +41591,9 @@ export async function runAcceptMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.orders).where(eq(schema.orders.id, p.id)).get();
-      const changed = tx.update(schema.orders).set(p.values).where(eq(schema.orders.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = orderData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, p.id)).returning().get();
       audit(tx, viewer, { action: "accept", model: "Order", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Order", "accept", changed, before);
       const inserted = [
@@ -41208,7 +41702,10 @@ export async function runBackOnMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.dishes).set(p.values).where(eq(schema.dishes.id, p.id)).returning().get();
+      const before = tx.select().from(schema.dishes).where(eq(schema.dishes.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = dishData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.dishes).set(checked).where(eq(schema.dishes.id, p.id)).returning().get();
       audit(tx, viewer, { action: "backOn", model: "Dish", record: changed.id, fields: ["available"] });
       const inserted = [
 
@@ -41318,7 +41815,9 @@ export async function runCollectedMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.orders).where(eq(schema.orders.id, p.id)).get();
-      const changed = tx.update(schema.orders).set(p.values).where(eq(schema.orders.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = orderData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, p.id)).returning().get();
       audit(tx, viewer, { action: "collected", model: "Order", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Order", "collected", changed, before);
       const inserted = [
@@ -41431,7 +41930,9 @@ export async function runDeclineMany(viewer: Viewer | null, ids: number[], asked
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.orders).where(eq(schema.orders.id, p.id)).get();
-      const changed = tx.update(schema.orders).set(p.values).where(eq(schema.orders.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = orderData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, p.id)).returning().get();
       audit(tx, viewer, { action: "decline", model: "Order", record: changed.id, fields: ["status","reason"] });
       outgoing(tx, viewer, "Order", "decline", changed, before);
       const inserted = [
@@ -41562,7 +42063,9 @@ export async function runReadyMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.orders).where(eq(schema.orders.id, p.id)).get();
-      const changed = tx.update(schema.orders).set(p.values).where(eq(schema.orders.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = orderData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, p.id)).returning().get();
       audit(tx, viewer, { action: "ready", model: "Order", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Order", "ready", changed, before);
       const inserted = [
@@ -41671,7 +42174,10 @@ export async function runSoldOutMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.dishes).set(p.values).where(eq(schema.dishes.id, p.id)).returning().get();
+      const before = tx.select().from(schema.dishes).where(eq(schema.dishes.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = dishData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.dishes).set(checked).where(eq(schema.dishes.id, p.id)).returning().get();
       audit(tx, viewer, { action: "soldOut", model: "Dish", record: changed.id, fields: ["available"] });
       const inserted = [
 
@@ -41791,7 +42297,7 @@ import { afterChange, afterDelete } from "./hooks";
 import { orderLineUi } from "./order-line";
 import { dishUi, type DishSettable } from "./dish";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -41845,6 +42351,28 @@ export const dishData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new dish must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: DishSettable): DishSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<DishSettable>, before: typeof schema.dishes.$inferSelect): Partial<DishSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+    return updated;
   },
 
   /** A condition for the dishes the viewer may read. */
@@ -41904,10 +42432,11 @@ export const dishData = {
 
   async create(viewer: Viewer | null, values: DishSettable) {
     check(dishAccess.create, viewer);
-    values = checkFiles(viewer, values);
     let row: typeof schema.dishes.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = dishData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.dishes).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Dish", record: made.id });
         return made;
@@ -41931,7 +42460,6 @@ export const dishData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(dishAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ picture: schema.dishes.picture }).from(schema.dishes).where(eq(schema.dishes.id, id)).get());
     let changed: typeof schema.dishes.$inferSelect;
     const updated = values;
     try {
@@ -41939,7 +42467,8 @@ export const dishData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.dishes).set(updated).where(eq(schema.dishes.id, id)).returning().get();
+        const checked = dishData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.dishes).set(checked).where(eq(schema.dishes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Dish", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -42342,7 +42871,7 @@ import { orderUi, type OrderSettable } from "./order";
 import { withOrderFormulas } from "./order.formulas";
 import { nextInSequence } from "#/kit/sequence.server";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -42383,6 +42912,27 @@ export const orderData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new order must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: OrderSettable): OrderSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<OrderSettable>, _before: typeof schema.orders.$inferSelect): Partial<OrderSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the orders the viewer may read. */
@@ -42458,7 +43008,9 @@ export const orderData = {
     if (viewer === null && (made?.n ?? 0) >= 10000) throw new AccessDenied(false);
     let row: typeof schema.orders.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = orderData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer), number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) }).returning().get();
         for (const chosen of lines ?? []) {
           const item = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, chosen.id), dishData.readable(viewer))).get();
@@ -42496,7 +43048,8 @@ export const orderData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.orders).set(updated).where(eq(schema.orders.id, id)).returning().get();
+        const checked = orderData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
         outgoing(tx, viewer, "Order", what, after, before);
         return after;
@@ -42808,6 +43361,9 @@ import { dishData } from "./dish.server";
 import { type OrderLineSettable } from "./order-line";
 import { withOrderLineFormulas } from "./order-line.formulas";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete order lines. */
 export const orderLineAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "staff"], owner: false },
@@ -42851,6 +43407,29 @@ export const orderLineData = {
     return hideRefs(hideRefs(rows, "order", (ids, c = orderData.readable(viewer)) => (c ? db.select({ id: schema.orders.id }).from(schema.orders).where(and(inArray(schema.orders.id, ids), c)).all().map((r) => r.id) : ids)), "dish", (ids, c = dishData.readable(viewer)) => (c ? db.select({ id: schema.dishes.id }).from(schema.dishes).where(and(inArray(schema.dishes.id, ids), c)).all().map((r) => r.id) : ids));
   },
 
+  /**
+   * What a new order line must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: OrderLineSettable): OrderLineSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<OrderLineSettable>, _before: typeof schema.orderLines.$inferSelect): Partial<OrderLineSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
+  },
+
   /** A condition for the order lines the viewer may read. */
   readable(viewer: Viewer | null) {
     const scope = readScope(orderLineAccess.read, viewer);
@@ -42891,10 +43470,11 @@ export const orderLineData = {
 
   async create(viewer: Viewer | null, values: OrderLineSettable) {
     check(orderLineAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.orderLines.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = orderLineData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.orderLines).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "OrderLine", record: made.id });
         return made;
@@ -42918,7 +43498,6 @@ export const orderLineData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(orderLineAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.orderLines.$inferSelect;
     const updated = values;
     try {
@@ -42926,7 +43505,8 @@ export const orderLineData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.orderLines).set(updated).where(eq(schema.orderLines.id, id)).returning().get();
+        const checked = orderLineData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.orderLines).set(checked).where(eq(schema.orderLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "OrderLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
         return after;
       });
@@ -43347,6 +43927,9 @@ import { refusal } from "#/kit/log.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type StopSettable } from "./stop";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete stops. */
 export const stopAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
@@ -43368,6 +43951,27 @@ export const stopData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new stop must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: StopSettable): StopSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<StopSettable>, _before: typeof schema.stops.$inferSelect): Partial<StopSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the stops the viewer may read. */
@@ -43429,7 +44033,9 @@ export const stopData = {
     check(stopAccess.create, viewer);
     let row: typeof schema.stops.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = stopData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.stops).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Stop", record: made.id });
         return made;
@@ -43460,7 +44066,8 @@ export const stopData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.stops).set(updated).where(eq(schema.stops.id, id)).returning().get();
+        const checked = stopData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.stops).set(checked).where(eq(schema.stops.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Stop", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -46525,38 +47132,38 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/schema.ts": "91e72d4e generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "ae254a9d generated",
-  "src/generated/actions/accept.server.ts": "873be1fd generated",
+  "src/generated/actions/accept.server.ts": "978806c7 generated",
   "src/generated/actions/accept.ts": "38e5215d generated",
-  "src/generated/actions/back-on.server.ts": "1c453792 generated",
+  "src/generated/actions/back-on.server.ts": "98b7c8d2 generated",
   "src/generated/actions/back-on.ts": "2fcd77e5 generated",
-  "src/generated/actions/collected.server.ts": "3984c7c5 generated",
+  "src/generated/actions/collected.server.ts": "677426c7 generated",
   "src/generated/actions/collected.ts": "121a754a generated",
-  "src/generated/actions/decline.server.ts": "38eeca2c generated",
+  "src/generated/actions/decline.server.ts": "4a266c5a generated",
   "src/generated/actions/decline.ts": "1ba1a2b1 generated",
-  "src/generated/actions/ready.server.ts": "c18f8451 generated",
+  "src/generated/actions/ready.server.ts": "70e1c97b generated",
   "src/generated/actions/ready.ts": "4551fcd6 generated",
-  "src/generated/actions/sold-out.server.ts": "168d311d generated",
+  "src/generated/actions/sold-out.server.ts": "bed3fba3 generated",
   "src/generated/actions/sold-out.ts": "d324a1d9 generated",
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "26d9aa94 generated",
+  "src/generated/dish.server.ts": "f5e71811 generated",
   "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "4d01ce54 generated",
+  "src/generated/order-line.server.ts": "6cbe0877 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "3f206de0 generated",
+  "src/generated/order.server.ts": "3bdf1e53 generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "844b85db generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "067de185 generated",
+  "src/generated/stop.server.ts": "f1ef99bd generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -47967,6 +48574,9 @@ import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type ItemSettable } from "./item";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * Each new file in a reviewed field waits for a reviewer (docs/design/file-review.md), unless a
  * reviewer sent it; a file that is replaced or removed leaves the list, and with it a rejection
@@ -48076,6 +48686,28 @@ export const itemData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new item must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: ItemSettable): ItemSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<ItemSettable>, before: typeof schema.items.$inferSelect): Partial<ItemSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+    return updated;
   },
 
   /** A condition for the items the viewer may read. */
@@ -48402,10 +49034,11 @@ export const itemData = {
 
   async create(viewer: Viewer | null, values: ItemSettable) {
     check(itemAccess.create, viewer);
-    values = checkFiles(viewer, values);
     let row: typeof schema.items.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = itemData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         queueReviews(tx, viewer, made.id, undefined, made);
@@ -48430,7 +49063,6 @@ export const itemData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ photos: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get());
     let changed: typeof schema.items.$inferSelect;
     const updated = values;
     try {
@@ -48438,7 +49070,8 @@ export const itemData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.items).set(updated).where(eq(schema.items.id, id)).returning().get();
+        const checked = itemData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.items).set(checked).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         queueReviews(tx, viewer, id, before, after);
         return after;
@@ -50949,7 +51582,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "eeb3b1b6 generated",
+  "src/generated/item.server.ts": "84d584a3 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -52306,6 +52939,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { type ItemSettable } from "./item";
 import { withItemFormulas } from "./item.formulas";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete items. */
 export const itemAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true },
@@ -52357,6 +52993,27 @@ export const itemData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new item must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ItemSettable): ItemSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ItemSettable>, _before: typeof schema.items.$inferSelect): Partial<ItemSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the items the viewer may read. */
@@ -52615,7 +53272,9 @@ export const itemData = {
     check(itemAccess.create, viewer);
     let row: typeof schema.items.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = itemData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
@@ -52646,7 +53305,8 @@ export const itemData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.items).set(updated).where(eq(schema.items.id, id)).returning().get();
+        const checked = itemData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.items).set(checked).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -54099,7 +54759,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "71ebcb25 generated",
+  "src/generated/item.server.ts": "e7fe4ad9 generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -55247,7 +55907,7 @@ import { afterChange } from "#/generated/hooks";
 import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSettable } from "#/generated/incident-update.schema";
-import { incidentUpdateAccess } from "#/generated/incident-update.server";
+import { incidentUpdateAccess, incidentUpdateData } from "#/generated/incident-update.server";
 import { identifiedAccess, identifiedFits } from "./identified";
 
 type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
@@ -55278,10 +55938,13 @@ export async function runIdentified(viewer: Viewer | null, id: number) {
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
-      const changed = tx.update(schema.incidents).set(one.values).where(eq(schema.incidents.id, one.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, one.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, one.id, one.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...one.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
@@ -55312,10 +55975,13 @@ export async function runIdentifiedMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.incidents).set(p.values).where(eq(schema.incidents.id, p.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "identified", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...p.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "identified" } });
       return { changed, inserted };
@@ -55377,7 +56043,7 @@ import { afterChange } from "#/generated/hooks";
 import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSettable } from "#/generated/incident-update.schema";
-import { incidentUpdateAccess } from "#/generated/incident-update.server";
+import { incidentUpdateAccess, incidentUpdateData } from "#/generated/incident-update.server";
 import { monitoringAccess, monitoringFits } from "./monitoring";
 
 type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
@@ -55408,10 +56074,13 @@ export async function runMonitoring(viewer: Viewer | null, id: number) {
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
-      const changed = tx.update(schema.incidents).set(one.values).where(eq(schema.incidents.id, one.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, one.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, one.id, one.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...one.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
@@ -55442,10 +56111,13 @@ export async function runMonitoringMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.incidents).set(p.values).where(eq(schema.incidents.id, p.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "monitoring", model: "Incident", record: changed.id, fields: ["status"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...p.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "monitoring" } });
       return { changed, inserted };
@@ -55507,7 +56179,7 @@ import { afterChange } from "#/generated/hooks";
 import { incidentSettable } from "#/generated/incident.schema";
 import { incidentData } from "#/generated/incident.server";
 import { incidentUpdateSettable } from "#/generated/incident-update.schema";
-import { incidentUpdateAccess } from "#/generated/incident-update.server";
+import { incidentUpdateAccess, incidentUpdateData } from "#/generated/incident-update.server";
 import { resolveAccess, resolveFits } from "./resolve";
 
 type Row = NonNullable<Awaited<ReturnType<typeof incidentData.get>>>;
@@ -55539,10 +56211,13 @@ export async function runResolve(viewer: Viewer | null, id: number) {
   const one = plan(viewer, row);
   // One transaction: the change and the records it adds, or nothing.
   const written = db.transaction((tx) => {
-      const changed = tx.update(schema.incidents).set(one.values).where(eq(schema.incidents.id, one.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, one.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, one.id, one.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, one.id)).returning().get();
       audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...one.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...one.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
@@ -55573,10 +56248,13 @@ export async function runResolveMany(viewer: Viewer | null, ids: number[]) {
     }
   }
   const written = db.transaction((tx) => plans.map((p) => {
-      const changed = tx.update(schema.incidents).set(p.values).where(eq(schema.incidents.id, p.id)).returning().get();
+      const before = tx.select().from(schema.incidents).where(eq(schema.incidents.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = incidentData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const changed = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, p.id)).returning().get();
       audit(tx, viewer, { action: "resolve", model: "Incident", record: changed.id, fields: ["status","resolvedAt"] });
       const inserted = [
-        tx.insert(schema.incidentUpdates).values({ ...p.added0, ownerId: personOf(viewer) }).returning().get(),
+        tx.insert(schema.incidentUpdates).values({ ...incidentUpdateData.checkCreate(tx, viewer, { ...p.added0, ownerId: personOf(viewer) }) }).returning().get(),
       ] as const;
       audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: inserted[0].id, details: { by: "resolve" } });
       return { changed, inserted };
@@ -57465,6 +58143,9 @@ import { incidentData } from "./incident.server";
 import { maintenanceData } from "./maintenance.server";
 import { type ComponentSettable } from "./component";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete components. */
 export const componentAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
@@ -57514,6 +58195,27 @@ export const componentData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
+  },
+
+  /**
+   * What a new component must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: ComponentSettable): ComponentSettable {
+    const values = given;
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<ComponentSettable>, _before: typeof schema.components.$inferSelect): Partial<ComponentSettable> {
+    const updated = given;
+
+    return updated;
   },
 
   /** A condition for the components the viewer may read. */
@@ -57773,7 +58475,9 @@ export const componentData = {
     check(componentAccess.create, viewer);
     let row: typeof schema.components.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = componentData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.components).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Component", record: made.id });
         return made;
@@ -57804,7 +58508,8 @@ export const componentData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.components).set(updated).where(eq(schema.components.id, id)).returning().get();
+        const checked = componentData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.components).set(checked).where(eq(schema.components.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Component", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -58153,7 +58858,7 @@ import { componentData } from "./component.server";
 import { incidentUpdateUi } from "./incident-update";
 import { incidentUi, type IncidentSettable } from "./incident";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -58250,6 +58955,29 @@ export const incidentData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "component", (ids, c = componentData.readable(viewer)) => (c ? db.select({ id: schema.components.id }).from(schema.components).where(and(inArray(schema.components.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new incident must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: IncidentSettable): IncidentSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<IncidentSettable>, _before: typeof schema.incidents.$inferSelect): Partial<IncidentSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the incidents the viewer may read. */
@@ -58511,10 +59239,11 @@ export const incidentData = {
 
   async create(viewer: Viewer | null, values: IncidentSettable) {
     check(incidentAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.incidents.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = incidentData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.incidents).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Incident", record: made.id });
         return made;
@@ -58538,7 +59267,6 @@ export const incidentData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(incidentAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.incidents.$inferSelect;
     const updated = values;
     try {
@@ -58546,7 +59274,8 @@ export const incidentData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.incidents).set(updated).where(eq(schema.incidents.id, id)).returning().get();
+        const checked = incidentData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Incident", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -58818,6 +59547,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { incidentData } from "./incident.server";
 import { type IncidentUpdateSettable } from "./incident-update";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete incident updates. */
 export const incidentUpdateAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
@@ -58888,6 +59620,29 @@ export const incidentUpdateData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "incident", (ids, c = incidentData.readable(viewer)) => (c ? db.select({ id: schema.incidents.id }).from(schema.incidents).where(and(inArray(schema.incidents.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new incident update must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: IncidentUpdateSettable): IncidentUpdateSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<IncidentUpdateSettable>, _before: typeof schema.incidentUpdates.$inferSelect): Partial<IncidentUpdateSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the incident updates the viewer may read. */
@@ -59148,10 +59903,11 @@ export const incidentUpdateData = {
 
   async create(viewer: Viewer | null, values: IncidentUpdateSettable) {
     check(incidentUpdateAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.incidentUpdates.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = incidentUpdateData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.incidentUpdates).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "IncidentUpdate", record: made.id });
         return made;
@@ -59175,7 +59931,6 @@ export const incidentUpdateData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(incidentUpdateAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.incidentUpdates.$inferSelect;
     const updated = values;
     try {
@@ -59183,7 +59938,8 @@ export const incidentUpdateData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.incidentUpdates).set(updated).where(eq(schema.incidentUpdates.id, id)).returning().get();
+        const checked = incidentUpdateData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.incidentUpdates).set(checked).where(eq(schema.incidentUpdates.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "IncidentUpdate", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -59569,6 +60325,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { componentData } from "./component.server";
 import { type MaintenanceSettable } from "./maintenance";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete maintenances. */
 export const maintenanceAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
@@ -59640,6 +60399,29 @@ export const maintenanceData = {
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "component", (ids, c = componentData.readable(viewer)) => (c ? db.select({ id: schema.components.id }).from(schema.components).where(and(inArray(schema.components.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new maintenance must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: MaintenanceSettable): MaintenanceSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<MaintenanceSettable>, _before: typeof schema.maintenances.$inferSelect): Partial<MaintenanceSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the maintenances the viewer may read. */
@@ -59900,10 +60682,11 @@ export const maintenanceData = {
 
   async create(viewer: Viewer | null, values: MaintenanceSettable) {
     check(maintenanceAccess.create, viewer);
-    checkReferences(viewer, values);
     let row: typeof schema.maintenances.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = maintenanceData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.maintenances).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Maintenance", record: made.id });
         return made;
@@ -59927,7 +60710,6 @@ export const maintenanceData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(maintenanceAccess.write, viewer, row.ownerId);
-    checkReferences(viewer, values);
     let changed: typeof schema.maintenances.$inferSelect;
     const updated = values;
     try {
@@ -59935,7 +60717,8 @@ export const maintenanceData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.maintenances).set(updated).where(eq(schema.maintenances.id, id)).returning().get();
+        const checked = maintenanceData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.maintenances).set(checked).where(eq(schema.maintenances.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Maintenance", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         return after;
       });
@@ -64687,30 +65470,30 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/schema.ts": "9495a58b generated",
   "src/db/seed.ts": "a04b6693 generated",
   "src/generated/access.test.ts": "41f7c3b5 generated",
-  "src/generated/actions/identified.server.ts": "14da46dc generated",
+  "src/generated/actions/identified.server.ts": "f06555cb generated",
   "src/generated/actions/identified.ts": "08a14f22 generated",
-  "src/generated/actions/monitoring.server.ts": "081af354 generated",
+  "src/generated/actions/monitoring.server.ts": "9a46b1fd generated",
   "src/generated/actions/monitoring.ts": "bcd8c8b0 generated",
-  "src/generated/actions/resolve.server.ts": "6b6da89f generated",
+  "src/generated/actions/resolve.server.ts": "7a46f8f0 generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "554eddc2 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "3d195515 generated",
+  "src/generated/component.server.ts": "2f6960e5 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "8fde74f3 generated",
+  "src/generated/incident-update.server.ts": "becee6e2 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "15350c86 generated",
+  "src/generated/incident.server.ts": "48122df8 generated",
   "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "fde631a3 generated",
+  "src/generated/maintenance.server.ts": "98f41e02 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "66e85f49 generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -65830,7 +66613,9 @@ export async function runAssignToMany(viewer: Viewer | null, ids: number[], aske
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, p.id)).get();
-      const changed = tx.update(schema.supportCases).set(p.values).where(eq(schema.supportCases.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = supportCaseData.checkUpdate(tx, viewer, p.id, p.values, before, "assignTo", []);
+      const changed = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, p.id)).returning().get();
       audit(tx, viewer, { action: "assignTo", model: "SupportCase", record: changed.id, fields: ["assignee"] });
       outgoing(tx, viewer, "SupportCase", "assignTo", changed, before);
       const inserted = [
@@ -65967,7 +66752,9 @@ export async function runAssignToMeMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, p.id)).get();
-      const changed = tx.update(schema.supportCases).set(p.values).where(eq(schema.supportCases.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = supportCaseData.checkUpdate(tx, viewer, p.id, p.values, before, "assignToMe", ["assigneeId"]);
+      const changed = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, p.id)).returning().get();
       audit(tx, viewer, { action: "assignToMe", model: "SupportCase", record: changed.id, fields: ["assignee"] });
       outgoing(tx, viewer, "SupportCase", "assignToMe", changed, before);
       const inserted = [
@@ -66080,7 +66867,9 @@ export async function runCloseMany(viewer: Viewer | null, ids: number[], asked: 
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, p.id)).get();
-      const changed = tx.update(schema.supportCases).set(p.values).where(eq(schema.supportCases.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = supportCaseData.checkUpdate(tx, viewer, p.id, p.values, before, "close", ["status"]);
+      const changed = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, p.id)).returning().get();
       audit(tx, viewer, { action: "close", model: "SupportCase", record: changed.id, fields: ["status","assignee"] });
       outgoing(tx, viewer, "SupportCase", "close", changed, before);
       const inserted = [
@@ -66217,7 +67006,9 @@ export async function runReopenMany(viewer: Viewer | null, ids: number[]) {
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, p.id)).get();
-      const changed = tx.update(schema.supportCases).set(p.values).where(eq(schema.supportCases.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = supportCaseData.checkUpdate(tx, viewer, p.id, p.values, before, "reopen", ["status"]);
+      const changed = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, p.id)).returning().get();
       audit(tx, viewer, { action: "reopen", model: "SupportCase", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "SupportCase", "reopen", changed, before);
       const inserted = [
@@ -66330,7 +67121,9 @@ export async function runStartWorkMany(viewer: Viewer | null, ids: number[], ask
   }
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.supportCases).where(eq(schema.supportCases.id, p.id)).get();
-      const changed = tx.update(schema.supportCases).set(p.values).where(eq(schema.supportCases.id, p.id)).returning().get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = supportCaseData.checkUpdate(tx, viewer, p.id, p.values, before, "startWork", ["status"]);
+      const changed = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, p.id)).returning().get();
       audit(tx, viewer, { action: "startWork", model: "SupportCase", record: changed.id, fields: ["status","assignee"] });
       outgoing(tx, viewer, "SupportCase", "startWork", changed, before);
       const inserted = [
@@ -67259,6 +68052,9 @@ import { afterChange, afterDelete } from "./hooks";
 import { supportCaseData } from "./support-case.server";
 import { type MessageSettable } from "./message";
 
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "agent"], owner: false },
@@ -67343,6 +68139,30 @@ export const messageData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.messages.id }).from(schema.messages).where(sql\`\${schema.messages.attachments} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new message must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: MessageSettable): MessageSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<MessageSettable>, before: typeof schema.messages.$inferSelect): Partial<MessageSettable> {
+    const updated = checkFiles(viewer, given, before);
+    checkReferences(viewer, updated);
+
+    return updated;
   },
 
   /** A condition for the messages the viewer may read. */
@@ -67583,11 +68403,11 @@ export const messageData = {
 
   async create(viewer: Viewer | null, values: MessageSettable) {
     check(messageAccess.create, viewer);
-    values = checkFiles(viewer, values);
-    checkReferences(viewer, values);
     let row: typeof schema.messages.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = messageData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.messages).values({ ...values, ownerId: personOf(viewer), agentId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Message", record: made.id });
         outgoing(tx, viewer, "Message", "created", made);
@@ -67612,8 +68432,6 @@ export const messageData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ attachments: schema.messages.attachments }).from(schema.messages).where(eq(schema.messages.id, id)).get());
-    checkReferences(viewer, values);
     let changed: typeof schema.messages.$inferSelect;
     const updated = values;
     try {
@@ -67621,7 +68439,8 @@ export const messageData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        const after = tx.update(schema.messages).set(updated).where(eq(schema.messages.id, id)).returning().get();
+        const checked = messageData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.messages).set(checked).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "Message", what, after, before);
         return after;
@@ -68066,7 +68885,7 @@ import { messageData } from "./message.server";
 import { messageUi } from "./message";
 import { supportCaseUi, type SupportCaseSettable } from "./support-case";
 
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
@@ -68151,6 +68970,37 @@ export const supportCaseData = {
   /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
   uses(file: string): boolean {
     return !!db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(sql\`\${schema.supportCases.attachments} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
+  /**
+   * What a new support case must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: SupportCaseSettable): SupportCaseSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
+    const next: Record<string, unknown> = { status: "open", ...values };
+    if (fits({ status: ["inProgress", "closed"] }, next) && (next.assigneeId ?? "") === "") throw new BadInput(w.requiredNow("Assignee"));
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<SupportCaseSettable>, before: typeof schema.supportCases.$inferSelect, what = "changed", frees: readonly string[] = []): Partial<SupportCaseSettable> {
+    const updated = checkFiles(viewer, given, before);
+
+      if (before) {
+        const given: Record<string, unknown> = updated;
+        const was: Record<string, unknown> = before;
+        if ((what === "changed" || !frees.includes("customerEmail")) && "customerEmail" in given && JSON.stringify(given.customerEmail ?? null) !== JSON.stringify(before.customerEmail ?? null)) throw new BadInput(w.cannotChangeNow("Customer email"));
+        const next: Record<string, unknown> = { ...was, ...given };
+        if (fits({ status: ["inProgress", "closed"] }, next) && (next.assigneeId ?? "") === "") throw new BadInput(w.requiredNow("Assignee"));
+      }
+    return updated;
   },
 
   /** A condition for the support cases the viewer may read. */
@@ -68411,12 +69261,11 @@ export const supportCaseData = {
 
   async create(viewer: Viewer | null, values: SupportCaseSettable) {
     check(supportCaseAccess.create, viewer);
-    values = checkFiles(viewer, values);
-    const next: Record<string, unknown> = { status: "open", ...values };
-    if (fits({ status: ["inProgress", "closed"] }, next) && (next.assigneeId ?? "") === "") throw new BadInput(w.requiredNow("Assignee"));
     let row: typeof schema.supportCases.$inferSelect;
     try {
+      // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
+        values = supportCaseData.checkCreate(tx, viewer, values);
         const made = tx.insert(schema.supportCases).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "SupportCase", record: made.id });
         outgoing(tx, viewer, "SupportCase", "created", made);
@@ -68441,7 +69290,6 @@ export const supportCaseData = {
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(supportCaseAccess.write, viewer, row.ownerId);
-    values = checkFiles(viewer, values, db.select({ attachments: schema.supportCases.attachments }).from(schema.supportCases).where(eq(schema.supportCases.id, id)).get());
     let changed: typeof schema.supportCases.$inferSelect;
     const updated = values;
     try {
@@ -68449,14 +69297,8 @@ export const supportCaseData = {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
-        if (before) {
-          const given: Record<string, unknown> = updated;
-          const was: Record<string, unknown> = before;
-          if ((what === "changed" || !frees.includes("customerEmail")) && "customerEmail" in given && JSON.stringify(given.customerEmail ?? null) !== JSON.stringify(before.customerEmail ?? null)) throw new BadInput(w.cannotChangeNow("Customer email"));
-          const next: Record<string, unknown> = { ...was, ...given };
-          if (fits({ status: ["inProgress", "closed"] }, next) && (next.assigneeId ?? "") === "") throw new BadInput(w.requiredNow("Assignee"));
-        }
-        const after = tx.update(schema.supportCases).set(updated).where(eq(schema.supportCases.id, id)).returning().get();
+        const checked = supportCaseData.checkUpdate(tx, viewer, id, updated, before, what, frees);
+        const after = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "SupportCase", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
         outgoing(tx, viewer, "SupportCase", what, after, before);
         return after;
@@ -71039,28 +71881,28 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/db/schema.ts": "ddcd3e3c generated",
   "src/db/seed.ts": "59920618 generated",
   "src/generated/access.test.ts": "caa1406d generated",
-  "src/generated/actions/assign-to-me.server.ts": "cdf480ac generated",
+  "src/generated/actions/assign-to-me.server.ts": "6abf9eb9 generated",
   "src/generated/actions/assign-to-me.ts": "7f1c30db generated",
-  "src/generated/actions/assign-to.server.ts": "743e91b5 generated",
+  "src/generated/actions/assign-to.server.ts": "43b6e198 generated",
   "src/generated/actions/assign-to.ts": "ec25b09b generated",
-  "src/generated/actions/close.server.ts": "c712c2ea generated",
+  "src/generated/actions/close.server.ts": "92fc9a9b generated",
   "src/generated/actions/close.ts": "4898d627 generated",
-  "src/generated/actions/reopen.server.ts": "051bad29 generated",
+  "src/generated/actions/reopen.server.ts": "8891cb85 generated",
   "src/generated/actions/reopen.ts": "47cc7a6f generated",
-  "src/generated/actions/start-work.server.ts": "44c4920d generated",
+  "src/generated/actions/start-work.server.ts": "08a8ba4b generated",
   "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "b365bd87 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "a9ddf32d generated",
+  "src/generated/message.server.ts": "00275f2b generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "d9f41429 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "6f70147e generated",
+  "src/generated/support-case.server.ts": "240d2d41 generated",
   "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",

@@ -65,9 +65,11 @@ test("the time a record takes is checked in its write's transaction, and a move 
     ".innerJoin(schema.services, eq(schema.services.id, schema.appointments.serviceId))",
   );
   expect(data).toContain("eq(schema.timeOffs.barberId, barberId)");
+  // A create's checks, the time's among them, run in its transaction (A 153).
   expect(data).toMatch(
-    /row = db\.transaction\(\(tx\) => \{\n\s+checkTime\(tx, \{ status: "requested", \.\.\.values \}\);/,
+    /row = db\.transaction\(\(tx\) => \{\n\s+values = \w+\.checkCreate\(tx, viewer, values\);/,
   );
+  expect(data).toContain('checkTime(tx, { status: "requested", ...values });');
   expect(data).toContain('["barberId", "startsAt", "serviceId", "status"].some((k) => k in moving');
   expect(data).toContain("checkTime(tx, { ...before, ...updated }, id);");
   expect(data).toContain("throw new Conflict(`not-free:");
