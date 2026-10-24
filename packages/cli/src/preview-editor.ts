@@ -486,6 +486,20 @@ export type Middleware = (
   next: () => void,
 ) => void;
 
+/**
+ * A preview on this machine may be framed only by a page on this machine (Studio, the theme
+ * lab), never by a site the person happens to visit; a hosted preview has its own guard.
+ */
+export const framedLocally: Middleware = (req, res, next) => {
+  const host = req.headers.host;
+  if (typeof host === "string" && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host))
+    res.setHeader(
+      "Content-Security-Policy",
+      "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* http://[::1]:* https://localhost:* https://127.0.0.1:* https://[::1]:*",
+    );
+  next();
+};
+
 /** The setting the preview's process gets: the token's SHA-256 as hex, never the token itself. */
 export const PREVIEW_TOKEN_DIGEST = "SMITHABLE_PREVIEW_TOKEN_SHA256";
 
@@ -629,6 +643,7 @@ export function smithableEditor(options: { holdUpdates?: boolean; token?: boolea
         server.middlewares.use(tokenGuard(digest));
         if (server.httpServer) guardUpgrades(server.httpServer, digest);
       }
+      server.middlewares.use(framedLocally);
       if (options.holdUpdates) holdFullReloads(server);
       let changed = 0;
       for (const event of ["add", "change", "unlink"])

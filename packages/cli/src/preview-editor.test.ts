@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import {
+  framedLocally,
   guardUpgrades,
   holdFullReloads,
   type Middleware,
@@ -440,11 +441,11 @@ test("on a host the preview takes Studio's token on every request, requests and 
   try {
     process.env.SMITHABLE_PREVIEW_TOKEN_SHA256 = digest;
     smithableEditor({ token: true }).configureServer(dev);
-    expect(registered.length).toBe(2);
+    expect(registered.length).toBe(3);
     expect(typeof registered[0]).toBe("function");
     registered.length = 0;
     smithableEditor().configureServer(dev);
-    expect(registered).toEqual(["/__smithable/settled"]);
+    expect(registered).toEqual([framedLocally, "/__smithable/settled"]);
     registered.length = 0;
     delete process.env.SMITHABLE_PREVIEW_TOKEN_SHA256;
     smithableEditor({ token: true }).configureServer(dev);
@@ -454,4 +455,29 @@ test("on a host the preview takes Studio's token on every request, requests and 
     if (saved !== undefined) process.env.SMITHABLE_PREVIEW_TOKEN_SHA256 = saved;
     else delete process.env.SMITHABLE_PREVIEW_TOKEN_SHA256;
   }
+});
+
+test("a preview on this machine may be framed only from this machine", () => {
+  const framed = (host: string) => {
+    const set: Record<string, string> = {};
+    let passed = false;
+    framedLocally(
+      { headers: { host } },
+      {
+        statusCode: 200,
+        setHeader: (name, value) => {
+          set[name] = value;
+        },
+        end: () => {},
+      },
+      () => {
+        passed = true;
+      },
+    );
+    return { csp: set["Content-Security-Policy"], passed };
+  };
+  expect(framed("localhost:5173").csp).toMatch(/^frame-ancestors 'self' http:\/\/localhost:\*/);
+  expect(framed("127.0.0.1:5173").passed).toBe(true);
+  // A hosted preview's address gets no such header here: its own guard frames it.
+  expect(framed("app.example.org").csp).toBeUndefined();
 });
