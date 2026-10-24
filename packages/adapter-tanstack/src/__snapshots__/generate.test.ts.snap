@@ -6742,7 +6742,7 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
@@ -9403,7 +9403,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -9429,7 +9429,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "e4b1ddd6 generated",
+  "src/lib/auth.ts": "fdb6a54c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -14899,7 +14899,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "1c8a64ac kit",
+  "src/kit/outgoing.ts": "d3aa9cf8 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -26364,7 +26364,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -26380,7 +26380,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "1c8a64ac kit",
+  "src/kit/outgoing.ts": "d3aa9cf8 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -30253,7 +30253,7 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
@@ -32222,7 +32222,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -32246,7 +32246,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "ba810a9d generated",
+  "src/lib/auth.ts": "586d8fbf generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -39699,7 +39699,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -39715,7 +39715,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "1c8a64ac kit",
+  "src/kit/outgoing.ts": "d3aa9cf8 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -44172,7 +44172,7 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
@@ -46601,7 +46601,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "1c8a64ac kit",
+  "src/kit/outgoing.ts": "d3aa9cf8 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -46614,7 +46614,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "0e2f98fa generated",
+  "src/lib/auth.ts": "5a418a30 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -49210,7 +49210,7 @@ const contactItem = createServerFn({ method: "POST" })
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}/\${row.id}\`;
     await sendMail({
       to: to.email,
-      replyTo: \`"\${sender.name.replace(/["\\\\<>\\n]/g, "")}" <\${sender.email}>\`,
+      replyTo: \`"\${sender.name.replace(/["\\\\<>\\r\\n]/g, "")}" <\${sender.email}>\`,
       subject: \`About “\${name}”\`,
       text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
     });
@@ -50986,7 +50986,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -51017,7 +51017,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "beab8268 generated",
+  "src/routes/$id.tsx": "44a3df32 generated",
   "src/routes/__root.tsx": "fb4e1e0e generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -54129,7 +54129,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -61555,7 +61555,7 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
@@ -64751,7 +64751,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -64776,7 +64776,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "aa5c1a9c generated",
+  "src/lib/auth.ts": "e782e4ca generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -69266,7 +69266,7 @@ export const auth = betterAuth({
           const proven = !unconfirmed(ctx?.path, newUser.emailVerified);
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });
@@ -71093,7 +71093,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "f6af8a2e kit",
+  "src/kit/assistant.server.ts": "d3d8275f kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -71108,7 +71108,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
-  "src/kit/outgoing.ts": "1c8a64ac kit",
+  "src/kit/outgoing.ts": "d3aa9cf8 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -71122,7 +71122,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "96150250 generated",
+  "src/lib/auth.ts": "197468ce generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",

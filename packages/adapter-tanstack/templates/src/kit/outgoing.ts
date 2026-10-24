@@ -42,7 +42,9 @@ export function targetSettings(target: string): { url: string; secret: string } 
 }
 
 /** An IPv6 address written out in full (eight groups of four), so no short form slips past. */
-function normalizeV6(ip: string): string {
+function normalizeV6(address: string): string {
+  // A zone ("fe80::1%eth0") names the interface, not the address.
+  const ip = address.replace(/%.*$/, "");
   if (!ip.includes(":")) return ip;
   let parts = ip.toLowerCase().split(":");
   const last = parts[parts.length - 1];
@@ -75,6 +77,8 @@ function normalizeV6(ip: string): string {
  */
 export function privateAddress(ip: string): boolean {
   const v6 = normalizeV6(ip);
+  // Not an IPv6 address written out in full: refused, never guessed at.
+  if (v6.includes(":") && !/^(?:[0-9a-f]{4}:){7}[0-9a-f]{4}$/.test(v6)) return true;
   if (v6.includes(":")) {
     if (
       v6.startsWith("0000:0000:0000:0000:0000:ffff:") ||
@@ -98,7 +102,10 @@ export function privateAddress(ip: string): boolean {
         v6.startsWith("fea") ||
         v6.startsWith("feb") ||
         v6.startsWith("ff") ||
-        v6.startsWith("2001:0db8:")
+        v6.startsWith("2001:0db8:") ||
+        // 6to4 and Teredo carry an IPv4 address that may be a private one.
+        v6.startsWith("2002:") ||
+        v6.startsWith("2001:0000:")
       );
     }
   }

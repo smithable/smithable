@@ -130,5 +130,6 @@ test("tool results returned to the model are wrapped in <untrusted_record_data> 
   });
   const toolMsg = bodies[1]?.messages.find((m) => m.role === "tool");
   expect(toolMsg?.content).toMatch(/^<untrusted_record_data>[\s\S]*<\/untrusted_record_data>$/);
-  expect(toolMsg?.content).toContain("<\\/untrusted_record_data>");
+  // The tag inside the record is dropped: one opening and one closing tag, the app's own.
+  expect(toolMsg?.content.match(/untrusted_record_data/g)).toHaveLength(2);
 });

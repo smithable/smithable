@@ -247,13 +247,10 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
       messages.push({
         role: "tool",
         tool_call_id: c.id,
-        // Records hold what anybody wrote: fenced as data, a closing tag inside escaped.
+        // Records hold what anybody wrote: fenced as data, any such tag inside them dropped.
         content: `<untrusted_record_data>${JSON.stringify(content ?? null)
           .slice(0, RESULT_MAX)
-          .replace(
-            /<\/untrusted_record_data>/gi,
-            "<\\/untrusted_record_data>",
-          )}</untrusted_record_data>`,
+          .replace(/<\s*\/?\s*untrusted_record_data[^>]*>/gi, "")}</untrusted_record_data>`,
       });
     }
     // A proposed change ends the question: the person decides, not another model call.

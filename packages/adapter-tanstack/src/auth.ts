@@ -258,7 +258,7 @@ export const auth = betterAuth({
               ? `
           const refused = proven ? joinRefusal(email) : "Your sign-in provider has not confirmed this address.";
           if (refused) {
-            // Refusals are counted per address, so trying address after address is slowed down.
+            // The same address refused again and again is slowed down (its mails, its audit lines).
             count(\`refused:\${email}\`, { max: 5, seconds: 300 }, "attempts");
             audit(db, null, { action: "sign-in refused", model: "User", details: { email, reason: refused } });
             throw new APIError("FORBIDDEN", { message: refused });

@@ -322,7 +322,7 @@ function watched(dir: string): Map<string, string> {
     return `${s.mtimeMs}:${s.size}`;
   };
   const out = new Map(ignored.map((p) => [p, stamp(join(dir, p))]));
-  for (const gitFile of [".git/config", ".git/info/attributes"]) {
+  for (const gitFile of [".git/config", ".git/info/attributes", ".git/info/exclude"]) {
     out.set(gitFile, stamp(join(dir, gitFile)));
   }
   const hooks = join(dir, ".git", "hooks");

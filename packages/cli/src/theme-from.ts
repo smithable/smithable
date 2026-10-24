@@ -261,7 +261,7 @@ export async function themeFrom(
     return 2;
   }
   try {
-    const addrs = await lookup(url.hostname, { all: true, verbatim: true });
+    const addrs = await lookup(url.hostname.replace(/^\[|\]$/g, ""), { all: true, verbatim: true });
     if (addrs.length === 0 || addrs.some((a) => isPrivate(a.address))) throw new Error();
   } catch {
     io.err(`"${url.hostname}" is a private or unreachable address.\n`);
