@@ -324,3 +324,34 @@ describe("the AI policy", () => {
     expect(() => parsePolicy("anything")).toThrow("Unknown AI policy");
   });
 });
+
+describe("small talk (A 151)", () => {
+  test("a greeting or thanks is answered like a chat, by rule, with no model and never a refusal", async () => {
+    for (const hello of ["Hi", "hello smith!", "Good morning", "hey there"]) {
+      const answer = await propose(hello, []);
+      expect(answer.kind).toBe("answer");
+      if (answer.kind !== "answer") continue;
+      expect(answer.generator).toBe("small talk");
+      // It leads back to the app, with something to try from its own names.
+      expect(answer.text).toMatch(/^Hello! I'm Smith\. Tell me what to change in /);
+      // A field the first kind of record does not have yet, so the try is a real change.
+      expect(answer.text).toMatch(/For example “Add a (notes|comments|website) field to /);
+      expect(answer.usage).toEqual([]);
+    }
+    const thanks = await propose("Thanks a lot", []);
+    expect(thanks.kind === "answer" && thanks.text).toMatch(
+      /^You're welcome! Anything else to change in /,
+    );
+  });
+
+  test("a change is not small talk: it goes on to the change tiers as before", async () => {
+    const asked = await propose("hello, add a phone number to customers", [scripted([addPhone])]);
+    expect(asked.kind).toBe("change");
+  });
+
+  test("the models are told to answer small talk, never to refuse it", () => {
+    const { system } = promptFor({ location: "local" }, buildContext(index, "hi"));
+    expect(system).toContain("also for a greeting, thanks or other small talk");
+    expect(system).toContain('Never answer "none" to small talk.');
+  });
+});

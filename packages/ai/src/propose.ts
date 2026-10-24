@@ -8,6 +8,7 @@ import {
   type OperationArgs,
   operationsFor,
   type ProjectFiles,
+  type SpecIR,
   type SpecPlugin,
   validateAuth,
   validateContent,
@@ -21,6 +22,7 @@ import {
   refusalOf,
 } from "@smithable/index";
 import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
+import { smallTalk } from "./small-talk.js";
 
 export interface ProposedOperation {
   op: string;
@@ -50,7 +52,8 @@ Answer with JSON only:
 - {"kind":"operations","operations":[{"op":"<operation>","args":{…}}]} when the request clearly means one change (one or more operations).
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
 - {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
-- {"kind":"none","reason":"…"} when no operation can do it. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
+- {"kind":"answer","text":"…"} also for a greeting, thanks or other small talk: one or two friendly sentences, like a chat, that suggest something to change or ask about this app. Never answer "none" to small talk.
+- {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
 A record belongs to whoever created it. When the request says it belongs to, is handled by or is the responsibility of a person named in the record, that is setOwner with the record's User field (add the field first when there is none); access for "owner" then means that person.
@@ -215,8 +218,16 @@ export async function proposeChange(options: {
   const usage: Usage[] = [];
   // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
   // operations get the same dry run and host check; when they do not apply, a model reads it.
+  // The spec read once for every rule tier below.
+  const ir = validateSpec(
+    { path: "smithable.yml", text: files.spec },
+    files.plugins ? { plugins: files.plugins } : {},
+  ).ir;
+  // Tier 0 for small talk: a greeting or thanks is answered like a chat, by rule (A 151).
+  const talk = smallTalk(options.request, ir);
+  if (talk) return { kind: "answer", text: talk, concepts: [], usage, generator: "small talk" };
   // Tier 0 for questions: what the spec answers on its own (who can, what is, is it public…).
-  const answered = questionTier(files, options.request);
+  const answered = ir && questionTier(files, ir, options.request);
   if (answered)
     return {
       kind: "answer",
@@ -225,10 +236,10 @@ export async function proposeChange(options: {
       usage,
       generator: answered.rule,
     };
-  const phrased = phraseTier(files, options.request);
+  const phrased = ir && phraseTier(files, ir, options.request);
   // The rules read it and it cannot be done as asked (the field is there already, no field has
   // that name): the reason, not a model that would meet the same.
-  const why = phrased ? undefined : refusalTier(files, options.request);
+  const why = phrased || !ir ? undefined : refusalTier(files, ir, options.request);
   if (why) return { kind: "none", reason: why.refusal, usage };
   if (phrased) {
     const checked = dryRun(files, phrased.operations);
@@ -306,10 +317,7 @@ export async function proposeChange(options: {
 }
 
 /** Why the rules cannot make a request they read, when that is so (tier 0). */
-function refusalTier(files: ProjectFiles, request: string) {
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
+function refusalTier(files: ProjectFiles, ir: SpecIR, request: string) {
   const auth =
     files.auth === undefined
       ? undefined
@@ -318,10 +326,7 @@ function refusalTier(files: ProjectFiles, request: string) {
 }
 
 /** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
-function phraseTier(files: ProjectFiles, request: string) {
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
+function phraseTier(files: ProjectFiles, ir: SpecIR, request: string) {
   const auth =
     files.auth === undefined
       ? undefined
@@ -330,11 +335,8 @@ function phraseTier(files: ProjectFiles, request: string) {
 }
 
 /** A question about the app the index answers without a model (tier 0). */
-function questionTier(files: ProjectFiles, request: string) {
+function questionTier(files: ProjectFiles, ir: SpecIR, request: string) {
   if (!looksLikeQuestion(request)) return undefined;
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
   const auth =
     files.auth === undefined
       ? undefined
