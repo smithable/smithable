@@ -9,19 +9,16 @@ import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
 import { swipe } from "../windows";
-import { BehaviourMap } from "./BehaviourMap";
 import type { Run } from "./ChangeForms";
-import { DataMap } from "./DataMap";
 import { ImportRecords, OwnCode } from "./EntryTools";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
-import { NavMap } from "./NavMap";
 import { SpecForm } from "./SpecForm";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
 
-export type SubView = "behavior" | "look" | "who" | "content" | "map" | "nav" | "acts";
-const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content", "map"];
+export type SubView = "behavior" | "look" | "who" | "content";
+const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content"];
 
 /** A part picked in the preview, as the sub view and the place in its file it opens at. */
 function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | undefined {
@@ -241,9 +238,6 @@ export function NoCode({
               ["look", "Look", "look"],
               ["who", "Who can"],
               ["content", "Content"],
-              ["map", "Data map"],
-              ["nav", "Navigation"],
-              ["acts", "What happens"],
             ]}
             value={sub}
             onChange={setSub}
@@ -292,16 +286,6 @@ export function NoCode({
         <Look spec={spec} run={run} themes={project.themes} />
       ) : sub === "who" ? (
         <WhoCan spec={spec} run={run} authText={project.files.auth} />
-      ) : sub === "map" || sub === "nav" || sub === "acts" ? (
-        !spec.ir ? (
-          <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>
-        ) : sub === "map" ? (
-          <DataMap ir={spec.ir} auth={spec.auth} />
-        ) : sub === "nav" ? (
-          <NavMap ir={spec.ir} auth={spec.auth} />
-        ) : (
-          <BehaviourMap ir={spec.ir} />
-        )
       ) : (
         <div className="divide-y divide-line">
           <SpecForm

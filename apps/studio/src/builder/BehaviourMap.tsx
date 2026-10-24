@@ -15,12 +15,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { SpecIR } from "@smithable/core";
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import { Button } from "../ui";
 import { type BehaviourNode, behaviourOf } from "./behaviour-map";
-import { laidOut } from "./map-layout";
+import { laidOut, MapView, useDirection } from "./map-layout";
 import { behaviourMermaid } from "./mermaid";
-import { OPEN_PART } from "./NoCode";
 
 const WIDTH = 210;
 const HEIGHT = 72;
@@ -43,6 +42,7 @@ const PART: Record<BehaviourNode["kind"], string> = {
 };
 
 function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
+  const view = useContext(MapView);
   const { box } = data;
   return (
     <div
@@ -50,17 +50,13 @@ function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
       className={`rounded border bg-panel px-2 py-1.5 text-xs shadow-sm ${box.kind === "custom" ? "border-dashed border-line-strong" : "border-line"}`}
       style={{ width: WIDTH }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={view.horizontal ? Position.Left : Position.Top} />
       <p className="text-[10px] uppercase tracking-wide text-quiet">{KIND[box.kind]}</p>
       <button
         type="button"
         className="nodrag font-semibold text-accent hover:underline"
         title={`Open ${box.title} in Behavior`}
-        onClick={() =>
-          window.dispatchEvent(
-            new CustomEvent(OPEN_PART, { detail: `${PART[box.kind]}:${box.title}` }),
-          )
-        }
+        onClick={() => view.open(`${PART[box.kind]}:${box.title}`)}
       >
         {box.title}
       </button>
@@ -69,20 +65,24 @@ function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
           {line}
         </p>
       ))}
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={view.horizontal ? Position.Right : Position.Bottom} />
     </div>
   );
 }
 
 const nodeTypes = { box: Box };
 
-export function BehaviourMap({ ir }: { ir: SpecIR }) {
+export function BehaviourMap({ ir, onOpen }: { ir: SpecIR; onOpen: (concept: string) => void }) {
+  // The box's shape sets the direction: top to bottom when it is taller, left to right when wider.
+  const box = useRef<HTMLDivElement>(null);
+  const direction = useDirection(box);
   const map = useMemo(() => behaviourOf(ir), [ir]);
   const { nodes, edges } = useMemo(() => {
     const at = laidOut(
       map.nodes.map((n) => n.id),
       map.edges,
       { width: WIDTH, height: HEIGHT },
+      direction,
     );
     return {
       nodes: map.nodes.map(
@@ -102,10 +102,10 @@ export function BehaviourMap({ ir }: { ir: SpecIR }) {
         }),
       ),
     };
-  }, [map]);
+  }, [map, direction]);
   const [copied, setCopied] = useState(false);
   return (
-    <section aria-label="What happens" className="h-[70vh] min-h-96 p-3">
+    <section aria-label="What happens" className="flex h-full min-h-0 flex-col p-3">
       <div className="mb-2 flex items-end justify-between gap-2">
         <p className="text-xs text-muted">
           What the app does by itself or at a press of a button: actions and what they set, timers,
@@ -126,21 +126,25 @@ export function BehaviourMap({ ir }: { ir: SpecIR }) {
           The app has no actions, timers, mails or calls yet: it does what its pages do.
         </p>
       ) : (
-        <div className="h-full rounded border border-line">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            nodesConnectable={false}
-            nodesDraggable={false}
-            edgesFocusable={false}
-            fitView
-            fitViewOptions={{ padding: 0.15 }}
-            colorMode="system"
-          >
-            <Background />
-            <Controls showInteractive={false} />
-          </ReactFlow>
+        <div ref={box} className="min-h-0 flex-1 rounded border border-line">
+          <MapView.Provider value={{ horizontal: direction === "LR", open: onOpen }}>
+            <ReactFlow
+              // Made again for another direction, so the view fits the boxes again.
+              key={direction}
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              nodesConnectable={false}
+              nodesDraggable={false}
+              edgesFocusable={false}
+              fitView
+              fitViewOptions={{ padding: 0.15 }}
+              colorMode="system"
+            >
+              <Background />
+              <Controls showInteractive={false} />
+            </ReactFlow>
+          </MapView.Provider>
         </div>
       )}
     </section>

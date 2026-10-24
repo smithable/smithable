@@ -1,14 +1,20 @@
-// dagre's layout for the app map's tree-like views (Navigation, Behaviour): top to bottom, the
-// boxes all one size, each box's top left corner as React Flow places it.
+// dagre's layout for the app map's views, and the direction they take from their box: top to
+// bottom when the box is taller than wide, left to right when it is wider (Johan, 2026-10-24),
+// laid out again when the box changes shape.
 import { graphlib, layout } from "@dagrejs/dagre";
+import { createContext, type RefObject, useEffect, useState } from "react";
+
+export type Direction = "TB" | "LR";
 
 export function laidOut(
   ids: string[],
   edges: { source: string; target: string }[],
   size: { width: number; height: number },
+  direction: Direction = "TB",
+  spacing: { nodesep: number; ranksep: number } = { nodesep: 32, ranksep: 70 },
 ): Record<string, { x: number; y: number }> {
   const g = new graphlib.Graph();
-  g.setGraph({ rankdir: "TB", nodesep: 32, ranksep: 70 });
+  g.setGraph({ rankdir: direction, ...spacing });
   g.setDefaultEdgeLabel(() => ({}));
   // A label of its own for each node: dagre writes the node's place onto it.
   for (const id of ids) g.setNode(id, { ...size });
@@ -22,3 +28,26 @@ export function laidOut(
     }),
   );
 }
+
+/** The box's direction, followed as it is resized. */
+export function useDirection(box: RefObject<HTMLElement | null>): Direction {
+  const [direction, setDirection] = useState<Direction>("TB");
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setDirection(width > height ? "LR" : "TB");
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [box]);
+  return direction;
+}
+
+/** What a map's boxes need from the map: its direction (where their arrows join) and how a name opens. */
+export const MapView = createContext<{ horizontal: boolean; open: (concept: string) => void }>({
+  horizontal: false,
+  open: () => {},
+});
