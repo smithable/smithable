@@ -47,16 +47,26 @@ const kept = (who: string): Asked[] => {
   }
 };
 
-/** A turn as the model reads it again: the words shown, else the calls made. */
+/** A turn as the model reads it again: the words shown, else the calls made and what came back. */
 const turnOf = (a: Asked): Turn => ({
   question: a.question,
   answer:
     a.answer?.text ??
     a.failed ??
-    a.answer?.steps.map((s) => `${s.tool} ${JSON.stringify(s.args)}`).join("; ") ??
+    a.answer?.steps
+      .map((s) => `${s.tool} ${JSON.stringify(s.args)} → ${JSON.stringify(s.result ?? null)}`)
+      .join("; ") ??
     a.answer?.note ??
     "",
 });
+
+/** Forgets every conversation the tab keeps: at sign-out, when Ask may not be shown again. */
+export function forgetAsked() {
+  try {
+    for (const key of Object.keys(sessionStorage))
+      if (key.startsWith(KEPT)) sessionStorage.removeItem(key);
+  } catch {}
+}
 
 export function Ask({
   who,

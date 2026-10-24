@@ -6845,7 +6845,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -6950,6 +6950,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -9359,7 +9361,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -9380,7 +9382,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -9410,7 +9412,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f220e5af generated",
+  "src/routes/__root.tsx": "d036a1bb generated",
   "src/routes/admin/activity.tsx": "e816502d generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
@@ -21799,7 +21801,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -21987,6 +21989,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -26298,7 +26302,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
@@ -26325,7 +26329,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -26359,7 +26363,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f0a70d0f generated",
+  "src/routes/__root.tsx": "b9438c31 generated",
   "src/routes/about/index.tsx": "85782241 generated",
   "src/routes/admin/activity.tsx": "db85c43e generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
@@ -30311,7 +30315,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -30428,6 +30432,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -32146,7 +32152,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -32166,7 +32172,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -32194,7 +32200,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "e1d5c723 generated",
+  "src/routes/__root.tsx": "01060509 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "edbb1090 generated",
   "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
@@ -37647,7 +37653,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -37772,6 +37778,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -39610,7 +39618,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -39634,7 +39642,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -39668,7 +39676,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "3c3354ce generated",
+  "src/routes/__root.tsx": "d287a838 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "350b3d17 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
@@ -49244,7 +49252,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -49363,6 +49371,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -50880,7 +50890,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
@@ -50903,7 +50913,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -50935,7 +50945,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "4189a15e generated",
-  "src/routes/__root.tsx": "860a64de generated",
+  "src/routes/__root.tsx": "fb4e1e0e generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -53012,7 +53022,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -53105,6 +53115,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -54018,7 +54030,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -54037,7 +54049,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -54065,7 +54077,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "abe6767f generated",
+  "src/routes/__root.tsx": "5e4c2437 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "c5bb01c1 generated",
@@ -61566,7 +61578,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -61712,6 +61724,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -64622,7 +64636,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
@@ -64648,7 +64662,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -64677,7 +64691,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "8140f1eb generated",
+  "src/routes/__root.tsx": "b94262ff generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -69266,7 +69280,7 @@ import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
 import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";
-import { Ask } from "#/kit/Ask";
+import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
@@ -69371,6 +69385,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.
+    forgetAsked();
     await router.invalidate();
   };
   const rename = async (name: string) => {
@@ -70942,7 +70958,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "091d48a5 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "034abd99 kit",
+  "src/kit/Ask.tsx": "01a03ab1 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "e95f0e85 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -70963,7 +70979,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "af7e671d kit",
-  "src/kit/assistant.server.ts": "9a445b44 kit",
+  "src/kit/assistant.server.ts": "15a28358 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -70996,7 +71012,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/__root.tsx": "f088b179 generated",
+  "src/routes/__root.tsx": "07b6bb15 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "c5ea4e91 generated",
   "src/routes/cases/index.tsx": "f7f09d40 generated",

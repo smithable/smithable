@@ -207,8 +207,9 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     const calls = message.tool_calls ?? [];
     const text = message.content?.trim() || undefined;
     if (!calls.length) {
-      // A number earlier earlier in the conversation is known too.
-      const earlier = [...(parts.turns ?? []).flatMap((t) => [t.question, t.answer]), question];
+      // A number the person said earlier is known too; an earlier answer's is not, since the
+      // page sends it and it may itself have been unconfirmed.
+      const earlier = [...(parts.turns ?? []).map((t) => t.question), question];
       const why = text ? ungrounded(text, earlier.join("\n"), steps, parts.kinds) : undefined;
       // An answer with no lookup at all was talk: questions to try lead back to the records.
       if (!why)
