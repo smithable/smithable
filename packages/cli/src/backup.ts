@@ -83,7 +83,7 @@ const stamp = () => new Date().toISOString().replace(/[-:]/g, "").replace("T", "
 
 /** Node in the deployed image (distroless), or on this machine for the project itself. */
 const SNAPSHOT = (from: string, to: string) =>
-  `const D=require("better-sqlite3");new D(${JSON.stringify(from)},{readonly:true}).exec("VACUUM INTO '"+${JSON.stringify(to)}+"'")`;
+  `const D=require("better-sqlite3");new D(${JSON.stringify(from)},{readonly:true}).exec("VACUUM INTO '"+${JSON.stringify(to.replace(/'/g, "''"))}+"'")`;
 
 /** `smithable backup [dir] --to <folder|s3://…> [--container <name>]`. */
 /**

@@ -105,7 +105,9 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
       "unknown-key",
       `Smithable doesn't know "${key}".`,
       didYouMean(key, allowed) ??
-        `Teach it: "smithable teach ${key}" has AI write a project plugin for it once; after that it costs nothing.`,
+        (/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(key)
+          ? `Teach it: "smithable teach ${key}" has AI write a project plugin for it once; after that it costs nothing.`
+          : undefined),
     );
   }
   checkKeys(

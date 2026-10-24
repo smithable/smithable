@@ -14,7 +14,12 @@ function identity(dir: string): string[] {
 
 export function git(dir: string, args: string[]): { ok: boolean; out: string } {
   const who = args[0] === "commit" || args[0] === "revert" ? identity(dir) : [];
-  const result = spawnSync("git", [...who, ...args], { cwd: dir, encoding: "utf8" });
+  const safeConfig = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
+  const result = spawnSync("git", [...safeConfig, ...who, ...args], {
+    cwd: dir,
+    encoding: "utf8",
+    env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1" },
+  });
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }
 

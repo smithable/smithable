@@ -56,12 +56,20 @@ export function timed(what: string, since: number): void {
     process.stderr.write(`[time] ${what}: ${Date.now() - since} ms\n`);
 }
 
+function shellOptions(command: string, args: string[]): { shell?: boolean } {
+  if (process.platform === "win32") {
+    if (!/^[a-zA-Z0-9._-]+$/.test(command)) throw new Error(`Unsafe command: ${command}`);
+    if (args.every((a) => !/[&|<>^()$%]/.test(a))) return { shell: true };
+  }
+  return {};
+}
+
 /** Runs a command and shows its output only when it fails (a tool that talks while it works). */
 export function execQuiet(command: string, args: string[], cwd: string): number {
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
-    shell: process.platform === "win32",
+    ...shellOptions(command, args),
   });
   if (result.status !== 0) process.stderr.write(`${result.stdout ?? ""}${result.stderr ?? ""}`);
   return result.status ?? 1;
@@ -72,7 +80,7 @@ export function exec(command: string, args: string[], cwd: string): number {
   const result = spawnSync(command, args, {
     cwd,
     stdio: childStdio,
-    shell: process.platform === "win32",
+    ...shellOptions(command, args),
   });
   return result.status ?? 1;
 }
