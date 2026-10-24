@@ -33,6 +33,13 @@ export async function customize(
     io.err(`There is no page named "${pageId}".\n`);
     return 1;
   }
+  // The page made from the generated one is a list's; other kinds have no such page yet.
+  if (page.pattern.kind !== "crud") {
+    io.err(
+      `Only a list page can be customized this way ("${pageId}" is a ${page.pattern.kind} page).\n`,
+    );
+    return 1;
+  }
   const customPath = join("src", "custom", "pages", `${pageId}.tsx`);
   if (existsSync(join(dir, customPath))) {
     io.err(`${customPath} already exists: the page is customized. Edit that file.\n`);

@@ -128,8 +128,22 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
           `index(${JSON.stringify(`${n.sqlTable}_deleted_with`)}).on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)`,
         ]
       : [];
+    const coveredOwner = Boolean(model.trash || (perOwner && uniques.length));
+    const foreignKeys = [
+      ...new Set([
+        ...((hasSignIn(auth) || model.ownedBy) && !coveredOwner ? [ownerKey(model)] : []),
+        ...model.fields
+          .filter((f) => f.type.kind === "relation" && !f.type.many && !f.unique)
+          .map((f) => `${f.name}Id`)
+          .filter((col) => !(coveredOwner && col === ownerKey(model))),
+      ]),
+    ];
+    if (foreignKeys.length) imports.add("index");
+    const foreignIndexes = foreignKeys.map(
+      (col) => `index(${JSON.stringify(`${n.sqlTable}_${snake(col)}_idx`)}).on(t.${col})`,
+    );
     if (model.trash) imports.add("text");
-    const extras = [...uniques, ...live];
+    const extras = [...uniques, ...foreignIndexes, ...live];
     const body = `{
   id: integer().primaryKey({ autoIncrement: true }),
 ${columns.join("\n")}

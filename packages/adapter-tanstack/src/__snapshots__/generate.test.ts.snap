@@ -305,47 +305,59 @@ export const apiKey = sqliteTable("api_key", {
   createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
-export const projects = sqliteTable("projects", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  description: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const projects = sqliteTable(
+  "projects",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    description: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("projects_owner_id_idx").on(t.ownerId)],
+);
 
-export const tasks = sqliteTable("tasks", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  projectId: integer().notNull().references(() => projects.id, { onDelete: "restrict" }),
-  status: text({ enum: ["todo", "doing", "done"] }).notNull().default("todo"),
-  dueDate: text(),
-  assigneeId: text().references(() => user.id, { onDelete: "set null" }),
-  details: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const tasks = sqliteTable(
+  "tasks",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    projectId: integer().notNull().references(() => projects.id, { onDelete: "restrict" }),
+    status: text({ enum: ["todo", "doing", "done"] }).notNull().default("todo"),
+    dueDate: text(),
+    assigneeId: text().references(() => user.id, { onDelete: "set null" }),
+    details: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("tasks_owner_id_idx").on(t.ownerId), index("tasks_project_id_idx").on(t.projectId), index("tasks_assignee_id_idx").on(t.assigneeId)],
+);
 
-export const notes = sqliteTable("notes", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  projectId: integer().notNull().references(() => projects.id, { onDelete: "restrict" }),
-  body: text(),
-  attachment: text({ mode: "json" }).$type<StoredFile>(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const notes = sqliteTable(
+  "notes",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    projectId: integer().notNull().references(() => projects.id, { onDelete: "restrict" }),
+    body: text(),
+    attachment: text({ mode: "json" }).$type<StoredFile>(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("notes_owner_id_idx").on(t.ownerId), index("notes_project_id_idx").on(t.projectId)],
+);
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   tasks: many(tasks),
@@ -9347,7 +9359,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "b75b1ab6 generated",
+  "src/db/schema.ts": "873e6c40 generated",
   "src/db/seed.ts": "224df43d generated",
   "src/generated/access.test.ts": "130041c9 generated",
   "src/generated/actions/complete.server.ts": "550fbe39 generated",
@@ -9803,63 +9815,79 @@ export const outgoingCall = sqliteTable(
   (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
 
-export const services = sqliteTable("services", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  summary: text(),
-  minutes: integer().notNull().default(30),
-  price: integer(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const services = sqliteTable(
+  "services",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    summary: text(),
+    minutes: integer().notNull().default(30),
+    price: integer(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("services_owner_id_idx").on(t.ownerId)],
+);
 
-export const barbers = sqliteTable("barbers", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  bio: text(),
-  portrait: text({ mode: "json" }).$type<Picture>(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const barbers = sqliteTable(
+  "barbers",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    bio: text(),
+    portrait: text({ mode: "json" }).$type<Picture>(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("barbers_owner_id_idx").on(t.ownerId)],
+);
 
-export const timeOffs = sqliteTable("time_offs", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  barberId: integer().notNull().references(() => barbers.id, { onDelete: "restrict" }),
-  from: integer({ mode: "timestamp_ms" }).notNull(),
-  until: integer({ mode: "timestamp_ms" }).notNull(),
-  note: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const timeOffs = sqliteTable(
+  "time_offs",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    barberId: integer().notNull().references(() => barbers.id, { onDelete: "restrict" }),
+    from: integer({ mode: "timestamp_ms" }).notNull(),
+    until: integer({ mode: "timestamp_ms" }).notNull(),
+    note: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("time_offs_owner_id_idx").on(t.ownerId), index("time_offs_barber_id_idx").on(t.barberId)],
+);
 
-export const appointments = sqliteTable("appointments", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  serviceId: integer().notNull().references(() => services.id, { onDelete: "restrict" }),
-  barberId: integer().notNull().references(() => barbers.id, { onDelete: "restrict" }),
-  startsAt: integer({ mode: "timestamp_ms" }).notNull(),
-  name: text().notNull(),
-  phone: text(),
-  note: text(),
-  status: text({ enum: ["requested", "confirmed", "cancelled"] }).notNull().default("requested"),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const appointments = sqliteTable(
+  "appointments",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    serviceId: integer().notNull().references(() => services.id, { onDelete: "restrict" }),
+    barberId: integer().notNull().references(() => barbers.id, { onDelete: "restrict" }),
+    startsAt: integer({ mode: "timestamp_ms" }).notNull(),
+    name: text().notNull(),
+    phone: text(),
+    note: text(),
+    status: text({ enum: ["requested", "confirmed", "cancelled"] }).notNull().default("requested"),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("appointments_owner_id_idx").on(t.ownerId), index("appointments_service_id_idx").on(t.serviceId), index("appointments_barber_id_idx").on(t.barberId)],
+);
 
 export const barbersRelations = relations(barbers, ({ many }) => ({
   timeOffs: many(timeOffs),
@@ -14832,7 +14860,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "81cf488e generated",
+  "src/db/schema.ts": "1a0527ae generated",
   "src/db/seed.ts": "aeda6345 generated",
   "src/generated/access.test.ts": "5b7039fb generated",
   "src/generated/actions/cancel.server.ts": "17e8e159 generated",
@@ -15289,47 +15317,59 @@ export const timerRuns = sqliteTable(
   (t) => [uniqueIndex("timer_runs_once").on(t.timer, t.record, t.due)],
 );
 
-export const classTypes = sqliteTable("class_types", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  summary: text(),
-  level: text({ enum: ["beginner", "allLevels", "advanced"] }).notNull().default("allLevels"),
-  durationMinutes: integer().notNull().default(60),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const classTypes = sqliteTable(
+  "class_types",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    summary: text(),
+    level: text({ enum: ["beginner", "allLevels", "advanced"] }).notNull().default("allLevels"),
+    durationMinutes: integer().notNull().default(60),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("class_types_owner_id_idx").on(t.ownerId)],
+);
 
-export const instructors = sqliteTable("instructors", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  bio: text(),
-  portrait: text({ mode: "json" }).$type<Picture>(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const instructors = sqliteTable(
+  "instructors",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    bio: text(),
+    portrait: text({ mode: "json" }).$type<Picture>(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("instructors_owner_id_idx").on(t.ownerId)],
+);
 
-export const sessions = sqliteTable("sessions", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  classTypeId: integer().notNull().references(() => classTypes.id, { onDelete: "restrict" }),
-  instructorId: integer().notNull().references(() => instructors.id, { onDelete: "restrict" }),
-  startsAt: integer({ mode: "timestamp_ms" }).notNull(),
-  capacity: integer().notNull().default(12),
-  placesLeft: integer(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    classTypeId: integer().notNull().references(() => classTypes.id, { onDelete: "restrict" }),
+    instructorId: integer().notNull().references(() => instructors.id, { onDelete: "restrict" }),
+    startsAt: integer({ mode: "timestamp_ms" }).notNull(),
+    capacity: integer().notNull().default(12),
+    placesLeft: integer(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("sessions_owner_id_idx").on(t.ownerId), index("sessions_class_type_id_idx").on(t.classTypeId), index("sessions_instructor_id_idx").on(t.instructorId)],
+);
 
 // Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).
 export const bookings = sqliteTable(
@@ -15347,35 +15387,43 @@ export const bookings = sqliteTable(
   (t) => [unique().on(t.attendeeId, t.sessionId)],
 );
 
-export const posts = sqliteTable("posts", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  address: text().unique(),
-  summary: text(),
-  cover: text({ mode: "json" }).$type<Picture>(),
-  body: text().notNull(),
-  publishedOn: text(),
-  status: text({ enum: ["draft", "published"] }).notNull().default("draft"),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    address: text().unique(),
+    summary: text(),
+    cover: text({ mode: "json" }).$type<Picture>(),
+    body: text().notNull(),
+    publishedOn: text(),
+    status: text({ enum: ["draft", "published"] }).notNull().default("draft"),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("posts_owner_id_idx").on(t.ownerId)],
+);
 
-export const messages = sqliteTable("messages", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  email: text().notNull(),
-  message: text().notNull(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    email: text().notNull(),
+    message: text().notNull(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("messages_owner_id_idx").on(t.ownerId)],
+);
 
 export const classTypesRelations = relations(classTypes, ({ many }) => ({
   sessions: many(sessions),
@@ -26290,7 +26338,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "58a35d99 generated",
+  "src/db/schema.ts": "6a2e62d7 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "55ac05e0 generated",
   "src/generated/actions/publish.server.ts": "7e85fad8 generated",
@@ -26784,7 +26832,7 @@ export const orders = sqliteTable(
     /** The record it went to the trash with ("Customer:12"), restored with it (docs/design/delete-together.md). */
     deletedWith: text(),
   },
-  (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`), index("orders_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
+  (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_customer_id_idx").on(t.customerId), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`), index("orders_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
 );
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -32173,7 +32221,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "e6620168 generated",
+  "src/db/schema.ts": "e68874ae generated",
   "src/db/seed.ts": "cfae0905 generated",
   "src/generated/access.test.ts": "0901dddc generated",
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
@@ -32617,34 +32665,42 @@ export const timerRuns = sqliteTable(
   (t) => [uniqueIndex("timer_runs_once").on(t.timer, t.record, t.due)],
 );
 
-export const businessProfiles = sqliteTable("business_profiles", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  businessName: text().notNull(),
-  vatNumber: text(),
-  iban: text(),
-  paymentTermDays: integer().notNull().default(30),
-  invoiceFooter: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const businessProfiles = sqliteTable(
+  "business_profiles",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    businessName: text().notNull(),
+    vatNumber: text(),
+    iban: text(),
+    paymentTermDays: integer().notNull().default(30),
+    invoiceFooter: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("business_profiles_owner_id_idx").on(t.ownerId)],
+);
 
-export const clients = sqliteTable("clients", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  email: text().notNull(),
-  address: text(),
-  vatNumber: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const clients = sqliteTable(
+  "clients",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    email: text().notNull(),
+    address: text(),
+    vatNumber: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("clients_owner_id_idx").on(t.ownerId)],
+);
 
 // Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).
 export const invoices = sqliteTable(
@@ -32665,23 +32721,27 @@ export const invoices = sqliteTable(
       .$defaultFn(() => new Date())
       .$onUpdate(() => new Date()),
   },
-  (t) => [unique().on(t.ownerId, t.number)],
+  (t) => [unique().on(t.ownerId, t.number), index("invoices_client_id_idx").on(t.clientId)],
 );
 
-export const invoiceLines = sqliteTable("invoice_lines", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  invoiceId: integer().notNull().references(() => invoices.id, { onDelete: "restrict" }),
-  description: text().notNull(),
-  quantity: real().notNull().default(1),
-  unitPrice: integer().notNull(),
-  amount: integer(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const invoiceLines = sqliteTable(
+  "invoice_lines",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    invoiceId: integer().notNull().references(() => invoices.id, { onDelete: "restrict" }),
+    description: text().notNull(),
+    quantity: real().notNull().default(1),
+    unitPrice: integer().notNull(),
+    amount: integer(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("invoice_lines_owner_id_idx").on(t.ownerId), index("invoice_lines_invoice_id_idx").on(t.invoiceId)],
+);
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   invoices: many(invoices),
@@ -39635,7 +39695,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "0a45fa1f generated",
+  "src/db/schema.ts": "ddadc73d generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d18de62d generated",
   "src/generated/actions/mark-overdue.server.ts": "33566007 generated",
@@ -40112,71 +40172,87 @@ export const sequences = sqliteTable("sequences", {
   last: integer().notNull(),
 });
 
-export const dishes = sqliteTable("dishes", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  description: text(),
-  price: integer().notNull(),
-  section: text({ enum: ["starters", "mains", "drinks", "sweets"] }).notNull().default("starters"),
-  picture: text({ mode: "json" }).$type<Picture>(),
-  diet: text({ enum: ["none", "vegetarian", "vegan"] }).notNull().default("none"),
-  allergens: text(),
-  available: integer({ mode: "boolean" }).default(true),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const dishes = sqliteTable(
+  "dishes",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    description: text(),
+    price: integer().notNull(),
+    section: text({ enum: ["starters", "mains", "drinks", "sweets"] }).notNull().default("starters"),
+    picture: text({ mode: "json" }).$type<Picture>(),
+    diet: text({ enum: ["none", "vegetarian", "vegan"] }).notNull().default("none"),
+    allergens: text(),
+    available: integer({ mode: "boolean" }).default(true),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("dishes_owner_id_idx").on(t.ownerId)],
+);
 
-export const orders = sqliteTable("orders", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  number: integer().notNull().unique(),
-  name: text().notNull(),
-  phone: text().notNull(),
-  email: text(),
-  wanted: integer({ mode: "timestamp_ms" }),
-  note: text(),
-  status: text({ enum: ["new", "accepted", "ready", "collected", "declined"] }).notNull().default("new"),
-  reason: text(),
-  total: integer(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const orders = sqliteTable(
+  "orders",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    number: integer().notNull().unique(),
+    name: text().notNull(),
+    phone: text().notNull(),
+    email: text(),
+    wanted: integer({ mode: "timestamp_ms" }),
+    note: text(),
+    status: text({ enum: ["new", "accepted", "ready", "collected", "declined"] }).notNull().default("new"),
+    reason: text(),
+    total: integer(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("orders_owner_id_idx").on(t.ownerId)],
+);
 
-export const orderLines = sqliteTable("order_lines", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  orderId: integer().notNull().references(() => orders.id, { onDelete: "restrict" }),
-  dishId: integer().notNull().references(() => dishes.id, { onDelete: "restrict" }),
-  quantity: integer().notNull().default(1),
-  unitPrice: integer().notNull(),
-  amount: integer(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const orderLines = sqliteTable(
+  "order_lines",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    orderId: integer().notNull().references(() => orders.id, { onDelete: "restrict" }),
+    dishId: integer().notNull().references(() => dishes.id, { onDelete: "restrict" }),
+    quantity: integer().notNull().default(1),
+    unitPrice: integer().notNull(),
+    amount: integer(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("order_lines_owner_id_idx").on(t.ownerId), index("order_lines_order_id_idx").on(t.orderId), index("order_lines_dish_id_idx").on(t.dishId)],
+);
 
-export const stops = sqliteTable("stops", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  place: text().notNull(),
-  day: text().notNull(),
-  hours: text().notNull(),
-  note: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const stops = sqliteTable(
+  "stops",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    place: text().notNull(),
+    day: text().notNull(),
+    hours: text().notNull(),
+    note: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("stops_owner_id_idx").on(t.ownerId)],
+);
 
 export const ordersRelations = relations(orders, ({ many }) => ({
   lines: many(orderLines),
@@ -46522,7 +46598,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "91e72d4e generated",
+  "src/db/schema.ts": "1578ee4c generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "ae254a9d generated",
   "src/generated/actions/accept.server.ts": "873be1fd generated",
@@ -46948,23 +47024,27 @@ export const uploads = sqliteTable(
   (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],
 );
 
-export const items = sqliteTable("items", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  photos: text({ mode: "json" }).$type<Picture[]>().notNull(),
-  description: text().notNull(),
-  price: integer(),
-  category: text({ enum: ["furniture", "bikes", "electronics", "sports", "kids", "other"] }).notNull().default("furniture"),
-  condition: text({ enum: ["likeNew", "good", "worn"] }).notNull().default("likeNew"),
-  place: text(),
-  available: integer({ mode: "boolean" }).default(true),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const items = sqliteTable(
+  "items",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    photos: text({ mode: "json" }).$type<Picture[]>().notNull(),
+    description: text().notNull(),
+    price: integer(),
+    category: text({ enum: ["furniture", "bikes", "electronics", "sports", "kids", "other"] }).notNull().default("furniture"),
+    condition: text({ enum: ["likeNew", "good", "worn"] }).notNull().default("likeNew"),
+    place: text(),
+    available: integer({ mode: "boolean" }).default(true),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("items_owner_id_idx").on(t.ownerId)],
+);
 
 // The records people marked as favorites: each person's own, never shown to others.
 export const itemsFavorites = sqliteTable(
@@ -50941,7 +51021,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "4331fa73 generated",
+  "src/db/schema.ts": "38b92cb2 generated",
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
@@ -51305,20 +51385,24 @@ export const auditLog = sqliteTable(
   (t) => [index("audit_log_at").on(t.at), index("audit_log_record").on(t.model, t.recordId)],
 );
 
-export const items = sqliteTable("items", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  summary: text(),
-  kind: text({ enum: ["general", "favorite", "archived"] }).notNull().default("general"),
-  link: text(),
-  addedOn: text().notNull(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const items = sqliteTable(
+  "items",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    summary: text(),
+    kind: text({ enum: ["general", "favorite", "archived"] }).notNull().default("general"),
+    link: text(),
+    addedOn: text().notNull(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("items_owner_id_idx").on(t.ownerId)],
+);
 "
 `;
 
@@ -54090,7 +54174,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "3f96f60a generated",
+  "src/db/schema.ts": "2bfe6ed1 generated",
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
@@ -54466,63 +54550,79 @@ export const apiKey = sqliteTable("api_key", {
   createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
-export const components = sqliteTable("components", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  status: text({ enum: ["operational", "degraded", "down", "maintenance"] }).notNull().default("operational"),
-  description: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const components = sqliteTable(
+  "components",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    name: text().notNull(),
+    status: text({ enum: ["operational", "degraded", "down", "maintenance"] }).notNull().default("operational"),
+    description: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("components_owner_id_idx").on(t.ownerId)],
+);
 
-export const incidents = sqliteTable("incidents", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  status: text({ enum: ["investigating", "identified", "monitoring", "resolved"] }).notNull().default("investigating"),
-  componentId: integer().references(() => components.id, { onDelete: "set null" }),
-  detectedAt: integer({ mode: "timestamp_ms" }).notNull(),
-  resolvedAt: integer({ mode: "timestamp_ms" }),
-  summary: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const incidents = sqliteTable(
+  "incidents",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    status: text({ enum: ["investigating", "identified", "monitoring", "resolved"] }).notNull().default("investigating"),
+    componentId: integer().references(() => components.id, { onDelete: "set null" }),
+    detectedAt: integer({ mode: "timestamp_ms" }).notNull(),
+    resolvedAt: integer({ mode: "timestamp_ms" }),
+    summary: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("incidents_owner_id_idx").on(t.ownerId), index("incidents_component_id_idx").on(t.componentId)],
+);
 
-export const incidentUpdates = sqliteTable("incident_updates", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  incidentId: integer().notNull().references(() => incidents.id, { onDelete: "restrict" }),
-  at: integer({ mode: "timestamp_ms" }).notNull(),
-  status: text({ enum: ["investigating", "identified", "monitoring", "resolved"] }).notNull().default("investigating"),
-  message: text().notNull(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const incidentUpdates = sqliteTable(
+  "incident_updates",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    incidentId: integer().notNull().references(() => incidents.id, { onDelete: "restrict" }),
+    at: integer({ mode: "timestamp_ms" }).notNull(),
+    status: text({ enum: ["investigating", "identified", "monitoring", "resolved"] }).notNull().default("investigating"),
+    message: text().notNull(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("incident_updates_owner_id_idx").on(t.ownerId), index("incident_updates_incident_id_idx").on(t.incidentId)],
+);
 
-export const maintenances = sqliteTable("maintenances", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  title: text().notNull(),
-  componentId: integer().references(() => components.id, { onDelete: "set null" }),
-  startsAt: integer({ mode: "timestamp_ms" }).notNull(),
-  endsAt: integer({ mode: "timestamp_ms" }).notNull(),
-  description: text(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const maintenances = sqliteTable(
+  "maintenances",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    componentId: integer().references(() => components.id, { onDelete: "set null" }),
+    startsAt: integer({ mode: "timestamp_ms" }).notNull(),
+    endsAt: integer({ mode: "timestamp_ms" }).notNull(),
+    description: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("maintenances_owner_id_idx").on(t.ownerId), index("maintenances_component_id_idx").on(t.componentId)],
+);
 
 export const componentsRelations = relations(components, ({ many }) => ({
   incidents: many(incidents),
@@ -64684,7 +64784,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/custom/sections/Uptime.tsx": "b8180e0a custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "9495a58b generated",
+  "src/db/schema.ts": "dcef5318 generated",
   "src/db/seed.ts": "a04b6693 generated",
   "src/generated/access.test.ts": "41f7c3b5 generated",
   "src/generated/actions/identified.server.ts": "14da46dc generated",
@@ -65190,38 +65290,46 @@ export const mailThreads = sqliteTable(
   (t) => [index("mail_threads_message").on(t.messageId), index("mail_threads_record").on(t.model, t.recordId)],
 );
 
-export const supportCases = sqliteTable("support_cases", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  subject: text().notNull(),
-  customerEmail: text().notNull(),
-  status: text({ enum: ["open", "inProgress", "closed", "reopened"] }).notNull().default("open"),
-  priority: integer().notNull().default(3),
-  assigneeId: text().references(() => user.id, { onDelete: "set null" }),
-  body: text(),
-  attachments: text({ mode: "json" }).$type<StoredFile[]>(),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const supportCases = sqliteTable(
+  "support_cases",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    subject: text().notNull(),
+    customerEmail: text().notNull(),
+    status: text({ enum: ["open", "inProgress", "closed", "reopened"] }).notNull().default("open"),
+    priority: integer().notNull().default(3),
+    assigneeId: text().references(() => user.id, { onDelete: "set null" }),
+    body: text(),
+    attachments: text({ mode: "json" }).$type<StoredFile[]>(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("support_cases_owner_id_idx").on(t.ownerId), index("support_cases_assignee_id_idx").on(t.assigneeId)],
+);
 
-export const messages = sqliteTable("messages", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  content: text().notNull(),
-  sender: text({ enum: ["agent", "customer"] }).notNull().default("agent"),
-  agentId: text().references(() => user.id, { onDelete: "set null" }),
-  fromEmail: text(),
-  attachments: text({ mode: "json" }).$type<StoredFile[]>(),
-  supportCaseId: integer().notNull().references(() => supportCases.id, { onDelete: "restrict" }),
-  ownerId: text().references(() => user.id, { onDelete: "set null" }),
-  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),
-});
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    content: text().notNull(),
+    sender: text({ enum: ["agent", "customer"] }).notNull().default("agent"),
+    agentId: text().references(() => user.id, { onDelete: "set null" }),
+    fromEmail: text(),
+    attachments: text({ mode: "json" }).$type<StoredFile[]>(),
+    supportCaseId: integer().notNull().references(() => supportCases.id, { onDelete: "restrict" }),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("messages_owner_id_idx").on(t.ownerId), index("messages_agent_id_idx").on(t.agentId), index("messages_support_case_id_idx").on(t.supportCaseId)],
+);
 
 export const supportCasesRelations = relations(supportCases, ({ one, many }) => ({
   assignee: one(user, { fields: [supportCases.assigneeId], references: [user.id] }),
@@ -71036,7 +71144,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "e81eeda4 kit",
-  "src/db/schema.ts": "ddcd3e3c generated",
+  "src/db/schema.ts": "2566c3ce generated",
   "src/db/seed.ts": "59920618 generated",
   "src/generated/access.test.ts": "caa1406d generated",
   "src/generated/actions/assign-to-me.server.ts": "cdf480ac generated",
