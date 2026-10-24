@@ -618,7 +618,7 @@ export function App() {
                 checked={visualize}
                 onChange={() => setVisualize(!visualize)}
               />
-              Visualize
+              Map
             </label>
           </fieldset>
         ) : (
@@ -657,7 +657,7 @@ export function App() {
                   checked={visualize}
                   onChange={() => setVisualize(!visualize)}
                 />
-                Visualize
+                Map
               </label>
             </fieldset>
           </>

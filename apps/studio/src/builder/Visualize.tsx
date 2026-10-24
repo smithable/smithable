@@ -22,7 +22,7 @@ export function Visualize({
 }) {
   const [view, setView] = useState<View>("data");
   return (
-    <section aria-label="Visualize" className="flex h-full min-h-0 flex-col bg-panel">
+    <section aria-label="Map" className="flex h-full min-h-0 flex-col bg-panel">
       <div className="border-b border-line px-3 pt-1">
         <Tabs
           tabs={[
