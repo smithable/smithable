@@ -388,5 +388,8 @@ export function suggestions(kinds: AskKind[]): string[] {
   const counts = kinds.slice(0, 2).map((k) => w.howManyAre(k.pluralLabel.toLowerCase()));
   const split = kinds.find((k) => k.by.some((b) => k.fields.some((f) => f.name === b)));
   const by = split?.fields.find((f) => split.by.includes(f.name));
-  return split && by ? [...counts, w.perField(split.pluralLabel, by.label.toLowerCase())] : counts;
+  const tries =
+    split && by ? [...counts, w.perField(split.pluralLabel, by.label.toLowerCase())] : counts;
+  // Only what the rules read: a label they would not read gives no chip.
+  return tries.filter((question) => readQuestion(question, kinds));
 }

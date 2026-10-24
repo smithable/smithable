@@ -47,15 +47,34 @@ const kept = (who: string): Asked[] => {
   }
 };
 
-/** A turn as the model reads it again: the words shown, else the calls made and what came back. */
+/** What a call gave, in a line: a number, or how many rows and the first ones' names. */
+function brief(result: unknown): string {
+  if (typeof result !== "object" || result === null) return JSON.stringify(result ?? null);
+  const { rows, total } = result as { rows?: unknown; total?: unknown };
+  if (Array.isArray(rows)) {
+    const names = rows.slice(0, 5).map((row) => {
+      const values = Object.values((row ?? {}) as Record<string, unknown>);
+      const named =
+        (row as { title?: unknown } | null)?.title ?? values.find((v) => typeof v === "string");
+      return String(named ?? "");
+    });
+    return `${rows.length}: ${names.filter(Boolean).join(", ")}`;
+  }
+  if (typeof total === "number" && Object.keys(result).length === 1) return String(total);
+  return JSON.stringify(result).slice(0, 200);
+}
+
+/** A turn as the model reads it again: the words shown, else each call and what it gave in a line. */
 const turnOf = (a: Asked): Turn => ({
   question: a.question,
   answer:
     a.answer?.text ??
     a.failed ??
-    a.answer?.steps
-      .map((s) => `${s.tool} ${JSON.stringify(s.args)} → ${JSON.stringify(s.result ?? null)}`)
-      .join("; ") ??
+    (a.answer?.steps.length
+      ? a.answer.steps
+          .map((s) => `${s.tool} ${JSON.stringify(s.args)} → ${s.error ?? brief(s.result)}`)
+          .join("; ")
+      : undefined) ??
     a.answer?.note ??
     "",
 });
@@ -96,11 +115,19 @@ export function Ask({
     } catch {}
     setAsked(kept(who));
   }, [who]);
-  const keep = (list: Asked[]) => {
-    setAsked(list);
-    try {
-      sessionStorage.setItem(KEPT + who, JSON.stringify({ asked: list.slice(-20) } satisfies Kept));
-    } catch {}
+  // Who asks now, for an answer that comes after a sign-out or another person's sign-in.
+  const asking = useRef(who);
+  asking.current = who;
+  const keep = (asker: string, turn: Asked) => {
+    if (asker !== asking.current) return;
+    setAsked((list) => {
+      const next = [...list, turn].slice(-20);
+      try {
+        const found = JSON.parse(sessionStorage.getItem(KEPT + asker) ?? "{}") as Partial<Kept>;
+        sessionStorage.setItem(KEPT + asker, JSON.stringify({ ...found, asked: next }));
+      } catch {}
+      return next;
+    });
   };
   // biome-ignore lint/correctness/useExhaustiveDependencies: the newest answer, when one comes
   useEffect(() => {
@@ -109,13 +136,14 @@ export function Ask({
   const send = async (q: string) => {
     if (!q || busy) return;
     setBusy(true);
+    const asker = who;
     try {
       const answer = await ask(q, asked.map(turnOf));
-      keep([...asked, { question: q, answer }]);
+      keep(asker, { question: q, answer });
       setQuestion("");
     } catch (error) {
       const failed = error instanceof Error ? error.message : String(error);
-      keep([...asked, { question: q, failed }]);
+      keep(asker, { question: q, failed });
     } finally {
       setBusy(false);
     }
