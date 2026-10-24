@@ -84,5 +84,6 @@ export function inviteAllowed(viewer: { id: string } | null): void {
 export function codeAllowed(email: string, headers: Headers): void {
   // The network address first: one past its own limit spends none of an email's codes.
   count(`code-from:${address(headers)}`, LIMITS.codesFromAddress, "sign-in codes");
-  count(`code:${email}`, LIMITS.codes, w.signInCodes);
+  // The same address however it is written.
+  count(`code:${email.trim().toLowerCase()}`, LIMITS.codes, w.signInCodes);
 }

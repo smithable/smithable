@@ -84,7 +84,7 @@ export function whereOf(
       parts.push(mine);
       continue;
     }
-    const field = fields[name];
+    const field = Object.hasOwn(fields, name) ? fields[name] : undefined;
     if (!field)
       throw new BadInput(
         `There is no field "${name}" to filter by. Fields: ${Object.keys(fields).join(", ")}.`,
@@ -189,7 +189,9 @@ export function whereFromQuery(
 /** "field" from low to high, "-field" from high to low, among the columns that can be sorted. */
 export function sortOf(columns: Record<string, Column>, sort: string | undefined): SQL | undefined {
   if (!sort) return undefined;
-  const column = columns[sort.replace(/^-/, "")];
+  const column = Object.hasOwn(columns, sort.replace(/^-/, ""))
+    ? columns[sort.replace(/^-/, "")]
+    : undefined;
   if (!column)
     throw new BadInput(
       `There is no field "${sort.replace(/^-/, "")}" to sort by. Fields: ${Object.keys(columns).join(", ")}.`,

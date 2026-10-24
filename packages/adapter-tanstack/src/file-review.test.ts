@@ -106,3 +106,31 @@ test("an app without review gets none of its kit", () => {
   expect(made.some((f) => f.path === "src/kit/Review.tsx")).toBe(false);
   expect(made.some((f) => f.path === "src/kit/review-mail.server.ts")).toBe(false);
 });
+
+test("trashed records enforce unheld for required reviewed files and veiled for optional reviewed files", () => {
+  const withTrash = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Market }
+models:
+  Listing:
+    fields: { title: string!, photo: picture! }
+    review: [photo]
+    trash: true
+  Tenant:
+    fields: { name: string!, contract: file }
+    review: all
+    trash: true
+pages:
+  listings: { crud: Listing }
+  tenants: { crud: Tenant }
+  moderation: { review: all }
+`,
+  }).ir as SpecIR;
+  const made = generateApp(withTrash, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const at = (path: string) => made.find((f) => f.path === path)?.content ?? "";
+  expect(at("src/generated/listing.server.ts")).toContain(
+    "isNotNull(schema.listings.deletedAt), listingData.unheld(viewer), listingData.scoped(viewer)",
+  );
+  expect(at("src/generated/tenant.server.ts")).toContain("row: veiled(viewer, [shown])[0],");
+});

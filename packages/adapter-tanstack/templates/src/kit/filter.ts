@@ -56,7 +56,10 @@ export function orderOf(
   columns: Record<string, Column>,
   sort: string | undefined,
 ): SQL | undefined {
-  const column = sort ? columns[sort.replace(/^-/, "")] : undefined;
+  const column =
+    sort && Object.hasOwn(columns, sort.replace(/^-/, ""))
+      ? columns[sort.replace(/^-/, "")]
+      : undefined;
   if (!column || !sort) return undefined;
   return sort.startsWith("-") ? desc(column) : asc(column);
 }

@@ -1327,7 +1327,7 @@ ${roots
 }
 `
     : "";
-  const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${self}.scoped(viewer))`;
+  const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
   const named = signedIn
     ? `
@@ -1363,8 +1363,9 @@ ${roots
     const row = fetched && ${shownOne("fetched")};
     if (!row || !allows(${n.access}.delete, viewer, ${ownerOf})) return null;
     const rows = [row];${named.replace(/\n {4}/g, "\n    ")}
+    const shown = ${ownedAuto ? "shownTo(viewer, row)" : "row"};
     return {
-      row: ${compute(ownedAuto ? "shownTo(viewer, row)" : "row")},
+      row: ${compute(veils.length ? "veiled(viewer, [shown])[0]" : "shown")},
       deletedAt: row.deletedAt as Date,
       by: ${byName},
       until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
@@ -2009,7 +2010,7 @@ ${
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -2037,7 +2038,7 @@ ${
       }
       return best ? { id: best.id as number, title: ${shownTitle(model, `best.${titleColumn}`)} } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
@@ -2060,7 +2061,7 @@ ${
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -2085,7 +2086,7 @@ ${
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -2142,7 +2143,7 @@ ${
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })

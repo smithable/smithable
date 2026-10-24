@@ -2898,7 +2898,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -4194,7 +4194,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -4575,7 +4575,7 @@ export const noteData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -4603,7 +4603,7 @@ export const noteData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.notes.id, title: schema.notes.title })
@@ -4626,7 +4626,7 @@ export const noteData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(noteAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -4651,7 +4651,7 @@ export const noteData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -4704,7 +4704,7 @@ export const noteData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -5175,7 +5175,7 @@ export const projectData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -5203,7 +5203,7 @@ export const projectData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.projects.id, title: schema.projects.name })
@@ -5226,7 +5226,7 @@ export const projectData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(projectAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -5251,7 +5251,7 @@ export const projectData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -5304,7 +5304,7 @@ export const projectData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -5763,7 +5763,7 @@ export const taskData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -5791,7 +5791,7 @@ export const taskData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.tasks.id, title: schema.tasks.title })
@@ -5814,7 +5814,7 @@ export const taskData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(taskAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -5839,7 +5839,7 @@ export const taskData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -5892,7 +5892,7 @@ export const taskData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -7910,9 +7910,13 @@ import { receiptFor } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
+  deleteFile,
+  deletePicture,
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
+  type Picture,
   roomFor,
+  type StoredFile,
   saveFile,
   savePicture,
   scanned,
@@ -7963,7 +7967,15 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
             throw error;
           }
           const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, "note", params.field, (stored as { file: string }).file) };
-          await noteData.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+          try {
+            await noteData.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+          } catch (error) {
+            // The record did not take it: the file it would have had goes again.
+            const still = noteData.uses((stored as { file: string }).file);
+            if (field.kind === "file") deleteFile(stored as StoredFile, still);
+            else deletePicture(stored as Picture, still);
+            throw error;
+          }
           return stored;
         }),
     },
@@ -9316,7 +9328,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -9335,22 +9347,22 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "e34342b2 generated",
+  "src/generated/ask.server.ts": "3aa97fb5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
-  "src/generated/mcp.server.ts": "1bdaf3df generated",
+  "src/generated/mcp.server.ts": "1386dc52 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "61f4dd51 generated",
+  "src/generated/note.server.ts": "3199a3c0 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "93cf8194 generated",
+  "src/generated/project.server.ts": "4b4f617f generated",
   "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "7a4b55c3 generated",
+  "src/generated/task.server.ts": "168c9bd2 generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/users.server.ts": "d437282f generated",
@@ -9389,12 +9401,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -9403,7 +9415,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -9426,7 +9438,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "f102d4bb generated",
   "src/routes/admin/tasks/new.tsx": "f44c470d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "5588edd2 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "891d1105 generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
@@ -14092,7 +14104,7 @@ import { originOf } from "#/kit/origin";
 const PAGES = ["/","/privacy"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -14794,7 +14806,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -14862,14 +14874,14 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "1c8a64ac kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -14908,7 +14920,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/services/index.tsx": "930745df generated",
   "src/routes/services/new.tsx": "b24c44de generated",
   "src/routes/sign-in.tsx": "96119430 generated",
-  "src/routes/sitemap[.]xml.ts": "9d72e5c6 generated",
+  "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "27fcb010 generated",
   "src/routes/time-off/index.tsx": "2cac7bcc generated",
   "src/routes/time-off/new.tsx": "be2eaa7b generated",
@@ -16902,7 +16914,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -17369,7 +17381,7 @@ export const bookingData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -17397,7 +17409,7 @@ export const bookingData = {
       }
       return best ? { id: best.id as number, title: String(best.id) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.bookings.id, title: schema.bookings.id })
@@ -17420,7 +17432,7 @@ export const bookingData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(bookingAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -17445,7 +17457,7 @@ export const bookingData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -17476,7 +17488,7 @@ export const bookingData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -18000,7 +18012,7 @@ export const classTypeData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -18028,7 +18040,7 @@ export const classTypeData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.classTypes.id, title: schema.classTypes.name })
@@ -18051,7 +18063,7 @@ export const classTypeData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(classTypeAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -18076,7 +18088,7 @@ export const classTypeData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -18129,7 +18141,7 @@ export const classTypeData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -18839,7 +18851,7 @@ export const instructorData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -18867,7 +18879,7 @@ export const instructorData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.instructors.id, title: schema.instructors.name })
@@ -18890,7 +18902,7 @@ export const instructorData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(instructorAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -18915,7 +18927,7 @@ export const instructorData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -18968,7 +18980,7 @@ export const instructorData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -19433,7 +19445,7 @@ export const messageData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -19461,7 +19473,7 @@ export const messageData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.messages.id, title: schema.messages.name })
@@ -19484,7 +19496,7 @@ export const messageData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(messageAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -19509,7 +19521,7 @@ export const messageData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -19562,7 +19574,7 @@ export const messageData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -20189,7 +20201,7 @@ export const postData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -20217,7 +20229,7 @@ export const postData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.posts.id, title: schema.posts.title })
@@ -20240,7 +20252,7 @@ export const postData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(postAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -20265,7 +20277,7 @@ export const postData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -20318,7 +20330,7 @@ export const postData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -20897,7 +20909,7 @@ export const sessionData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -20925,7 +20937,7 @@ export const sessionData = {
       }
       return best ? { id: best.id as number, title: String(best.id) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.sessions.id, title: schema.sessions.id })
@@ -20948,7 +20960,7 @@ export const sessionData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(sessionAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -20973,7 +20985,7 @@ export const sessionData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -21004,7 +21016,7 @@ export const sessionData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -25703,7 +25715,7 @@ import { postData } from "#/generated/post.server";
 const PAGES = ["/","/schedule","/blog","/about","/privacy"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -26245,7 +26257,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -26261,13 +26273,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.server.ts": "7e85fad8 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "d376aa05 generated",
+  "src/generated/ask.server.ts": "88b814a0 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "ae779adb generated",
+  "src/generated/booking.server.ts": "b33c786a generated",
   "src/generated/booking.ts": "ed726ce3 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "ee5b40ec generated",
+  "src/generated/class-type.server.ts": "01f7eaeb generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -26275,21 +26287,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "c00d15f9 generated",
+  "src/generated/instructor.server.ts": "f40b133a generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "944e787c generated",
+  "src/generated/message.server.ts": "a58dcb17 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "7985fe8c generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "7cb79277 generated",
+  "src/generated/post.server.ts": "e81e7350 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "2cf20ceb generated",
+  "src/generated/session.server.ts": "0dc17c94 generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "01c0e4f8 generated",
@@ -26335,15 +26347,15 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "1c8a64ac kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -26354,7 +26366,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -26416,7 +26428,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "96119430 generated",
-  "src/routes/sitemap[.]xml.ts": "8e02c178 generated",
+  "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "b5e9eef0 generated",
@@ -27093,8 +27105,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { mergeCustomers as implementation } from "#/custom/actions/merge-customers";
 import { customerData } from "#/generated/customer.server";
 import { AccessDenied, check, type Rule, type Viewer } from "#/kit/access";
+import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { mergeCustomersInput, type MergeCustomersInput } from "./merge-customers.input";
 
 export type { MergeCustomersInput } from "./merge-customers.input";
@@ -27133,6 +27147,8 @@ export const mergeCustomers = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     check(mergeCustomersAccess, viewer);
+    // A custom action changes things like any form: limited per person and address.
+    writeAllowed(viewer, getRequestHeaders());
     if (data.keep != null && !customerData.canRead(viewer, data.keep)) throw new AccessDenied(true);
     if (data.duplicate != null && !customerData.canRead(viewer, data.duplicate)) throw new AccessDenied(true);
     // The implementation may take the viewer too, e.g. to use the data functions as them.
@@ -27605,7 +27621,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -28092,7 +28108,7 @@ export const customerData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -28120,7 +28136,7 @@ export const customerData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.customers.id, title: schema.customers.name })
@@ -28143,7 +28159,7 @@ export const customerData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(customerAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -28168,7 +28184,7 @@ export const customerData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -28221,7 +28237,7 @@ export const customerData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -28409,8 +28425,9 @@ export const customerData = {
     const people = new Map(
       db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
     );
+    const shown = row;
     return {
-      row: row,
+      row: shown,
       deletedAt: row.deletedAt as Date,
       by: (row.deletedBy && people.get(row.deletedBy)) ?? null,
       until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
@@ -29038,7 +29055,7 @@ export const orderData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -29066,7 +29083,7 @@ export const orderData = {
       }
       return best ? { id: best.id as number, title: String(best.number) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.orders.id, title: schema.orders.number })
@@ -29089,7 +29106,7 @@ export const orderData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(orderAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -29114,7 +29131,7 @@ export const orderData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -29167,7 +29184,7 @@ export const orderData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -29344,8 +29361,9 @@ export const orderData = {
     const people = new Map(
       db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
     );
+    const shown = shownTo(viewer, row);
     return {
-      row: withOrderFormulas(shownTo(viewer, row)),
+      row: withOrderFormulas(shown),
       deletedAt: row.deletedAt as Date,
       by: (row.deletedBy && people.get(row.deletedBy)) ?? null,
       until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
@@ -32112,7 +32130,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -32127,18 +32145,18 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/seed.ts": "cfae0905 generated",
   "src/generated/access.test.ts": "0901dddc generated",
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
-  "src/generated/actions/merge-customers.ts": "da1a7fd7 generated",
+  "src/generated/actions/merge-customers.ts": "87b0df12 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "f4067148 generated",
+  "src/generated/ask.server.ts": "9675d6b9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "e1d74b6e generated",
+  "src/generated/customer.server.ts": "492d0e6c generated",
   "src/generated/customer.ts": "8ebe38d3 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "a25da32a generated",
+  "src/generated/order.server.ts": "d7ee0d54 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "f7f499ac generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -32176,22 +32194,22 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -34207,7 +34225,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -34617,7 +34635,7 @@ export const businessProfileData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -34645,7 +34663,7 @@ export const businessProfileData = {
       }
       return best ? { id: best.id as number, title: String(best.businessName) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.businessProfiles.id, title: schema.businessProfiles.businessName })
@@ -34668,7 +34686,7 @@ export const businessProfileData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(businessProfileAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -34693,7 +34711,7 @@ export const businessProfileData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -34746,7 +34764,7 @@ export const businessProfileData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -35198,7 +35216,7 @@ export const clientData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -35226,7 +35244,7 @@ export const clientData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.clients.id, title: schema.clients.name })
@@ -35249,7 +35267,7 @@ export const clientData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(clientAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -35274,7 +35292,7 @@ export const clientData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -35327,7 +35345,7 @@ export const clientData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -35990,7 +36008,7 @@ export const invoiceData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -36018,7 +36036,7 @@ export const invoiceData = {
       }
       return best ? { id: best.id as number, title: String(best.number) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.invoices.id, title: schema.invoices.number })
@@ -36041,7 +36059,7 @@ export const invoiceData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(invoiceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -36066,7 +36084,7 @@ export const invoiceData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -36119,7 +36137,7 @@ export const invoiceData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -36691,7 +36709,7 @@ export const invoiceLineData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -36719,7 +36737,7 @@ export const invoiceLineData = {
       }
       return best ? { id: best.id as number, title: String(best.description) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.invoiceLines.id, title: schema.invoiceLines.description })
@@ -36742,7 +36760,7 @@ export const invoiceLineData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(invoiceLineAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -36767,7 +36785,7 @@ export const invoiceLineData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -36820,7 +36838,7 @@ export const invoiceLineData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -38977,7 +38995,7 @@ import { originOf } from "#/kit/origin";
 const PAGES = ["/"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -39568,7 +39586,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -39588,23 +39606,23 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "d94b7633 generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "697f1567 generated",
+  "src/generated/ask.server.ts": "e381fb12 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "a9bc6b16 generated",
+  "src/generated/business-profile.server.ts": "d281d629 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "83ccddc2 generated",
+  "src/generated/client.server.ts": "d089683b generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "f7bcb55f generated",
+  "src/generated/invoice-line.server.ts": "e7c15106 generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "4b5ad493 generated",
+  "src/generated/invoice.server.ts": "1b7d2c56 generated",
   "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "4b29e5a5 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -39648,15 +39666,15 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "1c8a64ac kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -39667,7 +39685,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -39696,7 +39714,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "64f20402 generated",
   "src/routes/sign-in.tsx": "fc4a8bfc generated",
-  "src/routes/sitemap[.]xml.ts": "4ec94599 generated",
+  "src/routes/sitemap[.]xml.ts": "f0ce9eb0 generated",
   "src/routes/welcome/index.tsx": "de260b5f generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
@@ -45370,7 +45388,7 @@ import { originOf } from "#/kit/origin";
 const PAGES = ["/","/where"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -46446,7 +46464,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e09d9afd generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -46525,15 +46543,15 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "1c8a64ac kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -46567,7 +46585,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
   "src/routes/sign-in.tsx": "708939ab generated",
-  "src/routes/sitemap[.]xml.ts": "c3f0b7d5 generated",
+  "src/routes/sitemap[.]xml.ts": "7259ffa4 generated",
   "src/routes/stops/$id.tsx": "893f7544 generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
@@ -47532,7 +47550,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -48159,7 +48177,7 @@ export const itemData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -48187,7 +48205,7 @@ export const itemData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.items.id, title: schema.items.title })
@@ -48210,7 +48228,7 @@ export const itemData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -48235,7 +48253,7 @@ export const itemData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -48288,7 +48306,7 @@ export const itemData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -49137,7 +49155,7 @@ const contactItem = createServerFn({ method: "POST" })
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}/\${row.id}\`;
     await sendMail({
       to: to.email,
-      replyTo: \`\${sender.name} <\${sender.email}>\`,
+      replyTo: \`"\${sender.name.replace(/["\\\\<>\\n]/g, "")}" <\${sender.email}>\`,
       subject: \`About “\${name}”\`,
       text: \`\${sender.name} (\${sender.email}) wrote about “\${name}”:\\n\\n\${sender.message}\\n\\n\${link}\\n\`,
     });
@@ -50345,7 +50363,7 @@ import { originOf } from "#/kit/origin";
 const PAGES = ["/welcome","/"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -50858,7 +50876,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -50872,11 +50890,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "6dbe9365 generated",
+  "src/generated/ask.server.ts": "06676a98 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "7f4cd1d5 generated",
+  "src/generated/item.server.ts": "eeb3b1b6 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -50917,15 +50935,15 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -50935,7 +50953,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -50944,7 +50962,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "4189a15e generated",
+  "src/routes/$id.tsx": "beab8268 generated",
   "src/routes/__root.tsx": "fb4e1e0e generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
@@ -50963,7 +50981,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/index.tsx": "5a3f02fe generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "96119430 generated",
-  "src/routes/sitemap[.]xml.ts": "ee7b1144 generated",
+  "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "48643259 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
@@ -51843,7 +51861,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -52374,7 +52392,7 @@ export const itemData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -52402,7 +52420,7 @@ export const itemData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.items.id, title: schema.items.name })
@@ -52425,7 +52443,7 @@ export const itemData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(itemAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -52450,7 +52468,7 @@ export const itemData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -52503,7 +52521,7 @@ export const itemData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -53605,7 +53623,7 @@ import { originOf } from "#/kit/origin";
 const PAGES = ["/","/items"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -54000,7 +54018,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -54014,12 +54032,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "79563eb7 generated",
+  "src/generated/ask.server.ts": "433cdd26 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "7a427dec generated",
+  "src/generated/item.server.ts": "71ebcb25 generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -54053,22 +54071,22 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -54086,7 +54104,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "96119430 generated",
-  "src/routes/sitemap[.]xml.ts": "4f7fcf3e generated",
+  "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "b5e9eef0 generated",
@@ -57098,7 +57116,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -57524,7 +57542,7 @@ export const componentData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -57552,7 +57570,7 @@ export const componentData = {
       }
       return best ? { id: best.id as number, title: String(best.name) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.components.id, title: schema.components.name })
@@ -57575,7 +57593,7 @@ export const componentData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(componentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -57600,7 +57618,7 @@ export const componentData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -57653,7 +57671,7 @@ export const componentData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -58264,7 +58282,7 @@ export const incidentData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -58292,7 +58310,7 @@ export const incidentData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.incidents.id, title: schema.incidents.title })
@@ -58315,7 +58333,7 @@ export const incidentData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -58340,7 +58358,7 @@ export const incidentData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -58393,7 +58411,7 @@ export const incidentData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -58901,7 +58919,7 @@ export const incidentUpdateData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -58929,7 +58947,7 @@ export const incidentUpdateData = {
       }
       return best ? { id: best.id as number, title: titleOf(best.message) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.incidentUpdates.id, title: schema.incidentUpdates.message })
@@ -58952,7 +58970,7 @@ export const incidentUpdateData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(incidentUpdateAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -58977,7 +58995,7 @@ export const incidentUpdateData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -59030,7 +59048,7 @@ export const incidentUpdateData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -59653,7 +59671,7 @@ export const maintenanceData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -59681,7 +59699,7 @@ export const maintenanceData = {
       }
       return best ? { id: best.id as number, title: String(best.title) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.maintenances.id, title: schema.maintenances.title })
@@ -59704,7 +59722,7 @@ export const maintenanceData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(maintenanceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -59729,7 +59747,7 @@ export const maintenanceData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -59782,7 +59800,7 @@ export const maintenanceData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -60696,7 +60714,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -63496,7 +63514,7 @@ import { incidentData } from "#/generated/incident.server";
 const PAGES = ["/","/history"];
 
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -64584,7 +64602,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -64606,24 +64624,24 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "bc392b9b generated",
+  "src/generated/ask.server.ts": "554eddc2 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "7dbe4c36 generated",
+  "src/generated/component.server.ts": "3d195515 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "95740af8 generated",
+  "src/generated/incident-update.server.ts": "8fde74f3 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "006a49a7 generated",
+  "src/generated/incident.server.ts": "15350c86 generated",
   "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "e2f2fb68 generated",
+  "src/generated/maintenance.server.ts": "fde631a3 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "4a6498a6 generated",
+  "src/generated/mcp.server.ts": "66e85f49 generated",
   "src/generated/pages.ts": "89e62230 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
@@ -64666,23 +64684,23 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/mcp.server.ts": "2da8d18a kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -64718,7 +64736,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/overview/index.tsx": "12695563 generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "708939ab generated",
-  "src/routes/sitemap[.]xml.ts": "01ba9891 generated",
+  "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "c5f9047a generated",
   "src/routes/team/index.tsx": "f53943cc generated",
   "src/routes/updates/$id.tsx": "6f71d0c0 generated",
@@ -66772,7 +66790,7 @@ const KINDS = {
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
 const kindOf = (args: Record<string, unknown>): Kind => {
-  const kind = KINDS[args.kind as keyof typeof KINDS];
+  const kind = Object.hasOwn(KINDS, String(args.kind)) ? KINDS[args.kind as keyof typeof KINDS] : undefined;
   if (!kind) throw new BadInput(\`There is no kind "\${String(args.kind)}". Kinds: \${Object.keys(KINDS).join(", ")}.\`);
   return kind;
 };
@@ -67327,7 +67345,7 @@ export const messageData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -67355,7 +67373,7 @@ export const messageData = {
       }
       return best ? { id: best.id as number, title: titleOf(best.content) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.messages.id, title: schema.messages.content })
@@ -67378,7 +67396,7 @@ export const messageData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(messageAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -67403,7 +67421,7 @@ export const messageData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -67456,7 +67474,7 @@ export const messageData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -68155,7 +68173,7 @@ export const supportCaseData = {
       const value = aggregate(rows.map((row) => row[field]), how);
       return value === null ? null : money ? value / 100 : value;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column)
       throw new BadInput(
         \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
@@ -68183,7 +68201,7 @@ export const supportCaseData = {
       }
       return best ? { id: best.id as number, title: String(best.subject) } : null;
     }
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (!column) return null;
     const row = db
       .select({ id: schema.supportCases.id, title: schema.supportCases.subject })
@@ -68206,7 +68224,7 @@ export const supportCaseData = {
     options: { field?: string; where?: unknown; search?: string } = {},
   ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
     if (readScope(supportCaseAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const split = FILTERABLE[by];
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
     if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
       throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
     const field = options.field ?? "";
@@ -68231,7 +68249,7 @@ export const supportCaseData = {
       return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
     }
     const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
-    const column = NUMBERS[field];
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
     if (how !== "count" && !column)
       throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
     const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
@@ -68284,7 +68302,7 @@ export const supportCaseData = {
   whyNone(viewer: Viewer | null, where: unknown): string | undefined {
     if (!where || typeof where !== "object") return undefined;
     for (const [name, v] of Object.entries(where)) {
-      const field = FILTERABLE[name];
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
       if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
       const values = db
         .selectDistinct({ v: sql<string>\`\${field.column}\` })
@@ -69908,7 +69926,7 @@ import { supportCaseSchema } from "#/generated/support-case.schema";
 import { messageData } from "#/generated/message.server";
 import { messageSchema } from "#/generated/message.schema";
 import { fromMail } from "#/generated/outgoing.server";
-import { BadFile, FILE_MAX_BYTES, saveFile, scanned, type StoredFile } from "#/kit/uploads";
+import { BadFile, deleteFile, FILE_MAX_BYTES, roomFor, saveFile, scanned, type StoredFile } from "#/kit/uploads";
 
 const NAME = "support";
 const DAY = 86_400_000;
@@ -69928,20 +69946,25 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
 const address = (v: unknown) => (/<([^<>]+)>/.exec(text(v))?.[1] ?? text(v)).trim();
 /** The mail's text, or its HTML without the tags when it has no text. */
 const bodyOf = (mail: Mail) =>
-  text(mail.text) || text(mail.html).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+  text(mail.text) || text(mail.html).replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
 /** Each attachment checked and kept as an upload is; one too large or refused is the answer instead. */
-async function saved(mail: Mail, model: string): Promise<StoredFile[] | Response> {
+async function saved(mail: Mail, model: string, uses: (file: string) => boolean): Promise<StoredFile[] | Response> {
   const files: StoredFile[] = [];
-  for (const one of Array.isArray(mail.attachments) ? mail.attachments : []) {
+  const parts = Array.isArray(mail.attachments) ? mail.attachments : [];
+  if (parts.length > 10) return answer(413, { error: "Too many attachments (over 10)." });
+  for (const one of parts) {
     const { name, data } = one as { name?: unknown; data?: unknown };
     const bytes = Buffer.from(text(data), "base64");
     if (bytes.byteLength === 0) continue;
-    if (bytes.byteLength > FILE_MAX_BYTES)
-      return answer(413, { error: \`\${text(name) || "An attachment"} is over \${FILE_MAX_BYTES / 1_000_000} MB.\` });
+    if (bytes.byteLength > FILE_MAX_BYTES || !roomFor(bytes.byteLength)) {
+      for (const f of files) deleteFile(f, uses(f.file));
+      return answer(413, { error: \`\${text(name) || "An attachment"} is too large or storage is full.\` });
+    }
     try {
       await scanned(bytes);
       files.push(saveFile(model, bytes, text(name) || "attachment"));
     } catch (error) {
+      for (const f of files) deleteFile(f, uses(f.file));
       if (error instanceof BadFile) return answer(422, { error: error.message });
       throw error;
     }
@@ -69962,7 +69985,10 @@ export const Route = createFileRoute("/incoming/support")({
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env.INCOMING_SUPPORT_SECRET;
-        if (!secret) return answer(401, { error: "This address is not set up: INCOMING_SUPPORT_SECRET is not set." });
+        if (!secret) {
+          console.error("Incoming call failed: INCOMING_SUPPORT_SECRET is not set.");
+          return answer(401, { error: "Wrong secret or signature." });
+        }
         const raw = await request.text();
         const given = request.headers.get("authorization") ?? "";
         const expected = \`Bearer \${secret}\`;
@@ -70002,7 +70028,7 @@ export const Route = createFileRoute("/incoming/support")({
         // A record that is gone (or never was) has no thread: the mail is a new one.
         if (thread !== undefined && !(await supportCaseData.get(caller, thread))) thread = undefined;
         if (thread !== undefined) {
-          const files = await saved(mail, "message");
+          const files = await saved(mail, "message", messageData.uses);
           if (files instanceof Response) return files;
           const joining = messageSchema.safeParse({
             supportCaseId: thread,
@@ -70011,8 +70037,10 @@ export const Route = createFileRoute("/incoming/support")({
             content: bodyOf(mail),
             attachments: files,
           });
-          if (!joining.success)
+          if (!joining.success) {
+            for (const f of files) deleteFile(f, messageData.uses(f.file));
             return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
+          }
           const to = thread;
           try {
             const made = await fromMail({ messageId: mailId || undefined, quiet: automatic }, async () => {
@@ -70023,30 +70051,36 @@ export const Route = createFileRoute("/incoming/support")({
             done();
             return answer(201, { id: made.id, thread: to });
           } catch (error) {
+            for (const f of files) deleteFile(f, messageData.uses(f.file));
             if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
-            return answer(422, { error: error instanceof Error ? error.message : String(error) });
+            console.error("Incoming call failed:", error);
+            return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
         }
-        const files = await saved(mail, "support-case");
+        const files = await saved(mail, "support-case", supportCaseData.uses);
         if (files instanceof Response) return files;
         const parsed = supportCaseSchema.safeParse({
-          status: "open",
+                status: "open",
           customerEmail: address(mail.from),
           subject: text(mail.subject),
           body: bodyOf(mail),
           attachments: files,
-        });
-        if (!parsed.success)
+      });
+      if (!parsed.success) {
+                for (const f of files) deleteFile(f, supportCaseData.uses(f.file));
           return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
-        try {
-          const made = await fromMail({ messageId: mailId || undefined, quiet: automatic }, () => supportCaseData.create(caller, parsed.data));
-          keep(made.id);
-          done();
-          return answer(201, { id: made.id });
-        } catch (error) {
+      }
+      try {
+        const made = await fromMail({ messageId: mailId || undefined, quiet: automatic }, () => supportCaseData.create(caller, parsed.data));
+        keep(made.id);
+        done();
+        return answer(201, { id: made.id });
+      } catch (error) {
+                for (const f of files) deleteFile(f, supportCaseData.uses(f.file));
           if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
-          return answer(422, { error: error instanceof Error ? error.message : String(error) });
-        }
+        console.error("Incoming call failed:", error);
+        return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
+      }
       },
     },
   },
@@ -70912,7 +70946,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
-  "server.mjs": "1a461fb9 kit",
+  "server.mjs": "32c38faf kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -70936,17 +70970,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.server.ts": "44c4920d generated",
   "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "24f16a0a generated",
+  "src/generated/ask.server.ts": "b365bd87 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "9a5a978a generated",
+  "src/generated/message.server.ts": "a9ddf32d generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "d9f41429 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "aba34b31 generated",
+  "src/generated/support-case.server.ts": "6f70147e generated",
   "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/users.server.ts": "89ad054e generated",
@@ -70984,15 +71018,15 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/filter.ts": "ead526ad kit",
+  "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "eeec82e5 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/limit.ts": "1170a5e4 kit",
+  "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "7c7acc84 kit",
   "src/kit/model.ts": "f5c1c07c kit",
-  "src/kit/origin.ts": "d48092fa kit",
+  "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/outgoing.server.ts": "7b8ce12b kit",
   "src/kit/outgoing.ts": "1c8a64ac kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -71003,7 +71037,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "40b33a2c kit",
-  "src/kit/where.ts": "f7928322 kit",
+  "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "2d1a8547 kit",
   "src/kit/zoned.ts": "8225716c kit",
@@ -71021,7 +71055,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "cb9bb507 generated",
+  "src/routes/incoming/support.ts": "fca905e5 generated",
   "src/routes/index.tsx": "6a89e0fa generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e3a9f60c generated",

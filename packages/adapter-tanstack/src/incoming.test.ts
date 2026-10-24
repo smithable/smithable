@@ -72,12 +72,18 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain("title: text(mail.subject),");
   expect(route).toContain("body: bodyOf(mail),");
   expect(route).toContain("attachments: files,");
-  expect(route).toContain('const files = await saved(mail, "request");');
+  expect(route).toContain('const files = await saved(mail, "request", requestData.uses);');
   expect(route).toContain('files.push(saveFile(model, bytes, text(name) || "attachment"));');
-  expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES)");
+  expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES || !roomFor(bytes.byteLength))");
+  expect(route).toContain("if (parts.length > 10)");
+  expect(route).toContain(
+    'replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ")',
+  );
   expect(route).toContain("await scanned(bytes);");
+  expect(route).toContain("!/SQLITE_|Drizzle|Failed query/i.test(error.message)");
   // No templates and no id: no path helpers to leave unused.
   expect(route).not.toContain("const fill");
+  expect(file("src/routes/incoming/monitorDown.ts")?.content).toContain("Object.hasOwn(v, part)");
 });
 
 test("a reply joins its thread: found by the ids it answers, else the tag; a thread mail carries its tag and headers", () => {

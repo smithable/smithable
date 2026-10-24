@@ -129,9 +129,12 @@ serve({
           response.headers.set("Cache-Control", "no-store");
       }
 
-      // Serve user uploads and static images with a sandbox CSP to mitigate stored XSS via SVGs
+      // A picture opened on its own runs nothing: an SVG with a script in it is only a picture.
       const path = new URL(request.url).pathname;
-      if (response.ok && (path.startsWith("/images/") || path.startsWith("/uploads/"))) {
+      if (
+        response.ok &&
+        (path.startsWith("/images/") || path.startsWith("/uploads/") || path.endsWith(".svg"))
+      ) {
         response.headers.set(
           "Content-Security-Policy",
           "sandbox; default-src 'none'; style-src 'unsafe-inline'",
