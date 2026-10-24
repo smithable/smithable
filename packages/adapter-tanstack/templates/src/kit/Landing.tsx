@@ -534,11 +534,17 @@ function HeroView({
           />
           <div
             aria-hidden
-            className="absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10"
+            className={cn(
+              "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
+              // Dark mode's primary is a light one: the wash is the background tinted with it, so
+              // the picture still shows and the text is the page's own (look-references.md §3).
+              "dark:bg-(--cover-wash)/90 dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10 [--cover-wash:color-mix(in_oklch,var(--primary)_30%,var(--background))]",
+            )}
           />
           <div
             className={cn(
               "mx-auto max-w-6xl px-5 py-24 text-primary-foreground sm:py-32 [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90",
+              "dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
               shortcutList && "pb-28 sm:pb-36",
             )}
           >

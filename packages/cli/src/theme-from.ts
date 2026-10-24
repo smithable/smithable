@@ -27,11 +27,16 @@ export interface Look {
 
 /** Runs in the page (as text: the CLI has no DOM types): the look of what is on screen. */
 const SAMPLE = `(() => {
+  // Any CSS color (rgb, oklch from Tailwind 4, color-mix, …) through a one-pixel canvas.
+  const pixel = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
   const parse = (c) => {
-    const m = c.match(/rgba?\\(([^)]+)\\)/);
-    if (!m) return null;
-    const [r, g, b, a = 1] = m[1].split(/[\\s,/]+/).filter(Boolean).map(Number);
-    return a < 0.5 ? null : [r, g, b];
+    if (!c || c === "transparent") return null;
+    pixel.clearRect(0, 0, 1, 1);
+    pixel.fillStyle = "#000";
+    pixel.fillStyle = c;
+    pixel.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = pixel.getImageData(0, 0, 1, 1).data;
+    return a < 128 ? null : [r, g, b];
   };
   const hex = (rgb) => "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
   const visible = (el) => {
@@ -61,7 +66,9 @@ const SAMPLE = `(() => {
     return el ? [[hex(backgroundOf(el)), 1]] : [];
   }));
   scrollTo(0, 0);
-  const background = backgrounds[0] ?? "#ffffff";
+  // The page's own background when it says one; bands and pictures over it are sections.
+  const own = parse(getComputedStyle(document.body).backgroundColor) ?? parse(getComputedStyle(document.documentElement).backgroundColor);
+  const background = own ? hex(own) : backgrounds[0] ?? "#ffffff";
   const texts = [...document.querySelectorAll("p, li, td, dd, blockquote")].filter(visible);
   const foreground = tally(texts.flatMap((el) => {
     const c = parse(getComputedStyle(el).color);

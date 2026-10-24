@@ -68,6 +68,14 @@ for (const target of targets) {
         } catch {}
       }, colorScheme);
       await page.goto(url, { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
+      // A site whose dark mode is only a class its own switch sets (next-themes without the
+      // system's setting): the class, as the switch would.
+      if (colorScheme === "dark")
+        await page.evaluate(() => {
+          const root = document.documentElement;
+          if (!root.classList.contains("dark") && !root.dataset.appearance)
+            root.classList.add("dark");
+        });
       // Scroll through, so sections that rise in as they are seen have risen.
       const height = await page.evaluate(() => document.body.scrollHeight);
       for (let y = 0; y < height; y += 600) {
