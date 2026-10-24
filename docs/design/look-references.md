@@ -20,7 +20,7 @@ The two sites (public, with their code):
   one-row footer. Dark mode by a header switch.
 
 The pictures (each reference beside our app, light and dark, desktop 1440 and phone 390, full
-page) are in Johan's pictures folder, `look-refs/2026-10-24-1625-padel-and-bistro/`.
+page) are in Johan's pictures folder, `look-refs/2026-10-24-1636-padel-and-bistro/`.
 `scripts/look-shots.mjs` on the branch takes them again (`node scripts/look-shots.mjs <dir>
 <label>=<url> …`, then `--pair` for a side-by-side).
 
