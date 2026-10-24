@@ -473,13 +473,18 @@ const WHERE: Record<string, string> = {
 
 /** The theme's pairs that may not read, one plain sentence each: a warning, never a refusal. */
 function hardToRead(theme: ThemeIR): string[] {
-  return (["light", "dark"] as const).flatMap((mode) =>
-    lowContrast(theme[mode]).map(({ text, on }) =>
-      text === "ring"
-        ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
-        : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+  // Several pairs share a background (and the outline is checked on cards): each sentence once.
+  return [
+    ...new Set(
+      (["light", "dark"] as const).flatMap((mode) =>
+        lowContrast(theme[mode]).map(({ text, on }) =>
+          text === "ring"
+            ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
+            : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+        ),
+      ),
     ),
-  );
+  ];
 }
 
 function writtenColor(text: string, mode: "light" | "dark", token: string): string | undefined {
