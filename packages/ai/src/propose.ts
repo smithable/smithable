@@ -8,6 +8,7 @@ import {
   type OperationArgs,
   operationsFor,
   type ProjectFiles,
+  type SpecIR,
   type SpecPlugin,
   validateAuth,
   validateContent,
@@ -217,11 +218,16 @@ export async function proposeChange(options: {
   const usage: Usage[] = [];
   // Tier 0: a request worded like one of the everyday changes needs no model at all. Its
   // operations get the same dry run and host check; when they do not apply, a model reads it.
+  // The spec read once for every rule tier below.
+  const ir = validateSpec(
+    { path: "smithable.yml", text: files.spec },
+    files.plugins ? { plugins: files.plugins } : {},
+  ).ir;
   // Tier 0 for small talk: a greeting or thanks is answered like a chat, by rule (A 151).
-  const talk = smallTalkTier(files, options.request);
+  const talk = smallTalk(options.request, ir);
   if (talk) return { kind: "answer", text: talk, concepts: [], usage, generator: "small talk" };
   // Tier 0 for questions: what the spec answers on its own (who can, what is, is it public…).
-  const answered = questionTier(files, options.request);
+  const answered = ir && questionTier(files, ir, options.request);
   if (answered)
     return {
       kind: "answer",
@@ -230,10 +236,10 @@ export async function proposeChange(options: {
       usage,
       generator: answered.rule,
     };
-  const phrased = phraseTier(files, options.request);
+  const phrased = ir && phraseTier(files, ir, options.request);
   // The rules read it and it cannot be done as asked (the field is there already, no field has
   // that name): the reason, not a model that would meet the same.
-  const why = phrased ? undefined : refusalTier(files, options.request);
+  const why = phrased || !ir ? undefined : refusalTier(files, ir, options.request);
   if (why) return { kind: "none", reason: why.refusal, usage };
   if (phrased) {
     const checked = dryRun(files, phrased.operations);
@@ -311,10 +317,7 @@ export async function proposeChange(options: {
 }
 
 /** Why the rules cannot make a request they read, when that is so (tier 0). */
-function refusalTier(files: ProjectFiles, request: string) {
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
+function refusalTier(files: ProjectFiles, ir: SpecIR, request: string) {
   const auth =
     files.auth === undefined
       ? undefined
@@ -323,10 +326,7 @@ function refusalTier(files: ProjectFiles, request: string) {
 }
 
 /** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
-function phraseTier(files: ProjectFiles, request: string) {
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
+function phraseTier(files: ProjectFiles, ir: SpecIR, request: string) {
   const auth =
     files.auth === undefined
       ? undefined
@@ -334,18 +334,9 @@ function phraseTier(files: ProjectFiles, request: string) {
   return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
 }
 
-/** A greeting, thanks or small talk, answered by rule with the app's own names (tier 0). */
-function smallTalkTier(files: ProjectFiles, request: string) {
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  return smallTalk(request, validateSpec({ path: "smithable.yml", text: files.spec }, options).ir);
-}
-
 /** A question about the app the index answers without a model (tier 0). */
-function questionTier(files: ProjectFiles, request: string) {
+function questionTier(files: ProjectFiles, ir: SpecIR, request: string) {
   if (!looksLikeQuestion(request)) return undefined;
-  const options = files.plugins ? { plugins: files.plugins } : {};
-  const ir = validateSpec({ path: "smithable.yml", text: files.spec }, options).ir;
-  if (!ir) return undefined;
   const auth =
     files.auth === undefined
       ? undefined

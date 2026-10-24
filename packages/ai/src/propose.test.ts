@@ -334,7 +334,8 @@ describe("small talk (A 151)", () => {
       expect(answer.generator).toBe("small talk");
       // It leads back to the app, with something to try from its own names.
       expect(answer.text).toMatch(/^Hello! I'm Smith\. Tell me what to change in /);
-      expect(answer.text).toMatch(/For example “Add a notes field to /);
+      // A field the first kind of record does not have yet, so the try is a real change.
+      expect(answer.text).toMatch(/For example “Add a (notes|comments|website) field to /);
       expect(answer.usage).toEqual([]);
     }
     const thanks = await propose("Thanks a lot", []);

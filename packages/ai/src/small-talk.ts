@@ -27,11 +27,15 @@ const OK = /^(ok|okay|cool|nice|great|good|perfect|awesome)$/;
 function tryThis(ir?: SpecIR): string {
   const model = ir?.models[0];
   const page = ir?.pages[0];
-  const records = model ? humanize(plural(model.name)).toLowerCase() : "records";
   const question = page
     ? `“Who can open the ${humanize(page.id).toLowerCase()} page?”`
     : "“Who can see what?”";
-  return `For example “Add a notes field to ${records}” or ${question}`;
+  // A field the kind of record does not have yet, so the first try is a real change.
+  const field = ["notes", "comments", "website"].find(
+    (name) => !model?.fields.some((f) => f.name === name),
+  );
+  if (!model || !field) return `For example ${question}`;
+  return `For example “Add a ${field} field to ${humanize(plural(model.name)).toLowerCase()}” or ${question}`;
 }
 
 /** A short answer to small talk, or undefined when the request is not small talk. */
