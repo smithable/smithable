@@ -159,11 +159,15 @@ export function App() {
         ? "smith"
         : "nocode"
   ) as WindowId;
-  const showWindow = (window: WindowId) =>
+  // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
+  const [visualize, setVisualize] = useState(false);
+  const showWindow = (window: WindowId) => {
+    setVisualize(false);
     setPlace((p) => ({
       ...p,
       window: window === "changes" && phone.changesUnderSmith ? "smith" : window,
     }));
+  };
   const stepWindow = (by: number) =>
     showWindow(
       phoneList[(phoneList.indexOf(phoneWindow) + by + phoneList.length) % phoneList.length] ??
@@ -246,8 +250,6 @@ export function App() {
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
-  // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
-  const [visualize, setVisualize] = useState(false);
   /** No code or Code on screen: in the place of the other one, or the first place when neither is. */
   const workIn = (mode: "nocode" | "code") => {
     setVisualize(false);
@@ -590,19 +592,34 @@ export function App() {
                 key={w}
                 className={cx(
                   "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                  phoneWindow === w ? "bg-panel shadow-xs" : "text-muted",
+                  phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
                 )}
               >
                 <input
                   type="radio"
                   name="window"
                   className="sr-only"
-                  checked={phoneWindow === w}
+                  checked={phoneWindow === w && !visualize}
                   onChange={() => showWindow(w)}
                 />
                 {WINDOW_NAMES[w]}
               </label>
             ))}
+            {/* Visualize on a narrow screen too, over the window shown (A 150). */}
+            <label
+              className={cx(
+                "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                visualize ? "bg-panel shadow-xs" : "text-muted",
+              )}
+            >
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={visualize}
+                onChange={() => setVisualize(!visualize)}
+              />
+              Visualize
+            </label>
           </fieldset>
         ) : (
           <>

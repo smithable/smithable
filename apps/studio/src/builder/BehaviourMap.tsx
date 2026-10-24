@@ -138,7 +138,7 @@ export function BehaviourMap({ ir, onOpen }: { ir: SpecIR; onOpen: (concept: str
               nodesDraggable={false}
               edgesFocusable={false}
               fitView
-              fitViewOptions={{ padding: 0.15 }}
+              fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
               colorMode="system"
             >
               <Background />

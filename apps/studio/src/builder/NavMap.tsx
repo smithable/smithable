@@ -171,7 +171,7 @@ export function NavMap({
             nodesDraggable={false}
             edgesFocusable={false}
             fitView
-            fitViewOptions={{ padding: 0.15 }}
+            fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
             colorMode="system"
           >
             <Background />
