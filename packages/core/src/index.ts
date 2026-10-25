@@ -214,6 +214,7 @@ export {
   BUILT_IN_THEMES,
   checkContrast,
   deriveTokens,
+  hardToRead,
   lowContrast,
   parseTheme,
   SHADOWS,

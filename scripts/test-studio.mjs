@@ -2782,7 +2782,7 @@ if (!failed) {
             break;
           await new Promise((r) => setTimeout(r, 500));
         }
-        await labPage.goto(labUrl);
+        await labPage.goto(`${labUrl}/?guide=off`);
         // The frames open once the app has signed the lab in; the landing page in light first.
         const frame = labPage.frameLocator('[data-frame="Landing-light"]');
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 * P });

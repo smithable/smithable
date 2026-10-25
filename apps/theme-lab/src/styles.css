@@ -152,3 +152,63 @@ iframe {
   margin: auto;
   color: #555;
 }
+
+/* The guide (Guide.tsx): the place cut out of a dimmed screen, and a card beside it. */
+.guide {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.guide::backdrop {
+  background: transparent;
+}
+.guide-place {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 6px;
+  outline: 2px solid #4f46e5;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.35);
+}
+.guide-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #18181b;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+  font-size: 14px;
+}
+.guide-card h2 {
+  margin: 2px 0 6px;
+  font-size: 15px;
+}
+.guide-card p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+.guide-count {
+  color: #71717a;
+  font-size: 12px;
+}
+.guide-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.guide-buttons .primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+.guide-open {
+  margin-left: auto;
+}

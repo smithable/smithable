@@ -10,8 +10,8 @@ import {
   emptyUx,
   FONT_WEIGHTS,
   FONTS,
+  hardToRead,
   hexOf,
-  lowContrast,
   parseTheme,
   SHADOWS,
   STYLE_VALUES,
@@ -19,6 +19,7 @@ import {
   themeFit,
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Guide, guideFirst } from "./Guide";
 import { getField, setField, themeText } from "./theme-text";
 
 type Frames = { label: string; path: string }[];
@@ -68,6 +69,8 @@ export function App() {
   const [grey, setGrey] = useState(false);
   const [signedIn, setSignedIn] = useState(PUBLIC);
   const [saved, setSaved] = useState<string>();
+  // The guide (A 158): by itself once in a browser when the pages are in, again from its button.
+  const [guiding, setGuiding] = useState(false);
   // A starter being made (local mode): its name while the lab waits, or what went wrong.
   const [making, setMaking] = useState<string>();
   // Each new app is signed in again; the fallback below waits for it anew.
@@ -94,10 +97,16 @@ export function App() {
         .then(setStart);
   }, []);
 
+  // Once the pages are in and the frames signed in, so every place the guide points at is drawn.
+  const ready = signedIn && !!start?.frames.length;
+  useEffect(() => {
+    if (ready && guideFirst()) setGuiding(true);
+  }, [ready]);
+
   const name = /^name:\s*(\S+)/m.exec(text)?.[1] ?? "my-theme";
   const { theme, diagnostics } = useMemo(
     // Every colour applies; text that may be hard to read is said, never refused (Johan, 2026-10-24).
-    () => parseTheme({ path: `themes/${name}.yml`, text }, { contrast: "warning" }),
+    () => parseTheme({ path: `themes/${name}.yml`, text }),
     [name, text],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
@@ -295,7 +304,7 @@ export function App() {
             </select>
           </label>
         )}
-        <label>
+        <label data-guide="start">
           Start from theme{" "}
           <select onChange={(e) => startFrom(e.target.value)} defaultValue="modern">
             <optgroup label="Built in">
@@ -330,12 +339,23 @@ export function App() {
         >
           Show the motion
         </button>
-        <button type="button" disabled={!theme || errors.length > 0} onClick={save}>
+        <button
+          type="button"
+          data-guide="save"
+          disabled={!theme || errors.length > 0}
+          onClick={save}
+        >
           {PUBLIC ? "Download" : start?.project ? "Save to the project" : "Save theme"}
         </button>
         {saved && <span role="status">{saved}</span>}
+        <button type="button" className="guide-open" onClick={() => setGuiding(true)}>
+          Guide
+        </button>
       </header>
-      <aside>{shown && <Controls theme={shown} text={text} set={set} />}</aside>
+      {guiding && <Guide onEnd={() => setGuiding(false)} />}
+      <aside data-guide="controls">
+        {shown && <Controls theme={shown} text={text} set={set} mode={mode} />}
+      </aside>
       <main>
         {start && !signedIn && !making && (
           <iframe
@@ -352,7 +372,7 @@ export function App() {
           />
         )}
         <div className="bar">
-          <fieldset aria-label="Page">
+          <fieldset aria-label="Page" data-guide="page">
             {start?.frames.map((f) => (
               <button
                 type="button"
@@ -364,14 +384,14 @@ export function App() {
               </button>
             ))}
           </fieldset>
-          <fieldset aria-label="Mode">
+          <fieldset aria-label="Mode" data-guide="mode">
             {(["light", "dark"] as const).map((m) => (
               <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>
                 {m === "light" ? "Light" : "Dark"}
               </button>
             ))}
           </fieldset>
-          <fieldset aria-label="Width">
+          <fieldset aria-label="Width" data-guide="width">
             {SIZES.map(([label, w]) => (
               <button
                 type="button"
@@ -408,7 +428,7 @@ export function App() {
           )}
           {signedIn && beside && frame(true)}
         </div>
-        <section className="notes">
+        <section className="notes" data-guide="notes">
           {errors.length > 0 && (
             // Only a file that cannot make a theme (a colour that is no colour): never a choice of colours.
             <p className="avoid">
@@ -416,7 +436,7 @@ export function App() {
             </p>
           )}
           {theme &&
-            hardToRead(theme).map((line) => (
+            hardToReadIn(theme).map((line) => (
               <p key={line} className="avoid" data-warning="">
                 {line}
               </p>
@@ -456,37 +476,12 @@ export function App() {
   );
 }
 
-/** A colour as the file writes it, as hex; undefined when absent or not a colour. */
-/** Where each colour pair is used, in words a non-designer knows (no colour names, no ratios). */
-const WHERE: Record<string, string> = {
-  background: "the text on the page",
-  card: "the text on cards",
-  primary: "the text on the main buttons",
-  secondary: "the text on the other buttons",
-  muted: "the quieter text, such as hints and dates,",
-  accent: "the text on highlighted rows and menu items",
-  sidebar: "the text in the side menu",
-  destructive: "the text on delete buttons",
-  success: "the text on the green badges",
-  warning: "the text on the warning badges",
-};
-
 /** The theme's pairs that may not read, one plain sentence each: a warning, never a refusal. */
-function hardToRead(theme: ThemeIR): string[] {
-  // Several pairs share a background (and the outline is checked on cards): each sentence once.
-  return [
-    ...new Set(
-      (["light", "dark"] as const).flatMap((mode) =>
-        lowContrast(theme[mode]).map(({ text, on }) =>
-          text === "ring"
-            ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
-            : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
-        ),
-      ),
-    ),
-  ];
-}
+const hardToReadIn = (theme: ThemeIR): string[] => [
+  ...new Set((["light", "dark"] as const).flatMap((mode) => hardToRead(theme[mode], mode))),
+];
 
+/** A colour as the file writes it, as hex; undefined when absent or not a colour. */
 function writtenColor(text: string, mode: "light" | "dark", token: string): string | undefined {
   const raw = getField(text, [mode, token]);
   return typeof raw === "string" && /^(#[0-9a-f]{6}|oklch\()/i.test(raw) ? hexOf(raw) : undefined;
@@ -501,8 +496,11 @@ function Controls({
   theme,
   text,
   set,
+  mode,
 }: {
   theme: ThemeIR;
+  /** The mode on screen: its own colours are the ones shown and changed (Johan, 2026-10-25). */
+  mode: "light" | "dark";
   /** The file as it is: a colour the checks refused is shown as written, so it can be picked again. */
   text: string;
   set: (path: (string | number)[], value: unknown) => void;
@@ -559,11 +557,9 @@ function Controls({
   return (
     <>
       <fieldset>
-        <legend>Colours</legend>
-        {color("light", "primary")}
-        {color("light", "background")}
-        {color("dark", "primary")}
-        {color("dark", "background")}
+        <legend>Colours ({mode === "light" ? "light mode" : "dark mode"})</legend>
+        {color(mode, "primary")}
+        {color(mode, "background")}
       </fieldset>
       <fieldset>
         <legend>Fonts</legend>

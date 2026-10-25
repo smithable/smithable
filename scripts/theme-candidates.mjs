@@ -190,7 +190,7 @@ ${block(light)}
 dark:
 ${block(dark)}
 `;
-    const { theme, diagnostics } = parseTheme({ path: `${name}.yml`, text });
+    const { theme, diagnostics } = parseTheme({ path: `${name}.yml`, text }, { contrast: "error" });
     const errors = diagnostics.filter((d) => d.severity === "error");
     if (!theme || errors.length) {
       dropped.push(`${name}: ${errors.map((d) => d.message).join(" ")}`);
