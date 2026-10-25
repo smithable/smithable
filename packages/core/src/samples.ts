@@ -312,3 +312,8 @@ export function fitSamples(
   }
   return render(kept.filter((f) => f.records.length > 0));
 }
+
+/** Sample records as a sample file's text (samples/<Model>.yml), under a comment line. */
+export function sampleFileText(records: readonly unknown[], comment: string): string {
+  return `# ${comment}\n${stringify(records, { lineWidth: 0 })}`;
+}

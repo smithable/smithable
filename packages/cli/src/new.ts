@@ -6,9 +6,11 @@ import {
   clarifyProject,
   closeShared,
   closestStarter,
+  type DraftedSamples,
   describedWith,
   draftProject,
   draftProjectByOperations,
+  draftSamples,
   type Edit,
   type Question,
   readDescription,
@@ -18,6 +20,8 @@ import {
 import {
   fitSamples,
   reservedDomain,
+  type SpecIR,
+  sampleFileText,
   validateAuth,
   validateContent,
   validateSpec,
@@ -33,6 +37,7 @@ import {
   languageAsked,
   PageError,
   readPage,
+  siteNameOf,
   tooLittle,
 } from "./from-page.js";
 import { generate } from "./generate.js";
@@ -88,8 +93,9 @@ export async function create(
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
-  let pictures: { file: string; alt: string; bytes: Uint8Array }[] = [];
+  let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
   let fromPage = false;
+  let draftedSamples: DraftedSamples = {};
   if (options.from) {
     if (options.withPictures) {
       const consent = await confirm(
@@ -216,6 +222,10 @@ export async function create(
       return 1;
     }
     files = draft.files;
+    // From a page: the site's own name, not the draft's reading of the page's title (which is
+    // often a sentence); a name someone typed still wins below.
+    const site = siteNameOf(description);
+    if (site && !options.name?.trim()) files = named(files, site);
     options.onDraft?.(files);
     // An action the model could not get right is left out and said, rather than failing the draft.
     if (draft.dropped?.length)
@@ -237,9 +247,32 @@ export async function create(
     }
     const confirmed = await confirm(io, "\nCreate this app?", options.yes === true);
     if (confirmed !== true) return confirmed;
+    const texts =
+      ir && content
+        ? validateContent({ path: "smithable.content.yml", text: content }, ir).content
+        : undefined;
+    // Sample records drafted with the app, a few per model in one small request; a model left
+    // out keeps the starter's records or generated rows.
+    if (ir && options.sampleData !== false && process.env.SMITHABLE_NO_SAMPLES !== "1") {
+      const drafted = await draftSamples({
+        description,
+        ir,
+        ...(texts ? { content: texts } : {}),
+        providers,
+      });
+      if (drafted.usage.length) io.out(`${usageLine(drafted.usage)}\n`);
+      draftedSamples = drafted.samples;
+    }
     // Pictures from the Smithable image library, unless the page's own came with --with-pictures.
     if (ir && !fromPage && process.env.SMITHABLE_NO_PICTURES !== "1")
-      pictures = await addLibraryPictures({ description, ir, files, io });
+      pictures = await addLibraryPictures({
+        description,
+        ir,
+        ...(texts ? { content: texts } : {}),
+        drafted: new Set(Object.keys(draftedSamples)),
+        files,
+        io,
+      });
   }
   if (options.name?.trim()) files = named(files, options.name.trim());
   // The app's first administrator is whoever makes it: a starter's sample address never
@@ -283,7 +316,13 @@ export async function create(
   const samples = !options.describe
     ? starterSamples
     : drafted
-      ? fitSamples(starterSamples, drafted)
+      ? fitSamples(
+          [
+            ...starterSamples.filter((s) => !(sampleModel(s.path) in draftedSamples)),
+            ...sampleFiles(draftedSamples, drafted, pictures, fromPage),
+          ],
+          drafted,
+        )
       : [];
   if (sampleData)
     for (const { path, text } of samples) {
@@ -449,6 +488,51 @@ function gitEmail(): string | undefined {
   const result = spawnSync("git", ["config", "user.email"], { encoding: "utf8" });
   const address = result.status === 0 ? result.stdout.trim() : "";
   return address || undefined;
+}
+
+const sampleModel = (path: string) => path.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "");
+
+/**
+ * Drafted sample records as samples/<Model>.yml files, each record's picture fields given the
+ * model's own pictures in turn (the library's, marked as an AI's; or the page's with
+ * --with-pictures), so a dish shows a dish. A model without fitting pictures leaves them out.
+ */
+export function sampleFiles(
+  samples: DraftedSamples,
+  ir: SpecIR,
+  pictures: { file: string; alt: string; model?: string }[],
+  fromPage = false,
+): { path: string; text: string }[] {
+  return Object.entries(samples).flatMap(([name, rows]) => {
+    const model = ir.models.find((m) => m.name === name);
+    if (!model) return [];
+    const pool = fromPage
+      ? pictures.map((p) => ({ file: p.file, alt: p.alt }))
+      : pictures
+          .filter((p) => p.model === name)
+          .map((p) => ({ file: p.file.replace(/^samples\//, ""), alt: p.alt, generated: true }));
+    const records = rows.map((row, i) => {
+      const record: Record<string, unknown> = { ...row };
+      const picture = pool[i % (pool.length || 1)];
+      if (picture)
+        for (const field of model.fields) {
+          if (field.type.kind !== "scalar") continue;
+          // A copy each: one object written twice would be a YAML alias.
+          if (field.type.name === "picture") record[field.name] = { ...picture };
+          if (field.type.name === "pictures") record[field.name] = [{ ...picture }];
+        }
+      return record;
+    });
+    return [
+      {
+        path: `samples/${name}.yml`,
+        text: sampleFileText(
+          records,
+          "Sample records drafted with the app; change or remove them freely.",
+        ),
+      },
+    ];
+  });
 }
 
 export function named(files: Record<string, string>, name: string): Record<string, string> {

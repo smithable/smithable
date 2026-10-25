@@ -185,6 +185,7 @@ export {
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,
+  sampleFileText,
   titleField,
   validateSamples,
 } from "./samples.js";

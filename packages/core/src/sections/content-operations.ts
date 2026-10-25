@@ -1,5 +1,12 @@
 import { parse, stringify } from "yaml";
-import { ASSISTANT_TEXTS, derivedTexts, LANGUAGES, LOGO_SRC, notText } from "../content.js";
+import {
+  ASSISTANT_TEXTS,
+  derivedTexts,
+  LANGUAGES,
+  LOGO_SRC,
+  notText,
+  sectionItemTexts,
+} from "../content.js";
 import type { YamlEditor } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { humanize, plural } from "../naming.js";
@@ -406,9 +413,86 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
   },
 };
 
+/**
+ * A section's items at once (a features section's points, a FAQ's questions and answers, the
+ * testimonials), in place of the ones it had: a first draft writes them from what a page or a
+ * description says, so the section is not a heading over nothing. No items removes them.
+ */
+const setItems: Operation<{
+  page: string;
+  section: string;
+  items: Record<string, string>[];
+  language?: string;
+}> = {
+  name: "setItems",
+  summary:
+    "Set a landing section's items, in place of its others: features { title, text }, faq { question, answer }, testimonials { quote, name, role }, footer { label, link }, pricing { name, price, period, text, button }; no items removes them.",
+  schema: {
+    type: "object",
+    required: ["page", "section", "items"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The section, e.g. features or faq." },
+      ),
+      items: {
+        type: "array",
+        maxItems: 12,
+        items: { type: "object", additionalProperties: { type: "string" } },
+        description: 'Each item\'s texts by key, e.g. [{ "question": "…", "answer": "…" }].',
+      },
+      language: {
+        enum: [...LANGUAGES],
+        description:
+          "In one of the app's other languages: its file, smithable.content.<language>.yml.",
+      },
+    },
+  },
+  positional: ["page", "section"],
+  describe: ({ page, section, items }) =>
+    items.length
+      ? `Give the ${section} section of ${page} ${items.length} item${items.length === 1 ? "" : "s"}`
+      : `Remove the items of the ${section} section of ${page}`,
+  destructive: () => false,
+  apply(editors, { page, section, items, language }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    const keys = sectionItemTexts(found.kind);
+    if (!keys)
+      throw new OperationError(`A ${found.kind} section has no items of texts to set here.`);
+    for (const item of items)
+      for (const [key, value] of Object.entries(item)) {
+        if (!keys.includes(key))
+          throw new OperationError(
+            `A ${found.kind} section's item has no "${key}": its texts are ${keys.join(", ")}.`,
+          );
+        if (typeof value !== "string") throw new OperationError(`"${key}" is a text.`);
+      }
+    const main = (editors.content.get(["language"]) as string | undefined) ?? LANGUAGES[0];
+    const content =
+      language === undefined || language === main
+        ? editors.content
+        : editors.translations.get(language);
+    if (!content)
+      throw new OperationError(
+        `The app is not in "${language}": add it first (smithable op addLanguage ${language}).`,
+      );
+    const path = ["pages", page, section, "items"];
+    const kept = items.filter((item) => Object.values(item).some((v) => v.trim()));
+    if (!kept.length) {
+      if (content.has(path)) content.removeAndPrune(path, 0);
+    } else if (content.has(path)) content.set(path, kept);
+    else content.add(path.slice(0, -1), "items", kept);
+    return [];
+  },
+};
+
 export const contentOperations: AnyOperation[] = [
   setText,
   setTexts,
+  setItems,
   nameRecords,
   setLanguage,
   addLanguage,

@@ -1,8 +1,14 @@
 // Pictures for a first build, chosen from the Smithable image library's index by its tags: a
 // hero for the landing page, a mark for the app (docs/design/app-logo.md §4) and a few sample
-// pictures for the records. Pure: the host fetches
+// pictures for each model's records. Pure: the host fetches
 // the index and the files (docs/design/showcase.md, the image library).
-import type { SpecIR } from "@smithable/core";
+import {
+  type ContentIR,
+  humanize,
+  type ModelIR,
+  type SpecIR,
+  storesPictures,
+} from "@smithable/core";
 
 /** One entry of the library's index.json. */
 export interface PictureEntry {
@@ -19,7 +25,11 @@ export interface PickedPictures {
   hero?: PictureEntry;
   /** Always one when the library has marks: a fitting one, else an abstract one. */
   logo?: PictureEntry;
-  samples: PictureEntry[];
+  /**
+   * Sample pictures for each model that stores pictures, chosen by the model's own subject; a
+   * model nothing in the library fits has none (no picture is better than a bicycle for a dish).
+   */
+  models: Record<string, PictureEntry[]>;
 }
 
 /** Tags that say little about the subject; they only break ties. */
@@ -131,8 +141,30 @@ function asGood(entry: PictureEntry, best: PictureEntry, w: Words): boolean {
   );
 }
 
+/** A tag that names a subject: not a generic one, nor the starter a picture was made for. */
+const subject = (tag: string) => !tag.startsWith("starter-") && !GENERIC.has(tag);
+
+/** A tag and its parts longer than three letters ("second-hand", "living-room"), singular. */
+const tagParts = (tag: string) =>
+  [tag, ...tag.split("-").filter((p) => p.length > 3)].map(singular);
+
 /**
- * The hero and up to `count` sample pictures that fit a description and its models best;
+ * How many of an entry's subject tags a model's own words say: its name, labels and
+ * description. Its fields and choices are not its subject (a court type's "kids" is no toy).
+ */
+function modelFit(entry: PictureEntry, own: Set<string>): number {
+  return entry.tags.filter((t) => subject(t) && tagParts(t).some((p) => own.has(p))).length;
+}
+
+const modelWords = (model: ModelIR, content?: ContentIR) => {
+  const texts = content?.models[model.name];
+  return new Set(
+    words([humanize(model.name), texts?.label, texts?.pluralLabel, model.description].join(" ")),
+  );
+};
+
+/**
+ * The hero and up to `count` sample pictures for each model with pictures that fit best;
  * deterministic for the same index and words. Among the heroes that are as good a choice as
  * the best one, the description and the app's name choose, so two yoga studios do not get the
  * same picture while the same app always gets the same. Without a fitting hero, a calm abstract
@@ -140,7 +172,7 @@ function asGood(entry: PictureEntry, best: PictureEntry, w: Words): boolean {
  */
 export function pickPictures(
   index: readonly PictureEntry[],
-  options: { description: string; ir?: SpecIR; count?: number },
+  options: { description: string; ir?: SpecIR; content?: ContentIR; count?: number },
 ): PickedPictures {
   const count = options.count ?? 6;
   const said = new Map<string, number>();
@@ -182,10 +214,26 @@ export function pickPictures(
     .filter((e) => e.tags.includes("abstract"))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const logo = marks.chosen ?? abstract[n % (abstract.length || 1)];
-  const samples = index
-    .filter((e) => e.kind === "sample")
-    .sort(byScore(wordSet))
-    .filter((e, i, all) => score(e, wordSet) >= 1 || i < Math.min(count, all.length))
-    .slice(0, count);
-  return { ...(hero ? { hero } : {}), ...(logo ? { logo } : {}), samples };
+  // Each model's samples by its own subject first (a Dish gets dishes, whatever "book a table"
+  // in the description says), then what the app says among those. A model whose words no
+  // picture shares gets one only by the app's name ("Harbour Café" for its Items) or what the
+  // description means without saying it (a marketplace's second-hand things), else none.
+  const samples = index.filter((e) => e.kind === "sample");
+  const named = new Set(words(options.ir?.app.name ?? ""));
+  for (const word of said.keys()) for (const t of SYNONYMS[word] ?? []) named.add(t);
+  const models: Record<string, PictureEntry[]> = {};
+  for (const model of options.ir?.models ?? []) {
+    if (!model.fields.some(storesPictures)) continue;
+    const own = modelWords(model, options.content);
+    let fitting = samples.filter((e) => modelFit(e, own) > 0);
+    if (!fitting.length)
+      fitting = samples.filter((e) =>
+        e.tags.some((t) => subject(t) && tagParts(t).some((p) => named.has(p))),
+      );
+    const rank = (e: PictureEntry) => 2 * modelFit(e, own) + 0.5 * score(e, wordSet);
+    models[model.name] = fitting
+      .sort((a, b) => rank(b) - rank(a) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .slice(0, count);
+  }
+  return { ...(hero ? { hero } : {}), ...(logo ? { logo } : {}), models };
 }
