@@ -1,120 +1,101 @@
-# What is for sale as the starter shows it (docs/spec/v0.1.md, Sample data). The photos are from
-# the Smithable image library (smithable-images, CC0); the first of each record is its cover.
-- title: Teak sideboard, 1960s
+# What is for sale as the starter shows it (docs/spec/v0.1.md, Sample data). The photos are real
+# ones from the Smithable image library (smithable-images): CC0 on Wikimedia Commons, each listed
+# with its source in public/images/samples/CREDITS.md. No AI made them, so they carry no badge
+# (generated: false); the first of each record is its cover.
+- title: Table with four chairs
   photos:
-    - { file: market-sideboard-1.webp, alt: "A teak sideboard with sliding doors against a white wall", generated: true }
-    - { file: market-sideboard-2.webp, alt: "The corner and wood grain of the teak sideboard", generated: true }
-  description: Two sliding doors that run smoothly and a shelf inside. A few light marks on top; 160 cm wide.
-  price: 240
-  category: furniture
-  condition: good
-  place: Mariehamn
-- title: Two oak dining chairs
-  photos:
-    - { file: market-chairs-1.webp, alt: "Two oak dining chairs side by side", generated: true }
-  description: Solid oak, sturdy and without wobbles. Sold as a pair.
-  price: 60
+    - { file: market-table-chairs-1.webp, alt: "A birch table with white chairs around it", generated: false }
+  description: Birch plywood top on black steel legs, 140 by 80 cm, with four white chairs.
+  price: 180
   category: furniture
   condition: good
   place: Jomala
-- title: Wool armchair
+- title: Light gray armchair
   photos:
-    - { file: market-armchair-1.webp, alt: "A gray wool armchair in a living room corner", generated: true }
-    - { file: market-armchair-2.webp, alt: "The wool fabric and armrest of the armchair", generated: true }
-  description: Gray wool with oak legs, no stains or tears. Very comfortable for reading.
+    - { file: market-armchair-1.webp, alt: "A light gray armchair with a blue cushion in a corner by the curtains", generated: false }
+  description: Light gray fabric on wooden legs, no stains or tears. Comes with its blue cushion.
   price: 120
   category: furniture
   condition: likeNew
   place: Mariehamn
-- title: Floor lamp with linen shade
+- title: Green floor lamp
   photos:
-    - { file: market-lamp-1.webp, alt: "A brass floor lamp with a linen shade against a wall", generated: true }
-  description: Brass stand, 150 cm tall, with a warm light. The bulb is included.
+    - { file: market-lamp-1.webp, alt: "A green floor lamp against a pale green wall", generated: false }
+  description: Metal, 150 cm tall, with a shade that tilts. The bulb is included.
   price: 25
   category: furniture
   condition: good
   place: Lemland
 - title: City bike, seven gears
   photos:
-    - { file: market-city-bike-1.webp, alt: "A green city bike with a basket on a gravel drive", generated: true }
-    - { file: market-city-bike-2.webp, alt: "The handlebar, bell and basket of the city bike", generated: true }
-  description: Step-through frame, basket and lights. Serviced this spring.
+    - { file: market-city-bike-1.webp, alt: "A black bike on the grass by a pond at sunset", generated: false }
+  description: Black frame with mudguards and a kickstand. Serviced this spring.
   price: 180
   category: bikes
   condition: good
   place: Mariehamn
-- title: Balance bike
+- title: Wooden pull-along toys
   photos:
-    - { file: market-balance-bike-1.webp, alt: "A child's wooden balance bike on a lawn", generated: true }
-  description: Wooden balance bike for ages 2 to 4. Our youngest has outgrown it.
-  price: 30
+    - { file: market-toys-1.webp, alt: "Three wooden pull-along toys: a car, a star and a duck", generated: false }
+  description: A car, a star and a duck in oiled wood, for ages 1 to 3. Our youngest has outgrown them.
+  price: 20
   category: kids
-  condition: worn
+  condition: good
   place: Finström
 - title: Road bike, 56 cm frame
   photos:
-    - { file: market-road-bike-1.webp, alt: "A gray road bike leaning against a garage wall", generated: true }
-  description: Aluminum frame, 18 gears and new tires. Ridden two summers.
+    - { file: market-road-bike-1.webp, alt: "A blue road bike leaning on a green railing by a beach", generated: false }
+  description: Aluminum frame, disc brakes and new tires. Ridden two summers.
   price: 350
   category: bikes
   condition: good
   place: Saltvik
-- title: Laptop, 14 inch
+- title: Laptop, 13 inch
   photos:
-    - { file: market-laptop-1.webp, alt: "An open laptop with its charger on a wooden table", generated: true }
-  description: 16 GB memory, 512 GB disk. Battery lasts about six hours. Charger included.
+    - { file: market-laptop-1.webp, alt: "An open laptop, a phone and a notebook on a wooden desk", generated: false }
+  description: 8 GB memory, 256 GB disk. Battery lasts about six hours. Charger included.
   price: 290
   category: electronics
   condition: good
   place: Mariehamn
 - title: Over-ear headphones
   photos:
-    - { file: market-headphones-1.webp, alt: "Black over-ear headphones on a wooden table", generated: true }
-  description: Wireless, with noise canceling. Ear pads replaced last year.
+    - { file: market-headphones-1.webp, alt: "Over-ear headphones resting on a loudspeaker", generated: false }
+  description: Wired, with a cable that comes off. Ear pads replaced last year.
   price: 85
   category: electronics
   condition: likeNew
   place: Jomala
 - title: Turntable
   photos:
-    - { file: market-turntable-1.webp, alt: "A wooden record player on a low shelf beside records", generated: true }
-    - { file: market-turntable-2.webp, alt: "The tonearm and a record on the record player", generated: true }
-  description: Belt drive, new needle. Plays 33 and 45.
+    - { file: market-turntable-1.webp, alt: "A record player in a wooden cabinet, a record on the platter", generated: false }
+  description: Built into a teak cabinet with volume, bass and treble. Plays 33 and 45, new needle.
   price: 140
   category: electronics
   condition: good
   place: Mariehamn
-- title: Cross-country skis, 190 cm
+- title: Acoustic guitar
   photos:
-    - { file: market-skis-1.webp, alt: "Cross-country skis and poles against a red wall in the snow", generated: true }
-  description: Classic skis with bindings, poles included.
-  price: 70
-  category: sports
-  condition: worn
-  place: Sund
-- title: Sailing dinghy with trailer
-  photos:
-    - { file: market-dinghy-1.webp, alt: "A white sailing dinghy on a trailer by a granite shore", generated: true }
-    - { file: market-dinghy-2.webp, alt: "The sail and tiller inside the dinghy", generated: true }
-  description: A small dinghy with mast, sail and tiller, on a road trailer. Ready for the summer.
-  price: 1200
-  category: sports
-  condition: good
-  place: Eckerö
-- title: Car roof box
-  photos:
-    - { file: market-roof-box-1.webp, alt: "A black car roof box on a garage floor", generated: true }
-  description: 400 litres, fits most roof bars. Key included.
+    - { file: market-guitar-1.webp, alt: "An acoustic guitar standing against a white wall", generated: false }
+  description: Spruce top, new strings, plays well. A soft case is included.
   price: 110
   category: other
   condition: good
-  place: Mariehamn
-- title: Box of children's books
+  place: Sund
+- title: Rowing boat with oars
   photos:
-    - { file: market-books-1.webp, alt: "A cardboard box of children's picture books on a floor", generated: true }
-  description: About thirty picture books in Swedish and English.
-  price: 15
-  category: kids
+    - { file: market-rowboat-1.webp, alt: "White rowing boats with oars on a lakeside lawn", generated: false }
+  description: A light rowing boat for two, 3.5 m, oars included. Ready for the summer.
+  price: 600
+  category: sports
+  condition: good
+  place: Eckerö
+- title: Three old books
+  photos:
+    - { file: market-books-1.webp, alt: "A stack of old leather-bound books", generated: false }
+  description: Leather-bound, from the 1890s. The spines are worn, the pages clean.
+  price: 30
+  category: other
   condition: worn
   place: Hammarland
   available: false
