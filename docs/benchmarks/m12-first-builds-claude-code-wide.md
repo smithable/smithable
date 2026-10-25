@@ -1,11 +1,11 @@
-# M12 first builds: claude-code, the second set (2026-10-25)
+# M12 first builds: claude-code, the second set (2026-10-25; 5 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 19 type-check, 1,604,545 tokens (1,538,100 in, 66,445 out), $2.1658 (as Claude Code reports it); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 20 type-check, 1,257,947 tokens (1,204,310 in, 53,637 out), €0.0000 + $1.7480 (as Claude Code reports it); 7 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | My clients as a freelance translator: who they are, what I quoted and what they paid. | invoicing | yes | yes | 96,516 | 3,409 | $0.1236 | 0 | 2 | 59 s |
-| A sales pipeline for our six-person web agency: leads, deals and who follows up when. | crm | yes | **no** | 96,904 | 3,951 | $0.1375 | 0 | 2 | 72 s |
+| A sales pipeline for our six-person web agency: leads, deals and who follows up when. *(rerun 2026-10-25)* | crm | yes | **no** | 0 | 0 | €0.0000 | 2 | 2 | 21 s |
 | Online booking for a hair salon: customers pick a stylist and a free time themselves. | barbers | yes | yes | 47,958 | 2,152 | $0.0683 | 0 | 1 | 46 s |
 | A piano teacher's lessons: my pupils, their weekly times and what each one practises. | records | yes | yes | 47,161 | 1,387 | $0.0467 | 0 | 1 | 34 s |
 | Invoices for my photography work: clients, shoots and what is still unpaid. | invoicing | yes | yes | 48,085 | 2,101 | $0.0683 | 0 | 1 | 37 s |
@@ -17,16 +17,16 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | An internal status board for our IT systems, so staff see what is down and when it is back. | status | yes | yes | 48,302 | 2,486 | $0.0778 | 0 | 1 | 44 s |
 | Service status for our municipality's online services, for residents to check outages. | status | yes | yes | 48,299 | 2,602 | $0.0801 | 0 | 1 | 45 s |
 | A log of my car's fuel, service visits and costs. | records | yes | yes | 47,149 | 1,913 | $0.0571 | 0 | 1 | 51 s |
-| The guest list and seating plan for our wedding, with who has answered and their meal choices. | records | yes | **no** | 47,159 | 1,471 | $0.0483 | 0 | 1 | 37 s |
-| Bird sightings for our birdwatching club: species, place, date and who saw it. | records | yes | **no** | 94,768 | 1,737 | $0.0761 | 0 | 2 | 38 s |
+| The guest list and seating plan for our wedding, with who has answered and their meal choices. *(rerun 2026-10-25)* | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 16 s |
+| Bird sightings for our birdwatching club: species, place, date and who saw it. *(rerun 2026-10-25)* | records | yes | **no** | 0 | 0 | €0.0000 | 2 | 2 | 15 s |
 | Our allotment society: who has which plot, the waiting list and the yearly fee. | records | yes | yes | 47,160 | 2,463 | $0.0682 | 0 | 1 | 45 s |
 | Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet. | barbers | yes | yes | 48,009 | 3,276 | $0.0912 | 0 | 1 | 60 s |
 | Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor. | invoicing | yes | yes | 149,246 | 7,870 | $0.2763 | 0 | 3 | 93 s |
 | En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris. | marketplace | yes | yes | 47,422 | 2,561 | $0.0722 | 0 | 1 | 48 s |
 | Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 147,585 | 5,712 | $0.2198 | 0 | 3 | 77 s |
-| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | crm | yes | **no** | 47,802 | 4,161 | $0.1073 | 0 | 1 | 47 s |
+| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. *(rerun 2026-10-25)* | crm | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 14 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | kiosk | yes | yes | 48,024 | 4,511 | $0.1160 | 0 | 1 | 51 s |
-| A backend for my habit app: habits, daily check-ins and streaks. | records | yes | **no** | 47,157 | 1,488 | $0.0486 | 0 | 1 | 24 s |
+| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-25)* | records | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 13 s |
 | Somewhere my AI assistant keeps my tasks and notes, by project. | api | yes | yes | 47,440 | 985 | $0.0408 | 0 | 1 | 20 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m12-first-builds-claude-code-wide/), one folder per description (app-1 …).
@@ -219,9 +219,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 136 files (136 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GBijuV/app-2. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M59UCw/app-2. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GBijuV/app-2
+  cd /tmp/smithable-bench-m12-M59UCw/app-2
   smithable studio
 
 or only run the app with smithable run.
@@ -1005,9 +1005,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 124 files (124 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GBijuV/app-14. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M59UCw/app-14. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GBijuV/app-14
+  cd /tmp/smithable-bench-m12-M59UCw/app-14
   smithable studio
 
 or only run the app with smithable run.
@@ -1056,9 +1056,9 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, logo.webp.
 Generated 127 files (127 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GBijuV/app-15. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M59UCw/app-15. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GBijuV/app-15
+  cd /tmp/smithable-bench-m12-M59UCw/app-15
   smithable studio
 
 or only run the app with smithable run.
@@ -1547,9 +1547,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 148 files (148 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GBijuV/app-21. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M59UCw/app-21. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GBijuV/app-21
+  cd /tmp/smithable-bench-m12-M59UCw/app-21
   smithable studio
 
 or only run the app with smithable run.
@@ -1712,9 +1712,9 @@ Sign-in and access
 Pictures from the Smithable image library: logo.webp.
 Generated 120 files (120 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GBijuV/app-23. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-M59UCw/app-23. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GBijuV/app-23
+  cd /tmp/smithable-bench-m12-M59UCw/app-23
   smithable studio
 
 or only run the app with smithable run.

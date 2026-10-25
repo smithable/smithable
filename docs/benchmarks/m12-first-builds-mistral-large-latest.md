@@ -1,20 +1,20 @@
-# M12 first builds: mistral-large-latest (2026-10-25)
+# M12 first builds: mistral-large-latest (2026-10-25; 2 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 10 type-check, 479,503 tokens (453,674 in, 25,829 out), €0.0000 + $0.2657 (Mistral's list price); 0 model calls answered from the response cache. *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 10 type-check, 423,294 tokens (400,082 in, 23,212 out), €0.0000 + $0.2349 (Mistral's list price); 3 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 37,420 | 2,637 | $0.0227 | 0 | 2 | 42 s |
 | A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 10 s |
 | Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 90,567 | 4,644 | $0.0522 | 0 | 5 | 62 s |
-| A tool library where neighbors lend each other tools. | marketplace | yes | **no** | 17,398 | 834 | $0.0100 | 0 | 1 | 26 s |
+| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 0 | 0 | $0.0000 | 1 | 1 | 16 s |
 | An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 17,258 | 657 | $0.0096 | 0 | 1 | 21 s |
 | A job board for a local union, with job posts and applications. | marketplace | yes | yes | 74,267 | 5,421 | $0.0453 | 0 | 4 | 62 s |
 | A football club's site: teams, players, matches and results. | records | yes | yes | 17,256 | 859 | $0.0099 | 0 | 1 | 39 s |
 | Event registration for a conference: talks, speakers and attendees. | records | yes | yes | 92,158 | 3,947 | $0.0520 | 0 | 5 | 119 s |
 | A help desk for an IT team: tickets, priorities and who handles them. | support | yes | yes | 17,757 | 1,059 | $0.0105 | 0 | 1 | 35 s |
 | A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 17,255 | 2,222 | $0.0120 | 0 | 1 | 41 s |
-| A status page for our API, with incidents and planned maintenance. | status | yes | **no** | 36,194 | 1,783 | $0.0208 | 0 | 2 | 51 s |
+| A status page for our API, with incidents and planned maintenance. *(rerun 2026-10-25)* | status | yes | **no** | 0 | 0 | $0.0000 | 2 | 2 | 19 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 36,144 | 1,766 | $0.0207 | 0 | 2 | 50 s |
 
 Each created app's four spec files are in [m12-first-builds-mistral-large-latest/](m12-first-builds-mistral-large-latest/), one folder per description (app-1 …).
@@ -304,23 +304,23 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 130 files (130 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-KnEaQ1/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-X13hYd/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-KnEaQ1/app-4
+  cd /tmp/smithable-bench-m12-X13hYd/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-KnEaQ1/app-4/smithable.yml:17:3  warning  Tool's photo wait for review, but no review page lists Tool, so nothing is ever approved.
+/tmp/smithable-bench-m12-X13hYd/app-4/smithable.yml:17:3  warning  Tool's photo wait for review, but no review page lists Tool, so nothing is ever approved.
     hint: Add one: smithable op addReviewPage (a page with "review: all").
-/tmp/smithable-bench-m12-KnEaQ1/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-X13hYd/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 
-/tmp/smithable-bench-m12-KnEaQ1/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132
+/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132
 		return this.stmt.run(...params);
 		                 ^
 SqliteError: NOT NULL constraint failed: tools.photo
-    at PreparedQuery.run (/tmp/smithable-bench-m12-KnEaQ1/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-KnEaQ1/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-KnEaQ1/app-4/src/db/seed.ts:19:6)
+    at PreparedQuery.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132:20)
+    at QueryPromise.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
+    at <anonymous> (/tmp/smithable-bench-m12-X13hYd/app-4/src/db/seed.ts:19:6)
     at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
     at async node:internal/modules/esm/loader:647:26
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
@@ -804,13 +804,13 @@ Sign-in and access
 Pictures from the Smithable image library: hero.webp, logo.webp.
 Generated 171 files (171 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-KnEaQ1/app-11. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-X13hYd/app-11. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-KnEaQ1/app-11
+  cd /tmp/smithable-bench-m12-X13hYd/app-11
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-KnEaQ1/app-11/smithable.ux.yml:8:18  warning  IncidentUpdate.at is required and the reply box does not ask for it: give it a default, or `by: app`, or the thread shows Add incident update instead.
+/tmp/smithable-bench-m12-X13hYd/app-11/smithable.ux.yml:8:18  warning  IncidentUpdate.at is required and the reply box does not ask for it: give it a default, or `by: app`, or the thread shows Add incident update instead.
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.
