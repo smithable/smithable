@@ -1,13 +1,13 @@
 # M12 first builds: mistral-large-latest (2026-10-25; 2 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 11 / 12 created, 10 type-check, 515,674 tokens (489,723 in, 25,951 out), €0.0000 + $0.2838 (Mistral's list price); 4 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 11 / 12 created, 11 type-check, 462,350 tokens (436,741 in, 25,609 out), €0.0000 + $0.2568 (Mistral's list price); 7 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 37,420 | 2,637 | $0.0227 | 0 | 2 | 42 s |
 | A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 10 s |
 | Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 90,567 | 4,644 | $0.0522 | 0 | 5 | 62 s |
-| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 52,982 | 342 | $0.0270 | 1 | 4 | 81 s |
+| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | yes | 0 | 0 | $0.0000 | 4 | 4 | 8 s |
 | An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 17,258 | 657 | $0.0096 | 0 | 1 | 21 s |
 | A job board for a local union, with job posts and applications. | marketplace | yes | yes | 74,267 | 5,421 | $0.0453 | 0 | 4 | 62 s |
 | A football club's site: teams, players, matches and results. | records | yes | yes | 17,256 | 859 | $0.0099 | 0 | 1 | 39 s |
@@ -321,15 +321,15 @@ Sign-in and access
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 131 files (131 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-cJDMuY/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-cjQEah/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-cJDMuY/app-4
+  cd /tmp/smithable-bench-m12-cjQEah/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:11  warning  Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or remove the section of home that shows it.
-/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:17  warning  Visitors can open tools, but may not read Tool, so the page shows them none: add it under public.read, or take tools out of public.pages.
-/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-cjQEah/app-4/smithable.auth.yml:11:11  warning  Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or remove the section of home that shows it.
+/tmp/smithable-bench-m12-cjQEah/app-4/smithable.auth.yml:11:17  warning  Visitors can open tools, but may not read Tool, so the page shows them none: add it under public.read, or take tools out of public.pages.
+/tmp/smithable-bench-m12-cjQEah/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
