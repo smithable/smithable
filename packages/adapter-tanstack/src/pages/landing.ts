@@ -74,11 +74,20 @@ export function landingRoute(
       : "{undefined}";
   // A kind's own part (its list) is the kind's page, which loads its own records.
   const records = sections.filter((s) => s.model && !s.own);
-  const loaders = [...new Set(records.map((s) => s.model as string))].map((name) => {
+  // Each model's list read once; the page gets each section's rows already filtered and cut to
+  // what it shows (A 154), not the whole list.
+  const lists = [...new Set(records.map((s) => s.model as string))].map((name) => {
     const n = names(modelNamed(ir, name), t);
     imports.add(n.module, n.list);
-    return `${camel(plural(name))}: (await ${n.list}()).rows`;
+    return `    const ${camel(plural(name))} = (await ${n.list}()).rows;`;
   });
+  const shown = records.map(
+    (s) =>
+      `${JSON.stringify(s.name)}: ${camel(plural(s.model as string))}${kept(s.where)}.slice(0, ${s.limit ?? 6})`,
+  );
+  const loader = records.length
+    ? `  loader: async () => {\n${lists.join("\n")}\n    return { ${shown.join(", ")} };\n  },\n`
+    : "";
   const items = (name: string) => literal(text(name).items ?? []);
   const sectionParts = (section: LandingSection): string[] => {
     // A section's component, opened with where its texts are kept, so the preview can change
@@ -222,7 +231,7 @@ export function landingRoute(
           text=${attr(own.text)}`
               : ""
           }
-          cards={data.${camel(plural(model.name))}${kept(section.where)}.slice(0, ${section.limit ?? 6}).map((row) => ({
+          cards={data[${JSON.stringify(section.name)}].map((row) => ({
             key: row.id,
             title: String(row.${title}),${
               article
@@ -444,11 +453,11 @@ ${
   if (!framed)
     return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  component: ${component},
 });
 
 function ${component}() {
-${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+${records.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
     <div data-kit="sections">${headed ? `\n      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id, 8)} />` : ""}
       ${parts.join("\n      ")}
     </div>
@@ -468,11 +477,11 @@ ${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(
   imports.add("#/generated/app", "app");
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loaders.length ? `  loader: async () => ({ ${loaders.join(", ")} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  component: ${component},
 });
 
 function ${component}() {
-${loaders.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+${records.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
     <LandingLayout appName={app.name}${t.logo} link={${header}}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>
