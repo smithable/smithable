@@ -991,8 +991,9 @@ export function dataModule(
   });
   const ownerOf = signedIn ? `row.${owner}` : "undefined";
   // A person's default ME(): who makes the record; a field the form shows keeps what was chosen.
+  // The owner field is set by ownerFor below (which falls back to the viewer): not twice.
   const byMe = model.fields
-    .filter((f) => f.defaultMe)
+    .filter((f) => f.defaultMe && !(signedIn && model.ownedBy === f.name))
     .map((f) =>
       f.byApp
         ? `${dataKey(f)}: personOf(viewer)`

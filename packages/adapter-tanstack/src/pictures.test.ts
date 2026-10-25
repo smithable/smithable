@@ -405,3 +405,18 @@ test("a document field: a JSON column, the document input, the uploads map, the 
   });
   expect(bad.diagnostics.map((d) => d.code)).toContain("invalid-field");
 });
+
+test("a required picture's sample rows are inserted only with their picture", () => {
+  const tools = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Tools }\nmodels:\n  Tool:\n    fields: { name: string!, photo: picture! }\npages:\n  tools: { crud: Tool }\n",
+  }).ir as SpecIR;
+  const seed =
+    generateApp(tools, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+      (f) => f.path === "src/db/seed.ts",
+    )?.content ?? "";
+  // samplePicture is null where the app has no sample pictures: such a row is left out.
+  expect(seed).toContain("const pictured = rows.filter((r) => r.photo !== null) as Row[];");
+  expect(seed).toContain('(Omit<Row, "photo"> & { photo: Picture | null })[]');
+  expect(seed).toContain('import { type Picture, samplePicture } from "#/kit/uploads";');
+});
