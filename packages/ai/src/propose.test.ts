@@ -297,6 +297,12 @@ describe("what a model is offered", () => {
     expect(local.system).toBe(
       promptFor({ location: "local" }, slice(["model:Customer"], "Customers need a fax")).system,
     );
+    // The kit's own words go in the stable prefix, for every provider (A 163).
+    const kit = ["AppShell: the menu stays in view while the page scrolls."];
+    for (const location of ["eu", "local"] as const)
+      expect(
+        promptFor({ location }, slice(["page:orders"], "Sticky menu"), undefined, kit).system,
+      ).toContain("- AppShell: the menu stays in view");
   });
 });
 

@@ -7,6 +7,7 @@ import { themeCss } from "@smithable/adapter-tanstack";
 import {
   BUILT_IN_THEMES,
   contrast,
+  deriveTokens,
   emptyUx,
   FONT_WEIGHTS,
   FONTS,
@@ -515,29 +516,52 @@ function Controls({
       </select>
     </label>
   );
-  const written = (mode: "light" | "dark", token: "primary" | "background" | "foreground") =>
-    writtenColor(text, mode, token);
-  const color = (mode: "light" | "dark", token: "primary" | "background") => (
+  type Token = "primary" | "background" | "card" | "foreground";
+  const written = (mode: "light" | "dark", token: Token) => writtenColor(text, mode, token);
+  const shownColor = (mode: "light" | "dark", token: Token) =>
+    written(mode, token) ?? hexOf(theme[mode][token]);
+  // The text follows the colours it sits on, as before (A 160): a new background or surface
+  // changes it to the one that reads when the chosen one no longer does. Unticked, the chosen
+  // text colour stays, and the warnings above say where it is hard to read.
+  const [follows, setFollows] = useState(true);
+  const color = (mode: "light" | "dark", token: Token, label: string) => (
     <label key={`${mode}.${token}`}>
-      {mode} {token}
+      {label}
       <input
         type="color"
-        value={written(mode, token) ?? hexOf(theme[mode][token])}
+        aria-label={label}
+        value={shownColor(mode, token)}
         onChange={(e) =>
           token === "background"
             ? background(mode, e.target.value)
-            : set([mode, token], e.target.value)
+            : token === "card"
+              ? surface(mode, e.target.value)
+              : set([mode, token], e.target.value)
         }
       />
     </label>
   );
-  // A new background: the colours that sit on it are derived from it again, and the text
-  // changes to the one that reads when the file's own no longer does.
+  // A new background or surface: the colours that sit on the background are derived from it
+  // again (the surfaces too, unless chosen), and the text follows when it should. The text is
+  // one colour on the background and on the surfaces (cards, menus, forms), so it follows to the
+  // one of white and ink that reads on both best.
   const background = (mode: "light" | "dark", value: string) => {
     set([mode, "background"], value);
-    for (const token of ["card", "muted", "border", "accent"]) set([mode, token], undefined);
-    const foreground = written(mode, "foreground") ?? hexOf(theme[mode].foreground);
-    if (contrast(foreground, value) < 4.5) set([mode, "foreground"], textOn(value));
+    for (const token of ["muted", "border", "accent"]) set([mode, token], undefined);
+    // The surfaces as they will be: chosen, or derived from the new background.
+    const card =
+      written(mode, "card") ??
+      hexOf(deriveTokens({ ...theme[mode], background: value, card: undefined }, mode).card);
+    follow(mode, value, card);
+  };
+  const surface = (mode: "light" | "dark", value: string) => {
+    set([mode, "card"], value);
+    follow(mode, shownColor(mode, "background"), value);
+  };
+  const follow = (mode: "light" | "dark", bg: string, card: string) => {
+    const reads = (fg: string) => Math.min(contrast(fg, bg), contrast(fg, card));
+    if (!follows || reads(shownColor(mode, "foreground")) >= 4.5) return;
+    set([mode, "foreground"], reads("#ffffff") >= reads("#101522") ? "#ffffff" : "#101522");
   };
   // The weights the headings' font has (a weight outside them is refused).
   const [lightest, heaviest] = FONT_WEIGHTS[
@@ -558,8 +582,21 @@ function Controls({
     <>
       <fieldset>
         <legend>Colours ({mode === "light" ? "light mode" : "dark mode"})</legend>
-        {color(mode, "primary")}
-        {color(mode, "background")}
+        {color(mode, "primary", "Primary")}
+        {color(mode, "background", "Background")}
+        {color(mode, "card", "Surfaces (cards, menus, forms)")}
+        {color(mode, "foreground", "Text")}
+        <label>
+          <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
+          Text colour follows the others
+        </label>
+        <p className="hint">
+          {follows
+            ? "The text changes to white or ink when a background or surface would make it hard to read."
+            : "The text stays as chosen; a warning above says where it is hard to read."}{" "}
+          The text is one colour on the background and the surfaces; text on the primary colour
+          (buttons) is a second one, white or ink, whichever reads on it.
+        </p>
       </fieldset>
       <fieldset>
         <legend>Fonts</legend>

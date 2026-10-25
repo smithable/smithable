@@ -148,7 +148,7 @@ export function Wizard({
                 : proposal.kind === "answer"
                   ? proposal.text
                   : proposal.kind === "none"
-                    ? `No operation can do this: ${proposal.reason}`
+                    ? proposal.reason
                     : proposal.kind === "failed"
                       ? proposal.message
                       : ""}

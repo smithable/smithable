@@ -148,7 +148,8 @@ export function App() {
     [changeKey, concepts],
   );
   // A phone shows one window at a time (studio-v3.md §8), chosen in the header or by a swipe
-  // across it; No code, Preview and Smith by default, Changes and Code as its settings say.
+  // across it; No code, Preview, Smith and Code by default, Changes as its settings say. It opens on
+  // the preview (A 161).
   const narrow = useMedia("(max-width: 1023px)");
   const [phone, setPhone] = usePhoneSettings();
   const phoneList = phoneWindows(phone);
@@ -157,7 +158,7 @@ export function App() {
       ? place.window
       : place.window === "changes" && phone.changesUnderSmith
         ? "smith"
-        : "nocode"
+        : "preview"
   ) as WindowId;
   // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
   const [visualize, setVisualize] = useState(false);
@@ -250,17 +251,34 @@ export function App() {
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
-  /** No code or Code on screen: in the place of the other one, or the first place when neither is. */
-  const workIn = (mode: "nocode" | "code") => {
+  /**
+   * A window on screen from the header's tabs. No code or Code goes in the place of the other one,
+   * or the first place when neither is; Preview or Smith in the last place on screen that holds
+   * neither, or the only one in one window (A 161). The window moved out takes the place the
+   * other left, so none is lost from the arrangement.
+   */
+  const workIn = (window: WindowId) => {
     setVisualize(false);
-    if (slotOf(mode) !== undefined) return;
-    const other = mode === "code" ? "nocode" : "code";
-    const at = slotOf(other) ?? shown[0] ?? 0;
-    setArrangement({
-      ...arrangement,
-      slots: arrangement.slots.map((s, i) => (i === at ? mode : s)) as typeof arrangement.slots,
-    });
+    if (slotOf(window) !== undefined) return;
+    const work = (s: SlotContent | undefined) => s === "nocode" || s === "code";
+    const at = work(window)
+      ? (slotOf(window === "code" ? "nocode" : "code") ?? shown[0] ?? 0)
+      : layout === "one"
+        ? (shown[0] ?? 0)
+        : ([...shown].reverse().find((i) => !work(slots[i])) ?? shown[0] ?? 0);
+    const from = arrangement.slots.findIndex(
+      (s) => s === window || (s === "smith+changes" && window === "smith"),
+    );
+    const next = [...arrangement.slots] as typeof arrangement.slots;
+    if (from >= 0) [next[at], next[from]] = [next[from] as SlotContent, next[at] as SlotContent];
+    else next[at] = window;
+    setArrangement({ ...arrangement, slots: next });
   };
+  // Preview and Smith are tabs too when one of them is off screen: in one window always.
+  const tabs: WindowId[] =
+    layout === "one" || slotOf("preview") === undefined || slotOf("smith") === undefined
+      ? ["nocode", "code", "preview", "smith"]
+      : ["nocode", "code"];
 
   // The spec the preview shows now, for what a change touches (refresh).
   const shownIR = useRef<Spec["ir"]>(undefined);
@@ -550,8 +568,9 @@ export function App() {
   }, [previewUp]);
   // The tour visits every window: one not shown as it starts would be left out of it, so the
   // third window comes into view in the same render the tour starts in.
+  // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   const startGuide = () => {
-    if (tour === "nocode") guideStop("change");
+    if (tour === "nocode" && !narrow) guideStop("change");
     setGuiding(true);
   };
   // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up
@@ -625,10 +644,10 @@ export function App() {
           <>
             <LayoutBar arrangement={arrangement} onChange={setArrangement} />
             {/* No code or Code, back and forth in one click: the one chosen takes the other's
-                place (Johan, 2026-10-23). */}
+                place (Johan, 2026-10-23); Preview and Smith when one is off screen (A 161). */}
             <fieldset className="flex rounded-md bg-subtle p-0.5">
               <legend className="sr-only">Way of working</legend>
-              {(["nocode", "code"] as const).map((mode) => (
+              {tabs.map((mode) => (
                 <label
                   key={mode}
                   className={cx(
@@ -818,7 +837,10 @@ export function App() {
             key={tour}
             app={project.name}
             stops={TOURS[tour]}
-            onEnd={() => setGuiding(false)}
+            onEnd={() => {
+              setGuiding(false);
+              if (narrow) showWindow("preview");
+            }}
             onCode={() =>
               setArrangement({
                 ...arrangement,
@@ -954,7 +976,7 @@ export function App() {
                         />
                       </Suspense>
                     ) : w === "smith" ? (
-                      <Panel key={w} title={WINDOW_NAMES.smith} className="min-h-0 flex-1">
+                      <Panel key={w} title="Ask agent Smith" className="min-h-0 flex-1">
                         <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                           <Ask
                             example={example}

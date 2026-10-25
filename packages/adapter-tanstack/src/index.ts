@@ -4,6 +4,7 @@ export { customPageFromEdit, customPageSource, generateApp, readme } from "./gen
 export type { GeneratedEntry } from "./implementation.js";
 export { implementationIndex } from "./implementation.js";
 export { fieldColumn, insertRecord, recordTable, type StoredValue } from "./import.js";
+export { kitSummary } from "./kit-summary.js";
 export {
   choiceValueSql,
   columnOf,

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
+import { kitSummary } from "@smithable/adapter-tanstack";
 import {
   cached,
   openAICompatible,
@@ -126,6 +127,7 @@ export async function proposeFor(
     context,
     providers,
     anyConfigured: aiProviders().length > 0,
+    kit: kitSummary(),
     ...around,
     // What only the project's data can tell: a new required field on a table with rows.
     check: (before, after, effects) => {

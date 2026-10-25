@@ -12,19 +12,21 @@ export function laidOut(
   size: { width: number; height: number },
   direction: Direction = "TB",
   spacing: { nodesep: number; ranksep: number } = { nodesep: 32, ranksep: 70 },
+  /** A box taller than `size` (a data map box with a note), by id. */
+  heights: Record<string, number> = {},
 ): Record<string, { x: number; y: number }> {
   const g = new graphlib.Graph();
   g.setGraph({ rankdir: direction, ...spacing });
   g.setDefaultEdgeLabel(() => ({}));
   // A label of its own for each node: dagre writes the node's place onto it.
-  for (const id of ids) g.setNode(id, { ...size });
+  for (const id of ids) g.setNode(id, { width: size.width, height: heights[id] ?? size.height });
   for (const e of edges)
     if (ids.includes(e.source) && ids.includes(e.target)) g.setEdge(e.source, e.target);
   layout(g);
   return Object.fromEntries(
     ids.map((id) => {
       const at = g.node(id);
-      return [id, { x: at.x - size.width / 2, y: at.y - size.height / 2 }];
+      return [id, { x: at.x - size.width / 2, y: at.y - (heights[id] ?? size.height) / 2 }];
     }),
   );
 }

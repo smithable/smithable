@@ -1,5 +1,6 @@
 import { type AuthIR, type SpecIR, validateAuth, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
+import bookingSpec from "../../../../examples/booking/smithable.yml?raw";
 import crmAuth from "../../../../examples/crm/smithable.auth.yml?raw";
 import crmSpec from "../../../../examples/crm/smithable.yml?raw";
 import { mapOf } from "./data-map";
@@ -20,15 +21,17 @@ test("the CRM's map: its kinds of record and the people, references and ownershi
     id: "Customer.accountManager",
     source: "Customer",
     target: "User",
-    label: "accountManager (owns it) · many to one",
+    label: "accountManager (owns it)",
     kind: "owner",
     relation: "many to one",
+    ends: ["*", "0..1"],
   });
   // How they relate, with the list on the other side.
   expect(edges.find((e) => e.id === "Order.customer")).toMatchObject({
     relation: "many to one",
     list: "Customer.orders",
-    label: "customer · many to one · Customer.orders",
+    label: "customer · Customer.orders",
+    ends: ["*", "1"],
   });
   // An order is whoever made it: said in its box, not by an arrow to the people.
   expect(nodes.find((n) => n.id === "Order")?.madeBy).toBe(true);
@@ -47,4 +50,20 @@ test("without sign-in a record is not its maker's: only ownedBy says whose it is
   ]);
   expect(nodes.some((n) => n.madeBy)).toBe(false);
   expect(nodes.map((n) => n.id)).toContain("User");
+});
+
+test("a kind no arrow reaches says where its records come from and where they show (A 164)", () => {
+  const booking = validateSpec({ path: "smithable.yml", text: bookingSpec }).ir as SpecIR;
+  const { nodes } = mapOf(booking);
+  // A post is written on its page and shown on the blog and the home page's news; a message
+  // comes from the home page's contact form.
+  expect(Object.fromEntries(nodes.filter((n) => n.alone).map((n) => [n.id, n.alone]))).toEqual({
+    Post: { from: ["the posts page"], shown: ["home", "blog", "admin"], actions: ["publish"] },
+    Message: {
+      from: ["the contact form on home", "the messages page"],
+      shown: ["admin"],
+      actions: [],
+    },
+  });
+  expect(nodes.find((n) => n.id === "Session")?.alone).toBeUndefined();
 });
