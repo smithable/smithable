@@ -48,7 +48,7 @@ dark:
   foreground: "#e3e9ef"
 ```
 
-The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: seven fonts, and for headings, surfaces, buttons, pictures and tables a few choices each.
+The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: eight fonts, and for headings, surfaces, buttons, pictures and tables a few choices each.
 
 ## 3. Add it
 
