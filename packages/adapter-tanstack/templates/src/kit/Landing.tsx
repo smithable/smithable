@@ -1210,7 +1210,14 @@ function CallToActionView({
 }) {
   return (
     <section {...sectionHooks(texts)} {...frame(band, "py-12")}>
-      <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
+      {/* On the primary band the band is its box: the words on it, the button inverse. */}
+      <div
+        className={
+          band === "primary"
+            ? "py-4"
+            : "rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12"
+        }
+      >
         <h2
           className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
           {...mark(texts, "title")}
@@ -1225,7 +1232,10 @@ function CallToActionView({
         {link && (
           <Link
             to={link.to}
-            className={cn(buttonVariants({ variant: "secondary" }), "mt-8 h-12 px-6 text-base")}
+            className={cn(
+              buttonVariants({ variant: band === "primary" ? "default" : "secondary" }),
+              "mt-8 h-12 px-6 text-base",
+            )}
           >
             <span {...mark(texts, "button")}>{link.label}</span>
           </Link>
