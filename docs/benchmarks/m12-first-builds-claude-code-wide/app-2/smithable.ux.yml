@@ -1,21 +1,17 @@
 smithableUx: 0.1
-theme:
-  preset: modern
 pages:
-  deals:
-    table:
-      columns: [title, lead, stage, value, expectedClose, accountManager]
   leads:
     table:
-      columns: [company, contactName, status, source, accountManager]
-  followUps:
+      sort: nextFollowUp
+      columns: [name, company, status, assignedTo, nextFollowUp]
+  deals:
     table:
-      sort: dueOn
-      columns: [dueOn, subject, lead, assignee, done]
+      sort: nextFollowUp
+      columns: [title, lead, stage, value, assignedTo, nextFollowUp]
 tones:
   Deal.stage:
     won: success
     lost: danger
   Lead.status:
     qualified: success
-    disqualified: danger
+    lost: danger

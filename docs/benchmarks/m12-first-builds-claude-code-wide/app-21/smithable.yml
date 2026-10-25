@@ -10,6 +10,7 @@ models:
       name: string!
       email: email
       phone: phone
+      address: string
       notes: text
       cars: Car[]
       invoices: Invoice[]
@@ -17,55 +18,57 @@ models:
   Car:
     fields:
       registration: string! unique
-      make: string
-      modelName: string
+      make: string!
+      carModel: string
       year: int
+      vin: string
       mileage: int
       customer: Customer!
       jobs: Job[]
-    namedBy: [registration, make]
   Job:
     fields:
+      title: string!
       car: Car!
-      description: text!
-      scheduledOn: date
-      status: booked | inProgress | done | canceled
+      status: booked | inProgress | done
+      date: date = TODAY()
+      description: text
       mechanic: User
+      hours: decimal
       laborCost: money
       partsCost: money
       total:
         type: money
         formula: laborCost + partsCost
-    namedBy: [car, scheduledOn]
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
       job: Job
-      amount: money!
       status: draft | sent | paid
+      amount: money!
       issuedOn: date = TODAY()
-      dueOn: date
-      paidOn: date
+      dueDate: date
+      paidOn:
+        type: date
+        by: app
     trash: true
-    namedBy: number
 pages:
-  huoltotyot:
+  tyot:
     crud: Job
-    search: [description]
-    filters: [status, mechanic, scheduledOn, car]
-    actions: [startJob, completeJob, cancelJob]
+    search: [title]
+    filters: [status, car, mechanic, date]
+    actions: [startJob, completeJob]
   asiakkaat:
     crud: Customer
     search: [name, email, phone]
   autot:
     crud: Car
-    search: [registration, make, modelName]
+    search: [registration, make, carModel]
     filters: [customer]
   laskut:
     crud: Invoice
     search: [number]
-    filters: [status, customer, dueOn]
+    filters: [status, customer, dueDate]
     actions: [sendInvoice, markPaid]
   tiimi:
     users: manage
@@ -77,25 +80,21 @@ actions:
     set:
       status: inProgress
       mechanic: ME()
+    intent: Aloita työ ja ota se itsellesi.
   completeJob:
     on: Job
     when:
       status: [booked, inProgress]
     set:
       status: done
-  cancelJob:
-    on: Job
-    when:
-      status: [booked, inProgress]
-    set:
-      status: canceled
+    intent: Merkitse työ valmiiksi.
   sendInvoice:
     on: Invoice
     when:
       status: draft
     set:
       status: sent
-      issuedOn: TODAY()
+    intent: Merkitse lasku lähetetyksi.
   markPaid:
     on: Invoice
     when:
@@ -103,3 +102,4 @@ actions:
     set:
       status: paid
       paidOn: TODAY()
+    intent: Merkitse lasku maksetuksi.

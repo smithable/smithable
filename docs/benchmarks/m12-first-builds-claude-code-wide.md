@@ -1,11 +1,11 @@
 # M12 first builds: claude-code, the second set (2026-10-25; 5 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 20 type-check, 1,257,947 tokens (1,204,310 in, 53,637 out), €0.0000 + $1.7480 (as Claude Code reports it); 7 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 23 type-check, 1,553,492 tokens (1,489,994 in, 63,498 out), €0.0000 + $2.4371 (as Claude Code reports it); 1 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | My clients as a freelance translator: who they are, what I quoted and what they paid. | invoicing | yes | yes | 96,516 | 3,409 | $0.1236 | 0 | 2 | 59 s |
-| A sales pipeline for our six-person web agency: leads, deals and who follows up when. *(rerun 2026-10-25)* | crm | yes | **no** | 0 | 0 | €0.0000 | 2 | 2 | 21 s |
+| A sales pipeline for our six-person web agency: leads, deals and who follows up when. *(rerun 2026-10-25)* | crm | yes | yes | 47,874 | 2,129 | $0.4256 | 0 | 1 | 46 s |
 | Online booking for a hair salon: customers pick a stylist and a free time themselves. | barbers | yes | yes | 47,958 | 2,152 | $0.0683 | 0 | 1 | 46 s |
 | A piano teacher's lessons: my pupils, their weekly times and what each one practises. | records | yes | yes | 47,161 | 1,387 | $0.0467 | 0 | 1 | 34 s |
 | Invoices for my photography work: clients, shoots and what is still unpaid. | invoicing | yes | yes | 48,085 | 2,101 | $0.0683 | 0 | 1 | 37 s |
@@ -18,15 +18,15 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | Service status for our municipality's online services, for residents to check outages. | status | yes | yes | 48,299 | 2,602 | $0.0801 | 0 | 1 | 45 s |
 | A log of my car's fuel, service visits and costs. | records | yes | yes | 47,149 | 1,913 | $0.0571 | 0 | 1 | 51 s |
 | The guest list and seating plan for our wedding, with who has answered and their meal choices. *(rerun 2026-10-25)* | records | yes | yes | 0 | 0 | €0.0000 | 1 | 1 | 16 s |
-| Bird sightings for our birdwatching club: species, place, date and who saw it. *(rerun 2026-10-25)* | records | yes | **no** | 0 | 0 | €0.0000 | 2 | 2 | 15 s |
+| Bird sightings for our birdwatching club: species, place, date and who saw it. *(rerun 2026-10-25)* | records | yes | yes | 94,789 | 1,492 | $0.0707 | 0 | 2 | 62 s |
 | Our allotment society: who has which plot, the waiting list and the yearly fee. | records | yes | yes | 47,160 | 2,463 | $0.0682 | 0 | 1 | 45 s |
 | Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet. | barbers | yes | yes | 48,009 | 3,276 | $0.0912 | 0 | 1 | 60 s |
 | Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor. | invoicing | yes | yes | 149,246 | 7,870 | $0.2763 | 0 | 3 | 93 s |
 | En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris. | marketplace | yes | yes | 47,422 | 2,561 | $0.0722 | 0 | 1 | 48 s |
 | Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 147,585 | 5,712 | $0.2198 | 0 | 3 | 77 s |
-| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. *(rerun 2026-10-25)* | crm | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 14 s |
+| Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. *(rerun 2026-10-25)* | crm | yes | yes | 47,848 | 4,040 | $0.1049 | 0 | 1 | 62 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | kiosk | yes | yes | 48,024 | 4,511 | $0.1160 | 0 | 1 | 51 s |
-| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-25)* | records | yes | **no** | 0 | 0 | €0.0000 | 1 | 1 | 13 s |
+| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-25)* | records | yes | **no** | 95,173 | 2,200 | $0.0879 | 0 | 2 | 47 s |
 | Somewhere my AI assistant keeps my tasks and notes, by project. | api | yes | yes | 47,440 | 985 | $0.0408 | 0 | 1 | 20 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m12-first-builds-claude-code-wide/), one folder per description (app-1 …).
@@ -39,7 +39,7 @@ Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing | Language | App name in it | Labels in it | Landing texts in it | With a text of their own |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | invoicing (words: booking) | 3 | 1 / 4 (has 3) | 2 / 7 (has 4) | 1 / 3 (has 3) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 1 / 3 | no mention; no landing page | en | | | | |
-| 2 | crm | 3 | 0 / 2 (has 3) | 1 / 3 (has 4) | 0 / 1 (has 4) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none |  | none | 0 / 3 | no mention; no landing page | en | | | | |
+| 2 | crm | 3 | 0 / 2 (has 2) | 1 / 3 (has 4) | 0 / 1 (has 2) | shared; admin, sales (sales) | none | pages none; read none; create none | 1 (no-timezone) | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
 | 3 | barbers | 3 | 3 / 4 (has 4) | 6 / 7 (has 7) | 2 / 2 (has 2) | private; admin, member (member) | none | pages home, privacy; read Service, Stylist; create none | 2 (no-timezone, operator-unknown) | none |  | none | 1 / 4 | no mention; landing page | en | | | | |
 | 4 | records (words: barbers) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 2) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page | en | | | | |
 | 5 | invoicing | 3 | 3 / 4 (has 4) | 3 / 7 (has 4) | 3 / 3 (has 3) | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 3 / 4 | no mention; no landing page | en | | | | |
@@ -58,9 +58,9 @@ Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m
 | 18 | invoicing (words: records) | 3 (sv: yes (ska, en)) | 2 / 4 (has 5) | 0 / 7 (has 5) | 3 / 3 (has 6) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 5 | no mention; no landing page | sv | no | yes (offerter, fakturor, till) | none | models 5/5, fields 32/32, pages 5/5 |
 | 19 | marketplace (words: records) | 3 (sv: yes (ska, lägga, saker)) | 1 / 1 (has 1) | 5 / 5 (has 6) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, catalog; read Item; create none | 1 (operator-unknown) | none |  | none | 1 / 1 | no mention; landing page | sv | no | yes (bilder, pris, till) | yes (på, vår, loppis) | models 1/1, fields 8/8, pages 6/6 |
 | 20 | booking (words: records) | 3 (fi: yes (tai)) | 4 / 6 (has 4) | 1 / 12 (has 8) | 0 / 1 (has 0) | private; admin, member (member) | none | pages home, lukujarjestys, tietosuoja; read Instructor, Session, ClassType; create none | 1 (operator-unknown) | none |  | none | 3 / 4 | no mention; landing page | fi | no | yes (tunnit, varaukset, varaus) | yes (ja, verkossa) | models 4/4, fields 17/17, pages 8/8 |
-| 21 | crm (words: records) | 3 (fi: yes (laskut)) | 1 / 2 (has 4) | 0 / 3 (has 5) | 0 / 1 (has 5) | shared; admin, staff (staff) | none | pages none; read none; create none | 0 | none |  | none | 1 / 4 | no mention; no landing page | fi | no | none | none | models 0/4, fields 0/29, pages 0/5 |
+| 21 | crm (words: records) | 3 (fi: yes (laskut)) | 1 / 2 (has 4) | 0 / 3 (has 5) | 0 / 1 (has 4) | shared; admin, staff (staff) | none | pages none; read none; create none | 0 | none |  | none | 1 / 4 | no mention; no landing page | fi | no | none | none | models 0/4, fields 0/33, pages 0/5 |
 | 22 | kiosk (words: records) | 3 (de: yes (die, vorbestellungen, abholzeiten)) | 2 / 4 (has 4) | 1 / 6 (has 6) | 6 / 6 (has 6) | shared; admin, staff (staff) | none | pages abholung, datenschutz; read Product, PickupTime; create Order | 1 (operator-unknown) | none |  | none | 1 / 4 | no mention; landing page | de | yes (hofladen) | none | no | models 0/4, fields 0/24, pages 0/6 |
-| 23 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 3) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | yes | none | 0 / 2 | no mention; no landing page | en | | | | |
+| 23 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 2) | 0 / 0 (has 4) | private; admin, member (member) | none | pages none; read none; create none | 0 | none | yes | none | 0 / 2 | no mention; no landing page | en | | | | |
 | 24 | api | 1 | 3 / 3 (has 3) | 2 / 2 (has 2) | 2 / 2 (has 2) | shared; admin, member, assistant (member) | none | pages none; read none; create none | 0 | none | yes | none | 3 / 3 | no mention; no landing page | en | | | | |
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names what the draft dropped because it could not be made valid: an action by its name, anything else (a formula field, a capacity) with its operation. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one `new --describe --yes` printed, with the word-match starter (`closestStarter`) beside it when it differs; "Questions" counts what `smithable clarify` would ask (`--yes` asks nothing), with their language for a description not in English. For a description not in English, the language columns say whether the app's name, its model and field labels, and its landing pages' texts contain words of that language (common words, or the description's own words of four letters or more), with up to three of them, and how many models and fields have a label and pages a title in the content file.
@@ -152,79 +152,67 @@ Agency Pipeline
   A sales pipeline for our web agency: leads, deals and who follows up when.
 
 Pages
+  - Deals (lists deals; search by title or lead; filter by stage, assigned to, next follow up or expected close; “Mark won”; “Mark lost”)
+  - Leads (lists leads; search by name, company or email; filter by status, source, assigned to or next follow up)
+  - Follow ups (a calendar of deals by week or month)
   - Team (who has access: invite people, change roles, remove users; only for admins)
-  - Deals (lists deals; search by title; filter by stage, account manager or expected close; “Mark won”; “Mark lost”)
-  - Leads (lists leads; search by company, contact name or email; filter by status, source or account manager)
-  - Follow ups (lists follow ups; filter by done, assignee or due on; “Complete”; “Take”)
 
 Leads
   Leads have:
-  - a company (required)
-  - a contact name
+  - a name (required)
+  - a company
   - an email
   - a phone
-  - a website (a web address)
-  - a source (referral, website, event, outbound or other, referral by default)
-  - status (new, contacted, qualified or disqualified, new by default)
+  - a source (referral, website, event, outreach or other, referral by default)
+  - status (new, contacted, qualified or lost, new by default)
+  - a next follow up (a date)
   - notes
-  Each lead can have an account manager (a user, who makes it, by default).
+  Each lead can have an assigned to (a user).
   Each lead lists its deals.
-  Each lead lists its follow ups.
-  The account manager owns the lead.
+  The assigned to owns the lead.
   Deleted leads stay in the trash for thirty days, where they can be restored.
 
 Deals
   Deals have:
   - a title (required)
   - a lead (a lead, required)
-  - a stage (proposal, negotiation, won or lost, proposal by default)
+  - a stage (discovery, proposal, negotiation, won or lost, discovery by default)
   - a value (an amount)
   - an expected close (a date)
-  - closed on (a date)
+  - a next follow up (a date)
+  - a follow up note
   - notes
-  Each deal can have an account manager (a user, who makes it, by default).
-  The account manager owns the deal.
+  Each deal can have an assigned to (a user).
+  The assigned to owns the deal.
   Deleted deals stay in the trash for thirty days, where they can be restored.
 
-Follow ups
-  Follow ups have:
-  - a subject (required)
-  - a lead (a lead, required)
-  - due on (a date, required)
-  - done (yes or no, false by default)
-  - a note
-  Each follow up can have an assignee (a user, who makes it, by default).
-  The assignee owns the follow up.
-
 Mark won
-  For a deal that is proposal or negotiation; sets stage to won and closed on to today.
+  For a deal that is discovery, proposal or negotiation; sets stage to won.
+  Mark the deal as won.
 
 Mark lost
-  For a deal that is proposal or negotiation; sets stage to lost and closed on to today.
-
-Complete
-  For a follow up that is not done; sets done to yes.
-
-Take
-  For a follow up that is not done; sets assignee to whoever presses it.
+  For a deal that is discovery, proposal or negotiation; sets stage to lost.
+  Mark the deal as lost.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - sales (Works with leads, deals and follow-ups): opens the deals page, the leads page and the follow ups page; adds every kind of record; changes everyone's records
+  - sales (Works with leads and deals): opens the deals page, the leads page and the follow ups page; adds every kind of record; changes everyone's records
   New users get the sales role.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 136 files (136 changed, 0 removed).
+Generated 128 files (128 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-M59UCw/app-2. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-v3aL0o/app-2. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-M59UCw/app-2
+  cd /tmp/smithable-bench-m12-v3aL0o/app-2
   smithable studio
 
 or only run the app with smithable run.
+/tmp/smithable-bench-m12-v3aL0o/app-2/smithable.yml:48:14  warning  Page "followUps" is a calendar, but the app has no time zone: records are placed in UTC.
+    hint: Set "timezone" under "app", e.g. "Europe/Mariehamn".
 ```
 
 ### 3. Online booking for a hair salon: customers pick a stylist and a free time themselves.
@@ -1016,20 +1004,18 @@ or only run the app with smithable run.
 ### 15. Bird sightings for our birdwatching club: species, place, date and who saw it.
 
 ```text
-Bird Log
-  The birdwatching club's shared record of bird sightings: species, place, date and who saw it.
+Club Sightings
+  Bird sightings logged by our birdwatching club: species, place, date and who saw it.
 
 Pages
-  - Species (lists specieses; search by name, scientific name or family)
-  - Sightings (lists sightings; search by place or notes; filter by species, seen on or observer)
+  - Species (lists specieses; search by name or scientific name)
+  - Sightings (lists sightings; search by place or notes; filter by species, observer or seen on)
   - Team (who has access: invite people, change roles, remove users; only for admins)
 
 Specieses
   Specieses have:
   - a name (required, unique)
   - a scientific name
-  - a family
-  - a picture
   - notes
   Each species lists its sightings.
 
@@ -1038,12 +1024,11 @@ Sightings
   - species (a species, required)
   - a place (required)
   - seen on (a date, required, today by default)
-  - a count (a whole number, required, 1 by default)
-  - a photo (picture)
+  - a count (a whole number, 1 by default)
   - notes
+  - a photo (picture)
   Each sighting can have an observer (a user, who makes it, by default).
   The observer owns the sighting.
-  A sighting is named after its species and its seen on.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -1054,11 +1039,11 @@ Sign-in and access
   New users get the member role.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, logo.webp.
-Generated 127 files (127 changed, 0 removed).
+Generated 126 files (126 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-M59UCw/app-15. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-v3aL0o/app-15. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-M59UCw/app-15
+  cd /tmp/smithable-bench-m12-v3aL0o/app-15
   smithable studio
 
 or only run the app with smithable run.
@@ -1469,10 +1454,10 @@ Korjaamo
   Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
 
 Pages
-  - Huoltotyot (lists jobs; search by description; filter by status, mechanic, scheduled on or car; “Start job”; “Complete job”; “Cancel job”)
+  - Tyot (lists jobs; search by title; filter by status, car, mechanic or date; “Start job”; “Complete job”)
   - Asiakkaat (lists customers; search by name, email or phone)
-  - Autot (lists cars; search by registration, make or model name; filter by customer)
-  - Laskut (lists invoices; search by number; filter by status, customer or due on; “Send invoice”; “Mark paid”)
+  - Autot (lists cars; search by registration, make or car model; filter by customer)
+  - Laskut (lists invoices; search by number; filter by status, customer or due date; “Send invoice”; “Mark paid”)
   - Tiimi (who has access: invite people, change roles, remove users; only for admins)
 
 Customers
@@ -1480,6 +1465,7 @@ Customers
   - a name (required)
   - an email
   - a phone
+  - address
   - notes
   Each customer lists its cars.
   Each customer lists its invoices.
@@ -1488,68 +1474,69 @@ Customers
 Cars
   Cars have:
   - a registration (required, unique)
-  - a make
-  - a model name
+  - a make (required)
+  - a car model
   - a year (a whole number)
+  - a vin
   - a mileage (a whole number)
   - a customer (a customer, required)
   Each car lists its jobs.
-  A car is named after its registration and its make.
 
 Jobs
   Jobs have:
+  - a title (required)
   - a car (a car, required)
-  - a description (required)
-  - scheduled on (a date)
-  - status (booked, in progress, done or canceled, booked by default)
+  - status (booked, in progress or done, booked by default)
+  - a date (today by default)
+  - a description
+  - hours (a number)
   - a labor cost (an amount)
   - a parts cost (an amount)
   Each job can have a mechanic (a user).
   The total is calculated as the labor cost plus the parts cost.
-  A job is named after its car and its scheduled on.
 
 Invoices
   Invoices have:
   - a number (required, unique)
   - a customer (a customer, required)
   - a job (a job)
-  - an amount (an amount, required)
   - status (draft, sent or paid, draft by default)
+  - an amount (an amount, required)
   - issued on (a date, today by default)
-  - due on (a date)
-  - paid on (a date)
+  - a due date
+  - paid on (a date, filled by the app)
   Deleted invoices stay in the trash for thirty days, where they can be restored.
-  A invoice is named after its number.
 
 Start job
   For a job that is booked; sets status to in progress and mechanic to whoever presses it.
+  Aloita työ ja ota se itsellesi.
 
 Complete job
   For a job that is booked or in progress; sets status to done.
-
-Cancel job
-  For a job that is booked or in progress; sets status to canceled.
+  Merkitse työ valmiiksi.
 
 Send invoice
-  For an invoice that is draft; sets status to sent and issued on to today.
+  For an invoice that is draft; sets status to sent.
+  Merkitse lasku lähetetyksi.
 
 Mark paid
   For an invoice that is sent; sets status to paid and paid on to today.
+  Merkitse lasku maksetuksi.
 
 Sign-in and access
   People sign in with a code sent to their email.
   Everyone who signs in sees all records, and changes and deletes the ones they own.
   Roles:
   - admin: everything
-  - staff (Korjaamon työntekijä: hoitaa asiakkaita, autoja, huoltotöitä ja laskuja): opens the huoltotyot page, the asiakkaat page, the autot page and the laskut page; adds every kind of record; changes everyone's records
+  - staff (Korjaamon työntekijä: hoitaa asiakkaat, autot, työt ja laskut): opens the tyot page, the asiakkaat page, the autot page and the laskut page; adds every kind of record; changes everyone's records
   New users get the staff role.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 148 files (148 changed, 0 removed).
+Generated 144 files (144 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-M59UCw/app-21. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-v3aL0o/app-21. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-M59UCw/app-21
+  cd /tmp/smithable-bench-m12-v3aL0o/app-21
   smithable studio
 
 or only run the app with smithable run.
@@ -1663,42 +1650,43 @@ or only run the app with smithable run.
 
 ```text
 Habit Tracker
-  Keeps each person's habits, their daily check-ins and their streaks.
+  Keep track of your habits with daily check-ins and streaks.
 
 Pages
-  - Habits (lists habits; search by name or description; filter by status; “Pause”; “Resume”; “Archive”)
-  - Check ins (lists check ins; filter by habit, date or done)
+  - Habits (lists habits; search by name or description; filter by status or frequency; “Reset streak”; “Pause”; “Resume”; “Check in”)
+  - Check ins (lists check ins; filter by habit or date)
 
 Habits
   Habits have:
   - a name (required)
   - a description
+  - a frequency (daily, weekdays or weekly, daily by default)
   - status (active, paused or archived, active by default)
   - started on (a date, required, today by default)
   - a current streak (a whole number, 0 by default, filled by the app)
-  - a longest streak (a whole number, 0 by default, filled by the app)
+  - a last check in (a date, filled by the app)
   Each habit lists its check ins.
 
 Check ins
   Check ins have:
   - a habit (a habit, required)
   - a date (required, today by default)
-  - done (yes or no, true by default)
   - a note
-  A check in is named after its habit and its date.
   No two check ins have the same habit and date for one owner.
+
+Reset streak
+  Sets current streak to 0.
+  Start the habit's streak over after a missed day.
 
 Pause
   For a habit that is active; sets status to paused.
-  Pause a habit for a while.
 
 Resume
-  For a habit that is paused or archived; sets status to active.
-  Take a habit up again.
+  For a habit that is paused; sets status to active.
 
-Archive
-  For a habit that is active or paused; sets status to archived.
-  Put away a habit no longer followed.
+Check in
+  For a habit that is active; sets last check in to today; asks for the check in's note; adds a check in (date today).
+  Check in on a habit for today.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -1707,14 +1695,14 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-  Other programs can read and change habits and check ins with a key, and run pause, resume and archive.
+  Other programs can read and change habits and check ins with a key, and run check in, reset streak, pause and resume.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
-Generated 120 files (120 changed, 0 removed).
+Generated 121 files (121 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-M59UCw/app-23. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-v3aL0o/app-23. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-M59UCw/app-23
+  cd /tmp/smithable-bench-m12-v3aL0o/app-23
   smithable studio
 
 or only run the app with smithable run.

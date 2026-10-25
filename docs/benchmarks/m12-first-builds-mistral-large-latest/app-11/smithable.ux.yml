@@ -1,8 +1,0 @@
-smithableUx: 0.1
-theme:
-  preset: minimal
-pages:
-  incidents:
-    record:
-      lists:
-        updates: thread

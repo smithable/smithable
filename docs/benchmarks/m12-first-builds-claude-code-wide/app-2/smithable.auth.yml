@@ -6,10 +6,10 @@ defaultAccess: shared
 roles:
   admin: all
   sales:
-    description: Works with leads, deals and follow-ups.
+    description: Works with leads and deals.
+    pages: [deals, leads, followUps]
     create: all
     write: all
-    pages: [deals, leads, followUps]
 assistant:
   for: signed-in
 defaultRole: sales

@@ -2,7 +2,7 @@ smithableContent: 0.1
 pages:
   home:
     title: Borrow tools from your neighbors
-    subtitle: Find what you need, when you need it
+    subtitle: Find what you need for your next project, and lend what you're not using.
     hero:
       image:
         src: images/hero.webp

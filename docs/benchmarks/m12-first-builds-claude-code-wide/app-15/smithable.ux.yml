@@ -6,7 +6,7 @@ pages:
     icon: book
   sightings:
     table:
-      columns: [species, place, seenOn, count, observer]
+      columns: [species, place, seenOn, observer, count]
       sort: -seenOn
     icon: calendar
 theme:

@@ -1,62 +1,67 @@
 smithable: 0.1
 app:
   name: Habit Tracker
-  description: Keeps each person's habits, their daily check-ins and their streaks.
+  description: Keep track of your habits with daily check-ins and streaks.
   timezone: Europe/Stockholm
 models:
   Habit:
     fields:
       name: string!
       description: text
+      frequency: daily | weekdays | weekly
       status: active | paused | archived
       startedOn: date! = TODAY()
       currentStreak:
         type: int
         by: app
         default: 0
-      longestStreak:
-        type: int
+      lastCheckIn:
+        type: date
         by: app
-        default: 0
       checkIns: CheckIn[]
   CheckIn:
     fields:
       habit: Habit!
       date: date! = TODAY()
-      done: bool = true
       note: text
     unique: [{ fields: [habit, date], scope: owner }]
-    namedBy: [habit, date]
 pages:
   habits:
     crud: Habit
+    actions: [resetStreak, pause, resume, checkIn]
     search: [name, description]
-    filters: [status]
+    filters: [status, frequency]
     defaultFilter:
-      status: [active, paused]
-    actions: [pause, resume, archive]
+      status: active
   checkIns:
     crud: CheckIn
-    filters: [habit, date, done]
+    filters: [habit, date]
 actions:
+  resetStreak:
+    on: Habit
+    set:
+      currentStreak: 0
+    intent: Start the habit's streak over after a missed day.
   pause:
     on: Habit
     when:
       status: active
     set:
       status: paused
-    intent: Pause a habit for a while.
   resume:
     on: Habit
     when:
-      status: [paused, archived]
+      status: paused
     set:
       status: active
-    intent: Take a habit up again.
-  archive:
+  checkIn:
     on: Habit
     when:
-      status: [active, paused]
+      status: active
     set:
-      status: archived
-    intent: Put away a habit no longer followed.
+      lastCheckIn: TODAY()
+    add:
+      CheckIn:
+        date: TODAY()
+        note:
+    intent: Check in on a habit for today.

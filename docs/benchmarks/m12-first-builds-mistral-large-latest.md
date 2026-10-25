@@ -1,20 +1,20 @@
 # M12 first builds: mistral-large-latest (2026-10-25; 2 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 12 / 12 created, 10 type-check, 423,294 tokens (400,082 in, 23,212 out), €0.0000 + $0.2349 (Mistral's list price); 3 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 11 / 12 created, 10 type-check, 534,553 tokens (507,336 in, 27,217 out), €0.0000 + $0.2945 (Mistral's list price); 4 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 37,420 | 2,637 | $0.0227 | 0 | 2 | 42 s |
 | A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 10 s |
 | Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 90,567 | 4,644 | $0.0522 | 0 | 5 | 62 s |
-| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 0 | 0 | $0.0000 | 1 | 1 | 16 s |
+| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 70,595 | 1,608 | $0.0377 | 1 | 5 | 36 s |
 | An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 17,258 | 657 | $0.0096 | 0 | 1 | 21 s |
 | A job board for a local union, with job posts and applications. | marketplace | yes | yes | 74,267 | 5,421 | $0.0453 | 0 | 4 | 62 s |
 | A football club's site: teams, players, matches and results. | records | yes | yes | 17,256 | 859 | $0.0099 | 0 | 1 | 39 s |
 | Event registration for a conference: talks, speakers and attendees. | records | yes | yes | 92,158 | 3,947 | $0.0520 | 0 | 5 | 119 s |
 | A help desk for an IT team: tickets, priorities and who handles them. | support | yes | yes | 17,757 | 1,059 | $0.0105 | 0 | 1 | 35 s |
 | A recipe collection for a family, with ingredients and shopping lists. | records | yes | yes | 17,255 | 2,222 | $0.0120 | 0 | 1 | 41 s |
-| A status page for our API, with incidents and planned maintenance. *(rerun 2026-10-25)* | status | yes | **no** | 0 | 0 | $0.0000 | 2 | 2 | 19 s |
+| A status page for our API, with incidents and planned maintenance. *(rerun 2026-10-25)* | status | **no** | **no** | 36,659 | 2,397 | $0.0219 | 3 | 5 | 28 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 36,144 | 1,766 | $0.0207 | 0 | 2 | 50 s |
 
 Each created app's four spec files are in [m12-first-builds-mistral-large-latest/](m12-first-builds-mistral-large-latest/), one folder per description (app-1 …).
@@ -22,21 +22,20 @@ Each created app's four spec files are in [m12-first-builds-mistral-large-latest
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)
 
-2 of 12 drafts end with a warning about what is public (*Public flaws left*: public-personal-data, public-page-closed-records, contact-form-closed, shortcut-closed, mine-public, visitors-read-drafts); since #266 a draft with one goes back to the model once to fix it. *API app*, for the second set's two descriptions of apps for programs and assistants: "yes" when the draft has no landing page, an `api` block, tools when the description names an assistant, and a role other than admin for keys; otherwise what it lacks.
+3 of 11 drafts end with a warning about what is public (*Public flaws left*: public-personal-data, public-page-closed-records, contact-form-closed, shortcut-closed, mine-public, visitors-read-drafts); since #266 a draft with one goes back to the model once to fix it. *API app*, for the second set's two descriptions of apps for programs and assistants: "yes" when the draft has no landing page, an `api` block, tools when the description names an assistant, and a role other than admin for keys; otherwise what it lacks.
 
 | # | Starter | Questions | Models kept | Pages kept | Actions kept | Access; roles (default) | Pages with access | Public | Warnings | Public flaws left | API app | Starter's texts in the draft | Models with the starter's samples | Visitors / landing |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | booking | 0 | 6 / 6 (has 6) | 12 / 12 (has 12) | 1 / 1 (has 1) | private; admin, member (member) | none | pages home, schedule, blog, about, privacy; read ClassType, Instructor, Session, Post; create Message | 2 (no-timezone, operator-unknown) | none |  | none | 4 / 6 | mentions visitors; landing page |
 | 2 | ? (words: crm) | 0 | 0 / 0 (has 6) | 0 / 0 (has 5) | 0 / 0 (has 1) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none |  | none | 0 / 6 | no mention; no landing page |
 | 3 | invoicing | 0 | 4 / 4 (has 4) | 5 / 7 (has 5) | 3 / 3 (has 3); left out: addField Invoice.dueOn | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 3 / 4 | no mention; no landing page |
-| 4 | marketplace (words: records) | 3 | 0 / 1 (has 1) | 2 / 5 (has 5) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, tools; read Tool; create none | 2 (review-no-page, operator-unknown) | none |  | none | 0 / 1 | no mention; landing page |
+| 4 | marketplace (words: records) | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 2); left out: markReturned | private; admin, member (member) | none | pages home, tools; read Tool; create none | 2 (public-personal-data, operator-unknown) | **public-personal-data** |  | none | 0 / 2 | no mention; landing page |
 | 5 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, baker (baker) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
 | 6 | marketplace | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, jobs; read none; create none | 3 (public-page-closed-records, operator-unknown) | **public-page-closed-records** |  | none | 0 / 2 | no mention; landing page |
 | 7 | records | 3 | 0 / 1 (has 3) | 1 / 2 (has 5) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, teams, players, matches, privacy; read Team, Player, Match; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | mentions visitors; landing page |
 | 8 | records | 3 | 0 / 1 (has 4) | 1 / 2 (has 7) | 0 / 0 (has 2) | shared; admin, organizer (organizer) | none | pages home, talks; read Talk; create none | 3 (capacity-no-unique, public-page-closed-records, operator-unknown) | **public-page-closed-records** |  | none | 0 / 4 | no mention; landing page |
 | 9 | support (words: invoicing) | 3 | 1 / 2 (has 2) | 1 / 2 (has 2) | 4 / 5 (has 5) | shared; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
 | 10 | records | 3 | 0 / 1 (has 3) | 1 / 2 (has 4) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, recipes; read Recipe; create none | 3 (write-without-read, operator-unknown) | none |  | none | 0 / 3 | no mention; landing page |
-| 11 | status | 0 | 4 / 4 (has 4) | 7 / 8 (has 7) | 3 / 3 (has 3) | shared; admin, member (member) | none | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 1 (thread-needs-form) | none |  | none | 4 / 4 | no mention; landing page |
 | 12 | status | 0 | 4 / 4 (has 4) | 7 / 8 (has 7) | 3 / 3 (has 3) | shared; admin, member (member) | none | pages home; read Component, Incident, IncidentUpdate, Maintenance; create none | 0 | none |  | none | 4 / 4 | mentions visitors; landing page |
 
 "Kept" counts the starter's models, pages and actions that the draft still has by name, with how many the draft has in all; "left out" names what the draft dropped because it could not be made valid: an action by its name, anything else (a formula field, a capacity) with its operation. "Starter's texts" lists the starter's app name or sample titles found in the draft's spec or content. "Models with the starter's samples" counts the draft's models that keep some of the starter's sample records after `fitSamples`; the rest get generated rows. "Mentions visitors" means the description says visitors, public or site. "Starter" is the one `new --describe --yes` printed, with the word-match starter (`closestStarter`) beside it when it differs; "Questions" counts what `smithable clarify` would ask (`--yes` asks nothing), with their language for a description not in English.
@@ -271,26 +270,47 @@ or only run the app with smithable run.
 ### 4. A tool library where neighbors lend each other tools.
 
 ```text
+Left out, since it could not be made valid:
+  addAction markReturned: addAction: "when.returnedOn" must be a string or true or false or a list.
+
 NeighborTools
-  Borrow and lend tools with your neighbors.
+  A tool library where neighbors lend each other tools.
 
 Pages
   - Borrow tools from your neighbors (a landing page: hero, tools where available is yes and footer)
-  - Tools (lists tools; search by name, description or location; filter by category, condition or available; sort by name or date added; records can be saved as favorites; contact the owner by mail)
+  - Tools (lists tools)
+  - My tools (lists tools)
+  - Borrowings (lists borrowings)
   - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)
-  - My tools (lists tools; only the viewer's own records)
-  - Saved (lists tools; only the viewer's saved records)
 
 Tools
   Tools have:
   - a name (required)
-  - a photo (picture, required)
+  - photos (pictures, required)
   - a description (required)
-  - a category (gardening, woodworking, cleaning, power, hand or other, gardening by default)
-  - a condition (new, like new, good or worn, new by default)
+  - a category (gardening, woodworking, plumbing, electrical, automotive, cleaning or other, gardening by default)
+  - a condition (new, like new, good, worn or broken, new by default)
   - a location
   - available (yes or no, true by default)
-  Photos of tools are reviewed before others see them; a tool waits until its photo is.
+  - a due back (a date)
+  Each tool can have a borrower (a user, fixed when available is no).
+
+Borrowings
+  Borrowings have:
+  - a tool (a tool, required)
+  - borrowed on (a date, today by default)
+  - a due back (a date, required)
+  - returned on (a date)
+  - notes
+  Each borrowing can have a borrower (a user).
+
+Return
+  For a tool that is not available; sets available to yes; asks for the borrower and the due back.
+  Mark a tool as returned and available.
+
+Borrow
+  For a tool that is available; sets available to no and borrower to whoever presses it; asks for the due back and the borrowing's due back; adds a borrowing (borrower whoever pressed it).
+  Mark a tool as borrowed and create a borrowing record.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -302,33 +322,16 @@ Sign-in and access
   Open to anyone without signing in: the home page, the tools page and reading tools.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
-Generated 130 files (130 changed, 0 removed).
+Generated 131 files (131 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-X13hYd/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-GtsCBn/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-X13hYd/app-4
+  cd /tmp/smithable-bench-m12-GtsCBn/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-X13hYd/app-4/smithable.yml:17:3  warning  Tool's photo wait for review, but no review page lists Tool, so nothing is ever approved.
-    hint: Add one: smithable op addReviewPage (a page with "review: all").
-/tmp/smithable-bench-m12-X13hYd/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
-
-/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132
-		return this.stmt.run(...params);
-		                 ^
-SqliteError: NOT NULL constraint failed: tools.photo
-    at PreparedQuery.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132:20)
-    at QueryPromise.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)
-    at <anonymous> (/tmp/smithable-bench-m12-X13hYd/app-4/src/db/seed.ts:19:6)
-    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
-    at async node:internal/modules/esm/loader:647:26
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
-  code: 'SQLITE_CONSTRAINT_NOTNULL'
-}
-
-Node.js v24.21.0
-Could not add sample data; the app works without it.
+/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.auth.yml:12:10  warning  Anyone on the internet can read Tool, including personal data in borrower.
+/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.
@@ -733,84 +736,15 @@ or only run the app with smithable run.
 
 ### 11. A status page for our API, with incidents and planned maintenance.
 
+Failed:
+
 ```text
-API Status
-  The current state of our API and planned maintenance.
+Starting from the status starter.
+Smithable model (mistral-large-latest) · 39,056 tokens (36,659 in, 2,397 out) · $0.0219 · 3 of 5 calls from the cache
+No model drafted a valid project.
+Expected ':' after property name in JSON at position 934 (line 1 column 935)
+Without a model, start from a starter: smithable new /tmp/smithable-bench-m12-GtsCBn/app-11 --starter status
 
-Pages
-  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring and footer)
-  - Incidents (lists incidents; filter by status; “Identified”; “Monitoring”; “Resolve”)
-  - Updates (lists incident updates)
-  - Components (lists components)
-  - Maintenance (lists maintenances)
-  - Overview (every kind of record, to find, open, change and delete; only for admins)
-  - Team (who has access: invite people, change roles, remove users; only for admins)
-
-Components
-  Components have:
-  - a name (required)
-  - status (operational, degraded, down or maintenance, operational by default)
-  - a description
-  Each component lists its incidents.
-  Each component lists its maintenances.
-
-Incidents
-  Incidents have:
-  - a title (required)
-  - status (investigating, identified, monitoring or resolved, investigating by default)
-  - a component (a component)
-  - detected at (a date and time, required)
-  - resolved at (a date and time)
-  - a summary (formatted text)
-  Each incident lists its incident updates.
-
-Incident updates
-  Incident updates have:
-  - an incident (an incident, required)
-  - a date and time (at, required)
-  - status (investigating, identified, monitoring or resolved, investigating by default)
-  - a message (required)
-
-Maintenances
-  Maintenances have:
-  - a title (required)
-  - a component (a component)
-  - starts at (a date and time, required)
-  - ends at (a date and time, required)
-  - a description
-
-Identified
-  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).
-  The cause is found; the incident moves to identified, with an update saying so.
-
-Monitoring
-  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).
-  A fix is out; the incident is watched before it is closed, with an update saying so.
-
-Resolve
-  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).
-  The incident is over, with an update saying so. The component's state stays what the team sets.
-
-Sign-in and access
-  People sign in with a code sent to their email.
-  Everyone who signs in sees all records, and changes and deletes the ones they own.
-  Roles:
-  - admin: everything
-  - member: opens every page; adds every kind of record
-  New users get the member role.
-  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.
-  Other programs can read and change components and incidents with a key, and run resolve. AI assistants can use it too.
-  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
-Pictures from the Smithable image library: hero.webp, logo.webp.
-Generated 171 files (171 changed, 0 removed).
-
-Created /tmp/smithable-bench-m12-X13hYd/app-11. Open it in Studio, to see it and change it:
-
-  cd /tmp/smithable-bench-m12-X13hYd/app-11
-  smithable studio
-
-or only run the app with smithable run.
-/tmp/smithable-bench-m12-X13hYd/app-11/smithable.ux.yml:8:18  warning  IncidentUpdate.at is required and the reply box does not ask for it: give it a default, or `by: app`, or the thread shows Add incident update instead.
 ```
 
 ### 12. A public uptime page for a web shop: which services work, outages and their updates.

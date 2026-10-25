@@ -65,16 +65,16 @@
     "starter": "marketplace",
     "created": true,
     "typecheck": false,
-    "tokens": 0,
-    "tokensIn": 0,
-    "tokensOut": 0,
-    "cost": 0,
+    "tokens": 72203,
+    "tokensIn": 70595,
+    "tokensOut": 1608,
+    "cost": 0.0377,
     "currency": "$",
     "fromCache": 1,
-    "calls": 1,
+    "calls": 5,
     "rerun": "2026-10-25",
-    "seconds": 16,
-    "summary": "NeighborTools\n  Borrow and lend tools with your neighbors.\n\nPages\n  - Borrow tools from your neighbors (a landing page: hero, tools where available is yes and footer)\n  - Tools (lists tools; search by name, description or location; filter by category, condition or available; sort by name or date added; records can be saved as favorites; contact the owner by mail)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - My tools (lists tools; only the viewer's own records)\n  - Saved (lists tools; only the viewer's saved records)\n\nTools\n  Tools have:\n  - a name (required)\n  - a photo (picture, required)\n  - a description (required)\n  - a category (gardening, woodworking, cleaning, power, hand or other, gardening by default)\n  - a condition (new, like new, good or worn, new by default)\n  - a location\n  - available (yes or no, true by default)\n  Photos of tools are reviewed before others see them; a tool waits until its photo is.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the tools page and reading tools.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 130 files (130 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-X13hYd/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-X13hYd/app-4\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-X13hYd/app-4/smithable.yml:17:3  warning  Tool's photo wait for review, but no review page lists Tool, so nothing is ever approved.\n    hint: Add one: smithable op addReviewPage (a page with \"review: all\").\n/tmp/smithable-bench-m12-X13hYd/app-4/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).\n\n/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132\n\t\treturn this.stmt.run(...params);\n\t\t                 ^\nSqliteError: NOT NULL constraint failed: tools.photo\n    at PreparedQuery.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/better-sqlite3/session.ts:132:20)\n    at QueryPromise.run (/tmp/smithable-bench-m12-X13hYd/app-4/node_modules/.pnpm/drizzle-orm@0.45.4_@types+better-sqlite3@9.6.0_better-sqlite3@12.11.1_kysely@0.29.7/node_modules/src/sqlite-core/query-builders/insert.ts:398:26)\n    at <anonymous> (/tmp/smithable-bench-m12-X13hYd/app-4/src/db/seed.ts:19:6)\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  code: 'SQLITE_CONSTRAINT_NOTNULL'\n}\n\nNode.js v24.21.0\nCould not add sample data; the app works without it.",
+    "seconds": 36,
+    "summary": "Left out, since it could not be made valid:\n  addAction markReturned: addAction: \"when.returnedOn\" must be a string or true or false or a list.\n\nNeighborTools\n  A tool library where neighbors lend each other tools.\n\nPages\n  - Borrow tools from your neighbors (a landing page: hero, tools where available is yes and footer)\n  - Tools (lists tools)\n  - My tools (lists tools)\n  - Borrowings (lists borrowings)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nTools\n  Tools have:\n  - a name (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a category (gardening, woodworking, plumbing, electrical, automotive, cleaning or other, gardening by default)\n  - a condition (new, like new, good, worn or broken, new by default)\n  - a location\n  - available (yes or no, true by default)\n  - a due back (a date)\n  Each tool can have a borrower (a user, fixed when available is no).\n\nBorrowings\n  Borrowings have:\n  - a tool (a tool, required)\n  - borrowed on (a date, today by default)\n  - a due back (a date, required)\n  - returned on (a date)\n  - notes\n  Each borrowing can have a borrower (a user).\n\nReturn\n  For a tool that is not available; sets available to yes; asks for the borrower and the due back.\n  Mark a tool as returned and available.\n\nBorrow\n  For a tool that is available; sets available to no and borrower to whoever presses it; asks for the due back and the borrowing's due back; adds a borrowing (borrower whoever pressed it).\n  Mark a tool as borrowed and create a borrowing record.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the tools page and reading tools.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-GtsCBn/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-GtsCBn/app-4\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.auth.yml:12:10  warning  Anyone on the internet can read Tool, including personal data in borrower.\n/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "records",
@@ -82,7 +82,8 @@
         "Who can list tools in the library?",
         "What can visitors see without signing in?",
         "What main details does each tool record hold?"
-      ]
+      ],
+      "dropped": "markReturned"
     }
   },
   {
@@ -232,19 +233,19 @@
   {
     "description": "A status page for our API, with incidents and planned maintenance.",
     "starter": "status",
-    "created": true,
+    "created": false,
     "typecheck": false,
-    "tokens": 0,
-    "tokensIn": 0,
-    "tokensOut": 0,
-    "cost": 0,
+    "tokens": 39056,
+    "tokensIn": 36659,
+    "tokensOut": 2397,
+    "cost": 0.0219,
     "currency": "$",
-    "fromCache": 2,
-    "calls": 2,
+    "fromCache": 3,
+    "calls": 5,
     "rerun": "2026-10-25",
-    "seconds": 19,
-    "summary": "API Status\n  The current state of our API and planned maintenance.\n\nPages\n  - Home (a landing page: hero, components, incidents where status is investigating or identified or monitoring and footer)\n  - Incidents (lists incidents; filter by status; “Identified”; “Monitoring”; “Resolve”)\n  - Updates (lists incident updates)\n  - Components (lists components)\n  - Maintenance (lists maintenances)\n  - Overview (every kind of record, to find, open, change and delete; only for admins)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each component lists its incidents.\n  Each component lists its maintenances.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary (formatted text)\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a component (a component)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so. The component's state stays what the team sets.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, reading components, reading incidents where status is investigating or identified or monitoring or resolved, reading incident updates and reading maintenances.\n  Other programs can read and change components and incidents with a key, and run resolve. AI assistants can use it too.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 171 files (171 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-X13hYd/app-11. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-X13hYd/app-11\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-X13hYd/app-11/smithable.ux.yml:8:18  warning  IncidentUpdate.at is required and the reply box does not ask for it: give it a default, or `by: app`, or the thread shows Add incident update instead.",
-    "error": "",
+    "seconds": 28,
+    "summary": "No model drafted a valid project.\nExpected ':' after property name in JSON at position 934 (line 1 column 935)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-GtsCBn/app-11 --starter status",
+    "error": "Starting from the status starter.\nSmithable model (mistral-large-latest) · 39,056 tokens (36,659 in, 2,397 out) · $0.0219 · 3 of 5 calls from the cache\nNo model drafted a valid project.\nExpected ':' after property name in JSON at position 934 (line 1 column 935)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-GtsCBn/app-11 --starter status\n",
     "meta": {
       "wordStarter": "status",
       "questions": []
