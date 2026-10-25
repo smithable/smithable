@@ -467,7 +467,7 @@ Custom files may import anything from `generated/` and `kit/`. Generated code im
 
 ### 6.5 Drift detection
 
-The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit. For a page's list route, `smithable customize page:<page>` moves the edit: when the edit only touched the component, the edited component becomes the custom page and the route is generated again; when it changed loading or access, it explains why the edit cannot move. `generate` suggests this when it finds such an edit. (In the M7 benchmark, one hand-edited route blocked every later operation.)
+The compiler records a hash of every file it owns in `.smithable/`. If someone edits a compiler-owned file by hand, Smithable reports drift and offers two choices: **revert**, or **move the change into a custom file or the manifest**. It never silently overwrites a manual edit. For a list or dashboard page's route, `smithable customize page:<page>` moves the edit (other kinds of page are refused in words): when the edit only touched the component, the edited component becomes the custom page and the route is generated again; when it changed loading or access, it explains why the edit cannot move. `generate` suggests this when it finds such an edit. (In the M7 benchmark, one hand-edited route blocked every later operation.)
 
 Missing custom implementations (a manifest says `custom: true` but the file or export is missing) are also reported as drift.
 

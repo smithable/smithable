@@ -33,10 +33,10 @@ export async function customize(
     io.err(`There is no page named "${pageId}".\n`);
     return 1;
   }
-  // The page made from the generated one is a list's; other kinds have no such page yet.
-  if (page.pattern.kind !== "crud") {
+  // The page made from the generated one: a list's or a dashboard's (A 155); other kinds have none yet.
+  if (page.pattern.kind !== "crud" && page.pattern.kind !== "dashboard") {
     io.err(
-      `Only a list page can be customized this way ("${pageId}" is a ${page.pattern.kind} page).\n`,
+      `Only a list or dashboard page can be customized this way ("${pageId}" is a ${page.pattern.kind} page).\n`,
     );
     return 1;
   }
