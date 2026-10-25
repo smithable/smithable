@@ -307,6 +307,9 @@ test("addTheme adds themes/<name>.yml, --use applies it, and a bad file or a tak
   expect(added.added).toEqual([{ path: "themes/forest.yml", text }]);
   expect(added.files.ux).toBe("smithableUx: 0.1\ntheme:\n  preset: forest\n");
   expect(added.description).toBe("Add theme forest and use it");
+  // Text that may not read is the person's choice: added, said as a warning elsewhere, never refused.
+  const pale = text.replace('foreground: "#1f2a1f"', 'foreground: "#c0c8c0"');
+  expect(applyOperation({ spec: crm }, "addTheme", { name: "pale", text: pale }).ok).toBe(true);
   const bad = applyOperation({ spec: crm }, "addTheme", {
     name: "forest",
     text: "smithableTheme: 0.1\nfont: Comic Sans\n",

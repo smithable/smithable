@@ -161,11 +161,12 @@ const LIGHT_TEXT = "#ffffff";
 /**
  * Parses a project's theme file. A theme can be as short as three colors per mode
  * (background, foreground, primary): the rest is derived as a brand color is, and every pair
- * the kit puts together is checked for contrast.
+ * the kit puts together is checked for contrast. Text that may not read is said in plain words,
+ * never refused: the colours are the person's choice (Johan, 2026-10-24 and 2026-10-25).
  */
 export function parseTheme(
   file: { path: string; text: string },
-  /** "warning": text that may not read is said, not refused (the theme lab, Johan 2026-10-24). */
+  /** "error": a theme that does not read is refused (the candidates script, which drops those). */
   options: { contrast?: "error" | "warning" } = {},
 ): {
   theme?: ThemeIR;
@@ -298,10 +299,9 @@ export function parseTheme(
         given as Partial<Tokens> & Pick<Tokens, "background" | "foreground" | "primary">,
         mode,
       );
-      for (const problem of checkContrast(modes[mode]))
-        if (options.contrast === "warning")
-          ctx.warning(node, "theme-contrast", `In "${mode}", ${problem}`);
-        else ctx.error(node, "theme-contrast", `In "${mode}", ${problem}`);
+      for (const problem of hardToRead(modes[mode], mode))
+        if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
+        else ctx.warning(node, "theme-contrast", problem);
     }
   }
   if (ctx.diagnostics.some((d) => d.severity === "error")) return { diagnostics: ctx.diagnostics };
@@ -466,6 +466,36 @@ export function lowContrast(
     const got = contrast(hexOf(tokens[text]), hexOf(tokens[on]));
     return got < needed ? [{ text, on, got, needed }] : [];
   });
+}
+
+/** Where each colour pair is used, in words a non-designer knows (no colour names, no ratios). */
+const WHERE: Partial<Record<TokenName, string>> = {
+  background: "the text on the page",
+  card: "the text on cards",
+  primary: "the text on the main buttons",
+  secondary: "the text on the other buttons",
+  muted: "the quieter text, such as hints and dates,",
+  accent: "the text on highlighted rows and menu items",
+  sidebar: "the text in the side menu",
+  destructive: "the text on delete buttons",
+  success: "the text on the green badges",
+  warning: "the text on the warning badges",
+};
+
+/**
+ * What may be hard to read in a mode, one plain sentence each (no colour names, no ratios):
+ * what the theme lab, the CLI and addTheme say, as a warning. Pairs on the same colour share one.
+ */
+export function hardToRead(tokens: Tokens, mode: "light" | "dark"): string[] {
+  return [
+    ...new Set(
+      lowContrast(tokens).map(({ text, on }) =>
+        text === "ring"
+          ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
+          : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+      ),
+    ),
+  ];
 }
 
 /** What does not read, as sentences naming the pair and its ratio; empty when all is well. */

@@ -102,13 +102,18 @@ test("a theme of three colors per mode gets the rest derived, and reads", () => 
   expect(light.ring).toBe("#2f6b3a");
 });
 
-test("a theme that does not read, or is not a theme, is refused with the reason", () => {
-  const pale = parse(forest.replace('  foreground: "#1f2a1f"', '  foreground: "#c0c8c0"'));
-  expect(pale.theme).toBeUndefined();
-  expect(pale.diagnostics.map((d) => d.code)).toContain("theme-contrast");
-  expect(pale.diagnostics.find((d) => d.code === "theme-contrast")?.message).toMatch(
-    /foreground on background is [\d.]+:1; it needs 4.5:1/,
-  );
+test("a theme that may not read applies with a plain warning; one that is not a theme is refused", () => {
+  const paleText = forest.replace('  foreground: "#1f2a1f"', '  foreground: "#c0c8c0"');
+  const pale = parse(paleText);
+  // The colours are the person's choice (Johan, 2026-10-25): said in plain words, never refused.
+  expect(pale.theme).toBeDefined();
+  const said = pale.diagnostics.find((d) => d.code === "theme-contrast");
+  expect(said?.severity).toBe("warning");
+  expect(said?.message).toBe("In light mode, the text on the page may be hard to read.");
+  // Only the candidates script asks for a refusal, to drop the unreadable.
+  expect(
+    parseTheme({ path: "themes/forest.yml", text: paleText }, { contrast: "error" }).theme,
+  ).toBeUndefined();
   const wrong = parse(
     "smithableTheme: 0.1\nfont: Comic Sans\nmotion: bouncy\nlight: { background: red }\n",
   );
@@ -187,7 +192,7 @@ test("the ux file's background: a color, set by setTheme, refused when not a col
 
 test("for the theme lab, text that may not read is a warning: the theme is made and every colour applies", () => {
   const text = forest.replace('  foreground: "#1f2a1f"', '  foreground: "#c0c8c0"');
-  const lab = parseTheme({ path: "themes/forest.yml", text }, { contrast: "warning" });
+  const lab = parseTheme({ path: "themes/forest.yml", text });
   expect(lab.theme).toBeDefined();
   const said = lab.diagnostics.find((d) => d.code === "theme-contrast");
   expect(said?.severity).toBe("warning");
