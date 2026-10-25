@@ -1,15 +1,16 @@
 smithable: 0.1
 app:
   name: Tidy Ledger
-  description: "Monthly invoicing for a small cleaning company: households, their invoices and what is paid."
+  description: "Monthly invoicing for a small cleaning company: households, their invoices and what has been paid."
   currency: EUR
 models:
-  Client:
+  Household:
     fields:
       name: string!
       email: email!
       phone: phone
       address: text
+      notes: text
       invoices: Invoice[]
   InvoiceLine:
     fields:
@@ -23,7 +24,7 @@ models:
   Invoice:
     fields:
       number: string! unique
-      client: Client!
+      household: Household!
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
@@ -33,12 +34,16 @@ models:
         formula: SUM(lines.amount)
 pages:
   households:
-    crud: Client
-    search: [name, email]
+    crud: Household
+    search: [name, email, phone]
+  invoice-lines:
+    crud: InvoiceLine
+  team:
+    users: manage
   invoices:
     crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markPaid]
+    filters: [household, status, issuedOn]
+    actions: [markSent, markPaid, markOverdue, invoiceNextMonth]
   overview:
     dashboard:
       outstanding:
@@ -59,8 +64,6 @@ pages:
       latest:
         list: Invoice
         limit: 5
-  team:
-    users: manage
 actions:
   markSent:
     on: Invoice
@@ -76,8 +79,31 @@ actions:
     set:
       status: paid
     intent: The household paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+  invoiceNextMonth:
+    on: Invoice
+    copy:
+      status: draft
+      number:
+      issuedOn: TODAY()
+      dueOn:
+    with: [lines]
+    intent: Start next month's invoice for the same household from this one.
+timers:
+  overdueCheck:
+    on: Invoice
+    at: 7 days after dueOn
+    where:
+      status: sent
+    run: markOverdue
 outgoing:
   invoiceSent:
     when: markSent
     to: mail
-    recipient: client.email
+    recipient: household.email

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: Tickets from users, assigned and tracked by the IT team.
+  description: Tickets from users, handled by the IT team.
 models:
   Ticket:
     fields:
@@ -9,7 +9,7 @@ models:
       requesterEmail:
         type: email!
         locked: true
-      status: open | inProgress | resolved | closed | reopened
+      status: open | inProgress | resolved | reopened
       priority:
         type: int!
         min: 1
@@ -18,14 +18,14 @@ models:
       assignee:
         type: User
         required:
-          status: [inProgress, resolved, closed]
+          status: [inProgress, resolved]
       body: text
       attachments: files
       messages: Message[]
   Message:
     fields:
       content: text!
-      sender: agent | requester
+      sender: agent | user
       agent:
         type: User
         by: app
@@ -39,13 +39,14 @@ pages:
     search: [subject, requesterEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
-    actions: [assignToMe, assignTo, startWork, resolve, close, reopen]
+    actions: [assignToMe, assignTo, startWork, resolve, reopen]
   team:
     users: manage
-navigation: [tickets, team]
 actions:
   assignToMe:
     on: Ticket
+    when:
+      assignee: not ME()
     set:
       assignee: ME()
     intent: "Take the ticket: you become its assignee."
@@ -67,18 +68,11 @@ actions:
       status: [open, inProgress, reopened]
     set:
       status: resolved
-    intent: The issue is fixed; the requester can confirm.
-  close:
-    on: Ticket
-    when:
-      status: [resolved]
-    set:
-      status: closed
-    intent: The requester is satisfied; the ticket is closed.
+    intent: The user has their answer.
   reopen:
     on: Ticket
     when:
-      status: [resolved, closed]
+      status: resolved
     set:
       status: reopened
     intent: The ticket needs more work after all.
@@ -93,3 +87,4 @@ outgoing:
       sender: agent
     to: mail
     recipient: ticket.requesterEmail
+navigation: [tickets, team]

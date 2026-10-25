@@ -4,7 +4,7 @@
   "wordStarter": "api",
   "questions": [
     "Who will use the habit app?",
-    "What should a daily check-in record?",
-    "Can anyone see habits or streaks without signing in?"
+    "Can people see anything without signing in?",
+    "What should a daily check-in record?"
   ]
 }

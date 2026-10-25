@@ -3,7 +3,8 @@
   "starter": "support",
   "wordStarter": "invoicing",
   "questions": [
-    "Who can create a ticket?",
-    "What can visitors see without signing in?"
+    "Who can create a new ticket?",
+    "What should visitors see without signing in?",
+    "What main details should each ticket hold?"
   ]
 }

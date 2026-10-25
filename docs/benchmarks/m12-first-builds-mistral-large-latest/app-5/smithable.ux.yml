@@ -1,6 +1,7 @@
 smithableUx: 0.1
+theme:
+  preset: craft
 pages:
   ingredients:
     table:
-      columns: [name, quantity, unit, supplier, lastUpdated]
       sort: name

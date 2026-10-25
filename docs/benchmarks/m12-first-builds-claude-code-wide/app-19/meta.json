@@ -3,9 +3,9 @@
   "starter": "marketplace",
   "wordStarter": "records",
   "questions": [
-    "Vem ska kunna lägga upp saker?",
-    "Vad ska besökare se utan att logga in?",
-    "Hur ska köpare kontakta säljaren?"
+    "Vem ska kunna lägga upp saker att sälja?",
+    "Vad ska besökare kunna se utan att logga in?",
+    "Hur ska en köpare höra av sig om en sak?"
   ],
   "lang": "sv"
 }

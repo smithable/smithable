@@ -2,6 +2,7 @@ smithable: 0.1
 app:
   name: Swap Shelf
   description: Colleagues offer things they no longer need and others claim them.
+  timezone: Europe/Stockholm
 models:
   Item:
     fields:
@@ -10,44 +11,39 @@ models:
       description: text
       category: furniture | electronics | books | kitchen | stationery | clothing | other
       condition: likeNew | good | worn
-      place: string
-      status: available | claimed | gone
-      claimedBy:
-        type: User
-        by: app
+      pickupSpot: string
+      status: available | given
+      claims: Claim[]
+  Claim:
+    fields:
+      item: Item!
+      note: text
+    capacity:
+      per: item
+      max: 1
 pages:
   shelf:
     route: /
     crud: Item
-    search: [title, description, place]
+    search: [title, description, pickupSpot]
     filters: [category, condition, status]
-    sortable: [title, createdAt]
+    defaultFilter:
+      status: available
+    favorites: true
   myItems:
     crud: Item
+    mine: true
+  myClaims:
+    crud: Claim
     mine: true
   team:
     users: manage
 actions:
-  claim:
+  markGiven:
     on: Item
     when:
       status: available
     set:
-      status: claimed
-      claimedBy: ME()
-    intent: Claim an available item for yourself.
-  markGone:
-    on: Item
-    when:
-      status: claimed
-    set:
-      status: gone
-    intent: Mark a claimed item as handed over.
-  release:
-    on: Item
-    when:
-      status: claimed
-    set:
-      status: available
-      claimedBy:
-    intent: Put a claimed item back on the shelf.
+      status: given
+    intent: Mark an item as handed over to the colleague who claimed it.
+navigation: [shelf, myItems, myClaims, team]

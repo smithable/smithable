@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
-  name: Riverside FC
+  name: Club Football
   description: The club's site with its teams, players, fixtures and results.
-  timezone: Europe/London
+  timezone: Europe/Mariehamn
 models:
   Team:
     fields:
@@ -10,18 +10,18 @@ models:
       ageGroup: string
       coach: string
       photo: picture
-      description: text
+      summary: text
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
+      position: goalkeeper | defender | midfielder | forward
       number:
         type: int
         min: 1
         max: 99
-      position: goalkeeper | defender | midfielder | forward
       photo: picture
       bio: text
   Match:
@@ -30,9 +30,8 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      location: string
-      competition: string
-      status: scheduled | played | postponed | cancelled
+      ground: string
+      status: scheduled | played | postponed
       goalsFor:
         type: int
         min: 0
@@ -44,7 +43,7 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, competition]
+    search: [opponent, ground]
     filters: [team, status, venue, kickoff]
     actions: [recordResult, postpone]
   teams:

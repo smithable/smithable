@@ -1,6 +1,6 @@
 smithableUx: 0.1
 theme:
-  preset: modern
+  preset: warm-service
 tones:
   Invoice.status:
     paid: success

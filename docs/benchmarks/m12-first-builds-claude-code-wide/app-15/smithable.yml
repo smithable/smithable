@@ -1,12 +1,14 @@
 smithable: 0.1
 app:
   name: Club Sightings
-  description: "The bird sightings of our birdwatching club: species, place, date and who saw it."
+  description: "Bird sightings logged by our birdwatching club: species, place, date and who saw it."
+  timezone: Europe/Mariehamn
 models:
   Species:
     fields:
       name: string! unique
       scientificName: string
+      notes: text
       sightings: Sighting[]
   Sighting:
     fields:
@@ -19,6 +21,7 @@ models:
         min: 1
         default: 1
       notes: text
+      photo: picture
     ownedBy: observer
 pages:
   species:

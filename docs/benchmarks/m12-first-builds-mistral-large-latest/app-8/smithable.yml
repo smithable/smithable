@@ -1,65 +1,84 @@
 smithable: 0.1
 app:
-  name: Conference Connect
-  description: "Event registration for a conference: talks, speakers and attendees."
+  name: Conference Registration
+  description: Manage talks, speakers and attendees for a conference.
+  timezone: Europe/Mariehamn
 models:
-  Talk:
-    fields:
-      title: string!
-      description: markdown
-      startsAt: datetime!
-      endsAt: datetime!
-      location: string!
-      capacity: int! = 100
-      attendees: Attendee[]
-      spotsLeft:
-        type: int
-        formula: capacity - COUNT(attendees)
   Speaker:
     fields:
       name: string!
-      bio: markdown
-      portrait: picture
+      bio: text
+      email: email!
+      phone: phone
+      website: url
+      picture: picture
+  Talk:
+    fields:
+      title: string!
+      description: text
+      startsAt: datetime!
+      endsAt: datetime!
+      speaker: Speaker!
+      room: string
+      status: draft | scheduled | canceled
+      capacity: int! = 100
   Attendee:
     fields:
       name: string!
       email: email!
+      phone: phone
       company: string
+      ticket: standard | vip
+  Registration:
+    fields:
+      attendee: Attendee!
       talk: Talk!
-      registeredAt:
-        type: datetime
-        by: app
-        default: NOW()
+      registeredAt: datetime! = NOW()
+      status: confirmed | canceled
     capacity:
       per: talk
       max: talk.capacity
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
+      where:
+        status: confirmed
 pages:
   talks:
     crud: Talk
+    actions: [cancelTalk]
   speakers:
     crud: Speaker
   attendees:
     crud: Attendee
+  registrations:
+    crud: Registration
+    actions: [cancelRegistration]
   home:
     route: /
     landing:
       hero:
       footer:
-      featured-speakers:
+      talks:
+        records: Talk
+        where:
+          status: scheduled
+      speakers:
         records: Speaker
-      faq:
-      contact:
-        form: Message
   privacy:
     route: /privacy
     legal: privacy
-outgoing:
-  registrationConfirmed:
-    when: Attendee created
-    to: mail
-    recipient: email
+  team:
+    users: manage
+actions:
+  cancelTalk:
+    on: Talk
+    when:
+      status: scheduled
+    set:
+      status: canceled
+    intent: Cancel a scheduled talk.
+  cancelRegistration:
+    on: Registration
+    when:
+      status: confirmed
+    set:
+      status: canceled
+    intent: Cancel a confirmed registration.

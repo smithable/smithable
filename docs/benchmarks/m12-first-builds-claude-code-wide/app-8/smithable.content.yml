@@ -4,6 +4,16 @@ pages:
     title: Shelf
   myItems:
     title: My items
+  myClaims:
+    title: My claims
+actions:
+  markGiven:
+    label: Mark as given
+models:
+  Item:
+    fields:
+      pickupSpot:
+        label: Pick-up spot
 logo:
   src: images/logo.webp
   alt: A loop forming a simple knot

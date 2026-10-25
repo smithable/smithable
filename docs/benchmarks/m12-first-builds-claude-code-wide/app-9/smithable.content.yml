@@ -3,16 +3,6 @@ models:
   Album:
     fields:
       condition:
-        label: Record condition
-        values:
-          mint: Mint (M)
-          nearMint: Near mint (NM)
-          veryGoodPlus: Very good plus (VG+)
-          veryGood: Very good (VG)
-          good: Good (G)
-          fair: Fair (F)
-          poor: Poor (P)
-      sleeveCondition:
         values:
           mint: Mint (M)
           nearMint: Near mint (NM)
@@ -22,9 +12,7 @@ models:
           fair: Fair (F)
           poor: Poor (P)
       pricePaid:
-        label: Price paid
-      label:
-        label: Record label
+        label: What I paid
 logo:
   src: images/logo.webp
   alt: Three stacked cards

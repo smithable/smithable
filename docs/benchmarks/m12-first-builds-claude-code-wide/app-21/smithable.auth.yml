@@ -6,8 +6,8 @@ defaultAccess: shared
 roles:
   admin: all
   staff:
-    description: "Korjaamon työntekijä: asiakkaat, autot, huoltotyöt ja laskut."
-    pages: [huoltotyot, asiakkaat, autot, laskut]
+    description: "Korjaamon työntekijä: hoitaa asiakkaat, autot, työt ja laskut."
+    pages: [tyot, asiakkaat, autot, laskut]
     create: all
     write: all
 assistant:

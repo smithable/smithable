@@ -4,7 +4,7 @@
   "wordStarter": "records",
   "questions": [
     "Who can view the teams, players, matches, and results?",
-    "What details should each player record include?",
-    "What details should each match record include?"
+    "What details should each match record include?",
+    "Should visitors be able to see upcoming matches and past results without signing in?"
   ]
 }

@@ -8,39 +8,42 @@ models:
       name: string!
       photos: pictures!
       description: text!
-      category: gardening | woodworking | automotive | cleaning | power | hand | other
-      condition: new | likeNew | good | worn
-      location: string!
+      category: gardening | woodworking | plumbing | electrical | automotive | cleaning | other
+      condition: new | likeNew | good | worn | broken
+      location: string
       available: bool = true
-      borrower: User
+      borrower:
+        type: User
+        locked:
+          available: false
       dueBack: date
-    review: [photos]
+  Borrowing:
+    fields:
+      tool: Tool!
+      borrower: User!
+      borrowedOn: date = TODAY()
+      dueBack: date!
+      returnedOn: date
+      notes: text
 pages:
-  catalog:
+  tools:
     crud: Tool
-    search: [name, description, location]
-    filters: [category, condition, available]
-    sortable: [name, createdAt]
-    favorites: true
-    contact: owner
+  myTools:
+    crud: Tool
+  borrowings:
+    crud: Borrowing
   home:
     route: /
     landing:
       hero:
       footer:
-      latest:
+      availableTools:
         records: Tool
         where:
           available: true
   privacy:
     route: /privacy
     legal: privacy
-  myTools:
-    crud: Tool
-    mine: true
-  review:
-    review: all
-navigation: [catalog, myTools, review]
 actions:
   return:
     on: Tool
@@ -50,7 +53,7 @@ actions:
       available: true
       borrower:
       dueBack:
-    intent: Mark this tool as returned and available again.
+    intent: Mark a tool as returned and available.
   borrow:
     on: Tool
     when:
@@ -58,5 +61,10 @@ actions:
     set:
       available: false
       borrower: ME()
-      dueBack: DATEADD(TODAY(), 7, "day")
-    intent: Mark this tool as borrowed by me for one week.
+      dueBack:
+    add:
+      Borrowing:
+        borrower: ME()
+        dueBack:
+    intent: Mark a tool as borrowed and create a borrowing record.
+navigation: [tools, myTools, borrowings]

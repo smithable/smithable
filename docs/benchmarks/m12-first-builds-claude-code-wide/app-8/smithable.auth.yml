@@ -5,11 +5,7 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member:
-    description: Offers and claims items.
-    pages: all
-    create: all
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
-defaultRole: member
 admins: [johan@smithable.ai]

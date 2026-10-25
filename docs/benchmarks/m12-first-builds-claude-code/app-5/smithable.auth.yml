@@ -5,12 +5,7 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member:
-    description: Works with the bakery's stock.
-    pages: all
-    create: all
-    write: [Ingredient, Supplier]
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
-defaultRole: member
 admins: [johan@smithable.ai]

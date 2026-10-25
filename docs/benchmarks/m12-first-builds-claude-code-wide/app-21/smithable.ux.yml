@@ -1,23 +1,24 @@
 smithableUx: 0.1
 pages:
-  huoltotyot:
+  tyot:
     table:
       sort: -date
-      columns: [date, car, description, status, mechanic, total]
+      columns: [title, car, status, date, mechanic, total]
     icon: clipboard
   laskut:
     table:
-      columns: [number, customer, amount, status, dueDate]
+      columns: [number, customer, status, amount, dueDate]
     icon: receipt
+  autot:
+    table:
+      columns: [registration, make, carModel, year, customer]
+    icon: truck
   asiakkaat:
     icon: users
-  autot:
-    icon: truck
 tones:
-  ServiceJob.status:
+  Job.status:
     inProgress: warning
     done: success
-    canceled: danger
   Invoice.status:
     sent: warning
     paid: success

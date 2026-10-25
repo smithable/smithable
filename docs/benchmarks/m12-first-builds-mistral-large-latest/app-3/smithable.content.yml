@@ -1,0 +1,21 @@
+smithableContent: 0.1
+pages:
+  overview:
+    title: Overview
+  invoices:
+    title: Invoices
+models:
+  Invoice:
+    label: Invoice
+    pluralLabel: Invoices
+actions:
+  markSent:
+    label: Mark as Sent
+  markPaid:
+    label: Mark as Paid
+  markOverdue:
+    label: Mark as Overdue
+logo:
+  src: images/logo.webp
+  alt: A receipt with a torn edge and a coin
+  generated: true

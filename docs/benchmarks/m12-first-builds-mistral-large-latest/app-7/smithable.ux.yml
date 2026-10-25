@@ -1,16 +1,3 @@
 smithableUx: 0.1
 theme:
-  preset: corporate
-  brand:
-    primary: "#006633"
-pages:
-  matches:
-    table:
-      columns: [homeTeam, awayTeam, date, venue, result, homeScore, awayScore]
-      sort: -date
-  teams:
-    table:
-      view: cards
-  players:
-    table:
-      view: cards
+  preset: nordic

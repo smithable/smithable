@@ -1,11 +1,10 @@
 {
   "description": "Event registration for a conference: talks, speakers and attendees.",
-  "starter": "booking",
+  "starter": "records",
   "wordStarter": "records",
   "questions": [
     "Who can register for the conference?",
     "What can visitors see without signing in?",
-    "What details does the app track for each attendee?"
-  ],
-  "dropped": "register"
+    "What details does each attendee record hold?"
+  ]
 }

@@ -1,9 +1,18 @@
 smithable: 0.1
 app:
-  name: Bakery Inventory
+  name: SweetStock
   description: Track ingredients, suppliers and stock levels for a small bakery.
   timezone: Europe/Mariehamn
 models:
+  Ingredient:
+    fields:
+      name: string!
+      description: text
+      stock: int! = 0
+      minimum: int! = 5
+      unit: string! = kg
+      lastUpdated: date! = TODAY()
+      supplier: Supplier!
   Supplier:
     fields:
       name: string!
@@ -11,29 +20,10 @@ models:
       email: email
       phone: phone
       address: text
-  Ingredient:
-    fields:
-      name: string!
-      summary: text
-      quantity: decimal!
-      unit: string!
-      minimumStock: decimal!
-      supplier: Supplier!
-      lastUpdated: date! = TODAY()
 pages:
+  ingredients:
+    crud: Ingredient
   suppliers:
     crud: Supplier
   team:
     users: manage
-  ingredients:
-    crud: Ingredient
-    filters: [supplier]
-    actions: [restock]
-navigation: [ingredients, suppliers]
-actions:
-  restock:
-    on: Ingredient
-    set:
-      quantity:
-      lastUpdated: TODAY()
-    intent: Update the stock level when restocking an ingredient.

@@ -36,7 +36,6 @@ pages:
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
-    filters: [status]
   updates:
     crud: IncidentUpdate
   components:
@@ -54,19 +53,10 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
+  overview:
+    data: all
   team:
     users: manage
-  privacy:
-    route: /privacy
-    legal: privacy
-  history:
-    custom: IncidentHistory
 actions:
   identified:
     on: Incident
@@ -105,3 +95,4 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.
+navigation: [overview, incidents, updates, maintenance, components, team]

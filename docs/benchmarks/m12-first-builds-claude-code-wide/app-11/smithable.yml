@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Status Board
-  description: What is down in our IT systems, what is being fixed, and when it is back.
+  description: "The state of our IT systems: what is down, what is being fixed and when it is back."
 models:
   Component:
     fields:
@@ -36,29 +36,27 @@ models:
 pages:
   components:
     crud: Component
-    filters: [status]
   incidents:
     crud: Incident
     filters: [status, component]
+    defaultFilter:
+      status: [investigating, identified, monitoring]
     actions: [identified, monitoring, resolve]
   maintenance:
     crud: Maintenance
   overview:
     dashboard:
-      down:
-        count: Component
-        where:
-          status: [down, degraded]
       open:
         count: Incident
         where:
           status: [investigating, identified, monitoring]
+      down:
+        count: Component
+        where:
+          status: [down, degraded]
       latest:
         list: Incident
         limit: 5
-      perMonth:
-        count: Incident
-        by: detectedAt
   team:
     users: manage
 actions:
@@ -99,4 +97,3 @@ actions:
         status: resolved
         message: This incident is resolved. The system is back.
     intent: The incident is over and the system is back, with an update saying so.
-navigation: [components, incidents, maintenance, overview, team]

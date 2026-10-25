@@ -1,13 +1,15 @@
 smithableUx: 0.1
+tones:
+  Habit.status:
+    active: success
+    paused: warning
 pages:
   habits:
     table:
-      columns: [name, frequency, currentStreak, longestStreak, active]
-    icon: star
+      columns: [name, frequency, status, currentStreak, lastCheckIn]
   checkIns:
     table:
       columns: [date, habit, note]
       sort: -date
-    icon: clipboard
 theme:
   preset: modern

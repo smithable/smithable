@@ -1,0 +1,54 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Find your next union job
+    subtitle: Browse open positions in the area
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+  jobs:
+    title: Jobs
+    subtitle: Open positions for union members
+  myJobs:
+    title: My jobs
+models:
+  JobPost:
+    label: Job
+    pluralLabel: Jobs
+    fields:
+      title:
+        label: Job title
+      description:
+        label: Description
+      category:
+        label: Category
+      wage:
+        label: Wage
+      hours:
+        label: Hours
+      location:
+        label: Location
+      status:
+        label: Status
+  Application:
+    label: Application
+    pluralLabel: Applications
+    fields:
+      job:
+        label: Job
+      name:
+        label: Name
+      email:
+        label: Email
+      phone:
+        label: Phone
+      resume:
+        label: Resume
+      status:
+        label: Status
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

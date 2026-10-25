@@ -11,7 +11,7 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, tools, privacy]
+  pages: [home, catalog, privacy]
   read: [Tool]
 defaultRole: member
 admins: [johan@smithable.ai]

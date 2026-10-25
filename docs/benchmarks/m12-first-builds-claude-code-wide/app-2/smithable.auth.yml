@@ -6,8 +6,8 @@ defaultAccess: shared
 roles:
   admin: all
   sales:
-    description: Works with leads, deals and follow-ups.
-    pages: [deals, leads, followUps, schedule]
+    description: Works with leads and deals.
+    pages: [deals, leads, followUps]
     create: all
     write: all
 assistant:

@@ -5,7 +5,7 @@ defaultAccess: private
 roles:
   admin: all
   member:
-    description: Säljer och sparar saker.
+    description: Lägger upp saker att sälja och sparar andras.
     pages: all
     create: all
 assistant:

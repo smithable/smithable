@@ -3,9 +3,11 @@ pages:
   species:
     table:
       sort: name
+    icon: book
   sightings:
     table:
       columns: [species, place, seenOn, observer, count]
       sort: -seenOn
+    icon: calendar
 theme:
   preset: woodland

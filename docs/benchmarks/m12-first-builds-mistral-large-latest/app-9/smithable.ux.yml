@@ -1,7 +1,1 @@
 smithableUx: 0.1
-theme:
-  preset: corporate
-tones:
-  Ticket.status:
-    resolved: success
-    closed: success

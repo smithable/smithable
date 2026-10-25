@@ -1,17 +1,10 @@
 smithable: 0.1
 app:
-  name: Joogastudion varaukset
+  name: Joogavaraus
   description: Joogastudion tunnit, ohjaajat ja varaukset verkossa.
   currency: EUR
   timezone: Europe/Helsinki
 models:
-  ClassType:
-    fields:
-      name: string!
-      summary: text
-      level: allLevels | beginner | advanced
-      durationMinutes: int! = 60
-      sessions: Session[]
   Instructor:
     fields:
       name: string!
@@ -20,7 +13,6 @@ models:
       sessions: Session[]
   Session:
     fields:
-      classType: ClassType!
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
@@ -28,36 +20,57 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
+      classType: ClassType!
+    namedBy: [classType, startsAt]
   Booking:
     fields:
       session: Session! unique
+      attendee: User
+    namedBy: session
+    ownedBy: attendee
     capacity:
       per: session
       max: session.capacity
+      closes: session.startsAt
+      cancelUntil: session.startsAt
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: allLevels | beginner | advanced
+      durationMinutes: int! = 60
+      sessions: Session[]
 pages:
-  tunnit:
-    crud: Session
-  tuntityypit:
-    crud: ClassType
-    filters: [level]
-  ohjaajat:
-    crud: Instructor
-  omat-varaukset:
-    crud: Booking
-  lukujarjestys:
-    calendar: Session
-  etusivu:
+  home:
     route: /
     landing:
       hero:
-        shortcuts: [lukujarjestys, ohjaajat]
       footer:
-      classes:
-        records: ClassType
+      instructors:
+        records: Instructor
       callToAction:
         button: lukujarjestys
+      classes:
+        records: ClassType
+  lukujarjestys:
+    calendar:
+      model: Session
+      starts: startsAt
+  omat-varaukset:
+    crud: Booking
+  tunnit:
+    crud: Session
+    sortable: [startsAt, capacity]
+    filters: [classType, instructor, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+  ohjaajat:
+    crud: Instructor
   tietosuoja:
     route: /tietosuoja
     legal: privacy
-  hallinta:
+  yllapito:
     data: all
+  tuntityypit:
+    crud: ClassType
+    filters: [level]

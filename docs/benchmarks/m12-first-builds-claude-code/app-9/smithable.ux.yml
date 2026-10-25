@@ -1,5 +1,8 @@
 smithableUx: 0.1
 tones:
   Ticket.status:
+    open: warning
+    reopened: danger
     closed: success
-    reopened: warning
+theme:
+  preset: corporate

@@ -3,5 +3,11 @@ pages:
   talks:
     table:
       sort: startsAt
+    record:
+      subtitle: speaker
+      detail: [startsAt, room]
+  speakers:
+    record:
+      subtitle: company
 theme:
   preset: modern

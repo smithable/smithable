@@ -1,8 +1,8 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Join Us at Conference Connect
-    subtitle: Discover insightful talks, connect with speakers, and register for your favorite sessions.
+    title: Join Us for the Conference
+    subtitle: Discover inspiring talks and connect with industry leaders.
     hero:
       image:
         src: images/hero.webp
@@ -14,19 +14,81 @@ pages:
     title: Speakers
   attendees:
     title: Attendees
+  registrations:
+    title: Registrations
 models:
   Talk:
     label: Talk
     pluralLabel: Talks
+    fields:
+      title:
+        label: Title
+      description:
+        label: Description
+      startsAt:
+        label: Starts At
+      speaker:
+        label: Speaker
+      room:
+        label: Room
+      status:
+        label: Status
+        values:
+          draft: Draft
+          scheduled: Scheduled
+          canceled: Canceled
+      capacity:
+        label: Capacity
+      endsAt:
+        label: Ends At
   Speaker:
     label: Speaker
     pluralLabel: Speakers
+    fields:
+      name:
+        label: Name
+      bio:
+        label: Bio
+      email:
+        label: Email
+      phone:
+        label: Phone
+      website:
+        label: Website
+      picture:
+        label: Picture
   Attendee:
-    pluralLabel: Attendees
     label: Attendee
-  Message:
-    label: Message
-    pluralLabel: Messages
+    pluralLabel: Attendees
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      phone:
+        label: Phone
+      company:
+        label: Company
+      ticket:
+        label: Ticket Type
+        values:
+          standard: Standard
+          vip: VIP
+  Registration:
+    label: Registration
+    pluralLabel: Registrations
+    fields:
+      attendee:
+        label: Attendee
+      talk:
+        label: Talk
+      registeredAt:
+        label: Registered At
+      status:
+        label: Status
+        values:
+          confirmed: Confirmed
+          canceled: Canceled
 logo:
   src: images/logo.webp
   alt: A ticket

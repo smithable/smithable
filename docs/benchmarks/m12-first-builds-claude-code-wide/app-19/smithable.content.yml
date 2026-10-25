@@ -19,15 +19,15 @@ models:
           furniture: Möbler
           clothes: Kläder
           books: Böcker
-          electronics: Elektronik
           kids: Barn
           kitchen: Kök
+          electronics: Elektronik
           other: Övrigt
       condition:
         label: Skick
         values:
           likeNew: Som ny
-          good: Bra
+          good: Bra skick
           worn: Sliten
       place:
         label: Plats
@@ -46,7 +46,7 @@ pages:
     title: Välkommen
     hero:
       title: Fynda på vår loppis
-      subtitle: Bläddra bland begagnade saker från grannar och vänner – eller lägg upp det du själv vill sälja, med bilder och pris.
+      subtitle: Lägg upp det du vill sälja med bilder och pris, eller hitta något nytt bland grannarnas saker.
       button: Se alla saker
       image:
         src: images/hero.webp
@@ -54,8 +54,6 @@ pages:
         generated: true
     latest:
       title: Senast upplagt
-    footer:
-      text: Loppisen – köp och sälj begagnat i närheten.
   privacy:
     title: Integritet
 logo:

@@ -1,18 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
+    title: Welcome to Greenfield FC
+    subtitle: The home of football in Greenfield
     hero:
-      title: Welcome to Football Club
-      subtitle: Follow our teams, players and match results.
-      button: View Teams
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    upcomingMatches:
-      title: Upcoming Matches
-    recentResults:
-      title: Recent Results
+  teams:
+    title: Teams
+  players:
+    title: Players
+  matches:
+    title: Matches
 logo:
   src: images/logo.webp
   alt: A football

@@ -9,29 +9,59 @@ models:
       name: string!
       description: text
       frequency: daily | weekdays | weekly
-      active: bool = true
+      status: active | paused | archived
       startedOn: date! = TODAY()
       currentStreak:
         type: int
         by: app
         default: 0
-      longestStreak:
-        type: int
+      lastCheckIn:
+        type: date
         by: app
-        default: 0
       checkIns: CheckIn[]
   CheckIn:
     fields:
       habit: Habit!
       date: date! = TODAY()
       note: text
+    unique: [{ fields: [habit, date], scope: owner }]
 pages:
   habits:
     crud: Habit
+    actions: [resetStreak, pause, resume, checkIn]
     search: [name, description]
-    filters: [frequency, active]
+    filters: [status, frequency]
+    defaultFilter:
+      status: active
   checkIns:
     crud: CheckIn
     filters: [habit, date]
-  calendar:
-    calendar: CheckIn
+actions:
+  resetStreak:
+    on: Habit
+    set:
+      currentStreak: 0
+    intent: Start the habit's streak over after a missed day.
+  pause:
+    on: Habit
+    when:
+      status: active
+    set:
+      status: paused
+  resume:
+    on: Habit
+    when:
+      status: paused
+    set:
+      status: active
+  checkIn:
+    on: Habit
+    when:
+      status: active
+    set:
+      lastCheckIn: TODAY()
+    add:
+      CheckIn:
+        date: TODAY()
+        note:
+    intent: Check in on a habit for today.

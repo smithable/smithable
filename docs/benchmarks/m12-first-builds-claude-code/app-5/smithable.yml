@@ -15,22 +15,31 @@ models:
   Ingredient:
     fields:
       name: string! unique
-      category: flour | sugar | dairy | eggs | fats | leavening | flavoring | fruitAndNuts | packaging | other
+      category: flour | sugar | dairy | eggs | fats | yeast | fruit | nuts | chocolate | spices | packaging | other
       unit: kg | g | l | ml | pieces | packs
       inStock: decimal! = 0
-      reorderLevel: decimal = 0
+      reorderLevel: decimal
+      storage: dry | chilled | frozen
       supplier: Supplier
-      storage: dry | fridge | freezer
-      lastCounted: date = TODAY()
       notes: text
+      stockChanges: StockChange[]
+  StockChange:
+    fields:
+      ingredient: Ingredient!
+      kind: delivery | used | wasted | count
+      quantity: decimal!
+      on: date! = TODAY()
+      note: string
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [category, supplier, storage]
+    filters: [category, storage, supplier]
   suppliers:
     crud: Supplier
     search: [name, contactName, email]
+  stockChanges:
+    crud: StockChange
+    filters: [ingredient, kind, on]
   team:
     users: manage
-navigation: [ingredients, suppliers, team]

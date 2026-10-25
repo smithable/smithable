@@ -3,7 +3,8 @@
   "starter": "records",
   "wordStarter": "crm",
   "questions": [
-    "Who should be able to see the collection?",
-    "Should artists be their own records, or just a name on each album?"
+    "Can visitors see your collection without signing in?",
+    "Should artists be their own records, or just a name on each album?",
+    "What else should each album hold besides artist, condition and price paid?"
   ]
 }

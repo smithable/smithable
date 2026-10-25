@@ -8,6 +8,8 @@ pages:
         src: images/hero.webp
         alt: A home kitchen with a wooden table, open shelves and herbs on the windowsill
         generated: true
+  recipes:
+    title: Recipes
 models:
   Recipe:
     label: Recipe
@@ -15,8 +17,8 @@ models:
     fields:
       name:
         label: Name
-      description:
-        label: Description
+      summary:
+        label: Summary
       ingredients:
         label: Ingredients
       instructions:
@@ -30,10 +32,10 @@ models:
       category:
         label: Category
         values:
-          starter: Starter
-          main: Main Course
+          breakfast: Breakfast
+          lunch: Lunch
+          dinner: Dinner
           dessert: Dessert
-          side: Side Dish
           snack: Snack
           drink: Drink
       difficulty:
@@ -44,8 +46,6 @@ models:
           hard: Hard
       favorite:
         label: Favorite
-      tags:
-        label: Tags
   ShoppingList:
     label: Shopping List
     pluralLabel: Shopping Lists

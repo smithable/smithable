@@ -1,0 +1,10 @@
+smithableUx: 0.1
+theme:
+  preset: corporate
+tones:
+  JobPost.status:
+    open: success
+  Application.status:
+    reviewed: warning
+    contacted: success
+    rejected: danger

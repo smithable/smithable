@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "booking",
   "questions": [
-    "How do you price a translation job in a quote?",
+    "How do you price a quote?",
     "How should payments be tracked?",
-    "Besides contact details, what should a client record hold?"
+    "What else should each job hold besides the price?"
   ]
 }

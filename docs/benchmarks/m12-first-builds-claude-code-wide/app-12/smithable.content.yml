@@ -2,9 +2,6 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Are our online services working?
-      subtitle: "Live status of the municipality's online services: current outages, what we are fixing and planned maintenance."
-      button: Incident history
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town

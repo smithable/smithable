@@ -1,7 +1,9 @@
 smithable: 0.1
 app:
-  name: Confer
-  description: "Talks, speakers and registration for a conference: attendees sign up and reserve their seat at the talks they want to hear."
+  name: Confera
+  description: Talks, speakers and attendee registration for a conference.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
@@ -40,7 +42,6 @@ pages:
     filters: [speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
-    search: [title, room]
   speakers:
     crud: Speaker
   my-registrations:
@@ -56,18 +57,13 @@ pages:
       footer:
       programme:
         records: Talk
-      speakerList:
+      lineup:
         records: Speaker
       faq:
       callToAction:
-        button: schedule
+        button: talks
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
-navigation:
-  main: [talks, speakers, my-registrations, schedule, home, privacy, admin]
-  programme: [schedule, talks, speakers, my-registrations]
-  website: [home]
-  admin: [admin]

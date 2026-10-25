@@ -5,12 +5,11 @@ pages:
       sort: -date
     icon: calendar
 tones:
-  Shoot.status:
-    done: success
-    canceled: danger
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
+  Shoot.status:
+    delivered: success
 theme:
-  preset: minimal
+  preset: editorial
