@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { PictureEntry } from "@smithable/ai";
 import { validateContent, validateSamples, validateSpec } from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
 // new.js pulls in most of the CLI: imported here, its load time is not a test's (5 s) on a busy machine.
@@ -379,10 +380,10 @@ test("a photograph from the library is not badged, and the app credits it", asyn
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     fetched: "2026-10-25",
   };
-  const photos = [
-    { ...index[0], generated: false, credit },
-    { ...index[1], generated: true },
-  ] as typeof index;
+  const photos: PictureEntry[] = [
+    { ...(index[0] as PictureEntry), generated: false, credit },
+    { ...(index[1] as PictureEntry), generated: true },
+  ];
   const files: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
   const written = await addLibraryPictures({
     description: "a café with its menu",
