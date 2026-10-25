@@ -11,6 +11,7 @@ import {
   pageIcon,
   pascal,
   plural,
+  SECTION_LOOKS,
   type SpecIR,
   storesPictures,
   type UxIR,
@@ -46,6 +47,8 @@ export function landingRoute(
   auth: AuthIR,
   ux: UxIR,
   framed: boolean | "parts" = true,
+  /** The page's theme bands its sections (surfaces.sections: banded): every second one is muted. */
+  banded = false,
 ): string {
   const text = (name: string) => t.section(page.id, name);
   const component = `${pascal(page.id)}Page`;
@@ -89,11 +92,17 @@ export function landingRoute(
     ? `  loader: async () => {\n${lists.join("\n")}\n    return { ${shown.join(", ")} };\n  },\n`
     : "";
   const items = (name: string) => literal(text(name).items ?? []);
+  // A banded theme's sections: every second one that can have a band, counting from the first
+  // after the hero (the footer and a custom section not counted), is muted unless it says its own.
+  const alternate = new Set<string>();
   const sectionParts = (section: LandingSection): string[] => {
     // A section's component, opened with where its texts are kept, so the preview can change
     // them in place.
-    // Its look from smithable.ux.yml (layout, image, columns, highlight), checked by its kind.
-    const look = Object.entries(ux.pages[page.id]?.looks?.[section.name] ?? {})
+    // Its look from smithable.ux.yml (layout, image, columns, highlight, band), checked by its kind.
+    const given = ux.pages[page.id]?.looks?.[section.name] ?? {};
+    const look = Object.entries(
+      alternate.has(section.name) && given.band === undefined ? { ...given, band: "muted" } : given,
+    )
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>
@@ -117,6 +126,16 @@ export function landingRoute(
               : ""
           }
           link=${link(routeOf(section.button) ?? start, own.button ?? "Get started")}${
+            section.secondButton
+              ? `
+          secondLink=${
+            own.secondButton
+              ? link(routeOf(section.secondButton), own.secondButton)
+              : (imports.add("#/generated/pages", "pageUi"),
+                link(routeOf(section.secondButton), t.pageTitleOf(section.secondButton), true))
+          }`
+              : ""
+          }${
             own.image
               ? `
           image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""} }}`
@@ -410,6 +429,14 @@ export function landingRoute(
       }
     }
   };
+  if (banded)
+    sections
+      .filter(
+        (s) => !s.own && SECTION_LOOKS[s.kind]?.band !== undefined && sectionParts(s).length > 0,
+      )
+      .forEach((s, i) => {
+        if (i % 2 === 1) alternate.add(s.name);
+      });
   const parts = sections.flatMap(sectionParts);
   const footerSection = sections.find((s) => s.kind === "footer");
   const footerTexts = footerSection ? text(footerSection.name) : undefined;

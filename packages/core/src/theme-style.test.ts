@@ -55,6 +55,9 @@ test("fonts from the list only, values from their sets, and no tight capitals", 
   expect(codes("surfaces: { cards: glass }\n")).toContain("invalid-value");
   expect(codes("headings: { align: right }\n")).toContain("invalid-value");
   expect(read("fonts: { body: Outfit }\n").theme?.font).toBe("Outfit");
+  // A banded theme: every second landing section on the muted band; open is the default.
+  expect(read("surfaces: { sections: banded }\n").theme?.style.surfaces.sections).toBe("banded");
+  expect(codes("surfaces: { sections: striped }\n")).toContain("invalid-value");
   expect(codes("buttons: { colour: red }\n")).toContain("unknown-key");
   expect(codes("headings: { case: upper, tracking: tight }\n")).toContain("invalid-value");
   expect(codes("headings: { case: upper, tracking: wide }\n")).not.toContain("invalid-value");

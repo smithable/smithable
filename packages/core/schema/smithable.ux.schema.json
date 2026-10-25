@@ -254,9 +254,10 @@
                         "split",
                         "centered",
                         "plain",
-                        "cover"
+                        "cover",
+                        "photo"
                       ],
-                      "description": "One of split, centered, plain, cover; the first is the default."
+                      "description": "One of split, centered, plain, cover, photo; the first is the default."
                     },
                     "image": {
                       "enum": [
@@ -280,6 +281,15 @@
                         6
                       ],
                       "description": "One of 3, 2, 4, 5, 6; the first is the default."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 },
@@ -304,6 +314,15 @@
                         6
                       ],
                       "description": "One of 3, 2, 4, 5, 6, side by side on a wide screen: 3 for cards and 4 for a grid when not said; a list has none."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 },
@@ -318,6 +337,15 @@
                         "one"
                       ],
                       "description": "One of cards, carousel, one; the first is the default."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 },
@@ -328,6 +356,15 @@
                     "highlight": {
                       "type": "string",
                       "description": "The name of the item to set apart."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 },
@@ -348,6 +385,15 @@
                         2
                       ],
                       "description": "One of 1, 2, for the list layout; the first is the default."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 },
@@ -364,6 +410,75 @@
                         6
                       ],
                       "description": "One of 3, 2, 4, 5, 6; the first is the default."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
                     }
                   }
                 }

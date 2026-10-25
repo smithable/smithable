@@ -91,6 +91,10 @@ const pageUx = (ux: UxIR, page: string): UxIR => ({
   theme: { ...ux.theme, ...ux.pages[page]?.theme },
 });
 
+/** Whether a page's theme (its own, or the app's) bands its sections (surfaces.sections). */
+export const bandedPage = (ux: UxIR, page: string, themes: readonly ThemeIR[] = []): boolean =>
+  themeOf(pageUx(ux, page), themes).style.surfaces.sections === "banded";
+
 /** The pages with a theme of their own. */
 const themedPages = (ux: UxIR) =>
   Object.entries(ux.pages)

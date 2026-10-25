@@ -1591,6 +1591,10 @@
                   "type": "string",
                   "description": "The page the section's button opens."
                 },
+                "secondButton": {
+                  "type": "string",
+                  "description": "A hero's second button, an outline one beside the first: the page it opens. None when not given."
+                },
                 "shortcuts": {
                   "type": "array",
                   "items": {
@@ -1765,6 +1769,10 @@
                 "button": {
                   "type": "string",
                   "description": "The page the section's button opens."
+                },
+                "secondButton": {
+                  "type": "string",
+                  "description": "A hero's second button, an outline one beside the first: the page it opens. None when not given."
                 },
                 "shortcuts": {
                   "type": "array",

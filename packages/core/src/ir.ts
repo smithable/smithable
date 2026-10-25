@@ -433,6 +433,8 @@ export interface PageSection {
   starts?: string;
   /** The page a hero's or call to action's button opens. */
   button?: string;
+  /** The page a hero's second button (an outline one beside the first) opens; none when not given. */
+  secondButton?: string;
   /** A hero's shortcuts: up to four pages, shown as round icons over its lower edge. */
   shortcuts?: string[];
   /** A records section shows this model's records as cards. */

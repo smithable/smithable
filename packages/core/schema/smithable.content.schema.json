@@ -193,6 +193,10 @@
           "description": "A landing page's section's texts, by the section's name in smithable.yml.",
           "additionalProperties": false,
           "properties": {
+            "eyebrow": {
+              "type": "string",
+              "description": "A short line over the heading, e.g. what the section is."
+            },
             "title": {
               "type": "string",
               "description": "The section's heading."
@@ -208,6 +212,10 @@
             "button": {
               "type": "string",
               "description": "The button's text."
+            },
+            "secondButton": {
+              "type": "string",
+              "description": "A hero's second button's text (secondButton in smithable.yml); the page's title when not given."
             },
             "image": {
               "type": "object",

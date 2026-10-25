@@ -1610,3 +1610,52 @@ pages:
   expect(refused.ok).toBe(false);
   expect(applyOperations({ spec }, []).ok).toBe(false);
 });
+
+test("setHeroButtons sets the pages a hero's buttons open, a second one beside the first; none takes one away", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const file = (s: string) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string;
+  const invoicing = { spec: file(""), auth: file(".auth"), content: file(".content") };
+  const set = applyOperation(invoicing, "setHeroButtons", {
+    page: "home",
+    secondButton: "clients",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.description).toBe("The home hero's second button opens clients");
+  expect(set.files.spec).toContain("hero: { button: overview, secondButton: clients }");
+  // Its words: the content file's secondButton, through setText.
+  const words = applyOperation({ ...invoicing, ...set.files }, "setText", {
+    text: "Our clients",
+    path: ["pages", "home", "hero", "secondButton"],
+  });
+  if (!words.ok) throw new Error(words.message);
+  expect(words.files.content).toContain("secondButton: Our clients");
+  const none = applyOperation({ ...invoicing, ...set.files }, "setHeroButtons", {
+    page: "home",
+    secondButton: "none",
+  });
+  expect(none.ok && none.files.spec).toContain("hero: { button: overview }");
+  // A renamed page is followed; a removed one takes the button with it.
+  const renamed = applyOperation({ ...invoicing, ...set.files }, "renamePage", {
+    from: "clients",
+    to: "customers",
+  });
+  expect(renamed.ok && renamed.files.spec).toContain("secondButton: customers");
+  const gone = applyOperation({ ...invoicing, ...set.files }, "removePage", { page: "clients" });
+  expect(gone.ok && gone.files.spec).not.toContain("secondButton");
+  expect(applyOperation(invoicing, "setHeroButtons", { page: "home", button: "nowhere" }).ok).toBe(
+    false,
+  );
+  expect(applyOperation(invoicing, "setHeroButtons", { page: "home" }).ok).toBe(false);
+  // Only a hero has a second button.
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: file("").split("      faq:\n").join("      faq: { secondButton: clients }\n"),
+  });
+  expect(spec.diagnostics.map((d) => d.message)).toContain(
+    "Only a hero section has a second button.",
+  );
+});

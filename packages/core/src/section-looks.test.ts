@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
 import { validateSpec } from "./spec.js";
+import { themeNamed } from "./theme.js";
 import { validateUx } from "./ux.js";
 
 const spec = `smithable: 0.1
@@ -63,7 +64,7 @@ test("each section kind takes its own looks, checked by name and value", () => {
     "{ hero: { layout: wavy }, footer: { layout: list }, nope: {} }",
   ).diagnostics.map((d) => d.message);
   expect(messages).toContain(
-    '"layout" of the look of hero on page "home" is one of split, centered, plain, cover.',
+    '"layout" of the look of hero on page "home" is one of split, centered, plain, cover, photo.',
   );
   expect(messages.join()).toContain('Unknown key "layout" in the look of footer');
   expect(messages).toContain('home has no section named "nope".');
@@ -176,4 +177,60 @@ test("motion is a theme value: the preset's own, the ux file's over it, set with
   const still = applyOperation({ spec }, "setTheme", { motion: "none" });
   expect(still).toMatchObject({ ok: true, description: "Set the look: no motion" });
   expect(set.files.ux).toContain("motion: lively");
+});
+
+test("a section's band is none, muted, inverse or primary, on every kind but the hero and the footer", () => {
+  const read = ux(
+    "{ hero: { layout: photo }, features: { band: muted }, items: { band: inverse }, faq: { band: primary }, gallery: { band: none } }",
+  );
+  expect(read.diagnostics).toEqual([]);
+  expect(read.ux?.pages.home?.looks).toEqual({
+    hero: { layout: "photo" },
+    features: { band: "muted" },
+    items: { band: "inverse" },
+    faq: { band: "primary" },
+    gallery: { band: "none" },
+  });
+  const messages = ux("{ hero: { band: muted }, footer: { band: muted }, faq: { band: dark } }")
+    .diagnostics.map((d) => d.message)
+    .join("\n");
+  expect(messages).toContain('Unknown key "band" in the look of hero');
+  expect(messages).toContain('Unknown key "band" in the look of footer');
+  expect(messages).toContain(
+    '"band" of the look of faq on page "home" is one of none, muted, inverse, primary.',
+  );
+  const set = applyOperation({ spec }, "setSectionLook", {
+    page: "home",
+    section: "faq",
+    key: "band",
+    value: "inverse",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.ux).toContain("band: inverse");
+});
+
+test("a band whose text would not read on its surface is a warning, in the mode it fails in", () => {
+  const modern = themeNamed("modern");
+  if (!modern) throw new Error("no modern");
+  // A project's theme whose muted surface is nearly as dark as its text in light mode.
+  const murky = { ...modern, name: "murky", light: { ...modern.light, muted: "#3a3a3a" } };
+  const read = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\ntheme: { preset: murky }\npages:\n  home:\n    sections: { features: { band: muted }, faq: { band: primary } }\n",
+    },
+    ir,
+    [murky],
+  );
+  expect(read.ux).toBeDefined();
+  // One plain warning per band and mode, however many of its pairs fail.
+  expect(read.diagnostics.map((d) => [d.severity, d.code])).toEqual([["warning", "band-contrast"]]);
+  expect(read.diagnostics[0]?.message).toMatch(
+    /^On the muted band of features \(page "home"\), in light mode, the text may be hard to read\.$/,
+  );
+  // The built-in themes' bands all read.
+  expect(
+    ux("{ features: { band: muted }, items: { band: inverse }, faq: { band: primary } }")
+      .diagnostics,
+  ).toEqual([]);
 });

@@ -110,9 +110,9 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
  */
 export const LANDING_SECTIONS: Record<
   SectionKind,
-  { button?: true; form?: true; shortcuts?: true }
+  { button?: true; secondButton?: true; form?: true; shortcuts?: true }
 > = {
-  hero: { button: true, shortcuts: true },
+  hero: { button: true, secondButton: true, shortcuts: true },
   features: {},
   records: {},
   pricing: {},
@@ -296,6 +296,11 @@ const SECTIONS_SCHEMA = (of: string): JsonSchema => ({
           "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }.",
       },
       button: { type: "string", description: "The page the section's button opens." },
+      secondButton: {
+        type: "string",
+        description:
+          "A hero's second button, an outline one beside the first: the page it opens. None when not given.",
+      },
       shortcuts: {
         type: "array",
         items: { type: "string" },
@@ -1063,11 +1068,15 @@ export function followSections(
   const sections = partSections(page);
   if (effect.kind === "remove-page") {
     const linked = sections.filter(
-      (s) => s.button === effect.page || s.shortcuts?.includes(effect.page),
+      (s) =>
+        s.button === effect.page ||
+        s.secondButton === effect.page ||
+        s.shortcuts?.includes(effect.page),
     );
     for (const section of linked) {
       const at = ["pages", page.id, under, section.name];
       if (section.button === effect.page) spec.removeAndPrune([...at, "button"], 4);
+      if (section.secondButton === effect.page) spec.removeAndPrune([...at, "secondButton"], 4);
       const rest = section.shortcuts?.filter((p) => p !== effect.page) ?? [];
       if (section.shortcuts?.includes(effect.page))
         if (rest.length) spec.set([...at, "shortcuts"], rest);
@@ -1266,6 +1275,7 @@ export function readSections(
         "filters",
         "where",
         "button",
+        "secondButton",
         "shortcuts",
         "limit",
         "form",
@@ -1391,6 +1401,14 @@ export function readSections(
           ctx.error(option, "invalid-value", "A hero has at most four shortcuts.");
         for (const { name: page, at } of pages) ctx.reference("page", page, at);
         section.shortcuts = pages.slice(0, 4).map((p) => p.name);
+      } else if (key === "secondButton") {
+        const page = readString(ctx, option, `"secondButton" in ${sectionWhere}`);
+        if (page !== undefined) {
+          ctx.reference("page", page, option);
+          section.secondButton = page;
+        }
+        if (!allows.secondButton)
+          ctx.error(optionKey, "invalid-key", "Only a hero section has a second button.");
       } else if (key === "button") {
         const page = readString(ctx, option, `"button" in ${sectionWhere}`);
         if (page !== undefined) {

@@ -81,6 +81,8 @@ export interface SectionContent {
   subtitle?: string;
   text?: string;
   button?: string;
+  /** A hero's second button (secondButton in smithable.yml); the page's title when not given. */
+  secondButton?: string;
   label?: string;
   /** A contact section's details; hours one per line, thanks once the form is sent. */
   address?: string;
@@ -118,7 +120,7 @@ const SECTION_TEXTS: Record<
   string,
   { texts: string[]; items?: string[]; image?: true; fields?: true }
 > = {
-  hero: { texts: ["eyebrow", "title", "subtitle", "button"], image: true },
+  hero: { texts: ["eyebrow", "title", "subtitle", "button", "secondButton"], image: true },
   features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
   records: { texts: ["eyebrow", "title", "text"] },
   pricing: {

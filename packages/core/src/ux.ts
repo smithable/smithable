@@ -13,7 +13,15 @@ import { capitalize, humanize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
 import { readNamePart } from "./sections/name-parts.js";
 import { didYouMean } from "./suggest.js";
-import { FONTS, type ThemeIR, themeNamed, themeNames, withBackground } from "./theme.js";
+import {
+  bandLowContrast,
+  FONTS,
+  type ThemeIR,
+  themeNamed,
+  themeNames,
+  tokensOf,
+  withBackground,
+} from "./theme.js";
 import { threadBindings } from "./thread.js";
 
 /**
@@ -147,7 +155,16 @@ export interface SectionLook {
   image?: "left" | "right";
   columns?: number;
   highlight?: string;
+  band?: Band;
 }
+
+/**
+ * A section's band (docs/design/look-references.md §3, gap 5): the section across the page's
+ * width on one of the theme's surfaces, its text in that surface's own color. none (the default)
+ * is today's open section. Not on a hero (its layouts are its own) or a footer (the frame's).
+ */
+export const BANDS = ["none", "muted", "inverse", "primary"] as const;
+export type Band = (typeof BANDS)[number];
 
 /**
  * The looks each section kind has: a key's allowed values, or "text" for any (a pricing plan's
@@ -156,15 +173,19 @@ export interface SectionLook {
 export const SECTION_LOOKS: Partial<
   Record<string, Record<string, readonly (string | number)[] | "text">>
 > = {
-  hero: { layout: ["split", "centered", "plain", "cover"], image: ["right", "left"] },
-  features: { columns: [3, 2, 4, 5, 6] },
+  hero: { layout: ["split", "centered", "plain", "cover", "photo"], image: ["right", "left"] },
+  features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
-  records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4, 5, 6] },
-  testimonials: { layout: ["cards", "carousel", "one"] },
-  pricing: { highlight: "text" },
+  records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4, 5, 6], band: BANDS },
+  testimonials: { layout: ["cards", "carousel", "one"], band: BANDS },
+  pricing: { highlight: "text", band: BANDS },
   // An FAQ's columns are its list's (every answer shown); the accordion is one column.
-  faq: { layout: ["accordion", "list"], columns: [1, 2] },
-  gallery: { columns: [3, 2, 4, 5, 6] },
+  faq: { layout: ["accordion", "list"], columns: [1, 2], band: BANDS },
+  gallery: { columns: [3, 2, 4, 5, 6], band: BANDS },
+  callToAction: { band: BANDS },
+  contact: { band: BANDS },
+  text: { band: BANDS },
+  calculator: { band: BANDS },
 };
 
 /** A records section's columns in the grid layout when the ux file does not say (today's four). */
@@ -413,6 +434,7 @@ export function validateUx(
   });
   const ctx = new ParseContext(file.path, lines);
   const ux = emptyUx();
+  const bands: BandAt[] = [];
   const done = () => ({
     ...(hasErrors(ctx.diagnostics) ? {} : { ux }),
     diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
@@ -591,7 +613,7 @@ export function validateUx(
             continue;
           }
           if (part.key === "sections") {
-            result.looks = readSectionLooks(ctx, part.value, spec, where);
+            result.looks = readSectionLooks(ctx, part.value, spec, where, bands);
             continue;
           }
           if (part.key === "theme") {
@@ -760,7 +782,39 @@ export function validateUx(
       }
     }
   }
+  checkBands(ctx, ux, bands, themes);
   return done();
+}
+
+/** A band a section's look gives, where it is written. */
+type BandAt = { page: string; section: string; band: Band; node: ParsedNode | null };
+
+/**
+ * A band whose text would not read on its surface, in the page's theme (the app's, or the
+ * landing page's own, with the brand's background) in light or dark mode: a warning, as the
+ * theme's own colors are checked (checkContrast), not a silent result.
+ */
+function checkBands(
+  ctx: ParseContext,
+  ux: UxIR,
+  bands: BandAt[],
+  themes: readonly ThemeIR[] | undefined,
+): void {
+  for (const b of bands) {
+    const own = { ...ux.theme, ...ux.pages[b.page]?.theme };
+    const named = themeNamed(own.preset ?? "modern", themes);
+    if (!named) continue;
+    const theme = (own.background && withBackground(named, own.background)) || named;
+    for (const mode of ["light", "dark"] as const)
+      if (bandLowContrast(tokensOf(theme, mode), b.band).length)
+        ctx.warning(
+          b.node,
+          "band-contrast",
+          // Plain words, as a theme's own contrast is said (hardToRead): no colour names, no ratios.
+          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, the text may be hard to read.`,
+          `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
+        );
+  }
 }
 
 /** A landing page's `sections:` in the ux file: each named section's look, checked by its kind. */
@@ -769,6 +823,8 @@ function readSectionLooks(
   node: ParsedNode | null,
   page: PageIR,
   where: string,
+  /** The bands given, for their contrast once the themes are read. */
+  bands: BandAt[],
 ): Record<string, SectionLook> {
   const looks: Record<string, SectionLook> = {};
   const sections = page.sections.filter((s) => !s.own);
@@ -832,6 +888,8 @@ function readSectionLooks(
         "invalid-value",
         `"columns" of ${at} is for cards and a grid; a list is one row per record.`,
       );
+    if (look.band && look.band !== "none")
+      bands.push({ page: page.id, section: entry.key, band: look.band, node: entry.value });
     looks[entry.key] = look;
   }
   return looks;

@@ -1133,6 +1133,76 @@ export const crudOperations: AnyOperation[] = [
   setContact,
   setMine,
 ];
+/**
+ * A hero's buttons: the first (the page it opens; without one, the first section's button or the
+ * app's first page, as "Get started") and a second, an outline button beside it (none unless
+ * given). "none" takes one away; a button not named stays as it is.
+ */
+const setHeroButtons: Operation<{ page: string; button?: string; secondButton?: string }> = {
+  name: "setHeroButtons",
+  summary:
+    'Choose the pages a landing page\'s hero buttons open: its button and a second one beside it, an outline button ("none" takes one away). Their words are setText … button / secondButton.',
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Landing page" }, { description: "e.g. home." }),
+      button: {
+        type: "string",
+        description:
+          "The page the first button opens, or none (then the first section's button's page, else the app's first page).",
+      },
+      secondButton: {
+        type: "string",
+        description:
+          "The page the second button opens, or none (no second button, the default). Its words default to the page's title.",
+      },
+    },
+  },
+  positional: ["page", "button", "secondButton"],
+  describe: ({ page, button, secondButton }) =>
+    [
+      button &&
+        (button === "none"
+          ? `the ${page} hero's button opens its default page`
+          : `the ${page} hero's button opens ${button}`),
+      secondButton &&
+        (secondButton === "none"
+          ? `the ${page} hero has no second button`
+          : `the ${page} hero's second button opens ${secondButton}`),
+    ]
+      .filter(Boolean)
+      .join("; ")
+      .replace(/^t/, "T") || `Leave the ${page} hero's buttons as they are`,
+  destructive: () => false,
+  apply({ spec }, { page, button, secondButton }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const hero = existing?.sections.find((s) => s.kind === "hero");
+    if (!existing || !hero) throw new OperationError(`The ${page} page has no hero.`);
+    if (!button && !secondButton)
+      throw new OperationError("Name a page for the button or the second button, or none.");
+    const at = [...sectionsPath(existing), hero.name];
+    for (const [key, target] of [
+      ["button", button],
+      ["secondButton", secondButton],
+    ] as const) {
+      if (!target) continue;
+      const path = [...at, key];
+      if (target === "none") {
+        if (spec.has(path)) spec.removeAndPrune(path, at.length);
+        continue;
+      }
+      if (!ir.pages.some((p) => p.id === target))
+        throw new OperationError(`There is no page named "${target}".`);
+      if (spec.has(path)) spec.set(path, target);
+      else if (spec.get(at) == null) spec.set(at, { [key]: target });
+      else spec.add(at, key, target);
+    }
+    return [];
+  },
+};
+
 /** Operations of the landing pattern. */
 const moveSection: Operation<{ page: string; section: string; before?: string; after?: string }> = {
   name: "moveSection",
@@ -1229,6 +1299,7 @@ export const landingOperations: AnyOperation[] = [
   moveSection,
   setSectionWhere,
   setShortcuts,
+  setHeroButtons,
 ];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile];

@@ -2,6 +2,8 @@ import {
   type AuthIR,
   emptyContent,
   type SpecIR,
+  type ThemeIR,
+  themeNamed,
   validateAuth,
   validateContent,
   validateSpec,
@@ -148,4 +150,93 @@ pages:
   expect(looked).toContain("columns={5}");
   // Nothing said: no columns, and the kit keeps its own (cards 3, grid 4, gallery 3, FAQ 1).
   expect(page("smithableUx: 0.1\n")).not.toContain("columns=");
+});
+
+test("a section's band, a banded theme's every second section, a hero's second button and the photo layout reach the page", () => {
+  const site = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Bistro }
+models:
+  Dish: { fields: { name: string! } }
+pages:
+  home:
+    route: /
+    landing:
+      hero: { secondButton: dishes }
+      dishes: { records: Dish }
+      story: { text: }
+      faq: {}
+      gallery: {}
+      callToAction: {}
+      footer: {}
+  dishes: { crud: Dish }
+`,
+  }).ir as SpecIR;
+  const modern = themeNamed("modern") as ThemeIR;
+  const stripes: ThemeIR = {
+    ...modern,
+    name: "stripes",
+    style: { ...modern.style, surfaces: { ...modern.style.surfaces, sections: "banded" } },
+  };
+  const page = (uxText: string, contentText = "") => {
+    const texts =
+      validateContent(
+        {
+          path: "smithable.content.yml",
+          text: `smithableContent: 0.1
+pages:
+  home:
+${contentText}    faq: { items: [{ question: Open on Sundays?, answer: Yes. }] }
+    gallery: { items: [{ image: { src: images/a.webp, alt: A table } }] }
+`,
+        },
+        site,
+      ).content ?? emptyContent();
+    return (
+      generateApp(site, {
+        smithableVersion: "0.0.0",
+        auth: validateAuth(
+          {
+            path: "smithable.auth.yml",
+            text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home, dishes], read: [Dish] }\n",
+          },
+          site,
+        ).auth as AuthIR,
+        content: texts,
+        themes: [stripes],
+        ux: validateUx({ path: "smithable.ux.yml", text: uxText }, site, [stripes]).ux,
+      }).find((f) => f.path === "src/routes/index.tsx")?.content ?? ""
+    );
+  };
+  const bandOf = (code: string, component: string) =>
+    /band="(\w+)"/.exec(code.split(`<${component}\n`)[1]?.split("/>")[0] ?? "")?.[1];
+  // Nothing said: no band anywhere, and the second button's words are its page's title.
+  const plain = page("smithableUx: 0.1\n");
+  expect(plain).not.toContain("band=");
+  expect(plain).toContain('secondLink={{ to: "/dishes", label: pageUi["dishes"].title }}');
+  // Bands as the ux file gives them, and the photo hero.
+  const banded = page(
+    "smithableUx: 0.1\npages:\n  home:\n    sections: { hero: { layout: photo }, faq: { band: inverse }, callToAction: { band: primary } }\n",
+    "    hero: { secondButton: Our menu }\n",
+  );
+  expect(banded).toContain('layout="photo"');
+  expect(banded).toContain('secondLink={{ to: "/dishes", label: "Our menu" }}');
+  expect(bandOf(banded, "Faq")).toBe("inverse");
+  expect(bandOf(banded, "CallToAction")).toBe("primary");
+  expect(bandOf(banded, "RecordCards")).toBeUndefined();
+  // A banded theme: counting from the first section after the hero, the second, fourth… are
+  // muted (the text section with no words shows nothing and is not counted; the footer neither),
+  // unless a section says its own band.
+  const alternating = page("smithableUx: 0.1\ntheme: { preset: stripes }\n");
+  expect(bandOf(alternating, "RecordCards")).toBeUndefined();
+  expect(bandOf(alternating, "Faq")).toBe("muted");
+  expect(bandOf(alternating, "Gallery")).toBeUndefined();
+  expect(bandOf(alternating, "CallToAction")).toBe("muted");
+  const own = page(
+    "smithableUx: 0.1\ntheme: { preset: stripes }\npages:\n  home:\n    sections: { faq: { band: none }, gallery: { band: primary } }\n",
+  );
+  expect(bandOf(own, "Faq")).toBe("none");
+  expect(bandOf(own, "Gallery")).toBe("primary");
+  expect(bandOf(own, "CallToAction")).toBe("muted");
 });

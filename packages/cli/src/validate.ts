@@ -332,5 +332,21 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
       `${action.name}${action.custom ? "" : ` (on ${action.on})`}: run by ${who.length ? who.join(", ") : "nobody"}`,
     );
   }
+  // A landing page's hero: the page its button opens when the spec names none, and its second.
+  for (const page of ir.pages) {
+    if (page.pattern.kind !== "landing") continue;
+    const hero = page.pattern.sections.find((s) => s.kind === "hero");
+    if (!hero) continue;
+    const other = page.pattern.sections.find((s) => s !== hero && s.button)?.button;
+    const first = ir.navigation
+      .flatMap((m) => m.pages)
+      .find((id) => ir.pages.find((p) => p.id === id)?.pattern.kind !== "landing");
+    const opens = hero.button
+      ? `opens ${hero.button}`
+      : `opens ${other ?? first ?? "nothing"} (by rule: ${other ? "the page's other section's button" : "the app's first page"}; say it with button)`;
+    lines.push(
+      `${page.id} hero: button ${opens}; ${hero.secondButton ? `second button opens ${hero.secondButton}` : "no second button (secondButton)"}`,
+    );
+  }
   return `${lines.join("\n")}\n`;
 }

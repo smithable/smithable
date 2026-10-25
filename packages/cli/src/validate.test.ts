@@ -62,3 +62,14 @@ test("validate requires smithable.auth.yml and checks it against the spec", asyn
   expect(await run(["validate", dir], io)).toBe(1);
   expect(io.stderr).toContain('There is no model named "Nte" in smithable.yml.');
 });
+
+test("validate --explain says what a hero's buttons open, by rule or as written", async () => {
+  const io = captureIo();
+  expect(await run(["validate", join(examples, "kiosk"), "--explain"], io)).toBe(0);
+  expect(io.stdout).toMatch(
+    /where hero: button opens \w+ \(by rule: .*; say it with button\); no second button \(secondButton\)/,
+  );
+  const invoicing = captureIo();
+  expect(await run(["validate", join(examples, "invoicing"), "--explain"], invoicing)).toBe(0);
+  expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
+});
