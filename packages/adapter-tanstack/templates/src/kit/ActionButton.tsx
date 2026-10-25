@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ModelForm } from "./ModelForm";
-import type { AppUi, ModelUi, Options } from "./model";
+import { type AppUi, type ModelUi, type Options, textMarker } from "./model";
 import { tx, w } from "./words";
 
 export function ActionButton({
@@ -76,7 +76,10 @@ export function ActionButton({
         disabled={busy}
         onClick={() => (ask ? void open() : run())}
       >
-        {label}
+        {/* Its words are the content file's: changed in place in the preview (A 169). */}
+        <span {...(concept ? textMarker(`actions.${concept.slice("action:".length)}.label`) : {})}>
+          {label}
+        </span>
       </Button>
       {failure && (
         <span role="alert" className="text-sm text-destructive">

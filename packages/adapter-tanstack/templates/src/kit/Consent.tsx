@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "#/components/ui/button";
 import { AppLink } from "./AppLink";
 import { choose, consentAsked, consentWanted, onConsentChange, reopenConsent } from "./consent";
+import { textMarker } from "./model";
 import { w } from "./words";
 
 export interface ConsentTexts {
@@ -32,7 +33,7 @@ export function Consent({ texts, privacy }: { texts?: ConsentTexts; privacy?: st
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-3 text-sm sm:flex-row sm:items-center">
         <p className="flex-1">
-          {texts?.text ?? w.consentText}
+          <span {...textMarker("consent.text")}>{texts?.text ?? w.consentText}</span>
           {privacy && (
             <>
               {" "}
@@ -44,10 +45,10 @@ export function Consent({ texts, privacy }: { texts?: ConsentTexts; privacy?: st
         </p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => choose("yes")}>
-            {texts?.accept ?? w.accept}
+            <span {...textMarker("consent.accept")}>{texts?.accept ?? w.accept}</span>
           </Button>
           <Button variant="outline" onClick={() => choose("no")}>
-            {texts?.decline ?? w.decline}
+            <span {...textMarker("consent.decline")}>{texts?.decline ?? w.decline}</span>
           </Button>
         </div>
       </div>
