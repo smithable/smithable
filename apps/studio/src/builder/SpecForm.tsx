@@ -107,6 +107,8 @@ const Tools = createContext<(path: Path) => React.ReactNode>(() => undefined);
 
 /** The part asked to be shown (a kind of record, a field picked in the preview): open down to it. */
 const Opened = createContext<Path | undefined>(undefined);
+/** Whether the file is the content file, whose entries are named by other files (A 168). */
+const InContent = createContext(false);
 const leadsTo = (path: Path, target: Path | undefined) =>
   target !== undefined && path.length <= target.length && path.every((p, i) => p === target[i]);
 
@@ -160,7 +162,9 @@ export function SpecForm({
                     <Opened.Provider value={open}>
                       <Tools.Provider value={tools ?? (() => undefined)}>
                         <Adder.Provider value={adder ?? (() => undefined)}>
-                          <Value schema={schema} value={read(files[key])} path={[]} />
+                          <InContent.Provider value={key === "content"}>
+                            <Value schema={schema} value={read(files[key])} path={[]} />
+                          </InContent.Provider>
                         </Adder.Provider>
                       </Tools.Provider>
                     </Opened.Provider>
@@ -209,6 +213,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
   const opened = useContext(Opened);
+  const inContent = useContext(InContent);
   const tools = useContext(Tools);
   const adder = useContext(Adder);
   const shaped = useContext(Shape)(path);
@@ -319,7 +324,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
               open={leadsTo([...path, name], opened) || undefined}
             >
               <summary className="cursor-pointer px-2 py-1 font-medium">
-                {entryHeading(name, path[0] === "content")}
+                {entryHeading(name, inContent)}
               </summary>
               <div className="space-y-2 border-t border-line p-2">
                 <div className="flex flex-wrap items-center gap-2">
