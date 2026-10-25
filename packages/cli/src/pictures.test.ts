@@ -399,7 +399,7 @@ test("a photograph from the library is not badged, and the app credits it", asyn
   writePictures(dir, written);
   const images = join(dir, "public", "images");
   expect(JSON.parse(readFileSync(join(images, "pictures.json"), "utf8"))).toEqual({
-    "samples/1.webp": { generated: true },
+    "samples/0.webp": { generated: true },
     "hero.webp": { generated: false },
   });
   expect(readFileSync(join(images, "CREDITS.md"), "utf8")).toContain(
