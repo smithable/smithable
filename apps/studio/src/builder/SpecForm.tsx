@@ -18,6 +18,7 @@ import {
   alternativeFor,
   choicesFor,
   controlOf,
+  entryHeading,
   labelOf,
   operationFor,
   renameFor,
@@ -291,7 +292,9 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
               className="rounded-md border border-line"
               open={leadsTo([...path, name], opened) || undefined}
             >
-              <summary className="cursor-pointer px-2 py-1 font-medium">{name}</summary>
+              <summary className="cursor-pointer px-2 py-1 font-medium">
+                {entryHeading(name, path[0] === "content")}
+              </summary>
               <div className="space-y-2 border-t border-line p-2">
                 <div className="flex flex-wrap items-center gap-2">
                   {renamer([...path, name]) && (

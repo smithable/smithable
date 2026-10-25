@@ -539,10 +539,12 @@ export const CONTENT_SCHEMA: JsonSchema = {
       enum: [Number(CONTENT_VERSION), CONTENT_VERSION],
     },
     language: {
+      title: "Language",
       enum: [...LANGUAGES],
       description: `The language of everything a person reads in the app (the app's own words follow it): ${LANGUAGES.join(", ")}; en is the default.`,
     },
     languages: {
+      title: "Other languages",
       type: "array",
       items: { enum: [...LANGUAGES] },
       uniqueItems: true,
@@ -550,6 +552,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
         "The other languages the app is offered in, each with its file smithable.content.<language>.yml of the same texts (docs/design/languages.md).",
     },
     logo: {
+      title: "Logo",
       type: "object",
       description:
         "The app's mark, before its name in the menu and the landing page's header, and its tab icon: { src: images/logo.webp, alt: what it shows }.",
@@ -565,6 +568,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     models: {
+      title: "Kinds of record",
       type: "object",
       description: "Each model's texts, by the model's name.",
       additionalProperties: {
@@ -609,6 +613,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     pages: {
+      title: "Pages",
       type: "object",
       description:
         "Each page's texts, by the page's name: its title and subtitle, and its sections' or tiles' texts by their names.",
@@ -657,6 +662,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     consent: {
+      title: "Consent bar",
       type: "object",
       description:
         "The consent bar's words, when the app asks for consent (analytics that need it, or custom code): the sentence, and the two buttons.",
@@ -668,6 +674,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     assistant: {
+      title: "Ask, the assistant",
       type: "object",
       description:
         "Ask, the assistant in the app: its visible texts, in the app's language (who gets it is smithable.auth.yml's; its voice smithable.ux.yml's).",
@@ -684,6 +691,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     menus: {
+      title: "Menu headings",
       type: "object",
       description: "A named menu's heading: { admin: { label: Administration } }.",
       additionalProperties: {
@@ -693,6 +701,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     actions: {
+      title: "Actions",
       type: "object",
       description:
         "An action's words, by its name in smithable.yml: { resolve: { label: Mark as resolved, help: Closes the case for good. } }. The label is its button and its page's title, else its name in words; the help is the button's tooltip and a line under its dialog's title.",
@@ -703,6 +712,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
       },
     },
     outgoing: {
+      title: "Mails",
       type: "object",
       description:
         "An outgoing mail's words, by its name in smithable.yml: { bookingMade: { subject: Your booking, text: Thank you! } }. The record follows the text.",
