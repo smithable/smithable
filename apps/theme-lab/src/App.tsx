@@ -97,10 +97,11 @@ export function App() {
         .then(setStart);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the frames are first in
+  // Once the pages are in and the frames signed in, so every place the guide points at is drawn.
+  const ready = signedIn && !!start?.frames.length;
   useEffect(() => {
-    if (signedIn && guideFirst()) setGuiding(true);
-  }, [signedIn]);
+    if (ready && guideFirst()) setGuiding(true);
+  }, [ready]);
 
   const name = /^name:\s*(\S+)/m.exec(text)?.[1] ?? "my-theme";
   const { theme, diagnostics } = useMemo(
