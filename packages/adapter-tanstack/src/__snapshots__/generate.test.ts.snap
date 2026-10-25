@@ -13905,7 +13905,11 @@ import { List } from "lucide-react";
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => ({ services: (await listServices()).rows, barbers: (await listBarbers()).rows }),
+  loader: async () => {
+    const services = (await listServices()).rows;
+    const barbers = (await listBarbers()).rows;
+    return { "services": services.slice(0, 6), "barbers": barbers.slice(0, 6) };
+  },
   component: HomePage,
 });
 
@@ -13925,7 +13929,7 @@ function HomePage() {
           texts="pages.home.services"
           id="services"
           title={serviceUi.pluralLabel}
-          cards={data.services.slice(0, 6).map((row) => ({
+          cards={data["services"].map((row) => ({
             key: row.id,
             title: String(row.name),
             text: row.summary ?? undefined,
@@ -13937,7 +13941,7 @@ function HomePage() {
           id="barbers"
           icon={List}
           title={barberUi.pluralLabel}
-          cards={data.barbers.slice(0, 6).map((row) => ({
+          cards={data["barbers"].map((row) => ({
             key: row.id,
             title: String(row.name),
             picture: row.portrait ? { src: \`/files/barber/\${row.id}/portrait\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated } : undefined,
@@ -15147,7 +15151,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "760c0d6b generated",
+  "src/routes/index.tsx": "2375f97f generated",
   "src/routes/privacy/index.tsx": "e303f9ed generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "9f29cc8a generated",
@@ -22477,7 +22481,10 @@ import { PageHeader } from "#/kit/AppShell";
 export const Route = createFileRoute("/about/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["about"], context.viewer, location.href),
   head: () => pageHead("about"),
-  loader: async () => ({ instructors: (await listInstructors()).rows }),
+  loader: async () => {
+    const instructors = (await listInstructors()).rows;
+    return { "team": instructors.slice(0, 6) };
+  },
   component: AboutPage,
 });
 
@@ -22491,7 +22498,7 @@ function AboutPage() {
           id="team"
           icon={Users}
           title={instructorUi.pluralLabel}
-          cards={data.instructors.slice(0, 6).map((row) => ({
+          cards={data["team"].map((row) => ({
             key: row.id,
             title: String(row.name),
             picture: row.portrait ? { src: \`/files/instructor/\${row.id}/portrait\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated } : undefined,
@@ -24466,7 +24473,11 @@ import { ModelForm } from "#/kit/ModelForm";
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => ({ classTypes: (await listClassTypes()).rows, posts: (await listPosts()).rows }),
+  loader: async () => {
+    const classTypes = (await listClassTypes()).rows;
+    const posts = (await listPosts()).rows;
+    return { "classes": classTypes.slice(0, 6), "news": posts.slice(0, 6) };
+  },
   component: HomePage,
 });
 
@@ -24487,7 +24498,7 @@ function HomePage() {
           texts="pages.home.classes"
           id="classes"
           title={classTypeUi.pluralLabel}
-          cards={data.classTypes.slice(0, 6).map((row) => ({
+          cards={data["classes"].map((row) => ({
             key: row.id,
             title: String(row.name),
             text: row.summary ?? undefined,
@@ -24510,7 +24521,7 @@ function HomePage() {
           id="news"
           icon={BookOpen}
           title={postUi.pluralLabel}
-          cards={data.posts.slice(0, 6).map((row) => ({
+          cards={data["news"].map((row) => ({
             key: row.id,
             title: String(row.title),
             href: \`/blog/\${encodeURIComponent(row.address || String(row.id))}\`,
@@ -26793,7 +26804,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/__root.tsx": "b9438c31 generated",
-  "src/routes/about/index.tsx": "85782241 generated",
+  "src/routes/about/index.tsx": "6c4dd63e generated",
   "src/routes/admin/activity.tsx": "db85c43e generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
@@ -26824,7 +26835,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "3d503243 generated",
+  "src/routes/index.tsx": "ef584fa3 generated",
   "src/routes/instructors/$id.tsx": "1105deb4 generated",
   "src/routes/instructors/index.tsx": "dfac8649 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
@@ -46734,7 +46745,10 @@ import { app } from "#/generated/app";
 export const Route = createFileRoute("/where/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["where"], context.viewer, location.href),
   head: () => pageHead("where"),
-  loader: async () => ({ stops: (await listStops()).rows }),
+  loader: async () => {
+    const stops = (await listStops()).rows;
+    return { "stops": stops.slice(0, 7) };
+  },
   component: WherePage,
 });
 
@@ -46754,7 +46768,7 @@ function WherePage() {
           texts="pages.where.stops"
           id="stops"
           title={stopUi.pluralLabel}
-          cards={data.stops.slice(0, 7).map((row) => ({
+          cards={data["stops"].map((row) => ({
             key: row.id,
             title: String(row.place),
             text: row.note ?? undefined,
@@ -47340,7 +47354,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/new.tsx": "1a880670 generated",
   "src/routes/team/activity.tsx": "d3324158 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
-  "src/routes/where/index.tsx": "fad54d7e generated",
+  "src/routes/where/index.tsx": "2c4338d9 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "8439b73a generated",
@@ -51194,7 +51208,10 @@ import { Package } from "lucide-react";
 export const Route = createFileRoute("/welcome/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => ({ items: (await listItems()).rows }),
+  loader: async () => {
+    const items = (await listItems()).rows;
+    return { "latest": items.slice(0, 6) };
+  },
   component: HomePage,
 });
 
@@ -51233,7 +51250,7 @@ function HomePage() {
   ],
 }}
           title={itemUi.pluralLabel}
-          cards={data.items.slice(0, 6).map((row) => ({
+          cards={data["latest"].map((row) => ({
             key: row.id,
             title: String(row.title),
             href: \`/\${row.id}\`,
@@ -51771,7 +51788,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "96119430 generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
-  "src/routes/welcome/index.tsx": "48643259 generated",
+  "src/routes/welcome/index.tsx": "b634929e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
   "src/theme.css": "8439b73a generated",
@@ -54023,7 +54040,10 @@ import { app } from "#/generated/app";
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => ({ items: (await listItems()).rows }),
+  loader: async () => {
+    const items = (await listItems()).rows;
+    return { "items": items.slice(0, 6) };
+  },
   component: HomePage,
 });
 
@@ -54043,7 +54063,7 @@ function HomePage() {
           texts="pages.home.items"
           id="items"
           title={itemUi.pluralLabel}
-          cards={data.items.slice(0, 6).map((row) => ({
+          cards={data["items"].map((row) => ({
             key: row.id,
             title: String(row.name),
             href: \`/items/\${row.id}\`,
@@ -54928,7 +54948,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "5e4c2437 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "c5bb01c1 generated",
+  "src/routes/index.tsx": "9e421604 generated",
   "src/routes/items/$id.tsx": "001d1444 generated",
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
@@ -63950,7 +63970,12 @@ import { app } from "#/generated/app";
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => ({ components: (await listComponents()).rows, incidents: (await listIncidents()).rows, maintenances: (await listMaintenances()).rows }),
+  loader: async () => {
+    const components = (await listComponents()).rows;
+    const incidents = (await listIncidents()).rows;
+    const maintenances = (await listMaintenances()).rows;
+    return { "services": components.slice(0, 6), "open": incidents.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6), "recent": incidents.filter((row) => row.status === "resolved").slice(0, 5), "planned": maintenances.slice(0, 3) };
+  },
   component: HomePage,
 });
 
@@ -63970,7 +63995,7 @@ function HomePage() {
           texts="pages.home.services"
           id="services"
           title={componentUi.pluralLabel}
-          cards={data.components.slice(0, 6).map((row) => ({
+          cards={data["services"].map((row) => ({
             key: row.id,
             title: String(row.name),
             text: row.description ?? undefined,
@@ -63985,7 +64010,7 @@ function HomePage() {
           texts="pages.home.open"
           id="open"
           title={incidentUi.pluralLabel}
-          cards={data.incidents.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).slice(0, 6).map((row) => ({
+          cards={data["open"].map((row) => ({
             key: row.id,
             title: String(row.title),
             href: \`/history/\${encodeURIComponent(String(row.id))}\`,
@@ -63996,7 +64021,7 @@ function HomePage() {
           texts="pages.home.recent"
           id="recent"
           title={incidentUi.pluralLabel}
-          cards={data.incidents.filter((row) => row.status === "resolved").slice(0, 5).map((row) => ({
+          cards={data["recent"].map((row) => ({
             key: row.id,
             title: String(row.title),
             href: \`/history/\${encodeURIComponent(String(row.id))}\`,
@@ -64007,7 +64032,7 @@ function HomePage() {
           texts="pages.home.planned"
           id="planned"
           title={maintenanceUi.pluralLabel}
-          cards={data.maintenances.slice(0, 3).map((row) => ({
+          cards={data["planned"].map((row) => ({
             key: row.id,
             title: String(row.title),
             text: row.description ?? undefined,
@@ -65709,7 +65734,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "345c12e1 generated",
   "src/routes/incidents/index.tsx": "df2fa48e generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
-  "src/routes/index.tsx": "a4ae6e1f generated",
+  "src/routes/index.tsx": "48f412ae generated",
   "src/routes/maintenance/$id.tsx": "dd96b09a generated",
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
