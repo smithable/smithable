@@ -650,7 +650,10 @@ export function validateUx(
                 "invalid-key",
                 `A header's look is for a landing page; ${page.key} is not one.`,
               );
-            else result.header = readHeaderLook(ctx, part.value, where);
+            else {
+              const header = readHeaderLook(ctx, part.value, where);
+              if (Object.keys(header).length) result.header = header;
+            }
             continue;
           }
           if (part.key === "theme") {

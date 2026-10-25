@@ -539,7 +539,53 @@ function hoursValue(hours: Record<string, [number, number][]>): Record<string, s
   return out;
 }
 
+// A landing page's header, as people call it: the top menu, the header, the navigation bar.
+const HEADER_WORDS =
+  "(?:the )?(?:top |main |site |landing page's |home page's |page's )?(?:menu|header|navigation|nav|navbar|top bar|menu bar|nav bar|header bar|navigation bar)(?: bar)?";
+// What a header does as the page scrolls: stays at the top, or goes away with the page.
+const STAYS =
+  "stick|sticky|fixed|stay(?: (?:at the top|on top|put|fixed|visible|in place|there))?|at the top|on top|in place|in view|visible|not (?:scroll|go|move)(?: away)?|not move";
+const SCROLLS =
+  "scroll(?: away| up| off)?(?: with the page)?|go (?:up and )?away|not (?:stick|be sticky|sticky|stay(?: at the top| on top| put| fixed)?|be fixed|fixed)|non-sticky|unsticky";
+// After it: when they scroll, on which page, where it stays ("when I scroll down on the home page").
+const SCROLL_TAIL =
+  "(?: (?:when|while|as|if) [a-z' ]*?scroll(?:s|ing)?(?: down| up)?| on (?:the )?(?:landing|home|front|start|first) page| at the top(?: of the (?:page|screen))?)*";
+const HEADER_PHRASES = [
+  new RegExp(
+    `^(?:make|keep|have|let|set) ${HEADER_WORDS} (?:to )?(?:be )?(?<how>${STAYS}|${SCROLLS})${SCROLL_TAIL}$`,
+  ),
+  new RegExp(
+    `^${HEADER_WORDS} (?:should|must|needs to|has to|is to|ought to)(?: always)? (?:be )?(?<how>${STAYS}|${SCROLLS})${SCROLL_TAIL}$`,
+  ),
+  new RegExp(
+    `^(?:use |make |give it |i want )?(?:a |the )?(?<how>sticky|non-sticky) ${HEADER_WORDS}${SCROLL_TAIL}$`,
+  ),
+  /^(?<how>unstick) (?:the )?(?:top )?(?:menu|header|navigation)$/,
+];
+
 const RULES: Rule[] = [
+  {
+    // "make the menu stick when I scroll down", "the header should stay at the top", "the top
+    // menu should scroll away with the page": the landing pages' header (smithable.ux.yml
+    // header.position). The app's own pages' menu stays at the top already.
+    name: "sticky header",
+    match(text, scope) {
+      const how = HEADER_PHRASES.map((p) => p.exec(text)?.groups?.how).find(Boolean);
+      if (!how) return undefined;
+      const landing = scope.ir.pages.filter((p) => p.pattern.kind === "landing");
+      if (landing.length === 0) return null;
+      const stays = new RegExp(`^(?:${STAYS})$`).test(how) || how === "sticky";
+      return landing.map((p) => ({
+        op: "setSectionLook",
+        args: {
+          page: p.id,
+          section: "header",
+          key: "position",
+          value: stays ? "sticky" : "scrolling",
+        },
+      }));
+    },
+  },
   {
     // "barbers have opening hours 9 to 17 on weekdays", "rooms are open 10-14 on saturdays":
     // the model's records are booked by their time (appointments.md §2); other days are kept.
