@@ -4,7 +4,7 @@
 // first, with every control, as `smithable theme lab` makes it) makes its app, serves it (port
 // 8404), signs in, and saves each frame's page without its scripts, its CSS as one sheet and its
 // pictures into frames/<starter>/ (the saving is smithable static's); the Latin subset of the
-// seven hosted fonts once, in frames/fonts/. `pnpm site` builds the lab beside them. Rerun it
+// eight hosted fonts once, in frames/fonts/. `pnpm site` builds the lab beside them. Rerun it
 // after a change to the kit's pages or a starter. Not part of `check`.
 // Usage: node scripts/theme-lab-export.mjs [starter…]
 import {

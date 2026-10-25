@@ -120,8 +120,9 @@ pages:
   const { content } = read(`smithableContent: 0.1
 pages:
   home:
-    hero: { title: Know your customers, button: Open the app }
+    hero: { eyebrow: For small teams, title: Know your customers, button: Open the app }
     faq:
+      eyebrow: Questions
       items:
         - { question: Is it free?, answer: Yes. }
     pricing:
@@ -134,8 +135,12 @@ pages:
   expect(content?.pages).toEqual({
     home: {
       sections: {
-        hero: { title: "Know your customers", button: "Open the app" },
-        faq: { items: [{ question: "Is it free?", answer: "Yes." }] },
+        hero: {
+          eyebrow: "For small teams",
+          title: "Know your customers",
+          button: "Open the app",
+        },
+        faq: { eyebrow: "Questions", items: [{ question: "Is it free?", answer: "Yes." }] },
         pricing: {
           items: [{ name: "Pro", price: "€9", features: ["Unlimited customers", "Support"] }],
         },

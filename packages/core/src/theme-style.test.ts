@@ -18,7 +18,7 @@ test("a theme that says nothing has today's modern shape", () => {
 
 test("the style fields of a theme file", () => {
   const { theme, diagnostics } = read(`fonts: { body: Source Sans 3, heading: Fraunces }
-headings: { weight: 600, tracking: normal, scale: large, case: none }
+headings: { weight: 600, tracking: normal, scale: large, case: none, align: center }
 surfaces: { cards: flat, sections: open, dividers: light }
 buttons: { shape: pill, weight: bold }
 pictures: { corners: round, frame: border }
@@ -28,7 +28,7 @@ tables: { numbers: tabular, rows: zebra }
   expect(theme?.font).toBe("Source Sans 3");
   expect(theme?.style).toEqual({
     headingFont: "Fraunces",
-    headings: { weight: 600, tracking: "normal", scale: "large", case: "none" },
+    headings: { weight: 600, tracking: "normal", scale: "large", case: "none", align: "center" },
     surfaces: { cards: "flat", sections: "open", dividers: "light" },
     buttons: { shape: "pill", weight: "bold" },
     pictures: { corners: "round", frame: "border" },
@@ -53,6 +53,8 @@ test("fonts from the list only, values from their sets, and no tight capitals", 
     "invalid-value",
   );
   expect(codes("surfaces: { cards: glass }\n")).toContain("invalid-value");
+  expect(codes("headings: { align: right }\n")).toContain("invalid-value");
+  expect(read("fonts: { body: Outfit }\n").theme?.font).toBe("Outfit");
   expect(codes("buttons: { colour: red }\n")).toContain("unknown-key");
   expect(codes("headings: { case: upper, tracking: tight }\n")).toContain("invalid-value");
   expect(codes("headings: { case: upper, tracking: wide }\n")).not.toContain("invalid-value");

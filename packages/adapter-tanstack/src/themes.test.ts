@@ -43,6 +43,9 @@ test("a theme's style is one variable per field; the presets read as before by t
   expect(root(modern, "heading-tracking")).toBe("-0.02em");
   expect(root(modern, "card-border")).toBe("1px");
   expect(root(modern, "button-radius")).toBe("calc(var(--radius) - 2px)");
+  // Section headings at the start unless a theme centers them (headings.align).
+  expect(root(modern, "heading-align")).toBe("start");
+  expect(root(modern, "heading-inline")).toBe("0");
   expect(root(css("playful"), "card-border")).toBe("0");
   expect(root(css("playful"), "button-radius")).toBe("9999px");
   expect(root(css("corporate"), "table-numbers")).toBe("tabular-nums");

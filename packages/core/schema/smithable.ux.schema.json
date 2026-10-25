@@ -46,9 +46,10 @@
                 "Source Serif 4",
                 "Fraunces",
                 "Archivo Narrow",
-                "DM Sans"
+                "DM Sans",
+                "Outfit"
               ],
-              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans."
+              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit."
             }
           }
         },
@@ -274,9 +275,11 @@
                       "enum": [
                         3,
                         2,
-                        4
+                        4,
+                        5,
+                        6
                       ],
-                      "description": "One of 3, 2, 4; the first is the default."
+                      "description": "One of 3, 2, 4, 5, 6; the first is the default."
                     }
                   }
                 },
@@ -291,6 +294,16 @@
                         "grid"
                       ],
                       "description": "One of cards, list, grid; the first is the default."
+                    },
+                    "columns": {
+                      "enum": [
+                        3,
+                        2,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "One of 3, 2, 4, 5, 6, side by side on a wide screen: 3 for cards and 4 for a grid when not said; a list has none."
                     }
                   }
                 },
@@ -328,6 +341,29 @@
                         "list"
                       ],
                       "description": "One of accordion, list; the first is the default."
+                    },
+                    "columns": {
+                      "enum": [
+                        1,
+                        2
+                      ],
+                      "description": "One of 1, 2, for the list layout; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "columns": {
+                      "enum": [
+                        3,
+                        2,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "One of 3, 2, 4, 5, 6; the first is the default."
                     }
                   }
                 }

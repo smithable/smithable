@@ -15,6 +15,7 @@ pages:
       features:
       items: { records: Item }
       faq:
+      gallery:
       footer:
   items: { crud: Item }
 `;
@@ -31,15 +32,30 @@ const ux = (sections: string) =>
 
 test("each section kind takes its own looks, checked by name and value", () => {
   const read = ux(
-    "{ hero: { layout: split, image: left }, features: { columns: 4 }, items: { layout: grid }, faq: { layout: list } }",
+    "{ hero: { layout: split, image: left }, features: { columns: 6 }, items: { layout: grid, columns: 5 }, faq: { layout: list, columns: 2 }, gallery: { columns: 4 } }",
   );
   expect(read.diagnostics).toEqual([]);
   expect(read.ux?.pages.home?.looks).toEqual({
     hero: { layout: "split", image: "left" },
-    features: { columns: 4 },
-    items: { layout: "grid" },
-    faq: { layout: "list" },
+    features: { columns: 6 },
+    items: { layout: "grid", columns: 5 },
+    faq: { layout: "list", columns: 2 },
+    gallery: { columns: 4 },
   });
+  expect(ux("{ items: { columns: 7 } }").diagnostics.map((d) => d.message)).toContain(
+    '"columns" of the look of items on page "home" is one of 3, 2, 4, 5, 6.',
+  );
+  expect(ux("{ faq: { columns: 3 } }").diagnostics.map((d) => d.message)).toContain(
+    '"columns" of the look of faq on page "home" is one of 1, 2.',
+  );
+  // An FAQ's columns are its list's: with the accordion they are a warning, not an error.
+  const accordion = ux("{ faq: { columns: 2 } }").diagnostics;
+  expect(accordion.map((d) => [d.severity, d.message])).toEqual([
+    [
+      "warning",
+      '"columns" of the look of faq on page "home" is for the list layout; the accordion is one column.',
+    ],
+  ]);
   const messages = ux(
     "{ hero: { layout: wavy }, footer: { layout: list }, nope: {} }",
   ).diagnostics.map((d) => d.message);

@@ -8,7 +8,15 @@ import { CONTENT_VERSION, LANGUAGES } from "./content.js";
 import { CONTEXT_SCHEMA } from "./context-file.js";
 import type { JsonSchema } from "./section.js";
 import { FONTS } from "./theme.js";
-import { CONTROLS, ICONS, SECTION_LOOKS, THEME_PRESETS, TONES, UX_VERSION } from "./ux.js";
+import {
+  CONTROLS,
+  ICONS,
+  RECORD_GRID_COLUMNS,
+  SECTION_LOOKS,
+  THEME_PRESETS,
+  TONES,
+  UX_VERSION,
+} from "./ux.js";
 
 const strings = (description: string): JsonSchema => ({
   type: "array",
@@ -203,7 +211,12 @@ const look = Object.fromEntries(
             ? { type: "string", description: "The name of the item to set apart." }
             : {
                 enum: [...values],
-                description: `One of ${values.join(", ")}; the first is the default.`,
+                description:
+                  kind === "records" && option === "columns"
+                    ? `One of ${values.join(", ")}, side by side on a wide screen: ${values[0]} for cards and ${RECORD_GRID_COLUMNS} for a grid when not said; a list has none.`
+                    : kind === "faq" && option === "columns"
+                      ? `One of ${values.join(", ")}, for the list layout; the first is the default.`
+                      : `One of ${values.join(", ")}; the first is the default.`,
               },
         ]),
       ),

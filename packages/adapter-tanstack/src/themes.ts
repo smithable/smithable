@@ -47,6 +47,7 @@ export const FONT_PACKAGES: Record<string, string> = {
   Fraunces: "@fontsource-variable/fraunces",
   "Archivo Narrow": "@fontsource-variable/archivo-narrow",
   "DM Sans": "@fontsource-variable/dm-sans",
+  Outfit: "@fontsource-variable/outfit",
 };
 
 /** The theme the ux file names, among the built-ins and the project's own. */
@@ -141,6 +142,9 @@ function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string
     "heading-tracking": TRACKING[style.headings.tracking],
     "heading-scale": SCALE[style.headings.scale],
     "heading-case": style.headings.case === "upper" ? "uppercase" : "none",
+    // A section's heading block: at the start, or centered with its lead under it (headings.align).
+    "heading-align": style.headings.align === "center" ? "center" : "start",
+    "heading-inline": style.headings.align === "center" ? "auto" : "0",
     // A card: a border (bordered), the theme's shadow alone (raised), or neither (flat).
     "card-shadow": s.cards === "flat" ? "none" : theme.shadow,
     "card-border": s.cards === "bordered" ? "1px" : "0",

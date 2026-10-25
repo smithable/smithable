@@ -109,6 +109,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -8971,6 +8972,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -9345,7 +9348,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "6c385d35 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "f4729a01 generated",
+  "package.json": "91974824 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
@@ -9483,7 +9486,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -9595,6 +9598,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -14465,6 +14469,8 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -14846,7 +14852,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "cc07fb29 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "96d52bb0 generated",
+  "package.json": "554c6a41 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
@@ -14899,7 +14905,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -14970,7 +14976,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/new.tsx": "be2eaa7b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "b34f3cc9 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -15082,6 +15088,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -25866,6 +25873,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -26324,7 +26333,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "c949523d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "7ecd98f9 generated",
+  "package.json": "9870549c generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
@@ -26394,7 +26403,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
@@ -26502,7 +26511,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "55edf3d4 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -26620,6 +26629,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -31855,6 +31865,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -32206,7 +32218,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "fb4f1863 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "af7d6dc0 generated",
+  "package.json": "01514a31 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
@@ -32318,7 +32330,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "1f2754d0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -32430,6 +32442,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -39269,6 +39282,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -39681,7 +39696,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "72d2f14e generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "ba744845 generated",
+  "package.json": "be79e240 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
@@ -39743,7 +39758,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -39817,7 +39832,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/welcome/index.tsx": "de260b5f generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "0b442446 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -39935,6 +39950,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -46194,6 +46210,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -46584,7 +46602,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "f818169d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "3bf7896d generated",
+  "package.json": "5b8424a8 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e09d9afd generated",
@@ -46648,7 +46666,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -46718,7 +46736,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/where/index.tsx": "fad54d7e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "484c6ea1 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -46830,6 +46848,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -50648,6 +50667,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -51007,7 +51028,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "ea84412d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "1e723008 generated",
+  "package.json": "84df9819 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
@@ -51051,7 +51072,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -51120,7 +51141,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/welcome/index.tsx": "48643259 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -51232,6 +51253,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -53849,6 +53871,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -54160,7 +54184,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "f19f8273 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "47b06f36 generated",
+  "package.json": "b62c1ae7 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
@@ -54200,7 +54224,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -54253,7 +54277,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -54371,6 +54395,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -64350,6 +64375,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -64769,7 +64796,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "80efd3a6 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "9c7a61f5 generated",
+  "package.json": "8b27bfd0 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
@@ -64833,7 +64860,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "7931b5f4 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/Landing.tsx": "97de941d kit",
+  "src/kit/Landing.tsx": "60c5487a kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -64915,7 +64942,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/new.tsx": "9bff0965 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -65033,6 +65060,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
     "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/nunito-sans": "5.3.0",
+    "@fontsource-variable/outfit": "5.3.0",
     "@fontsource-variable/source-sans-3": "5.3.1",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@tailwindcss/vite": "4.3.3",
@@ -70780,6 +70808,8 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   --heading-tracking: -0.02em;
   --heading-scale: 1;
   --heading-case: none;
+  --heading-align: start;
+  --heading-inline: 0;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   --card-border: 1px;
   --card-border-color: var(--border);
@@ -71130,7 +71160,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "cdec4528 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "ad9c6d38 generated",
+  "package.json": "dffbac69 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
@@ -71251,7 +71281,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "b5280555 kit",
-  "src/theme.css": "b5e9eef0 generated",
+  "src/theme.css": "8439b73a generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

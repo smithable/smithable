@@ -157,12 +157,18 @@ export const SECTION_LOOKS: Partial<
   Record<string, Record<string, readonly (string | number)[] | "text">>
 > = {
   hero: { layout: ["split", "centered", "plain", "cover"], image: ["right", "left"] },
-  features: { columns: [3, 2, 4] },
-  records: { layout: ["cards", "list", "grid"] },
+  features: { columns: [3, 2, 4, 5, 6] },
+  // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
+  records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4, 5, 6] },
   testimonials: { layout: ["cards", "carousel", "one"] },
   pricing: { highlight: "text" },
-  faq: { layout: ["accordion", "list"] },
+  // An FAQ's columns are its list's (every answer shown); the accordion is one column.
+  faq: { layout: ["accordion", "list"], columns: [1, 2] },
+  gallery: { columns: [3, 2, 4, 5, 6] },
 };
+
+/** A records section's columns in the grid layout when the ux file does not say (today's four). */
+export const RECORD_GRID_COLUMNS = 4;
 
 export const UX_VERSION = "0.1";
 export const TONES = ["neutral", "success", "warning", "danger"] as const;
@@ -812,6 +818,13 @@ function readSectionLooks(
       }
       (look as Record<string, unknown>)[option.key] = value;
     }
+    if (section.kind === "faq" && look.columns !== undefined && look.layout !== "list")
+      ctx.warning(
+        entry.value,
+        "invalid-value",
+        `"columns" of ${at} is for the list layout; the accordion is one column.`,
+        `Add layout: list (setSectionLook ${page.id} ${entry.key} layout list).`,
+      );
     looks[entry.key] = look;
   }
   return looks;
