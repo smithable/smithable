@@ -2122,7 +2122,7 @@ try {
       const pagesArea = texts.locator('details[data-key="pages"]').first();
       if (!(await pagesArea.evaluate((d) => d.open)))
         await pagesArea.locator("summary").first().click();
-      const customers = await entry(pagesArea, "customers");
+      const customers = await entry(pagesArea, "Customers");
       const box = customers.getByRole("textbox", { name: "subtitle" });
       await box.fill("Every client and their orders.");
       await box.press("Enter");
