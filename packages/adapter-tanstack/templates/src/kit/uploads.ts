@@ -89,12 +89,16 @@ export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}
  * What the image library said of each picture Smithable placed (public/images/pictures.json):
  * whether an image model made it. Absent in an app from before photographs.
  */
+let placed: Record<string, { generated?: boolean }> | undefined;
 function placedPictures(): Record<string, { generated?: boolean }> {
-  try {
-    return JSON.parse(readFileSync(join("public", "images", "pictures.json"), "utf8"));
-  } catch {
-    return {};
-  }
+  // Read once a seed: every sample picture asks.
+  if (!placed)
+    try {
+      placed = JSON.parse(readFileSync(join("public", "images", "pictures.json"), "utf8"));
+    } catch {
+      placed = {};
+    }
+  return placed ?? {};
 }
 
 /**
