@@ -291,7 +291,7 @@ const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
 /**
- * A section's band (smithable.ux.yml): none, an open section on the page; muted, inverse or
+ * A section's band: none, an open section on the page; muted, inverse or
  * primary, the section across the width on that surface of the theme, its content in the page's
  * measure. styles.css gives the text, cards, buttons and links inside the band's colors.
  */
@@ -452,7 +452,7 @@ function HeroView({
   title: string;
   subtitle?: string;
   link?: LandingLink;
-  /** A second button beside the first, an outline one (secondButton in smithable.yml). */
+  /** A second button beside the first, an outline one. */
   secondLink?: LandingLink;
   image?: LandingImage;
   /** Sections follow: a quiet arrow under the content says the page goes on. */

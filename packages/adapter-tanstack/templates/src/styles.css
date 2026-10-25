@@ -120,7 +120,7 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
-  /* A landing section's band (band in smithable.ux.yml, or a banded theme): the section on a
+  /* A landing section's band (its own, or a banded theme's): the section on a
      surface of the theme. The band's two colors are taken on the section (--band-surface, its
      text --band-text), and its children read the theme's tokens as the band's, so the text,
      cards, buttons and links inside need no colors of their own. On muted, the page's text on
@@ -129,7 +129,7 @@
      (the primary, its own text color on it), every text is the band's text color, cards and
      lines are a step from the surface, and a button turns inverse: the band's text color as its
      fill, the surface's as its words, an outline one keeping a line in the text color. The
-     validation warns when a band's text falls under 4.5:1 (core's bandLowContrast). */
+     validation warns when a band's text falls under 4.5:1. */
   [data-band] {
     background-color: var(--band-surface);
     color: var(--band-text);
