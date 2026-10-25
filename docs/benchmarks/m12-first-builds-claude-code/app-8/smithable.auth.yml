@@ -6,12 +6,12 @@ roles:
   admin: all
   member:
     description: An attendee who registers for talks.
-    pages: [my-registrations, schedule, talks, speakers]
+    pages: [talks, speakers, schedule, my-registrations]
     create: [Registration]
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, talks, speakers, privacy]
+  pages: [home, talks, speakers, schedule, privacy]
   read: [Talk, Speaker]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -1,27 +1,19 @@
 smithableContent: 0.1
+pages:
+  ingredients:
+    title: Ingredients
+    subtitle: Track stock levels and suppliers
+  suppliers:
+    title: Suppliers
+    subtitle: Manage supplier information
 models:
   Ingredient:
     label: Ingredient
     pluralLabel: Ingredients
-    fields:
-      name:
-        label: Name
-      summary:
-        label: Description
-      quantity:
-        label: Quantity
-      unit:
-        label: Unit
-      minimumStock:
-        label: Minimum Stock
-      supplier:
-        label: Supplier
-      lastUpdated:
-        label: Last Updated
-pages:
-  ingredients:
-    title: Ingredients
+  Supplier:
+    label: Supplier
+    pluralLabel: Suppliers
 logo:
   src: images/logo.webp
-  alt: An ear of wheat
+  alt: A parcel box
   generated: true

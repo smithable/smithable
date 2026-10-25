@@ -5,6 +5,8 @@ tones:
   Quote.status:
     accepted: success
     declined: danger
+    sent: warning
   Invoice.status:
     paid: success
     overdue: danger
+    sent: warning

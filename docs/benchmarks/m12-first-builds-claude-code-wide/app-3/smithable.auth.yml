@@ -6,13 +6,12 @@ roles:
   admin: all
   member:
     description: A customer who books appointments.
-    pages: [my-bookings]
-    create: [Booking]
+    pages: [appointments]
+    create: [Appointment]
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, stylists, privacy]
-  read: [Service, Stylist, Slot]
-  create: [Message]
+  pages: [home, privacy]
+  read: [Service, Stylist]
 defaultRole: member
 admins: [johan@smithable.ai]

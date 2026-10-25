@@ -1,4 +1,15 @@
 smithableContent: 0.1
+models:
+  StockChange:
+    label: Stock change
+    pluralLabel: Stock changes
+  Ingredient:
+    fields:
+      inStock:
+        label: In stock
+pages:
+  stockChanges:
+    title: Stock changes
 logo:
   src: images/logo.webp
   alt: A parcel box

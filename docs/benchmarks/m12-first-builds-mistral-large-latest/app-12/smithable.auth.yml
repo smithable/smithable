@@ -5,17 +5,12 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  staff:
-    description: Writes incidents and their updates.
-    pages: [incidents, updates, maintenance, components]
-    create: all
-    write: all
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
 public:
   pages: [home]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
-defaultRole: staff
 api:
   models: [Component, Incident]
   actions: [resolve]

@@ -1,66 +1,103 @@
 smithable: 0.1
 app:
-  name: Frisörsalongen
-  description: Onlinebokning för en frisörsalong där kunderna själva bokar tid hos sin frisör.
+  name: Salong Sax & Kam
+  description: Tidsbokning hos frisörsalongens frisörer, som kunderna gör själva på nätet.
   currency: SEK
   timezone: Europe/Stockholm
 models:
   Service:
     fields:
       name: string!
-      description: text
-      durationMinutes: int! = 45
+      summary: text
+      minutes: int! = 30
       price: money
-  Stylist:
+  Barber:
     fields:
       name: string!
-      bio: markdown
+      bio: text
       portrait: picture
-      slots: Slot[]
-  Slot:
+      timeOffs: TimeOff[]
+    schedule:
+      hours:
+        mon-fri: 09:00-17:00
+        sat: 10:00-14:00
+      breaks: 12:00-12:30
+      gap: 10
+      away: TimeOff
+  TimeOff:
     fields:
-      stylist: Stylist!
-      startsAt: datetime!
-      capacity: int! = 1
-      bookings: Booking[]
-      placesLeft:
-        type: int
-        formula: capacity - COUNT(bookings)
-  Booking:
+      barber: Barber!
+      from: datetime!
+      until: datetime!
+      note: string
+  Appointment:
     fields:
-      slot: Slot! unique
       service: Service!
+      barber: Barber!
+      startsAt: datetime!
+      name: string!
       phone: phone
       note: text
-    capacity:
-      per: slot
-      max: slot.capacity
+      status:
+        type: requested | confirmed | cancelled
+        by: app
+    occupies:
+      resource: barber
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: [requested, confirmed]
+      cancelUntil: 12h
 pages:
-  hem:
+  home:
     route: /
     landing:
       hero:
-      behandlingar:
+      services:
         records: Service
-      frisorer:
-        records: Stylist
-      callToAction:
-        button: boka
+      barbers:
+        records: Barber
       footer:
-  boka:
+  appointments:
+    crud: Appointment
+    filters: [status]
+    actions: [confirm, cancel]
+  day:
     calendar:
-      model: Slot
+      model: Appointment
       starts: startsAt
-  tider:
-    crud: Slot
-  behandlingar:
+  services:
     crud: Service
-  frisorer:
-    crud: Stylist
-  mina-bokningar:
-    crud: Booking
-  integritet:
-    route: /integritet
+  barbers:
+    crud: Barber
+  time-off:
+    crud: TimeOff
+  privacy:
+    route: /privacy
     legal: privacy
-  admin:
-    data: all
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+  cancel:
+    on: Appointment
+    when:
+      status: [requested, confirmed]
+    set:
+      status: cancelled
+outgoing:
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner
+  appointmentConfirmed:
+    when: confirm
+    to: mail
+    recipient: owner

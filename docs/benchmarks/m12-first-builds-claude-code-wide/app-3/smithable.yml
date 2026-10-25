@@ -3,74 +3,100 @@ app:
   name: Shear Studio
   description: "Online booking for a hair salon: customers pick a stylist and a free time themselves."
   currency: EUR
-  timezone: Europe/Stockholm
 models:
   Service:
     fields:
       name: string!
       summary: text
-      durationMinutes: int! = 45
+      minutes: int! = 30
       price: money
   Stylist:
     fields:
       name: string!
-      bio: markdown
+      bio: text
       portrait: picture
-      slots: Slot[]
-  Slot:
+      timeOffs: TimeOff[]
+    schedule:
+      hours:
+        tue-fri: 09:00-18:00
+        sat: 09:00-15:00
+      breaks: 12:00-12:30
+      gap: 10
+      away: TimeOff
+  TimeOff:
     fields:
       stylist: Stylist!
-      startsAt: datetime!
-      durationMinutes: int! = 45
-      bookings: Booking[]
-      placesLeft:
-        type: int
-        formula: 1 - COUNT(bookings)
-  Booking:
+      from: datetime!
+      until: datetime!
+      note: string
+  Appointment:
     fields:
-      slot: Slot! unique
       service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      name: string!
       phone: phone
       note: text
-    capacity:
-      per: slot
-      max: 1
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
+      status:
+        type: requested | confirmed | cancelled
+        by: app
+    occupies:
+      resource: stylist
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: [requested, confirmed]
+      cancelUntil: 12h
 pages:
+  appointments:
+    crud: Appointment
+    filters: [status]
+    actions: [confirm, cancel]
+  day:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  services:
+    crud: Service
+  stylists:
+    crud: Stylist
+  time-off:
+    crud: TimeOff
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, stylists]
       footer:
-      stylists:
-        records: Stylist
       services:
         records: Service
-      faq:
-      callToAction:
-        button: schedule
-      contact:
-        form: Message
-  schedule:
-    calendar: Slot
-  my-bookings:
-    crud: Booking
-  slots:
-    crud: Slot
-    filters: [stylist, startsAt]
-  stylists:
-    crud: Stylist
-  services:
-    crud: Service
-  messages:
-    crud: Message
+      stylists:
+        records: Stylist
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+  cancel:
+    on: Appointment
+    when:
+      status: [requested, confirmed]
+    set:
+      status: cancelled
+outgoing:
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner
+  appointmentConfirmed:
+    when: confirm
+    to: mail
+    recipient: owner

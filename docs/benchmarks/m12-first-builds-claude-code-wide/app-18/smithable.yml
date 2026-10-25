@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Byggkoll
+  name: Byggkollen
   description: Offerter, kunder och fakturor för en liten byggfirma.
   currency: SEK
   timezone: Europe/Stockholm
@@ -11,14 +11,12 @@ models:
       email: email
       phone: phone
       address: text
-      orgNumber: string
       quotes: Quote[]
       invoices: Invoice[]
   QuoteLine:
     fields:
       description: string!
       quantity: decimal! = 1
-      unit: string
       unitPrice: money!
       amount:
         type: money
@@ -28,7 +26,6 @@ models:
     fields:
       description: string!
       quantity: decimal! = 1
-      unit: string
       unitPrice: money!
       amount:
         type: money
@@ -42,7 +39,6 @@ models:
       issuedOn: date! = TODAY()
       validUntil: date
       status: draft | sent | accepted | declined
-      notes: text
       lines: QuoteLine[]
       total:
         type: money
@@ -70,13 +66,9 @@ pages:
   fakturor:
     crud: Invoice
     filters: [customer, status]
-    actions: [sendInvoice, markPaid]
+    actions: [markSent, markPaid, markOverdue]
   oversikt:
     dashboard:
-      openQuotes:
-        sum: Quote.total
-        where:
-          status: sent
       outstanding:
         sum: Invoice.total
         where:
@@ -85,9 +77,13 @@ pages:
         sum: Invoice.total
         where:
           status: overdue
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
+      openQuotes:
+        sum: Quote.total
+        where:
+          status: sent
+      latestQuotes:
+        list: Quote
+        limit: 5
   team:
     users: manage
 actions:
@@ -104,7 +100,7 @@ actions:
       status: sent
     set:
       status: accepted
-    intent: Kunden har accepterat offerten.
+    intent: Kunden har godkänt offerten.
   declineQuote:
     on: Quote
     when:
@@ -112,7 +108,7 @@ actions:
     set:
       status: declined
     intent: Kunden har tackat nej till offerten.
-  sendInvoice:
+  markSent:
     on: Invoice
     when:
       status: draft
@@ -126,3 +122,17 @@ actions:
     set:
       status: paid
     intent: Kunden har betalat fakturan.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: Fakturan är försenad.
+timers:
+  markOverdue:
+    on: Invoice
+    at: 1 day after dueOn
+    where:
+      status: sent
+    run: markOverdue

@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Vinyl Shelf
-  description: "A private catalogue of my vinyl records: albums, artists, condition and what I paid."
+  name: Crate Digger
+  description: "A personal catalogue of my vinyl records: the albums, their artists, their condition and what I paid."
   currency: EUR
-  timezone: Europe/Mariehamn
+  timezone: Europe/Stockholm
 models:
   Artist:
     fields:
-      name: string! unique
+      name: string!
       country: string
       notes: text
       albums: Album[]
@@ -15,12 +15,14 @@ models:
     fields:
       title: string!
       artist: Artist!
-      year: int
+      year:
+        type: int
+        min: 1900
+        max: 2100
       label: string
       genre: string
       cover: picture
       condition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
-      sleeveCondition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
       pricePaid: money
       boughtOn: date
       boughtFrom: string
@@ -29,7 +31,7 @@ pages:
   albums:
     crud: Album
     search: [title, label, genre, notes]
-    filters: [artist, condition, year]
+    filters: [artist, condition, year, pricePaid]
     sortable: [title, year, pricePaid, boughtOn]
   artists:
     crud: Artist

@@ -1,12 +1,5 @@
 smithableUx: 0.1
 pages:
-  components:
-    table:
-      columns: [name, status, description]
-  incidents:
-    table:
-      columns: [title, status, component, detectedAt, expectedBackAt, resolvedAt]
-      sort: -detectedAt
   maintenance:
     table:
       sort: startsAt
@@ -20,5 +13,3 @@ tones:
     identified: warning
     monitoring: warning
     resolved: success
-theme:
-  preset: corporate

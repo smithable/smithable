@@ -1,8 +1,26 @@
 smithable: 0.1
 app:
   name: Agency Pipeline
-  description: "A sales pipeline for a small web agency: leads, deals and who follows up when."
-  currency: EUR
+  description: "A sales pipeline for our web agency: leads, deals and who follows up when."
+pages:
+  team:
+    users: manage
+  deals:
+    crud: Deal
+    search: [title]
+    filters: [stage, accountManager, expectedClose]
+    actions: [markWon, markLost]
+  leads:
+    crud: Lead
+    search: [company, contactName, email]
+    filters: [status, source, accountManager]
+  followUps:
+    route: /follow-ups
+    crud: FollowUp
+    filters: [done, assignee, dueOn]
+    defaultFilter:
+      done: false
+    actions: [complete, take]
 models:
   Lead:
     fields:
@@ -11,10 +29,10 @@ models:
       email: email
       phone: phone
       website: url
-      source: referral | website | outreach | event | other
+      source: referral | website | event | outbound | other
       status: new | contacted | qualified | disqualified
       notes: text
-      accountManager: User
+      accountManager: User = ME()
       deals: Deal[]
       followUps: FollowUp[]
     ownedBy: accountManager
@@ -28,45 +46,20 @@ models:
         type: money
         min: 0
       expectedClose: date
-      closedOn:
-        type: date
-        by: app
+      closedOn: date
+      accountManager: User = ME()
       notes: text
-      accountManager: User
     ownedBy: accountManager
     trash: true
   FollowUp:
     fields:
+      subject: string!
       lead: Lead!
-      deal: Deal
-      due: date!
-      assignee: User!
-      note: string
-      status: open | done
-      doneOn:
-        type: date
-        by: app
+      dueOn: date!
+      assignee: User = ME()
+      done: bool = false
+      note: text
     ownedBy: assignee
-pages:
-  deals:
-    crud: Deal
-    search: [title]
-    filters: [stage, lead, accountManager]
-    actions: [markWon, markLost]
-  leads:
-    crud: Lead
-    search: [company, contactName, email]
-    filters: [status, source, accountManager]
-  followUps:
-    crud: FollowUp
-    filters: [status, assignee, due]
-    actions: [markDone]
-  schedule:
-    calendar:
-      model: FollowUp
-      starts: due
-  team:
-    users: manage
 actions:
   markWon:
     on: Deal
@@ -82,10 +75,16 @@ actions:
     set:
       stage: lost
       closedOn: TODAY()
-  markDone:
+  complete:
     on: FollowUp
     when:
-      status: open
+      done: false
     set:
-      status: done
-      doneOn: TODAY()
+      done: true
+  take:
+    on: FollowUp
+    when:
+      done: false
+    set:
+      assignee: ME()
+navigation: [deals, leads, followUps, team]

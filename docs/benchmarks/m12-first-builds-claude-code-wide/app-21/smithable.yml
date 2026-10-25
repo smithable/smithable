@@ -8,9 +8,8 @@ models:
   Customer:
     fields:
       name: string!
-      email: email unique
+      email: email
       phone: phone
-      address: string
       notes: text
       cars: Car[]
       invoices: Invoice[]
@@ -18,80 +17,85 @@ models:
   Car:
     fields:
       registration: string! unique
-      make: string!
-      carModel: string
+      make: string
+      modelName: string
       year: int
       mileage: int
       customer: Customer!
-      jobs: ServiceJob[]
-  ServiceJob:
+      jobs: Job[]
+    namedBy: [registration, make]
+  Job:
     fields:
       car: Car!
       description: text!
+      scheduledOn: date
       status: booked | inProgress | done | canceled
-      date: date!
       mechanic: User
-      hours:
-        type: decimal
-        min: 0
-      laborCost:
-        type: money
-        min: 0
-      partsCost:
-        type: money
-        min: 0
+      laborCost: money
+      partsCost: money
       total:
         type: money
         formula: laborCost + partsCost
+    namedBy: [car, scheduledOn]
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
-      job: ServiceJob
-      status: draft | sent | paid
+      job: Job
       amount: money!
+      status: draft | sent | paid
       issuedOn: date = TODAY()
-      dueDate: date
+      dueOn: date
       paidOn: date
     trash: true
+    namedBy: number
 pages:
   huoltotyot:
-    crud: ServiceJob
-    filters: [status, mechanic, date]
-    actions: [startJob, completeJob]
+    crud: Job
+    search: [description]
+    filters: [status, mechanic, scheduledOn, car]
+    actions: [startJob, completeJob, cancelJob]
   asiakkaat:
     crud: Customer
     search: [name, email, phone]
   autot:
     crud: Car
-    search: [registration, make, carModel]
+    search: [registration, make, modelName]
+    filters: [customer]
   laskut:
     crud: Invoice
     search: [number]
-    filters: [status, customer, dueDate]
+    filters: [status, customer, dueOn]
     actions: [sendInvoice, markPaid]
   tiimi:
     users: manage
 actions:
   startJob:
-    on: ServiceJob
+    on: Job
     when:
       status: booked
     set:
       status: inProgress
       mechanic: ME()
   completeJob:
-    on: ServiceJob
+    on: Job
     when:
-      status: inProgress
+      status: [booked, inProgress]
     set:
       status: done
+  cancelJob:
+    on: Job
+    when:
+      status: [booked, inProgress]
+    set:
+      status: canceled
   sendInvoice:
     on: Invoice
     when:
       status: draft
     set:
       status: sent
+      issuedOn: TODAY()
   markPaid:
     on: Invoice
     when:

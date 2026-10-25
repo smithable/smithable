@@ -1,10 +1,10 @@
 {
   "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
   "starter": "records",
-  "wordStarter": "booking",
+  "wordStarter": "barbers",
   "questions": [
     "Who will use the app?",
-    "How should practice be recorded?",
-    "Is each pupil's weekly time a single fixed slot?"
+    "What should you keep about what each pupil practises?",
+    "How do the weekly times work?"
   ]
 }

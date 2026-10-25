@@ -1,10 +1,8 @@
 smithableUx: 0.1
-pages:
-  slots:
-    table:
-      sort: startsAt
+tones:
+  Appointment.status:
+    confirmed: success
+    requested: warning
+    cancelled: danger
 theme:
-  preset: editorial
-  brand:
-    primary: "#9d4b6e"
-    font: DM Sans
+  preset: warm-service

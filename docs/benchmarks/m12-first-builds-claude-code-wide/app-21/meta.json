@@ -4,8 +4,8 @@
   "wordStarter": "records",
   "questions": [
     "Kuka sovellusta käyttää?",
-    "Näkevätkö asiakkaat jotain kirjautumatta?",
-    "Mitä huoltotyöhön ja laskuun kirjataan?"
+    "Mitä huoltotyöhön kirjataan?",
+    "Miten laskut syntyvät?"
   ],
   "lang": "fi"
 }

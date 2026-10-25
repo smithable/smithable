@@ -2,11 +2,17 @@ smithableUx: 0.1
 pages:
   ingredients:
     table:
-      columns: [name, category, inStock, unit, reorderLevel, supplier, lastCounted]
-      sort: name
-  suppliers:
+      columns: [name, category, inStock, unit, reorderLevel, supplier]
+    icon: package
+  stockChanges:
     table:
-      columns: [name, contactName, email, phone]
-      sort: name
+      sort: -on
+    icon: list
+  suppliers:
+    icon: truck
+tones:
+  StockChange.kind:
+    delivery: success
+    wasted: danger
 theme:
   preset: cafe

@@ -1,4 +1,24 @@
 smithableContent: 0.1
+models:
+  FuelUp:
+    label: Fuel-up
+    pluralLabel: Fuel-ups
+    fields:
+      odometer:
+        label: Odometer (km)
+  ServiceVisit:
+    label: Service visit
+    pluralLabel: Service visits
+    fields:
+      odometer:
+        label: Odometer (km)
+pages:
+  fuel:
+    title: Fuel
+  services:
+    title: Service visits
+  expenses:
+    title: Other costs
 logo:
   src: images/logo.webp
   alt: A car from the side

@@ -1,5 +1,8 @@
 smithableUx: 0.1
 theme:
-  preset: pastel
-  brand:
-    font: Fraunces
+  preset: warm-service
+tones:
+  Appointment.status:
+    requested: warning
+    confirmed: success
+    cancelled: danger

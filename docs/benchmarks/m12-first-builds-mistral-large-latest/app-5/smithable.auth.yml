@@ -5,7 +5,8 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  baker: all
 assistant:
   for: signed-in
+defaultRole: baker
 admins: [johan@smithable.ai]

@@ -2,10 +2,15 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Your town's flea market, online
+      subtitle: Post what you no longer need with a few photos and a price, and find treasures from your neighbors.
+      button: Browse items
       image:
         src: images/hero.webp
         alt: An outdoor market with stalls of vegetables and flowers
         generated: true
+    latest:
+      title: Just posted
 logo:
   src: images/logo.webp
   alt: A price tag

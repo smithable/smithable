@@ -4,10 +4,13 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: Follows the club; only administrators add and change teams, players and matches.
+    pages: [home, matches, teams, players]
 assistant:
   for: signed-in
 public:
   pages: [home, matches, teams, players, privacy]
-  read: [Match, Team, Player]
+  read: [Team, Player, Match]
+defaultRole: member
 admins: [johan@smithable.ai]

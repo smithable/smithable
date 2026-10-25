@@ -1,7 +1,9 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: "Tickets for the IT team: their priorities, who handles them and the notes on each."
+  description: "Tickets for the IT team: what is wrong, how urgent it is and who handles it."
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Ticket:
     fields:

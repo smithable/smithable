@@ -2,18 +2,10 @@ smithableUx: 0.1
 pages:
   quotes:
     table:
-      sort: -quotedOn
-      columns: [number, client, title, quotedOn, amount, paid, status]
-    icon: file
-  clients:
-    icon: users
-  overview:
-    icon: chart
+      columns: [title, client, amount, paid, balance, status, quotedOn]
   payments:
     table:
-      columns: [paidOn, client, quote, amount, method]
       sort: -paidOn
-    icon: receipt
 tones:
   Quote.status:
     accepted: success

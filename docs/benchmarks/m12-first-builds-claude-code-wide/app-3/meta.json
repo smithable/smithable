@@ -1,10 +1,10 @@
 {
   "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
-  "starter": "booking",
-  "wordStarter": "booking",
+  "starter": "barbers",
+  "wordStarter": "barbers",
   "questions": [
-    "Do customers need an account to book?",
-    "Do customers also pick a service (like a cut or colour) that sets how long the appointment is?",
-    "Who manages stylists' schedules and appointments?"
+    "Do customers need an account to book, or can they book with just their name and contact details?",
+    "Do customers also choose a service (cut, colour, etc.) that sets how long the appointment is?",
+    "Who manages the schedule behind the scenes?"
   ]
 }

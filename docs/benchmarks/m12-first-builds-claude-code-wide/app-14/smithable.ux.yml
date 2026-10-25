@@ -2,12 +2,14 @@ smithableUx: 0.1
 pages:
   guests:
     table:
-      columns: [name, household, rsvp, meal, table]
+      columns: [name, rsvp, meal, table, side]
       sort: name
     icon: users
   tables:
     table:
       sort: name
+    record:
+      subtitle: seats
     icon: layers
 tones:
   Guest.rsvp:

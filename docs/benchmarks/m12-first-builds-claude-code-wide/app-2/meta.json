@@ -3,7 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "How do leads and deals relate?",
-    "What should a deal track besides its follow-up date and owner?"
+    "Can people outside the team do anything without signing in?",
+    "What is a lead?",
+    "What should a deal hold besides its stage?"
   ]
 }

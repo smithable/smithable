@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: The current state of our API and any incidents or planned maintenance.
-  timezone: Europe/Mariehamn
+  description: The current state of our API and planned maintenance.
 models:
   Component:
     fields:
@@ -33,6 +32,32 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
+pages:
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+    filters: [status]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+  maintenance:
+    crud: Maintenance
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+  overview:
+    data: all
+  team:
+    users: manage
 actions:
   identified:
     on: Incident
@@ -71,29 +96,3 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-  incidents:
-    crud: Incident
-    filters: [status]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-  maintenance:
-    crud: Maintenance
-  privacy:
-    route: /privacy
-    legal: privacy
-  team:
-    users: manage

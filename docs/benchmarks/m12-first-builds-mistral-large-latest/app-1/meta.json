@@ -2,8 +2,5 @@
   "description": "A booking site for a yoga studio, with classes, teachers and online booking.",
   "starter": "booking",
   "wordStarter": "booking",
-  "questions": [
-    "Who can see the class schedule without signing in?",
-    "What kind of records will hold information about the classes?"
-  ]
+  "questions": []
 }

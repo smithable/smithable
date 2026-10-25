@@ -3,8 +3,9 @@ pages:
   items:
     table:
       view: cards
-      columns: [pictures, name, category, period, onDisplay]
-    form:
-      sections: [{ name: object, fields: [name, accessionNumber, category, pictures] }, { name: details, fields: [period, origin, material, onDisplay, addedOn] }, { name: story, fields: [summary, story] }]
+    record:
+      subtitle: period
+      detail: [category, origin]
+    icon: layers
 theme:
   preset: editorial

@@ -4,7 +4,7 @@
   "wordStarter": "booking",
   "questions": [
     "Who will use the app?",
-    "What can visitors see without signing in?",
+    "What can people see without signing in?",
     "How should the yearly fee be tracked?"
   ]
 }

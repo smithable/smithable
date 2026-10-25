@@ -3,7 +3,10 @@ pages:
   albums:
     table:
       columns: [title, artist, year, condition, pricePaid]
-      sort: title
+      view: cards
+    record:
+      subtitle: artist
+      detail: [year, condition]
     icon: layers
   artists:
     table:
@@ -13,7 +16,8 @@ tones:
   Album.condition:
     mint: success
     nearMint: success
+    good: warning
     fair: warning
     poor: danger
 theme:
-  preset: editorial
+  preset: ink-and-brass

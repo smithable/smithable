@@ -1,3 +1,8 @@
 smithableUx: 0.1
 theme:
   preset: minimal
+pages:
+  tools:
+    record:
+      subtitle: category
+      detail: [condition, location]

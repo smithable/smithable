@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
-    "How do shoots and invoices relate?",
-    "How should payments be tracked?",
-    "Can clients see anything without signing in?"
+    "How do shoots relate to invoices?",
+    "What should a shoot record hold?",
+    "Can clients see their invoices without signing in?"
   ]
 }

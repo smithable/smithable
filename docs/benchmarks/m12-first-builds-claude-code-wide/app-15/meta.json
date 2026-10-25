@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "api",
   "questions": [
-    "What can people outside the club see without signing in?",
-    "Should species be their own list that sightings pick from, or typed freely on each sighting?",
-    "Besides species, place, date and observer, what else should a sighting hold?"
+    "What can visitors see without signing in?",
+    "How should species be recorded?",
+    "What else should a sighting hold?"
   ]
 }

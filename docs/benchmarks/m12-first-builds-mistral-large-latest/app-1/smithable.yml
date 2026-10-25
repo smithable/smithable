@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Yoga Studio Booking
+  name: Yoga Studio
   description: Class schedule and online booking for a yoga studio.
 models:
   Instructor:
@@ -8,7 +8,6 @@ models:
       name: string!
       bio: markdown
       portrait: picture
-      sessions: Session[]
   Session:
     fields:
       instructor: Instructor!
@@ -18,12 +17,18 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
+      classType: ClassType!
+    namedBy: [classType, startsAt]
   Booking:
     fields:
       session: Session! unique
+      attendee: User
+    ownedBy: attendee
     capacity:
       per: session
       max: session.capacity
+      closes: session.startsAt
+      cancelUntil: session.startsAt
   Post:
     fields:
       title: string!
@@ -38,9 +43,37 @@ models:
       name: string!
       email: email!
       message: text!
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: beginner | allLevels | advanced
+      durationMinutes: int! = 60
+actions:
+  publish:
+    on: Post
+    when:
+      status: draft
+    set:
+      status: published
+    intent: The post is out for everyone to read.
+timers:
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt
+  publish:
+    on: Post
+    at: publishedOn
+    where:
+      status: draft
+    run: publish
 pages:
   sessions:
     crud: Session
+    sortable: [startsAt, capacity]
+    filters: [classType, instructor, startsAt]
+    defaultFilter:
+      startsAt: upcoming
   instructors:
     crud: Instructor
   messages:
@@ -48,33 +81,62 @@ pages:
   posts:
     crud: Post
     filters: [status]
-  my-bookings:
-    crud: Booking
   home:
     route: /
     landing:
       hero:
+        shortcuts: [schedule, blog]
       footer:
       estimate:
-        custom: EstimateCalculator
+        custom: Estimate
       gallery:
       faq:
       news:
         records: Post
-        where:
-          status: published
       contact:
         form: Message
+      classes:
+        records: ClassType
+      callToAction:
+        button: schedule
   schedule:
     calendar: Session
   blog:
     articles: Post
+  about:
+    sections:
+      intro:
+        text:
+      story:
+        text:
+      team:
+        records: Instructor
+      faq:
   privacy:
     route: /privacy
     legal: privacy
+  my-bookings:
+    crud: Booking
+    sections:
+      cancelling:
+        text:
   admin:
     data: all
+  class-types:
+    crud: ClassType
+    filters: [level]
+navigation:
+  main: [sessions, instructors, messages, posts, home, schedule, blog, about, privacy, my-bookings, admin, class-types]
+  schedule: [schedule, my-bookings, sessions]
+  messages: [messages]
+  website: [blog, about, posts, home]
+  admin: [admin]
+  studioSetup: [class-types, instructors]
 outgoing:
+  reminder:
+    when: remind
+    to: mail
+    recipient: owner
   bookingMade:
     when: Booking created
     to: mail

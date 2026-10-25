@@ -12,8 +12,8 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, blog, privacy]
-  read: [Instructor, Session, { Post: { where: { status: published } } }]
+  pages: [home, schedule, blog, about, privacy]
   create: [Message]
+  read: [ClassType, Instructor, Session, { Post: { where: { status: published } } }]
 defaultRole: member
 admins: [johan@smithable.ai]

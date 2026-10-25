@@ -4,16 +4,18 @@ models:
     label: Object
     pluralLabel: Objects
 pages:
+  items:
+    title: Collection
   home:
     hero:
       title: Explore our museum's collection
-      subtitle: Browse the objects in our care and discover the stories behind them.
+      subtitle: Browse the objects that tell our community's history, and the stories behind each one.
       button: Browse the collection
       image:
         src: images/hero.webp
         alt: Rows of bookshelves and reading tables in a quiet library
         generated: true
-    items:
+    onDisplay:
       title: On display now
 logo:
   src: images/logo.webp

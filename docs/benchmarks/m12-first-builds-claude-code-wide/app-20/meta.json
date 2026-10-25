@@ -4,8 +4,8 @@
   "wordStarter": "records",
   "questions": [
     "Kuka voi varata tunteja?",
-    "Mitä vierailijat näkevät kirjautumatta?",
-    "Pitääkö varausten yhteydessä seurata myös maksuja tai sarjakortteja?"
+    "Mitä vierailija näkee kirjautumatta?",
+    "Liittyykö varauksiin sarjakortteja tai jäsenyyksiä?"
   ],
   "lang": "fi"
 }

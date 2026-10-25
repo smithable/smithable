@@ -5,7 +5,7 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all, write: [Guest, Table], delete: [Guest, Table] }
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
 admins: [johan@smithable.ai]

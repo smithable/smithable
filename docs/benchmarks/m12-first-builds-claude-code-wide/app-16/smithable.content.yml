@@ -1,9 +1,9 @@
 smithableContent: 0.1
 models:
-  WaitingListEntry:
+  WaitingEntry:
     label: Waiting list entry
     pluralLabel: Waiting list
 logo:
   src: images/logo.webp
-  alt: A sprout
+  alt: Three stacked cards
   generated: true

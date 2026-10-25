@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Hofladen
-  description: Unsere Produkte, Vorbestellungen der Kunden und die Abholzeiten des Hofladens.
+  description: "Unser kleiner Hofladen: Produkte vorbestellen und zur passenden Abholzeit am Hof abholen."
   currency: EUR
   timezone: Europe/Berlin
 models:
@@ -11,10 +11,10 @@ models:
       description: text
       price: money!
       unit: string
-      category: vegetables | fruit | eggs | dairy | meat | bakery | preserves
+      category: vegetables | fruit | eggs | dairy | meat | bakery | other
       picture: picture
       available: bool = true
-  PickupSlot:
+  PickupTime:
     fields:
       day: date!
       hours: string!
@@ -24,7 +24,7 @@ models:
       name: string!
       phone: phone!
       email: email
-      pickup: PickupSlot
+      pickup: PickupTime
       note: text
       status: new | accepted | ready | collected | declined
       reason: text
@@ -46,20 +46,23 @@ pages:
     crud: Order
     filters: [status, pickup]
     sortable: [createdAt]
+    defaultFilter:
+      status: [new, accepted, ready]
     actions: [accept, ready, collected, decline]
   produkte:
     crud: Product
     filters: [category, available]
     actions: [soldOut, backOn]
   abholzeiten:
-    crud: PickupSlot
+    crud: PickupTime
   abholung:
     route: /abholung
     landing:
       hero:
+      zeiten:
+        records: PickupTime
+        view: table
       footer:
-      slots:
-        records: PickupSlot
   datenschutz:
     route: /datenschutz
     legal: privacy
@@ -72,7 +75,7 @@ actions:
       available: true
     set:
       available: false
-    intent: Heute nichts mehr davon.
+    intent: Heute nicht mehr vorrätig.
   backOn:
     on: Product
     when:
@@ -86,7 +89,7 @@ actions:
       status: new
     set:
       status: accepted
-    intent: Wir nehmen die Bestellung an.
+    intent: Die Vorbestellung wird angenommen.
   ready:
     on: Order
     when:
@@ -100,7 +103,7 @@ actions:
       status: ready
     set:
       status: collected
-    intent: Der Kunde hat sie abgeholt.
+    intent: Der Kunde hat die Bestellung abgeholt.
   decline:
     on: Order
     when:
@@ -108,5 +111,17 @@ actions:
     set:
       status: declined
       reason:
-    intent: "Die Bestellung geht nicht: sag warum."
-navigation: [bestellungen, produkte, abholzeiten, team]
+    intent: "Die Bestellung kann nicht erfüllt werden: Grund angeben."
+outgoing:
+  orderPlaced:
+    when: Order created
+    to: mail
+    recipient: admin
+  orderAccepted:
+    when: accept
+    to: mail
+    recipient: email
+  orderReady:
+    when: ready
+    to: mail
+    recipient: email

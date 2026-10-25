@@ -1,0 +1,64 @@
+smithable: 0.1
+app:
+  name: Local Union Jobs
+  description: Find and post jobs for union members in the area.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      footer:
+      latest:
+        records: JobPost
+        where:
+          status: open
+  privacy:
+    route: /privacy
+    legal: privacy
+  jobs:
+    crud: JobPost
+    search: [title, description, location]
+    filters: [category, hours, wage]
+    sortable: [wage, createdAt]
+    favorites: true
+  myJobs:
+    crud: JobPost
+    mine: true
+  applications:
+    crud: Application
+models:
+  JobPost:
+    fields:
+      title: string!
+      description: markdown!
+      category: construction | healthcare | education | manufacturing | transportation | other
+      wage: money
+      hours: fullTime | partTime | contract | seasonal
+      location: string!
+      postedBy: User!
+      status: open | closed
+  Application:
+    fields:
+      job: JobPost!
+      name: string!
+      email: email!
+      phone: phone
+      message: text
+      resume: file
+      status: submitted | reviewed | contacted | rejected
+actions:
+  closeJob:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: closed
+    intent: Close the job posting so no more applications are received.
+  reopenJob:
+    on: JobPost
+    when:
+      status: closed
+    set:
+      status: open
+    intent: Reopen the job posting to accept applications again.
+navigation: [jobs, myJobs, applications]

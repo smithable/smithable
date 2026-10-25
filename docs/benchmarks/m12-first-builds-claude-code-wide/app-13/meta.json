@@ -1,10 +1,10 @@
 {
   "description": "A log of my car's fuel, service visits and costs.",
   "starter": "records",
-  "wordStarter": "status",
+  "wordStarter": "barbers",
   "questions": [
-    "Is this log for one car or for several vehicles?",
-    "What should a fuel entry record?",
-    "Besides fuel and service visits, are there other costs to log?"
+    "Is this log for one car, or should it handle several vehicles?",
+    "What should each fuel entry record?",
+    "Should anyone besides you be able to see or add entries?"
   ]
 }

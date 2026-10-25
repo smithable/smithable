@@ -3,15 +3,16 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin: all
+  admin:
+    description: Salongen. Sköter tjänsterna, frisörerna och deras ledighet; bekräftar bokningar.
   member:
-    description: En kund som bokar tid i salongen.
-    pages: [mina-bokningar]
-    create: [Booking]
+    description: En kund som bokar tid.
+    pages: [appointments]
+    create: [Appointment]
 assistant:
   for: signed-in
 public:
-  pages: [hem, boka, integritet]
-  read: [Service, Stylist, Slot]
+  pages: [home, privacy]
+  read: [Service, Barber]
 defaultRole: member
 admins: [johan@smithable.ai]

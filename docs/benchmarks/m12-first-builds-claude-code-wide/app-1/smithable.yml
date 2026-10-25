@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Translator's Ledger
-  description: Keep track of my translation clients, the quotes I send them and the payments they make.
+  name: Wordfolio
+  description: A freelance translator's record of clients, the quotes sent to them and the payments received.
   currency: EUR
 models:
   Client:
@@ -10,34 +10,34 @@ models:
       company: string
       email: email
       phone: phone
-      address: text
+      languages: string
       notes: text
       quotes: Quote[]
-      payments: Payment[]
   Quote:
     fields:
-      number: string! unique
-      client: Client!
       title: string!
+      client: Client!
       sourceLanguage: string
       targetLanguage: string
-      wordCount: int
+      words: int
+      amount: money!
       quotedOn: date! = TODAY()
       deadline: date
-      amount: money!
       status: draft | sent | accepted | declined
-      notes: text
+      document: file
       payments: Payment[]
       paid:
         type: money
         formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: amount - paid
   Payment:
     fields:
-      client: Client!
-      quote: Quote
+      quote: Quote!
       amount: money!
       paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
+      method: bankTransfer | card | paypal | cash | other
       note: string
 pages:
   clients:
@@ -45,11 +45,14 @@ pages:
     search: [name, company, email]
   quotes:
     crud: Quote
-    filters: [client, status]
-    actions: [markSent, accept, decline]
+    filters: [client, status, quotedOn]
+    actions: [markSent, markAccepted, markDeclined]
+  payments:
+    crud: Payment
+    filters: [quote, paidOn, method]
   overview:
     dashboard:
-      quotedOpen:
+      quoted:
         sum: Quote.amount
         where:
           status: sent
@@ -57,15 +60,12 @@ pages:
         sum: Quote.amount
         where:
           status: accepted
-      latestQuotes:
-        list: Quote
-        limit: 5
       received:
         sum: Payment.amount
         by: paidOn
-  payments:
-    crud: Payment
-    filters: [client, method, paidOn]
+      latestPayments:
+        list: Payment
+        limit: 5
 actions:
   markSent:
     on: Quote
@@ -74,17 +74,17 @@ actions:
     set:
       status: sent
     intent: The quote went to the client.
-  accept:
+  markAccepted:
     on: Quote
     when:
-      status: sent
+      status: [draft, sent]
     set:
       status: accepted
     intent: The client accepted the quote.
-  decline:
+  markDeclined:
     on: Quote
     when:
-      status: sent
+      status: [draft, sent]
     set:
       status: declined
     intent: The client turned the quote down.

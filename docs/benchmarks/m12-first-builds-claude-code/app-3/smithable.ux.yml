@@ -3,10 +3,12 @@ pages:
   payments:
     table:
       sort: -paidOn
-theme:
-  preset: modern
 tones:
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
+theme:
+  preset: modern
+  brand:
+    primary: "#0f766e"

@@ -2,19 +2,16 @@ smithableUx: 0.1
 pages:
   huoltotyot:
     table:
-      sort: -date
-      columns: [date, car, description, status, mechanic, total]
+      sort: scheduledOn
     icon: clipboard
-  laskut:
-    table:
-      columns: [number, customer, amount, status, dueDate]
-    icon: receipt
   asiakkaat:
     icon: users
   autot:
     icon: truck
+  laskut:
+    icon: receipt
 tones:
-  ServiceJob.status:
+  Job.status:
     inProgress: warning
     done: success
     canceled: danger

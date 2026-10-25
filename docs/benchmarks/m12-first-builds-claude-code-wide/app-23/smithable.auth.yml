@@ -9,4 +9,5 @@ assistant:
   for: signed-in
 api:
   models: [Habit, CheckIn]
+  actions: [pause, resume, archive]
 admins: [johan@smithable.ai]

@@ -4,7 +4,7 @@
   "wordStarter": "records",
   "questions": [
     "Vilka ska använda appen?",
-    "Ska kunderna kunna se något utan att logga in?",
+    "Ska kunderna kunna se något själva?",
     "Vad ska en offert innehålla?"
   ],
   "lang": "sv"

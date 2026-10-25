@@ -1,8 +1,4 @@
 smithableContent: 0.1
-models:
-  Client:
-    label: Household
-    pluralLabel: Households
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

@@ -1,32 +1,38 @@
 smithable: 0.1
 app:
-  name: Club Sightings
-  description: "The bird sightings of our birdwatching club: species, place, date and who saw it."
+  name: Bird Log
+  description: "The birdwatching club's shared record of bird sightings: species, place, date and who saw it."
+  timezone: Europe/Mariehamn
 models:
   Species:
     fields:
       name: string! unique
       scientificName: string
+      family: string
+      picture: picture
+      notes: text
       sightings: Sighting[]
   Sighting:
     fields:
       species: Species!
       place: string!
       seenOn: date! = TODAY()
-      observer: User! = ME()
       count:
-        type: int
+        type: int!
         min: 1
         default: 1
+      observer: User! = ME()
+      photo: picture
       notes: text
     ownedBy: observer
+    namedBy: [species, seenOn]
 pages:
   species:
     crud: Species
-    search: [name, scientificName]
+    search: [name, scientificName, family]
   sightings:
     crud: Sighting
     search: [place, notes]
-    filters: [species, observer, seenOn]
+    filters: [species, seenOn, observer]
   team:
     users: manage

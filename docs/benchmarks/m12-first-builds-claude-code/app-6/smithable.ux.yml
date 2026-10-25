@@ -2,17 +2,9 @@ smithableUx: 0.1
 tones:
   Job.status:
     open: success
-    filled: warning
   Application.status:
     accepted: success
-    rejected: danger
+    declined: danger
     reviewing: warning
-pages:
-  jobs:
-    icon: briefcase
-  applications:
-    icon: clipboard
-  myApplications:
-    icon: file
 theme:
-  preset: corporate
+  preset: navy

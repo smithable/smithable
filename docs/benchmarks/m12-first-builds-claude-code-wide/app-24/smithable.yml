@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Project Memory
-  description: Tasks and notes, grouped by project, that my AI assistant keeps for me.
+  description: My tasks and notes, grouped by project, kept by my AI assistant.
+  timezone: Europe/Stockholm
 models:
   Project:
     fields:

@@ -1,9 +1,9 @@
 {
   "description": "Service status for our municipality's online services, for residents to check outages.",
   "starter": "status",
-  "wordStarter": "status",
+  "wordStarter": "barbers",
   "questions": [
-    "Should residents be able to do more than just view the status page?",
-    "Who at the municipality posts incidents and updates?"
+    "Besides checking the status page, can residents do anything else?",
+    "Who on the municipality's side posts incidents and updates?"
   ]
 }

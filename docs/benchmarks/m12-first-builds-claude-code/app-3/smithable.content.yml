@@ -2,15 +2,16 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Invoices done, so you can get back to work
-      subtitle: Billfold keeps your clients, invoices and payments in one place, built for freelancers.
+      title: Invoices out, payments in
+      subtitle: Ledgerly keeps your clients, invoices and payments in one place, so you always know who owes you what.
+      button: Get started
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
       title: Send your next invoice in minutes
-      button: Get started
+      button: Sign in
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

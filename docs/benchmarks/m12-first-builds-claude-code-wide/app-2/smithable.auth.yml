@@ -7,9 +7,9 @@ roles:
   admin: all
   sales:
     description: Works with leads, deals and follow-ups.
-    pages: [deals, leads, followUps, schedule]
     create: all
     write: all
+    pages: [deals, leads, followUps]
 assistant:
   for: signed-in
 defaultRole: sales

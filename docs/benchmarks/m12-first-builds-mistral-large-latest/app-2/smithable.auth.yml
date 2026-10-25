@@ -16,7 +16,7 @@ roles:                             # what each role may do, beyond their own rec
     write: all                       # anyone's customers and orders; deleting them stays each one's own, and admins'
 
 
-admins: [johan@smithable.ai]           # become admin when they first sign in
+admins: [johan@smithable.ai]           # become admin when they sign in
 
 # ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
 # signing in. Never add models that contain personal or business data.

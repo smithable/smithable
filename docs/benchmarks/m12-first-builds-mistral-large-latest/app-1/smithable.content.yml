@@ -4,7 +4,7 @@ pages:
     hero:
       image:
         src: images/hero.webp
-        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        alt: A yoga class stretching on mats in a bright studio
         generated: true
 logo:
   src: images/logo.webp

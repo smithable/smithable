@@ -1,12 +1,93 @@
 smithableContent: 0.1
+models:
+  ClassType:
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
+    fields:
+      name:
+        label: Nimi
+      summary:
+        label: Kuvaus
+      level:
+        label: Taso
+        values:
+          beginner: Aloittelijat
+          allLevels: Kaikki tasot
+          advanced: Edistyneet
+      durationMinutes:
+        label: Kesto (min)
+      sessions:
+        label: Tunnit
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+    fields:
+      name:
+        label: Nimi
+      bio:
+        label: Esittely
+      portrait:
+        label: Kuva
+      sessions:
+        label: Tunnit
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+    fields:
+      classType:
+        label: Tuntityyppi
+      instructor:
+        label: Ohjaaja
+      startsAt:
+        label: Alkaa
+      capacity:
+        label: Paikkoja
+      bookings:
+        label: Varaukset
+      placesLeft:
+        label: Vapaita paikkoja
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+    fields:
+      session:
+        label: Tunti
+      attendee:
+        label: Osallistuja
 pages:
-  etusivu:
+  home:
+    title: Etusivu
     hero:
+      title: Löydä hetki itsellesi matolla
+      subtitle: Katso viikon joogatunnit ja varaa paikkasi verkossa muutamalla klikkauksella.
+      button: Katso lukujärjestys
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
         generated: true
+    classes:
+      title: Tuntimme
+    instructors:
+      title: Ohjaajamme
+    callToAction:
+      title: Valmis aloittamaan?
+      text: Valitse sopiva tunti ja varaa paikkasi jo tänään.
+      button: Varaa tunti
+  lukujarjestys:
+    title: Lukujärjestys
+  omat-varaukset:
+    title: Omat varaukset
+  tunnit:
+    title: Tunnit
+  tuntityypit:
+    title: Tuntityypit
+  ohjaajat:
+    title: Ohjaajat
+  tietosuoja:
+    title: Tietosuoja
+  yllapito:
+    title: Ylläpito
 logo:
   src: images/logo.webp
-  alt: Three nested arcs
+  alt: A flower of five round petals
   generated: true

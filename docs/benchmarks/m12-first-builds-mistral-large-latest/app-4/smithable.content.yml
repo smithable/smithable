@@ -1,57 +1,13 @@
 smithableContent: 0.1
 pages:
   home:
+    title: Borrow tools from your neighbors
+    subtitle: Find what you need, when you need it
     hero:
-      title: Borrow tools from your neighbors
-      subtitle: Find what you need, lend what you have, and build community together.
-      button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-    latest:
-      title: Recently added tools
-  catalog:
-    title: Tool catalog
-    subtitle: Browse tools available to borrow in your neighborhood
-  myTools:
-    title: My tools
-    subtitle: Tools I've added to the library
-models:
-  Tool:
-    label: Tool
-    fields:
-      name:
-        label: Tool name
-      photos:
-        label: Photos
-      description:
-        label: Description
-      category:
-        label: Category
-        values:
-          gardening: Gardening
-          woodworking: Woodworking
-          automotive: Automotive
-          cleaning: Cleaning
-          power: Power tools
-          hand: Hand tools
-          other: Other
-      condition:
-        label: Condition
-        values:
-          new: New
-          likeNew: Like new
-          good: Good
-          worn: Worn
-      location:
-        label: Location
-      available:
-        label: Available
-      borrower:
-        label: Borrower
-      dueBack:
-        label: Due back
 logo:
   src: images/logo.webp
   alt: A toolbox

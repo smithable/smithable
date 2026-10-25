@@ -2,14 +2,19 @@ smithableUx: 0.1
 pages:
   pupils:
     table:
-      columns: [name, lessonDay, lessonTime, minutes, level]
-      sort: lessonDay
+      columns: [name, weekday, startTime, minutes, level]
+      sort: weekday
+    record:
+      subtitle: weekday
+      detail: [startTime, level]
     icon: users
-  pieces:
+  practice:
     table:
       columns: [title, composer, pupil, status, startedOn]
     icon: book
 tones:
   Piece.status:
     polishing: warning
-    learned: success
+    done: success
+theme:
+  preset: quiet-workspace

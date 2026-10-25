@@ -12,11 +12,23 @@ pages:
     title: Teachers
   home:
     hero:
+      title: Find your calm, one breath at a time
+      subtitle: Classes for every level with teachers who know you by name. See the week's schedule and book your place online.
+      button: See the schedule
       image:
         src: images/hero.webp
-        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        alt: A yoga class stretching on mats in a bright studio
         generated: true
+    classes:
+      title: Our classes
+    teachers:
+      title: Meet our teachers
+    callToAction:
+      title: Ready to roll out your mat?
+      button: Book a class
+    contact:
+      title: Questions? Write to us
 logo:
   src: images/logo.webp
-  alt: A lotus over a ripple
+  alt: A calendar page
   generated: true

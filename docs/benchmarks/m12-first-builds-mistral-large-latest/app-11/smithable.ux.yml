@@ -1,5 +1,8 @@
 smithableUx: 0.1
 theme:
-  preset: corporate
-  brand:
-    primary: "#2563eb"
+  preset: minimal
+pages:
+  incidents:
+    record:
+      lists:
+        updates: thread

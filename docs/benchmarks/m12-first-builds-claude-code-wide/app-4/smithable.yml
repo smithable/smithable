@@ -1,48 +1,53 @@
 smithable: 0.1
 app:
   name: Piano Lessons
-  description: A piano teacher's pupils, their weekly lesson times and what each one practises.
-  timezone: Europe/Stockholm
+  description: Keep track of my piano pupils, their weekly lesson times and what each one practises.
+  timezone: Europe/Mariehamn
 models:
   Pupil:
     fields:
       name: string!
+      weekday: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      startTime: string
+      minutes: int = 30
+      level: beginner | intermediate | advanced
       email: email
       phone: phone
-      level: beginner | intermediate | advanced
-      lessonDay: monday | tuesday | wednesday | thursday | friday | saturday | sunday
-      lessonTime: string
-      minutes:
-        type: int!
-        min: 15
-        max: 120
-        default: 30
-      active: bool = true
       notes: text
+      active: bool = true
       pieces: Piece[]
   Piece:
     fields:
-      pupil: Pupil!
       title: string!
       composer: string
-      status: learning | polishing | learned
+      pupil: Pupil!
+      status: learning | polishing | done
       focus: text
       startedOn: date = TODAY()
 pages:
   pupils:
     crud: Pupil
-    search: [name, email]
-    filters: [lessonDay, level, active]
-  pieces:
+    search: [name, notes]
+    filters: [weekday, level, active]
+    defaultFilter:
+      active: true
+  practice:
     crud: Piece
     search: [title, composer]
     filters: [pupil, status]
-    actions: [markLearned]
+    defaultFilter:
+      status: [learning, polishing]
+    actions: [startPolishing, markDone]
 actions:
-  markLearned:
+  startPolishing:
+    on: Piece
+    when:
+      status: learning
+    set:
+      status: polishing
+  markDone:
     on: Piece
     when:
       status: [learning, polishing]
     set:
-      status: learned
-    intent: Mark a piece as learned.
+      status: done
