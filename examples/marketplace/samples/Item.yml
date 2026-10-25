@@ -76,7 +76,7 @@
   place: Mariehamn
 - title: Acoustic guitar
   photos:
-    - { file: market-guitar-1.webp, alt: "An acoustic guitar standing against a white wall", generated: false }
+    - { file: market-guitar-1.webp, alt: "An acoustic guitar standing against a wall on a gray carpet", generated: false }
   description: Spruce top, new strings, plays well. A soft case is included.
   price: 110
   category: other
