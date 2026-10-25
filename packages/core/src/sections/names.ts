@@ -35,6 +35,17 @@ const NAMES = {
 } as const;
 export type NameKind = keyof typeof NAMES;
 
+/**
+ * Words the code reserves (A 159): a spec name that is one cannot be what the generated app names
+ * a function or a value after it, so it is refused, never renamed (the spec stays what the code
+ * says). JavaScript's reserved words, strict mode's, and the globals a binding may not shadow.
+ */
+export const RESERVED_WORDS: ReadonlySet<string> = new Set(
+  "await break case catch class const continue debugger default delete do else enum export extends false finally for function if implements import in instanceof interface let new null package private protected public return static super switch this throw true try typeof var void while with yield constructor prototype undefined NaN Infinity eval arguments".split(
+    " ",
+  ),
+);
+
 /** The rule a name of this kind follows, as a sentence about `name`. */
 export function nameRule(kind: NameKind, name: string): string {
   const [, what, rule, example] = NAMES[kind];

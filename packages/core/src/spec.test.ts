@@ -145,3 +145,24 @@ describe("advice: notes with the operation that does what they say", () => {
     ]);
   });
 });
+
+test("an action named with a reserved word or a model's name is refused with one that fits (A 159)", () => {
+  const actions = (models: string, actions: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp: { name: Tools }\nmodels:\n${models}${actions ? `actions:\n${actions}` : ""}`,
+    }).diagnostics.filter((d) => d.severity === "error");
+  const tool = "  Tool:\n    fields: { name: string!, status: in | out }\n";
+  expect(
+    actions(tool, "  return: { on: Tool, set: { status: in } }\n").map((d) => d.message),
+  ).toEqual(['Action name "return" is a word the code reserves: name the action "returnTool".']);
+  const habits =
+    "  Habit:\n    fields: { name: string!, done: bool }\n  CheckIn:\n    fields: { at: date! }\n";
+  expect(
+    actions(habits, "  checkIn: { on: Habit, set: { done: true } }\n").map((d) => d.message),
+  ).toEqual([
+    'Action name "checkIn" is also the name of the model CheckIn: name the action "checkInHabit".',
+  ]);
+  // Any word may name a field: only an action's name becomes code of its own.
+  expect(actions("  Tool:\n    fields: { return: string!, default: bool }\n", "")).toEqual([]);
+});

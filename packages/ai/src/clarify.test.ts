@@ -221,3 +221,22 @@ test("a list of records the other model does not refer back to is left out, in a
   expect(draft.files["smithable.yml"]).not.toContain("[]");
   expect(draft.operations?.map((o) => o.op)).toEqual(["setApp", "addModel", "addModel", "addPage"]);
 });
+
+test("a refused action name goes back with the name to use instead (A 159)", async () => {
+  const model = scripted([
+    {
+      operations: [
+        { op: "setApp", args: { name: "Tool Library" } },
+        {
+          op: "addModel",
+          args: { model: "Tool", fields: { name: "string!", status: "in | out" } },
+        },
+        { op: "addPage", args: { page: "tools", model: "Tool" } },
+        { op: "addAction", args: { action: "return", on: "Tool", set: { status: "in" } } },
+      ],
+    },
+    { operations: [] },
+  ]);
+  await draftProjectByOperations({ description: "A tool library", providers: [model] });
+  expect(model.prompts[1]).toContain('name the action "returnTool"');
+});

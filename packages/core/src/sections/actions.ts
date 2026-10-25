@@ -36,7 +36,7 @@ import type { JsonSchema, SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
 import { actionOperations } from "./action-operations.js";
 import { parseDefault, parseFieldShorthand } from "./field-type.js";
-import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
+import { FIELD_NAME_PATTERN, nameRule, RESERVED_WORDS } from "./names.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
 import { textSchema } from "./text-schema.js";
 
@@ -242,7 +242,26 @@ export const actionsSection: SpecSection<"actions"> = {
       }
       ctx.define("action", key);
       const action = readAction(ctx, key, keyNode, value, parsed.models ?? []);
-      if (action) actions.push(action);
+      if (!action) continue;
+      // A name the app's code cannot take as its own (A 159): refused with a name that fits.
+      const models = (parsed.models ?? []).map((m) => m.name);
+      const clash = models.find((m) => m.charAt(0).toLowerCase() + m.slice(1) === key);
+      if (RESERVED_WORDS.has(key) || clash) {
+        const better = `${key}${("on" in action && action.on) || "Action"}`;
+        const fits =
+          !RESERVED_WORDS.has(better) &&
+          !models.some((m) => m.charAt(0).toLowerCase() + m.slice(1) === better);
+        const why = clash
+          ? `is also the name of the model ${clash}`
+          : "is a word the code reserves";
+        ctx.error(
+          keyNode,
+          "invalid-name",
+          `Action name "${key}" ${why}: ${fits ? `name the action "${better}"` : "choose another name"}.`,
+        );
+        continue;
+      }
+      actions.push(action);
     }
     return actions;
   },
