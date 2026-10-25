@@ -337,7 +337,7 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     if (page.pattern.kind !== "landing") continue;
     const hero = page.pattern.sections.find((s) => s.kind === "hero");
     if (!hero) continue;
-    const other = page.pattern.sections.find((s) => s.button)?.button;
+    const other = page.pattern.sections.find((s) => s !== hero && s.button)?.button;
     const first = ir.navigation
       .flatMap((m) => m.pages)
       .find((id) => ir.pages.find((p) => p.id === id)?.pattern.kind !== "landing");

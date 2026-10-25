@@ -1638,7 +1638,12 @@ test("setHeroButtons sets the pages a hero's buttons open, a second one beside t
     secondButton: "none",
   });
   expect(none.ok && none.files.spec).toContain("hero: { button: overview }");
-  // A removed page takes the button with it.
+  // A renamed page is followed; a removed one takes the button with it.
+  const renamed = applyOperation({ ...invoicing, ...set.files }, "renamePage", {
+    from: "clients",
+    to: "customers",
+  });
+  expect(renamed.ok && renamed.files.spec).toContain("secondButton: customers");
   const gone = applyOperation({ ...invoicing, ...set.files }, "removePage", { page: "clients" });
   expect(gone.ok && gone.files.spec).not.toContain("secondButton");
   expect(applyOperation(invoicing, "setHeroButtons", { page: "home", button: "nowhere" }).ok).toBe(
