@@ -223,12 +223,10 @@ test("a band whose text would not read on its surface is a warning, in the mode 
     [murky],
   );
   expect(read.ux).toBeDefined();
-  expect(read.diagnostics.map((d) => [d.severity, d.code])).toEqual([
-    ["warning", "band-contrast"],
-    ["warning", "band-contrast"],
-  ]);
+  // One plain warning per band and mode, however many of its pairs fail.
+  expect(read.diagnostics.map((d) => [d.severity, d.code])).toEqual([["warning", "band-contrast"]]);
   expect(read.diagnostics[0]?.message).toMatch(
-    /^On the muted band of features \(page "home"\), in light mode, foreground on muted is \d\.\d:1; text needs 4\.5:1 to read\.$/,
+    /^On the muted band of features \(page "home"\), in light mode, the text may be hard to read\.$/,
   );
   // The built-in themes' bands all read.
   expect(

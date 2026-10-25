@@ -806,12 +806,13 @@ function checkBands(
     if (!named) continue;
     const theme = (own.background && withBackground(named, own.background)) || named;
     for (const mode of ["light", "dark"] as const)
-      for (const p of bandLowContrast(tokensOf(theme, mode), b.band))
+      if (bandLowContrast(tokensOf(theme, mode), b.band).length)
         ctx.warning(
           b.node,
           "band-contrast",
-          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, ${p.text} on ${p.on} is ${(Math.floor(p.got * 10) / 10).toFixed(1)}:1; text needs 4.5:1 to read.`,
-          `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose ${p.on} reads under its text.`,
+          // Plain words, as a theme's own contrast is said (hardToRead): no colour names, no ratios.
+          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, the text may be hard to read.`,
+          `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
         );
   }
 }
