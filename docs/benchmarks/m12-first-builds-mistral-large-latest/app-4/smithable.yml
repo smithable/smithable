@@ -44,16 +44,8 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
+navigation: [tools, myTools, borrowings]
 actions:
-  return:
-    on: Tool
-    when:
-      available: false
-    set:
-      available: true
-      borrower:
-      dueBack:
-    intent: Mark a tool as returned and available.
   borrow:
     on: Tool
     when:
@@ -67,4 +59,12 @@ actions:
         borrower: ME()
         dueBack:
     intent: Mark a tool as borrowed and create a borrowing record.
-navigation: [tools, myTools, borrowings]
+  returnTool:
+    on: Tool
+    when:
+      available: false
+    set:
+      available: true
+      borrower:
+      dueBack:
+    intent: Mark a tool as returned and available.

@@ -65,16 +65,16 @@
     "starter": "marketplace",
     "created": true,
     "typecheck": false,
-    "tokens": 72203,
-    "tokensIn": 70595,
-    "tokensOut": 1608,
-    "cost": 0.0377,
+    "tokens": 53324,
+    "tokensIn": 52982,
+    "tokensOut": 342,
+    "cost": 0.027,
     "currency": "$",
     "fromCache": 1,
-    "calls": 5,
+    "calls": 4,
     "rerun": "2026-10-25",
-    "seconds": 36,
-    "summary": "Left out, since it could not be made valid:\n  addAction markReturned: addAction: \"when.returnedOn\" must be a string or true or false or a list.\n\nNeighborTools\n  A tool library where neighbors lend each other tools.\n\nPages\n  - Borrow tools from your neighbors (a landing page: hero, tools where available is yes and footer)\n  - Tools (lists tools)\n  - My tools (lists tools)\n  - Borrowings (lists borrowings)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nTools\n  Tools have:\n  - a name (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a category (gardening, woodworking, plumbing, electrical, automotive, cleaning or other, gardening by default)\n  - a condition (new, like new, good, worn or broken, new by default)\n  - a location\n  - available (yes or no, true by default)\n  - a due back (a date)\n  Each tool can have a borrower (a user, fixed when available is no).\n\nBorrowings\n  Borrowings have:\n  - a tool (a tool, required)\n  - borrowed on (a date, today by default)\n  - a due back (a date, required)\n  - returned on (a date)\n  - notes\n  Each borrowing can have a borrower (a user).\n\nReturn\n  For a tool that is not available; sets available to yes; asks for the borrower and the due back.\n  Mark a tool as returned and available.\n\nBorrow\n  For a tool that is available; sets available to no and borrower to whoever presses it; asks for the due back and the borrowing's due back; adds a borrowing (borrower whoever pressed it).\n  Mark a tool as borrowed and create a borrowing record.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the tools page and reading tools.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-GtsCBn/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-GtsCBn/app-4\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.auth.yml:12:10  warning  Anyone on the internet can read Tool, including personal data in borrower.\n/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "seconds": 81,
+    "summary": "NeighborTools\n  A tool library where neighbors lend each other tools.\n\nPages\n  - Borrow tools from your neighbors (a landing page: hero, tools where available is yes and footer)\n  - Tools (lists tools)\n  - My tools (lists tools)\n  - Borrowings (lists borrowings)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nTools\n  Tools have:\n  - a name (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a category (gardening, woodworking, plumbing, electrical, automotive, cleaning or other, gardening by default)\n  - a condition (new, like new, good, worn or broken, new by default)\n  - a location\n  - available (yes or no, true by default)\n  - a due back (a date)\n  Each tool can have a borrower (a user, fixed when available is no).\n\nBorrowings\n  Borrowings have:\n  - a tool (a tool, required)\n  - borrowed on (a date, today by default)\n  - a due back (a date, required)\n  - returned on (a date)\n  - notes\n  Each borrowing can have a borrower (a user).\n\nBorrow\n  For a tool that is available; sets available to no and borrower to whoever presses it; asks for the due back and the borrowing's due back; adds a borrowing (borrower whoever pressed it).\n  Mark a tool as borrowed and create a borrowing record.\n\nReturn tool\n  For a tool that is not available; sets available to yes; asks for the borrower and the due back.\n  Mark a tool as returned and available.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page and the tools page.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nPictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-cJDMuY/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-cJDMuY/app-4\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:11  warning  Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or remove the section of home that shows it.\n/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:17  warning  Visitors can open tools, but may not read Tool, so the page shows them none: add it under public.read, or take tools out of public.pages.\n/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
     "error": "",
     "meta": {
       "wordStarter": "records",
@@ -82,8 +82,7 @@
         "Who can list tools in the library?",
         "What can visitors see without signing in?",
         "What main details does each tool record hold?"
-      ],
-      "dropped": "markReturned"
+      ]
     }
   },
   {

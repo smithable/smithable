@@ -1,13 +1,13 @@
 # M12 first builds: mistral-large-latest (2026-10-25; 2 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 11 / 12 created, 10 type-check, 534,553 tokens (507,336 in, 27,217 out), €0.0000 + $0.2945 (Mistral's list price); 4 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). Totals: 11 / 12 created, 10 type-check, 515,674 tokens (489,723 in, 25,951 out), €0.0000 + $0.2838 (Mistral's list price); 4 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
 | A booking site for a yoga studio, with classes, teachers and online booking. | booking | yes | yes | 37,420 | 2,637 | $0.0227 | 0 | 2 | 42 s |
 | A CRM for a small sales team: companies, contacts, deals and follow-ups. | ? | yes | yes | 0 | 0 | €0.0000 | 0 | 0 | 10 s |
 | Invoicing for freelancers, with clients, invoices and payments. | invoicing | yes | yes | 90,567 | 4,644 | $0.0522 | 0 | 5 | 62 s |
-| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 70,595 | 1,608 | $0.0377 | 1 | 5 | 36 s |
+| A tool library where neighbors lend each other tools. *(rerun 2026-10-25)* | marketplace | yes | **no** | 52,982 | 342 | $0.0270 | 1 | 4 | 81 s |
 | An inventory app for a small bakery: ingredients, suppliers and stock levels. | records | yes | yes | 17,258 | 657 | $0.0096 | 0 | 1 | 21 s |
 | A job board for a local union, with job posts and applications. | marketplace | yes | yes | 74,267 | 5,421 | $0.0453 | 0 | 4 | 62 s |
 | A football club's site: teams, players, matches and results. | records | yes | yes | 17,256 | 859 | $0.0099 | 0 | 1 | 39 s |
@@ -29,7 +29,7 @@ Each created app's four spec files are in [m12-first-builds-mistral-large-latest
 | 1 | booking | 0 | 6 / 6 (has 6) | 12 / 12 (has 12) | 1 / 1 (has 1) | private; admin, member (member) | none | pages home, schedule, blog, about, privacy; read ClassType, Instructor, Session, Post; create Message | 2 (no-timezone, operator-unknown) | none |  | none | 4 / 6 | mentions visitors; landing page |
 | 2 | ? (words: crm) | 0 | 0 / 0 (has 6) | 0 / 0 (has 5) | 0 / 0 (has 1) | shared; admin, sales (sales) | none | pages none; read none; create none | 0 | none |  | none | 0 / 6 | no mention; no landing page |
 | 3 | invoicing | 0 | 4 / 4 (has 4) | 5 / 7 (has 5) | 3 / 3 (has 3); left out: addField Invoice.dueOn | private; admin, member (member) | none | pages none; read none; create none | 0 | none |  | none | 3 / 4 | no mention; no landing page |
-| 4 | marketplace (words: records) | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 2); left out: markReturned | private; admin, member (member) | none | pages home, tools; read Tool; create none | 2 (public-personal-data, operator-unknown) | **public-personal-data** |  | none | 0 / 2 | no mention; landing page |
+| 4 | marketplace (words: records) | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, tools; read none; create none | 3 (public-page-closed-records, operator-unknown) | **public-page-closed-records** |  | none | 0 / 2 | no mention; landing page |
 | 5 | records (words: api) | 3 | 0 / 1 (has 2) | 0 / 2 (has 3) | 0 / 0 (has 0) | shared; admin, baker (baker) | none | pages none; read none; create none | 0 | none |  | none | 0 / 2 | no mention; no landing page |
 | 6 | marketplace | 3 | 0 / 1 (has 2) | 1 / 5 (has 5) | 0 / 0 (has 2) | private; admin, member (member) | none | pages home, jobs; read none; create none | 3 (public-page-closed-records, operator-unknown) | **public-page-closed-records** |  | none | 0 / 2 | no mention; landing page |
 | 7 | records | 3 | 0 / 1 (has 3) | 1 / 2 (has 5) | 0 / 0 (has 0) | private; admin, member (member) | none | pages home, teams, players, matches, privacy; read Team, Player, Match; create none | 1 (operator-unknown) | none |  | none | 0 / 3 | mentions visitors; landing page |
@@ -270,9 +270,6 @@ or only run the app with smithable run.
 ### 4. A tool library where neighbors lend each other tools.
 
 ```text
-Left out, since it could not be made valid:
-  addAction markReturned: addAction: "when.returnedOn" must be a string or true or false or a list.
-
 NeighborTools
   A tool library where neighbors lend each other tools.
 
@@ -304,13 +301,13 @@ Borrowings
   - notes
   Each borrowing can have a borrower (a user).
 
-Return
-  For a tool that is not available; sets available to yes; asks for the borrower and the due back.
-  Mark a tool as returned and available.
-
 Borrow
   For a tool that is available; sets available to no and borrower to whoever presses it; asks for the due back and the borrowing's due back; adds a borrowing (borrower whoever pressed it).
   Mark a tool as borrowed and create a borrowing record.
+
+Return tool
+  For a tool that is not available; sets available to yes; asks for the borrower and the due back.
+  Mark a tool as returned and available.
 
 Sign-in and access
   People sign in with a code sent to their email.
@@ -319,19 +316,20 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-  Open to anyone without signing in: the home page, the tools page and reading tools.
+  Open to anyone without signing in: the home page and the tools page.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: samples/1.webp, samples/2.webp, samples/3.webp, samples/4.webp, samples/5.webp, samples/6.webp, hero.webp, logo.webp.
 Generated 131 files (131 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-GtsCBn/app-4. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-cJDMuY/app-4. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-GtsCBn/app-4
+  cd /tmp/smithable-bench-m12-cJDMuY/app-4
   smithable studio
 
 or only run the app with smithable run.
-/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.auth.yml:12:10  warning  Anyone on the internet can read Tool, including personal data in borrower.
-/tmp/smithable-bench-m12-GtsCBn/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
+/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:11  warning  Visitors can open home, but may not read Tool, so the page shows them none: add it under public.read, or remove the section of home that shows it.
+/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.auth.yml:11:17  warning  Visitors can open tools, but may not read Tool, so the page shows them none: add it under public.read, or take tools out of public.pages.
+/tmp/smithable-bench-m12-cJDMuY/app-4/smithable.content.yml:3:3  warning  The privacy page "privacy" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).
 ```
 
 ### 5. An inventory app for a small bakery: ingredients, suppliers and stock levels.

@@ -28,7 +28,7 @@ models:
 pages:
   habits:
     crud: Habit
-    actions: [resetStreak, pause, resume, checkIn]
+    actions: [resetStreak, pause, resume, checkInHabit]
     search: [name, description]
     filters: [status, frequency]
     defaultFilter:
@@ -54,7 +54,7 @@ actions:
       status: paused
     set:
       status: active
-  checkIn:
+  checkInHabit:
     on: Habit
     when:
       status: active
