@@ -365,3 +365,43 @@ test("the hero picked for the app replaces the starter's, which has the same fil
   expect(readFileSync(join(dir, "public", "images", "hero.webp"), "utf8")).toBe("picked");
   expect(readFileSync(join(dir, "public", "images", "logo.webp"), "utf8")).toBe("logo");
 });
+
+test("a photograph from the library is not badged, and the app credits it", async () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Kaffe }\nmodels:\n  Dish: { fields: { name: string!, photo: picture } }\npages:\n  home: { route: /, landing: { hero: { button: menu } } }\n  menu: { crud: Dish }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const credit = {
+    page: "https://commons.wikimedia.org/wiki/File:Cafe.jpg",
+    author: "A. Photographer",
+    licence: "CC0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    fetched: "2026-10-25",
+  };
+  const photos = [
+    { ...index[0], generated: false, credit },
+    { ...index[1], generated: true },
+  ] as typeof index;
+  const files: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
+  const written = await addLibraryPictures({
+    description: "a café with its menu",
+    ir,
+    files,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: photos,
+  });
+  // Said either way in the content file: a photograph's false is written, not left out.
+  expect(files["smithable.content.yml"]).toContain("generated: false");
+  const dir = temp();
+  writePictures(dir, written);
+  const images = join(dir, "public", "images");
+  expect(JSON.parse(readFileSync(join(images, "pictures.json"), "utf8"))).toEqual({
+    "samples/1.webp": { generated: true },
+    "hero.webp": { generated: false },
+  });
+  expect(readFileSync(join(images, "CREDITS.md"), "utf8")).toContain(
+    "- hero.webp: A. Photographer, [CC0](https://creativecommons.org/publicdomain/zero/1.0/), from https://commons.wikimedia.org/wiki/File:Cafe.jpg (fetched 2026-10-25)",
+  );
+});

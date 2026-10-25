@@ -18,7 +18,7 @@ export {
   textLanguage,
   writtenIn,
 } from "./language.js";
-export type { PickedPictures, PictureEntry } from "./pictures.js";
+export type { PickedPictures, PictureCredit, PictureEntry } from "./pictures.js";
 export { pickPictures } from "./pictures.js";
 export type { Proposal, ProposedOperation } from "./propose.js";
 export { plainSchema, proposeChange } from "./propose.js";
