@@ -8,6 +8,7 @@ import {
   draftOperations,
   draftProjectByOperations,
   dropClosedShortcuts,
+  footerLast,
   openLinked,
   repaired,
   repairFieldShorthand,
@@ -740,4 +741,55 @@ test("a description that asks for two languages gets the other one added last, i
   expect(draft.operations?.at(-1)).toEqual({ op: "addLanguage", args: { language: "en" } });
   expect(draft.files["smithable.content.yml"]).toMatch(/languages: \[\s*en\s*\]/);
   expect(draft.files["smithable.content.en.yml"]).toContain("models:");
+});
+
+test("a drafted landing page keeps its footer last, and its sections get the items drafted for them", async () => {
+  const provider: Provider = {
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete() {
+      return {
+        text: JSON.stringify({
+          operations: [
+            { op: "setApp", args: { name: "Pasio Padel Club" } },
+            { op: "addModel", args: { model: "Court", fields: { name: "string!" } } },
+            { op: "addPage", args: { page: "courts", model: "Court" } },
+            { op: "addLandingPage", args: { page: "home" } },
+            { op: "addSection", args: { page: "home", section: "features" } },
+            { op: "addSection", args: { page: "home", section: "faq" } },
+            {
+              op: "setItems",
+              args: {
+                page: "home",
+                section: "faq",
+                items: [{ question: "Can children play?", answer: "Yes, from six." }],
+              },
+            },
+          ],
+        }),
+        model: "fake",
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    },
+  };
+  const draft = await draftProjectByOperations({
+    description: "a padel club where members book courts",
+    providers: [provider],
+  });
+  if (draft.kind !== "draft") throw new Error(draft.message);
+  const spec = draft.files["smithable.yml"] ?? "";
+  expect(spec.indexOf("footer")).toBeGreaterThan(spec.indexOf("faq"));
+  expect(draft.operations).toContainEqual({
+    op: "moveSection",
+    args: { page: "home", section: "footer", after: "faq" },
+  });
+  expect(draft.files["smithable.content.yml"]).toContain("question: Can children play?");
+  // A footer already last is left where it is.
+  const files = toProjectFiles(draft.files);
+  const done: { op: string; args: Record<string, unknown> }[] = [];
+  expect(footerLast(files, done)).toBe(files);
+  expect(done).toEqual([]);
 });

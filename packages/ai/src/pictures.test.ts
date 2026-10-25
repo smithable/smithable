@@ -1,5 +1,6 @@
-import { validateSpec } from "@smithable/core";
+import { validateContent, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
+import libraryText from "./library-samples.test.json?raw";
 import { type PictureEntry, pickPictures, words } from "./pictures.js";
 
 const entry = (id: string, kind: string, tags: string[]): PictureEntry => ({
@@ -30,7 +31,6 @@ test("a yoga studio gets the yoga hero; a café the café hero and barista", () 
   expect(yoga.hero?.id).toBe("hero-yoga-studio");
   const cafe = pickPictures(index, { description: "Our café's menu and opening hours" });
   expect(cafe.hero?.id).toBe("hero-cafe");
-  expect(cafe.samples[0]?.id).toBe("cafe-barista");
 });
 
 test("the models' names and fields count: a marketplace of items gets second-hand samples", () => {
@@ -51,15 +51,103 @@ pages:
     ir,
     count: 2,
   });
-  expect(picked.samples.map((s) => s.id)).toEqual(["bike-red", "sofa-grey"]);
+  // A model without pictures gets none; this one stores none.
+  expect(picked.models).toEqual({});
+  const pictured = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Torget, description: A place to sell things. }
+models:
+  Item:
+    fields: { title: string!, photo: picture, category: furniture | bicycle | other }
+pages:
+  items: { crud: Item }
+`,
+  }).ir;
+  const items = pickPictures(index, {
+    description: "a site where people sell things",
+    ir: pictured,
+  });
+  expect(items.models.Item?.map((s) => s.id)).toEqual(["bike-red", "sofa-grey"]);
 });
 
-test("nothing fits: the calm abstract hero and the first samples, deterministically", () => {
-  const a = pickPictures(index, { description: "Quarterly compliance filings", count: 2 });
-  const b = pickPictures(index, { description: "Quarterly compliance filings", count: 2 });
+test("nothing fits: the calm abstract hero and no samples, deterministically", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Filings }\nmodels:\n  Filing:\n    fields: { title: string!, scan: picture }\npages:\n  filings: { crud: Filing }\n",
+  }).ir;
+  const a = pickPictures(index, { description: "Quarterly compliance filings", ir });
+  const b = pickPictures(index, { description: "Quarterly compliance filings", ir });
   expect(a.hero?.id).toBe("hero-abstract-calm");
-  expect(a.samples).toHaveLength(2);
+  expect(a.models).toEqual({ Filing: [] });
   expect(a).toEqual(b);
+});
+
+/** The image library's sample pictures as its index lists them (ids and tags, 2026-10-25). */
+const library: PictureEntry[] = (JSON.parse(libraryText) as { id: string; tags: string[] }[]).map(
+  (e) => entry(e.id, "sample", e.tags),
+);
+
+const app = (spec: string, content?: string) => {
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  if (!ir) throw new Error("invalid");
+  const texts = content
+    ? validateContent({ path: "smithable.content.yml", text: content }, ir).content
+    : undefined;
+  return { ir, ...(texts ? { content: texts } : {}) };
+};
+
+test("each model's samples follow its own subject: dishes for a bistro, nothing off topic for a padel club", () => {
+  // The bistro: "book a table" and "cooking classes" in the description drew books and a yoga class.
+  const bistro = app(
+    `smithable: 0.1
+app: { name: Le Petit Zinc, description: A bistro in Bayonne. }
+models:
+  Dish:
+    fields: { name: string!, price: money, photo: picture, course: starter | main | dessert }
+  Booking:
+    fields: { name: string!, guests: int! }
+pages:
+  dishes: { crud: Dish }
+`,
+    "smithableContent: 0.1\nlanguage: fr\nmodels:\n  Dish:\n    label: Plat\n",
+  );
+  const dishes = pickPictures(library, {
+    description:
+      "A bistro where guests book a table, see the dishes of the day and join cooking classes",
+    ...bistro,
+  }).models.Dish?.map((e) => e.id);
+  expect(dishes?.length).toBeGreaterThan(3);
+  for (const id of dishes ?? []) expect(id).toMatch(/^food-/);
+  // The padel club: a court type is no bicycle, dumbbell or yoga mat. Nothing fits: none.
+  const padel = app(`smithable: 0.1
+app: { name: Pasio Padel Club, description: Padel courts to book in Bayonne. }
+models:
+  CourtType:
+    fields: { name: string!, price: money, photo: picture, players: doubles | singles | kids }
+pages:
+  courts: { crud: CourtType }
+`);
+  expect(
+    pickPictures(library, {
+      description:
+        "A padel club with seven panoramic courts, sports bar, racket rental and classes",
+      ...padel,
+    }).models,
+  ).toEqual({ CourtType: [] });
+  // An app named after its subject lends it to a model whose own words name none.
+  const cafe = app(`smithable: 0.1
+app: { name: Harbour Cafe }
+models:
+  Special:
+    fields: { name: string!, photo: picture }
+pages:
+  specials: { crud: Special }
+`);
+  const specials = pickPictures(library, { description: "Our weekly specials", ...cafe }).models
+    .Special;
+  expect(specials?.length).toBeGreaterThan(0);
+  for (const e of specials ?? []) expect(e.tags).toContain("cafe");
 });
 
 test("a starter's tag and a model's name do not make a subject; what the person wrote does", () => {

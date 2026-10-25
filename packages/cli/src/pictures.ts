@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { type PictureEntry, pickPictures } from "@smithable/ai";
-import { type SpecIR, storesPictures, YamlEditor } from "@smithable/core";
+import { type ContentIR, kebab, type SpecIR, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 
 const LIBRARY = "https://docs.smithable.ai/images";
@@ -73,35 +73,64 @@ async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefi
  * The pictures a drafted app gets, each marked as made by an AI (`generated: true`, the library's
  * are): the hero into public/images/hero.webp (and the content file's
  * hero image, when the landing page's hero has none), its mark into public/images/logo.webp (and
- * the content file's logo, when it has none), samples into public/images/samples/<n>.webp.
+ * the content file's logo, when it has none). Sample pictures are chosen for each model: a model
+ * with its own sample records (`drafted`) gets its pictures as samples/<model>-<n>.webp, marked
+ * with the model, for its records to name; the numbered ones (samples/<n>.webp) that generated
+ * rows take, whatever their model, are only those that fit every model with generated rows.
  * Returns what was written; says one line either way.
  */
 export async function addLibraryPictures(options: {
   description: string;
   ir: SpecIR;
+  content?: ContentIR;
+  /** The models whose records come from a sample file rather than generated rows. */
+  drafted?: ReadonlySet<string>;
   files: Record<string, string>;
   io: Io;
   fetchFn?: Fetch;
   index?: PictureEntry[];
   cacheDir?: string;
-}): Promise<{ file: string; alt: string; bytes: Uint8Array }[]> {
+}): Promise<{ file: string; alt: string; bytes: Uint8Array; model?: string }[]> {
   const fetchFn = options.fetchFn ?? fetch;
   const index = options.index ?? (await libraryIndex(fetchFn, options.cacheDir));
   if (!index) {
     options.io.out("No pictures: the Smithable image library could not be reached.\n");
     return [];
   }
-  const picked = pickPictures(index, { description: options.description, ir: options.ir });
-  const written: { file: string; alt: string; bytes: Uint8Array }[] = [];
+  const picked = pickPictures(index, {
+    description: options.description,
+    ir: options.ir,
+    ...(options.content ? { content: options.content } : {}),
+  });
+  const written: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
+  // Sample pictures are for records' picture fields; an app without any gets none (picked has
+  // only the models with pictures).
+  const drafted = options.drafted ?? new Set<string>();
+  for (const [model, entries] of Object.entries(picked.models)) {
+    if (!drafted.has(model)) continue;
+    let n = 0;
+    for (const sample of entries) {
+      const bytes = await bytesOf(sample.url, fetchFn);
+      if (!bytes) continue;
+      n += 1;
+      written.push({ file: `samples/${kebab(model)}-${n}.webp`, alt: sample.alt, bytes, model });
+    }
+  }
+  // Generated rows take samples/0.webp, 1.webp and 2.webp in turn, whatever their model: only
+  // pictures that fit each of those models (usually one) are written there.
+  const generated = Object.entries(picked.models).filter(([model]) => !drafted.has(model));
+  const shared = (generated[0]?.[1] ?? []).filter((e) =>
+    generated.every(([, entries]) => entries.some((o) => o.id === e.id)),
+  );
   let n = 0;
-  // Sample pictures are for records' picture fields; an app without any gets none.
-  const pictured = options.ir.models.some((m) => m.fields.some(storesPictures));
-  for (const sample of pictured ? picked.samples : []) {
+  for (const sample of shared) {
+    if (n === 3) break;
     const bytes = await bytesOf(sample.url, fetchFn);
     if (!bytes) continue;
-    n += 1;
     written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes });
+    n += 1;
   }
+  const pictured = Object.values(picked.models).some((entries) => entries.length > 0);
   const landing = options.ir.pages.find((p) => p.pattern.kind === "landing");
   const hero =
     landing?.pattern.kind === "landing"
@@ -140,8 +169,7 @@ export async function addLibraryPictures(options: {
       options.files["smithable.content.yml"] = editor.text;
     }
   }
-  const wanted =
-    (pictured && picked.samples.length > 0) || (picked.hero && landing && hero) || picked.logo;
+  const wanted = pictured || (picked.hero && landing && hero) || picked.logo;
   options.io.out(
     written.length
       ? `Pictures from the Smithable image library: ${written.map((w) => w.file).join(", ")}.\n`

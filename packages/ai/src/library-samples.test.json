@@ -1,0 +1,593 @@
+[
+  {
+    "id": "accounting-calculator-b",
+    "tags": [
+      "sample",
+      "accounting",
+      "office",
+      "documents",
+      "calculator",
+      "invoice",
+      "indoor",
+      "calm",
+      "starter-invoicing"
+    ]
+  },
+  {
+    "id": "accounting-laptops-b",
+    "tags": ["sample", "accounting", "office", "laptop", "people", "indoor", "calm"]
+  },
+  {
+    "id": "accounting-review-b",
+    "tags": ["sample", "accounting", "office", "meeting", "people", "documents", "indoor"]
+  },
+  {
+    "id": "accounting-signing-b",
+    "tags": ["sample", "accounting", "documents", "contract", "signing", "outdoor"]
+  },
+  {
+    "id": "accounting-team-b",
+    "tags": ["sample", "accounting", "office", "meeting", "team", "people", "indoor"]
+  },
+  { "id": "animal-hens-b", "tags": ["sample", "hens", "chicken", "animal", "farm", "outdoor"] },
+  { "id": "animal-rabbit-b", "tags": ["sample", "rabbit", "pets", "animal", "indoor"] },
+  { "id": "animal-sheep-b", "tags": ["sample", "sheep", "animal", "farm", "outdoor"] },
+  {
+    "id": "apartment-balcony-b",
+    "tags": ["sample", "apartment", "property", "balcony", "outdoor"]
+  },
+  { "id": "apartment-block-b", "tags": ["An apartment building with balconies"] },
+  {
+    "id": "apartment-interior-b",
+    "tags": ["sample", "apartment", "property", "interior", "indoor"]
+  },
+  { "id": "apartment-studio-b", "tags": ["sample", "apartment", "property", "interior", "indoor"] },
+  { "id": "bike-cargo-b", "tags": ["sample", "bike", "bicycle", "cargo", "vehicle", "outdoor"] },
+  { "id": "bike-city-b", "tags": ["sample", "bike", "bicycle", "vehicle", "outdoor"] },
+  { "id": "bike-kids-b", "tags": ["sample", "bike", "bicycle", "kids", "outdoor"] },
+  { "id": "bike-mountain-b", "tags": ["sample", "bike", "bicycle", "sports", "outdoor"] },
+  { "id": "bike-road-b", "tags": ["sample", "bike", "bicycle", "sports", "outdoor"] },
+  { "id": "boat-kayak-b", "tags": ["sample", "boat", "kayak", "sports", "sea", "outdoor"] },
+  { "id": "boat-motor-b", "tags": ["sample", "boat", "sea", "harbor", "outdoor"] },
+  { "id": "boat-rowing-b", "tags": ["sample", "boat", "sea", "lake", "outdoor", "calm"] },
+  { "id": "boat-sail-b", "tags": ["sample", "boat", "sailing", "sea", "outdoor"] },
+  { "id": "books-open-b", "tags": ["sample", "books", "reading", "indoor", "calm"] },
+  { "id": "books-shelf-b", "tags": ["sample", "books", "library", "indoor"] },
+  { "id": "books-stack-b", "tags": ["sample", "books", "reading", "indoor"] },
+  {
+    "id": "cafe-cinnamon-buns-b",
+    "tags": ["sample", "cafe", "food", "bakery", "buns", "indoor", "warm"]
+  },
+  { "id": "cafe-cup-street-b", "tags": ["sample", "cafe", "coffee", "cup", "street", "outdoor"] },
+  { "id": "cafe-friends-b", "tags": ["sample", "cafe", "coffee", "people", "indoor", "warm"] },
+  {
+    "id": "cafe-latte-art-b",
+    "tags": ["sample", "cafe", "barista", "coffee", "people", "indoor", "warm"]
+  },
+  {
+    "id": "cafe-readers-b",
+    "tags": ["sample", "cafe", "coffee", "books", "people", "indoor", "warm", "calm"]
+  },
+  {
+    "id": "camera-digital-b",
+    "tags": ["sample", "camera", "electronics", "photography", "indoor"]
+  },
+  { "id": "camera-film-b", "tags": ["sample", "camera", "electronics", "photography", "indoor"] },
+  { "id": "car-electric-b", "tags": ["sample", "car", "vehicle", "electric", "outdoor"] },
+  { "id": "car-estate-b", "tags": ["sample", "car", "vehicle", "outdoor"] },
+  { "id": "car-hatchback-b", "tags": ["sample", "car", "vehicle", "outdoor"] },
+  { "id": "car-van-b", "tags": ["sample", "van", "vehicle", "car", "outdoor"] },
+  { "id": "car-vintage-b", "tags": ["sample", "car", "vehicle", "vintage", "outdoor"] },
+  { "id": "cat-black-b", "tags": ["sample", "cat", "pets", "animal", "indoor"] },
+  { "id": "cat-garden-b", "tags": ["sample", "cat", "pets", "animal", "outdoor"] },
+  { "id": "cat-kitten-b", "tags": ["sample", "cat", "kitten", "pets", "animal", "indoor"] },
+  { "id": "cat-tabby-b", "tags": ["sample", "cat", "pets", "animal", "indoor"] },
+  { "id": "chair-armchair-b", "tags": ["sample", "chair", "armchair", "furniture", "indoor"] },
+  { "id": "chair-office-b", "tags": ["sample", "chair", "furniture", "office", "indoor"] },
+  { "id": "chair-wooden-b", "tags": ["sample", "chair", "furniture", "indoor"] },
+  { "id": "clothes-bag-b", "tags": ["sample", "bag", "clothes", "fashion", "indoor"] },
+  { "id": "clothes-dress-b", "tags": ["sample", "dress", "clothes", "fashion", "indoor"] },
+  { "id": "clothes-jacket-b", "tags": ["sample", "jacket", "clothes", "fashion", "indoor"] },
+  { "id": "clothes-rack-b", "tags": ["sample", "clothes", "fashion", "shop", "indoor"] },
+  { "id": "clothes-shoes-b", "tags": ["sample", "shoes", "boots", "clothes", "fashion", "indoor"] },
+  { "id": "clothes-sweater-b", "tags": ["sample", "sweater", "clothes", "fashion", "indoor"] },
+  {
+    "id": "construction-frame-b",
+    "tags": ["sample", "construction", "builder", "timber", "house", "people", "outdoor"]
+  },
+  {
+    "id": "construction-living-room-b",
+    "tags": [
+      "sample",
+      "construction",
+      "room",
+      "living-room",
+      "sofa",
+      "interior",
+      "property",
+      "indoor",
+      "calm"
+    ]
+  },
+  {
+    "id": "construction-measuring",
+    "tags": ["sample", "construction", "builder", "timber", "tools", "people", "outdoor"]
+  },
+  {
+    "id": "construction-plans-b",
+    "tags": ["sample", "construction", "plans", "documents", "people", "outdoor"]
+  },
+  {
+    "id": "construction-wooden-house-b",
+    "tags": ["sample", "construction", "house", "building", "property", "outdoor"]
+  },
+  {
+    "id": "consulting-conversation-b",
+    "tags": ["sample", "consulting", "office", "meeting", "people", "indoor"]
+  },
+  {
+    "id": "consulting-coworking-b",
+    "tags": ["sample", "consulting", "office", "coworking", "laptop", "people", "indoor"]
+  },
+  {
+    "id": "consulting-handshake-b",
+    "tags": ["sample", "consulting", "office", "deal", "people", "indoor"]
+  },
+  {
+    "id": "consulting-video-call-b",
+    "tags": ["sample", "consulting", "office", "laptop", "remote", "indoor", "calm"]
+  },
+  {
+    "id": "consulting-workshop-b",
+    "tags": ["sample", "consulting", "office", "workshop", "team", "people", "indoor"]
+  },
+  {
+    "id": "dental-chair-b",
+    "tags": ["sample", "dental", "clinic", "health", "room", "indoor", "calm"]
+  },
+  { "id": "dental-dentist", "tags": ["sample", "dental", "clinic", "health", "people", "indoor"] },
+  {
+    "id": "dental-instruments-b",
+    "tags": ["sample", "dental", "clinic", "health", "tools", "people", "indoor"]
+  },
+  {
+    "id": "dental-reception-b",
+    "tags": ["sample", "dental", "clinic", "reception", "people", "indoor", "calm"]
+  },
+  {
+    "id": "dental-waiting-room-b",
+    "tags": ["sample", "dental", "clinic", "waiting-room", "people", "indoor"]
+  },
+  { "id": "document-contract-b", "tags": ["A printed contract with a pen"] },
+  {
+    "id": "document-folder-b",
+    "tags": ["sample", "document", "documents", "folder", "office", "indoor"]
+  },
+  {
+    "id": "document-invoice-b",
+    "tags": ["sample", "document", "documents", "invoice", "office", "indoor"]
+  },
+  {
+    "id": "document-letter-b",
+    "tags": ["sample", "document", "documents", "mail", "letter", "indoor"]
+  },
+  { "id": "document-notebook-b", "tags": ["sample", "document", "documents", "notes", "indoor"] },
+  {
+    "id": "document-plans-b",
+    "tags": ["sample", "document", "documents", "plans", "construction", "indoor"]
+  },
+  {
+    "id": "document-receipts-b",
+    "tags": ["sample", "document", "documents", "receipt", "accounting", "indoor"]
+  },
+  { "id": "dog-labrador-b", "tags": ["sample", "dog", "pets", "animal", "outdoor"] },
+  { "id": "dog-puppy-b", "tags": ["sample", "dog", "puppy", "pets", "animal", "indoor"] },
+  { "id": "dog-shepherd-b", "tags": ["sample", "dog", "pets", "animal", "outdoor"] },
+  { "id": "dog-terrier-b", "tags": ["sample", "dog", "pets", "animal", "indoor"] },
+  { "id": "dog-walk-b", "tags": ["sample", "dog", "pets", "animal", "walk", "outdoor"] },
+  { "id": "drink-beer-b", "tags": ["sample", "drink", "beer", "bar", "indoor"] },
+  { "id": "drink-cocktail-b", "tags": ["sample", "drink", "cocktail", "bar", "indoor"] },
+  { "id": "drink-coffee-b", "tags": ["sample", "drink", "coffee", "cafe", "indoor"] },
+  { "id": "drink-juice-b", "tags": ["sample", "drink", "juice", "indoor"] },
+  { "id": "drink-tea-b", "tags": ["sample", "drink", "tea", "indoor", "calm"] },
+  { "id": "drink-wine-b", "tags": ["sample", "drink", "wine", "indoor", "evening"] },
+  {
+    "id": "electronics-headphones-b",
+    "tags": ["sample", "headphones", "electronics", "music", "indoor"]
+  },
+  {
+    "id": "electronics-monitor-b",
+    "tags": ["sample", "monitor", "computer", "electronics", "office", "indoor"]
+  },
+  {
+    "id": "electronics-speaker-b",
+    "tags": ["sample", "speaker", "electronics", "music", "indoor"]
+  },
+  { "id": "electronics-tablet-b", "tags": ["sample", "tablet", "electronics", "indoor"] },
+  { "id": "event-concert-b", "tags": ["sample", "event", "concert", "music", "indoor", "evening"] },
+  { "id": "event-dinner-b", "tags": ["sample", "event", "dinner", "party", "indoor", "evening"] },
+  { "id": "event-tickets-b", "tags": ["sample", "event", "tickets", "indoor"] },
+  { "id": "event-wedding-b", "tags": ["sample", "event", "wedding", "outdoor", "summer"] },
+  { "id": "event-workshop-b", "tags": ["sample", "event", "workshop", "class", "indoor"] },
+  {
+    "id": "fitness-coast-run-b",
+    "tags": [
+      "sample",
+      "gallery",
+      "fitness",
+      "running",
+      "sea",
+      "coast",
+      "evening",
+      "people",
+      "outdoor",
+      "warm",
+      "starter-booking"
+    ]
+  },
+  { "id": "fitness-gym-b", "tags": ["sample", "fitness", "gym", "weights", "room", "indoor"] },
+  {
+    "id": "fitness-stretching",
+    "tags": [
+      "sample",
+      "gallery",
+      "fitness",
+      "yoga",
+      "class",
+      "studio",
+      "people",
+      "indoor",
+      "calm",
+      "starter-booking"
+    ]
+  },
+  {
+    "id": "fitness-trainer-b",
+    "tags": ["sample", "fitness", "trainer", "weights", "people", "outdoor"]
+  },
+  {
+    "id": "fitness-yoga-mat-b",
+    "tags": [
+      "sample",
+      "gallery",
+      "fitness",
+      "yoga",
+      "mat",
+      "studio",
+      "indoor",
+      "calm",
+      "starter-booking"
+    ]
+  },
+  {
+    "id": "florist-bouquet-b",
+    "tags": ["sample", "florist", "flowers", "bouquet", "people", "indoor", "warm"]
+  },
+  { "id": "florist-buckets-b", "tags": ["sample", "florist", "flowers", "shop", "outdoor"] },
+  { "id": "florist-ribbon-b", "tags": ["sample", "florist", "flowers", "bouquet", "outdoor"] },
+  {
+    "id": "florist-storefront-b",
+    "tags": ["sample", "florist", "plants", "shop", "storefront", "outdoor"]
+  },
+  {
+    "id": "florist-wrapped-b",
+    "tags": ["sample", "florist", "flowers", "bouquet", "product", "indoor", "calm"]
+  },
+  { "id": "food-bread-b", "tags": ["sample", "food", "bread", "bakery", "indoor"] },
+  { "id": "food-breakfast-b", "tags": ["sample", "food", "breakfast", "indoor"] },
+  { "id": "food-burger", "tags": ["sample", "food", "dish", "burger", "indoor"] },
+  { "id": "food-cake-b", "tags": ["sample", "food", "cake", "dessert", "bakery", "indoor"] },
+  { "id": "food-cheese-b", "tags": ["sample", "food", "cheese", "indoor"] },
+  { "id": "food-fish-b", "tags": ["sample", "food", "dish", "fish", "indoor"] },
+  { "id": "food-fruit-b", "tags": ["sample", "food", "fruit", "indoor"] },
+  { "id": "food-pasta-b", "tags": ["sample", "food", "dish", "pasta", "indoor"] },
+  { "id": "food-pizza-b", "tags": ["sample", "food", "dish", "pizza", "indoor"] },
+  { "id": "food-salad-b", "tags": ["sample", "food", "dish", "salad", "indoor"] },
+  { "id": "food-soup-b", "tags": ["sample", "food", "dish", "soup", "indoor", "warm"] },
+  { "id": "food-vegetables-b", "tags": ["sample", "food", "vegetables", "market", "indoor"] },
+  { "id": "furniture-bed-b", "tags": ["sample", "bed", "furniture", "bedroom", "indoor"] },
+  {
+    "id": "furniture-bookshelf-b",
+    "tags": ["sample", "bookshelf", "furniture", "books", "indoor"]
+  },
+  { "id": "furniture-wardrobe-b", "tags": ["sample", "wardrobe", "furniture", "indoor"] },
+  { "id": "horse-paddock-b", "tags": ["sample", "horse", "animal", "farm", "outdoor"] },
+  { "id": "horse-pony-b", "tags": ["sample", "horse", "pony", "animal", "farm", "outdoor"] },
+  { "id": "horse-white-b", "tags": ["sample", "horse", "animal", "farm", "outdoor"] },
+  {
+    "id": "house-cottage-b",
+    "tags": ["sample", "house", "cottage", "property", "rental", "outdoor"]
+  },
+  { "id": "house-modern-b", "tags": ["sample", "house", "property", "building", "outdoor"] },
+  { "id": "house-red-b", "tags": ["sample", "house", "property", "building", "outdoor"] },
+  { "id": "house-terrace-b", "tags": ["sample", "house", "property", "building", "outdoor"] },
+  { "id": "house-yellow-b", "tags": ["sample", "house", "property", "building", "outdoor"] },
+  { "id": "instrument-drums-b", "tags": ["sample", "instrument", "drums", "music", "indoor"] },
+  { "id": "instrument-guitar-b", "tags": ["sample", "instrument", "guitar", "music", "indoor"] },
+  {
+    "id": "instrument-keyboard-b",
+    "tags": ["sample", "instrument", "keyboard", "music", "indoor"]
+  },
+  { "id": "instrument-piano-b", "tags": ["sample", "instrument", "piano", "music", "indoor"] },
+  { "id": "instrument-violin-b", "tags": ["sample", "instrument", "violin", "music", "indoor"] },
+  { "id": "lamp-desk-b", "tags": ["sample", "lamp", "lighting", "furniture", "indoor"] },
+  { "id": "lamp-floor-b", "tags": ["sample", "lamp", "lighting", "furniture", "indoor"] },
+  { "id": "lamp-pendant-b", "tags": ["sample", "lamp", "lighting", "furniture", "indoor"] },
+  { "id": "laptop-closed-b", "tags": ["sample", "laptop", "computer", "electronics", "indoor"] },
+  {
+    "id": "laptop-open-b",
+    "tags": ["sample", "laptop", "computer", "electronics", "office", "indoor"]
+  },
+  {
+    "id": "market-armchair-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "furniture",
+      "armchair",
+      "chair",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-armchair-2-b",
+    "tags": ["sample", "starter-marketplace", "furniture", "armchair", "second-hand", "indoor"]
+  },
+  {
+    "id": "market-balance-bike-1",
+    "tags": ["sample", "starter-marketplace", "bike", "kids", "toy", "second-hand", "outdoor"]
+  },
+  {
+    "id": "market-books-1-b",
+    "tags": ["sample", "starter-marketplace", "books", "kids", "second-hand", "indoor"]
+  },
+  {
+    "id": "market-chairs-1-b",
+    "tags": ["sample", "starter-marketplace", "furniture", "chair", "second-hand", "indoor"]
+  },
+  {
+    "id": "market-city-bike-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "bike",
+      "bicycle",
+      "vehicle",
+      "second-hand",
+      "outdoor"
+    ]
+  },
+  {
+    "id": "market-city-bike-2-b",
+    "tags": ["sample", "starter-marketplace", "bike", "bicycle", "second-hand", "outdoor"]
+  },
+  {
+    "id": "market-dinghy-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "boat",
+      "sailing",
+      "sea",
+      "vehicle",
+      "second-hand",
+      "outdoor"
+    ]
+  },
+  {
+    "id": "market-dinghy-2-b",
+    "tags": ["sample", "starter-marketplace", "boat", "sailing", "second-hand", "outdoor"]
+  },
+  {
+    "id": "market-headphones-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "headphones",
+      "electronics",
+      "music",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-lamp-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "lamp",
+      "lighting",
+      "furniture",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-laptop-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "laptop",
+      "computer",
+      "electronics",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-road-bike-1-b",
+    "tags": ["sample", "starter-marketplace", "bike", "bicycle", "sports", "second-hand", "outdoor"]
+  },
+  {
+    "id": "market-roof-box-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "car",
+      "vehicle",
+      "accessories",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-sideboard-1-b",
+    "tags": ["sample", "starter-marketplace", "furniture", "sideboard", "second-hand", "indoor"]
+  },
+  {
+    "id": "market-sideboard-2-b",
+    "tags": ["sample", "starter-marketplace", "furniture", "sideboard", "second-hand", "indoor"]
+  },
+  {
+    "id": "market-skis-1-b",
+    "tags": ["sample", "starter-marketplace", "skis", "sports", "winter", "second-hand", "outdoor"]
+  },
+  {
+    "id": "market-turntable-1-b",
+    "tags": [
+      "sample",
+      "starter-marketplace",
+      "turntable",
+      "electronics",
+      "music",
+      "second-hand",
+      "indoor"
+    ]
+  },
+  {
+    "id": "market-turntable-2-b",
+    "tags": ["sample", "starter-marketplace", "turntable", "music", "second-hand", "indoor"]
+  },
+  {
+    "id": "people-carpenter-b",
+    "tags": ["sample", "people", "carpenter", "craft", "work", "indoor"]
+  },
+  { "id": "people-chef-b", "tags": ["sample", "people", "chef", "restaurant", "work", "indoor"] },
+  {
+    "id": "people-courier-b",
+    "tags": ["sample", "people", "courier", "delivery", "work", "outdoor"]
+  },
+  { "id": "people-farmer-b", "tags": ["sample", "people", "farmer", "farm", "work", "outdoor"] },
+  {
+    "id": "people-gardener-b",
+    "tags": ["sample", "people", "gardener", "garden", "work", "outdoor"]
+  },
+  { "id": "people-hiker-b", "tags": ["sample", "people", "hiking", "outdoor", "travel"] },
+  {
+    "id": "people-mechanic-b",
+    "tags": ["sample", "people", "mechanic", "garage", "work", "indoor"]
+  },
+  { "id": "people-nurse-b", "tags": ["sample", "people", "nurse", "health", "work", "indoor"] },
+  { "id": "people-office-b", "tags": ["sample", "people", "office", "work", "indoor"] },
+  { "id": "people-portrait-1-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-2-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-3-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-4-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-5-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-6-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-7-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-portrait-8-b", "tags": ["sample", "people", "person", "portrait", "indoor"] },
+  { "id": "people-shopkeeper-b", "tags": ["sample", "people", "shop", "work", "indoor"] },
+  { "id": "people-teacher-b", "tags": ["sample", "people", "teacher", "school", "work", "indoor"] },
+  { "id": "people-team-b", "tags": ["sample", "people", "team", "office", "meeting", "indoor"] },
+  { "id": "phone-black-b", "tags": ["sample", "phone", "electronics", "indoor"] },
+  { "id": "phone-hand-b", "tags": ["sample", "phone", "electronics", "indoor"] },
+  { "id": "plant-flowers-b", "tags": ["sample", "plant", "flowers", "indoor"] },
+  { "id": "plant-herbs-b", "tags": ["sample", "plant", "plants", "herbs", "kitchen", "indoor"] },
+  { "id": "plant-monstera-b", "tags": ["sample", "plant", "plants", "houseplant", "indoor"] },
+  { "id": "plant-succulents-b", "tags": ["sample", "plant", "plants", "houseplant", "indoor"] },
+  { "id": "plant-tree-b", "tags": ["sample", "plant", "tree", "garden", "outdoor"] },
+  {
+    "id": "plumber-bathroom-b",
+    "tags": ["sample", "plumber", "bathroom", "room", "interior", "property", "indoor", "calm"]
+  },
+  {
+    "id": "plumber-customer-b",
+    "tags": ["sample", "plumber", "customer", "bathroom", "people", "indoor"]
+  },
+  { "id": "plumber-sink-b", "tags": ["sample", "plumber", "repair", "pipes", "people", "indoor"] },
+  { "id": "plumber-tools-b", "tags": ["sample", "plumber", "tools", "product", "outdoor"] },
+  {
+    "id": "plumber-van-b",
+    "tags": ["sample", "plumber", "van", "vehicle", "car", "house", "outdoor"]
+  },
+  { "id": "product-bottle-b", "tags": ["sample", "product", "bottle", "indoor"] },
+  { "id": "product-box-b", "tags": ["sample", "product", "box", "parcel", "shipping", "indoor"] },
+  {
+    "id": "product-boxes-b",
+    "tags": ["sample", "product", "boxes", "parcel", "shipping", "warehouse", "indoor"]
+  },
+  { "id": "product-candle-b", "tags": ["sample", "product", "candle", "home", "indoor", "warm"] },
+  { "id": "product-jar-b", "tags": ["sample", "product", "jar", "food", "indoor"] },
+  { "id": "product-mug-b", "tags": ["sample", "product", "mug", "ceramics", "craft", "indoor"] },
+  { "id": "product-parcel-b", "tags": ["sample", "product", "parcel", "delivery", "outdoor"] },
+  { "id": "product-soap-b", "tags": ["sample", "product", "soap", "craft", "indoor"] },
+  {
+    "id": "product-sunglasses-b",
+    "tags": ["sample", "product", "sunglasses", "fashion", "indoor"]
+  },
+  { "id": "product-vase-b", "tags": ["sample", "product", "vase", "ceramics", "craft", "indoor"] },
+  { "id": "product-watch-b", "tags": ["sample", "product", "watch", "fashion", "indoor"] },
+  {
+    "id": "room-bathroom-b",
+    "tags": ["sample", "room", "bathroom", "interior", "property", "indoor"]
+  },
+  {
+    "id": "room-bedroom-b",
+    "tags": ["sample", "room", "bedroom", "interior", "property", "indoor", "calm"]
+  },
+  { "id": "room-hall-b", "tags": ["sample", "room", "hall", "interior", "indoor"] },
+  {
+    "id": "room-kitchen-b",
+    "tags": ["sample", "room", "kitchen", "interior", "property", "indoor"]
+  },
+  {
+    "id": "room-living-b",
+    "tags": ["sample", "room", "living-room", "interior", "property", "indoor"]
+  },
+  { "id": "room-meeting-b", "tags": ["sample", "room", "meeting-room", "office", "indoor"] },
+  { "id": "room-office-b", "tags": ["sample", "room", "office", "interior", "indoor"] },
+  { "id": "service-cleaning-b", "tags": ["sample", "service", "cleaning", "indoor"] },
+  {
+    "id": "service-haircut-b",
+    "tags": ["sample", "service", "salon", "haircut", "beauty", "indoor"]
+  },
+  {
+    "id": "service-massage-b",
+    "tags": ["sample", "service", "massage", "health", "indoor", "calm"]
+  },
+  { "id": "service-moving-b", "tags": ["sample", "service", "moving", "boxes", "indoor"] },
+  { "id": "service-painting-b", "tags": ["sample", "service", "painting", "decorating", "indoor"] },
+  {
+    "id": "service-photography-b",
+    "tags": ["sample", "service", "photography", "studio", "indoor"]
+  },
+  { "id": "service-repair-b", "tags": ["sample", "service", "repair", "bike", "indoor"] },
+  { "id": "service-tutoring-b", "tags": ["sample", "service", "tutoring", "education", "indoor"] },
+  { "id": "sofa-gray-b", "tags": ["A gray three-seater sofa in a bright room"] },
+  { "id": "sofa-green-b", "tags": ["sample", "sofa", "furniture", "indoor"] },
+  { "id": "sofa-leather-b", "tags": ["sample", "sofa", "furniture", "indoor", "warm"] },
+  { "id": "sports-backpack-b", "tags": ["sample", "sports", "backpack", "hiking", "outdoor"] },
+  { "id": "sports-fishing-b", "tags": ["sample", "sports", "fishing", "lake", "outdoor"] },
+  { "id": "sports-football-b", "tags": ["sample", "sports", "football", "ball", "outdoor"] },
+  { "id": "sports-golf-b", "tags": ["sample", "sports", "golf", "outdoor"] },
+  { "id": "sports-skates-b", "tags": ["sample", "sports", "skates", "winter", "outdoor"] },
+  { "id": "sports-skis-b", "tags": ["Cross-country skis in the snow"] },
+  { "id": "sports-tennis-b", "tags": ["sample", "sports", "tennis", "outdoor"] },
+  { "id": "sports-tent-b", "tags": ["sample", "sports", "camping", "tent", "outdoor"] },
+  { "id": "sports-weights-b", "tags": ["sample", "sports", "weights", "gym", "fitness", "indoor"] },
+  { "id": "table-coffee-b", "tags": ["sample", "table", "furniture", "indoor"] },
+  { "id": "table-desk-b", "tags": ["sample", "desk", "table", "furniture", "office", "indoor"] },
+  { "id": "table-dining-b", "tags": ["sample", "table", "furniture", "dining", "indoor"] },
+  { "id": "tools-drill-b", "tags": ["sample", "tools", "drill", "workshop", "indoor"] },
+  { "id": "tools-garden-b", "tags": ["sample", "tools", "garden", "outdoor"] },
+  { "id": "tools-hand-b", "tags": ["sample", "tools", "workshop", "indoor"] },
+  { "id": "tools-ladder-b", "tags": ["sample", "tools", "ladder", "outdoor"] },
+  { "id": "tools-toolbox-b", "tags": ["sample", "tools", "toolbox", "indoor"] },
+  { "id": "toy-blocks-b", "tags": ["Wooden toy blocks on a floor"] },
+  { "id": "toy-boardgame-b", "tags": ["sample", "toy", "game", "boardgame", "indoor"] },
+  { "id": "toy-puzzle-b", "tags": ["sample", "toy", "toys", "game", "indoor"] },
+  { "id": "toy-teddy-b", "tags": ["sample", "toy", "toys", "kids", "indoor"] },
+  { "id": "toy-train-b", "tags": ["sample", "toy", "toys", "kids", "indoor"] }
+]

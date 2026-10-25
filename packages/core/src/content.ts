@@ -115,6 +115,12 @@ const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)
 /** A mark's file: a picture's, or an SVG (a maker's own logo usually is one). */
 export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/;
 
+/** The keys of a kind of section's items that are plain texts (a pricing plan's features and a gallery's picture are not); none when its items are not texts alone. */
+export function sectionItemTexts(kind: string): string[] | undefined {
+  const items = SECTION_TEXTS[kind]?.items;
+  return items && !items.includes("image") ? items.filter((k) => k !== "features") : undefined;
+}
+
 /** The texts each kind of section takes, and the keys of its items. */
 const SECTION_TEXTS: Record<
   string,

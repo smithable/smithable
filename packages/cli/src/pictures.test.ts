@@ -1,9 +1,9 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { validateContent, validateSpec } from "@smithable/core";
+import { validateContent, validateSamples, validateSpec } from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
 // new.js pulls in most of the CLI: imported here, its load time is not a test's (5 s) on a busy machine.
-import { named } from "./new.js";
+import { named, sampleFiles } from "./new.js";
 import {
   addLibraryPictures,
   atLibrary,
@@ -29,7 +29,7 @@ const index = [
     kind: "sample",
     url: "https://x/sample/cafe-barista.webp",
     alt: "A barista",
-    tags: ["sample", "cafe"],
+    tags: ["sample", "cafe", "dish"],
   },
   {
     id: "far",
@@ -93,7 +93,8 @@ pages:
     fetchFn: fakeFetch,
     index,
   });
-  expect(written.map((w) => w.file)).toEqual(["samples/1.webp", "hero.webp"]);
+  // The Dish's rows are generated: its picture is a numbered one, which generated rows take.
+  expect(written.map((w) => w.file)).toEqual(["samples/0.webp", "hero.webp"]);
   expect(files["smithable.content.yml"]).toContain("src: images/hero.webp");
   expect(files["smithable.content.yml"]).toContain("alt: A café");
   // The content file stays valid: the hero's texts are under the page by its name, and the same
@@ -120,7 +121,45 @@ pages:
   const dir = temp();
   writePictures(dir, written);
   expect(readFileSync(join(dir, "public", "images", "hero.webp"))).toHaveLength(4);
-  expect(readFileSync(join(dir, "public", "images", "samples", "1.webp"))).toHaveLength(4);
+  expect(readFileSync(join(dir, "public", "images", "samples", "0.webp"))).toHaveLength(4);
+});
+
+test("a model with drafted records gets its own pictures, named in its sample file", async () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Kaffe }\nmodels:\n  Dish:\n    fields: { name: string!, price: money, photo: picture }\n  Table:\n    fields: { name: string!, photo: picture }\npages:\n  menu: { crud: Dish }\n  tables: { crud: Table }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const written = await addLibraryPictures({
+    description: "a café with its menu",
+    ir,
+    drafted: new Set(["Dish"]),
+    files: {},
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index,
+  });
+  // The Dish's own picture; nothing fits a Table, so no numbered one for its generated rows.
+  expect(written.filter((w) => w.file.startsWith("samples/"))).toMatchObject([
+    { file: "samples/dish-1.webp", alt: "A barista", model: "Dish" },
+  ]);
+  const files = sampleFiles(
+    {
+      Dish: [
+        { name: "Cinnamon bun", price: 4.5 },
+        { name: "Fish soup", price: 14 },
+      ],
+    },
+    ir,
+    written,
+  );
+  expect(files.map((f) => f.path)).toEqual(["samples/Dish.yml"]);
+  expect(files[0]?.text).toContain("file: dish-1.webp");
+  expect(files[0]?.text).toContain("generated: true");
+  expect(validateSamples(files, ir).diagnostics).toEqual([]);
+  expect(validateSamples(files, ir).samples.Dish?.[1]?.photo).toMatchObject({
+    picture: "dish-1.webp",
+  });
 });
 
 test("an app whose records have no pictures gets no sample pictures, only its hero", async () => {

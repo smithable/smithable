@@ -10,6 +10,7 @@ import {
   languageAsked,
   PageError,
   readPage,
+  siteNameOf,
   tooLittle,
   USER_AGENT,
 } from "./from-page.js";
@@ -55,6 +56,68 @@ test("a page's text, menu, forms and pictures; scripts and inline pictures left 
   expect(description).toContain("The app behind a site like this one (https://cafe.example/)");
   expect(description).toContain("- Book a table");
   expect(description).toContain("- page-1.jpg: Cups on a table");
+});
+
+test("the site's name: the logo's alt, the home link, og:site_name, then the title's shortest part", () => {
+  const page = (head: string, body: string) =>
+    `<html><head>${head}</head><body>${body}<p>Some words about the club and its courts, enough to read.</p></body></html>`;
+  const title = "<title>Réservation de courts de padel à Bayonne | Pasio Padel Club</title>";
+  const url = "https://padel.example/";
+  expect(readPage(page(title, ""), url).siteName).toBe("Pasio Padel Club");
+  expect(
+    readPage(page(`${title}<meta property="og:site_name" content="Pasio">`, ""), url).siteName,
+  ).toBe("Pasio");
+  expect(
+    readPage(page(title, '<header><a href="/">Accueil</a><a href="/">Pasio Club</a></header>'), url)
+      .siteName,
+  ).toBe("Pasio Club");
+  expect(
+    readPage(
+      page(title, '<header><a href="/"><img src="/logo.webp" alt="Pasio logo"></a></header>'),
+      url,
+    ).siteName,
+  ).toBe("Pasio");
+  // A title that is all slogan names nothing; the description then has no site name.
+  const slogan = readPage(
+    page("<title>Book the best padel courts in the whole of Bayonne</title>", ""),
+    url,
+  );
+  expect(slogan.siteName).toBe("");
+  expect(siteNameOf(describePage(slogan))).toBeUndefined();
+  expect(siteNameOf(describePage(readPage(page(title, ""), url)))).toBe("Pasio Padel Club");
+  expect(siteNameOf("A padel club\nSite name: Pasio")).toBeUndefined();
+});
+
+test("items under a page's headings: facilities and questions with their answers", () => {
+  const reading = readPage(
+    `<html><body><h2>Everything for your comfort</h2>
+<div><h3>Seven courts</h3><p>Indoor and covered courts with a view of the club.</p></div>
+<div><h3>Match videos</h3><p>Watch your games again to improve.</p></div>
+<h2>FAQ</h2>
+<details><summary>Can children play?</summary><p>Yes: padel is gentle on the joints.</p></details>
+<dl><dt>Do you rent rackets?</dt><dd>Yes, at the desk.</dd></dl>
+<h2>About</h2><p>One paragraph and no items here, which is not a list at all.</p></body></html>`,
+    "https://padel.example/",
+  );
+  expect(reading.groups).toEqual([
+    {
+      heading: "Everything for your comfort",
+      items: [
+        { title: "Seven courts", text: "Indoor and covered courts with a view of the club." },
+        { title: "Match videos", text: "Watch your games again to improve." },
+      ],
+    },
+    {
+      heading: "FAQ",
+      items: [
+        { title: "Can children play?", text: "Yes: padel is gentle on the joints." },
+        { title: "Do you rent rackets?", text: "Yes, at the desk." },
+      ],
+    },
+  ]);
+  const description = describePage(reading);
+  expect(description).toContain('Items under "FAQ":\n- Can children play?: Yes');
+  expect(description).toContain("with setItems");
 });
 
 let server: Server;
