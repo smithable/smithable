@@ -318,3 +318,39 @@ test("a conversation without a reply box has its Add button as JSX, not as text"
   expect(route).toContain("{canAdd?.updates && (");
   expect(route).not.toMatch(/\n\s+canAdd\?\.updates && \(/);
 });
+
+test("a record's rules write was and next only where a line reads them, so the app type-checks", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Tools }
+models:
+  Tool:
+    fields:
+      name: string!
+      available: bool
+      borrower: { type: User, locked: { available: false } }
+  Stamp:
+    fields:
+      code: { type: string, locked: true }
+  Order:
+    fields:
+      status: draft | placed
+      placedAt: { type: date, required: { status: placed } }
+pages:
+  tools: { crud: Tool }
+  stamps: { crud: Stamp }
+  orders: { crud: Order }
+`,
+  }).ir as SpecIR;
+  const out = generateApp(spec, { smithableVersion: "0.0.0", auth });
+  const of = (name: string) =>
+    out.find((f) => f.path === `src/generated/${name}.server.ts`)?.content ?? "";
+  // A lock with a condition reads the record as it was; nothing reads what it becomes.
+  expect(of("tool")).toContain("const was: Record<string, unknown> = before;");
+  expect(of("tool")).not.toContain("const next: Record<string, unknown>");
+  // A lock that always holds reads neither.
+  expect(of("stamp")).not.toContain("const was: Record<string, unknown>");
+  // A field required in a state reads what the record becomes.
+  expect(of("order")).toContain("const next: Record<string, unknown> = { ...was, ...given };");
+});
