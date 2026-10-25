@@ -92,14 +92,15 @@ export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-5-5, through 
 
 Without them, Ask answers by its rules alone and says when a question needs a model.
 
-On smithable.ai, which model answers depends on the project's level, which its owner sets on the app's page under "Where your data and AI may go". At every level the data is stored and hosted in the EU.
+On smithable.ai, where a project's AI may run follows its region and, for an EU project, its level. Accounts and projects are **global** unless their owner chooses the EU (the account's page, "Region"); on smithable.eu every account is EU. A global project's Ask uses the best model for the job through Anthropic's own API: Claude Haiku 5.5 for a question, Claude Sonnet 5.5 when an answer's checks fail; Mistral Medium when the service's monthly allowance for Claude is used up. An EU project (every project on smithable.eu, and any project a global account marks EU) keeps its data stored and hosted in the EU at every level, while where its AI runs is the level's, set on the app's page under "Where your data and AI may go":
 
 | Level | Ask's model | The app's connections |
 |---|---|---|
-| **Normal** (a new project starts here) | Claude Haiku 4.5, run in the EU; Mistral Medium when Haiku is unavailable | services served from an endpoint in the EU |
+| **Relaxed** | the global project's models, through Anthropic's API in the US | any service |
+| **Normal** (an EU project starts here) | Claude Haiku 5.5 run in the EU where an EU endpoint serves it; Mistral Medium until then | services served from an endpoint in the EU |
 | **Strict** | Mistral Small, moving to Mistral Medium when it gets stuck | only services run by EU companies; people sign in with an email code only (no Google or Facebook) |
 
-Relaxed, for organizations outside the EU, comes later. Projects made before the levels existed stay on Mistral until their owner picks a level.
+Projects made before the regions existed are global (Johan, 2026-10-25).
 
 Measured on 134 questions and changes across six starters ([bench-ask](benchmarks/bench-ask-seven-tools.md), [cascade](benchmarks/bench-ask-cascade.md)), with each answer checked against the records:
 
