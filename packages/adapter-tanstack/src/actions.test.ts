@@ -123,12 +123,14 @@ test("an action sets what a form cannot: a field the app fills", () => {
   );
   // A record an action adds may get the app's fields too.
   const noted = generate(
-    "note",
+    "addNote",
     "{ on: Task, add: { Note: { body: Noted, kind: system } } }",
     undefined,
     "status: open | done\n      notes: Note[]\n  Note:\n    fields:\n      body: text!\n      kind: { type: user | system, by: app }\n      task: Task!",
   );
-  expect(noted("src/generated/actions/note.server.ts")).toContain("added0: noteSettable.parse({");
+  expect(noted("src/generated/actions/add-note.server.ts")).toContain(
+    "added0: noteSettable.parse({",
+  );
   // Without a field the app fills, the two schemas are one.
   expect(
     generate("close", "{ on: Task, set: { status: done } }")("src/generated/task.schema.ts"),

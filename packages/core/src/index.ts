@@ -200,7 +200,7 @@ export {
   sortableBy,
 } from "./sections/list-keys.js";
 export { partText, readNamePart } from "./sections/name-parts.js";
-export { type NameKind, nameProblem } from "./sections/names.js";
+export { type NameKind, nameProblem, RESERVED_WORDS } from "./sections/names.js";
 export { outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
