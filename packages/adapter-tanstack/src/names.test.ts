@@ -268,3 +268,53 @@ test("a subtitle alone imports only what it uses, so the app type-checks", () =>
   expect(lines).toContain("subtitle: (titleOf(row.company)) || undefined,");
   expect(lines).toContain('import { titleOf } from "#/kit/format";');
 });
+
+test("a record page named by its parts does not import titleOf, and an owner by ME() is set once", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Birds }
+models:
+  Sighting:
+    namedBy: [species, seenOn]
+    ownedBy: observer
+    fields:
+      notes: text!
+      species: string!
+      seenOn: date!
+      observer: User! = ME()
+pages:
+  sightings: { crud: Sighting }
+`,
+  }).ir as SpecIR;
+  const out = generateApp(spec, { smithableVersion: "0.0.0", auth });
+  const of = (path: string) => out.find((f) => f.path === path)?.content ?? "";
+  const route = of("src/routes/sightings/$id.tsx");
+  // The heading is the name function's: titleOf is imported only where it is written.
+  expect(route).toContain("sightingName(row as Record<string, unknown>)");
+  expect(route.includes("titleOf")).toBe(false);
+  // ownerFor sets the owner (falling back to the viewer); ME() does not write it a second time.
+  const data = of("src/generated/sighting.server.ts");
+  expect(data).toContain("observerId: ownerFor(viewer, values.observerId)");
+  expect(data).not.toContain("observerId: values.observerId ?? personOf(viewer)");
+});
+
+test("a conversation without a reply box has its Add button as JSX, not as text", () => {
+  const desk = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Status }\nmodels:\n  Incident:\n    fields: { title: string!, updates: 'IncidentUpdate[]' }\n  IncidentUpdate:\n    fields: { at: datetime!, message: text!, incident: Incident! }\npages:\n  incidents: { crud: Incident }\n  incidentUpdates: { crud: IncidentUpdate }\n",
+  }).ir as SpecIR;
+  const ux = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  incidents:\n    record:\n      lists: { updates: thread }\n",
+    },
+    desk,
+  ).ux;
+  const route =
+    generateApp(desk, { smithableVersion: "0.0.0", auth, ux }).find(
+      (f) => f.path === "src/routes/incidents/$id.tsx",
+    )?.content ?? "";
+  expect(route).toContain("{canAdd?.updates && (");
+  expect(route).not.toMatch(/\n\s+canAdd\?\.updates && \(/);
+});

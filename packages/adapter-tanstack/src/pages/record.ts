@@ -372,7 +372,10 @@ export function detailRoute(
   // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
   const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
-    ...(longTitle(model) ? ([["#/kit/format", ["titleOf"]]] as [string, string[]][]) : []),
+    // Only where the heading writes it: a name of parts heads the page by its function instead.
+    ...(longTitle(model) && !composedName(model) && title !== "id"
+      ? ([["#/kit/format", ["titleOf"]]] as [string, string[]][])
+      : []),
     [n.module, [n.remove, n.get, n.ui, n.update, ...(trash ? [trashNames(model).restore] : [])]],
     [`${n.module}.schema`, [n.schema]],
     ...(composedName(model)
@@ -482,7 +485,7 @@ export function detailRoute(
       return `      <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">${label}</h2>
-          ${add?.route && !thread.replies ? button : ""}
+          ${add?.route && !thread.replies ? `{${button}}` : ""}
         </div>
         <Thread
           ui={${tn.ui}}
