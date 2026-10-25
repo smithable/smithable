@@ -3,6 +3,7 @@
 // alone; the validator keeps its own copy of the same rules, with line numbers.
 import {
   type AuthIR,
+  GRANT_KEYS,
   type GrantKey,
   type GrantNames,
   humanize,
@@ -172,4 +173,39 @@ export function warningText(w: GridWarning): string {
     case "public-page-closed-records":
       return `Anyone may open this page but not read ${w.models.map((m) => humanize(plural(m)).toLowerCase()).join(" or ")}, so it shows them none.`;
   }
+}
+
+/** Names as a list in words: "customers, orders and invoices". */
+const listed = (names: string[]) =>
+  names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : (names[0] ?? "");
+
+/** The things a grant names, in words: pages, actions or kinds of record. */
+const things = (key: GrantKey, names: string[]) =>
+  key === "pages"
+    ? `the ${listed(names.map((n) => humanize(n).toLowerCase()))} page${names.length > 1 ? "s" : ""}`
+    : listed(
+        names.map((n) =>
+          key === "actions" ? humanize(n).toLowerCase() : humanize(plural(n)).toLowerCase(),
+        ),
+      );
+
+/** What a role may do, in one sentence: Who can's simple view (A 166). */
+export function roleSentence(ir: SpecIR, grants: "all" | RoleGrants): string {
+  if (grants === "all") return "May do everything.";
+  const parts = GRANT_KEYS.flatMap((key) => {
+    const names = grantChoices(ir, key).filter((n) => granted(ir, grants, key, n));
+    return names.length ? [`${VERBS[key]} ${things(key, names)}`] : [];
+  });
+  return parts.length ? `May ${parts.join("; ")}.` : "May do nothing beyond their own records.";
+}
+
+/** What a visitor who has not signed in may do, in one sentence. */
+export function visitorSentence(auth: AuthIR): string {
+  const { pages, read, create } = auth.public;
+  const parts = [
+    pages.length > 0 && `open ${things("pages", pages)}`,
+    read.length > 0 && `see ${things("read", read)}`,
+    create.length > 0 && `add ${things("create", create)}`,
+  ].filter(Boolean);
+  return parts.length ? `May ${parts.join("; ")}.` : "Nothing without signing in.";
 }

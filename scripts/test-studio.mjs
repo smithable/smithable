@@ -551,6 +551,12 @@ try {
   );
   await step("access: sales may add orders, and nothing else", async () => {
     await sub("Who can");
+    // Simple first: a sentence for each role; the grid is Advanced, kept open once opened (A 166).
+    await page
+      .getByRole("list", { name: "What each can do" })
+      .getByText("May do everything.")
+      .waitFor();
+    await page.getByRole("button", { name: /^Advanced: every grant/ }).click();
     const grid = page.getByRole("region", { name: "Who can" });
     // Sales may add every kind of record (create: all): taking customers away leaves orders.
     await grid.getByRole("checkbox", { name: "sales may add customers", exact: true }).click();
