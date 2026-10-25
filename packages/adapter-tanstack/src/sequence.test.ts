@@ -101,14 +101,14 @@ pages:
   const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
   const copy = file("src/generated/actions/duplicate.server.ts");
   expect(copy).toContain(
-    'ownerId: personOf(viewer) }), number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) })',
+    'ownerId: personOf(viewer), number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) }).from(schema.orders).get()?.n ?? 0) })',
   );
   expect(copy).toContain('import { max } from "drizzle-orm";');
   expect(copy).toContain('import { nextInSequence } from "#/kit/sequence.server";');
   expect(copy).not.toContain("number: row.number");
   const close = file("src/generated/actions/close.server.ts");
   expect(close).toContain(
-    'ownerId: personOf(viewer) }), number: nextInSequence(tx, "Receipt.number", tx.select({ n: max(schema.receipts.number) }).from(schema.receipts).get()?.n ?? 0) })',
+    'ownerId: personOf(viewer), number: nextInSequence(tx, "Receipt.number", tx.select({ n: max(schema.receipts.number) }).from(schema.receipts).get()?.n ?? 0) })',
   );
   expect(close).toContain('import { eq, max } from "drizzle-orm";');
 });

@@ -218,12 +218,12 @@ pages:
   // session's places, a capacity no action may overfill), each in the action's transaction.
   expect(close).toContain("const checked = sessionData.checkUpdate(tx, viewer, ");
   expect(close).toContain(".set(checked)");
-  expect(close).toContain("...bookingData.checkCreate(tx, viewer, {");
+  expect(close).toContain("...bookingData.checkCreate(tx, viewer, one.added0)");
   expect(close).toContain(
     'import { bookingAccess, bookingData } from "#/generated/booking.server";',
   );
   expect(file("src/generated/actions/again.server.ts")).toContain(
-    "...sessionData.checkCreate(tx, viewer, {",
+    "...sessionData.checkCreate(tx, viewer, values)",
   );
   // The checks are written once, in the data modules, and create() and update() call them.
   const session = file("src/generated/session.server.ts");
