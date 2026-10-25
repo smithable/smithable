@@ -247,3 +247,24 @@ test("a reference as the subtitle is bracketed before its fallback, so the app t
   // A reference's part is a ternary: without the brackets `|| undefined` binds to its "" arm.
   expect(lines).toMatch(/subtitle: \(\(row\.instructor .*\) \|\| undefined,/);
 });
+
+test("a subtitle alone imports only what it uses, so the app type-checks", () => {
+  const speakers = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Talks }\nmodels:\n  Speaker:\n    fields: { name: string!, company: string, bio: markdown }\npages:\n  speakers: { crud: Speaker }\n",
+  }).ir as SpecIR;
+  const ux = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  speakers:\n    record: { subtitle: company }\n",
+    },
+    speakers,
+  ).ux;
+  const lines =
+    generateApp(speakers, { smithableVersion: "0.0.0", auth, ux }).find(
+      (f) => f.path === "src/generated/speaker.name.ts",
+    )?.content ?? "";
+  // No name of parts and no detail: nameOf has nothing to join.
+  expect(lines).toContain("subtitle: (titleOf(row.company)) || undefined,");
+  expect(lines).toContain('import { titleOf } from "#/kit/format";');
+});
