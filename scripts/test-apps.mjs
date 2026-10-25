@@ -616,8 +616,14 @@ async function sessionsListFlow(base) {
     const upcoming = await rows();
     await chips.getByRole("button", { name: "All", exact: true }).click();
     await page.waitForURL(/[?&]startsAt=all/, { timeout: 10000 * P });
-    for (let i = 0; i < 50 * P && (await rows()) <= upcoming; i++) await page.waitForTimeout(100);
-    if ((await rows()) <= upcoming) throw new Error("All shows no more sessions than Upcoming");
+    // The chip is gone and All shows at least what Upcoming did. More only when a session is
+    // past: from Monday 00:00 until the week's first class every sample session is still to come.
+    await chips
+      .getByRole("listitem")
+      .filter({ hasText: "Starts at: Upcoming" })
+      .waitFor({ state: "detached", timeout: 10000 * P });
+    for (let i = 0; i < 20 * P && (await rows()) <= upcoming; i++) await page.waitForTimeout(100);
+    if ((await rows()) < upcoming) throw new Error("All shows fewer sessions than Upcoming");
     // Folded: the instructor filter until More filters.
     if (await page.getByRole("group", { name: "Instructor" }).count())
       throw new Error("the instructor filter is not folded");
