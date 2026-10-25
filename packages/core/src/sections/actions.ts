@@ -235,7 +235,9 @@ export const actionsSection: SpecSection<"actions"> = {
   parse(ctx, node, parsed) {
     if (node === undefined) return [];
     const actions: ActionIR[] = [];
-    for (const { key, keyNode, value } of mapEntries(ctx, node, `"actions"`) ?? []) {
+    const entries = mapEntries(ctx, node, `"actions"`) ?? [];
+    const taken = new Set(entries.map((e) => e.key));
+    for (const { key, keyNode, value } of entries) {
       if (!FIELD_NAME_PATTERN.test(key)) {
         ctx.error(keyNode, "invalid-name", nameRule("action", key));
         continue;
@@ -250,6 +252,7 @@ export const actionsSection: SpecSection<"actions"> = {
         const better = `${key}${("on" in action && action.on) || "Action"}`;
         const fits =
           !RESERVED_WORDS.has(better) &&
+          !taken.has(better) &&
           !models.some((m) => m.charAt(0).toLowerCase() + m.slice(1) === better);
         const why = clash
           ? `is also the name of the model ${clash}`
@@ -259,8 +262,8 @@ export const actionsSection: SpecSection<"actions"> = {
           "invalid-name",
           `Action name "${key}" ${why}: ${fits ? `name the action "${better}"` : "choose another name"}.`,
         );
-        continue;
       }
+      // Kept even when refused, so what refers to it finds it: the error alone stops the build.
       actions.push(action);
     }
     return actions;

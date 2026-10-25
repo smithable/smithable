@@ -163,6 +163,13 @@ test("an action named with a reserved word or a model's name is refused with one
   ).toEqual([
     'Action name "checkIn" is also the name of the model CheckIn: name the action "checkInHabit".',
   ]);
+  // The name it offers is never one another action has.
+  expect(
+    actions(
+      tool,
+      "  return: { on: Tool, set: { status: in } }\n  returnTool: { on: Tool, set: { status: out } }\n",
+    ).map((d) => d.message),
+  ).toEqual(['Action name "return" is a word the code reserves: choose another name.']);
   // Any word may name a field: only an action's name becomes code of its own.
   expect(actions("  Tool:\n    fields: { return: string!, default: bool }\n", "")).toEqual([]);
 });
