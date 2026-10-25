@@ -332,8 +332,9 @@ async function calendarFlow(base) {
       .locator("section ol button")
       .first()
       .waitFor({ timeout: 10000 * P });
-    const shown = await week.innerText();
     const { nth } = await openClass(page, page.getByRole("dialog"));
+    // The week the class was found in: next week's once this week's have all closed (a Sunday).
+    const shown = await week.innerText();
     const session = page.locator("section ol button").nth(nth);
     const title = (await session.locator("span").first().innerText()).trim();
     await page
