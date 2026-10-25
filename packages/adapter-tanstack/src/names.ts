@@ -210,7 +210,8 @@ export function ${nameFunction(model)}(row: Record<string, unknown>, leave: read
   const lines = recordLines(ir, ux, model);
   // A part's code may be a ternary (a reference), so it is bracketed before `|| undefined`.
   if (lines) {
-    imports.push(["#/kit/format", "nameOf"]);
+    // Only the detail joins its parts with nameOf: a subtitle alone would leave it unused.
+    if (lines.detail?.length) imports.push(["#/kit/format", "nameOf"]);
     code += `
 /** What a ${label.toLowerCase()} shows under its name where there is room (smithable.ux.yml's record). */
 export function ${linesFunction(model)}(row: Record<string, unknown>): { subtitle?: string; detail?: string } {
