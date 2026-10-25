@@ -353,7 +353,7 @@ export function App() {
       </header>
       {guiding && <Guide onEnd={() => setGuiding(false)} />}
       <aside data-guide="controls">
-        {shown && <Controls theme={shown} text={text} set={set} />}
+        {shown && <Controls theme={shown} text={text} set={set} mode={mode} />}
       </aside>
       <main>
         {start && !signedIn && !making && (
@@ -495,8 +495,11 @@ function Controls({
   theme,
   text,
   set,
+  mode,
 }: {
   theme: ThemeIR;
+  /** The mode on screen: its own colours are the ones shown and changed (Johan, 2026-10-25). */
+  mode: "light" | "dark";
   /** The file as it is: a colour the checks refused is shown as written, so it can be picked again. */
   text: string;
   set: (path: (string | number)[], value: unknown) => void;
@@ -553,11 +556,9 @@ function Controls({
   return (
     <>
       <fieldset>
-        <legend>Colours</legend>
-        {color("light", "primary")}
-        {color("light", "background")}
-        {color("dark", "primary")}
-        {color("dark", "background")}
+        <legend>Colours ({mode === "light" ? "light mode" : "dark mode"})</legend>
+        {color(mode, "primary")}
+        {color(mode, "background")}
       </fieldset>
       <fieldset>
         <legend>Fonts</legend>

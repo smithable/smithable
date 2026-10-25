@@ -21,12 +21,12 @@ export const STOPS: Stop[] = [
   {
     anchor: "controls",
     title: "Change it",
-    text: "Colors, fonts, corners and spacing: each change shows on the page at once. A color you change is the mode's on screen only.",
+    text: "Colors, fonts, corners and spacing: each change shows on the page at once. The colors are those of the mode on screen.",
   },
   {
     anchor: "mode",
     title: "Light and dark, each its own",
-    text: "Each mode keeps its own colors: the theme's until you change them, then yours, however often you switch.",
+    text: "Switch to see and change each mode's own colors: the theme's until you change them, then yours, however often you switch.",
   },
   {
     anchor: "page",
