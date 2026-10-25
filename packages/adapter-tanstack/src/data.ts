@@ -1050,14 +1050,22 @@ export function dataModule(
     ruled && namesComputed
       ? `    const loaded: Record<string, unknown> = (await ${n.data}.get(viewer, id)) ?? {};\n`
       : "";
+  // `was` and `next` only where a line reads them: a lock that always holds reads neither, and a
+  // lock alone never reads `next` (a required field's rule does).
+  const readsWas =
+    needs("next").length > 0 || model.fields.some((f) => f.locked && f.locked !== true);
   const updateRules = ruled
     ? `
         if (before) {
-          const given: Record<string, unknown> = updated;
-          const was: Record<string, unknown> = ${loadComputed ? "{ ...before, ...loaded }" : "before"};${locks.length ? `\n${locks.join("\n")}` : ""}
-          const next: Record<string, unknown> = { ...was, ...given };${needs("next")
-            .map((l) => `\n          ${l}`)
-            .join("")}
+          const given: Record<string, unknown> = updated;${readsWas ? `\n          const was: Record<string, unknown> = ${loadComputed ? "{ ...before, ...loaded }" : "before"};` : ""}${locks.length ? `\n${locks.join("\n")}` : ""}${
+            needs("next").length
+              ? `\n          const next: Record<string, unknown> = { ...was, ...given };${needs(
+                  "next",
+                )
+                  .map((l) => `\n          ${l}`)
+                  .join("")}`
+              : ""
+          }
         }`
     : "";
   // On a create the record is not stored yet: its formulas are worked out on the values given.
