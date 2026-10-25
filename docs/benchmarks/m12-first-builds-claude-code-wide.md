@@ -1,6 +1,6 @@
 # M12 first builds: claude-code, the second set (2026-10-25; 5 rerun since)
 
-The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 23 type-check, 1,553,492 tokens (1,489,994 in, 63,498 out), €0.0000 + $2.4371 (as Claude Code reports it); 1 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
+The app descriptions, each started with `smithable new --describe … --yes` (the starter the first step picks, adapted by the model; errors go back up to four times). The beta is English: the descriptions not in English are measured to know where we stand, not because they are supported. Totals: 24 / 24 created, 24 type-check, 1,504,278 tokens (1,442,768 in, 61,510 out), €0.0000 + $2.3492 (as Claude Code reports it); 1 model calls answered from the response cache. Rows marked *rerun* ran again on their own after the full run (`--only`). *Rounds* counts the model's drafting calls: the first draft and each round of corrections after it.
 
 | Description | Starter | Created | Type-checks | Tokens in | Tokens out | Cost | Cached calls | Rounds | Time |
 |---|---|---|---|---|---|---|---|---|---|
@@ -26,7 +26,7 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa. | booking | yes | yes | 147,585 | 5,712 | $0.2198 | 0 | 3 | 77 s |
 | Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. *(rerun 2026-10-25)* | crm | yes | yes | 47,848 | 4,040 | $0.1049 | 0 | 1 | 62 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | kiosk | yes | yes | 48,024 | 4,511 | $0.1160 | 0 | 1 | 51 s |
-| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-25)* | records | yes | **no** | 95,173 | 2,200 | $0.0879 | 0 | 2 | 47 s |
+| A backend for my habit app: habits, daily check-ins and streaks. *(rerun 2026-10-25)* | records | yes | yes | 47,947 | 212 | €0.0000 | 0 | 1 | 97 s |
 | Somewhere my AI assistant keeps my tasks and notes, by project. | api | yes | yes | 47,440 | 985 | $0.0408 | 0 | 1 | 20 s |
 
 Each created app's four spec files are in [m12-first-builds-claude-code-wide/](m12-first-builds-claude-code-wide/), one folder per description (app-1 …).
@@ -1653,7 +1653,7 @@ Habit Tracker
   Keep track of your habits with daily check-ins and streaks.
 
 Pages
-  - Habits (lists habits; search by name or description; filter by status or frequency; “Reset streak”; “Pause”; “Resume”; “Check in”)
+  - Habits (lists habits; search by name or description; filter by status or frequency; “Reset streak”; “Pause”; “Resume”; “Check in habit”)
   - Check ins (lists check ins; filter by habit or date)
 
 Habits
@@ -1684,7 +1684,7 @@ Pause
 Resume
   For a habit that is paused; sets status to active.
 
-Check in
+Check in habit
   For a habit that is active; sets last check in to today; asks for the check in's note; adds a check in (date today).
   Check in on a habit for today.
 
@@ -1695,14 +1695,14 @@ Sign-in and access
   - admin: everything
   - member: opens every page; adds every kind of record
   New users get the member role.
-  Other programs can read and change habits and check ins with a key, and run check in, reset streak, pause and resume.
+  Other programs can read and change habits and check ins with a key, and run check in habit, reset streak, pause and resume.
   Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.
 Pictures from the Smithable image library: logo.webp.
 Generated 121 files (121 changed, 0 removed).
 
-Created /tmp/smithable-bench-m12-v3aL0o/app-23. Open it in Studio, to see it and change it:
+Created /tmp/smithable-bench-m12-iMpJTJ/app-23. Open it in Studio, to see it and change it:
 
-  cd /tmp/smithable-bench-m12-v3aL0o/app-23
+  cd /tmp/smithable-bench-m12-iMpJTJ/app-23
   smithable studio
 
 or only run the app with smithable run.
