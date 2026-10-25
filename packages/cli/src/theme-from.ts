@@ -32,7 +32,8 @@ const SAMPLE = `(() => {
   const parse = (c) => {
     if (!c || c === "transparent") return null;
     pixel.clearRect(0, 0, 1, 1);
-    pixel.fillStyle = "#000";
+    // Clear first: a color the canvas cannot read leaves this, and reads as none.
+    pixel.fillStyle = "rgba(0, 0, 0, 0)";
     pixel.fillStyle = c;
     pixel.fillRect(0, 0, 1, 1);
     const [r, g, b, a] = pixel.getImageData(0, 0, 1, 1).data;

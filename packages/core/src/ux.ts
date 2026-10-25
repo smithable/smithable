@@ -818,12 +818,19 @@ function readSectionLooks(
       }
       (look as Record<string, unknown>)[option.key] = value;
     }
+    // Columns a layout does not have: an FAQ's accordion is one column, records as a list rows.
     if (section.kind === "faq" && look.columns !== undefined && look.layout !== "list")
       ctx.warning(
         entry.value,
         "invalid-value",
         `"columns" of ${at} is for the list layout; the accordion is one column.`,
         `Add layout: list (setSectionLook ${page.id} ${entry.key} layout list).`,
+      );
+    if (section.kind === "records" && look.columns !== undefined && look.layout === "list")
+      ctx.warning(
+        entry.value,
+        "invalid-value",
+        `"columns" of ${at} is for cards and a grid; a list is one row per record.`,
       );
     looks[entry.key] = look;
   }

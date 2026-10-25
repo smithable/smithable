@@ -56,6 +56,9 @@ test("each section kind takes its own looks, checked by name and value", () => {
       '"columns" of the look of faq on page "home" is for the list layout; the accordion is one column.',
     ],
   ]);
+  expect(ux("{ items: { layout: list, columns: 4 } }").diagnostics.map((d) => d.severity)).toEqual([
+    "warning",
+  ]);
   const messages = ux(
     "{ hero: { layout: wavy }, footer: { layout: list }, nope: {} }",
   ).diagnostics.map((d) => d.message);
