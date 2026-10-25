@@ -1,7 +1,7 @@
 import { validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
 import type { CompletionRequest, Provider } from "./provider.js";
-import { draftSamples, sampledModels } from "./samples.js";
+import { draftSamples, sampledModels, uniqueRows } from "./samples.js";
 
 const ir = validateSpec({
   path: "smithable.yml",
@@ -80,4 +80,29 @@ test("no model, or a failing one: no records, the generated rows stay", async ()
     },
   };
   expect((await draftSamples({ description: "x", ir, providers: [failing] })).samples).toEqual({});
+});
+
+test("a row that repeats a unique value, alone or together with others, is left out", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Club }\nmodels:\n  Court:\n    fields: { name: string!, address: string unique }\n  Slot:\n    fields: { court: Court!, at: datetime! }\n    unique: [[court, at]]\npages:\n  courts: { crud: Court }\n  slots: { crud: Slot }\n",
+  }).ir;
+  if (!spec) throw new Error("invalid");
+  const [court, slot] = spec.models;
+  if (!court || !slot) throw new Error("no models");
+  expect(
+    uniqueRows(court, [
+      { name: "A", address: "12 Rue des Sports" },
+      { name: "B", address: "12 Rue des Sports" },
+      { name: "C" },
+      { name: "D" },
+    ]).map((r) => r.name),
+  ).toEqual(["A", "C", "D"]);
+  expect(
+    uniqueRows(slot, [
+      { court: "A", at: "2026-10-26 08:00" },
+      { court: "A", at: "2026-10-26 08:00" },
+      { court: "B", at: "2026-10-26 08:00" },
+    ]),
+  ).toHaveLength(2);
 });

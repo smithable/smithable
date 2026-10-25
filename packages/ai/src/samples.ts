@@ -82,6 +82,31 @@ export function sampledModels(ir: SpecIR): ModelIR[] {
 }
 
 /**
+ * The rows without those that repeat a unique field's value, or the values of fields unique
+ * together, of a row before them: the database would refuse the whole seed (a padel club's
+ * eight courts at one address).
+ */
+export function uniqueRows<T extends Record<string, unknown>>(model: ModelIR, rows: T[]): T[] {
+  const keys = [
+    ...model.fields.filter((f) => f.unique).map((f) => [f.name]),
+    ...(model.unique ?? []).map((u) => u.fields),
+  ];
+  const seen = keys.map(() => new Set<string>());
+  return rows.filter((row) => {
+    const values = keys.map((key) =>
+      key.every((k) => row[k] !== undefined && row[k] !== null && row[k] !== "")
+        ? JSON.stringify(key.map((k) => row[k]))
+        : undefined,
+    );
+    if (values.some((v, i) => v !== undefined && seen[i]?.has(v))) return false;
+    values.forEach((v, i) => {
+      if (v !== undefined) seen[i]?.add(v);
+    });
+    return true;
+  });
+}
+
+/**
  * Up to `count` rows for each model the seed fills, from the cheapest allowed model in one
  * request. Without a model, or when it fails, none: the generated rows stay.
  */
@@ -142,14 +167,14 @@ export async function draftSamples(options: {
             ? field.type.values.join(" | ")
             : `a ${field.type.model}`;
       const shown = texts[name]?.label;
-      return `${name} (${kind}${field.required ? ", required" : ""}${shown ? `, shown as "${shown}"` : ""})`;
+      return `${name} (${kind}${field.required ? ", required" : ""}${field.unique ? ", unique" : ""}${shown ? `, shown as "${shown}"` : ""})`;
     });
     return `- ${model.name}, shown as "${label(model)}"${model.description ? `: ${model.description}` : ""}\n  fields: ${described.join(", ")}`;
   });
   const user = `The app: ${options.ir.app.name}${options.ir.app.description ? `, ${options.ir.app.description}` : ""}
 What it was made from: ${options.description}
 
-Write ${Math.min(count, 8)} to ${count} records for each of these models:
+Write ${count} records for each of these models. A unique field, and fields unique together, differ in every record. Dates fall in the weeks around ${new Date().toISOString().slice(0, 10)}.
 ${lines.join("\n")}`;
   try {
     const answer = (await completeJson(
@@ -176,7 +201,8 @@ ${lines.join("\n")}`;
               ]
             : [],
         );
-      if (kept.length) samples[model.name] = kept;
+      const unique = uniqueRows(model, kept);
+      if (unique.length) samples[model.name] = unique;
     }
     return { samples, usage };
   } catch {
