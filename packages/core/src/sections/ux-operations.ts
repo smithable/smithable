@@ -396,7 +396,7 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
 const setSectionLook: Operation<{ page: string; section: string; key: string; value: string }> = {
   name: "setSectionLook",
   summary:
-    'Choose how a landing section looks, e.g. hero layout split|centered|plain|cover, records layout cards|list|grid, features/records/gallery columns 2-6, faq layout accordion|list and columns 1|2 ("default" removes it).',
+    'Choose how a landing section looks, e.g. hero layout split|centered|plain|cover|photo, records layout cards|list|grid, features/records/gallery columns 2-6, faq layout accordion|list and columns 1|2, any section but the hero and footer band none|muted|inverse|primary ("default" removes it).',
   schema: {
     type: "object",
     required: ["page", "section", "key", "value"],
@@ -406,7 +406,7 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       section: { type: "string", description: "The section's name, e.g. hero." },
       key: {
         type: "string",
-        description: "layout, image, columns or highlight, as the section takes.",
+        description: "layout, image, columns, highlight or band, as the section takes.",
       },
       value: { type: "string", description: 'A value the key allows, or "default".' },
     },

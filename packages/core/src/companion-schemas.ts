@@ -216,7 +216,9 @@ const look = Object.fromEntries(
                     ? `One of ${values.join(", ")}, side by side on a wide screen: ${values[0]} for cards and ${RECORD_GRID_COLUMNS} for a grid when not said; a list has none.`
                     : kind === "faq" && option === "columns"
                       ? `One of ${values.join(", ")}, for the list layout; the first is the default.`
-                      : `One of ${values.join(", ")}; the first is the default.`,
+                      : option === "band"
+                        ? `The section across the width on a surface of the theme: ${values.join(", ")}; none (the default) is an open section, or the muted band a banded theme gives every second section.`
+                        : `One of ${values.join(", ")}; the first is the default.`,
               },
         ]),
       ),
@@ -440,10 +442,14 @@ const section: JsonSchema = {
   description: "A landing page's section's texts, by the section's name in smithable.yml.",
   additionalProperties: false,
   properties: {
+    eyebrow: text("A short line over the heading, e.g. what the section is."),
     title: text("The section's heading."),
     subtitle: text("A hero's line under the heading."),
     text: text("A paragraph under the heading."),
     button: text("The button's text."),
+    secondButton: text(
+      "A hero's second button's text (secondButton in smithable.yml); the page's title when not given.",
+    ),
     image: {
       type: "object",
       description: "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",

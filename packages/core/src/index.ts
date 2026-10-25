@@ -212,6 +212,7 @@ export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js
 export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
 export {
   BUILT_IN_THEMES,
+  bandLowContrast,
   checkContrast,
   deriveTokens,
   hardToRead,
@@ -236,8 +237,9 @@ export {
 export { type ThreadBindings, threadBindings } from "./thread.js";
 export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
 export { writeUniqueScopes } from "./unique-scopes.js";
-export type { Control, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";
+export type { Band, Control, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";
 export {
+  BANDS,
   CONTROLS,
   controlUnfit,
   emptyUx,

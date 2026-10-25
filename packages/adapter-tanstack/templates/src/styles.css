@@ -120,6 +120,67 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
+  /* A landing section's band (band in smithable.ux.yml, or a banded theme): the section on a
+     surface of the theme. The band's two colors are taken on the section (--band-surface, its
+     text --band-text), and its children read the theme's tokens as the band's, so the text,
+     cards, buttons and links inside need no colors of their own. On muted, the page's text on
+     the muted surface (pictures' and placeholders' muted becomes the page's background). On
+     inverse (the foreground's color as the surface, the background's as its text) and primary
+     (the primary, its own text color on it), every text is the band's text color, cards and
+     lines are a step from the surface, and a button turns inverse: the band's text color as its
+     fill, the surface's as its words, an outline one keeping a line in the text color. The
+     validation warns when a band's text falls under 4.5:1 (core's bandLowContrast). */
+  [data-band] {
+    background-color: var(--band-surface);
+    color: var(--band-text);
+  }
+  [data-band="muted"] {
+    --band-surface: var(--muted);
+    --band-text: var(--foreground);
+    --band-under: var(--background);
+  }
+  [data-band="muted"] > * {
+    --background: var(--band-surface);
+    --muted: var(--band-under);
+  }
+  [data-band="inverse"] {
+    --band-surface: var(--foreground);
+    --band-text: var(--background);
+  }
+  [data-band="primary"] {
+    --band-surface: var(--primary);
+    --band-text: var(--primary-foreground);
+  }
+  [data-band="inverse"] > *,
+  [data-band="primary"] > * {
+    --background: var(--band-surface);
+    --foreground: var(--band-text);
+    --card: color-mix(in oklch, var(--band-text) 8%, var(--band-surface));
+    --card-foreground: var(--band-text);
+    --muted: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --muted-foreground: var(--band-text);
+    --secondary: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --secondary-foreground: var(--band-text);
+    --accent: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --accent-foreground: var(--band-text);
+    --border: color-mix(in oklch, var(--band-text) 40%, var(--band-surface));
+    --input: color-mix(in oklch, var(--band-text) 55%, var(--band-surface));
+    --primary: var(--band-text);
+    --primary-foreground: var(--band-surface);
+    --primary-hover: color-mix(in oklch, var(--band-text) 85%, var(--band-surface));
+    --hover: color-mix(in oklch, var(--band-text) 12%, transparent);
+    --ring: var(--band-text);
+  }
+  /* In the site's frame the band runs across the window's width (a border image reaching out on
+     both sides, which never scrolls), its content staying in the page's measure; on a page in
+     the app's frame it stays in its column, its corners rounded. */
+  [data-kit="landing"] main {
+    overflow-x: clip;
+  }
+  [data-kit="landing"] [data-band] {
+    border-radius: 0;
+    border-image: conic-gradient(var(--band-surface) 0 0) fill 0 / / 0 100vw;
+  }
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: var(--motion-slow);

@@ -330,7 +330,7 @@ function ownNames(place: Place, text: string, known: Known, keys: boolean): stri
   // A landing page's section, a dashboard's tile.
   if (section === "pages" && depth === 4) {
     if (["records", "form", "count", "list"].includes(key ?? "")) return kinds;
-    if (["button", "shortcuts"].includes(key ?? "")) return [...pages.keys()];
+    if (["button", "secondButton", "shortcuts"].includes(key ?? "")) return [...pages.keys()];
   }
   if (section === "actions" && depth === 2) {
     if (key === "on") return kinds;

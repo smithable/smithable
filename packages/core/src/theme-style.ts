@@ -49,8 +49,11 @@ export interface ThemeStyle {
   surfaces: {
     /** A card: the background alone, a border, or a shadow. */
     cards: "flat" | "bordered" | "raised";
-    /** A page's sections: rules between them, or each in a box. */
-    sections: "open" | "boxed";
+    /**
+     * A landing page's sections: open, each in a box, or banded (every second one after the hero,
+     * the second first, across the width on the muted surface, unless it says its own band).
+     */
+    sections: "open" | "boxed" | "banded";
     /** The lines between rows and sections. */
     dividers: "light" | "strong" | "none";
   };
@@ -82,7 +85,7 @@ export const STYLE_VALUES = {
   },
   surfaces: {
     cards: ["flat", "bordered", "raised"],
-    sections: ["open", "boxed"],
+    sections: ["open", "boxed", "banded"],
     dividers: ["light", "strong", "none"],
   },
   buttons: { shape: ["rounded", "pill", "square"], weight: ["regular", "bold"] },

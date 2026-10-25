@@ -498,6 +498,32 @@ export function hardToRead(tokens: Tokens, mode: "light" | "dark"): string[] {
   ];
 }
 
+/**
+ * The pairs a landing section's band puts together (the kit's styles.css): on a muted band the
+ * page's text and its muted text on the muted surface; on an inverse band the background's color
+ * as text on the foreground's; on a primary band the primary's own text color on it. Inside a band
+ * every text, card and button takes the band's colors, so these are the ones that must read.
+ */
+const BAND_PAIRS: Record<string, [text: TokenName, on: TokenName][]> = {
+  muted: [
+    ["foreground", "muted"],
+    ["muted-foreground", "muted"],
+  ],
+  inverse: [["background", "foreground"]],
+  primary: [["primary-foreground", "primary"]],
+};
+
+/** A band's text that would not read on its surface (under 4.5:1), as lowContrast says it. */
+export function bandLowContrast(
+  tokens: Tokens,
+  band: string,
+): { text: TokenName; on: TokenName; got: number; needed: number }[] {
+  return (BAND_PAIRS[band] ?? []).flatMap(([text, on]) => {
+    const got = contrast(hexOf(tokens[text]), hexOf(tokens[on]));
+    return got < 4.5 ? [{ text, on, got, needed: 4.5 }] : [];
+  });
+}
+
 /** What does not read, as sentences naming the pair and its ratio; empty when all is well. */
 export function checkContrast(tokens: Tokens): string[] {
   // Rounded down, so a ratio just under the one needed never reads as reaching it ("4.5 needs 4.5").

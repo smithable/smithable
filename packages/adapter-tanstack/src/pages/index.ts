@@ -5,6 +5,7 @@ import { calculatorRoute } from "../calculators.js";
 import { hasKeys } from "../keys.js";
 import { reviewFileRoute, reviewRoute } from "../review.js";
 import { type GenContext, trashedLists } from "../shared.js";
+import { bandedPage } from "../themes.js";
 import { articlesRoutes } from "./articles.js";
 import { calendarRoute } from "./calendar.js";
 import { customRoute } from "./custom.js";
@@ -46,16 +47,34 @@ export const PAGE_GENERATORS: {
   },
   landing: {
     kit: ["src/kit/Landing.tsx"],
-    routes: (page, { ir, t, auth, ux }) => ({
-      "index.tsx": landingRoute(page, page.pattern.sections, ir, t, auth, ux),
+    routes: (page, { ir, t, auth, ux, options }) => ({
+      "index.tsx": landingRoute(
+        page,
+        page.pattern.sections,
+        ir,
+        t,
+        auth,
+        ux,
+        true,
+        bandedPage(ux, page.id, options.themes),
+      ),
     }),
   },
   // A page of parts and no kind: laid out as a landing page's sections are, in the page's frame
   // (docs/design/page-sections.md §4), which the root gives it.
   sections: {
     kit: ["src/kit/Landing.tsx"],
-    routes: (page, { ir, t, auth, ux }) => ({
-      "index.tsx": landingRoute(page, page.sections, ir, t, auth, ux, false),
+    routes: (page, { ir, t, auth, ux, options }) => ({
+      "index.tsx": landingRoute(
+        page,
+        page.sections,
+        ir,
+        t,
+        auth,
+        ux,
+        false,
+        bandedPage(ux, page.id, options.themes),
+      ),
     }),
   },
   dashboard: {

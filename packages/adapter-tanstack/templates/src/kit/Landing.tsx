@@ -291,6 +291,27 @@ const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
 /**
+ * A section's band (smithable.ux.yml): none, an open section on the page; muted, inverse or
+ * primary, the section across the width on that surface of the theme, its content in the page's
+ * measure. styles.css gives the text, cards, buttons and links inside the band's colors.
+ */
+export type Band = "none" | "muted" | "inverse" | "primary";
+type Banded = {
+  /** The section across the width on a surface of the theme (none: an open section). */
+  band?: Band;
+};
+
+/** A section's frame: its box (open, or boxed by the theme), or a band across the width. */
+const frame = (band: Band, padding: string) => ({
+  "data-band": band === "none" ? undefined : band,
+  className: cn(
+    "mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) px-5",
+    band === "none" && "bg-(--section-background)",
+    padding,
+  ),
+});
+
+/**
  * A section's heading block (its eyebrow, title and lead) at the start or centered, as the
  * theme's headings.align says (--heading-align); a narrower block under it (the lead, a FAQ)
  * moves to the middle with it (--heading-inline).
@@ -313,12 +334,13 @@ function Eyebrow({ texts, children }: { texts?: string; children: string }) {
 
 function SectionView({
   texts,
+  band = "none",
   eyebrow,
   id,
   title,
   text,
   children,
-}: {
+}: Banded & {
   id: string;
   title?: string;
   text?: string;
@@ -331,7 +353,7 @@ function SectionView({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
-      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
+      {...frame(band, "py-12")}
     >
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
@@ -362,11 +384,12 @@ function SectionView({
 /** A text section: a heading and paragraphs (a blank line between them in the content file). */
 function TextSectionView({
   texts,
+  band = "none",
   eyebrow,
   id,
   title,
   text,
-}: {
+}: Banded & {
   id: string;
   title?: string;
   text?: string;
@@ -378,7 +401,7 @@ function TextSectionView({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
-      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-10"
+      {...frame(band, "py-10")}
     >
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
@@ -419,6 +442,7 @@ function HeroView({
   title,
   subtitle,
   link,
+  secondLink,
   image,
   more,
   shortcuts = [],
@@ -428,6 +452,8 @@ function HeroView({
   title: string;
   subtitle?: string;
   link?: LandingLink;
+  /** A second button beside the first, an outline one (secondButton in smithable.yml). */
+  secondLink?: LandingLink;
   image?: LandingImage;
   /** Sections follow: a quiet arrow under the content says the page goes on. */
   more?: boolean;
@@ -435,9 +461,10 @@ function HeroView({
   shortcuts?: LandingShortcut[];
   /**
    * split: text beside the picture; centered: text over it; plain: no picture; cover: the
-   * picture across the width with the theme's primary washing over it under the text.
+   * picture across the width with the theme's primary washing over it under the text; photo:
+   * the picture across the width, a dark scrim from the start side, white text at the start.
    */
-  layout?: "split" | "centered" | "plain" | "cover";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo";
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
@@ -475,6 +502,26 @@ function HeroView({
       </ul>
     </nav>
   );
+  // Without a picture every look is plain.
+  const shown = image ? layout : "plain";
+  // The second button: an outline one, in the hero's own text color on a picture or a wash.
+  const second = secondLink && (
+    <Link
+      to={secondLink.to}
+      data-part="second-button"
+      className={cn(
+        buttonVariants({ variant: "outline" }),
+        "h-12 px-6 text-base",
+        (shown === "centered" || shown === "photo") &&
+          "border-white/70 bg-transparent text-white hover:bg-white/10",
+        // Over the cover's rule for its links (the first button's fill), so marked as important.
+        shown === "cover" &&
+          "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!",
+      )}
+    >
+      <span {...mark(texts, "secondButton")}>{secondLink.label}</span>
+    </Link>
+  );
   const text = (
     <div>
       {/* In the hero's own text color, so it reads on a picture and on the cover's wash too. */}
@@ -498,10 +545,15 @@ function HeroView({
           {subtitle}
         </p>
       )}
-      {link && (
-        <Link to={link.to} className={cn(buttonVariants(), "mt-10 h-12 px-6 text-base")}>
-          <span {...mark(texts, "button")}>{link.label}</span>
-        </Link>
+      {(link || second) && (
+        <div className={cn("mt-10 flex flex-wrap gap-3", shown === "centered" && "justify-center")}>
+          {link && (
+            <Link to={link.to} className={cn(buttonVariants(), "h-12 px-6 text-base")}>
+              <span {...mark(texts, "button")}>{link.label}</span>
+            </Link>
+          )}
+          {second}
+        </div>
       )}
     </div>
   );
@@ -568,6 +620,40 @@ function HeroView({
       </>
     ) : (
       hero
+    );
+  // Across the width at a large size: a dark scrim from the start side (from the foot on a
+  // phone, where the text sits low) keeps the text white and readable on any picture, in light
+  // and dark mode alike; the text and buttons stand at the start.
+  if (layout === "photo")
+    return framed(
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        className="relative isolate flex min-h-[34rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
+      >
+        <img
+          src={image.src}
+          alt={image.alt}
+          width={1600}
+          height={900}
+          fetchPriority="high"
+          className="absolute inset-0 -z-10 size-full object-cover"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+        />
+        <div
+          className={cn(
+            "mx-auto w-full max-w-6xl px-5 py-16 text-white sm:py-24 [&_h1]:max-w-2xl [&_p]:text-white/90",
+            shortcutList && "pb-28 sm:pb-36",
+          )}
+        >
+          {text}
+          {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
+          {!shortcutList && end}
+        </div>
+      </section>,
     );
   // Over the picture: a dark veil keeps the text readable on any picture.
   if (layout === "centered")
@@ -665,12 +751,13 @@ const GALLERY_COLUMNS = {
 
 function FeaturesView({
   texts,
+  band = "none",
   eyebrow,
   title,
   text,
   items,
   columns = 3,
-}: {
+}: Banded & {
   title?: string;
   text?: string;
   items: { title?: string; text?: string }[];
@@ -681,7 +768,7 @@ function FeaturesView({
   eyebrow?: string;
 }) {
   return (
-    <Section id="features" texts={texts} eyebrow={eyebrow} title={title} text={text}>
+    <Section id="features" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
       <ul className={cn("grid gap-4", CARD_COLUMNS[columns])}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
@@ -707,6 +794,7 @@ function FeaturesView({
 /** Records shown as cards, e.g. the classes a studio offers. */
 function RecordCardsView({
   texts,
+  band = "none",
   eyebrow,
   id,
   title,
@@ -716,7 +804,7 @@ function RecordCardsView({
   columns,
   icon,
   door,
-}: {
+}: Banded & {
   id: string;
   title?: string;
   text?: string;
@@ -795,7 +883,7 @@ function RecordCardsView({
     </>
   );
   return (
-    <Section id={id} texts={texts} eyebrow={eyebrow} title={title} text={text}>
+    <Section id={id} texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
       {door && (
         <div data-part="door" className="mb-8 space-y-4">
           {door.search && (
@@ -887,13 +975,14 @@ function RecordCardsView({
 
 function PricingView({
   texts,
+  band = "none",
   eyebrow,
   title,
   text,
   plans,
   link,
   highlight,
-}: {
+}: Banded & {
   title?: string;
   text?: string;
   /** The plan drawn forward, by its name. */
@@ -914,7 +1003,7 @@ function PricingView({
   const forward = (name?: string) =>
     Boolean(highlight && name && name.trim().toLowerCase() === highlight.trim().toLowerCase());
   return (
-    <Section id="pricing" texts={texts} eyebrow={eyebrow} title={title} text={text}>
+    <Section id="pricing" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, i) => (
           <li key={plan.name}>
@@ -978,11 +1067,12 @@ function PricingView({
 
 function TestimonialsView({
   texts,
+  band = "none",
   eyebrow,
   title,
   items,
   layout = "cards",
-}: {
+}: Banded & {
   title?: string;
   items: { quote?: string; name?: string; role?: string }[];
   /** cards: side by side; carousel: a row that scrolls sideways; one: the first quote, large. */
@@ -1010,7 +1100,7 @@ function TestimonialsView({
   );
   const first = items[0];
   return (
-    <Section id="testimonials" texts={texts} eyebrow={eyebrow} title={title}>
+    <Section id="testimonials" texts={texts} band={band} eyebrow={eyebrow} title={title}>
       {layout === "one" && first ? (
         quote(first, 0, true)
       ) : (
@@ -1044,12 +1134,13 @@ function TestimonialsView({
 /** Questions that open in place; the browser handles the keyboard and the expanded state. */
 function FaqView({
   texts,
+  band = "none",
   eyebrow,
   title,
   items,
   layout = "accordion",
   columns = 1,
-}: {
+}: Banded & {
   title?: string;
   items: { question?: string; answer?: string }[];
   /** accordion: answers open on a click; list: every answer shown. */
@@ -1062,7 +1153,7 @@ function FaqView({
 }) {
   if (layout === "list")
     return (
-      <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
+      <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title}>
         <dl
           className={
             columns === 2
@@ -1084,7 +1175,7 @@ function FaqView({
       </Section>
     );
   return (
-    <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
+    <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title}>
       <div className={cn("max-w-3xl divide-y border-y", INLINE)}>
         {items.map((item, i) => (
           <details key={item.question} className="group">
@@ -1107,20 +1198,18 @@ function FaqView({
 
 function CallToActionView({
   texts,
+  band = "none",
   title,
   text,
   link,
-}: {
+}: Banded & {
   title: string;
   text?: string;
   link?: LandingLink;
   texts?: string;
 }) {
   return (
-    <section
-      {...sectionHooks(texts)}
-      className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
-    >
+    <section {...sectionHooks(texts)} {...frame(band, "py-12")}>
       <div className="rounded-xl bg-primary px-6 py-12 text-primary-foreground sm:px-12">
         <h2
           className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
@@ -1152,6 +1241,7 @@ function CallToActionView({
  */
 function ContactView({
   texts,
+  band = "none",
   eyebrow,
   title,
   text,
@@ -1161,7 +1251,7 @@ function ContactView({
   hours,
   thanks,
   form,
-}: {
+}: Banded & {
   title?: string;
   text?: string;
   address?: string;
@@ -1249,6 +1339,7 @@ function ContactView({
     <Section
       id="contact"
       texts={texts}
+      band={band}
       eyebrow={eyebrow}
       title={title ?? (form ? w.contactUs : undefined)}
       text={text}
@@ -1289,12 +1380,13 @@ function ContactView({
 /** Pictures in a grid; one opens large in a lightbox, with the arrow keys to move on. */
 function GalleryView({
   texts,
+  band = "none",
   eyebrow,
   title,
   text,
   items,
   columns = 3,
-}: {
+}: Banded & {
   title?: string;
   text?: string;
   items: { image?: LandingImage; caption?: string }[];
@@ -1312,7 +1404,7 @@ function GalleryView({
   const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
   const current = pictures[open];
   return (
-    <Section id="gallery" texts={texts} eyebrow={eyebrow} title={title} text={text}>
+    <Section id="gallery" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
       <ul className={cn("grid grid-cols-2 gap-3", GALLERY_COLUMNS[columns])}>
         {pictures.map((item, i) => (
           <li key={item.image.src}>
