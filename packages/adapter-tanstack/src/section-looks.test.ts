@@ -135,3 +135,30 @@ test("robots.txt lets search engines read the public pages and nothing else", ()
   );
   expect(robots("")).toContain('const ROBOTS = "User-agent: *\\nDisallow: /\\n";');
 });
+
+test("a landing page's header look is the layout's header prop; without one the layout has none", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Site }\npages:\n  home:\n    route: /\n    landing:\n      hero:\n      footer:\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const route = (text: string) => {
+    const ux = validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\n${text}` }, ir).ux;
+    if (!ux) throw new Error("the ux file does not validate");
+    return (
+      generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent(), ux }).find(
+        (f) => f.path === "src/routes/index.tsx",
+      )?.content ?? ""
+    );
+  };
+  expect(route("pages:\n  home: { header: { position: sticky } }\n")).toContain(
+    'header={{ position: "sticky" }}',
+  );
+  expect(route("")).not.toContain("header={{");
+});

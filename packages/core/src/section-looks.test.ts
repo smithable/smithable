@@ -233,4 +233,53 @@ test("a band whose text would not read on its surface is a warning, in the mode 
     ux("{ features: { band: muted }, items: { band: inverse }, faq: { band: primary } }")
       .diagnostics,
   ).toEqual([]);
+
+test("a landing page's header stays or scrolls: header position, set with setSectionLook home header", () => {
+  const read = (text: string) =>
+    validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\npages:\n${text}` }, ir);
+  // Nothing said is today's header, which scrolls away with the page.
+  expect(read("  home: { icon: home }\n").ux?.pages.home?.header).toBeUndefined();
+  const sticky = read("  home: { header: { position: sticky } }\n");
+  expect(sticky.diagnostics).toEqual([]);
+  expect(sticky.ux?.pages.home?.header).toEqual({ position: "sticky" });
+  expect(
+    read("  home: { header: { position: fixed } }\n").diagnostics.map((d) => d.message),
+  ).toEqual(['"position" of the header of page "home" is one of scrolling, sticky.']);
+  expect(read("  home: { header: { size: big } }\n").diagnostics[0]?.message).toContain(
+    'Unknown key "size" in the header of page "home"',
+  );
+  expect(read("  items: { header: { position: sticky } }\n").diagnostics[0]?.message).toBe(
+    "A header's look is for a landing page; items is not one.",
+  );
+  const set = applyOperation({ spec }, "setSectionLook", {
+    page: "home",
+    section: "header",
+    key: "position",
+    value: "sticky",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.ux).toContain("home:\n    header:\n      position: sticky");
+  const back = applyOperation(set.files, "setSectionLook", {
+    page: "home",
+    section: "header",
+    key: "position",
+    value: "default",
+  });
+  expect(back.ok && back.files.ux).not.toContain("header");
+  expect(
+    applyOperation({ spec }, "setSectionLook", {
+      page: "home",
+      section: "header",
+      key: "position",
+      value: "fixed",
+    }),
+  ).toMatchObject({ ok: false, message: '"position" of a header is one of scrolling, sticky.' });
+  expect(
+    applyOperation({ spec }, "setSectionLook", {
+      page: "items",
+      section: "header",
+      key: "position",
+      value: "sticky",
+    }),
+  ).toMatchObject({ ok: false });
 });

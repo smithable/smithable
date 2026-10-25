@@ -85,6 +85,9 @@ export interface PageUx {
   /** A landing page's sections' looks, by section name (docs/design/look.md §1.4); the ux file's
    * page-level `sections`, not the form's. */
   looks?: Record<string, SectionLook>;
+  /** A landing page's header's look (HEADER_LOOKS): whether it stays at the top as the page
+   * scrolls. The frame's, not a section's. */
+  header?: HeaderLook;
   /** The form's groups, each with a heading; fields in none follow at the end. */
   sections?: { name: string; fields: string[] }[];
   /** Short fields two abreast on wide screens. */
@@ -186,6 +189,19 @@ export const SECTION_LOOKS: Partial<
   contact: { band: BANDS },
   text: { band: BANDS },
   calculator: { band: BANDS },
+};
+
+/** How a landing page's header looks; HEADER_LOOKS has its keys and values. */
+export interface HeaderLook {
+  position?: "scrolling" | "sticky";
+}
+
+/**
+ * The looks of a landing page's header, as SECTION_LOOKS has a section's: the first value is the
+ * header's own. Its position: scrolling (away with the page) or sticky (kept at the top).
+ */
+export const HEADER_LOOKS: Record<string, readonly string[]> = {
+  position: ["scrolling", "sticky"],
 };
 
 /** A records section's columns in the grid layout when the ux file does not say (today's four). */
@@ -576,7 +592,17 @@ export function validateUx(
             return [name];
           });
         for (const part of checkKeys(ctx, mapEntries(ctx, page.value, where) ?? [], where, {
-          allowed: ["icon", "table", "form", "record", "sections", "theme", "filters", "frame"],
+          allowed: [
+            "icon",
+            "table",
+            "form",
+            "record",
+            "sections",
+            "header",
+            "theme",
+            "filters",
+            "frame",
+          ],
           later: ["detail", "calendar"],
         })) {
           if (part.key === "frame") {
@@ -614,6 +640,17 @@ export function validateUx(
           }
           if (part.key === "sections") {
             result.looks = readSectionLooks(ctx, part.value, spec, where, bands);
+            continue;
+          }
+          if (part.key === "header") {
+            // The header is a landing page's own frame's; other pages' frames are the app's.
+            if (spec.pattern.kind !== "landing")
+              ctx.error(
+                part.keyNode,
+                "invalid-key",
+                `A header's look is for a landing page; ${page.key} is not one.`,
+              );
+            else result.header = readHeaderLook(ctx, part.value, where);
             continue;
           }
           if (part.key === "theme") {
@@ -815,6 +852,27 @@ function checkBands(
           `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
         );
   }
+
+/** A landing page's `header:` in the ux file, checked against HEADER_LOOKS. */
+function readHeaderLook(ctx: ParseContext, node: ParsedNode | null, where: string): HeaderLook {
+  const at = `the header of ${where}`;
+  const look: HeaderLook = {};
+  for (const option of checkKeys(ctx, mapEntries(ctx, node, at) ?? [], at, {
+    allowed: Object.keys(HEADER_LOOKS),
+  })) {
+    const values = HEADER_LOOKS[option.key] ?? [];
+    const value = isScalar(option.value) ? option.value.value : undefined;
+    if (typeof value !== "string" || !values.includes(value)) {
+      ctx.error(
+        option.value,
+        "invalid-value",
+        `"${option.key}" of ${at} is one of ${values.join(", ")}.`,
+      );
+      continue;
+    }
+    (look as Record<string, unknown>)[option.key] = value;
+  }
+  return look;
 }
 
 /** A landing page's `sections:` in the ux file: each named section's look, checked by its kind. */

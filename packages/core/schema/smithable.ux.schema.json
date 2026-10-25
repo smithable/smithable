@@ -485,6 +485,20 @@
               ]
             }
           },
+          "header": {
+            "type": "object",
+            "description": "A landing page's header's look: its position, scrolling (away with the page, the default) or sticky (kept at the top).",
+            "additionalProperties": false,
+            "properties": {
+              "position": {
+                "enum": [
+                  "scrolling",
+                  "sticky"
+                ],
+                "description": "One of scrolling, sticky; the first is the default."
+              }
+            }
+          },
           "theme": {
             "type": "object",
             "description": "A landing page's own theme, over the app's: { preset: playful }, with brand, density and motion as the app's theme takes them.",
