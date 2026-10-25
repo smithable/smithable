@@ -1068,6 +1068,44 @@ export function dataModule(
         .join("")}`
     : "";
   const self = n.data;
+  // The checks a write must pass (A 153), each written once: create() and update() call them in
+  // their transaction, and so do the actions that write in one of their own.
+  const indent = (code: string) =>
+    code.replace(/\n {6,8}/g, (m) => `\n${" ".repeat(m.length - 3)}`);
+  const createBody = `${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${createRules}${indent(`${capacityCheck()}${closedCheck}`)}${occ ? `\n    checkTime(tx, { ${choiceDefaults}...values });` : ""}`;
+  const createViewer = uploadFields.length > 0 || refs.length > 0 || closedCheck !== "";
+  const updateBody = `${refs.length ? "    checkReferences(viewer, updated);\n" : ""}${holdChecks.length || capacity ? "    const values = updated;" : ""}${indent(holdChecks.join(""))}${indent(updateChecks)}${indent(updateRules)}${
+    occ
+      ? `
+    // A change that moves the time it takes (or takes time again) is checked like a new one.
+    const moving: Record<string, unknown> = updated;
+    if (!holdsTime(before) || ${literal(movingKeys(occ))}.some((k) => k in moving && JSON.stringify(moving[k]) !== JSON.stringify(before[k as keyof typeof before])))
+      checkTime(tx, { ...before, ...updated }, id);`
+      : ""
+  }`;
+  const updateUses = (name: string) => new RegExp(`\\b${name}\\b`).test(updateBody);
+  const writeChecks = `
+  /**
+   * What a new ${n.label.toLowerCase()} must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}): ${n.settableValues} {
+    ${uploadFields.length ? "let" : "const"} values = given;
+${createBody}
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(${updateUses("tx") ? "tx" : "_tx"}: Tx, ${uploadFields.length || updateUses("viewer") ? "viewer" : "_viewer"}: Viewer | null, ${updateUses("id") ? "id" : "_id"}: number, given: Partial<${n.settableValues}>, ${uploadFields.length || updateUses("before") ? "before" : "_before"}: typeof ${n.table}.$inferSelect${loadComputed ? ", loaded: Record<string, unknown> = {}" : ""}${locks.length ? `, what = "changed", frees: readonly string[] = []` : ""}): Partial<${n.settableValues}> {
+    const updated = ${uploadFields.length ? "checkFiles(viewer, given, before)" : "given"};
+${updateBody}
+    return updated;
+  },
+`;
   // The record's title as the audit log keeps it, and a create with its line.
   const titleKey = titleField(model);
   // Worked out, never entered: not a change of their own in the audit log.
@@ -1567,14 +1605,10 @@ ${occ ? occupiesImports() : ""}${[...others]
   .join(
     "",
   )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}${
-  group.length || roots.length || occ
-    ? `
-/** A transaction, as the group's functions are called inside one (docs/design/delete-together.md). */
+${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
+/** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-`
-    : ""
-}${usedBy}${rootInTrash}${occ ? occupiesHelpers(model, ir, occ) : ""}
+${usedBy}${rootInTrash}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**
@@ -1795,7 +1829,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
     pictures.length
       ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
       : ""
-  }
+  }${writeChecks}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {${
     model.trash || held.length
@@ -2246,24 +2280,13 @@ ${
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
-}${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${createRules}    let row: typeof ${n.table}.$inferSelect;
+}    let row: typeof ${n.table}.$inferSelect;
     try {
-      ${
-        capacity
-          ? `// The count and the insert in one transaction: two people cannot both take the last place.
-      row = db.transaction((tx) => {${capacityCheck()}${closedCheck}${occ ? `\n        checkTime(tx, { ${choiceDefaults}...values });` : ""}
-        ${insertAudited}
-      });`
-          : occ
-            ? `// The time's check and the insert in one transaction: two people cannot both take the same time.
+      // The checks and the insert in one transaction${capacity ? ": two people cannot both take the last place" : occ ? ": two people cannot both take the same time" : ""}.
       row = db.transaction((tx) => {
-        checkTime(tx, { ${choiceDefaults}...values });
+        values = ${self}.checkCreate(tx, viewer, values);
         ${insertAudited}
-      });`
-            : `row = db.transaction((tx) => {
-        ${insertAudited}
-      });`
-      }
+      });
     } catch (error) {
       throw ${capacity || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
@@ -2283,7 +2306,7 @@ ${
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(${n.access}.write, viewer, ${ownerOf});
-${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${uploadFields.map((f) => `${dataKey(f)}: ${n.table}.${dataKey(f)}`).join(", ")} }).from(${n.table}).where(eq(${n.table}.id, id)).get());\n` : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
+${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${
       model.ownedBy && signedIn
         ? ownerRequired
@@ -2294,19 +2317,12 @@ ${uploadFields.length ? `    values = checkFiles(viewer, values, db.select({ ${u
         : "values"
     };
     try {
-      changed = db.transaction((tx) => {${holdChecks.join("")}
+      changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
-        if (!before) throw new AccessDenied(viewer !== null);${updateChecks}${updateRules}${
-          occ
-            ? `
-        // A change that moves the time it takes (or takes time again) is checked like a new one.
-        const moving: Record<string, unknown> = updated;
-        if (!holdsTime(before) || ${literal(movingKeys(occ))}.some((k) => k in moving && JSON.stringify(moving[k]) !== JSON.stringify(before[k as keyof typeof before])))
-          checkTime(tx, { ...before, ...updated }, id);`
-            : ""
-        }
-        const after = tx.update(${n.table}).set(updated).where(eq(${n.table}.id, id)).returning().get();
+        if (!before) throw new AccessDenied(viewer !== null);
+        const checked = ${self}.checkUpdate(tx, viewer, id, updated, before${loadComputed ? ", loaded" : ""}${locks.length ? ", what, frees" : ""});
+        const after = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
         return after;
       });
@@ -2624,6 +2640,24 @@ export const VISITOR_ROWS = 10_000;
 export const TEXT_MAX = { string: 200, text: 10_000, markdown: 50_000, publicText: 2_000 };
 
 /** A text's length rules: required (not only spaces), `min` and `max` characters. */
+/** Whether a field of the model is locked, so its change checks take what changes it (A 153). */
+export function hasLocks(model: ModelIR): boolean {
+  return model.fields.some((f) => f.locked);
+}
+
+/**
+ * Whether the model's rules name a computed field (record-rules.md §5), so its change checks read
+ * the record as the page loads it, its formulas worked out (A 153).
+ */
+export function checksLoaded(model: ModelIR): boolean {
+  const formulaNames = new Set(model.fields.filter((f) => f.formula).map((f) => f.name));
+  return model.fields.some((f) =>
+    [f.locked === true ? undefined : f.locked, f.requiredWhen].some(
+      (c) => c && Object.keys(c).some((k) => formulaNames.has(k)),
+    ),
+  );
+}
+
 export function textBounds(field: FieldIR, visitors = false): string {
   const long = (max: number) => (visitors ? TEXT_MAX.publicText : max);
   const max =

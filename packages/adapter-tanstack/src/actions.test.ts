@@ -180,3 +180,57 @@ test("an action's condition on a reference reads the stored key and the viewer: 
     'finishFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {\n  return row.status === "open";',
   );
 });
+
+test("an action's own writes pass the record's checks: its change, the records it adds, a copy (A 153)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Classes }
+models:
+  Session:
+    fields:
+      title: string!
+      places: int = 10
+      status: open | closed
+      bookings: Booking[]
+  Booking:
+    fields:
+      session: Session!
+    capacity: { per: session, max: session.places }
+actions:
+  close: { on: Session, set: { status: closed }, add: { Booking: {} } }
+  again: { on: Session, copy: { status: open } }
+pages:
+  sessions: { crud: Session, actions: [close, again] }
+`,
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const file = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+  const close = file("src/generated/actions/close.server.ts");
+  // The change is checked as update() checks one, the added booking as create() checks one (the
+  // session's places, a capacity no action may overfill), each in the action's transaction.
+  expect(close).toContain("const checked = sessionData.checkUpdate(tx, viewer, ");
+  expect(close).toContain(".set(checked)");
+  expect(close).toContain("...bookingData.checkCreate(tx, viewer, one.added0)");
+  expect(close).toContain(
+    'import { bookingAccess, bookingData } from "#/generated/booking.server";',
+  );
+  expect(file("src/generated/actions/again.server.ts")).toContain(
+    "...sessionData.checkCreate(tx, viewer, values)",
+  );
+  // The checks are written once, in the data modules, and create() and update() call them.
+  const session = file("src/generated/session.server.ts");
+  expect(session).toContain(
+    "const checked = sessionData.checkUpdate(tx, viewer, id, updated, before",
+  );
+  const booking = file("src/generated/booking.server.ts");
+  expect(booking).toContain("values = bookingData.checkCreate(tx, viewer, values);");
+  expect(booking.match(/throw new Conflict\("full"\)/g)).toHaveLength(2);
+});
