@@ -90,3 +90,62 @@ test("without any of it the routes are as before", () => {
     "sortRows",
   );
 });
+
+test("a landing section's eyebrow and its columns reach the page as props; unsaid, none", () => {
+  const site = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Bistro }
+models:
+  Dish: { fields: { name: string! } }
+pages:
+  home:
+    route: /
+    landing: { hero: {}, dishes: { records: Dish }, faq: {}, gallery: {} }
+  dishes: { crud: Dish }
+`,
+  }).ir as SpecIR;
+  const page = (uxText: string) => {
+    const texts =
+      validateContent(
+        {
+          path: "smithable.content.yml",
+          text: `smithableContent: 0.1
+pages:
+  home:
+    hero: { eyebrow: Open daily }
+    dishes: { eyebrow: Popular dishes, title: Favorite meals }
+    faq: { items: [{ question: Open on Sundays?, answer: Yes. }] }
+    gallery: { items: [{ image: { src: images/a.webp, alt: A table } }] }
+`,
+        },
+        site,
+      ).content ?? emptyContent();
+    return (
+      generateApp(site, {
+        smithableVersion: "0.0.0",
+        auth: validateAuth(
+          {
+            path: "smithable.auth.yml",
+            text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home, dishes], read: [Dish] }\n",
+          },
+          site,
+        ).auth as AuthIR,
+        content: texts,
+        ux: validateUx({ path: "smithable.ux.yml", text: uxText }, site).ux,
+      }).find((f) => f.path === "src/routes/index.tsx")?.content ?? ""
+    );
+  };
+  const looked = page(
+    "smithableUx: 0.1\npages:\n  home:\n    sections: { dishes: { layout: grid, columns: 6 }, faq: { layout: list, columns: 2 }, gallery: { columns: 5 } }\n",
+  );
+  expect(looked).toContain('eyebrow="Open daily"');
+  expect(looked).toContain('eyebrow="Popular dishes"');
+  // The FAQ has no eyebrow in the content file, so it gets none.
+  expect(looked.match(/eyebrow=/g)).toHaveLength(2);
+  expect(looked).toContain("columns={6}");
+  expect(looked).toContain("columns={2}");
+  expect(looked).toContain("columns={5}");
+  // Nothing said: no columns, and the kit keeps its own (cards 3, grid 4, gallery 3, FAQ 1).
+  expect(page("smithableUx: 0.1\n")).not.toContain("columns=");
+});

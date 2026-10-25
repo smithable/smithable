@@ -29,7 +29,7 @@ export const STACK_PROFILE = {
   markdown: { "react-markdown": "10.1.0" },
   /**
    * Self-hosted fonts, every one under the SIL Open Font License 1.1 (OFL-1.1): every app has
-   * the seven, and imports the ones its theme uses (body and headings).
+   * the eight, and imports the ones its theme uses (body and headings).
    */
   fonts: {
     "@fontsource-variable/inter": "5.3.0", // OFL-1.1, Rasmus Andersson
@@ -39,6 +39,7 @@ export const STACK_PROFILE = {
     "@fontsource-variable/fraunces": "5.3.0", // OFL-1.1, Undercase Type
     "@fontsource-variable/archivo-narrow": "5.3.0", // OFL-1.1, Omnibus-Type
     "@fontsource-variable/dm-sans": "5.3.0", // OFL-1.1, Colophon Foundry
+    "@fontsource-variable/outfit": "5.3.0", // OFL-1.1, Rodrigo Fuenzalida
   },
   /**
    * Security fixes for dependencies of dependencies, kept in the project's pnpm-workspace.yaml

@@ -64,3 +64,25 @@ test("a dark site, unreadable gray text, no buttons, an unknown font", () => {
     ]),
   );
 });
+
+test("a hosted font by its own name, and headings in another one, keep their names", () => {
+  const { text } = themeFromLook(
+    "https://bistro.example/",
+    "bistro",
+    look({ bodyFont: "DM Sans Variable", headingFont: "Fraunces Variable" }),
+    look({}),
+    "2026-10-25",
+  );
+  const theme = parseTheme({ path: "themes/bistro.yml", text }).theme;
+  expect(theme?.font).toBe("DM Sans");
+  expect(theme?.style.headingFont).toBe("Fraunces");
+  const outfit = themeFromLook(
+    "https://o.example/",
+    "o",
+    look({ bodyFont: "Outfit" }),
+    undefined,
+    "2026-10-25",
+  );
+  expect(outfit.text).toContain("font: Outfit");
+  expect(outfit.text).not.toContain("fonts:");
+});

@@ -27,11 +27,17 @@ export interface Look {
 
 /** Runs in the page (as text: the CLI has no DOM types): the look of what is on screen. */
 const SAMPLE = `(() => {
+  // Any CSS color (rgb, Tailwind 4's oklch, color-mix, …) through a one-pixel canvas.
+  const pixel = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
   const parse = (c) => {
-    const m = c.match(/rgba?\\(([^)]+)\\)/);
-    if (!m) return null;
-    const [r, g, b, a = 1] = m[1].split(/[\\s,/]+/).filter(Boolean).map(Number);
-    return a < 0.5 ? null : [r, g, b];
+    if (!c || c === "transparent") return null;
+    pixel.clearRect(0, 0, 1, 1);
+    // Clear first: a color the canvas cannot read leaves this, and reads as none.
+    pixel.fillStyle = "rgba(0, 0, 0, 0)";
+    pixel.fillStyle = c;
+    pixel.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = pixel.getImageData(0, 0, 1, 1).data;
+    return a < 128 ? null : [r, g, b];
   };
   const hex = (rgb) => "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
   const visible = (el) => {
@@ -61,14 +67,17 @@ const SAMPLE = `(() => {
     return el ? [[hex(backgroundOf(el)), 1]] : [];
   }));
   scrollTo(0, 0);
-  const background = backgrounds[0] ?? "#ffffff";
+  // The page's own background when it says one; bands and pictures over it are its sections'.
+  const own = parse(getComputedStyle(document.body).backgroundColor) ?? parse(getComputedStyle(document.documentElement).backgroundColor);
+  const background = own ? hex(own) : backgrounds[0] ?? "#ffffff";
   const texts = [...document.querySelectorAll("p, li, td, dd, blockquote")].filter(visible);
   const foreground = tally(texts.flatMap((el) => {
     const c = parse(getComputedStyle(el).color);
     return c ? [[hex(c), el.textContent.trim().length]] : [];
   }))[0] ?? null;
   const chroma = ([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b);
-  const buttons = [...document.querySelectorAll('button, [role="button"], input[type="submit"], a[class*="btn"], a[class*="button"], a[class*="cta"]')]
+  // Links styled as buttons count too: any link with a fill of its own.
+  const buttons = [...document.querySelectorAll('button, [role="button"], input[type="submit"], a')]
     .filter(visible)
     .flatMap((el) => {
       const s = getComputedStyle(el);
@@ -109,8 +118,26 @@ const SAMPLE = `(() => {
   };
 })()`;
 
+/**
+ * Switches a page's dark mode on the way most class-switched sites do (Tailwind's `.dark` on
+ * <html>, or `data-theme="dark"`), with transitions off so the colors read are the final ones.
+ */
+const DARK_CLASS = `(() => {
+  const style = document.createElement("style");
+  style.textContent = "*, *::before, *::after { transition: none !important; }";
+  document.head.append(style);
+  document.documentElement.classList.add("dark");
+  document.documentElement.setAttribute("data-theme", "dark");
+})()`;
+
 /** The fonts a theme may name, and which families each stands in for. */
 const FONT_MATCHES: [string, RegExp][] = [
+  // A hosted font by its own name first ("DM Sans Variable" too), so a site in DM Sans keeps it.
+  ["DM Sans", /^dm sans/i],
+  ["Outfit", /^outfit|urbanist|plus jakarta|jost|sora/i],
+  ["Fraunces", /^fraunces/i],
+  ["Source Serif 4", /^source serif/i],
+  ["Archivo Narrow", /^archivo narrow/i],
   [
     "Nunito Sans",
     /nunito|quicksand|varela|comfortaa|poppins|rubik|mulish|manrope|dm sans|lexend|rounded/i,
@@ -207,7 +234,12 @@ export function themeFromLook(
   const source = base ?? (other as Look);
   if (source.radius == null) notes.push("No buttons, cards or fields to read corners from; 8px.");
   const family = source.bodyFont;
-  const font = FONT_MATCHES.find(([, pattern]) => family && pattern.test(family))?.[0];
+  const match = (name: string | null) =>
+    FONT_MATCHES.find(([, pattern]) => name && pattern.test(name))?.[0];
+  const font = match(family);
+  // Headings in another font of their own, such as Fraunces over a sans body, keep it.
+  const heading = match(source.headingFont);
+  const headingFont = heading && heading !== (font ?? "Inter") ? heading : undefined;
   if (!font && family)
     notes.push(
       `The site's font "${family}" has no near match among the hosted fonts; using Inter.`,
@@ -234,7 +266,13 @@ export function themeFromLook(
     return `# From ${cleanUrl}, read ${today} by smithable theme --from.
 smithableTheme: 0.1
 name: ${name}
-font: ${font ?? "Inter"}                  # the site's: ${cleanFamily ?? "unknown"}${cleanHeading && cleanHeading !== cleanFamily ? `, headings ${cleanHeading}` : ""}
+${
+  headingFont
+    ? `fonts:
+  body: ${font ?? "Inter"}                # the site's: ${cleanFamily ?? "unknown"}
+  heading: ${headingFont}             # the site's: ${cleanHeading}`
+    : `font: ${font ?? "Inter"}                  # the site's: ${cleanFamily ?? "unknown"}${cleanHeading && cleanHeading !== cleanFamily ? `, headings ${cleanHeading}` : ""}`
+}
 radius: ${source.radius ?? 8}px
 shadow: ${source.shadowShare > 0.5 ? "soft" : "none"}
 light:
@@ -346,6 +384,12 @@ export async function themeFrom(
     };
     light = await read("light");
     dark = await read("dark");
+    // No dark mode by the system setting: a page with a switch keeps it as a class on <html>.
+    if (dark.background === light.background) {
+      await page.evaluate(DARK_CLASS);
+      const switched = (await page.evaluate(SAMPLE)) as Look;
+      if (switched.background !== light.background) dark = switched;
+    }
   } catch (error) {
     io.err(`${url.href} could not be read (${(error as Error).message.split("\n")[0]}).\n`);
     return 1;

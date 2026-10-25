@@ -13,6 +13,7 @@ export const FONTS = [
   "Fraunces",
   "Archivo Narrow",
   "DM Sans",
+  "Outfit",
 ] as const;
 
 /** Each font's weights, lightest and heaviest (its variable axis): a heading weight outside them is
@@ -25,6 +26,7 @@ export const FONT_WEIGHTS: Record<(typeof FONTS)[number], readonly [number, numb
   Fraunces: [100, 900],
   "Archivo Narrow": [400, 700],
   "DM Sans": [100, 1000],
+  Outfit: [100, 900],
 };
 
 /** Faces made for large type: fine for a page title, a note at a small scale (theme-fit.ts). */
@@ -41,6 +43,8 @@ export interface ThemeStyle {
     scale: "small" | "regular" | "large";
     /** Section titles and labels in capitals. */
     case: "none" | "upper";
+    /** A section's heading block (the line over the title, the title, its lead): at the start, or centered. */
+    align: "start" | "center";
   };
   surfaces: {
     /** A card: the background alone, a border, or a shadow. */
@@ -61,7 +65,7 @@ export interface ThemeStyle {
 
 /** Today's modern shape: what a theme that says nothing looks like. */
 export const DEFAULT_STYLE: ThemeStyle = {
-  headings: { weight: 700, tracking: "tight", scale: "regular", case: "none" },
+  headings: { weight: 700, tracking: "tight", scale: "regular", case: "none", align: "start" },
   surfaces: { cards: "bordered", sections: "open", dividers: "light" },
   buttons: { shape: "rounded", weight: "regular" },
   pictures: { corners: "theme", frame: "none" },
@@ -74,6 +78,7 @@ export const STYLE_VALUES = {
     tracking: ["tight", "normal", "wide"],
     scale: ["small", "regular", "large"],
     case: ["none", "upper"],
+    align: ["start", "center"],
   },
   surfaces: {
     cards: ["flat", "bordered", "raised"],

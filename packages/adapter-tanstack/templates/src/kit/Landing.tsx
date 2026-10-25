@@ -290,8 +290,30 @@ const sectionHooks = (texts: string | undefined) => ({
 const mark = (texts: string | undefined, key: string) =>
   texts ? textMarker(`${texts}.${key}`) : {};
 
+/**
+ * A section's heading block (its eyebrow, title and lead) at the start or centered, as the
+ * theme's headings.align says (--heading-align); a narrower block under it (the lead, a FAQ)
+ * moves to the middle with it (--heading-inline).
+ */
+const ALIGN = "[text-align:var(--heading-align,start)]";
+const INLINE = "[margin-inline:var(--heading-inline,0)]";
+
+/** The short line over a section's title, in the primary color. */
+function Eyebrow({ texts, children }: { texts?: string; children: string }) {
+  return (
+    <p
+      data-part="eyebrow"
+      className={cn("mb-2 text-sm font-semibold tracking-wide text-primary uppercase", ALIGN)}
+      {...mark(texts, "eyebrow")}
+    >
+      {children}
+    </p>
+  );
+}
+
 function SectionView({
   texts,
+  eyebrow,
   id,
   title,
   text,
@@ -302,6 +324,8 @@ function SectionView({
   text?: string;
   children: React.ReactNode;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
 }) {
   return (
     <section
@@ -309,17 +333,24 @@ function SectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-12"
     >
+      {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
           id={`${id}-title`}
-          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]"
+          className={cn(
+            "text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(2rem*var(--heading-scale))]",
+            ALIGN,
+          )}
           {...mark(texts, "title")}
         >
           {title}
         </h2>
       )}
       {text && (
-        <p className="mt-3 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "text")}>
+        <p
+          className={cn("mt-3 max-w-2xl text-lg text-muted-foreground", ALIGN, INLINE)}
+          {...mark(texts, "text")}
+        >
           {text}
         </p>
       )}
@@ -331,6 +362,7 @@ function SectionView({
 /** A text section: a heading and paragraphs (a blank line between them in the content file). */
 function TextSectionView({
   texts,
+  eyebrow,
   id,
   title,
   text,
@@ -339,6 +371,8 @@ function TextSectionView({
   title?: string;
   text?: string;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Our story"). */
+  eyebrow?: string;
 }) {
   return (
     <section
@@ -346,17 +380,22 @@ function TextSectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       className="mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) bg-(--section-background) px-5 py-10"
     >
+      {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
           id={`${id}-title`}
-          className="text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)]"
+          className={cn(
+            "text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)]",
+            ALIGN,
+          )}
           {...mark(texts, "title")}
         >
           {title}
         </h2>
       )}
+      {/* The paragraphs read from the start; their column moves to the middle with the heading. */}
       {text && (
-        <div className="mt-3 max-w-2xl space-y-3 text-lg" {...mark(texts, "text")}>
+        <div className={cn("mt-3 max-w-2xl space-y-3 text-lg", INLINE)} {...mark(texts, "text")}>
           {text.split(/\n\s*\n/).map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
@@ -376,6 +415,7 @@ export interface LandingImage {
 
 function HeroView({
   texts,
+  eyebrow,
   title,
   subtitle,
   link,
@@ -401,6 +441,8 @@ function HeroView({
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
+  /** A short line over the title, e.g. who the app is for ("For small studios"). */
+  eyebrow?: string;
 }) {
   const after = useId();
   // A link to where the next section starts, so it works by keyboard and without JavaScript.
@@ -435,6 +477,16 @@ function HeroView({
   );
   const text = (
     <div>
+      {/* In the hero's own text color, so it reads on a picture and on the cover's wash too. */}
+      {eyebrow && (
+        <p
+          data-part="eyebrow"
+          className="mb-4 text-sm font-semibold tracking-wide uppercase opacity-90"
+          {...mark(texts, "eyebrow")}
+        >
+          {eyebrow}
+        </p>
+      )}
       <h1
         className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
         {...mark(texts, "title")}
@@ -469,7 +521,8 @@ function HeroView({
     );
   // Across the width: the primary washes over the picture where the text is, so the text keeps
   // the theme's own contrast (primary against its foreground), checked like the rest; on a phone,
-  // where the text spans the picture, the wash is nearly solid.
+  // where the text spans the picture, the wash is nearly solid. Dark mode's primary is a light
+  // one, so there the wash is the dark background tinted with it and the text is the page's own.
   if (layout === "cover")
     return (
       <>
@@ -484,11 +537,15 @@ function HeroView({
           />
           <div
             aria-hidden
-            className="absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10"
+            className={cn(
+              "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
+              "[--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10",
+            )}
           />
           <div
             className={cn(
               "mx-auto max-w-6xl px-5 py-24 text-primary-foreground sm:py-32 [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90",
+              "dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
               shortcutList && "pb-28 sm:pb-36",
             )}
           >
@@ -576,8 +633,39 @@ function HeroView({
   );
 }
 
+/**
+ * Cards side by side on wide screens (features, records as cards), by columns. Written out in
+ * full: Tailwind makes only the classes it finds in the source.
+ */
+const CARD_COLUMNS = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+  5: "sm:grid-cols-3 lg:grid-cols-5",
+  6: "sm:grid-cols-3 lg:grid-cols-6",
+};
+
+/** Pictures side by side (records as a grid), two on a phone. */
+const PICTURE_COLUMNS = {
+  2: "",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-3 lg:grid-cols-4",
+  5: "sm:grid-cols-3 lg:grid-cols-5",
+  6: "sm:grid-cols-4 lg:grid-cols-6",
+};
+
+/** A gallery's pictures side by side, two on a phone. */
+const GALLERY_COLUMNS = {
+  2: "",
+  3: "md:grid-cols-3",
+  4: "md:grid-cols-3 lg:grid-cols-4",
+  5: "md:grid-cols-3 lg:grid-cols-5",
+  6: "md:grid-cols-4 lg:grid-cols-6",
+};
+
 function FeaturesView({
   texts,
+  eyebrow,
   title,
   text,
   items,
@@ -586,18 +674,15 @@ function FeaturesView({
   title?: string;
   text?: string;
   items: { title?: string; text?: string }[];
-  /** Items side by side on wide screens: 2, 3 or 4. */
-  columns?: 2 | 3 | 4;
+  /** Items side by side on wide screens: 2 to 6. */
+  columns?: 2 | 3 | 4 | 5 | 6;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Why us"). */
+  eyebrow?: string;
 }) {
-  const grid = {
-    2: "sm:grid-cols-2",
-    3: "sm:grid-cols-2 lg:grid-cols-3",
-    4: "sm:grid-cols-2 lg:grid-cols-4",
-  }[columns];
   return (
-    <Section id="features" texts={texts} title={title} text={text}>
-      <ul className={cn("grid gap-4", grid)}>
+    <Section id="features" texts={texts} eyebrow={eyebrow} title={title} text={text}>
+      <ul className={cn("grid gap-4", CARD_COLUMNS[columns])}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
             <Card className="h-full space-y-2 p-card">
@@ -622,11 +707,13 @@ function FeaturesView({
 /** Records shown as cards, e.g. the classes a studio offers. */
 function RecordCardsView({
   texts,
+  eyebrow,
   id,
   title,
   text,
   cards,
   layout = "cards",
+  columns,
   icon,
   door,
 }: {
@@ -648,9 +735,13 @@ function RecordCardsView({
   }[];
   /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
   layout?: "cards" | "list" | "grid";
+  /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list has none. */
+  columns?: 2 | 3 | 4 | 5 | 6;
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Popular dishes"). */
+  eyebrow?: string;
   /**
    * A catalog's door: a search box and filter chips that open the model's list (`to`) with
    * the same address state, e.g. /?q=sofa or /?category=furniture.
@@ -704,7 +795,7 @@ function RecordCardsView({
     </>
   );
   return (
-    <Section id={id} texts={texts} title={title} text={text}>
+    <Section id={id} texts={texts} eyebrow={eyebrow} title={title} text={text}>
       {door && (
         <div data-part="door" className="mb-8 space-y-4">
           {door.search && (
@@ -757,7 +848,7 @@ function RecordCardsView({
           ))}
         </ul>
       ) : layout === "grid" ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className={cn("grid grid-cols-2 gap-3", PICTURE_COLUMNS[columns ?? 4])}>
           {cards.map((card) => (
             <li key={card.key} className="relative">
               <figure className="space-y-2">
@@ -771,7 +862,7 @@ function RecordCardsView({
           ))}
         </ul>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className={cn("grid gap-4", CARD_COLUMNS[columns ?? 3])}>
           {cards.map((card) => (
             <li key={card.key}>
               <Card
@@ -796,6 +887,7 @@ function RecordCardsView({
 
 function PricingView({
   texts,
+  eyebrow,
   title,
   text,
   plans,
@@ -816,11 +908,13 @@ function PricingView({
   }[];
   link?: LandingLink;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Plans"). */
+  eyebrow?: string;
 }) {
   const forward = (name?: string) =>
     Boolean(highlight && name && name.trim().toLowerCase() === highlight.trim().toLowerCase());
   return (
-    <Section id="pricing" texts={texts} title={title} text={text}>
+    <Section id="pricing" texts={texts} eyebrow={eyebrow} title={title} text={text}>
       <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, i) => (
           <li key={plan.name}>
@@ -884,6 +978,7 @@ function PricingView({
 
 function TestimonialsView({
   texts,
+  eyebrow,
   title,
   items,
   layout = "cards",
@@ -893,6 +988,8 @@ function TestimonialsView({
   /** cards: side by side; carousel: a row that scrolls sideways; one: the first quote, large. */
   layout?: "cards" | "carousel" | "one";
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Reviews"). */
+  eyebrow?: string;
 }) {
   const quote = (item: (typeof items)[number], i: number, large = false) => (
     <figure className={cn("space-y-4", large && "mx-auto max-w-3xl text-center")}>
@@ -913,7 +1010,7 @@ function TestimonialsView({
   );
   const first = items[0];
   return (
-    <Section id="testimonials" texts={texts} title={title}>
+    <Section id="testimonials" texts={texts} eyebrow={eyebrow} title={title}>
       {layout === "one" && first ? (
         quote(first, 0, true)
       ) : (
@@ -947,20 +1044,32 @@ function TestimonialsView({
 /** Questions that open in place; the browser handles the keyboard and the expanded state. */
 function FaqView({
   texts,
+  eyebrow,
   title,
   items,
   layout = "accordion",
+  columns = 1,
 }: {
   title?: string;
   items: { question?: string; answer?: string }[];
   /** accordion: answers open on a click; list: every answer shown. */
   layout?: "accordion" | "list";
+  /** The list's questions side by side on wide screens: 1 or 2. */
+  columns?: 1 | 2;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Questions"). */
+  eyebrow?: string;
 }) {
   if (layout === "list")
     return (
-      <Section id="faq" texts={texts} title={title}>
-        <dl className="max-w-3xl space-y-6">
+      <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
+        <dl
+          className={
+            columns === 2
+              ? "grid gap-x-10 gap-y-6 md:grid-cols-2"
+              : cn("max-w-3xl space-y-6", INLINE)
+          }
+        >
           {items.map((item, i) => (
             <div key={item.question}>
               <dt className="font-semibold" {...mark(texts, `items.${i}.question`)}>
@@ -975,8 +1084,8 @@ function FaqView({
       </Section>
     );
   return (
-    <Section id="faq" texts={texts} title={title}>
-      <div className="max-w-3xl divide-y border-y">
+    <Section id="faq" texts={texts} eyebrow={eyebrow} title={title}>
+      <div className={cn("max-w-3xl divide-y border-y", INLINE)}>
         {items.map((item, i) => (
           <details key={item.question} className="group">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
@@ -1043,6 +1152,7 @@ function CallToActionView({
  */
 function ContactView({
   texts,
+  eyebrow,
   title,
   text,
   address,
@@ -1065,6 +1175,8 @@ function ContactView({
    */
   form?: (sent: () => void, human: () => boolean) => React.ReactNode;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Visit us"). */
+  eyebrow?: string;
 }) {
   const [sent, setSent] = useState(false);
   const trap = useRef<HTMLInputElement>(null);
@@ -1137,6 +1249,7 @@ function ContactView({
     <Section
       id="contact"
       texts={texts}
+      eyebrow={eyebrow}
       title={title ?? (form ? w.contactUs : undefined)}
       text={text}
     >
@@ -1176,14 +1289,20 @@ function ContactView({
 /** Pictures in a grid; one opens large in a lightbox, with the arrow keys to move on. */
 function GalleryView({
   texts,
+  eyebrow,
   title,
   text,
   items,
+  columns = 3,
 }: {
   title?: string;
   text?: string;
   items: { image?: LandingImage; caption?: string }[];
+  /** Pictures side by side on wide screens: 2 to 6. */
+  columns?: 2 | 3 | 4 | 5 | 6;
   texts?: string;
+  /** A short line over the title, e.g. what the section is ("Our rooms"). */
+  eyebrow?: string;
 }) {
   const pictures = items.filter((i): i is { image: LandingImage; caption?: string } =>
     Boolean(i.image),
@@ -1193,8 +1312,8 @@ function GalleryView({
   const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
   const current = pictures[open];
   return (
-    <Section id="gallery" texts={texts} title={title} text={text}>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+    <Section id="gallery" texts={texts} eyebrow={eyebrow} title={title} text={text}>
+      <ul className={cn("grid grid-cols-2 gap-3", GALLERY_COLUMNS[columns])}>
         {pictures.map((item, i) => (
           <li key={item.image.src}>
             <figure>
@@ -1293,6 +1412,7 @@ function GalleryView({
 
 /** The keys whose texts a person reads: those go through tx; addresses, records and markers do not. */
 const TEXT_KEYS = new Set([
+  "eyebrow",
   "title",
   "subtitle",
   "text",
