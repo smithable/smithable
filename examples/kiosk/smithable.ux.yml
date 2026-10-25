@@ -8,6 +8,9 @@ tones:
   Order.status: { new: warning, accepted: neutral, ready: success, collected: neutral, declined: danger }
 
 pages:
+  where:
+    sections:
+      stops: { layout: list, band: inverse }   # the week's stops as rows on the dark band, a chalkboard's
   orders:
     table:
       columns: [number, name, status, wanted, total]

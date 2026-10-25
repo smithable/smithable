@@ -24,7 +24,7 @@ pages:
   home:
     route: /welcome
     landing:
-      hero: { button: catalog }
+      hero: { button: catalog, secondButton: myItems }
       latest: { records: Item, search: true, filters: [category], limit: 6 }
       footer: {}
   catalog:

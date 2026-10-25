@@ -7,9 +7,12 @@ theme:
 pages:
   home:
     sections:
-      hero: { layout: cover }          # the picture across the width, the text on the theme's color
+      hero: { layout: photo }          # the picture across the window, the text on a dark scrim
       classes: { layout: cards }
-      faq: { layout: accordion }
+      estimate: { band: muted }        # every second section on the muted band, as a club's site
+      faq: { layout: accordion, band: muted }
+      callToAction: { band: primary }
+      contact: { band: muted }
   # The members' pages in the site frame, for staff too (page-sections.md §4).
   schedule: { frame: site }
   my-bookings: { frame: site }

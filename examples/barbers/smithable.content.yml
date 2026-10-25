@@ -16,8 +16,10 @@ pages:
       subtitle: Two barbers, two chairs, a short walk from the western harbour. Choose a service and a barber, then a free time. We confirm by mail, usually within the hour on a working day.
       button: Book a time
     services:
+      eyebrow: What we do
       title: Services
     barbers:
+      eyebrow: Meet the team
       title: The barbers
   appointments:
     title: Appointments

@@ -8,6 +8,9 @@ tones:
   Appointment.status: { requested: warning, confirmed: success, cancelled: neutral }
 
 pages:
+  home:
+    sections:
+      barbers: { band: inverse }       # the team on the dark band, as a barbershop's sign
   appointments:
     table:
       columns: [startsAt, service, barber, name, status]
