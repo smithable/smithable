@@ -60,9 +60,12 @@ export const PAGE_GENERATORS: {
   },
   dashboard: {
     kit: ["src/kit/Dashboard.tsx", "src/kit/aggregate.ts"],
-    routes: (page, { ir, t, ux }) => ({
-      "index.tsx": dashboardRoute(page, page.pattern.items, ir, t, ux),
-    }),
+    routes: (page, { ir, t, ux, options }) => {
+      const custom = options.customPages?.includes(page.id) ?? false;
+      return {
+        "index.tsx": dashboardRoute(page, page.pattern.items, ir, t, ux, custom),
+      };
+    },
   },
   settings: {
     routes: (page, { ir, t, auth }) => ({

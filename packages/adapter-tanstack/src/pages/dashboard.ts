@@ -29,13 +29,13 @@ import {
  * A dashboard: its numbers are worked out in a server function from the records the viewer
  * may read, so they follow the same access rules as the lists.
  */
-export function dashboardRoute(
+export function dashboardParts(
   page: PageIR,
   items: DashboardItem[],
   ir: SpecIR,
   t: Texts,
   ux: UxIR,
-): string {
+) {
   const component = `${pascal(page.id)}Page`;
   const fn = `get${pascal(page.id)}`;
   const route = importList()
@@ -44,7 +44,10 @@ export function dashboardRoute(
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "guardPage")
     .add("#/lib/viewer.server", "currentViewer");
-  const view = importList().add("#/generated/app", "app").add("#/kit/AppShell", "PageHeader");
+  const view = importList()
+    .add("#/generated/app", "app")
+    .add("#/generated/pages", "pageUi")
+    .add("#/kit/AppShell", "PageHeader");
   const rowsOf = (model: string) => camel(plural(model));
   // A query reads its own records; the other tiles share one list per model.
   const models = [...new Set(items.filter((i) => !i.query).map((i) => i.model))];
@@ -143,21 +146,20 @@ export function dashboardRoute(
       : (g.codes[0] as string),
   );
   const navigate = tiles.some((tile) => tile.block === "list");
-  return `${HEADER}${route.merge(view).render()}
-const ${fn} = createServerFn().handler(async () => {
+  const serverFn = `const ${fn} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
 ${models.map((name) => `  const ${rowsOf(name)} = await ${names(modelNamed(ir, name), t).data}.list(viewer);`).join("\n")}
   return {
 ${values.map((v) => `    ${v},`).join("\n")}
   };
-});
+});`;
 
-export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
+  const routeDef = `export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => ${fn}(),
   component: ${component},
-});
+});`;
 
-function ${component}() {
+  const body = `function ${component}() {
   const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
   return (
     <>
@@ -167,6 +169,35 @@ function ${component}() {
       </div>
     </>
   );
+}`;
+
+  return { component, path: indexPath(page.route), route, view, serverFn, routeDef, body };
 }
+
+export function dashboardRoute(
+  page: PageIR,
+  items: DashboardItem[],
+  ir: SpecIR,
+  t: Texts,
+  ux: UxIR,
+  custom = false,
+): string {
+  const p = dashboardParts(page, items, ir, t, ux);
+  if (custom) {
+    p.route.add(`#/custom/pages/${page.id}`, p.component);
+    return `${HEADER}// The page itself is src/custom/pages/${page.id}.tsx, which is yours.
+${p.route.render()}
+${p.serverFn}
+
+${p.routeDef}
+`;
+  }
+
+  return `${HEADER}${p.route.merge(p.view).render()}
+${p.serverFn}
+
+${p.routeDef}
+
+${p.body}
 `;
 }

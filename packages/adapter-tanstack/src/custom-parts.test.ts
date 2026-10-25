@@ -7,6 +7,7 @@ import {
 } from "@smithable/core";
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
+import { customPageFromEdit, customPageSource } from "./pages/custom.js";
 
 test("a page and a section of your own: a generated route around a component created once", () => {
   const ir = validateSpec({
@@ -42,4 +43,36 @@ test("a page and a section of your own: a generated route around a component cre
     "export function RepaymentChart({ name, texts, title, text }: CustomSectionProps)",
   );
   expect(file("src/generated/custom.ts")?.zone).toBe("generated");
+});
+
+test("a dashboard page can be customized from the generated source or a hand-edited route", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Order:\n    fields: { total: money! }\npages:\n  orders: { crud: Order }\n  overview:\n    route: /\n    dashboard:\n      orders: { count: Order }\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const options = { smithableVersion: "0.0.0", auth };
+  const source = customPageSource(ir, "overview", options);
+  expect(source).toContain('const route = getRouteApi("/");');
+  expect(source).toContain('import { pageUi } from "#/generated/pages";');
+  expect(source).toContain("export function OverviewPage()");
+  expect(source).toContain("route.useLoaderData()");
+
+  const generated =
+    generateApp(ir, options).find((f) => f.path === "src/routes/index.tsx")?.content ?? "";
+  const edited = generated.replace("<PageHeader", '<div className="banner" /><PageHeader');
+  const moved = customPageFromEdit(ir, "overview", options, edited);
+  expect(moved.ok).toBe(true);
+  if (moved.ok) {
+    expect(moved.source).toContain('const route = getRouteApi("/");');
+    expect(moved.source).toContain('import { pageUi } from "#/generated/pages";');
+    expect(moved.source).toContain("export function OverviewPage()");
+    expect(moved.source).toContain('<div className="banner" />');
+  }
 });

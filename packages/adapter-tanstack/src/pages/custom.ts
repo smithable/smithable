@@ -11,6 +11,7 @@ import {
   type Texts,
   texts,
 } from "../shared.js";
+import { dashboardParts, dashboardRoute } from "./dashboard.js";
 import { listParts, listRoute } from "./list.js";
 
 /**
@@ -35,26 +36,31 @@ export function customPageFromEdit(
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
-  const p = listParts(
-    page,
-    crudModel(ir, page),
-    t,
-    ir,
-    options.ux ?? emptyUx(),
-    undefined,
-    options.auth,
-  );
+  const p =
+    page.pattern.kind === "dashboard"
+      ? dashboardParts(page, page.pattern.items, ir, t, options.ux ?? emptyUx())
+      : listParts(
+          page,
+          crudModel(ir, page),
+          t,
+          ir,
+          options.ux ?? emptyUx(),
+          undefined,
+          options.auth,
+        );
   const generatedRoute = routeBlock(
-    listRoute(
-      page,
-      crudModel(ir, page),
-      t,
-      ir,
-      false,
-      options.ux ?? emptyUx(),
-      undefined,
-      options.auth,
-    ),
+    page.pattern.kind === "dashboard"
+      ? dashboardRoute(page, page.pattern.items, ir, t, options.ux ?? emptyUx(), false)
+      : listRoute(
+          page,
+          crudModel(ir, page),
+          t,
+          ir,
+          false,
+          options.ux ?? emptyUx(),
+          undefined,
+          options.auth,
+        ),
   );
   const editedRoute = routeBlock(edited);
   if (
@@ -78,7 +84,7 @@ export function customPageFromEdit(
     .replace(new RegExp(`^function ${p.component}\\(`, "m"), `export function ${p.component}(`);
   // Drop what only the route needs (the component never does), and add getRouteApi.
   const view = p.view.names();
-  const routeOnly = new Set([...p.route.names()].filter((n) => !view.has(n)));
+  const routeOnly = new Set(["pageHead", ...[...p.route.names()].filter((n) => !view.has(n))]);
   code = code.replace(
     /^import \{([^}]*)\} from "([^"]+)";\n/gm,
     (_, list: string, module: string) => {
@@ -103,6 +109,19 @@ export function customPageSource(ir: SpecIR, pageId: string, options: GenerateOp
   const t = texts(options.content ?? emptyContent());
   const page = ir.pages.find((p) => p.id === pageId);
   if (!page) throw new Error(`Unknown page ${pageId}`);
+
+  if (page.pattern.kind === "dashboard") {
+    const p = dashboardParts(page, page.pattern.items, ir, t, options.ux ?? emptyUx());
+    p.view.add("@tanstack/react-router", "getRouteApi");
+    return `// Your version of the "${page.id}" page. Smithable created it from the generated page and never
+// changes it. The route (loading, search, access) stays generated: read its data with \`route\`.
+// If the spec changes the data, TypeScript reports what no longer fits.
+${p.view.render()}
+const route = getRouteApi(${JSON.stringify(p.path)});
+
+export ${p.body.replace("Route.useLoaderData()", "route.useLoaderData()")}`;
+  }
+
   const p = listParts(
     page,
     crudModel(ir, page),
