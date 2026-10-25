@@ -607,9 +607,13 @@ try {
       // maker's, said in its box.
       if ((await map.locator(".react-flow__edge").count()) < 2)
         throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
-      // The line says how the two relate (Johan, 2026-10-23).
+      // The line says how the two relate: UML's marks at its ends, the words as its title (A 165).
       await map
-        .getByText(/· many to one/)
+        .getByText("customer · Customer.orders", { exact: true })
+        .waitFor({ timeout: 10000 * P });
+      await map
+        .getByTitle(/^many to one: /)
+        .filter({ hasText: /^\*$/ })
         .first()
         .waitFor({ timeout: 10000 * P });
       await map
