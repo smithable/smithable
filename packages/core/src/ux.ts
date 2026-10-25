@@ -855,6 +855,7 @@ function checkBands(
           `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
         );
   }
+}
 
 /** A landing page's `header:` in the ux file, checked against HEADER_LOOKS. */
 function readHeaderLook(ctx: ParseContext, node: ParsedNode | null, where: string): HeaderLook {

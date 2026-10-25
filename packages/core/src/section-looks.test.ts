@@ -233,6 +233,7 @@ test("a band whose text would not read on its surface is a warning, in the mode 
     ux("{ features: { band: muted }, items: { band: inverse }, faq: { band: primary } }")
       .diagnostics,
   ).toEqual([]);
+});
 
 test("a landing page's header stays or scrolls: header position, set with setSectionLook home header", () => {
   const read = (text: string) =>

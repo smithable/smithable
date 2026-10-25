@@ -238,7 +238,17 @@ export {
 export { type ThreadBindings, threadBindings } from "./thread.js";
 export { type GroupEdge, looseReferrers, type Referrer, trashGroup } from "./trash-group.js";
 export { writeUniqueScopes } from "./unique-scopes.js";
-export type { Band, Control, HeaderLook, Icon, PageUx, ThemePreset, Tone, UxIR, Voice } from "./ux.js";
+export type {
+  Band,
+  Control,
+  HeaderLook,
+  Icon,
+  PageUx,
+  ThemePreset,
+  Tone,
+  UxIR,
+  Voice,
+} from "./ux.js";
 export {
   BANDS,
   CONTROLS,
