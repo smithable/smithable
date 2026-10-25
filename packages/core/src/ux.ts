@@ -193,15 +193,15 @@ export const SECTION_LOOKS: Partial<
 
 /** How a landing page's header looks; HEADER_LOOKS has its keys and values. */
 export interface HeaderLook {
-  position?: "scrolling" | "sticky";
+  position?: "sticky" | "scrolling";
 }
 
 /**
  * The looks of a landing page's header, as SECTION_LOOKS has a section's: the first value is the
- * header's own. Its position: scrolling (away with the page) or sticky (kept at the top).
+ * header's own. Its position: sticky (kept at the top as the page scrolls) or scrolling (away with it).
  */
 export const HEADER_LOOKS: Record<string, readonly string[]> = {
-  position: ["scrolling", "sticky"],
+  position: ["sticky", "scrolling"],
 };
 
 /** A records section's columns in the grid layout when the ux file does not say (today's four). */

@@ -377,7 +377,7 @@ export const UX_SCHEMA: JsonSchema = {
           header: {
             type: "object",
             description:
-              "A landing page's header's look: its position, scrolling (away with the page, the default) or sticky (kept at the top).",
+              "A landing page's header's look: its position, sticky (kept at the top as the page scrolls, the default) or scrolling (away with the page).",
             additionalProperties: false,
             properties: Object.fromEntries(
               Object.entries(HEADER_LOOKS).map(([option, values]) => [

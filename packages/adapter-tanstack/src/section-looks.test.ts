@@ -136,7 +136,7 @@ test("robots.txt lets search engines read the public pages and nothing else", ()
   expect(robots("")).toContain('const ROBOTS = "User-agent: *\\nDisallow: /\\n";');
 });
 
-test("a landing page's header look is the layout's header prop; without one the layout has none", () => {
+test("a landing page's header look is the layout's header prop; without one the layout has none (sticky, the kit's default)", () => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: "smithable: 0.1\napp: { name: Site }\npages:\n  home:\n    route: /\n    landing:\n      hero:\n      footer:\n",
@@ -157,8 +157,8 @@ test("a landing page's header look is the layout's header prop; without one the 
       )?.content ?? ""
     );
   };
-  expect(route("pages:\n  home: { header: { position: sticky } }\n")).toContain(
-    'header={{ position: "sticky" }}',
+  expect(route("pages:\n  home: { header: { position: scrolling } }\n")).toContain(
+    'header={{ position: "scrolling" }}',
   );
   expect(route("")).not.toContain("header={{");
 });

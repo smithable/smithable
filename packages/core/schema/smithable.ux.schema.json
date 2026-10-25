@@ -487,15 +487,15 @@
           },
           "header": {
             "type": "object",
-            "description": "A landing page's header's look: its position, scrolling (away with the page, the default) or sticky (kept at the top).",
+            "description": "A landing page's header's look: its position, sticky (kept at the top as the page scrolls, the default) or scrolling (away with the page).",
             "additionalProperties": false,
             "properties": {
               "position": {
                 "enum": [
-                  "scrolling",
-                  "sticky"
+                  "sticky",
+                  "scrolling"
                 ],
-                "description": "One of scrolling, sticky; the first is the default."
+                "description": "One of sticky, scrolling; the first is the default."
               }
             }
           },

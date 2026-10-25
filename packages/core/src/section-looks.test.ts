@@ -237,14 +237,14 @@ test("a band whose text would not read on its surface is a warning, in the mode 
 test("a landing page's header stays or scrolls: header position, set with setSectionLook home header", () => {
   const read = (text: string) =>
     validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\npages:\n${text}` }, ir);
-  // Nothing said is today's header, which scrolls away with the page.
+  // Nothing said is the header's own look, the first value: sticky (the kit's default).
   expect(read("  home: { icon: home }\n").ux?.pages.home?.header).toBeUndefined();
-  const sticky = read("  home: { header: { position: sticky } }\n");
-  expect(sticky.diagnostics).toEqual([]);
-  expect(sticky.ux?.pages.home?.header).toEqual({ position: "sticky" });
+  const scrolling = read("  home: { header: { position: scrolling } }\n");
+  expect(scrolling.diagnostics).toEqual([]);
+  expect(scrolling.ux?.pages.home?.header).toEqual({ position: "scrolling" });
   expect(
     read("  home: { header: { position: fixed } }\n").diagnostics.map((d) => d.message),
-  ).toEqual(['"position" of the header of page "home" is one of scrolling, sticky.']);
+  ).toEqual(['"position" of the header of page "home" is one of sticky, scrolling.']);
   expect(read("  home: { header: { size: big } }\n").diagnostics[0]?.message).toContain(
     'Unknown key "size" in the header of page "home"',
   );
@@ -255,10 +255,10 @@ test("a landing page's header stays or scrolls: header position, set with setSec
     page: "home",
     section: "header",
     key: "position",
-    value: "sticky",
+    value: "scrolling",
   });
   if (!set.ok) throw new Error(set.message);
-  expect(set.files.ux).toContain("home:\n    header:\n      position: sticky");
+  expect(set.files.ux).toContain("home:\n    header:\n      position: scrolling");
   const back = applyOperation(set.files, "setSectionLook", {
     page: "home",
     section: "header",
@@ -273,7 +273,7 @@ test("a landing page's header stays or scrolls: header position, set with setSec
       key: "position",
       value: "fixed",
     }),
-  ).toMatchObject({ ok: false, message: '"position" of a header is one of scrolling, sticky.' });
+  ).toMatchObject({ ok: false, message: '"position" of a header is one of sticky, scrolling.' });
   expect(
     applyOperation({ spec }, "setSectionLook", {
       page: "items",
