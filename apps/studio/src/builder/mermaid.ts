@@ -16,7 +16,8 @@ export function dataMermaid(map: { nodes: MapNode[]; edges: MapEdge[] }): string
       `  ${id("m", n.id)}[${text(`${n.id}<br/>${n.fields.length} field${n.fields.length === 1 ? "" : "s"}${n.madeBy ? "<br/>each is its maker's own" : ""}`)}]`,
     );
   for (const e of map.edges) {
-    const label = text(e.kind === "owner" ? `${e.label} (owns it)` : e.label);
+    // The label says whose it is already; how many at each end follows it.
+    const label = text(`${e.label} (${e.ends[0]} to ${e.ends[1]})`);
     lines.push(
       `  ${id("m", e.source)} ${e.kind === "owner" ? "-.->" : "-->"}|${label}| ${id("m", e.target)}`,
     );

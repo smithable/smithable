@@ -56,6 +56,7 @@ Answer with JSON only:
 - {"kind":"answer","text":"…"} for a question about how Smithable works when parts of its docs come with the request: answer from them in one to three sentences and name the page.
 - {"kind":"answer","text":"…"} for a question not about this app or Smithable: one sentence, then lead back with something to change or ask about this app.
 - {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
+The reason is said to the person, as you, in one to three friendly sentences: what cannot be done here, then the nearest thing that can (an operation that comes close, or custom code; a look the app has no setting for is custom CSS in src/custom/styles.css on the kit's hooks, naming the selector, e.g. [data-kit="app-shell"] [data-part="menu"]). When the app already does it by itself (the kit's list below), say so and how, not that it cannot be done.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
 A record belongs to whoever created it. When the request says it belongs to, is handled by or is the responsibility of a person named in the record, that is setOwner with the record's User field (add the field first when there is none); access for "owner" then means that person.
@@ -159,17 +160,22 @@ export function promptFor(
   provider: Pick<Provider, "location">,
   context: ContextSlice,
   plugins?: readonly SpecPlugin[],
+  kit: readonly string[] = [],
 ): { system: string; user: string; operations: AnyOperation[] } {
   const operations = relevantOperations(context.concepts, plugins);
+  // What every app does by itself, in the kit's words (A 163): part of the stable prefix.
+  const system = kit.length
+    ? `${SYSTEM}\n\nWhat every app does by itself (its kit, the same in every app; no operation changes it):\n${kit.map((line) => `- ${line}`).join("\n")}`
+    : SYSTEM;
   if (provider.location === "local") {
     return {
-      system: `${SYSTEM}\n\nOperation arguments:\n${proposable(plugins).map(signature).join("\n")}`,
+      system: `${system}\n\nOperation arguments:\n${proposable(plugins).map(signature).join("\n")}`,
       user: `${context.text}\n\nOperations that fit this request: ${operations.map((o) => o.name).join(", ")}.`,
       operations,
     };
   }
   return {
-    system: SYSTEM,
+    system,
     user: `${context.text}\n\nOperation arguments:\n${operations.map(signature).join("\n")}`,
     operations,
   };
@@ -219,6 +225,8 @@ export async function proposeChange(options: {
   conversation?: { request: string; reply: string }[];
   /** Parts of docs.smithable.ai the person's browser found for a question, to answer from. */
   docs?: { title: string; url: string; text: string }[];
+  /** What every app does by itself, in the kit's words (the adapter's kitSummary). */
+  kit?: readonly string[];
 }): Promise<Proposal> {
   const { files, context, providers } = options;
   const usage: Usage[] = [];
@@ -278,7 +286,7 @@ export async function proposeChange(options: {
   const docs = (options.docs ?? []).map((d) => `${d.title} (${d.url}): ${d.text}`).join("\n");
   const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${docs ? `\n\nFrom Smithable's docs:\n${docs}` : ""}`;
   for (const [index, provider] of providers.entries()) {
-    const prompted = promptFor(provider, context, files.plugins);
+    const prompted = promptFor(provider, context, files.plugins, options.kit);
     const { system, operations } = prompted;
     const user = prompted.user + around;
     const schema = answerSchema(operations);

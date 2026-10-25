@@ -14,7 +14,7 @@ export const WINDOW_NAMES: Record<SlotContent, string> = {
   nocode: "No code",
   code: "Code",
   preview: "Preview",
-  smith: "Ask agent Smith",
+  smith: "Smith",
   changes: "Changes",
   "smith+changes": "Smith, with Changes under it",
 };
@@ -255,12 +255,12 @@ export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => voi
   const [settings, setSettings] = useState<PhoneSettings>(() => {
     try {
       return {
-        code: false,
+        code: true,
         changesUnderSmith: true,
         ...JSON.parse(localStorage.getItem(PHONE) ?? "{}"),
       };
     } catch {
-      return { code: false, changesUnderSmith: true };
+      return { code: true, changesUnderSmith: true };
     }
   });
   useEffect(() => {
@@ -271,7 +271,7 @@ export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => voi
   return [settings, setSettings];
 }
 
-/** A phone's main windows, in their order: No code, Preview, Smith, then Changes and Code if set. */
+/** A phone's main windows, in their order: No code, Preview, Smith, then Changes and Code as set (Code by default: every part is in the header from the start, A 161). */
 export const phoneWindows = (s: PhoneSettings): WindowId[] => [
   "nocode",
   "preview",

@@ -607,9 +607,13 @@ try {
       // maker's, said in its box.
       if ((await map.locator(".react-flow__edge").count()) < 2)
         throw new Error(`${await map.locator(".react-flow__edge").count()} arrows on the map`);
-      // The line says how the two relate (Johan, 2026-10-23).
+      // The line says how the two relate: UML's marks at its ends, the words as its title (A 165).
       await map
-        .getByText(/· many to one/)
+        .getByText("customer · Customer.orders", { exact: true })
+        .waitFor({ timeout: 10000 * P });
+      await map
+        .getByTitle(/^many to one: /)
+        .filter({ hasText: /^\*$/ })
         .first()
         .waitFor({ timeout: 10000 * P });
       await map
@@ -1046,7 +1050,7 @@ try {
     async () => {
       const before = (await project()).files.spec;
       await page.getByLabel("Describe a change").fill("Hi");
-      await page.getByRole("button", { name: "Make the change" }).click();
+      await page.getByRole("button", { name: "Send", exact: true }).click();
       await page
         .getByRole("list", { name: "Thread" })
         .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
@@ -1061,7 +1065,7 @@ try {
   await step("a question about the app is answered from the spec, not applied", async () => {
     const before = (await project()).files.spec;
     await page.getByLabel("Describe a change").fill("Who can add orders?");
-    await page.getByRole("button", { name: "Make the change" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
     await page.getByText("Admins can add orders.").waitFor({ timeout: 30000 * P });
     // A question is looked up in the docs too: what they say, or that they cannot be reached.
     await page.getByRole("region", { name: "From the docs" }).waitFor({ timeout: 30000 * P });
@@ -1071,7 +1075,7 @@ try {
     "a change that deletes data is proposed first, and Discard leaves it in Smith's thread",
     async () => {
       await page.getByLabel("Describe a change").fill("Customers without notes");
-      await page.getByRole("button", { name: "Make the change" }).click();
+      await page.getByRole("button", { name: "Send", exact: true }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("(loses data)").waitFor({ timeout: 30000 * P });
       await proposal.getByRole("button", { name: "Discard" }).click();
@@ -1088,7 +1092,7 @@ try {
       await page
         .getByLabel("Describe a change")
         .fill("A mobile number for every customer would help");
-      await page.getByRole("button", { name: "Make the change" }).click();
+      await page.getByRole("button", { name: "Send", exact: true }).click();
       // Every proposal is shown first and waits for Apply, losing data or not.
       const shown = page.getByRole("region", { name: "Proposal" });
       await shown
@@ -1162,13 +1166,7 @@ try {
       );
       if (await page.getByRole("tab", { name: "Behavior" }).count())
         throw new Error("No code shows beside the preview");
-      // Code is offered on a phone once its settings say so.
-      if (await page.getByRole("radio", { name: "Code", exact: true }).count())
-        throw new Error("Code is offered on a phone by default");
-      await page.getByRole("button", { name: "Phone settings" }).click();
-      const settings = page.getByRole("dialog", { name: "Phone settings" });
-      await settings.getByLabel("Show Code among the windows").check();
-      await settings.getByRole("button", { name: "Done" }).click();
+      // Every part is in a phone's header from the start, Code too (A 161).
       await pick("Code");
       await page.waitForFunction(
         () => {
@@ -1178,12 +1176,12 @@ try {
         null,
         { timeout: 10000 * P },
       );
-      await pick("Ask agent Smith");
+      await pick("Smith");
       await page.getByLabel("Describe a change").waitFor();
       // Changes is under Smith on a phone: its tab beside his.
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();
-      await page.getByRole("tab", { name: "Ask agent Smith", exact: true }).click();
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
       await pick("No code");
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
       await page.setViewportSize({ width: 1920, height: 1000 });
@@ -1224,6 +1222,11 @@ try {
         throw new Error("the preview lost its page when Code came first");
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
       await page.getByRole("radio", { name: "One window" }).check({ force: true });
+      // One window: Preview and Smith are tabs beside No code and Code (A 161).
+      await page.getByRole("checkbox", { name: "Smith", exact: true }).check({ force: true });
+      await page.getByLabel("Describe a change").waitFor();
+      await page.getByRole("checkbox", { name: "Code", exact: true }).check({ force: true });
+      await page.getByRole("region", { name: "Code" }).waitFor();
       await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
       await firstWindow("nocode");

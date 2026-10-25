@@ -6,7 +6,7 @@ import type { Diagnostic } from "@smithable/core";
 import type { SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal, type TraceEntry } from "../api";
-import { Button, Input, Label } from "../ui";
+import { Button, cx, Input } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
 import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search";
@@ -185,7 +185,7 @@ export function Ask({
         next.kind === "answer"
           ? next.text
           : next.kind === "none"
-            ? `No operation can do this: ${next.reason}`
+            ? next.reason
             : next.kind === "failed"
               ? next.message
               : undefined;
@@ -227,131 +227,160 @@ export function Ask({
     }
   };
 
+  // A chat (A 162): the conversation fills the window, oldest first with the newest in view,
+  // the person's words on the right and Smith's on the left; one box at the foot sends.
+  const scroller = useRef<HTMLDivElement>(null);
+  const grown = (trace?.length ?? 0) + said.length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when the conversation grows
+  useEffect(() => {
+    const box = scroller.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [grown, proposal, busy, docs, output, local, waiting.length]);
+  const send = () => {
+    if (!request.trim()) return;
+    if (making)
+      void api.waiting({ add: request.trim() }).then(
+        () => setRequest(""),
+        (error: Error) => setOutput(error.message),
+      );
+    else void propose(followUp(request.trim(), last.current));
+  };
+
   return (
-    <div className="space-y-4 p-4">
-      {trace && <Thread trace={trace} said={said} words={words} />}
+    <div className="flex h-full min-h-0 flex-col">
+      <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+        {trace && <Thread trace={trace} said={said} words={words} />}
+        {ready && !making && !proposal && !request.trim() && (
+          <ReadyPrompts
+            shown={local}
+            ready={ready}
+            onPick={(prompt) => {
+              if (prompt === "add") {
+                setRequest("Help me add ");
+                return;
+              }
+              setLocal(prompt);
+            }}
+          />
+        )}
+        {waiting.length > 0 && (
+          <ul aria-label="Waiting" className="space-y-1">
+            {waiting.map((text, i) => (
+              <li
+                // The same request may wait twice: the text and how many alike came before.
+                key={`${text}#${waiting.slice(0, i).filter((t) => t === text).length}`}
+                className={cx(MINE, "flex items-center gap-2 text-muted")}
+              >
+                <span className="min-w-0 flex-1 truncate">Waiting: {text}</span>
+                <Button
+                  variant="ghost"
+                  className="h-6"
+                  aria-label={`Take back: ${text}`}
+                  onClick={() => void api.waiting({ remove: i }).catch(() => undefined)}
+                >
+                  Take back
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {/* What is being asked now, until it is answered and goes into the thread. */}
+        {(busy || proposal) && request.trim() && <p className={MINE}>{request.trim()}</p>}
+        {busy && !proposal && (
+          <p className={cx(SMITHS, "animate-pulse text-quiet")} aria-hidden="true">
+            …
+          </p>
+        )}
+        {proposal && (
+          <div className="mr-8">
+            <ProposalView
+              proposal={proposal}
+              words={words}
+              busy={busy}
+              onApply={apply}
+              onCancel={() => {
+                if (trace) say(request.trim(), "Discarded.");
+                setProposal(undefined);
+              }}
+              onEdit={onEdit}
+              onOption={(option) => {
+                const detailed = `${request.trim()} (${option})`;
+                setRequest(detailed);
+                void propose(detailed);
+              }}
+              onRefine={(more) => {
+                const detailed = `${request.trim()} (${more})`;
+                setRequest(detailed);
+                void propose(detailed);
+              }}
+            />
+          </div>
+        )}
+        {docs && (
+          <section aria-label="From the docs" className={cx(SMITHS, "space-y-1")}>
+            <h3 className="text-xs font-semibold tracking-wide text-quiet uppercase">
+              From the docs
+            </h3>
+            {docs === "unreachable" ? (
+              <p className="text-muted">The docs are not reachable right now.</p>
+            ) : docs.length === 0 ? (
+              <p className="text-muted">The docs say nothing on this.</p>
+            ) : (
+              docs.map((hit) => (
+                <p key={hit.url}>
+                  <a
+                    href={hit.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent underline"
+                  >
+                    {hit.title}
+                  </a>
+                  <span className="block text-xs text-muted">{hit.line}</span>
+                </p>
+              ))
+            )}
+          </section>
+        )}
+        {output && <p className={SMITHS}>{output}</p>}
+      </div>
       <form
-        className="space-y-2"
+        className="flex shrink-0 items-end gap-2 border-t border-line p-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!request.trim()) return;
-          if (making)
-            void api.waiting({ add: request.trim() }).then(
-              () => setRequest(""),
-              (error: Error) => setOutput(error.message),
-            );
-          else void propose(followUp(request.trim(), last.current));
+          send();
         }}
       >
-        <Label
-          text="Describe a change, or ask a question"
-          hint={
+        <textarea
+          aria-label="Describe a change, or ask a question"
+          placeholder={
             example ??
             "For example: customers should have a mobile number. Or: who can delete orders?"
           }
-        >
-          <textarea
-            value={request}
-            onChange={(e) => setRequest(e.target.value)}
-            rows={2}
-            className="block w-full rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-          />
-        </Label>
+          value={request}
+          onChange={(e) => setRequest(e.target.value)}
+          // Enter sends, as in any chat; Shift-Enter starts a new line.
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            if (!busy) send();
+          }}
+          rows={2}
+          className="block min-w-0 flex-1 resize-none rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
         <Button type="submit" disabled={busy || !request.trim()}>
-          {making
-            ? "Make it once the app is there"
-            : busy && !proposal
-              ? "Working…"
-              : "Make the change"}
+          {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
         </Button>
       </form>
-      {ready && !making && !proposal && !request.trim() && (
-        <ReadyPrompts
-          shown={local}
-          ready={ready}
-          onPick={(prompt) => {
-            if (prompt === "add") {
-              setRequest("Help me add ");
-              return;
-            }
-            setLocal(prompt);
-          }}
-        />
-      )}
-      {waiting.length > 0 && (
-        <ul aria-label="Waiting" className="space-y-1">
-          {waiting.map((text, i) => (
-            <li
-              // The same request may wait twice: the text and how many alike came before.
-              key={`${text}#${waiting.slice(0, i).filter((t) => t === text).length}`}
-              className="flex items-center gap-2 text-sm text-muted"
-            >
-              <span className="min-w-0 flex-1 truncate">Waiting: {text}</span>
-              <Button
-                variant="ghost"
-                className="h-6"
-                aria-label={`Take back: ${text}`}
-                onClick={() => void api.waiting({ remove: i }).catch(() => undefined)}
-              >
-                Take back
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {proposal && (
-        <ProposalView
-          proposal={proposal}
-          words={words}
-          busy={busy}
-          onApply={apply}
-          onCancel={() => {
-            if (trace) say(request.trim(), "Discarded.");
-            setProposal(undefined);
-          }}
-          onEdit={onEdit}
-          onOption={(option) => {
-            const detailed = `${request.trim()} (${option})`;
-            setRequest(detailed);
-            void propose(detailed);
-          }}
-          onRefine={(more) => {
-            const detailed = `${request.trim()} (${more})`;
-            setRequest(detailed);
-            void propose(detailed);
-          }}
-        />
-      )}
-      {docs && (
-        <section aria-label="From the docs" className="space-y-1 text-sm">
-          <h3 className="text-xs font-semibold tracking-wide text-quiet uppercase">
-            From the docs
-          </h3>
-          {docs === "unreachable" ? (
-            <p className="text-muted">The docs are not reachable right now.</p>
-          ) : docs.length === 0 ? (
-            <p className="text-muted">The docs say nothing on this.</p>
-          ) : (
-            docs.map((hit) => (
-              <p key={hit.url}>
-                <a
-                  href={hit.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent underline"
-                >
-                  {hit.title}
-                </a>
-                <span className="block text-xs text-muted">{hit.line}</span>
-              </p>
-            ))
-          )}
-        </section>
-      )}
-      {output && <p className="text-sm text-muted">{output}</p>}
     </div>
   );
 }
+
+/** A message's bubble: the person's on the right, Smith's on the left. */
+const MINE =
+  "ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-sm";
+const SMITHS =
+  "mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-subtle px-3 py-1.5 text-sm";
 
 /**
  * The thread: the change log read as a conversation, oldest first, with what this tab's session
@@ -359,13 +388,14 @@ export function Ask({
  */
 function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; words?: Words }) {
   const lines = threadLines(trace, said, words);
-  if (!lines.length) return <p className="text-sm text-quiet">Nothing asked or changed yet.</p>;
+  // Nothing yet: the greeting opens the conversation.
+  if (!lines.length) return null;
   return (
-    <ol aria-label="Thread" className="space-y-2 text-sm">
+    <ol aria-label="Thread" className="space-y-3">
       {lines.map((line) => (
         <li key={`${line.at}|${line.reply}`} className="space-y-1">
-          {line.request && <p className="ml-6 rounded-md bg-subtle px-2 py-1">{line.request}</p>}
-          <p className="text-muted">{line.reply}</p>
+          {line.request && <p className={MINE}>{line.request}</p>}
+          <p className={SMITHS}>{line.reply}</p>
         </li>
       ))}
     </ol>
@@ -449,7 +479,7 @@ function ReadyPrompts({
   return (
     <div className="space-y-3">
       {/* A greeting by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */}
-      <div className="space-y-1 text-sm">
+      <div className={cx(SMITHS, "space-y-1")}>
         <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
         <p className="text-muted">Perhaps you want to…</p>
       </div>
@@ -467,7 +497,7 @@ function ReadyPrompts({
         ))}
       </fieldset>
       {shown === "next" && (
-        <section aria-label="What to do next" className="space-y-1 text-sm">
+        <section aria-label="What to do next" className={cx(SMITHS, "space-y-1")}>
           {ready.notes.length === 0 ? (
             <p>Nothing stands out: the app's checks have no advice. Try it in the preview.</p>
           ) : (
@@ -489,7 +519,7 @@ function ReadyPrompts({
         </section>
       )}
       {shown === "what" && (
-        <section aria-label="What the app does, in short" className="space-y-2 text-sm">
+        <section aria-label="What the app does, in short" className={cx(SMITHS, "space-y-2")}>
           {ready.sections.slice(0, 4).map((section) => (
             <div key={section.concept}>
               <button
@@ -508,7 +538,7 @@ function ReadyPrompts({
         </section>
       )}
       {shown === "publish" && (
-        <section aria-label="How to publish" className="text-sm">
+        <section aria-label="How to publish" className={SMITHS}>
           {ready.home ? (
             <p>
               On smithable.ai it is one step:{" "}
@@ -657,9 +687,7 @@ export function ProposalView({
           {proposal.text}
         </p>
       )}
-      {proposal.kind === "none" && (
-        <p className="text-sm">No operation can do this: {proposal.reason}</p>
-      )}
+      {proposal.kind === "none" && <p className="text-sm">{proposal.reason}</p>}
       {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
     </section>
   );

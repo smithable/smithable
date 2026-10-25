@@ -1,4 +1,5 @@
-// Smithable app kit: the application frame with navigation menus and the signed-in user.
+// Smithable app kit: the application frame with navigation menus and the signed-in user; the
+// menu stays in view while the page scrolls (a sidebar on wide screens, a bar at the top on a phone).
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
 import { useRef, useState } from "react";
