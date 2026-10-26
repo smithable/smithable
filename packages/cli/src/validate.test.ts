@@ -67,7 +67,7 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   const io = captureIo();
   expect(await run(["validate", join(examples, "kiosk"), "--explain"], io)).toBe(0);
   expect(io.stdout).toMatch(
-    /where hero: button opens \w+ \(by rule: .*; say it with button\); second button opens menu/,
+    /where hero: button opens \w+ \(by rule: .*; say it with button\); no second button \(secondButton\)/,
   );
   const invoicing = captureIo();
   expect(await run(["validate", join(examples, "invoicing"), "--explain"], invoicing)).toBe(0);

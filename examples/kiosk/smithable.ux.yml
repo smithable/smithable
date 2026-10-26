@@ -10,7 +10,7 @@ tones:
 pages:
   where:
     sections:
-      stops: { layout: list, band: inverse }   # the week's stops as rows on the dark band, a chalkboard's
+      stops: { band: primary }         # the week's stops on the truck's red
   orders:
     table:
       columns: [number, name, status, wanted, total]

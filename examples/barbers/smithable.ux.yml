@@ -10,7 +10,7 @@ tones:
 pages:
   home:
     sections:
-      barbers: { band: inverse }       # the team on the dark band, as a barbershop's sign
+      barbers: { band: muted }         # the team on the muted band, apart from the price list
   appointments:
     table:
       columns: [startsAt, service, barber, name, status]

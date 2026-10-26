@@ -3490,7 +3490,6 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
           {
             "kind": "hero",
             "name": "hero",
-            "secondButton": "menu",
           },
           {
             "kind": "records",
@@ -3509,7 +3508,6 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
         {
           "kind": "hero",
           "name": "hero",
-          "secondButton": "menu",
         },
         {
           "kind": "records",

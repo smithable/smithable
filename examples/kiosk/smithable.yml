@@ -64,7 +64,7 @@ pages:
     crud: Stop
   where:
     landing:
-      hero: { secondButton: menu }
+      hero: {}
       stops: { records: Stop, limit: 7 }
       footer: {}
   team:
