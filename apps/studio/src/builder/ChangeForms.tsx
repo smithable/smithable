@@ -755,14 +755,26 @@ export function FieldShapeForm({
     proposed ? parseShape(proposed, models) : shapeOf(field),
   );
   const [becomes, setBecomes] = useState<Record<string, string>>({});
+  // What the person changed here and has not written yet.
+  const [touched, setTouched] = useState<(keyof FieldShape)[]>([]);
+  const edit = (next: FieldShape) => {
+    const keys = (Object.keys(next) as (keyof FieldShape)[]).filter((k) => next[k] !== shape[k]);
+    setTouched((t) => [...new Set([...t, ...keys])]);
+    setShape(next);
+  };
   // The field changed (this change, an undo, another window): start again from it, in place, so
-  // the form keeps its spot and focus instead of being made again (A 121).
+  // the form keeps its spot and focus instead of being made again (A 121); a control the person
+  // changed and has not written yet keeps their choice, so a refresh arriving a moment after a
+  // change never takes back the next one being made.
   const now = JSON.stringify(field);
   const [seen, setSeen] = useState(now);
   if (now !== seen) {
     setSeen(now);
-    setShape(proposed ? parseShape(proposed, models) : shapeOf(field));
-    setBecomes({});
+    const base = proposed ? parseShape(proposed, models) : shapeOf(field);
+    const kept = { ...base, ...Object.fromEntries(touched.map((k) => [k, shape[k]])) };
+    setShape(kept);
+    setTouched(touched.filter((k) => kept[k] !== base[k]));
+    if (!touched.length) setBecomes({});
   }
   const type = shorthand(shape, field);
   // A choice value that goes: the records and samples holding it get one of the new ones.
@@ -787,7 +799,7 @@ export function FieldShapeForm({
         return changed && unique ? rule(unique) : changed;
       }}
     >
-      <FieldShapeControls shape={shape} onChange={setShape} models={models} />
+      <FieldShapeControls shape={shape} onChange={edit} models={models} />
       {gone.map((v) => (
         <Label key={v} text={`Records with “${v}” get`}>
           <Select
