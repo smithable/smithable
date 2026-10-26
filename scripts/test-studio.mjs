@@ -846,11 +846,18 @@ try {
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
+      // A drag that lands while the preview is still reloading after the step before, or one
+      // Playwright's HTML5 drag drops, makes no change: tried once more before failing.
+      const moved = last.getByText("in the customers table").first();
       await header("email").dragTo(header("name"), { timeout: 60000 * P });
-      await last
-        .getByText("in the customers table")
-        .first()
-        .waitFor({ timeout: 60000 * P });
+      if (
+        !(await moved.waitFor({ timeout: 20000 }).then(
+          () => true,
+          () => false,
+        ))
+      )
+        await header("email").dragTo(header("name"), { timeout: 60000 * P });
+      await moved.waitFor({ timeout: 60000 * P });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
@@ -2218,6 +2225,10 @@ try {
       // Another type may lose values, so it is confirmed first.
       await page.getByRole("button", { name: "Apply anyway" }).click();
       await waitFile("homepage: url");
+      // Studio has the new spec before the next edit: its refresh would reset a choice made sooner.
+      await status
+        .getByText("Customers: now a homepage (a web address)")
+        .waitFor({ timeout: 60000 * P });
       // Where it is unique (uniqueness.md): a scope is the field's own key, through setFieldRules,
       // and back to not unique.
       await homepage
@@ -2225,7 +2236,17 @@ try {
         .selectOption({ label: "Unique in the whole app" });
       await homepage.getByRole("button", { name: "Change field" }).click();
       await waitFile("unique: app");
-      await homepage.getByLabel("Unique", { exact: true }).selectOption({ label: "Not unique" });
+      // The same: the form shows the scope written before it is taken away again.
+      const unique = homepage.getByLabel("Unique", { exact: true });
+      for (
+        let i = 0;
+        i < 60 * P &&
+        (await unique.evaluate((s) => s.selectedOptions[0]?.textContent)) !==
+          "Unique in the whole app";
+        i++
+      )
+        await new Promise((r) => setTimeout(r, 500));
+      await unique.selectOption({ label: "Not unique" });
       await homepage.getByRole("button", { name: "Change field" }).click();
       for (let i = 0; i < 60 * P && readFileSync(file, "utf8").includes("unique: app"); i++)
         await new Promise((r) => setTimeout(r, 1000));

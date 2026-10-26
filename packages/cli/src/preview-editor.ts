@@ -353,8 +353,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
   else window.addEventListener("load", styled, { once: true });
   // A page that crashed while the app was taking in a change (the root's error page: a loader
   // or a server function met the dev server mid-rebuild) is loaded again once the server
-  // answers, up to three times for an address, and does not say it is ready, so Studio keeps
-  // the last good page on screen meanwhile; the fourth time the error is shown as it is.
+  // answers, up to six times for an address, each wait twice the last (1.5 s up to 12 s, so a
+  // rebuild that takes half a minute is outlasted), and does not say it is ready, so Studio
+  // keeps the last good page on screen meanwhile; the seventh time the error is shown as it is.
   const CRASHES = "smithable:crashes";
   const crashes = () => {
     try {
@@ -367,7 +368,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const kept = crashes();
   const counted = Object.hasOwn(kept, location.pathname) && Number.isInteger(kept[location.pathname]) ? kept[location.pathname] : 0;
   const tries = crashed ? counted + 1 : 0;
-  // A good load, and the fourth crash (shown), forget the address, so a later crash is tried again.
+  // A good load, and the seventh crash (shown), forget the address, so a later crash is tried again.
   // Where nothing can be stored, nothing is tried again either, so no reload goes on forever.
   const remember = (count) => {
     try {
@@ -379,7 +380,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     }
   };
   if (crashed) post({ type: "errored", tries });
-  if (crashed && tries <= 3 && remember(tries)) {
+  const TRIES = 6;
+  if (crashed && tries <= TRIES && remember(tries)) {
     // Loaded again once the server renders this page cleanly: its own address, with the
     // page's cookies, answered without the error page's mark (a not-found page counts as clean).
     let asking = false;
@@ -398,7 +400,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
         clearInterval(retry);
         location.reload();
       });
-    }, 1500);
+    }, Math.min(1500 * 2 ** (tries - 1), 12000));
   } else {
     if (counted) remember(0);
     post({ type: "ready" });

@@ -152,10 +152,10 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   };
 }
 
-test("a page that crashed while the app updated is loaded again, three times, then shown", async () => {
+test("a page that crashed while the app updated is loaded again, six times with growing waits, then shown", async () => {
   const storage: Record<string, string> = {};
   const settle = () => new Promise((r) => setTimeout(r, 0));
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 6; attempt++) {
     const crashed = page("/customers/new", storage, true);
     // Not ready: Studio keeps the last good page; loaded again once the server answers.
     expect(crashed.posted.map((m) => m.type)).toEqual(["errored"]);
@@ -163,7 +163,7 @@ test("a page that crashed while the app updated is loaded again, three times, th
     await settle();
     expect(crashed.reloads).toHaveLength(1);
   }
-  // The fourth time the error is shown as it is, and the address is forgotten: a later crash
+  // The seventh time the error is shown as it is, and the address is forgotten: a later crash
   // there is tried again.
   const shown = page("/customers/new", storage, true);
   expect(shown.posted.map((m) => m.type)).toEqual(["errored", "ready"]);
