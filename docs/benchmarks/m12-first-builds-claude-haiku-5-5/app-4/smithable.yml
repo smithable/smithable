@@ -1,0 +1,54 @@
+smithable: 0.1
+app:
+  name: Tool Library
+  description: A tool library where neighbors lend each other tools.
+models:
+  Tool:
+    fields:
+      name: string!
+      summary: text
+      category: hand | power | garden | ladder | other
+      photo: picture
+  Loan:
+    fields:
+      tool: Tool!
+      dueOn: date!
+      returnedOn: date
+      status: out | returned
+    namedBy: tool.name
+    capacity:
+      per: tool
+      max: 1
+      where:
+        status: out
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: tools
+      tools:
+        records: Tool
+      footer:
+  tools:
+    crud: Tool
+    search: [name, summary, category]
+    filters: [category]
+  loans:
+    crud: Loan
+    filters: [status]
+    actions: [returnLoan]
+  team:
+    users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
+actions:
+  returnLoan:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+      returnedOn: TODAY()
+    intent: Mark a borrowed tool as returned.

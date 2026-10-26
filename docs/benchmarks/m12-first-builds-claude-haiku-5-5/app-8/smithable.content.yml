@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Talks across the programme, text: "Browse every session, with its time and room, and see how many places are left." }, { title: Meet the speakers, text: Read who is presenting and what they work on before you choose your talks. }, { title: Reserve your place, text: Register for a talk in a few clicks and keep track of your registrations in one place. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A ticket
+  generated: true

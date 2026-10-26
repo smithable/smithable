@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  talks:
+    record:
+      subtitle: speaker.name
+      detail: [startsAt, room]
+    table:
+      sort: startsAt
+theme:
+  preset: nordic

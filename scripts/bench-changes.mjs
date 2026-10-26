@@ -3,7 +3,8 @@
 // starter through `smithable ask --yes`, and checked in the spec files it leaves (not by reading the
 // answer). Some ask for what the spec cannot express: the right outcome there is no change.
 //   node scripts/bench-changes.mjs --rules                 rules only: proves tier 0 reads none of them
-//   node scripts/bench-changes.mjs <model> [<model>…]      eu.anthropic.…, mistral-…; ask before running
+//   node scripts/bench-changes.mjs <model> [<model>…]      eu.anthropic.…, mistral-…, claude-… (or
+//                                                          'claude-haiku-5-5>claude-sonnet-5-5', quoted); ask before running
 //   node scripts/bench-changes.mjs --score <apps dir>      checks a run's apps again (its results.json)
 // Writes docs/benchmarks/builder-changes.md (or builder-changes-rules.md).
 import { spawnSync } from "node:child_process";
@@ -161,7 +162,7 @@ const keyFile = (file) =>
   Object.fromEntries(
     readFileSync(join(homedir(), ".config/smithable", file), "utf8")
       .split("\n")
-      .map((line) => /^(?:export\s+)?([A-Z_]+)=(.*)$/.exec(line.trim()))
+      .map((line) => /^(?:export\s+)?([A-Za-z_]+)=(.*)$/.exec(line.trim()))
       .filter(Boolean)
       .map(([, key, value]) => [key, value.replace(/^["']|["']$/g, "")]),
   );
@@ -182,8 +183,15 @@ function envFor(model) {
       SMITHABLE_MODEL_URL: m.SMITHABLE_MODEL_URL ?? "https://api.mistral.ai/v1",
       SMITHABLE_MODEL_KEY: m.SMITHABLE_MODEL_KEY,
     });
-  } else if (model !== "rules")
-    throw new Error(`${model}: an eu.anthropic.… or mistral-… model, or --rules.`);
+  } else if (model.startsWith("claude-"))
+    // Anthropic's own API; "claude-haiku-5-5>claude-sonnet-5-5" escalates as the hosted service does.
+    Object.assign(env, {
+      SMITHABLE_FRONTIER: "anthropic",
+      SMITHABLE_FRONTIER_MODEL: model.split(">").join(","),
+      ANTHROPIC_API_KEY: keyFile("claude.env").claude_smithable_api_key,
+    });
+  else if (model !== "rules")
+    throw new Error(`${model}: an eu.anthropic.…, mistral-… or claude-… model, or --rules.`);
   return env;
 }
 

@@ -1,0 +1,19 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  member:
+    description: A neighbor who borrows tools.
+    pages: all
+    create: [Loan]
+    actions: [returnLoan]
+assistant:
+  for: signed-in
+defaultRole: member
+public:
+  pages: [home, tools, privacy]
+  read: [Tool]
+admins: [johan@smithable.ai]

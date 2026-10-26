@@ -1,0 +1,14 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  member: { pages: all, create: all, write: [Loan] }
+assistant:
+  for: signed-in
+public:
+  pages: [home, tools]
+  read: [Tool]
+admins: [johan@smithable.ai]

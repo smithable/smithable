@@ -1,0 +1,87 @@
+smithable: 0.1
+
+app:
+  name: Acme CRM
+  description: Lightweight CRM for a small B2B sales team.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Customer:
+    description: A company we have a commercial relationship with.
+    trash: true                       # a deleted customer can be restored for thirty days
+    fields:
+      name: string!
+      email: email unique
+      phone: phone
+      segment: smb | enterprise | government      # first value is the default
+      creditLimit:
+        type: money
+        min: 0
+        description: Maximum outstanding balance before new orders are held.
+      notes: text
+      accountManager: User
+      orders: Order[]                # every order that refers to this customer
+    ownedBy: accountManager          # the account manager owns the customer
+
+  Order:
+    trash: true
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: draft | placed | shipped | canceled
+      total: money!
+      shippingMethod: standard | express
+      shippingCost:
+        type: money
+        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
+        description: Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.
+        examples:
+          - input: { total: 150, shippingMethod: standard }
+            expected: 0
+          - input: { total: 80, shippingMethod: standard }
+            expected: 5
+          - input: { total: 150, shippingMethod: express }
+            expected: 15
+      placedAt: datetime = NOW()
+  Company:
+    fields:
+      name: string!
+      notes: text
+  Contact:
+    fields:
+      name: string!
+      notes: text
+  Deal:
+    fields:
+      name: string!
+      notes: text
+  FollowUp:
+    fields:
+      name: string!
+      notes: text
+
+actions:
+  mergeCustomers:
+    custom: true
+    input: { keep: Customer!, duplicate: Customer! }
+    intent: Merge a duplicate customer record into the one we keep.
+    rules:
+      - All orders of the duplicate move to the kept customer.
+      - Empty fields on the kept customer are filled from the duplicate.
+      - The duplicate is deleted afterwards.
+
+pages:
+  team:
+    intent: Invite colleagues and manage who has access.
+    users: manage
+  companies:
+    crud: Company
+  contacts:
+    crud: Contact
+  deals:
+    crud: Deal
+  follow-ups:
+    crud: FollowUp
+
+navigation: [team, companies, contacts, deals, follow-ups]

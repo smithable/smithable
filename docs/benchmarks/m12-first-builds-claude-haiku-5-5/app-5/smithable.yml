@@ -1,0 +1,33 @@
+smithable: 0.1
+app:
+  name: Bakery Stock
+  description: Keeps the bakery's ingredients, their suppliers and how much of each is in stock.
+models:
+  Supplier:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+  Ingredient:
+    fields:
+      name: string! unique
+      unit: kg | g | l | ml | pcs
+      quantity:
+        type: decimal!
+        min: 0
+        default: 0
+      reorderLevel:
+        type: decimal
+        min: 0
+        default: 0
+      supplier: Supplier
+pages:
+  ingredients:
+    crud: Ingredient
+    search: [name]
+    filters: [supplier, unit]
+  suppliers:
+    crud: Supplier
+  team:
+    users: manage

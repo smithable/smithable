@@ -1,0 +1,10 @@
+{
+  "description": "A help desk for an IT team: tickets, priorities and who handles them.",
+  "starter": "support",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who can open a ticket?",
+    "What can people who aren't on the IT team see?",
+    "Should each ticket keep a conversation between the requester and the team?"
+  ]
+}

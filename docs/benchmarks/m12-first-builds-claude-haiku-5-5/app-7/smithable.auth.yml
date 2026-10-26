@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  member:
+    description: Signed-in club members who can see the teams, players and matches.
+  editor: all
+assistant:
+  for: signed-in
+public:
+  pages: [home, teams, players, matches]
+  read: [Team, Player, Match]
+defaultRole: member
+admins: [johan@smithable.ai]

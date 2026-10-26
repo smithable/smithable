@@ -1,0 +1,7 @@
+smithableUx: 0.1
+theme:
+  preset: corporate
+pages:
+  applications:
+    table:
+      columns: [name, job, status]

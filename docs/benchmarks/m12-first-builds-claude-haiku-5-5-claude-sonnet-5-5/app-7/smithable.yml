@@ -1,0 +1,70 @@
+smithable: 0.1
+app:
+  name: Northside Football Club
+  description: A football club's site with its teams, players, matches and results.
+  timezone: Europe/Mariehamn
+models:
+  Player:
+    fields:
+      name: string!
+      shirtNumber:
+        type: int
+        min: 1
+        max: 99
+      position: goalkeeper | defender | midfielder | forward
+      photo: picture
+      bio: text
+      team: Team!
+  Match:
+    fields:
+      opponent: string!
+      kickoff: datetime!
+      venue: string
+      homeAway: home | away
+      status: scheduled | played | postponed
+      goalsFor:
+        type: int
+        min: 0
+      goalsAgainst:
+        type: int
+        min: 0
+      report: text
+      team: Team!
+  Team:
+    fields:
+      name: string!
+      category: firstTeam | reserves | women | youth
+      coach: string
+      photo: picture
+      about: text
+pages:
+  matches:
+    crud: Match
+    search: [opponent]
+    filters: [team, status, homeAway]
+  players:
+    crud: Player
+    search: [name]
+    filters: [team, position]
+  home:
+    route: /
+    landing:
+      hero:
+        button: matches
+        secondButton: players
+      results:
+        records: Match
+        where:
+          status: played
+      upcoming:
+        records: Match
+        where:
+          status: scheduled
+      squads:
+        records: Team
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  teams:
+    crud: Team

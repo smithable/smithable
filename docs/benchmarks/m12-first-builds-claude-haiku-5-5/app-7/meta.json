@@ -1,0 +1,9 @@
+{
+  "description": "A football club's site: teams, players, matches and results.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who should be able to add and change teams, players, matches and results?",
+    "What may visitors see without signing in?"
+  ]
+}

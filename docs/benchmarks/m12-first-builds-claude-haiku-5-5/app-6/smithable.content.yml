@@ -1,0 +1,13 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Jobs for union members
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

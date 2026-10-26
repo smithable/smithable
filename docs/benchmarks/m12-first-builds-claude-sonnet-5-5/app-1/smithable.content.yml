@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Book in seconds, text: Pick a class from the weekly schedule and reserve your mat online. }, { title: Classes for every level, text: From gentle beginner sessions to demanding advanced practice. }, { title: Experienced teachers, text: Learn from instructors who love sharing their craft. }, { title: See places left, text: Know right away whether a class still has room before you book. }]
+    faq:
+      items: [{ question: Do I need experience?, answer: Not at all. Beginner and all-levels classes welcome everyone. }, { question: How do I book a class?, answer: "Create an account, open the schedule and press Book on the class you want." }, { question: Can I cancel a booking?, answer: "Yes, you can cancel from your bookings page until the class starts." }, { question: What should I bring?, answer: Comfortable clothes and water. Ask the studio if you need to borrow a mat. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A lotus over a ripple
+  generated: true

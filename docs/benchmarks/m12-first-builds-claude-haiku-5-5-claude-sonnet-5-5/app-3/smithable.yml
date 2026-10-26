@@ -1,0 +1,120 @@
+smithable: 0.1
+app:
+  name: Billfold
+  description: "Invoicing for freelancers: keep track of clients, send invoices and record the payments that come in."
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      contract: file
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+      payments: Payment[]
+      amountPaid:
+        type: money
+        formula: SUM(payments.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  Payment:
+    fields:
+      invoice: Invoice!
+      paidOn: date! = TODAY()
+      amount: money!
+      method: bankTransfer | card | cash | other
+      note: string
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, markOverdue]
+    filters: [client, status]
+  clients:
+    crud: Client
+  invoice-lines:
+    crud: InvoiceLine
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      paid:
+        sum: Invoice.total
+        where:
+          status: paid
+  home:
+    route: /
+    landing:
+      hero:
+        button: overview
+      features:
+      faq:
+      callToAction:
+        button: overview
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  payments:
+    crud: Payment
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice in full.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+timers:
+  markOverdue:
+    on: Invoice
+    at: 7 days after dueOn
+    where:
+      status: sent
+    run: markOverdue
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

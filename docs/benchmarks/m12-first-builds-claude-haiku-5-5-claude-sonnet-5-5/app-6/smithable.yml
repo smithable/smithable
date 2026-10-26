@@ -1,0 +1,87 @@
+smithable: 0.1
+app:
+  name: Union Job Board
+  description: A job board where a local union posts jobs and its members apply for them.
+models:
+  JobPost:
+    fields:
+      title: string!
+      employer: string!
+      location: string
+      summary: text
+      details: markdown
+      pay: string
+      status: open | filled | closed
+      postedOn: date! = TODAY()
+      closingDate: date
+  Application:
+    fields:
+      jobPost: JobPost!
+      fullName: string!
+      membershipNumber: string
+      phone: phone
+      coverLetter: text
+      resume: file
+      status: submitted | reviewing | shortlisted | rejected | hired
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: jobs
+      openJobs:
+        records: JobPost
+        where:
+          status: open
+      features:
+      faq:
+      footer:
+  jobs:
+    crud: JobPost
+    actions: [markFilled, closePost]
+    search: [title, employer, location, summary]
+    filters: [status]
+  applications:
+    crud: Application
+    actions: [startReview, shortlist, reject, hire]
+    filters: [status, jobPost]
+  privacy:
+    route: /privacy
+    legal: privacy
+actions:
+  markFilled:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: filled
+  closePost:
+    on: JobPost
+    when:
+      status: open
+    set:
+      status: closed
+  startReview:
+    on: Application
+    when:
+      status: submitted
+    set:
+      status: reviewing
+  shortlist:
+    on: Application
+    when:
+      status: [submitted, reviewing]
+    set:
+      status: shortlisted
+  reject:
+    on: Application
+    when:
+      status: [submitted, reviewing, shortlisted]
+    set:
+      status: rejected
+  hire:
+    on: Application
+    when:
+      status: shortlisted
+    set:
+      status: hired

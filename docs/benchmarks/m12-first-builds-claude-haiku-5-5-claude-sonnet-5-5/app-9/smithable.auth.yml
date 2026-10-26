@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  agent:
+    description: "Handles tickets: takes them, answers and passes them on."
+    pages: [tickets]
+    create: all
+    write: all
+    actions: all
+assistant:
+  for: signed-in
+defaultRole: agent
+admins: [johan@smithable.ai]

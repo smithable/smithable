@@ -1,0 +1,10 @@
+{
+  "description": "A recipe collection for a family, with ingredients and shopping lists.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who will use the recipe collection?",
+    "What should a shopping list be built from?",
+    "What should each recipe hold?"
+  ]
+}

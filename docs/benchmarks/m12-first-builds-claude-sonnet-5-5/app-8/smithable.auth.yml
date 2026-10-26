@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: An attendee who registers for talks.
+    pages: [my-registrations]
+    create: [Registration]
+assistant:
+  for: signed-in
+public:
+  pages: [home, schedule, privacy]
+  read: [Speaker, Talk]
+defaultRole: member
+admins: [johan@smithable.ai]

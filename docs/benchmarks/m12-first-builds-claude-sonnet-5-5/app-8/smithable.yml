@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: Conference Hub
+  description: "Event registration for a conference: browse the talks and speakers, and register for the talks you want to attend."
+  currency: EUR
+  timezone: Europe/Stockholm
+models:
+  Speaker:
+    fields:
+      name: string!
+      company: string
+      bio: markdown
+      portrait: picture
+      talks: Talk[]
+  Talk:
+    fields:
+      title: string!
+      abstract: text
+      speaker: Speaker!
+      startsAt: datetime!
+      durationMinutes: int! = 45
+      room: string
+      capacity: int! = 50
+      registrations: Registration[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(registrations)
+  Registration:
+    fields:
+      talk: Talk! unique
+      attendee: User
+    namedBy: talk
+    ownedBy: attendee
+    capacity:
+      per: talk
+      max: talk.capacity
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
+pages:
+  talks:
+    crud: Talk
+  speakers:
+    crud: Speaker
+  my-registrations:
+    crud: Registration
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
+  home:
+    route: /
+    landing:
+      hero:
+      features:
+      speakers:
+        records: Speaker
+      faq:
+      callToAction:
+        button: schedule
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  admin:
+    data: all

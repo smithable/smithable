@@ -1,0 +1,33 @@
+smithable: 0.1
+app:
+  name: Bakery Pantry
+  description: Keeps track of a small bakery's ingredients, suppliers and stock levels.
+models:
+  Supplier:
+    fields:
+      name: string!
+      contactName: string
+      email: email
+      phone: phone
+      notes: text
+  Ingredient:
+    fields:
+      name: string!
+      storage: dry | fridge | freezer
+      unit: kg | g | l | ml | pieces
+      quantity: decimal! = 0
+      reorderLevel: decimal = 0
+      costPerUnit: money
+      supplier: Supplier
+      expiresOn: date
+      notes: text
+pages:
+  ingredients:
+    crud: Ingredient
+    search: [name]
+    filters: [storage, supplier]
+  suppliers:
+    crud: Supplier
+    search: [name, contactName, email]
+  team:
+    users: manage

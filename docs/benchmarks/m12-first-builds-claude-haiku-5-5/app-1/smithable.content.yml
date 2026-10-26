@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Find your class and book your place
+    subtitle: Browse our weekly yoga classes and book online in a few clicks.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A calendar page
+  generated: true

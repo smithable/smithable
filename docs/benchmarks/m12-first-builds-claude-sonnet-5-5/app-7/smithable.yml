@@ -1,0 +1,68 @@
+smithable: 0.1
+app:
+  name: Club Hub
+  description: A football club's site with its teams, players, matches and results.
+  timezone: Europe/Mariehamn
+models:
+  Team:
+    fields:
+      name: string! unique
+      category: men | women | juniors | veterans
+      coach: string
+      photo: picture
+      about: text
+      players: Player[]
+  Player:
+    fields:
+      name: string!
+      team: Team!
+      shirtNumber:
+        type: int
+        min: 1
+        max: 99
+      position: goalkeeper | defender | midfielder | forward
+      photo: picture
+      bio: text
+      active: bool = true
+  Match:
+    fields:
+      team: Team!
+      opponent: string!
+      kickoff: datetime!
+      venue: string
+      side: home | away
+      status: scheduled | played | postponed
+      goalsFor:
+        type: int
+        min: 0
+      goalsAgainst:
+        type: int
+        min: 0
+      report: markdown
+pages:
+  matches:
+    crud: Match
+    search: [opponent, venue]
+    filters: [team, status, kickoff]
+  teams:
+    crud: Team
+    search: [name]
+    filters: [category]
+  players:
+    crud: Player
+    search: [name, position]
+    filters: [team, position, active]
+  home:
+    route: /
+    landing:
+      hero:
+        button: matches
+        secondButton: teams
+      matchesList:
+        records: Match
+      teamsList:
+        records: Team
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy

@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Choose your talks, text: Browse the programme and pick the sessions that matter to you. }, { title: Meet the speakers, text: Hear from practitioners who share what they have learned. }, { title: Secure your seat, text: "Places are limited, so registering holds your spot in each talk." }, { title: Change your plans, text: Cancel a registration any time until the talk begins. }]
+    faq:
+      items: [{ question: How do I register for a talk?, answer: "Sign in with your email, open the schedule and press Book on any talk with places left." }, { question: Can I cancel?, answer: "Yes. You can cancel a registration until the talk starts, which frees the seat for someone else." }, { question: What if a talk is full?, answer: "Full talks no longer accept registrations, so check the other sessions in the same time slot." }, { question: Is registration for the whole conference needed?, answer: "No. You sign up talk by talk, and only for the ones you want to attend." }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A ticket
+  generated: true

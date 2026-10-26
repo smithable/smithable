@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: Union Jobs
+  description: A job board where a local union posts openings and its members apply.
+models:
+  Job:
+    fields:
+      title: string!
+      employer: string!
+      location: string
+      type: fullTime | partTime | temporary | apprenticeship
+      pay: string
+      description: text!
+      deadline: date
+      status: open | closed
+  Application:
+    fields:
+      job: Job!
+      phone: phone
+      coverLetter: text!
+      resume: file
+      status:
+        type: submitted | shortlisted | rejected
+        by: app
+pages:
+  jobs:
+    crud: Job
+    search: [title, employer, location, description]
+    filters: [type, status, deadline]
+    defaultFilter:
+      status: open
+    actions: [closeJob]
+  applications:
+    crud: Application
+    filters: [status, job]
+    actions: [shortlist, reject]
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: jobs
+      features:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+actions:
+  closeJob:
+    on: Job
+    when:
+      status: open
+    set:
+      status: closed
+  shortlist:
+    on: Application
+    when:
+      status: [submitted, rejected]
+    set:
+      status: shortlisted
+  reject:
+    on: Application
+    when:
+      status: [submitted, shortlisted]
+    set:
+      status: rejected

@@ -1,0 +1,77 @@
+smithable: 0.1
+app:
+  name: Desk IT
+  description: A help desk where the IT team tracks tickets, sets their priority and sees who handles them.
+models:
+  SupportCase:
+    fields:
+      subject: string!
+      requesterEmail:
+        type: email!
+        locked: true
+      category: other | hardware | software | network | access
+      status: open | inProgress | closed | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+      assignee:
+        type: User
+        required:
+          status: [inProgress, closed]
+      body: text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      agent:
+        type: User
+        by: app
+        default: ME()
+      attachments: files
+      supportCase: SupportCase!
+pages:
+  tickets:
+    crud: SupportCase
+    search: [subject, requesterEmail]
+    filters: [status, priority, category, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
+  team:
+    users: manage
+actions:
+  assignToMe:
+    on: SupportCase
+    when:
+      assignee: not ME()
+    set:
+      assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: SupportCase
+    set:
+      assignee:
+    intent: Give the ticket to a member of the team, chosen from the list.
+  startWork:
+    on: SupportCase
+    when:
+      status: [open, reopened]
+    set:
+      status: inProgress
+    intent: Someone is working on the ticket now; it needs an assignee.
+  close:
+    on: SupportCase
+    when:
+      status: [open, inProgress, reopened]
+    set:
+      status: closed
+    intent: The problem is solved.
+  reopen:
+    on: SupportCase
+    when:
+      status: closed
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.
