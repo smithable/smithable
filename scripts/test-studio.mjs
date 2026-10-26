@@ -846,11 +846,18 @@ try {
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
       const header = (field) => preview.locator(`th[data-sm-concept="field:Customer.${field}"]`);
+      // A drag that lands while the preview is still reloading after the step before, or one
+      // Playwright's HTML5 drag drops, makes no change: tried once more before failing.
+      const moved = last.getByText("in the customers table").first();
       await header("email").dragTo(header("name"), { timeout: 60000 * P });
-      await last
-        .getByText("in the customers table")
-        .first()
-        .waitFor({ timeout: 60000 * P });
+      if (
+        !(await moved.waitFor({ timeout: 20000 }).then(
+          () => true,
+          () => false,
+        ))
+      )
+        await header("email").dragTo(header("name"), { timeout: 60000 * P });
+      await moved.waitFor({ timeout: 60000 * P });
       const after = await project();
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
