@@ -19,6 +19,18 @@ export interface PictureEntry {
   tags: string[];
   width?: number;
   height?: number;
+  /** Made by an image model; absent in an index from before photographs (all made by one then). */
+  generated?: boolean;
+  /** A photograph's source and licence, for the app's public/images/CREDITS.md. */
+  credit?: PictureCredit;
+}
+
+export interface PictureCredit {
+  page: string;
+  author: string;
+  licence: string;
+  licenceUrl?: string;
+  fetched: string;
 }
 
 export interface PickedPictures {

@@ -86,18 +86,37 @@ export function deletePicture(picture: Picture | null | undefined, stillUsed: bo
 export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}"`;
 
 /**
+ * What the image library said of each picture Smithable placed (public/images/pictures.json):
+ * whether an image model made it. Absent in an app from before photographs.
+ */
+let placed: Record<string, { generated?: boolean }> | undefined;
+function placedPictures(): Record<string, { generated?: boolean }> {
+  // Read once a seed: every sample picture asks.
+  if (!placed)
+    try {
+      placed = JSON.parse(readFileSync(join("public", "images", "pictures.json"), "utf8"));
+    } catch {
+      placed = {};
+    }
+  return placed ?? {};
+}
+
+/**
  * For `pnpm db:seed`: the n-th sample picture (public/images/samples/<n>.webp) as a record's
- * picture, copied into uploads/; null when the app has no sample pictures. The numbered ones are
- * the image library's (an AI made them); a sample file says so of its own with `generated: true`.
+ * picture, copied into uploads/; null when the app has no sample pictures. A numbered one is
+ * badged as public/images/pictures.json says (a photograph is not), and without that list as the
+ * image library's were (an AI made them); a sample file says so of its own with `generated: true`.
  */
 export function samplePicture(
   model: string,
   n: number | string,
   alt: string,
-  generated = typeof n === "number",
+  generated?: boolean,
 ): Picture | null {
   // A starter's numbered pictures (0.webp, 1.webp, …), or a sample file's own by name.
-  const source = join("public", "images", "samples", typeof n === "number" ? `${n}.webp` : n);
+  const name = typeof n === "number" ? `${n}.webp` : n;
+  generated ??= placedPictures()[`samples/${name}`]?.generated ?? typeof n === "number";
+  const source = join("public", "images", "samples", name);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
   const picture = savePicture(model, bytes, alt);

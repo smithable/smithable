@@ -1,10 +1,10 @@
 // Pictures for a drafted app from the Smithable image library (docs.smithable.ai/images): the
 // index is fetched and cached for a day, the chosen files are written into the project, and the
 // landing page's hero gets its picture. Offline or refused, the app starts without pictures.
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { type PictureEntry, pickPictures } from "@smithable/ai";
+import { type PictureCredit, type PictureEntry, pickPictures } from "@smithable/ai";
 import { type ContentIR, kebab, type SpecIR, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 
@@ -69,9 +69,24 @@ async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefi
   }
 }
 
+/** A library picture placed in the app: its file under public/images/, and what made it. */
+export interface PlacedPicture {
+  file: string;
+  alt: string;
+  bytes: Uint8Array;
+  /** Made by an image model; a photograph is not, and has its credit. */
+  generated?: boolean;
+  credit?: PictureCredit;
+  /** The model whose sample records name it (samples/<model>-<n>.webp). */
+  model?: string;
+}
+
+/** Whether an index entry was made by an image model: an index from before photographs says nothing. */
+const madeByAi = (entry: PictureEntry) => entry.generated ?? true;
+
 /**
- * The pictures a drafted app gets, each marked as made by an AI (`generated: true`, the library's
- * are): the hero into public/images/hero.webp (and the content file's
+ * The pictures a drafted app gets, each marked as the library says (`generated`: true when an
+ * image model made it, false for a photograph): the hero into public/images/hero.webp (and the content file's
  * hero image, when the landing page's hero has none), its mark into public/images/logo.webp (and
  * the content file's logo, when it has none). Sample pictures are chosen for each model: a model
  * with its own sample records (`drafted`) gets its pictures as samples/<model>-<n>.webp, marked
@@ -90,7 +105,7 @@ export async function addLibraryPictures(options: {
   fetchFn?: Fetch;
   index?: PictureEntry[];
   cacheDir?: string;
-}): Promise<{ file: string; alt: string; bytes: Uint8Array; model?: string }[]> {
+}): Promise<PlacedPicture[]> {
   const fetchFn = options.fetchFn ?? fetch;
   const index = options.index ?? (await libraryIndex(fetchFn, options.cacheDir));
   if (!index) {
@@ -102,7 +117,11 @@ export async function addLibraryPictures(options: {
     ir: options.ir,
     ...(options.content ? { content: options.content } : {}),
   });
-  const written: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
+  const written: PlacedPicture[] = [];
+  const meta = (entry: PictureEntry) => ({
+    generated: madeByAi(entry),
+    ...(entry.credit ? { credit: entry.credit } : {}),
+  });
   // Sample pictures are for records' picture fields; an app without any gets none (picked has
   // only the models with pictures).
   const drafted = options.drafted ?? new Set<string>();
@@ -113,7 +132,13 @@ export async function addLibraryPictures(options: {
       const bytes = await bytesOf(sample.url, fetchFn);
       if (!bytes) continue;
       n += 1;
-      written.push({ file: `samples/${kebab(model)}-${n}.webp`, alt: sample.alt, bytes, model });
+      written.push({
+        file: `samples/${kebab(model)}-${n}.webp`,
+        alt: sample.alt,
+        bytes,
+        model,
+        ...meta(sample),
+      });
     }
   }
   // Generated rows take samples/0.webp, 1.webp and 2.webp in turn, whatever their model: only
@@ -127,7 +152,7 @@ export async function addLibraryPictures(options: {
     if (n === 3) break;
     const bytes = await bytesOf(sample.url, fetchFn);
     if (!bytes) continue;
-    written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes });
+    written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes, ...meta(sample) });
     n += 1;
   }
   const pictured = Object.values(picked.models).some((entries) => entries.length > 0);
@@ -139,14 +164,19 @@ export async function addLibraryPictures(options: {
   if (picked.hero && landing && hero) {
     const bytes = await bytesOf(picked.hero.url, fetchFn);
     if (bytes) {
-      written.push({ file: "hero.webp", alt: picked.hero.alt, bytes });
+      written.push({ file: "hero.webp", alt: picked.hero.alt, bytes, ...meta(picked.hero) });
       const editor = new YamlEditor(
         options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
       );
       // A landing section's texts are under the page by the section's name (pages.home.hero).
       const at = ["pages", landing.id, hero.name];
       if (!editor.has([...at, "image"])) {
-        const image = { src: "images/hero.webp", alt: picked.hero.alt, generated: true };
+        // Said either way, so a photograph's `generated: false` is in the file, never left out.
+        const image = {
+          src: "images/hero.webp",
+          alt: picked.hero.alt,
+          generated: madeByAi(picked.hero),
+        };
         if (editor.has(at)) editor.add(at, "image", image);
         else if (editor.has(["pages", landing.id]))
           editor.add(["pages", landing.id], hero.name, { image });
@@ -164,8 +194,12 @@ export async function addLibraryPictures(options: {
       options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
     );
     if (bytes && !editor.has(["logo"])) {
-      written.push({ file: "logo.webp", alt: picked.logo.alt, bytes });
-      editor.add([], "logo", { src: "images/logo.webp", alt: picked.logo.alt, generated: true });
+      written.push({ file: "logo.webp", alt: picked.logo.alt, bytes, ...meta(picked.logo) });
+      editor.add([], "logo", {
+        src: "images/logo.webp",
+        alt: picked.logo.alt,
+        generated: madeByAi(picked.logo),
+      });
       options.files["smithable.content.yml"] = editor.text;
     }
   }
@@ -189,7 +223,7 @@ export async function addLibraryPictures(options: {
 export function placePictures(
   dir: string,
   starterAssets: Record<string, string>,
-  pictures: { file: string; bytes: Uint8Array }[],
+  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit">[],
 ): void {
   for (const [file, data] of Object.entries(starterAssets)) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
@@ -198,12 +232,56 @@ export function placePictures(
   writePictures(dir, pictures);
 }
 
-export function writePictures(dir: string, pictures: { file: string; bytes: Uint8Array }[]): void {
+export function writePictures(
+  dir: string,
+  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit">[],
+): void {
   for (const picture of pictures) {
     const path = join(dir, "public", "images", picture.file);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, picture.bytes);
   }
+  writeCredits(dir, pictures);
+}
+
+/**
+ * What the library said of each picture placed: public/images/pictures.json (the file, whether
+ * an image model made it), which the app's sample records read for their badge, and
+ * public/images/CREDITS.md, a line for each photograph with where it is from and its licence.
+ * Both come from the index's entries, never by hand; CC0 asks for no credit, so no page shows it.
+ */
+function writeCredits(
+  dir: string,
+  pictures: Pick<PlacedPicture, "file" | "generated" | "credit">[],
+): void {
+  const said = pictures.filter((p) => p.generated !== undefined);
+  if (!said.length) return;
+  const images = join(dir, "public", "images");
+  mkdirSync(images, { recursive: true });
+  writeFileSync(
+    join(images, "pictures.json"),
+    `${JSON.stringify(Object.fromEntries(said.map((p) => [p.file, { generated: p.generated }])), null, 2)}\n`,
+  );
+  const credited = said.filter((p) => p.credit);
+  const credits = join(images, "CREDITS.md");
+  if (!credited.length) {
+    rmSync(credits, { force: true });
+    return;
+  }
+  writeFileSync(
+    credits,
+    [
+      "# Photographs",
+      "",
+      "The photographs in this folder, from the Smithable image library. Written by Smithable from the library's index.",
+      "",
+      ...credited.map(({ file, credit: c }) => {
+        const licence = c?.licenceUrl ? `[${c.licence}](${c.licenceUrl})` : c?.licence;
+        return `- ${file}: ${c?.author}, ${licence}, from ${c?.page} (fetched ${c?.fetched})`;
+      }),
+      "",
+    ].join("\n"),
+  );
 }
 
 /**
