@@ -1,0 +1,10 @@
+{
+  "description": "Event registration for a conference: talks, speakers and attendees.",
+  "starter": "booking",
+  "wordStarter": "records",
+  "questions": [
+    "What does an attendee register for?",
+    "What can visitors see without signing in?",
+    "Who adds and edits talks and speakers?"
+  ]
+}

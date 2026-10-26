@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Toolshare
+  description: Neighbors lend each other tools and keep track of who has what.
+models:
+  Tool:
+    fields:
+      name: string!
+      photos: pictures
+      description: text
+      category: hand | power | garden | cleaning | ladders | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+  Loan:
+    fields:
+      tool: Tool!
+      borrowedOn: date!
+      dueOn: date!
+      status: out | returned
+      returnedOn: date
+      note: string
+pages:
+  tools:
+    route: /
+    crud: Tool
+    search: [name, description, place]
+    filters: [category, condition, available]
+  myTools:
+    crud: Tool
+    mine: true
+  loans:
+    crud: Loan
+    filters: [status, dueOn]
+    actions: [markReturned]
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: tools
+      latest:
+        records: Tool
+      features:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
+actions:
+  markReturned:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+      returnedOn: TODAY()
+navigation: [tools, myTools, loans, team]

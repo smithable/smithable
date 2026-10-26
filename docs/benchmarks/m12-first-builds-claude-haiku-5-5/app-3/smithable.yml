@@ -1,0 +1,119 @@
+smithable: 0.1
+app:
+  name: Billable
+  description: "Invoicing for freelancers: each person keeps their own clients, invoices and payments."
+models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number:
+        type: string! unique
+        locked:
+          status: [sent, paid, overdue]
+      client:
+        type: Client!
+        locked:
+          status: [sent, paid, overdue]
+      issuedOn:
+        type: date!
+        default: TODAY()
+        locked:
+          status: [sent, paid, overdue]
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      payments: Payment[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  Payment:
+    fields:
+      invoice: Invoice!
+      amount: money!
+      paidOn: date! = TODAY()
+      note: string
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+timers:
+  markOverdue:
+    on: Invoice
+    at: 7 days after dueOn
+    where:
+      status: sent
+    run: markOverdue
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email
+pages:
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+  clients:
+    crud: Client
+    search: [name, email]
+  payments:
+    crud: Payment
+  settings:
+    route: /settings
+    crud: BusinessProfile
+  overview:
+    dashboard:
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      paid:
+        sum: Invoice.total
+        where:
+          status: paid
+      latest:
+        list: Invoice
+        limit: 5

@@ -1,0 +1,57 @@
+smithable: 0.1
+app:
+  name: Northfield Football Club
+  description: Shows the club's teams, players, fixtures and results, and lets club staff keep them up to date.
+  timezone: Europe/London
+models:
+  Team:
+    fields:
+      name: string! unique
+      ground: string
+      summary: text
+  Player:
+    fields:
+      name: string!
+      team: Team!
+      position: goalkeeper | defender | midfielder | forward
+      shirtNumber:
+        type: int
+        min: 1
+        max: 99
+  Match:
+    fields:
+      home: Team!
+      away: Team!
+      startsAt: datetime!
+      venue: string
+      status: scheduled | played
+      homeScore:
+        type: int
+        min: 0
+      awayScore:
+        type: int
+        min: 0
+pages:
+  teams:
+    crud: Team
+  players:
+    crud: Player
+    search: [name]
+    filters: [position, team]
+  matches:
+    crud: Match
+    filters: [status]
+  home:
+    route: /
+    landing:
+      hero:
+        button: matches
+        secondButton: teams
+      results:
+        records: Match
+        view: table
+        where:
+          status: played
+      footer:
+  team:
+    users: manage

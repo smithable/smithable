@@ -1,0 +1,7 @@
+smithableUx: 0.1
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger
+theme:
+  preset: corporate

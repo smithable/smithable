@@ -1,0 +1,55 @@
+smithable: 0.1
+app:
+  name: Union Job Board
+  description: Job posts from employers and applications from union members.
+models:
+  Application:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      message: text
+      cv: file
+      status: new | shortlisted | rejected | hired
+      job: JobPost!
+  JobPost:
+    fields:
+      title: string!
+      employer: string!
+      description: markdown!
+      location: string
+      pay: string
+      workType: fullTime | partTime | temporary | seasonal
+      status: open | filled | closed
+      deadline: date
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: jobs
+      openJobs:
+        records: JobPost
+        where:
+          status: open
+      footer:
+  applications:
+    route: /applications
+    crud: Application
+  team:
+    users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
+  jobs:
+    route: /jobs
+    crud: JobPost
+    search: [title, employer, location]
+    filters: [workType, status]
+    defaultFilter:
+      status: open
+outgoing:
+  applicationReceived:
+    when: Application created
+    to: mail
+    recipient: email

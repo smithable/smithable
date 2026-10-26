@@ -61,6 +61,19 @@ export SMITHABLE_FRONTIER_MODEL=eu.anthropic.claude-haiku-5-5   # the newest Hai
 
 The fixed instructions are cached between calls, and the cost is reported in dollars at Bedrock's EU price. A prompt over 100k tokens is never sent (Haiku 5.5 charges five times as much above it); none of Smithable's requests come near it.
 
+## Claude through Anthropic's API (tier 3)
+
+With an API key from Anthropic, Claude runs through Anthropic's own API. One model, or several cheapest first: a request the first cannot do, or whose answer fails Smithable's checks, goes to the next (a first build starts with the strongest):
+
+```bash
+export SMITHABLE_FRONTIER=anthropic
+export SMITHABLE_FRONTIER_MODEL=claude-haiku-5-5,claude-sonnet-5-5   # or one of them
+export ANTHROPIC_API_KEY=…
+# With SMITHABLE_AI_POLICY=eu-only Claude is never used this way: use Bedrock's eu. profiles.
+```
+
+The answer's schema is sent as structured output where the API can hold it, the fixed instructions are cached, and the cost is reported in dollars at Anthropic's list price. How the models compare on Smithable's own tasks: [docs/benchmarks/claude-5-5.md](https://github.com/smithable/smithable/blob/main/docs/benchmarks/claude-5-5.md).
+
 ## Custom code
 
 Some requests need code, not an operation: ranking customers by churn risk, a custom action's behaviour. A coder writes it, only in `src/custom/`:

@@ -1,0 +1,15 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Is our API working?
+      subtitle: The live state of our services, current incidents and planned maintenance.
+      button: Incident history
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

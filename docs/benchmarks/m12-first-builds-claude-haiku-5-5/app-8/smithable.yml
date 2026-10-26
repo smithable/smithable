@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Harbour Summit 2026
+  description: "Registration for the Harbour Summit conference: its talks, speakers and attendees."
+models:
+  Speaker:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+      company: string
+      talks: Talk[]
+  Talk:
+    fields:
+      title: string!
+      abstract: text
+      speaker: Speaker!
+      startsAt: datetime!
+      room: string
+      capacity: int! = 100
+      registrations: Registration[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(registrations)
+  Registration:
+    fields:
+      talk: Talk! unique
+      attendee: User
+    ownedBy: attendee
+    namedBy: talk
+    capacity:
+      per: talk
+      max: talk.capacity
+      closes: talk.startsAt
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: talks
+      speakers:
+        records: Speaker
+      programme:
+        records: Talk
+      features:
+        features:
+      callToAction:
+        callToAction:
+      footer:
+  talks:
+    crud: Talk
+  speakers:
+    crud: Speaker
+  my-registrations:
+    crud: Registration
+  privacy:
+    route: /privacy
+    legal: privacy

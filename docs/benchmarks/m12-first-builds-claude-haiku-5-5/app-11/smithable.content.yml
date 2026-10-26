@@ -1,0 +1,12 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A wrench
+  generated: true

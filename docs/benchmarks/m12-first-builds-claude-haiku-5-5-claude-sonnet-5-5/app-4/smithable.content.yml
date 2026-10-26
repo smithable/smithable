@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Borrow a tool, lend a hand
+      subtitle: Neighbors share the tools they own, so nobody has to buy a drill for one afternoon.
+      image:
+        src: images/hero.webp
+        alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
+        generated: true
+    features:
+      items: [{ title: Browse what's on the shelf, text: "See every tool neighbors have put up to share, with its condition and a photo." }, { title: Borrow with a due date, text: "Sign in, pick a tool and say when you will bring it back." }, { title: Lend your own, text: Add the tools you rarely use and let others get some value from them. }, { title: Know who has what, text: "Every loan is recorded, so a tool is never lost between neighbors." }]
+    faq:
+      items: [{ question: Who can borrow tools?, answer: "Neighbors who have been invited to join. Anyone can look at the tools, but borrowing needs an account." }, { question: What does it cost?, answer: "Nothing. Tools are lent for free, on trust between neighbors." }, { question: What if I break something?, answer: Tell the owner right away and agree together on a repair or a replacement. }, { question: How do I return a tool?, answer: "Bring it back by the due date, and the loan is marked as returned." }]
+logo:
+  src: images/logo.webp
+  alt: A toolbox
+  generated: true

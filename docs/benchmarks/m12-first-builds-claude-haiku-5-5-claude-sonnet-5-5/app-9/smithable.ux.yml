@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  tickets:
+    record:
+      lists:
+        messages: thread
+tones:
+  SupportCase.status:
+    closed: success
+    reopened: warning

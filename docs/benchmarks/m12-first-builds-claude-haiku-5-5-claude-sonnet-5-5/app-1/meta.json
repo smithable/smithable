@@ -1,0 +1,9 @@
+{
+  "description": "A booking site for a yoga studio, with classes, teachers and online booking.",
+  "starter": "booking",
+  "wordStarter": "booking",
+  "questions": [
+    "What can visitors see without signing in?",
+    "Who signs in to manage the studio's classes and bookings?"
+  ]
+}

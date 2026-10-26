@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    faq:
+      items: [{ question: Do I need experience?, answer: "Not at all. Beginner and all-levels classes are marked in the schedule, so you can pick one that suits you." }, { question: How do I book a class?, answer: "Sign in, open the schedule and press Book on the class you want. You will receive a confirmation by email." }, { question: Can I cancel my booking?, answer: "Yes, you can cancel from your bookings page any time before the class starts, which frees your place for someone else." }, { question: What should I bring?, answer: Comfortable clothes and a water bottle are enough. Please arrive a few minutes early to settle in. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A lotus over a ripple
+  generated: true

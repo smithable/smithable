@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  talks:
+    table:
+      sort: startsAt
+theme:
+  preset: corporate
+  brand:
+    primary: "#4f46e5"

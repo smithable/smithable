@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  matches:
+    table:
+      sort: -kickoff
+tones:
+  Match.status:
+    played: success
+    postponed: warning
+theme:
+  preset: navy
+  brand:
+    primary: "#15803d"

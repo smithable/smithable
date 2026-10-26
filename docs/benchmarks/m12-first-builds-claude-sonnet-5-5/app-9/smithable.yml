@@ -1,0 +1,75 @@
+smithable: 0.1
+app:
+  name: IT Help Desk
+  description: Tickets for the IT team, with priorities and who handles each one.
+models:
+  Ticket:
+    fields:
+      subject: string!
+      requesterEmail: email!
+      category: hardware | software | network | access | other
+      status: open | inProgress | closed | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+      assignee:
+        type: User
+        required:
+          status: [inProgress, closed]
+      description: text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      agent:
+        type: User
+        by: app
+        default: ME()
+      attachments: files
+      ticket: Ticket!
+pages:
+  tickets:
+    crud: Ticket
+    search: [subject, requesterEmail]
+    filters: [status, priority, category, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
+  team:
+    users: manage
+actions:
+  assignToMe:
+    on: Ticket
+    when:
+      assignee: not ME()
+    set:
+      assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: Ticket
+    set:
+      assignee:
+    intent: Give the ticket to a team member.
+  startWork:
+    on: Ticket
+    when:
+      status: [open, reopened]
+    set:
+      status: inProgress
+    intent: Someone is working on the ticket now; it needs an assignee.
+  close:
+    on: Ticket
+    when:
+      status: [open, inProgress, reopened]
+    set:
+      status: closed
+    intent: The requester has their answer.
+  reopen:
+    on: Ticket
+    when:
+      status: closed
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.

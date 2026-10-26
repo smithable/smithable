@@ -1,0 +1,42 @@
+smithable: 0.1
+app:
+  name: Family Recipes
+  description: A shared family collection of recipes, with their ingredients and shopping lists.
+models:
+  Recipe:
+    fields:
+      name: string!
+      servings:
+        type: int!
+        min: 1
+        max: 50
+        default: 4
+      course: main | starter | dessert | baking
+      method: markdown
+      ingredients: Ingredient[]
+  Ingredient:
+    fields:
+      name: string!
+      quantity: decimal
+      unit: string
+      recipe: Recipe!
+  ShoppingList:
+    fields:
+      name: string! = Shopping
+      shopDate: date
+      items: ShoppingItem[]
+  ShoppingItem:
+    fields:
+      name: string!
+      quantity: string
+      bought: bool
+      shoppingList: ShoppingList!
+pages:
+  recipes:
+    crud: Recipe
+    search: [name]
+    filters: [course]
+  shopping-lists:
+    crud: ShoppingList
+  team:
+    users: manage

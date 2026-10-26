@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: A union member who browses jobs and applies for them.
+    pages: [jobs, applications]
+    create: [Application]
+assistant:
+  for: signed-in
+public:
+  pages: [home, jobs, privacy]
+  read: [{ JobPost: { where: { status: open } } }]
+defaultRole: member
+admins: [johan@smithable.ai]

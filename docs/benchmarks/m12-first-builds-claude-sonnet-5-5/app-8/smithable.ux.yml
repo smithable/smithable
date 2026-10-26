@@ -1,0 +1,7 @@
+smithableUx: 0.1
+pages:
+  talks:
+    table:
+      sort: startsAt
+theme:
+  preset: corporate

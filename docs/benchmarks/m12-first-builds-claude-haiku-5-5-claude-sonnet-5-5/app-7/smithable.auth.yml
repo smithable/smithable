@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Looks at the club's records.
+    pages: all
+  staff: all
+assistant:
+  for: signed-in
+public:
+  pages: [home, teams, matches, players, privacy]
+  read: [Team, Player, Match]
+defaultRole: member
+admins: [johan@smithable.ai]

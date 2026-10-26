@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Neighborhood Tool Library
+  description: A place where neighbors lend each other tools and keep track of who has borrowed what.
+  timezone: Europe/Mariehamn
+models:
+  Loan:
+    fields:
+      borrower:
+        type: User
+        by: app
+        default: ME()
+      borrowedOn: date! = TODAY()
+      dueOn: date!
+      returnedOn: date
+      status: out | returned
+      note: string
+      tool: Tool!
+  Tool:
+    fields:
+      name: string!
+      description: text
+      category: general | garden | powerTools | handTools | cleaning | other
+      condition: good | fair | worn
+      photo: picture
+      pickupNote: string
+pages:
+  loans:
+    crud: Loan
+    actions: [markReturned]
+    filters: [status, tool]
+  home:
+    route: /
+    landing:
+      hero:
+        button: tools
+      toolsList:
+        records: Tool
+      features:
+      faq:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
+  tools:
+    crud: Tool
+    search: [name, description]
+    filters: [category, condition]
+actions:
+  markReturned:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+      returnedOn: TODAY()
