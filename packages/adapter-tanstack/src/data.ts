@@ -492,7 +492,7 @@ export function reserveElement(
   add(bn.module, r.places, r.book, bn.remove);
   add("#/kit/Reserve", "Reserve");
   // The pages that show the block (a record's, a calendar's) import the app's settings already.
-  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}}${t.reserve(booked)} timeZone={app.timeZone} />`;
+  return `<Reserve id={${id}} load={${r.places}} book={${r.book}} cancel={${bn.remove}}${t.reserve(booked)} texts="models.${booked.name}.reserve" timeZone={app.timeZone} />`;
 }
 
 /** The reservation block's server functions for a model with a capacity, e.g. bookingPlaces. */
