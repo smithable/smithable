@@ -139,6 +139,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/pictures.md",
+    out: "pictures.html",
+    description:
+      "Where an app's first pictures come from: the Smithable image library, made with an AI or real CC0 photographs from Wikimedia Commons, each with its source, and the AI badge.",
+    nav: "Where the pictures come from",
+    group: "Build",
+  },
+  {
     src: "docs/site/self-host.md",
     out: "self-host.html",
     description:
