@@ -26,7 +26,7 @@ const TRUST_PROXY = process.env.TRUST_PROXY === "1";
  * visitor, which the database, the uploads and the outbox read through this shared store.
  */
 const VISITOR = process.env.DEMO_VISITORS === "1" ? new AsyncLocalStorage() : undefined;
-if (VISITOR) globalThis[Symbol.for("smithable.visitor")] = VISITOR;
+if (VISITOR) globalThis[Symbol.for("app.visitor")] = VISITOR;
 const VISITOR_COOKIE = "demo_visitor";
 function visitorOf(request) {
   const cookie = request.headers.get("cookie") ?? "";

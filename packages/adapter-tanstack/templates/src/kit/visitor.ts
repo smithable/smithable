@@ -6,7 +6,7 @@ import type { AsyncLocalStorage } from "node:async_hooks";
 import { join } from "node:path";
 
 /** The production server's store of the request's visitor, shared through a global. */
-const KEY = Symbol.for("smithable.visitor");
+const KEY = Symbol.for("app.visitor");
 
 export const demo = process.env.DEMO_VISITORS === "1";
 export const dataDir = process.env.DATA_DIR ?? "data";
