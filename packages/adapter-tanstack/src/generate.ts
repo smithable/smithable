@@ -29,6 +29,7 @@ import {
   SIGN_IN_KIT,
   signInReadme,
   signInRoute,
+  userChoicesModule,
   usersModule,
   viewerModule,
 } from "./auth.js";
@@ -697,7 +698,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/routes/sign-in.tsx",
           signInRoute(auth, onboarding?.route, hasInvitations(ir, auth)),
         ),
-        ...(users ? [generated("src/generated/users.ts", usersModule())] : []),
+        ...(users
+          ? [
+              generated("src/generated/users.ts", usersModule()),
+              generated("src/generated/user-choices.server.ts", userChoicesModule()),
+            ]
+          : []),
         // Invitations and user management, for the users page (see users.ts).
         ...(hasInvitations(ir, auth)
           ? [

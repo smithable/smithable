@@ -362,17 +362,31 @@ export async function currentViewer(): Promise<Viewer | null> {
 /** Everyone who can be chosen in a User field, e.g. an account manager. */
 export function usersModule(): string {
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { asc } from "drizzle-orm";
-import { db } from "#/db";
-import { user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
+import { userChoices } from "./user-choices.server";
 
 /** Choices for fields that refer to a user; for signed-in users only. */
 export const userOptions = createServerFn().handler(async () => {
   if (!(await currentViewer())) throw new AccessDenied(false);
-  return db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+  return userChoices();
 });
+`;
+}
+
+/**
+ * The same choices for the server's own code: a server function calls this, never userOptions,
+ * which in a production build only a page may call (one server function calling another is
+ * looked up as a request and not found).
+ */
+export function userChoicesModule(): string {
+  return `${HEADER}import { asc } from "drizzle-orm";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+
+/** Everyone who can be chosen in a User field, by name. */
+export const userChoices = () =>
+  db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
 `;
 }
 

@@ -258,7 +258,7 @@ export const ${n.options} = createServerFn().handler(async () =>
 /** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
 export const ${n.ownerOptions} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? userOptions() : null;
+  return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? userChoices() : null;
 });
 `
     : "";
@@ -313,7 +313,7 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
   .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
   .join(
     "",
-  )}import { writeAllowed } from "#/kit/limit";${ownerField ? '\nimport { userOptions } from "./users";' : ""}
+  )}import { writeAllowed } from "#/kit/limit";${ownerField ? '\nimport { userChoices } from "./user-choices.server";' : ""}
 import { currentViewer } from "#/lib/viewer.server";
 import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
 

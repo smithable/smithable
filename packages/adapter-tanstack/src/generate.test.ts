@@ -197,7 +197,15 @@ test("whose record it is is chosen only by a role that may change everyone's", (
   // The people to choose from, or null for a viewer who can only make their own: the form then
   // leaves the field out (the server makes them the owner whatever is sent).
   expect(file("src/generated/tool.ts")).toContain(
-    "return (!!viewer && (!!viewer.system || toolAccess.write.roles.includes(viewer.role))) ? userOptions() : null;",
+    "return (!!viewer && (!!viewer.system || toolAccess.write.roles.includes(viewer.role))) ? userChoices() : null;",
+  );
+  // A server function never calls another (in a production build the inner call is looked up as a
+  // request and not found): the owner choices come from the server-only module.
+  expect(file("src/generated/tool.ts")).toContain(
+    'import { userChoices } from "./user-choices.server";',
+  );
+  expect(file("src/generated/user-choices.server.ts")).toContain(
+    "export const userChoices = () =>",
   );
   // The owner's choices come from it; another User field still lists everyone signed in.
   expect(file("src/routes/tools/new.tsx")).toContain(

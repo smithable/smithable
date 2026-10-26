@@ -2243,6 +2243,31 @@ async function favoritesFlow(base) {
 }
 
 /**
+ * The production build, signed in (a demo's sign-in, DEMO_SIGN_IN=1): an administrator opens a new
+ * customer straight from its address and gets the form, the account manager's choices loaded on
+ * the server. One server function calling another failed there with "Server function info not
+ * found", which the development server never shows.
+ */
+async function productionFormFlow(dir, port) {
+  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1" });
+  const browser = await chromium.launch();
+  try {
+    const base = `http://localhost:${port}`;
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/customers/new`);
+    await page.getByRole("textbox", { name: "Name *" }).waitFor({ timeout: 10000 * P });
+    await page
+      .getByText("Account manager")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+  } finally {
+    await browser.close();
+    stop();
+  }
+}
+
+/**
  * Contact the owner: the admin adds a customer (and so owns it); a sales user writes from its
  * page; the mail reaches the admin with the sender as reply-to, and the page never shows the
  * admin's address.
@@ -6023,6 +6048,12 @@ for (const [index, example] of examples.entries()) {
           }
         },
       ).catch(() => {});
+
+    if (example === "crm")
+      await asyncStep(
+        "in the production build an administrator opens a new customer from its address and gets the form, with whom to give it to",
+        () => productionFormFlow(dir, port + 450),
+      );
 
     let stop = await serve(dir, port, "production");
     try {
