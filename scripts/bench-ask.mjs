@@ -2,8 +2,9 @@
 // assistant tools at /mcp, with a key, by a model. Per model: right or wrong, model calls per
 // question, tokens in and out, cost and time, and how big the tools are.
 //   node scripts/bench-ask.mjs <model>… [--starter crm,status] [--label today] [--voice friendly]
-//   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API), or the hosted
-//   assistant's cascade, cascade:mistral-small-latest>eu.anthropic.…; ask before running.
+//   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API), claude-… (Anthropic's
+//   own API), or the hosted assistant's cascade, cascade:mistral-small-latest>eu.anthropic.… or
+//   cascade:claude-haiku-5-5>claude-sonnet-5-5; ask before running.
 // Each starter is made, offers everything to programs and assistants (setApi all), gets an admin
 // key, and is served; questions that change records each start from the starter's records again.
 // --voice sets Ask's voice (setAssistantVoice) and gives the model the generated kit's line for it,
@@ -41,8 +42,11 @@ if (!models.length && !rescore)
 const PORT = 6470;
 const MAX_CALLS = 8;
 
-// Prices per million tokens, in dollars: Bedrock's EU profiles (eu-north-1) and Mistral's list.
+// Prices per million tokens, in dollars: Bedrock's EU profiles (eu-north-1), Anthropic's own API
+// (fresh input; its cache reads, a tenth, are counted as fresh here) and Mistral's list.
 const PRICES = [
+  [/^claude-haiku-5-5/, [0.1, 0.5]],
+  [/^claude-sonnet-5-5/, [2, 10]],
   [/claude-sonnet-4-6/, [3.3, 16.5]],
   [/claude-haiku-4-5/, [1.1, 5.5]],
   [/mistral-small/, [0.15, 0.6]],
@@ -54,7 +58,7 @@ const keyFile = (file) =>
   Object.fromEntries(
     readFileSync(join(homedir(), ".config/smithable", file), "utf8")
       .split("\n")
-      .map((line) => /^(?:export\s+)?([A-Z_]+)=(.*)$/.exec(line.trim()))
+      .map((line) => /^(?:export\s+)?([A-Za-z_]+)=(.*)$/.exec(line.trim()))
       .filter(Boolean)
       .map(([, key, value]) => [key, value.replace(/^["']|["']$/g, "")]),
   );
@@ -193,6 +197,94 @@ function mistral(model) {
 }
 
 /**
+ * Claude through Anthropic's own API (claude-…), as the hosted gateway sends it
+ * (smithable-cloud service/src/anthropic.ts): the conversation in the OpenAI shape turned into
+ * Messages blocks, the system text and the tools marked for prompt caching, the answer turned back.
+ */
+function anthropicModel(model) {
+  const key = keyFile("claude.env").claude_smithable_api_key;
+  return async (system, messages, tools) => {
+    const turns = [];
+    const add = (role, blocks) => {
+      const last = turns.at(-1);
+      if (last?.role === role) last.content.push(...blocks);
+      else turns.push({ role, content: blocks });
+    };
+    for (const m of messages) {
+      if (m.role === "tool")
+        add("user", [
+          { type: "tool_result", tool_use_id: m.tool_call_id, content: m.content || " " },
+        ]);
+      else if (m.role === "assistant")
+        add("assistant", [
+          ...(m.content ? [{ type: "text", text: m.content }] : []),
+          ...(m.tool_calls ?? []).map((c) => ({
+            type: "tool_use",
+            id: c.id,
+            name: c.function.name,
+            input: JSON.parse(c.function.arguments || "{}"),
+          })),
+        ]);
+      else add("user", [{ type: "text", text: m.content || " " }]);
+    }
+    const defs = tools.map((t) => ({
+      name: t.name,
+      description: t.description ?? t.name,
+      input_schema: t.inputSchema,
+    }));
+    if (defs.length) defs[defs.length - 1].cache_control = { type: "ephemeral" };
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4000,
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+        messages: turns,
+        tools: defs,
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(body).slice(0, 400));
+    const content = body.content ?? [];
+    const calls = content
+      .filter((c) => c.type === "tool_use")
+      .map((c) => ({ id: c.id, name: c.name, input: c.input }));
+    const text = content
+      .filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join("");
+    const u = body.usage ?? {};
+    return {
+      message: {
+        role: "assistant",
+        content: text,
+        ...(calls.length
+          ? {
+              tool_calls: calls.map((c) => ({
+                id: c.id,
+                type: "function",
+                function: { name: c.name, arguments: JSON.stringify(c.input) },
+              })),
+            }
+          : {}),
+      },
+      calls,
+      text,
+      tokensIn:
+        (u.input_tokens ?? 0) +
+        (u.cache_read_input_tokens ?? 0) +
+        (u.cache_creation_input_tokens ?? 0),
+      tokensOut: u.output_tokens ?? 0,
+    };
+  };
+}
+
+/**
  * The hosted assistant's cascade (smithable-cloud service/src/gateway.ts, backlog B 35), named
  * `cascade:<cheap>><better>`: a question starts on the cheap model and goes on to the better one
  * when the cheap one is seen failing: two tool calls refused, a fourth model call (the kit's last
@@ -205,9 +297,15 @@ function mistral(model) {
 function cascade(cheap, better) {
   const GIVE_UP =
     /\b(I (cannot|can't|can not|am unable|'m unable|don't have (access|the ability))|unable to (find|answer|help|access)|jag kan (inte|tyvärr inte))\b/i;
-  const callCheap = mistral(cheap);
+  // Anthropic's own API takes the conversation in the same shape as Mistral, through the gateway's turn.
+  const openAiShaped = (m) => m.startsWith("mistral-") || m.startsWith("claude-");
+  const callCheap = cheap.startsWith("claude-") ? anthropicModel(cheap) : mistral(cheap);
   // Strict's cascade is Mistral to Mistral (Small, then Medium): the same shape, nothing to turn.
-  const callBetter = better.startsWith("mistral-") ? mistral(better) : bedrock(better);
+  const callBetter = better.startsWith("mistral-")
+    ? mistral(better)
+    : better.startsWith("claude-")
+      ? anthropicModel(better)
+      : bedrock(better);
   const onBetter = new WeakSet();
   const cost = (model, t) => {
     const [pin, pout] = price(model);
@@ -244,7 +342,7 @@ function cascade(cheap, better) {
     return out;
   };
   const askBetter = async (system, messages, tools) => {
-    if (better.startsWith("mistral-")) {
+    if (openAiShaped(better)) {
       const turn = await callBetter(system, messages, tools);
       return { ...turn, cost: cost(better, turn) };
     }
@@ -609,10 +707,13 @@ for (const starter of rescore ? [] : starters) {
       ? bedrock(model)
       : model.startsWith("mistral-")
         ? mistral(model)
-        : model.startsWith("cascade:")
-          ? cascade(...model.slice("cascade:".length).split(">"))
-          : null;
-    if (!call) throw new Error(`${model}: eu.anthropic.…, mistral-… or cascade:<cheap>><better>.`);
+        : model.startsWith("claude-")
+          ? anthropicModel(model)
+          : model.startsWith("cascade:")
+            ? cascade(...model.slice("cascade:".length).split(">"))
+            : null;
+    if (!call)
+      throw new Error(`${model}: eu.anthropic.…, mistral-…, claude-… or cascade:<cheap>><better>.`);
     for (const [i, question] of QUESTIONS[starter].entries()) {
       if ((only && !only.includes(i + 1)) || done(model, starter, i + 1)) continue;
       if (question.skip) {

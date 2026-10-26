@@ -16,6 +16,7 @@ import {
 } from "@smithable/ai";
 import { validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
+import { anthropic } from "./anthropic.js";
 import { bedrock } from "./bedrock.js";
 import { claudeCode } from "./claude-code.js";
 import { coderFromEnv, writeCode } from "./code.js";
@@ -77,6 +78,17 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
         env.SMITHABLE_USAGE_LOG,
       ),
     );
+  // Claude through Anthropic's own API: SMITHABLE_FRONTIER=anthropic, SMITHABLE_FRONTIER_MODEL=one
+  // or more models, cheapest first (claude-haiku-5-5,claude-sonnet-5-5), the key in ANTHROPIC_API_KEY.
+  if (
+    env.SMITHABLE_FRONTIER === "anthropic" &&
+    env.SMITHABLE_FRONTIER_MODEL &&
+    env.ANTHROPIC_API_KEY
+  )
+    for (const model of env.SMITHABLE_FRONTIER_MODEL.split(",")
+      .map((m) => m.trim())
+      .filter(Boolean))
+      providers.push(anthropic(model, env.ANTHROPIC_API_KEY, env.SMITHABLE_USAGE_LOG));
   // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen
   // before is answered from the folder. Never on unless set.
   const folder = env.SMITHABLE_LLM_CACHE;

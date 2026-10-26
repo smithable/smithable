@@ -4,30 +4,44 @@
 // each draft is a valid app, what it contains, tokens, cost and time, into
 // docs/benchmarks/draft-modes-<model>.md. Uses the configured model's allowance: ask first.
 //   node scripts/bench-draft.mjs [files|operations]   (both when left out)
-import { writeFileSync } from "node:fs";
+//   CLAUDE_MODEL=claude-haiku-5-5 node scripts/bench-draft.mjs …   Anthropic's own API instead, the
+//   key read from ~/.config/smithable/claude.env and never printed.
+import { readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import {
   closestStarter,
   draftProject,
   draftProjectByOperations,
   openAICompatible,
 } from "../packages/ai/dist/index.js";
+import { anthropic } from "../packages/cli/dist/anthropic.js";
 import { STARTERS } from "../packages/cli/dist/starters.gen.js";
 import { validateSpec } from "../packages/core/dist/index.js";
 
 const repo = new URL("..", import.meta.url).pathname;
-const model = process.env.SMITHABLE_MODEL;
-if (!model || !process.env.SMITHABLE_MODEL_URL)
-  throw new Error("Set SMITHABLE_MODEL, SMITHABLE_MODEL_URL and SMITHABLE_MODEL_KEY.");
+const claude = process.env.CLAUDE_MODEL;
+const model = claude ?? process.env.SMITHABLE_MODEL;
+if (!claude && (!model || !process.env.SMITHABLE_MODEL_URL))
+  throw new Error(
+    "Set SMITHABLE_MODEL, SMITHABLE_MODEL_URL and SMITHABLE_MODEL_KEY, or CLAUDE_MODEL.",
+  );
 const [input = 0, output = 0] = (process.env.SMITHABLE_MODEL_PRICE ?? "0/0").split("/").map(Number);
-const provider = openAICompatible({
-  name: "smithable",
-  tier: "smithable",
-  location: "eu",
-  baseUrl: process.env.SMITHABLE_MODEL_URL,
-  model,
-  apiKey: process.env.SMITHABLE_MODEL_KEY,
-  price: { input, output },
-});
+const claudeKey = () =>
+  /^claude_smithable_api_key=["']?([^"'\n]+)/m.exec(
+    readFileSync(join(homedir(), ".config/smithable/claude.env"), "utf8"),
+  )?.[1] ?? "";
+const provider = claude
+  ? anthropic(claude, claudeKey())
+  : openAICompatible({
+      name: "smithable",
+      tier: "smithable",
+      location: "eu",
+      baseUrl: process.env.SMITHABLE_MODEL_URL,
+      model,
+      apiKey: process.env.SMITHABLE_MODEL_KEY,
+      price: { input, output },
+    });
 const modes = process.argv[2] ? [process.argv[2]] : ["files", "operations"];
 
 const DESCRIPTIONS = [

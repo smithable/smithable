@@ -86,7 +86,7 @@ const keyFile = (file) =>
   Object.fromEntries(
     readFileSync(join(homedir(), ".config/smithable", file), "utf8")
       .split("\n")
-      .map((line) => /^(?:export\s+)?([A-Z_]+)=(.*)$/.exec(line.trim()))
+      .map((line) => /^(?:export\s+)?([A-Za-z_]+)=(.*)$/.exec(line.trim()))
       .filter(Boolean)
       .map(([, key, value]) => [key, value.replace(/^["']|["']$/g, "")]),
   );
@@ -117,9 +117,18 @@ if (!args.model) {
     SMITHABLE_BEDROCK_REGION: process.env.SMITHABLE_BEDROCK_REGION ?? "eu-north-1",
     SMITHABLE_AI_POLICY: "best-available",
   });
+} else if (args.model.startsWith("claude-")) {
+  // Claude through Anthropic's own API, as global projects are served (Johan, 2026-10-26):
+  // "claude-haiku-5-5>claude-sonnet-5-5" drafts with Haiku and goes to Sonnet when its checks fail.
+  Object.assign(process.env, {
+    SMITHABLE_FRONTIER: "anthropic",
+    SMITHABLE_FRONTIER_MODEL: args.model.split(">").join(","),
+    ANTHROPIC_API_KEY: keyFile("claude.env").claude_smithable_api_key,
+    SMITHABLE_AI_POLICY: "best-available",
+  });
 } else
   throw new Error(
-    `--model ${args.model}: a mistral-…, gpt-… or eu.anthropic.… model, or none for Claude.`,
+    `--model ${args.model}: a mistral-…, gpt-…, eu.anthropic.… or claude-… model, or none for Claude.`,
   );
 // The response cache, for every `smithable` the bench starts (see the header).
 if (args["no-cache"]) delete process.env.SMITHABLE_LLM_CACHE;
