@@ -5026,7 +5026,10 @@ async function askFlow(dir) {
           "ask",
           "Email the customer when an order ships",
         );
-        if (!none.out.includes("No operation can do this: Sending email needs custom code."))
+        if (
+          !none.out.includes("Sending email needs custom code.") ||
+          none.out.includes("No operation can do this")
+        )
           throw new Error(none.out);
       },
     );

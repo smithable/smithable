@@ -316,7 +316,8 @@ export async function proposeChange(options: {
         };
       if (answer.kind === "none") {
         // A small model's "cannot" is not the last word while a stronger one is allowed.
-        none = answer.reason ?? "No operation can do this.";
+        none =
+          answer.reason ?? "I can't make that change here: none of the changes I can make does it.";
         if (index === providers.length - 1) return { kind: "none", reason: none, usage };
         break;
       }

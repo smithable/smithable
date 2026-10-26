@@ -18,6 +18,7 @@ import {
   alternativeFor,
   choicesFor,
   controlOf,
+  entryHeading,
   labelOf,
   operationFor,
   renameFor,
@@ -106,6 +107,8 @@ const Tools = createContext<(path: Path) => React.ReactNode>(() => undefined);
 
 /** The part asked to be shown (a kind of record, a field picked in the preview): open down to it. */
 const Opened = createContext<Path | undefined>(undefined);
+/** Whether the file is the content file, whose entries are named by other files (A 168). */
+const InContent = createContext(false);
 const leadsTo = (path: Path, target: Path | undefined) =>
   target !== undefined && path.length <= target.length && path.every((p, i) => p === target[i]);
 
@@ -159,7 +162,9 @@ export function SpecForm({
                     <Opened.Provider value={open}>
                       <Tools.Provider value={tools ?? (() => undefined)}>
                         <Adder.Provider value={adder ?? (() => undefined)}>
-                          <Value schema={schema} value={read(files[key])} path={[]} />
+                          <InContent.Provider value={key === "content"}>
+                            <Value schema={schema} value={read(files[key])} path={[]} />
+                          </InContent.Provider>
                         </Adder.Provider>
                       </Tools.Provider>
                     </Opened.Provider>
@@ -176,12 +181,39 @@ export function SpecForm({
 
 const box = "block h-7 w-full rounded-md border border-line bg-panel px-2 text-sm text-fg";
 
+/** The spec's areas by a short name and an icon (A 167); the description stays the tooltip. */
+const AREAS: Record<string, { label: string; icon: string }> = {
+  app: { label: "App", icon: "M4 5h16v14H4zM4 9h16" },
+  models: {
+    label: "Data",
+    icon: "M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3Zm0 0v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3",
+  },
+  actions: { label: "Actions", icon: "M13 3 5 14h6l-1 7 8-11h-6l1-7Z" },
+  pages: { label: "Pages", icon: "M7 3h7l4 4v14H7zM14 3v4h4" },
+  navigation: { label: "Menus", icon: "M5 7h14M5 12h14M5 17h14" },
+};
+
+function AreaIcon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true">
+      <path
+        d={d}
+        className="fill-none stroke-current"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** A value under its schema: its control, filled with what the file says, writing at `path`. */
 function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; path: Path }) {
   const write = useContext(Writer);
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
   const opened = useContext(Opened);
+  const inContent = useContext(InContent);
   const tools = useContext(Tools);
   const adder = useContext(Adder);
   const shaped = useContext(Shape)(path);
@@ -291,7 +323,9 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
               className="rounded-md border border-line"
               open={leadsTo([...path, name], opened) || undefined}
             >
-              <summary className="cursor-pointer px-2 py-1 font-medium">{name}</summary>
+              <summary className="cursor-pointer px-2 py-1 font-medium">
+                {entryHeading(name, inContent)}
+              </summary>
               <div className="space-y-2 border-t border-line p-2">
                 <div className="flex flex-wrap items-center gap-2">
                   {renamer([...path, name]) && (
@@ -332,7 +366,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
       // A group of kinds (a page) names the kind it is: chosen when it was added, then fixed.
       const kind = control.kinds?.find((k) => own[k] !== undefined);
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {control.kinds && (
             <p className="text-xs text-muted">
               Kind: <span className="font-medium">{kind ?? "not chosen"}</span>
@@ -525,9 +559,9 @@ function Key({
 }) {
   const nested = ["group", "entries", "list"].includes(controlOf(schema)?.kind ?? "");
   const opened = useContext(Opened);
-  // The areas of a file (the app, kinds of record, pages…) are closed at first, as their
-  // entries are.
-  if (nested && path.length === 1)
+  // The areas of a file (the app, kinds of record, pages, menus…) are closed at first, as their
+  // entries are, whatever the value's shape: the tab's own folding (A 167).
+  if (path.length === 1 && (nested || AREAS[name]))
     return (
       <details
         className="rounded-md border border-line"
@@ -536,12 +570,19 @@ function Key({
         open={leadsTo(path, opened) || undefined}
       >
         <summary
-          className="cursor-pointer px-2 py-1 text-sm font-medium"
+          className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium"
           title={typeof schema.description === "string" ? schema.description : undefined}
         >
-          {labelOf(name, schema)}
+          {AREAS[name] && !schema.title ? (
+            <>
+              <AreaIcon d={AREAS[name].icon} />
+              {AREAS[name].label}
+            </>
+          ) : (
+            labelOf(name, schema)
+          )}
         </summary>
-        <div className="border-t border-line p-2">
+        <div className="border-t border-line p-3">
           <Value schema={schema} value={value} path={path} />
         </div>
       </details>

@@ -27,7 +27,9 @@ import {
   granted,
   gridWarnings,
   headerState,
+  roleSentence,
   ticked,
+  visitorSentence,
   warningText,
 } from "./who-can";
 
@@ -58,6 +60,7 @@ export function WhoCan({
   marked?: string;
 }) {
   const { ir, auth } = spec;
+  const [advanced, setAdvanced] = useAdvanced();
   if (!ir || !auth)
     return (
       <p className="p-3 text-sm text-quiet">
@@ -69,19 +72,31 @@ export function WhoCan({
         (d) => !GRID_CODES.includes(d.code),
       )
     : [];
+  // Simple first: sign-in, a sentence for each role and for visitors, the roles and Ask; every
+  // grant per kind of record, page and action is Advanced, closed until asked for (A 166). Both
+  // write the same file.
+  const notes = others.length + gridWarnings(ir, auth).length;
+  const open = advanced || marked !== undefined;
   return (
     <div className="space-y-6 p-3 text-sm">
       <SignIn auth={auth} run={run} />
-      {auth.signIn !== "none" && <Records auth={auth} run={run} />}
-      <Grid ir={ir} auth={auth} run={run} marked={marked} />
-      <WhyAccess ir={ir} auth={auth} />
-      {others.length > 0 && (
-        <ul aria-label="Other notes on who can" className="space-y-1 text-xs text-muted">
-          {others.map((d) => (
-            <li key={`${d.code}:${d.message}`}>{d.message}</li>
-          ))}
+      <Block title="What each can do">
+        <ul aria-label="What each can do" className="space-y-1.5">
+          <li>
+            <span className="font-medium">Visitors</span>: {visitorSentence(auth)}
+          </li>
+          {auth.signIn !== "none" &&
+            auth.roles.map((r) => (
+              <li key={r.name}>
+                <span className="font-medium">{humanize(plural(r.name))}</span>:{" "}
+                {roleSentence(ir, r.grants)}
+              </li>
+            ))}
         </ul>
-      )}
+        <p className="text-xs text-muted">
+          To change one, tick it in Advanced, or ask Smith ("sales may delete orders").
+        </p>
+      </Block>
       {auth.signIn !== "none" && <Roles auth={auth} run={run} />}
       <Assistant
         auth={auth}
@@ -89,8 +104,53 @@ export function WhoCan({
         texts={spec.content?.assistant}
         voice={spec.ux?.assistant.voice}
       />
+      <Button
+        variant="ghost"
+        aria-expanded={open}
+        onClick={() => setAdvanced(!open)}
+        className="px-0 text-accent"
+      >
+        {open ? "Hide advanced" : "Advanced: every grant per kind of record, page and action"}
+        {!open && notes > 0 && ` (${notes} ${notes === 1 ? "note" : "notes"})`}
+      </Button>
+      {open && (
+        <>
+          {auth.signIn !== "none" && <Records auth={auth} run={run} />}
+          <Grid ir={ir} auth={auth} run={run} marked={marked} />
+          <WhyAccess ir={ir} auth={auth} />
+          {others.length > 0 && (
+            <ul aria-label="Other notes on who can" className="space-y-1 text-xs text-muted">
+              {others.map((d) => (
+                <li key={`${d.code}:${d.message}`}>{d.message}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
     </div>
   );
+}
+
+const ADVANCED = "smithable:who-can-advanced";
+
+/** Whether Advanced is open, kept in this browser. */
+function useAdvanced(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(ADVANCED) === "1";
+    } catch {
+      return false;
+    }
+  });
+  return [
+    open,
+    (next) => {
+      setOpen(next);
+      try {
+        localStorage.setItem(ADVANCED, next ? "1" : "0");
+      } catch {}
+    },
+  ];
 }
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {

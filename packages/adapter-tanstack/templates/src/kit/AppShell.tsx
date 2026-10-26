@@ -172,7 +172,10 @@ function Navigation({
           return (
             <div key={menu.name} className="flex flex-col gap-1">
               {menu.label && (
-                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide">
+                <p
+                  className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide"
+                  {...textMarker(`menus.${menu.name}.label`)}
+                >
                   {tx(menu.label)}
                 </p>
               )}

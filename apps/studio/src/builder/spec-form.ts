@@ -116,6 +116,21 @@ const LABELS: Record<string, string> = {
   intent: "What it is for",
   route: "Address",
   formula: "Formula",
+  // The content file's, whose descriptions are sentences for the tooltip (A 168).
+  subject: "Subject",
+  text: "Text",
+  thanks: "After sending",
+  address: "Address",
+  phone: "Phone",
+  email: "Email",
+  src: "Picture file",
+  generated: "Made by an AI",
+  fields: "Fields",
+  results: "Results heading",
+  sections: "Section headings",
+  reserve: "Reservation block",
+  hosting: "Where it is hosted",
+  about: "What it is for",
 };
 
 /** A key's label: its word in LABELS, the first sentence of its description, or its name made readable. */
@@ -124,7 +139,12 @@ export function labelOf(key: string, schema: JsonSchema): string {
   if (typeof schema.title === "string" && schema.title) return schema.title;
   const known = LABELS[key];
   if (known) return known;
-  const description = typeof schema.description === "string" ? schema.description : "";
+  // Without an example in the file's own syntax ("{ admin: { label: … } }"), which is for the
+  // tooltip, never a heading (A 168).
+  const description = (typeof schema.description === "string" ? schema.description : "").replace(
+    /[\s:,]*\{.*$/s,
+    "",
+  );
   // The first sentence: up to a stop before a capital, so "e.g." and "i.e." stay inside it.
   const first = description
     .split(/(?<!\be\.g\.|\bi\.e\.)(?<=[.:;])\s+(?=[A-Z"])/)[0]
@@ -328,3 +348,13 @@ export function renameFor(
   }
   return undefined;
 }
+
+/** An entry's name as a heading: in words in the content file, whose names are other files' (A 168). */
+export const entryHeading = (name: string, inContent: boolean): string =>
+  inContent
+    ? name
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[-_]/g, " ")
+        .toLowerCase()
+        .replace(/^./, (c) => c.toUpperCase())
+    : name;

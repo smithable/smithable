@@ -267,7 +267,8 @@ export async function ask(
       io.err(`${proposal.message}\n`);
       return 1;
     case "none":
-      io.out(`No operation can do this: ${proposal.reason}\n`);
+      // The reason is said as Smith says it (A 163), with the nearest thing that can be done.
+      io.out(`${proposal.reason}\n`);
       // Behavior that follows a change is a hook, which a coder can write (ARCHITECTURE §6.4).
       if (
         /\b(e-?mail|message|notif|remind|schedule|daily|when |after |whenever|send)/i.test(

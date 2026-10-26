@@ -4,7 +4,14 @@ import bookingAuth from "../../../../examples/booking/smithable.auth.yml?raw";
 import bookingSpec from "../../../../examples/booking/smithable.yml?raw";
 import crmAuth from "../../../../examples/crm/smithable.auth.yml?raw";
 import crmSpec from "../../../../examples/crm/smithable.yml?raw";
-import { granted, gridWarnings, headerState, ticked } from "./who-can";
+import {
+  granted,
+  gridWarnings,
+  headerState,
+  roleSentence,
+  ticked,
+  visitorSentence,
+} from "./who-can";
 
 const FILES = { booking: [bookingSpec, bookingAuth], crm: [crmSpec, crmAuth] } as const;
 const read = (example: keyof typeof FILES, auth?: (text: string) => string) => {
@@ -66,4 +73,12 @@ test("a tick writes the grant whole; under all an untick writes the rest", () =>
   const every = ticked(ir, rest, "pages", "customers", true);
   expect(headerState(ir, every, "pages")).toBe("every");
   expect(ticked(ir, ["Customer"], "read", "Customer", false)).toEqual(["none"]);
+});
+
+test("the simple view's sentences: each role and visitors in one line (A 166)", () => {
+  const { ir, auth } = read("booking");
+  const lines = Object.fromEntries(auth.roles.map((r) => [r.name, roleSentence(ir, r.grants)]));
+  expect(lines.admin).toBe("May do everything.");
+  expect(Object.values(lines).every((l) => /^May .+\.$/.test(l))).toBe(true);
+  expect(visitorSentence(auth)).toMatch(/^May open the .+ page/);
 });
