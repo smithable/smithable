@@ -15,5 +15,5 @@ models:
 
 pages:
   customers: { subtitle: "Keep every relationship in view: who they are, how to reach them and how much credit they have with us." }
-  orders: { subtitle: "Every order and where it stands, from draft to shipped. Search by number or by customer." }
-  team: { subtitle: "Who has access and who is invited. Only colleagues with an Acme address can sign in." }
+  orders: { subtitle: Every order and where it stands. }
+  team: { subtitle: Who has access and who is invited. }
