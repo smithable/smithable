@@ -1,4 +1,4 @@
-# Two incidents: one being watched, one resolved.
+# Five incidents: two being watched, three resolved.
 - title: Website unreachable for twenty minutes
   status: resolved
   component: Website
@@ -7,6 +7,9 @@
   summary: |
     A certificate renewal failed and browsers refused to connect. The certificate was renewed by
     hand and the renewal job now alerts the team a week before expiry.
+
+    The shop could not be reached from 08:38 to 09:01. The mobile app uses its own address and
+    kept working, so orders placed there went through as normal.
 - title: Card payments slow at checkout
   status: monitoring
   component: Payments
@@ -14,3 +17,41 @@
   summary: |
     Card payments took up to a minute to confirm for some customers. The payment provider found a
     faulty node and moved traffic away from it; we are watching before we call it resolved.
+
+    Invoice payments and gift cards were not affected. No customer was charged twice: a card
+    payment that timed out was not taken, and the order could be placed again.
+- title: Sign-in codes arriving late
+  status: resolved
+  component: Sign-in and accounts
+  detectedAt: 2026-09-27 10:15
+  resolvedAt: 2026-09-27 11:40
+  summary: |
+    From about 10:00 sign-in codes took up to twenty minutes to arrive for customers who use two
+    of the large free mail services. Our mail provider was holding back our mail to them after a
+    spike in volume.
+
+    We moved sign-in codes to a second sending route at 10:55, and the delay was gone by 11:30.
+    Customers who were already signed in were not affected.
+- title: Mobile app could not load order history
+  status: resolved
+  component: Mobile app
+  detectedAt: 2026-09-29 19:12
+  resolvedAt: 2026-09-29 20:04
+  summary: |
+    From 18:30 the app showed an error instead of the order history for some customers. A change
+    to the order service sent dates in a form the current version of the app does not read.
+    Placing new orders and tracking recent parcels worked as normal.
+
+    We rolled the change back at 20:00. It will go out again only after an app update that reads
+    the new form has been out for two weeks.
+- title: Order confirmation emails delayed
+  status: monitoring
+  component: Order emails
+  detectedAt: 2026-10-02 07:50
+  summary: |
+    The service that sends order confirmations stopped after a nightly update at 02:10 and did
+    not start again. Emails waited in a queue until the team restarted it in the morning. Orders
+    were received and paid as normal the whole time; only the emails were late.
+
+    All waiting emails have been sent. We have added an alert for when the queue grows, and we
+    are watching the service through the morning before we close this.

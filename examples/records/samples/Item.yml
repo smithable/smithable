@@ -1,35 +1,67 @@
 # The collection's items, as the starter shows them (docs/spec/v0.1.md, Sample data).
 - name: Stoneware teapot
-  summary: Thrown by hand on Gotland in the 1970s, with a glaze the color of wet sand. It still pours without a drip.
+  summary: Thrown by hand on Gotland in the 1970s, with a glaze the color of wet sand. It still pours without a drip. It holds four cups. The lid has a small chip on its rim that does not show from the front.
   kind: favorite
   addedOn: 2026-09-24
 - name: Bentwood chair
-  summary: One of four chairs from a café that closed in 1962. The seat was recaned last winter.
+  summary: One of four chairs from a café that closed in 1962. The seat was recaned last winter by a weaver in Jomala. We have looked for the other three for years and found none.
   kind: general
   addedOn: 2026-09-18
+- name: Glass net floats
+  summary: Five green glass floats from old herring nets, each blown a little differently. Two still have their knotted cord. They hang in the porch window and catch the morning light.
+  kind: general
+  addedOn: 2026-09-14
 - name: Brass ship's lamp
-  summary: Hung in a fishing boat out of Kökar until the boat was sold. It burns paraffin and smells of it.
+  summary: Hung in a fishing boat out of Kökar until the boat was sold. It burns paraffin and smells of it. The glass chimney is a replacement; the brass is the original.
   kind: favorite
   addedOn: 2026-09-10
 - name: Linen tablecloth
-  summary: Woven in Ostrobothnia with a pattern of small birds. Too long for any table we have.
+  summary: Woven in Ostrobothnia with a pattern of small birds. Too long for any table we have, so we fold it double for long summer dinners on the porch.
   kind: general
   addedOn: 2026-09-03
+- name: Sea chest
+  summary: A painted pine chest with the initials A. J. and the year 1887 on the lid. It went to sea with a sailor from Föglö and came home with him. Inside the lid is a pasted-in print of a three-masted barque.
+  kind: favorite
+  addedOn: 2026-08-31
 - name: Birch bark basket
-  summary: Plaited from a single strip of bark, the old way. Light enough to carry berries all day.
+  summary: Plaited from a single strip of bark, the old way. Light enough to carry berries all day. The handle is a twisted spruce root.
   kind: general
   link: https://en.wikipedia.org/wiki/Birch_bark
   addedOn: 2026-08-27
+- name: Hand-drawn sea chart
+  summary: Ink on heavy paper, showing the sounds between Lemland and Lumparland with depths in fathoms. Nobody knows who drew it. It is framed behind glass that keeps the sun off.
+  kind: general
+  addedOn: 2026-08-20
 - name: Wall clock
-  summary: A Mora clock in a painted pine case, made around 1840. It needs winding every eight days.
+  summary: A Mora clock in a painted pine case, made around 1840. It needs winding every eight days. It runs about two minutes fast a week and strikes the half hours softly.
   kind: favorite
   link: https://en.wikipedia.org/wiki/Mora_clock
   addedOn: 2026-08-15
+- name: Rag rug
+  summary: Woven on a farm in Saltvik from old work shirts and one blue dress. Six metres long, which is why it lives in the hall. We beat it on the snow each March.
+  kind: general
+  addedOn: 2026-08-06
 - name: Enamel coffee pot
-  summary: A blue enamel pot that boiled coffee on a wood stove for forty years. Chipped at the spout, now only for show.
+  summary: A blue enamel pot that boiled coffee on a wood stove for forty years. Chipped at the spout, now only for show. It leaks at the bottom seam, so it stays on the shelf.
   kind: archived
   addedOn: 2026-07-30
+- name: Wooden butter mould
+  summary: Carved from alder with a tulip and two leaves. It pressed a farm's butter into pats for the Saturday market. The wood is dark from a century of cream.
+  kind: general
+  addedOn: 2026-07-21
 - name: Wool blanket
-  summary: Striped gray and red, from a mill in Jämtland that still makes them. It lives on the reading chair.
+  summary: Striped gray and red, from a mill in Jämtland that still makes them. It lives on the reading chair. It has been washed twice in thirty years, both times by hand in the lake.
   kind: general
   addedOn: 2026-07-12
+- name: Spinning wheel
+  summary: A flax wheel from Ostrobothnia, missing its distaff. The drive band is new, but the treadle sticks. Stored in the loft until someone can mend the footman.
+  kind: archived
+  addedOn: 2026-06-28
+- name: Pewter candlesticks
+  summary: A pair, marked with a maker's stamp we have not been able to read. Used at Christmas and at no other time. One has a small dent from a fall in 1958, the family says.
+  kind: favorite
+  addedOn: 2026-06-14
+- name: Brass barometer
+  summary: From a pilot's house in Mariehamn. The needle moves a day or so before a storm. The dial reads in millimetres of mercury, with the words Storm, Regn, Ostadigt and Vackert.
+  kind: general
+  addedOn: 2026-05-30

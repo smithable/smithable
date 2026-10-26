@@ -6,12 +6,18 @@
 - { classType: Foundations, instructor: Aino Virtanen, startsAt: 2026-09-28 18:00, capacity: 10 }
 - { classType: Vinyasa, instructor: Oskar Berg, startsAt: 2026-09-29 07:00, capacity: 14 }
 - { classType: Vinyasa, instructor: Oskar Berg, startsAt: 2026-09-29 07:00, capacity: 14 }
+- { classType: Restorative, instructor: Aino Virtanen, startsAt: 2026-09-30 12:00, capacity: 8 }
+- { classType: Restorative, instructor: Aino Virtanen, startsAt: 2026-09-30 12:00, capacity: 8 }
 - { classType: Yin, instructor: Emma Lindqvist, startsAt: 2026-09-30 19:00, capacity: 12 }
 - { classType: Yin, instructor: Emma Lindqvist, startsAt: 2026-09-30 19:00, capacity: 12 }
 - { classType: Power flow, instructor: Oskar Berg, startsAt: 2026-10-01 17:30, capacity: 10 }
 - { classType: Power flow, instructor: Oskar Berg, startsAt: 2026-10-01 17:30, capacity: 10 }
+- { classType: Foundations, instructor: Aino Virtanen, startsAt: 2026-10-01 19:00, capacity: 10 }
+- { classType: Foundations, instructor: Aino Virtanen, startsAt: 2026-10-01 19:00, capacity: 10 }
 - { classType: Hatha, instructor: Aino Virtanen, startsAt: 2026-10-02 12:00, capacity: 12 }
 - { classType: Hatha, instructor: Aino Virtanen, startsAt: 2026-10-02 12:00, capacity: 12 }
+- { classType: Hatha, instructor: Emma Lindqvist, startsAt: 2026-10-03 08:30, capacity: 12 }
+- { classType: Hatha, instructor: Emma Lindqvist, startsAt: 2026-10-03 08:30, capacity: 12 }
 - { classType: Vinyasa, instructor: Oskar Berg, startsAt: 2026-10-03 10:00, capacity: 16 }
 - { classType: Vinyasa, instructor: Oskar Berg, startsAt: 2026-10-03 10:00, capacity: 16 }
 - { classType: Yin, instructor: Emma Lindqvist, startsAt: 2026-10-04 17:00, capacity: 12 }

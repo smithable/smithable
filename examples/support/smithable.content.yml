@@ -8,9 +8,9 @@ models:
 pages:
   cases:
     title: Cases
-    subtitle: Every request, who has it and where it stands.
+    subtitle: Every request that came in by mail, who has it and where it stands. Open a case to read its thread and answer the customer from there.
 
 outgoing:
   caseReceived:
     subject: We got your request
-    text: Thank you for writing. Your request has a number now; an answer to this mail reaches the same case.
+    text: Thank you for writing to Harbour Support. Your request is now a case, and its number is in the subject of this mail. If you want to add something, answer this mail and keep the subject as it is; your answer goes to the same case. We read the support mail on weekdays from 8 to 17 and usually answer within one working day.

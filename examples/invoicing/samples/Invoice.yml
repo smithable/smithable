@@ -4,3 +4,6 @@
 - { number: 2026-004, client: Skerry Software, issuedOn: 2026-09-14, dueOn: 2026-10-14, status: sent }
 - { number: 2026-005, client: Fjord Analytics, issuedOn: 2026-09-28, dueOn: 2026-10-28, status: sent }
 - { number: 2026-006, client: Kallio Design, issuedOn: 2026-10-01, dueOn: 2026-10-31, status: draft }
+- { number: 2026-007, client: Lemland Cider House, issuedOn: 2026-10-05, dueOn: 2026-11-04, status: sent }
+- { number: 2026-008, client: Saltvik Sailing Club, issuedOn: 2026-10-07, dueOn: 2026-11-06, status: paid }
+- { number: 2026-009, client: Tallmo Arkitekter, issuedOn: 2026-10-12, dueOn: 2026-11-11, status: draft }

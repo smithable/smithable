@@ -6,3 +6,14 @@
 - { title: Draft the newsletter, project: Autumn newsletter, status: todo, dueDate: 2026-10-10, details: "Lead with the new opening hours, then the two autumn offers." }
 - { title: Book the movers, project: Office move, status: doing, dueDate: 2026-10-20, details: "Two quotes so far; the second is cheaper but cannot do a Saturday." }
 - { title: Order boxes, project: Office move, status: todo }
+- { title: Agree on the go-live date with the designer, project: Website relaunch, status: done, dueDate: 2026-09-30, details: "Settled on Monday 19 October. The old site stays up until the morning of that day." }
+- { title: Collect the staff photos for the about page, project: Website relaunch, status: doing, dueDate: 2026-10-07, details: "Four of six are in. Ingrid and Marcus still need to send theirs; plain background, shoulders up." }
+- { title: Set up redirects from the old addresses, project: Website relaunch, status: todo, dueDate: 2026-10-16, details: "The old price page is linked from two partner sites. Keep that address working." }
+- { title: Pick two photos from the summer, project: Autumn newsletter, status: doing, dueDate: 2026-10-08, details: "One of the shop front, one from the September workshop. Ask before using anyone's face." }
+- { title: Clean the mailing list, project: Autumn newsletter, status: todo, dueDate: 2026-10-12, details: "Remove the 14 addresses that bounced in the spring issue." }
+- { title: Measure the new meeting room, project: Office move, status: done, details: "3.4 by 4.1 metres. The old table fits; the long bookshelf does not." }
+- { title: Move the internet subscription, project: Office move, status: todo, dueDate: 2026-10-28, details: "The provider needs two weeks' notice. Ask for the line to work the day before the move." }
+- { title: Tell the post office the new address, project: Office move, status: todo, dueDate: 2026-11-02 }
+- { title: Make the guest list, project: Customer evening, status: doing, dueDate: 2026-10-30, details: "Regular customers from the last two years. Sara has last December's list to start from." }
+- { title: Write the invitation, project: Customer evening, status: todo, dueDate: 2026-11-06, details: "Short and personal: the date, the time, the new address and how to answer." }
+- { title: Order coffee and pastries, project: Customer evening, status: todo, dueDate: 2026-11-27 }

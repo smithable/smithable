@@ -10,10 +10,10 @@ pages:
   home:
     hero:
       title: Northwind service status
-      subtitle: The state of our services, updated by the team as things happen.
+      subtitle: The state of the Northwind shop, the app and payments. The team updates this page while an incident is going on, and every incident stays in the history afterwards. Times are Åland time.
       button: See past incidents
     services: { title: Services }
-    uptime: { title: The last 90 days, text: "One bar a day for each service: green when it worked all day, amber or red when an incident was going on." }
+    uptime: { title: The last 90 days, text: "One bar a day for each service: green when it worked all day, amber or red when an incident was going on. Work we announced ahead is listed under planned maintenance." }
     open: { title: Going on now }
     recent: { title: Recently resolved }
     planned: { title: Planned maintenance }

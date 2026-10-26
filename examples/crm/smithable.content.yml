@@ -8,12 +8,12 @@ models:
       segment:
         values: { smb: Small business }
       creditLimit:
-        help: Orders are held when the outstanding balance goes above this amount.
+        help: Orders are held when the outstanding balance goes above this amount. Agree a higher limit with the customer before you change it.
   Order:
     fields:
       placedAt: { label: Placed on }
 
 pages:
-  customers: { subtitle: Keep every relationship in view. }
-  orders: { subtitle: Every order and where it stands. }
-  team: { subtitle: Who has access and who is invited. }
+  customers: { subtitle: "Keep every relationship in view: who they are, how to reach them and how much credit they have with us." }
+  orders: { subtitle: "Every order and where it stands, from draft to shipped. Search by number or by customer." }
+  team: { subtitle: "Who has access and who is invited. Only colleagues with an Acme address can sign in." }

@@ -13,7 +13,7 @@ pages:
   home:
     hero:
       title: A good haircut, at a time that suits you
-      subtitle: Choose a service and a barber, then a free time. You get a mail when it is confirmed.
+      subtitle: Two barbers, two chairs, a short walk from the western harbour. Choose a service and a barber, then a free time. We confirm by mail, usually within the hour on a working day.
       button: Book a time
     services:
       title: Services
@@ -27,9 +27,10 @@ pages:
 outgoing:
   appointmentRequested:
     subject: A new appointment to confirm
+    text: A customer has asked for a time. Check the barber's day and confirm it, or cancel it and call the customer if the time does not work.
   appointmentMade:
     subject: We have your appointment
-    text: Thank you. We mail you again when it is confirmed. You can cancel online until 12 hours before.
+    text: Thank you. We have your request and mail you again when it is confirmed. You can cancel online until 12 hours before. After that, please call the shop.
   appointmentConfirmed:
     subject: Your appointment is confirmed
-    text: See you then. To cancel, sign in and open the appointment.
+    text: See you then. Please come a few minutes early. To cancel, sign in and open the appointment; within 12 hours of the time, call the shop instead.

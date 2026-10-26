@@ -3,4 +3,14 @@
   component: Website
   startsAt: 2026-10-12 22:00
   endsAt: 2026-10-12 23:00
-  description: The shop may be slow or show a maintenance page for up to an hour.
+  description: The shop may be slow or show a maintenance page for up to an hour. We chose a late Monday evening, when the fewest people shop. Orders already placed are not affected.
+- title: Move of the app's notification service
+  component: Mobile app
+  startsAt: 2026-10-19 06:00
+  endsAt: 2026-10-19 07:00
+  description: Order and delivery notifications in the app may arrive up to an hour late while the service moves to new servers. The app itself and placing orders are not affected.
+- title: Sign-in system update
+  component: Sign-in and accounts
+  startsAt: 2026-10-26 05:00
+  endsAt: 2026-10-26 05:30
+  description: Signing in may fail for a few minutes during the update. If you are already signed in, you stay signed in. If a code does not work, wait a moment and ask for a new one.

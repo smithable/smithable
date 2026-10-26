@@ -6,6 +6,13 @@
   sender: customer
   fromEmail: johan@skerrycafe.example
   content: Thank you. It still happens on my phone, on the laptop it works.
+- supportCase: Cannot sign in to the booking site
+  sender: agent
+  content: That helps. The phone may be keeping an old sign-in page open. Could you close every tab with the booking site, ask for a new code and try again? If it still fails, tell us which phone and browser you use.
+- supportCase: Cannot sign in to the booking site
+  sender: customer
+  fromEmail: johan@skerrycafe.example
+  content: Closed all the tabs and it is the same. It is an older phone with its own browser, I can check the version tonight.
 - supportCase: Invoice sent to the wrong address
   sender: agent
   content: We have sent the September invoice to accounts@nordicbuild.example and changed the address for the next ones.
@@ -13,3 +20,24 @@
   sender: customer
   fromEmail: accounts@nordicbuild.example
   content: Got it, thanks for the quick help.
+- supportCase: Invoice sent to the wrong address
+  sender: customer
+  fromEmail: accounts@nordicbuild.example
+  content: Sorry to write again. The October invoice came by post to the old office after all. Is the old address still on the reminders too?
+- supportCase: Card terminal drops the connection
+  sender: agent
+  content: We see the terminal going offline in our logs too, about every twenty minutes. Please restart the router and then the terminal, in that order. Meanwhile we are calling the payment provider about their side.
+- supportCase: Card terminal drops the connection
+  sender: customer
+  fromEmail: mikael@sundkiosk.example
+  content: Restarted both at half past ten. It has held for an hour now, but it held for an hour yesterday as well.
+- supportCase: Backup report says the last run failed
+  sender: agent
+  content: The backup disk did not answer last night. It may only be a loose cable. Could someone check that the small grey box under the server has its light on? Nothing else needs doing before tonight.
+- supportCase: Backup report says the last run failed
+  sender: customer
+  fromEmail: erik@vardoboatworks.example
+  content: The light was off. The cleaner had pulled the plug to use the socket. It is back in and the light is green.
+- supportCase: Shared calendar not syncing to phones
+  sender: agent
+  content: Thank you for the details. The phone update changed a sync setting for shared calendars. We will send you short steps to switch it back, one phone at a time, this afternoon.

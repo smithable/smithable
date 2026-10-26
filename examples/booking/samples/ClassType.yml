@@ -1,21 +1,25 @@
 # The studio's classes, as the starter shows them (docs/spec/v0.1.md, Sample data).
 - name: Foundations
-  summary: The basic postures, one at a time, with time to ask questions. A good first class if you have never done yoga.
+  summary: The basic postures, one at a time, with time to ask questions. A good first class if you have never done yoga, or if it has been a few years. Never more than ten mats in the room.
   level: beginner
   durationMinutes: 60
 - name: Hatha
-  summary: Slow, steady postures held for a few breaths each. You leave stretched, warm and rested.
+  summary: Slow, steady postures held for five breaths each, with a long rest at the end. You leave stretched, warm and rested. The morning classes start gently, for stiff backs.
   level: allLevels
   durationMinutes: 75
 - name: Vinyasa
-  summary: Postures linked to the breath in a flowing sequence. Expect to move and to sweat a little.
+  summary: Postures linked to the breath in a flowing sequence, with music low in the background. Expect to move and to sweat a little. Every posture has an easier version on offer.
   level: allLevels
   durationMinutes: 60
 - name: Yin
-  summary: Long, quiet holds on the floor that ease the joints and the mind. Bring warm socks.
+  summary: Long, quiet holds on the floor, three to five minutes each, that ease the hips, the back and the mind. Lights low and little talking. Bring warm socks.
   level: allLevels
   durationMinutes: 75
 - name: Power flow
-  summary: A strong, quick sequence for those who know the basic postures well. Arm balances and inversions included.
+  summary: A strong, quick sequence for those who know the basic postures well. Arm balances and inversions included, always with a way to rest. New to yoga? Come to Vinyasa for a few weeks first.
   level: advanced
+  durationMinutes: 60
+- name: Restorative
+  summary: Five or six postures held for several minutes, fully supported by bolsters, blocks and blankets. Good after an illness, a hard week or a long run. Nothing to push, nothing to prove.
+  level: allLevels
   durationMinutes: 60

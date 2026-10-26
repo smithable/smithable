@@ -1,11 +1,11 @@
 # Orders across the day's statuses, each with its number, as staff see them on the orders page.
-- { number: 1, name: Lena Berg, phone: "+358 40 123 4567", email: lena@archipelago.example, status: collected }
-- { number: 2, name: Mats Holm, phone: "+358 40 234 5678", status: collected }
+- { number: 1, name: Lena Berg, phone: "+358 40 123 4567", email: lena@archipelago.example, status: collected, note: Picking up for two on the way to the ferry. }
+- { number: 2, name: Mats Holm, phone: "+358 40 234 5678", status: collected, note: Fries well done if you can. }
 - { number: 3, name: Aino Laine, phone: "+358 50 345 6789", email: aino@example.fi, status: collected, note: "No onions, please." }
-- { number: 4, name: Johan Ek, phone: "+358 40 456 7890", status: declined, reason: The cheese board is sold out today. }
-- { number: 5, name: Sara Nyström, phone: "+358 45 567 8901", email: sara@harbourfreight.example, status: ready }
-- { number: 6, name: Erik Sund, phone: "+358 40 678 9012", status: accepted, note: Extra bread. }
-- { number: 7, name: Maja Lind, phone: "+358 50 789 0123", email: maja@example.ax, status: accepted }
-- { number: 8, name: Oskar Fors, phone: "+358 40 890 1234", status: new }
-- { number: 9, name: Elin Strand, phone: "+358 45 901 2345", email: elin@example.ax, status: new, note: Two forks. }
-- { number: 10, name: Noah Kask, phone: "+358 40 012 3456", status: new }
+- { number: 4, name: Johan Ek, phone: "+358 40 456 7890", status: declined, reason: The cheese board is sold out today. A new batch comes in later this week; we are sorry. }
+- { number: 5, name: Sara Nyström, phone: "+358 45 567 8901", email: sara@harbourfreight.example, status: ready, note: For the freight office. I come by car around noon. }
+- { number: 6, name: Erik Sund, phone: "+358 40 678 9012", status: accepted, note: Extra bread, and one of the burgers without pickles. }
+- { number: 7, name: Maja Lind, phone: "+358 50 789 0123", email: maja@example.ax, status: accepted, note: Dressing on the side, please. }
+- { number: 8, name: Oskar Fors, phone: "+358 40 890 1234", status: new, note: I am at the boat yard and walk over in about fifteen minutes. }
+- { number: 9, name: Elin Strand, phone: "+358 45 901 2345", email: elin@example.ax, status: new, note: Two forks for the cake. }
+- { number: 10, name: Noah Kask, phone: "+358 40 012 3456", status: new, note: On my way from the ferry terminal. }

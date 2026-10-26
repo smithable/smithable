@@ -12,16 +12,16 @@ models:
 outgoing:
   bookingMade:
     subject: Your booking
-    text: Thank you for booking. We look forward to seeing you.
+    text: Thank you for booking. We look forward to seeing you. Please come ten minutes early to settle in; mats, blocks and blankets are by the door. If you cannot come after all, cancel the booking before the class starts so the mat goes to someone else.
   bookingChanged:
     subject: Your booking was changed
-    text: The studio changed your booking. Here it is as it is now.
+    text: The studio changed your booking. Here it is as it is now. If the new class does not suit you, cancel it before it starts, or write to us and we will find you another.
   bookingCancelled:
     subject: Your booking was cancelled
-    text: Your booking was cancelled. Here it is as it was.
+    text: Your booking was cancelled. Here it is as it was. If this was a mistake, book the class again from the schedule while mats are left, or write to us.
   sessionMoved:
     subject: Your class has a new time
-    text: The studio moved a class you booked. Here it is with its new time.
+    text: The studio moved a class you booked. Here it is with its new time, and your mat is kept for you. If the new time does not suit you, cancel the booking so the mat goes to someone else.
 
 menus:
   schedule: { label: Schedule }
@@ -44,23 +44,33 @@ pages:
     story:
       title: A small studio by the harbour
       text: |-
-        Calm Yoga began in 2019 as one evening class in a borrowed room. Today it is a studio of
-        its own on Torggatan, with classes from early morning to late evening.
+        Stillwater began in 2019 as one evening class a week in a borrowed room above a bakery. Today it is a studio of
+        its own on Storagatan, a few minutes from the harbour, with classes from seven in the morning to late evening.
 
-        The classes stay small, so every teacher knows your name and how your practice is going.
+        The classes stay small, never more than sixteen mats, so every teacher knows your name and how your practice
+        is going. The room has wooden floors, tall windows and a radiator under each of them, which matters in February.
+
+        We keep things simple. You book a mat online, you cancel it if plans change, and if you want to talk about
+        your practice, there is time for that after class.
     team: { title: Who teaches }
     faq:
       title: Questions before you come
       items:
         - question: Do I need experience?
-          answer: No. Foundations and all-levels classes are made for beginners.
+          answer: No. Foundations and all-levels classes are made for beginners, and every posture has an easier version.
         - question: How early should I arrive?
-          answer: Ten minutes before the class, to settle in and find your mat.
+          answer: Ten minutes before the class, to settle in and find your mat. We close the door when the class starts, to keep the room quiet.
+        - question: Which languages do the teachers speak?
+          answer: All classes are taught in Swedish and English. Aino also teaches in Finnish if you ask.
+        - question: Is there a changing room?
+          answer: Yes, with lockers and two showers. Bring a padlock or borrow one at the desk.
+        - question: Can I buy a gift card?
+          answer: Yes, for one class or for a month. Ask at the desk or write to us, and we will post it or keep it for you to collect.
   home:
-    description: Small yoga classes in Mariehamn for every level. See the schedule and book a mat.
+    description: Small yoga classes in Mariehamn for every level, from a first class to arm balances. See the schedule and book a mat online.
     estimate:
       title: Would a monthly pass pay off?
-      text: Try your own numbers. Nothing is saved.
+      text: Try your own numbers. One class is 16 euros and the monthly pass 99, so at seven classes a month or more the pass is cheaper. Nothing you type is saved.
       fields:
         classesPerMonth: { label: Classes a month }
         dropIn: { label: One class }
@@ -70,7 +80,7 @@ pages:
       results: A month
     hero:
       title: Find your calm
-      subtitle: Small yoga classes for every level, in the heart of Mariehamn.
+      subtitle: Small yoga classes for every level, a short walk from the harbour in Mariehamn. Book a mat online and come as you are.
       button: See the schedule
       image:
         src: images/hero.webp
@@ -78,16 +88,20 @@ pages:
         generated: true
     classes:
       title: Our classes
-      text: Something for every level, from first steps to deep stretches.
+      text: Six kinds of class, from first steps to deep stretches and arm balances. Each has an easier version of every posture, so you can start where you are.
     faq:
       title: Before your first class
       items:
         - question: Do I need experience?
-          answer: No. Foundations and all-levels classes are made for beginners.
+          answer: No. Foundations and all-levels classes are made for beginners. The teacher shows the easier version of each posture first.
         - question: What should I bring?
-          answer: Comfortable clothes and water. Mats are there for you.
+          answer: Comfortable clothes and water. Mats, blocks, straps and blankets are here for you, free of charge.
         - question: How do I cancel a booking?
-          answer: Open your booking and cancel it; the spot goes to someone else.
+          answer: Open it under My bookings and cancel it before the class starts. The mat then goes to someone else.
+        - question: What does a class cost?
+          answer: One class is 16 euros. A monthly pass is 99 euros and covers as many classes as you like that month.
+        - question: Can I come if I am pregnant or have an injury?
+          answer: Often yes. Write to us or tell the teacher before the class, and we will suggest the classes that suit you.
     callToAction:
       title: Your first class is waiting
       button: Book a class
@@ -102,28 +116,28 @@ pages:
           caption: Summer sessions by the sea
     contact:
       title: Questions? Write to us
-      text: We answer within a day.
+      text: We answer within a day, usually the same evening. If you need to change a booking for today, call the desk instead.
       address: |
         Storagatan 1
         22100 Mariehamn
       phone: +358 18 123 456
-      email: hello@stillwater.ax
+      email: hello@stillwater.example
       hours: |
         Monday to Friday 7–21
-        Saturday and Sunday 9–17
+        Saturday and Sunday 9–19
       button: Send message
       thanks: Thank you! We will get back to you within a day.
     footer:
       text: Stillwater Yoga · Storagatan 1, Mariehamn
       items:
         - { label: Class schedule, link: /schedule }
-        - { label: Email us, link: "mailto:hello@stillwater.ax" }
+        - { label: Email us, link: "mailto:hello@stillwater.example" }
   schedule:
     title: Class schedule
-    subtitle: A little time, just for you.
+    subtitle: This week's and next week's classes. Choose one to see how many mats are left and book yours.
   my-bookings:
     cancelling:
       title: Can't come after all?
-      text: Open the booking and cancel it before the class starts, so the mat goes to someone else.
+      text: Open the booking and cancel it before the class starts, so the mat goes to someone else. Once the class has started it can no longer be cancelled here; call the desk and we will sort it out.
   sessions:
     title: Sessions
