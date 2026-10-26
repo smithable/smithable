@@ -4,20 +4,20 @@ Claude through Anthropic's own API (`SMITHABLE_FRONTIER=anthropic`, `docs/ai.md`
 
 ## Changes typed into Builder
 
-[builder-changes.md](builder-changes.md): twelve requests on fresh starters, through `smithable ask --yes`. Two runs on the same day, both counted right out of twelve:
+[builder-changes.md](builder-changes.md): twelve requests on fresh starters, through `smithable ask --yes`. One run of twelve moved Sonnet and Mistral Small by two or three, so the requests ran five times more on each setup, with Opus 5.5 beside them ([builder-changes-runs.md](builder-changes-runs.md) has every request). Right out of twelve:
 
-| Setup | First run | Second run | Cost per request |
+| Setup | Mean | Range over five runs | Cost per request |
 |---|---|---|---|
-| Haiku 5.5 | 6 | 10 | $0.002 |
-| Sonnet 5.5 | 11 | 9 | $0.04 |
-| Haiku>Sonnet | 10 | 8 | $0.01 |
-| Mistral Small | 10 | 7 (two of them rate limits) | $0.004 |
-| Mistral Medium | 8 | 8 | $0.04 |
+| Haiku 5.5 | 9.8 | 9–11 | $0.0025 |
+| Opus 5.5 | 9.8 | 9–10 | $0.086 |
+| Sonnet 5.5 | 9.2 | 9–10 | $0.043 |
+| Haiku>Sonnet | 9.0 | 7–10 | $0.011 |
+| Mistral Small | 7.0 | 6–9 (two rate limits) | $0.0036 |
 
-- Haiku's first run lost answers to a Markdown fence around its JSON. The provider now strips it, and the second run is the one to read.
-- Between the runs Sonnet and Mistral Small move by two or three, most of it in how often a model asks a question back instead of making the change. One run of twelve does not rank these models; it separates them from Mistral Medium, which makes wrong changes where the others ask.
-- With Haiku>Sonnet, a question back from Haiku is its answer: only a failed check goes to Sonnet. So the pair asks more than Sonnet alone, and in the second run more than Haiku alone.
-- "Make each order belong to the salesperson who made it" was wrong for every setup in both runs: each adds the field and the ownership but leaves who may change the order as it was.
+- The Claude models are level: Haiku is right as often as Opus at a thirtieth of its cost, and Sonnet a little less, by asking back more ("show the VAT number in the list": three of five times it asked where). Mistral Small is two to three behind, mostly with wrong changes rather than questions.
+- Every setup asks back on "split the name into first and last" (except Mistral Small, which makes the change), and every setup is wrong on "make each order belong to the salesperson who made it": each adds the field and the ownership but leaves who may change the order as it was. The first is arguably a fair question; the second is the operation layer's to make easier, not a model's.
+- Haiku>Sonnet escalates only when Haiku says the spec cannot express a request (11 of 60, all then right, as Sonnet's own answers are). A question back from Haiku is final: 10 of 60 ended so. For the same request in the same run Sonnet alone made the right change 5 times (three of them "put orders first and call them Sales") and asked back too 5 times (all "first and last name"). So the pair is worse than Haiku alone, because Haiku asked on requests it answers itself in other runs.
+- What the router could do: send a cheap model's question to the stronger model before the person sees it. On these runs that turns 5 of the pair's 10 questions into right changes (the pair to about 10 of 12) at Sonnet's price for those requests only, and the 5 others stay questions Sonnet asks as well. Undecided; a question that a stronger model answers by guessing is not always better than the question.
 
 ## First builds (M12)
 
@@ -63,6 +63,6 @@ This run priced cached input at the full input price, so the Claude costs here a
 
 ## What it says
 
-- Haiku 5.5 is a good first model: as reliable as Mistral Medium on first builds and drafts, right as often as Sonnet on Builder's changes once its fences are stripped, and as often as Mistral Small in Ask with fewer wrong answers stated as fact, at a tenth to a twentieth of Sonnet's cost.
-- Sonnet 5.5 earns its cost where Haiku fails a check, which the pair already does: in Ask the pair comes close to Sonnet for little more than Haiku's cost. Behind Haiku, Sonnet never ran in the changes bench's second run.
-- A question back is not escalated. Whether a cheap model's question should go to the stronger model before it reaches the person is a choice for the router, not settled here.
+- Haiku 5.5 is a good first model: as reliable as Mistral Medium on first builds and drafts, right as often as Opus on Builder's changes over five runs, and as often as Mistral Small in Ask with fewer wrong answers stated as fact, at a tenth to a twentieth of Sonnet's cost.
+- Sonnet 5.5 earns its cost where Haiku fails a check, which the pair already does: in Ask the pair comes close to Sonnet for little more than Haiku's cost. In Builder's changes it is reached only when Haiku says the spec cannot do it.
+- A question back is not escalated. Sending it to the stronger model first would have turned half of the pair's questions into right changes in Builder's runs; whether to is a choice for the router, not settled here.

@@ -19,7 +19,13 @@ const { parse } = createRequire(join(repo, "packages/core/package.json"))("yaml"
 const args = process.argv.slice(2);
 const rules = args.includes("--rules");
 const rescore = args.includes("--score") ? args[args.indexOf("--score") + 1] : undefined;
-const models = rules ? ["rules"] : rescore ? [] : args;
+// --results <file>: this run's rows as JSON for bench-changes-runs.mjs, and no report.
+const resultsFile = args.includes("--results") ? args[args.indexOf("--results") + 1] : undefined;
+const models = rules
+  ? ["rules"]
+  : rescore
+    ? []
+    : args.filter((a, i) => a !== "--results" && args[i - 1] !== "--results");
 if (!models.length && !rescore) throw new Error("Name the models, or --rules.");
 
 const field = (y, model, re) =>
@@ -273,6 +279,8 @@ if (rescore) {
         rule,
         tokens: Number((used?.[2] ?? "0").replaceAll(",", "")),
         currency: used?.[5] ?? "$",
+        // Which models answered (a pair's second only when the first failed).
+        by: used?.[1] ?? "",
         cost: Number(used?.[6] ?? 0),
         seconds: Math.round((Date.now() - started) / 1000),
         answer: out
@@ -290,6 +298,10 @@ if (rescore) {
     }
 
 if (!rescore) writeFileSync(join(root, "results.json"), `${JSON.stringify(results, null, 2)}\n`);
+if (resultsFile) {
+  writeFileSync(resultsFile, `${JSON.stringify(results, null, 2)}\n`);
+  process.exit(0);
+}
 
 // ── Report ───────────────────────────────────────────────────────────────────
 const today = new Date().toISOString().slice(0, 10);
