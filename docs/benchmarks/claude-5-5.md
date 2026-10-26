@@ -46,10 +46,21 @@ Both Claude models draft whole files reliably, where Mistral Small fails half; o
 
 ## Ask
 
-To come: `scripts/bench-ask.mjs` on Haiku, Sonnet and Haiku>Sonnet.
+[bench-ask-claude.md](bench-ask-claude.md): the 134 questions of bench-ask put to each starter's assistant tools, judged on the answer's facts against the records. Mistral Small is from its latest run ([bench-ask-small-after-zeros.md](bench-ask-small-after-zeros.md), 2026-10-14).
+
+| Setup | Right | Wrong | Of them, stated as fact | Cost per question |
+|---|---|---|---|---|
+| Haiku 5.5 | 125 / 134 (93 %) | 9 | 3 | $0.0007 |
+| Sonnet 5.5 | 129 / 134 (96 %) | 5 | 0 | $0.015 |
+| Haiku>Sonnet | 127 / 134 (95 %) | 7 | 3 | $0.002 |
+| Mistral Small | 124 / 134 (93 %) | 8 | 8 | $0.0006 |
+
+- Haiku is right as often as Mistral Small at about the same cost, and states fewer wrong answers as fact: the app's answer check shows most of its wrong answers as not confirmed.
+- Sonnet states no wrong answer as fact, at twenty times Haiku's cost per question.
+- The pair moved 11 questions to Sonnet (7 at the fourth tool call, 3 after the check sent an answer back twice, 1 after two refused calls); 7 of them were then right. It is within two questions of Sonnet at about a seventh of its cost.
 
 ## What it says
 
-- Haiku 5.5 is a good first model: as reliable as Mistral Medium on first builds and drafts, and right as often as Sonnet on Builder's changes once its fences are stripped, at a tenth of Sonnet's cost.
-- Sonnet 5.5 earns its cost where Haiku fails a check, which the pair already does; behind Haiku it never ran in the changes bench's second run.
+- Haiku 5.5 is a good first model: as reliable as Mistral Medium on first builds and drafts, right as often as Sonnet on Builder's changes once its fences are stripped, and as often as Mistral Small in Ask with fewer wrong answers stated as fact, at a tenth to a twentieth of Sonnet's cost.
+- Sonnet 5.5 earns its cost where Haiku fails a check, which the pair already does: in Ask the pair comes close to Sonnet for little more than Haiku's cost. Behind Haiku, Sonnet never ran in the changes bench's second run.
 - A question back is not escalated. Whether a cheap model's question should go to the stronger model before it reaches the person is a choice for the router, not settled here.
