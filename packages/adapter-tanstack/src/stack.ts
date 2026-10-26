@@ -7,9 +7,9 @@ export const STACK_PROFILE = {
   packageManager: "pnpm@12.6.0",
   dependencies: {
     "@tailwindcss/vite": "4.3.3",
-    "@tanstack/react-router": "1.170.45",
-    "@tanstack/react-start": "1.169.3",
-    "better-auth": "1.7.12",
+    "@tanstack/react-router": "1.170.46",
+    "@tanstack/react-start": "1.169.4",
+    "better-auth": "1.7.13",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -20,7 +20,7 @@ export const STACK_PROFILE = {
     nodemailer: "10.1.7",
     react: "19.3.1",
     "react-dom": "19.3.1",
-    srvx: "1.0.6",
+    srvx: "1.0.7",
     "tailwind-merge": "3.7.0",
     tailwindcss: "4.3.3",
     zod: "4.6.7",
@@ -65,7 +65,7 @@ export const STACK_PROFILE = {
   retiredOverrides: ["@esbuild-kit/core-utils>esbuild"],
   devDependencies: {
     "@playwright/test": "1.63.0",
-    "@tanstack/router-cli": "1.167.45",
+    "@tanstack/router-cli": "1.167.46",
     "@types/better-sqlite3": "9.6.0",
     "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.2",
@@ -75,7 +75,7 @@ export const STACK_PROFILE = {
     "drizzle-kit": "0.31.11",
     tsx: "4.23.15",
     typescript: "6.0.3",
-    vite: "8.3.4",
+    vite: "8.3.5",
     vitest: "5.0.5",
   },
 } as const;
