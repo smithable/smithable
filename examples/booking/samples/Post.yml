@@ -1,31 +1,44 @@
 - title: Morning classes are back
   address: morning-classes
-  summary: From October the studio opens at seven on weekdays. Start the day with Vinyasa or Hatha before work.
+  summary: From October there are early classes again, with Vinyasa at seven on Tuesdays and Hatha on Monday and Saturday mornings. Start the day on the mat before work.
   cover: { file: 1.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window, generated: true }
   body: |
-    From October the studio opens at **seven** on weekdays.
+    From October the studio opens early again, so you can practise before work.
 
-    - Monday and Wednesday: Hatha with Emma
-    - Tuesday and Thursday: Vinyasa with Oskar
+    - **Monday at 8:00**: Hatha with Emma, 75 minutes, gentle on stiff backs
+    - **Tuesday at 7:00**: Vinyasa with Oskar, done by eight
+    - **Saturday at 8:30**: Hatha with Emma, new this autumn
 
-    Booking opens a week ahead, as always.
+    The front door opens fifteen minutes before the first class. There is tea in the hall afterwards, and the showers are free for everyone who books.
+
+    Booking opens a week ahead, as always. The early classes fill up first, so book on the day the week opens if you can.
   publishedOn: 2026-09-21
   status: published
 - title: What to bring to your first class
   address: first-class
-  summary: Comfortable clothes and a bottle of water are all you need. We lend mats, blocks and blankets for free.
+  summary: Comfortable clothes and a bottle of water are all you need. We lend mats, blocks and blankets for free, and the teacher shows you around before the class.
   cover: { file: 0.webp, alt: Three people stretching sideways in a bright room, generated: true }
   body: |
-    Come ten minutes early so we can show you around.
+    Come ten minutes early so we can show you around and find you a spot in the room.
 
-    Wear something you can move in, and bring water. Mats, blocks and blankets are on the shelf by the door.
+    **What to wear.** Something you can move and stretch in. Leggings or soft trousers and a T-shirt are fine. We practise barefoot.
+
+    **What to bring.** A bottle of water. If you have a mat of your own, bring it. If not, ours are on the shelf by the door, with blocks, straps and blankets. We wash the mats every evening.
+
+    **Before the class.** Eat lightly, or not at all in the two hours before. Tell the teacher about an injury, a recent operation or a pregnancy. There is always another way to do a posture.
+
+    **After the class.** Stay for a cup of tea if you like. Many book their next class before they leave.
   publishedOn: 2026-09-07
   status: published
 - title: Summer sessions by the sea
   address: summer-by-the-sea
-  summary: All of August we met on the shore at Lilla Holmen at sunset. Thank you to everyone who came along.
+  summary: Every weekday evening in August we met on the shore at Lilla Holmen at sunset. Twenty-one evenings, one cancelled for rain. Thank you to everyone who came along.
   cover: { file: 2.webp, alt: A runner on a path by the sea at sunset, generated: true }
   body: |
-    Forty evenings, one canceled for rain. We will be back next summer.
+    Every weekday evening in August we rolled out the mats on the grass at Lilla Holmen, a short walk from the studio. Twenty-one evenings, one cancelled for rain and one cut short by mosquitoes.
+
+    On a calm evening we were thirty on the shore. Oskar led most of the flows, and Emma took the Friday Yin with the last of the sun on the water.
+
+    Thank you to everyone who helped carry mats and blankets down from the studio. We will be back next summer, from the first week of June if the weather allows.
   publishedOn: 2026-08-31
   status: published

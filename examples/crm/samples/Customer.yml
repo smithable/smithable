@@ -4,46 +4,88 @@
   phone: +358 40 123 4567
   segment: enterprise
   creditLimit: 50000
-  notes: A sawmill group in Lahti that orders twice a month. Invoices go to their Helsinki office, never to the mill.
+  notes: A sawmill group in Lahti that orders twice a month, usually on the first and third Monday. Invoices go to their Helsinki office, never to the mill. Their buyer, Mikko, wants a call before any price change, not an email.
 - name: Baltic Freight AB
   email: info@balticfreight.example
   phone: +46 8 555 012 34
   segment: enterprise
   creditLimit: 25000
-  notes: Runs the night ferries between Stockholm and Turku. Asked for a quote on express shipping in the spring.
+  notes: Runs the night ferries between Stockholm and Turku. Asked for a quote on express shipping in the spring. They canceled ORD-1004 because the delivery window clashed with a dry-dock week; ask about their maintenance calendar before quoting dates.
 - name: Skerry Software
   email: hello@skerry.example
   phone: +358 18 123 45
   segment: smb
   creditLimit: 5000
-  notes: A team of six in Mariehamn building booking systems. Prefers email over phone calls.
+  notes: A team of six in Mariehamn building booking systems. Prefers email over phone calls and answers within the day. Small orders, but they sent us Fjord Analytics and two other leads last year.
 - name: Helios Energy
   email: purchasing@helios.example
   phone: +47 22 12 34 56
   segment: enterprise
   creditLimit: 40000
-  notes: Installs solar parks along the Norwegian coast. New purchasing contact since August; introduce yourself.
+  notes: Installs solar parks along the Norwegian coast. New purchasing contact since August; introduce yourself. Their framework contract is up for renewal in January, and they compare at least three suppliers.
 - name: Fjord Analytics
   email: team@fjordanalytics.example
   phone: +47 55 12 34 56
   segment: smb
   creditLimit: 8000
-  notes: Data consultants in Bergen, recommended to us by Skerry. They pay early and like it noticed.
+  notes: Data consultants in Bergen, recommended to us by Skerry. They pay early and like it noticed. The draft ORD-1008 waits for their project budget to be signed off at the end of the month.
 - name: Kallio Design
   email: studio@kallio.example
   phone: +358 9 123 4567
   segment: smb
   creditLimit: 3000
-  notes: A two-person design studio in Helsinki. Needs invoices in English.
+  notes: A two-person design studio in Helsinki. Needs invoices in English. Orders are small and often for a single client project, so they ask for standard shipping to keep costs down.
 - name: Visby Municipality
   email: inkop@visby.example
   phone: +46 498 12 34 56
   segment: government
   creditLimit: 60000
-  notes: Buys through a framework agreement that runs to 2027. Every order needs their reference number in the notes.
+  notes: Buys through a framework agreement that runs to 2027. Every invoice needs their reference number, or it is sent back unpaid. Payment terms are 30 days and they keep to them.
 - name: Arctic Outdoor Co
   email: shop@arcticoutdoor.example
   phone: +46 980 123 45
   segment: smb
   creditLimit: 12000
-  notes: An outdoor shop in Kiruna with a busy winter season. Orders double from November to March.
+  notes: An outdoor shop in Kiruna with a busy winter season. Orders double from November to March. Deliveries go to the back door on the loading street; the front is a pedestrian zone.
+- name: Turku Harbour Authority
+  email: procurement@turkuharbour.example
+  phone: +358 2 555 0140
+  segment: government
+  creditLimit: 45000
+  notes: Runs the passenger and cargo quays in Turku. Every purchase goes through their procurement desk, and orders above 5000 EUR need a second signature, which can add a week. Ask for Riikka in the procurement office.
+- name: Oslo Cold Storage AS
+  email: orders@oslocold.example
+  phone: +47 21 55 30 80
+  segment: enterprise
+  creditLimit: 20000
+  notes: Three refrigerated warehouses around Oslo. Growing fast; we raised their limit from 12000 in September after a year of on-time payments. They always choose express and want the tracking code the same day.
+- name: Gotland Wool Mill
+  email: kontakt@gotlandwool.example
+  phone: +46 498 55 21 07
+  segment: smb
+  creditLimit: 4000
+  notes: A family-run spinning mill outside Slite. Orders a few times a year, mostly before the summer market season. They pay by bank transfer and sometimes a few days late; a friendly reminder is enough.
+- name: Tampere Print House
+  email: tilaukset@tampereprint.example
+  phone: +358 3 555 7712
+  segment: smb
+  creditLimit: 6000
+  notes: A print shop of eleven people in Tampere. Regular monthly orders since the spring. Their office manager, Laura, prefers a short call over email when a delivery is delayed.
+- name: Eckerö Ship Chandlers Ab
+  email: order@eckeroship.example
+  phone: +358 18 380 12
+  segment: smb
+  creditLimit: 2500
+  notes: Supplies the boats in the Eckerö harbour from a small shop on the quay. Many small orders in the sailing season, May to September, and almost none in winter. Invoices in Swedish.
+- name: Lemland Boatyard Ab
+  email: varvet@lemlandboat.example
+  phone: +358 18 341 56
+  segment: smb
+  creditLimit: 5000
+  notes: Repairs and winters about forty boats a year. Canceled ORD-1016 when a customer's refit was put off until spring; they expect to order again in March. The owner, Johan, answers the phone only before ten.
+- name: Umeå Regional Services
+  email: upphandling@umearegion.example
+  phone: +46 90 555 31 20
+  segment: government
+  creditLimit: 30000
+  notes: Buys for the region's offices and depots. A new customer since October after a public tender. They need delivery notes with each package and a quarterly summary of what was ordered.

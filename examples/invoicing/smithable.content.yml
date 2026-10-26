@@ -6,7 +6,7 @@ models:
   BusinessProfile:
     fields:
       vatNumber: { label: VAT number }
-      iban: { label: IBAN, help: Where clients pay your invoices. }
+      iban: { label: IBAN, help: Where clients pay your invoices. It is printed on every invoice. }
       paymentTermDays: { label: Days to pay }
   Client:
     fields:
@@ -15,13 +15,13 @@ models:
 outgoing:
   invoiceSent:
     subject: Your invoice
-    text: Here is your invoice. Thank you for your business.
+    text: Here is your invoice. The due date, the amount and the account to pay to are on it. If anything looks wrong, reply to this mail and I will sort it out. Thank you for your business.
 
 pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Invoicely keeps your clients, invoices and payments in one place, so you always know who owes you what.
+      subtitle: Invoicely keeps your clients, invoices and payments in one place, so you always know who owes you what. It is made for one person doing good work, not for an accounts department.
       button: Start invoicing
       image:
         src: images/hero.webp
@@ -31,11 +31,13 @@ pages:
       title: Everything a freelancer needs
       items:
         - title: Invoices in a minute
-          text: Add the lines, and the total works itself out.
+          text: Add the lines with hours or pieces and a price, and the total works itself out. The due date follows from the issue date.
         - title: See what is overdue
-          text: Every invoice shows whether it is a draft, sent, paid or overdue.
+          text: Every invoice shows whether it is a draft, sent, paid or overdue. A sent invoice turns overdue on its own a week after its due date.
         - title: Your clients in one place
-          text: Addresses and VAT numbers are there when you need them.
+          text: Addresses, mail addresses and VAT numbers are there when you need them, with every invoice you have sent each client.
+        - title: The contract with the invoice
+          text: Attach the agreement as a PDF, so the work and the bill stay together when a client asks.
     pricing:
       title: Simple pricing
       text: Example plans; the prices are illustrative.
@@ -54,26 +56,30 @@ pages:
       title: Questions
       items:
         - question: Can I use my own invoice numbers?
-          answer: Yes. Numbers are yours to choose, like 2026-001.
+          answer: Yes. Numbers are yours to choose. Most people count per year, like 2026-001, 2026-002.
         - question: Who can see my invoices?
-          answer: Only you. Each freelancer sees their own clients and invoices.
+          answer: Only you. Each freelancer sees their own clients and invoices, and nobody else's.
         - question: Can I change an invoice after sending it?
-          answer: A sent or paid invoice is not edited; you credit it instead.
+          answer: A sent or paid invoice is not edited; you credit it instead. A draft you can change as often as you like.
+        - question: What happens when a client pays late?
+          answer: A week after the due date a sent invoice is marked overdue, and the overview shows how much is late in total.
+        - question: Can I start a new invoice from an old one?
+          answer: Yes. Duplicate an invoice and its lines come along. Give the copy its own number and change what differs.
     callToAction:
       title: Send your next invoice with Invoicely
       button: Get started
   overview:
-    subtitle: Who owes you what, at a glance.
+    subtitle: Who owes you what, at a glance. Sent, overdue and paid, and what you invoiced each month.
     outstanding: { label: Outstanding }
     invoiced: { label: Invoiced by month }
     latest: { label: Latest invoices }
-  invoices: { subtitle: Every invoice and where it stands. }
-  clients: { subtitle: The people and companies you work for. }
+  invoices: { subtitle: Every invoice and where it stands. Mark one sent when it goes out and paid when the money is in. }
+  clients: { subtitle: "The people and companies you work for, with the details your invoices need." }
   settings:
-    subtitle: Your business details, as your invoices show them.
+    subtitle: Your business details, as your invoices show them. Changes apply to invoices you send from now on.
   welcome:
-    subtitle: A little setup now, and your invoices are ready to send.
+    subtitle: A little setup now, and your invoices are ready to send. You can change all of it later in settings.
     business: { title: Your business }
     payment:
       title: Getting paid
-      text: Clients see these on every invoice.
+      text: Clients see these on every invoice. Most clients expect 14 or 30 days to pay.

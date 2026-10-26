@@ -2,9 +2,15 @@
 - { invoice: 2026-001, description: Two rounds of changes, quantity: 4, unitPrice: 85 }
 - { invoice: 2026-002, description: "Brand guidelines, 24 pages", quantity: 1, unitPrice: 1400 }
 - { invoice: 2026-003, description: "Menu photography, half day", quantity: 1, unitPrice: 450 }
-- { invoice: 2026-003, description: Edited photos, quantity: 30, unitPrice: 8 }
+- { invoice: 2026-003, description: "Edited photos, colour and crop", quantity: 30, unitPrice: 8 }
 - { invoice: 2026-004, description: "Booking page, mobile layout", quantity: 10, unitPrice: 85 }
 - { invoice: 2026-004, description: Hosting setup, quantity: 1, unitPrice: 120 }
 - { invoice: 2026-005, description: Dashboard workshop, quantity: 1, unitPrice: 900 }
 - { invoice: 2026-005, description: Travel to Bergen, quantity: 1, unitPrice: 210.5 }
-- { invoice: 2026-006, description: Website copy, quantity: 6, unitPrice: 75 }
+- { invoice: 2026-006, description: "Website copy, about and services pages", quantity: 6, unitPrice: 75 }
+- { invoice: 2026-006, description: "Swedish version, checked against the Finnish", quantity: 3, unitPrice: 75 }
+- { invoice: 2026-007, description: "Label design, three apple ciders", quantity: 1, unitPrice: 680 }
+- { invoice: 2026-007, description: Print-ready files for the printer, quantity: 2, unitPrice: 85 }
+- { invoice: 2026-008, description: "Regatta poster, A2 and A4", quantity: 1, unitPrice: 320 }
+- { invoice: 2026-009, description: "Portfolio site, page templates", quantity: 20, unitPrice: 85 }
+- { invoice: 2026-009, description: "Photo selection and cropping, 40 images", quantity: 40, unitPrice: 6 }

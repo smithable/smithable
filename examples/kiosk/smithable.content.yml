@@ -14,16 +14,17 @@ pages:
     title: Where we are
     hero:
       title: Find the truck
-      subtitle: Fish soup, burgers and buns by the harbour. Order ahead and pick up at the hatch.
+      subtitle: Fish soup, salmon, burgers and cinnamon buns from a small truck that moves around Mariehamn during the week. Order ahead on the menu, tell us when you come, and pick up at the hatch. Or just walk up and order there.
     stops:
       title: This week
 
 outgoing:
   orderPlaced:
     subject: A new order
+    text: A new order has come in. Open the orders page to accept it, or decline it and say why.
   orderAccepted:
     subject: Your order is being made
-    text: Thank you. The kitchen has your order; we mail you again when it is ready.
+    text: Thank you. The kitchen has your order and has started on it. We mail you again when it is ready at the hatch.
   orderReady:
     subject: Your order is ready
-    text: Your order waits at the hatch.
+    text: Your order waits at the hatch. Tell us your order number when you come. We keep hot food warm for about fifteen minutes.

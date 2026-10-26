@@ -1,10 +1,19 @@
 # The services the status page reports on (docs/spec/v0.1.md, Sample data).
 - name: Website
   status: operational
-  description: The public website and the online shop.
+  description: The public website and the online shop. Browsing, the basket and placing orders all run here.
 - name: Payments
   status: degraded
-  description: Card payments at checkout.
+  description: Card payments at checkout, handled by our payment provider. Invoice payments and gift cards run separately.
 - name: Mobile app
   status: operational
-  description: The app for iOS and Android.
+  description: The Northwind app for iOS and Android. It uses the same accounts and orders as the website.
+- name: Sign-in and accounts
+  status: operational
+  description: Signing in with a code sent by email, customer accounts and saved delivery addresses.
+- name: Order emails
+  status: operational
+  description: Order confirmations, receipts and shipping notices sent by email after each order.
+- name: Delivery tracking
+  status: operational
+  description: Parcel tracking on the order page and the tracking links in our emails. The data comes from the carriers a few times an hour.

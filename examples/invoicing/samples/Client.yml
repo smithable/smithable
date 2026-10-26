@@ -26,3 +26,24 @@
     Strandkaien 20
     5013 Bergen
     Norway
+- name: Lemland Cider House
+  email: info@lemlandcider.example
+  address: |-
+    Norrbyvägen 31
+    22610 Lemland
+    Åland, Finland
+  vatNumber: FI23456781
+- name: Saltvik Sailing Club
+  email: treasurer@saltviksailing.example
+  address: |-
+    c/o Club house
+    Hamnvägen 2
+    22430 Saltvik
+    Åland, Finland
+- name: Tallmo Arkitekter
+  email: faktura@tallmo.example
+  address: |-
+    Slottsgatan 15 A
+    20100 Turku
+    Finland
+  vatNumber: FI34567812

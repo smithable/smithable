@@ -283,8 +283,8 @@ function target(page, href) {
 }
 
 const CSS = `
-:root{--bg:#fcfcfa;--fg:#1d1d1b;--muted:#5d5d58;--line:#e3e2dc;--code:#f2f1ec;--accent:#9a4a12;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#151513;--fg:#e9e8e3;--muted:#a3a29b;--line:#2f2e2a;--code:#21201d;--accent:#f0a466;color-scheme:dark}}
+:root{--bg:#fcfcfa;--fg:#1d1d1b;--muted:#5d5d58;--line:#e3e2dc;--code:#f2f1ec;--accent:#3b5bdb;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#151513;--fg:#e9e8e3;--muted:#a3a29b;--line:#2f2e2a;--code:#21201d;--accent:#748ffc;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--accent)}
@@ -293,6 +293,7 @@ header .home{display:flex;align-items:center}header .home img{display:block;bord
 header a{text-decoration:none}
 header .docs{color:var(--fg);font-weight:700;margin-right:auto}
 header .gh{color:var(--muted);font-size:.9rem}
+header .try{background:var(--accent);color:var(--bg);font-weight:600;font-size:.9rem;padding:.3rem .9rem;border-radius:999px;white-space:nowrap}
 .drawer summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:.2rem .85rem;font-weight:600}
 .drawer summary::-webkit-details-marker{display:none}
 .drawer[open] summary{background:var(--code)}
@@ -410,7 +411,7 @@ const html = (page, body) => {
 <style>${CSS}</style>
 </head>
 <body>
-<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
+<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><a class="try" href="https://smithable.ai/#prompt">Try it</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
 <div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>

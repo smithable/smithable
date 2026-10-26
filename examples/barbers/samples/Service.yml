@@ -1,4 +1,10 @@
-- { name: Haircut, summary: A cut and a wash., minutes: 30, price: 32 }
-- { name: Beard trim, summary: Shaped and trimmed with a hot towel., minutes: 20, price: 22 }
-- { name: Haircut and beard, summary: "Both, in one sitting.", minutes: 50, price: 48 }
-- { name: Children's haircut, summary: For children under 12., minutes: 20, price: 20 }
+- { name: Haircut, summary: "A cut with scissors or clippers, finished with a wash and a quick style. Tell us how you usually wear it and how long it has been since the last cut.", minutes: 30, price: 32 }
+- { name: Beard trim, summary: "Shaped and trimmed with clippers and scissors, lines cleaned up with a razor, finished with a hot towel and beard oil.", minutes: 20, price: 22 }
+- { name: Haircut and beard, summary: "Both in one sitting, with one wash and one hot towel. The most booked service on Fridays.", minutes: 50, price: 48 }
+- { name: Children's haircut, summary: "For children under 12. A parent stays in the shop, and we keep a booster seat by the chair.", minutes: 20, price: 20 }
+- { name: Buzz cut, summary: "One length all over with clippers, then the neck and edges cleaned up. Tell us the guard number if you know it.", minutes: 15, price: 18 }
+- { name: Skin fade, summary: "A fade down to the skin at the sides and back, blended into the length on top. Allow the full time; it is not rushed.", minutes: 40, price: 38 }
+- { name: Hot towel shave, summary: "A straight-razor shave with hot towels, a lather and a cold rinse. Best booked two or three days after your last shave.", minutes: 30, price: 30 }
+- { name: Long hair cut, summary: "For hair below the shoulders. A wash, a cut that keeps the length you want, and a blow-dry.", minutes: 45, price: 42 }
+- { name: Senior haircut, summary: "A regular haircut for customers over 67, at a lower price. Weekday mornings are usually quiet.", minutes: 30, price: 26 }
+- { name: Eyebrow and ear tidy, summary: "Eyebrows trimmed and stray hairs at the ears and neck taken care of. Can be added on after another service.", minutes: 10, price: 10 }

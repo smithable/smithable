@@ -1,8 +1,8 @@
 # Where the truck stands this week.
-- { place: West harbour, day: 2026-10-12, hours: "11:00-14:00" }
-- { place: The square, day: 2026-10-13, hours: "11:00-15:00" }
-- { place: West harbour, day: 2026-10-14, hours: "11:00-14:00" }
-- { place: Sjökvarteret, day: 2026-10-15, hours: "11:00-16:00", note: By the boat yard. }
-- { place: West harbour, day: 2026-10-16, hours: "11:00-20:00" }
-- { place: The market, day: 2026-10-17, hours: "10:00-22:00", note: Autumn market all day. }
-- { place: The square, day: 2026-10-18, hours: "12:00-16:00" }
+- { place: West harbour, day: 2026-10-12, hours: "11:00-14:00", note: By the guest harbour office. Fish soup until the pot is empty. }
+- { place: The square, day: 2026-10-13, hours: "11:00-15:00", note: On the north side, next to the flower stall. }
+- { place: West harbour, day: 2026-10-14, hours: "11:00-14:00", note: Same spot as Monday, by the guest harbour office. }
+- { place: Sjökvarteret, day: 2026-10-15, hours: "11:00-16:00", note: By the boat yard. Park on the gravel and walk the last bit. }
+- { place: West harbour, day: 2026-10-16, hours: "11:00-20:00", note: Open into the evening for the late ferry. Last orders at the hatch at 19:45. }
+- { place: The market, day: 2026-10-17, hours: "10:00-22:00", note: Autumn market all day. There is a queue at lunch, so ordering ahead is quicker. }
+- { place: The square, day: 2026-10-18, hours: "12:00-16:00", note: No orders ahead on Sundays. Come to the hatch and we cook while you wait. }

@@ -1,41 +1,41 @@
 # The truck's menu as the starter shows it. The pictures are from the Smithable image library
 # (smithable-images, CC0).
 - name: Fish soup
-  description: Salmon, cod and shrimp in a creamy broth with dill, served with bread.
+  description: Salmon, cod and shrimp in a creamy broth with dill and a little fennel, made fresh each morning. Served with a slice of sourdough and butter.
   price: 14.5
   section: mains
   picture: { file: food-soup-b.webp, alt: "A bowl of soup with bread", generated: true }
   diet: none
   allergens: fish, shellfish, milk, gluten
 - name: Salmon with dill potatoes
-  description: Pan-fried salmon, new potatoes and a dill and lemon sauce.
+  description: Pan-fried salmon, new potatoes tossed with dill, and a dill and lemon sauce on the side.
   price: 17
   section: mains
   picture: { file: food-fish-b.webp, alt: "A plate of salmon with potatoes and dill", generated: true }
   diet: none
   allergens: fish, milk
 - name: Harbour burger
-  description: Beef burger with cheddar, pickles and fries.
+  description: Beef burger with aged cheddar, our own pickles and mustard mayonnaise in a toasted bun, with fries. Ask if you want it without cheese.
   price: 15
   section: mains
   picture: { file: food-burger.webp, alt: "A burger with fries on a board", generated: true }
   diet: none
-  allergens: gluten, milk, mustard
+  allergens: gluten, milk, mustard, egg
 - name: Green salad
-  description: Leaves, cucumber, peas and a lemon dressing.
+  description: Mixed leaves, cucumber, green peas, radish and toasted sunflower seeds with a lemon and rapeseed oil dressing.
   price: 9
   section: starters
   picture: { file: food-salad-b.webp, alt: "A bowl of green salad on a wooden table", generated: true }
   diet: vegan
 - name: Sourdough and butter
-  description: A slice of the day's sourdough with salted butter.
+  description: A thick slice of the day's sourdough from a bakery in town, with salted butter.
   price: 4
   section: starters
   picture: { file: food-bread-b.webp, alt: "A loaf of sourdough bread on a board", generated: true }
   diet: vegetarian
   allergens: gluten, milk
 - name: Cheese board
-  description: Three cheeses from the islands, crackers and fig jam.
+  description: Three cheeses from island dairies, crackers and fig jam. We get a small batch each week, and when it is gone it is gone.
   price: 12
   section: starters
   picture: { file: food-cheese-b.webp, alt: "A board of cheeses and crackers", generated: true }
@@ -43,29 +43,32 @@
   allergens: milk, gluten
   available: false
 - name: Coffee
+  description: Filter coffee, a medium roast. Milk or oat milk on request, and a free refill while you wait for your food.
   price: 3.5
   section: drinks
   picture: { file: drink-coffee-b.webp, alt: "A cup of black coffee on a saucer", generated: true }
   diet: vegan
 - name: Orange juice
-  description: Freshly pressed.
+  description: Freshly pressed at the truck, about four oranges to a glass.
   price: 4.5
   section: drinks
   picture: { file: drink-juice-b.webp, alt: "A glass of orange juice by a window", generated: true }
   diet: vegan
 - name: Tea
+  description: Black tea, or a herbal blend of mint and lemon balm, in a small pot for one.
   price: 3
   section: drinks
   picture: { file: drink-tea-b.webp, alt: "A teapot and a cup of tea", generated: true }
   diet: vegan
 - name: Berry cake
-  description: A slice of the day's cake with lingonberries and cream.
+  description: A slice of the day's sponge cake with lingonberries and whipped cream.
   price: 6
   section: sweets
   picture: { file: food-cake-b.webp, alt: "A slice of berry cake on a plate", generated: true }
   diet: vegetarian
   allergens: gluten, milk, egg
 - name: Cinnamon bun
+  description: Baked in the morning with cardamom in the dough and pearl sugar on top. Most days they run out by two.
   price: 4
   section: sweets
   picture: { file: cafe-cinnamon-buns-b.webp, alt: "A tray of cinnamon buns by a café window", generated: true }

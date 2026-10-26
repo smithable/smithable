@@ -1,17 +1,42 @@
-# Three requests that came in by mail, none taken by an agent yet: two new, one the customer wrote
-# back on after it was answered.
+# Requests that came in by mail from the small businesses we look after, none taken by an agent
+# yet: most are new, one the customer wrote back on after it was answered.
 - subject: Printer out of toner
   customerEmail: maria@harbourfreight.example
   status: open
   priority: 2
-  body: The office printer says it is out of toner. Can you send a new cartridge?
+  body: The office printer says it is out of toner. It is the black and white one by the window, the same model as last year. We still have a few pages left for today. Can you send a new cartridge, or two if that is cheaper?
 - subject: Cannot sign in to the booking site
   customerEmail: johan@skerrycafe.example
   status: open
   priority: 4
-  body: Since this morning the sign-in page says my code has expired, every time.
+  body: Since this morning the sign-in page says my code has expired, every time. I ask for a new code and type it in within a minute, but it says the same. Guests can still book tables, so it is only the staff side. We have a lunch group of twenty on Friday that I need to set up.
 - subject: Invoice sent to the wrong address
   customerEmail: accounts@nordicbuild.example
   status: reopened
   priority: 3
-  body: Our September invoice went to our old office. Could you send it to accounts@ instead?
+  body: Our September invoice went to our old office on Storagatan, which we left in the summer. Nobody there passes our post on. Could you send it to accounts@ instead, and use that address from now on?
+- subject: Card terminal drops the connection
+  customerEmail: mikael@sundkiosk.example
+  status: open
+  priority: 5
+  body: The card terminal at the kiosk loses its connection several times an hour since yesterday afternoon. Payments fail and customers have to pay in cash or leave. The router lights look normal and the phone works on the same network. It is the busiest week of the season for us.
+- subject: Backup report says the last run failed
+  customerEmail: erik@vardoboatworks.example
+  status: open
+  priority: 4
+  body: This morning's backup report says the night run failed, with the error disk not found. It has worked every night until now. Nobody has touched the server room as far as I know. Should we do anything before tonight?
+- subject: New staff member needs an account
+  customerEmail: lotta@lemlandbakery.example
+  status: open
+  priority: 2
+  body: We have a new baker starting on Monday, Sanna Holmqvist. She needs a mail address and a sign-in for the order system, the same access as the other bakers. She does not need the accounts folder.
+- subject: Shared calendar not syncing to phones
+  customerEmail: tove@kokarphysio.example
+  status: open
+  priority: 3
+  body: Appointments we put in the shared calendar on the reception computer do not show on our phones any more. Changes made on a phone do show on the computer. It started after the phones updated last week. Two of us have missed a patient change because of it.
+- subject: Price for extra mailboxes
+  customerEmail: sara@saltvikfarm.example
+  status: open
+  priority: 1
+  body: We would like two more mailboxes for the farm shop, one for orders and one for the summer staff. What would that cost a month, and can they be set up before the first of May? No hurry, I am only planning the spring.

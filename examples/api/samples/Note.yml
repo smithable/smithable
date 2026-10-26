@@ -1,10 +1,25 @@
 # What the assistant and the team keep in mind, per project.
 - title: Colours agreed with the designer
   project: Website relaunch
-  body: Dark green for buttons and links, warm grey for backgrounds. No pure black anywhere.
+  body: Dark green for buttons and links, warm grey for backgrounds. No pure black anywhere; body text is a very dark green-grey. The logo stays as it is.
 - title: Newsletter goes out on a Tuesday
   project: Autumn newsletter
-  body: Tuesday mornings get the most opens; send before nine.
+  body: Tuesday mornings get the most opens; send before nine. Thursday afternoons did worst in the spring test. Avoid the week of the autumn school holiday.
 - title: The new office's door code
   project: Office move
-  body: Ask Marcus; it changes on the first of every month and is not written down here.
+  body: Ask Marcus; it changes on the first of every month and is not written down here. The assistant does not keep it either.
+- title: Tone for the website texts
+  project: Website relaunch
+  body: Write the way we talk to customers in the shop. Plain words, short sentences, prices with VAT included. Say "we", not the company name.
+- title: Numbers from the spring issue
+  project: Autumn newsletter
+  body: 612 sent, 58 per cent opened, 14 bounced. Most clicks went to the opening hours and the workshop dates, almost none to the price list.
+- title: The movers' quotes
+  project: Office move
+  body: The first quote is 7,800 kronor and can do Saturday 14 November. The second is 6,200 kronor, weekdays only, which means closing for a day. Decide by 20 October.
+- title: What the landlord said
+  project: Office move
+  body: Keys on 2 November. We may paint the walls as long as they stay light. The lift is booked through the caretaker at least three days ahead.
+- title: Chairs and room for the evening
+  project: Customer evening
+  body: Chairs for twenty in the big room and a standing table in the kitchen. The bakery downstairs has lent us ten chairs before; ask them in good time.

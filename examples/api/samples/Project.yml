@@ -1,7 +1,9 @@
 # The team's projects.
 - name: Website relaunch
-  description: The new website, from the first sketches to the day it goes live.
+  description: The new website, from the first sketches to the day it goes live. Five pages (home, services, prices, about us and contact). The designer delivers the last drawings on 2 October; we write the texts ourselves.
 - name: Autumn newsletter
-  description: The October issue for customers, with the new opening hours.
+  description: The October issue for customers, with the new opening hours. About 640 subscribers. One page of text and two photos, sent in the second week of October.
 - name: Office move
-  description: Moving to the new office on the second floor in November.
+  description: Moving to the new office on the second floor in November. Same entrance as the bakery, three rooms and a small kitchen. The lease on the old office ends on 30 November.
+- name: Customer evening
+  description: An evening at the new office on Friday 4 December for regular customers, with coffee and a short talk about next year's services. Thirty invitations, room for about twenty-five people.

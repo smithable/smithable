@@ -13,11 +13,11 @@ pages:
   home:
     hero:
       title: Our collection
-      subtitle: The things we keep, and what we know about each of them.
+      subtitle: The things we keep, where each one came from, and what we know about it. Most of them are still in use.
       button: See everything
     items:
       title: In the collection
     footer:
-      text: Made with care.
+      text: Made with care, one object at a time.
   items:
-    subtitle: Everything we keep, newest first.
+    subtitle: Everything we keep, newest first. Search by name or by what we wrote about it.

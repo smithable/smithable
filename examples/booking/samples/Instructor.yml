@@ -1,7 +1,30 @@
 - name: Emma Lindqvist
-  bio: Emma has taught Hatha and Yin for twelve years. Her classes are calm, precise and full of small adjustments.
+  bio: |
+    Emma has taught Hatha and Yin for twelve years, the last six of them here. Her classes are calm and precise, with small adjustments and time to stay in each posture.
+
+    She came to yoga after a back injury from sailing, and she still thinks about the spine first.
+
+    - Hatha on Monday and Saturday mornings
+    - Yin on Wednesday and Sunday evenings
+
+    Ask her about stiff hips, tired shoulders after a day at a desk, and how to rest without falling asleep.
   portrait: { file: 0.webp, alt: Emma's class stretching sideways in the bright studio, generated: true }
 - name: Oskar Berg
-  bio: Oskar came to yoga from distance running and teaches Vinyasa and Power flow. He likes a good playlist and a clear count.
+  bio: |
+    Oskar came to yoga from distance running, looking for a way to keep his knees. He teaches Vinyasa and Power flow, with a good playlist and a clear count.
+
+    His classes move, but he always shows the easier version of a posture first and the harder one second.
+
+    - Vinyasa on Tuesday at seven and Saturday at ten
+    - Power flow on Thursday at half past five
+
+    In summer he leads the evening sessions on the shore at Lilla Holmen.
 - name: Aino Virtanen
-  bio: Aino teaches Foundations and loves first classes. She makes sure everyone leaves knowing a few postures by name.
+  bio: |
+    Aino teaches Foundations and loves first classes. She makes sure everyone leaves knowing a few postures by name, and which ones to skip on a bad day.
+
+    Before yoga she worked for eight years as a physiotherapist's assistant, so she is good with old injuries and careful knees. She teaches in Swedish, Finnish and English.
+
+    - Foundations on Monday and Thursday evenings
+    - Restorative on Wednesday at lunch
+    - Hatha on Friday at lunch
