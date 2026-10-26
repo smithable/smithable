@@ -253,7 +253,8 @@ export function roomFor(bytes: number): boolean {
   const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
   if (!max) return true;
   if (storedBytes() + bytes > max) return false;
-  if (counted) counted.bytes += bytes;
+  const kept = counted.get(uploadsDir());
+  if (kept) kept.bytes += bytes;
   return true;
 }
 
