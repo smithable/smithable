@@ -21,11 +21,11 @@ const HEADERS = {
 const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 
 /**
- * A demo (DEMO_SIGN_IN=1): each visitor works on a copy of the app's data of their own
+ * A demo (DEMO_VISITORS=1): each visitor works on a copy of the app's data of their own
  * (src/kit/visitor.ts), named by a cookie set on their first request. The request runs as its
  * visitor, which the database, the uploads and the outbox read through this shared store.
  */
-const VISITOR = process.env.DEMO_SIGN_IN === "1" ? new AsyncLocalStorage() : undefined;
+const VISITOR = process.env.DEMO_VISITORS === "1" ? new AsyncLocalStorage() : undefined;
 if (VISITOR) globalThis[Symbol.for("smithable.visitor")] = VISITOR;
 const VISITOR_COOKIE = "demo_visitor";
 function visitorOf(request) {

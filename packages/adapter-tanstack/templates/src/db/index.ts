@@ -59,7 +59,7 @@ const IDLE = 60 * 60_000;
 const KEPT = 500;
 
 /**
- * A demo's database (DEMO_SIGN_IN=1): every call goes to the request's visitor's copy, made from
+ * A demo's database (DEMO_VISITORS=1): every call goes to the request's visitor's copy, made from
  * the app's own (as the seed and the hourly reset leave it) on their first request, kept open for
  * the next; outside a request, the app's own. Visitors idle an hour are deleted.
  */

@@ -2273,12 +2273,12 @@ async function productionFormFlow(dir, port) {
  * admin's address.
  */
 /**
- * A demo (DEMO_SIGN_IN=1) gives each visitor a copy of the app's data of their own
+ * A demo (DEMO_VISITORS=1) gives each visitor a copy of the app's data of their own
  * (src/kit/visitor.ts): what one visitor adds, another never sees, and the app's own data is left
  * as the seed made it.
  */
 async function demoVisitorsFlow(dir, port) {
-  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1" });
+  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1", DEMO_VISITORS: "1" });
   const browser = await chromium.launch();
   try {
     const base = `http://localhost:${port}`;
@@ -6092,7 +6092,7 @@ for (const [index, example] of examples.entries()) {
 
     if (example === "crm")
       await asyncStep(
-        "a demo (DEMO_SIGN_IN=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees",
+        "a demo (DEMO_VISITORS=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees",
         () => demoVisitorsFlow(dir, port + 400),
       );
 
