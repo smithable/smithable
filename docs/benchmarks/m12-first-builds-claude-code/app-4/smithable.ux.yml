@@ -1,11 +1,11 @@
 smithableUx: 0.1
 pages:
-  loans:
+  catalog:
     table:
-      sort: dueOn
+      view: cards
 tones:
-  Loan.status:
-    out: warning
-    returned: success
+  Tool.condition:
+    likeNew: success
+    worn: warning
 theme:
   preset: woodland

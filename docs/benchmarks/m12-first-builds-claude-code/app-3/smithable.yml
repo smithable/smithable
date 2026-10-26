@@ -5,6 +5,13 @@ app:
   currency: EUR
   timezone: Europe/Stockholm
 models:
+  BusinessProfile:
+    fields:
+      businessName: string!
+      vatNumber: string
+      iban: string
+      paymentTermDays: int! = 30
+      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -12,12 +19,28 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Payment:
+    fields:
+      paidOn: date! = TODAY()
+      amount: money!
+      method: bankTransfer | card | cash | other
+      reference: string
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
       contract: file
       lines: InvoiceLine[]
@@ -25,46 +48,37 @@ models:
       total:
         type: money
         formula: SUM(lines.amount)
-      balance:
-        type: money
-        formula: SUM(lines.amount) - SUM(payments.amount)
-      paidAmount:
+      paid:
         type: money
         formula: SUM(payments.amount)
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
+      balance:
         type: money
-        formula: quantity * unitPrice
-  Payment:
-    fields:
-      invoice: Invoice!
-      amount: money!
-      paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
-      reference: string
-      note: text
+        formula: total - paid
 pages:
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markPaid, markOverdue]
   clients:
     crud: Client
+    search: [name, email]
   payments:
     crud: Payment
     filters: [invoice, method, paidOn]
-  invoice-lines:
-    crud: InvoiceLine
+  business:
+    crud: BusinessProfile
   overview:
     dashboard:
       received:
         sum: Payment.amount
         by: paidOn
+      outstanding:
+        sum: Invoice.balance
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.balance
+        where:
+          status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
       latest:
         list: Invoice
         limit: 5
@@ -72,14 +86,19 @@ pages:
     route: /
     landing:
       hero:
-      footer:
+        button: overview
       features:
       faq:
       callToAction:
         button: overview
+      footer:
   privacy:
     route: /privacy
     legal: privacy
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
     on: Invoice
@@ -94,7 +113,12 @@ actions:
       status: [sent, overdue]
     set:
       status: paid
-    intent: The client paid the invoice.
+    add:
+      Payment:
+        paidOn: TODAY()
+        amount:
+        method:
+    intent: The client paid the invoice; the payment is recorded with it.
   markOverdue:
     on: Invoice
     when:
@@ -103,9 +127,9 @@ actions:
       status: overdue
     intent: The invoice is late.
 timers:
-  markOverdue:
+  flagOverdue:
     on: Invoice
-    at: 7 days after dueOn
+    at: dueOn
     where:
       status: sent
     run: markOverdue
@@ -114,3 +138,4 @@ outgoing:
     when: markSent
     to: mail
     recipient: client.email
+navigation: [overview, invoices, clients, payments, business]

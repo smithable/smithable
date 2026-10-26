@@ -6,7 +6,7 @@ models:
   Supplier:
     fields:
       name: string!
-      contactName: string
+      contactPerson: string
       email: email
       phone: phone
       website: url
@@ -14,32 +14,24 @@ models:
       ingredients: Ingredient[]
   Ingredient:
     fields:
-      name: string! unique
+      name: string!
       category: flour | sugar | dairy | eggs | fats | yeast | fruit | nuts | chocolate | spices | packaging | other
       unit: kg | g | l | ml | pieces | packs
       inStock: decimal! = 0
-      reorderLevel: decimal
-      storage: dry | chilled | frozen
+      reorderLevel: decimal = 0
+      lowStock:
+        type: bool
+        formula: inStock <= reorderLevel
       supplier: Supplier
+      storage: dry | fridge | freezer
+      lastCounted: date = TODAY()
       notes: text
-      stockChanges: StockChange[]
-  StockChange:
-    fields:
-      ingredient: Ingredient!
-      kind: delivery | used | wasted | count
-      quantity: decimal!
-      on: date! = TODAY()
-      note: string
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [category, storage, supplier]
   suppliers:
     crud: Supplier
-    search: [name, contactName, email]
-  stockChanges:
-    crud: StockChange
-    filters: [ingredient, kind, on]
+    search: [name, contactPerson, email]
   team:
     users: manage

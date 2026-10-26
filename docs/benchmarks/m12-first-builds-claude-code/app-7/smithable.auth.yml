@@ -6,7 +6,7 @@ roles:
   admin: all
   member:
     description: Follows the club; only administrators add and change teams, players and matches.
-    pages: [home, matches, teams, players]
+    pages: all
 assistant:
   for: signed-in
 public:

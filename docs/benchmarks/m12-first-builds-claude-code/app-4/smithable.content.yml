@@ -1,17 +1,15 @@
 smithableContent: 0.1
 pages:
-  catalog:
-    title: Tools
-  myTools:
-    title: My tools
-  loans:
-    title: Lent out
-  saved:
-    title: Saved
   home:
+    features:
+      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? A neighbor down the street probably has one sitting in a drawer. }, { title: Share what you own, text: "Put your ladder, hedge trimmer or pressure washer to use by listing it in a minute with a photo." }, { title: Ask the owner directly, text: Send a message from the tool's page to agree on when to pick it up and bring it back. }, { title: Keep it local, text: "Every tool shows roughly where it is, so you can find what's close enough to walk to." }]
+      title: How it works
+    faq:
+      items: [{ question: Does borrowing cost anything?, answer: No. The library runs on neighbors trusting each other; owners and borrowers agree on the details between themselves. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message. Together you settle when to collect it and when it comes back." }, { question: What if a tool is already lent out?, answer: The owner marks it as not available while it is away. Save it with the heart and check again later. }, { question: Who can see my contact details?, answer: Nobody browsing the catalog. Your address is only shared with the neighbors you exchange messages with. }]
+      title: Questions
     hero:
-      title: Borrow it from a neighbor
-      subtitle: Why buy a drill you'll use twice? See which tools your neighbors share, ask to borrow one, and put your own tools to work.
+      title: Your neighborhood's shared toolshed
+      subtitle: Find the tool you need a few doors away, and lend out the ones gathering dust in your garage.
       button: Browse tools
       image:
         src: images/hero.webp
@@ -19,6 +17,12 @@ pages:
         generated: true
     latest:
       title: Ready to borrow
+  catalog:
+    title: Tools
+  myTools:
+    title: My tools
+  saved:
+    title: Saved
 logo:
   src: images/logo.webp
   alt: A toolbox

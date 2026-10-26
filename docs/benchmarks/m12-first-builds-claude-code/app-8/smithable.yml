@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Confera
-  description: Talks, speakers and attendee registration for a conference.
+  name: Summit Registration
+  description: The programme of a conference, its speakers, and registration for talks for attendees.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -10,16 +10,17 @@ models:
       name: string!
       company: string
       bio: markdown
-      photo: picture
+      portrait: picture
       talks: Talk[]
   Talk:
     fields:
       title: string!
-      summary: text
+      abstract: markdown
       speaker: Speaker!
+      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
-      room: string
+      track: general | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -39,31 +40,35 @@ models:
 pages:
   talks:
     crud: Talk
-    filters: [speaker, startsAt]
-    defaultFilter:
-      startsAt: upcoming
+    filters: [speaker, track, startsAt]
   speakers:
     crud: Speaker
-  my-registrations:
-    crud: Registration
   schedule:
     calendar:
       model: Talk
       starts: startsAt
+  my-registrations:
+    crud: Registration
   home:
     route: /
     landing:
       hero:
-      footer:
-      programme:
-        records: Talk
+        button: talks
+        secondButton: speakers
+      features:
       lineup:
         records: Speaker
       faq:
       callToAction:
         button: talks
+      footer:
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
+navigation:
+  main: [talks, speakers, schedule, my-registrations, home, privacy, admin]
+  programme: [talks, schedule, speakers, my-registrations]
+  website: [home]
+  admin: [admin]

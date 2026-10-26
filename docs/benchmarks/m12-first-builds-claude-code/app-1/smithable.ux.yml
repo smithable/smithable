@@ -1,5 +1,10 @@
 smithableUx: 0.1
+pages:
+  sessions:
+    table:
+      sort: startsAt
 theme:
-  preset: woodland
+  preset: nordic
+  motion: subtle
   brand:
-    font: Fraunces
+    font: Nunito Sans
