@@ -68,14 +68,24 @@ function rateLimiter(burst, size) {
  */
 const limited = rateLimiter(60, 10_000);
 
+/**
+ * A demo's new visitors per address (each a copy of the database): a burst of 20, then one a
+ * second, so a client that never sends its cookie back cannot make copies without end.
+ */
+const newVisitors = rateLimiter(20, 10_000);
+
 function allowed(request) {
   if (request.method === "GET" || request.method === "HEAD") return true;
+  return limited(addressOf(request));
+}
+
+function addressOf(request) {
   // Only behind a proxy that says who the visitor is (TRUST_PROXY=1, e.g. the hosted service)
   // is X-Forwarded-For believed, and then only its last hop, the one that proxy added; anyone
   // else could send a new address with every request.
   const forwarded =
     TRUST_PROXY && request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  return limited(forwarded || request.ip || "");
+  return forwarded || request.ip || "";
 }
 
 /**
@@ -131,6 +141,11 @@ serve({
         );
       // A demo's request runs as its visitor; a new one gets their cookie with the answer.
       const guest = VISITOR && visitorOf(request);
+      if (guest?.fresh && !newVisitors(addressOf(request)))
+        return new Response("Too many new visitors; try again in a moment.", {
+          status: 429,
+          headers: { "Retry-After": "5", ...HEADERS },
+        });
       const response = guest ? await VISITOR.run(guest.id, next) : await next();
       if (guest?.fresh)
         response.headers.append(

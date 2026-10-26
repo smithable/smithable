@@ -40,6 +40,10 @@ const storedPath = (file: string) => {
   return existsSync(own) ? own : join(dataDir, "uploads", file);
 };
 
+/** A stored picture's and document's name under uploads/: nothing that leads out of it. */
+const PICTURE_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.webp$/;
+const STORED_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/;
+
 /** Refused pictures say why in words the form shows. */
 export class BadPicture extends Error {}
 
@@ -78,7 +82,7 @@ export function savePicture(model: string, bytes: Uint8Array, alt: string): Pict
 
 /** The file of a stored picture, or undefined when it is gone. */
 export function readPicture(picture: Picture): Buffer | undefined {
-  if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.webp$/.test(picture.file)) return undefined;
+  if (!PICTURE_FILE.test(picture.file)) return undefined;
   const path = storedPath(picture.file);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
@@ -86,7 +90,8 @@ export function readPicture(picture: Picture): Buffer | undefined {
 /** Removes a picture's file, unless `stillUsed` says another record keeps it. */
 export function deletePicture(picture: Picture | null | undefined, stillUsed: boolean): void {
   // Only a file of the app's (or the visitor's) own: a demo never deletes the seed's.
-  if (!picture || stillUsed || !existsSync(join(uploadsDir(), picture.file))) return;
+  if (!picture || stillUsed || !PICTURE_FILE.test(picture.file)) return;
+  if (!existsSync(join(uploadsDir(), picture.file))) return;
   unlinkSync(join(uploadsDir(), picture.file));
 }
 
@@ -287,14 +292,15 @@ export async function scanned(bytes: Uint8Array): Promise<void> {
 
 /** The bytes of a stored document, or undefined when it is gone. */
 export function readFile(stored: StoredFile): Buffer | undefined {
-  if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/.test(stored.file)) return undefined;
+  if (!STORED_FILE.test(stored.file)) return undefined;
   const path = storedPath(stored.file);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 
 /** Removes a document's file, unless `stillUsed` says another record keeps it. */
 export function deleteFile(stored: StoredFile | null | undefined, stillUsed: boolean): void {
-  if (!stored || stillUsed || !existsSync(join(uploadsDir(), stored.file))) return;
+  if (!stored || stillUsed || !STORED_FILE.test(stored.file)) return;
+  if (!existsSync(join(uploadsDir(), stored.file))) return;
   unlinkSync(join(uploadsDir(), stored.file));
 }
 

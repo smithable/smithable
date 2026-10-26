@@ -2268,11 +2268,6 @@ async function productionFormFlow(dir, port) {
 }
 
 /**
- * Contact the owner: the admin adds a customer (and so owns it); a sales user writes from its
- * page; the mail reaches the admin with the sender as reply-to, and the page never shows the
- * admin's address.
- */
-/**
  * A demo (DEMO_VISITORS=1) gives each visitor a copy of the app's data of their own
  * (src/kit/visitor.ts): what one visitor adds, another never sees, and the app's own data is left
  * as the seed made it.
@@ -2324,6 +2319,11 @@ async function demoVisitorsFlow(dir, port) {
   }
 }
 
+/**
+ * Contact the owner: the admin adds a customer (and so owns it); a sales user writes from its
+ * page; the mail reaches the admin with the sender as reply-to, and the page never shows the
+ * admin's address.
+ */
 async function contactFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

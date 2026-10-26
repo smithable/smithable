@@ -1,5 +1,5 @@
 // Smithable app kit: opens the SQLite database under DATA_DIR and applies pending migrations.
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -65,13 +65,22 @@ const KEPT = 500;
  */
 function visitorDb(): typeof own {
   const root = join(dataDir, "visitors");
+  // Copies from before a start are made from an older database (and its migrations): gone.
+  rmSync(root, { recursive: true, force: true });
   const open = new Map<string, { sqlite: Database.Database; db: typeof own }>();
   const seen = new Map<string, number>();
   const close = (id: string) => {
     open.get(id)?.sqlite.close();
     open.delete(id);
   };
+  const forget = (id: string) => {
+    close(id);
+    seen.delete(id);
+    rmSync(join(root, id), { recursive: true, force: true });
+  };
   const forVisitor = (id: string): typeof own => {
+    // The latest seen last, so the visitors seen longest ago are first in line to go.
+    seen.delete(id);
     seen.set(id, Date.now());
     const kept = open.get(id);
     if (kept) {
@@ -82,6 +91,11 @@ function visitorDb(): typeof own {
     }
     const file = join(root, id, "app.db");
     if (!existsSync(file)) {
+      // A new copy past the limit takes the place of the visitor seen longest ago.
+      for (const [old] of seen) {
+        if (seen.size <= KEPT) break;
+        forget(old);
+      }
       mkdirSync(join(root, id), { recursive: true });
       sqlite.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
     }
@@ -97,16 +111,7 @@ function visitorDb(): typeof own {
     return entry.db;
   };
   setInterval(() => {
-    if (!existsSync(root)) return;
-    const visitors = readdirSync(root)
-      .map((id) => ({ id, at: seen.get(id) ?? statSync(join(root, id)).mtimeMs }))
-      .sort((a, b) => b.at - a.at);
-    visitors.forEach(({ id, at }, i) => {
-      if (i < KEPT && Date.now() - at < IDLE) return;
-      close(id);
-      seen.delete(id);
-      rmSync(join(root, id), { recursive: true, force: true });
-    });
+    for (const [id, at] of seen) if (Date.now() - at >= IDLE) forget(id);
   }, 5 * 60_000).unref();
   return new Proxy(own, {
     get(_, key) {
