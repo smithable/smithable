@@ -59,6 +59,8 @@ const DESCRIPTIONS = [
 ];
 
 const rows = [];
+// The calls' own currency: euros for Mistral, dollars for Anthropic.
+let currency = "EUR";
 for (const description of DESCRIPTIONS) {
   for (const mode of modes) {
     const t0 = Date.now();
@@ -76,6 +78,7 @@ for (const description of DESCRIPTIONS) {
       0,
     );
     const cost = draft.usage.reduce((n, u) => n + (u.costEur ?? u.cost ?? 0), 0);
+    if (draft.usage[0]) currency = draft.usage[0].currency;
     const ir =
       draft.kind === "draft"
         ? validateSpec({ path: "smithable.yml", text: draft.files["smithable.yml"] }).ir
@@ -105,7 +108,7 @@ for (const description of DESCRIPTIONS) {
 const cell = (t) => String(t).replace(/\|/g, "\\|");
 const summary = modes.map((mode) => {
   const r = rows.filter((x) => x.mode === mode);
-  return `${mode}: ${r.filter((x) => x.valid).length} / ${r.length} valid, ${r.reduce((n, x) => n + x.tokens, 0).toLocaleString("en")} tokens, €${r.reduce((n, x) => n + x.cost, 0).toFixed(3)}, ${r.reduce((n, x) => n + x.seconds, 0)} s`;
+  return `${mode}: ${r.filter((x) => x.valid).length} / ${r.length} valid, ${r.reduce((n, x) => n + x.tokens, 0).toLocaleString("en")} tokens, ${currency === "USD" ? "$" : "€"}${r.reduce((n, x) => n + x.cost, 0).toFixed(3)}, ${r.reduce((n, x) => n + x.seconds, 0)} s`;
 });
 const report = `# First drafts, files against operations: ${model} (${new Date().toISOString().slice(0, 10)})
 

@@ -2,8 +2,8 @@
 
 11 descriptions (the M12 ten and one more), each drafted as whole files adapted from the closest starter and as a batch of operations from an empty app (docs/design/first-build.md, 2.7). Valid means the draft is an app Smithable accepts.
 
-- files: 11 / 11 valid, 312,859 tokens, €0.856, 229 s
-- operations: 10 / 11 valid, 471,094 tokens, €0.374, 158 s
+- files: 11 / 11 valid, 312,859 tokens, $0.856, 229 s
+- operations: 10 / 11 valid, 471,094 tokens, $0.374, 158 s
 
 | Description | Mode | Valid | Name | Models (fields) | Pages | Ops | Tokens | Time | Problem |
 |---|---|---|---|---|---|---|---|---|---|
