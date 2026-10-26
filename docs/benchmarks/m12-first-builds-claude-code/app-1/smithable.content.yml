@@ -1,33 +1,16 @@
 smithableContent: 0.1
-models:
-  Instructor:
-    label: Teacher
-    pluralLabel: Teachers
-  Session:
-    fields:
-      instructor:
-        label: Teacher
 pages:
-  instructors:
-    title: Teachers
   home:
+    faq:
+      items: [{ question: I have never done yoga. Where should I start?, answer: Pick a class marked for beginners. Our teachers show you each pose step by step and offer easier versions whenever you need them. }, { question: What do I need to bring?, answer: "Comfortable clothes and some water. We have mats, blocks and blankets you can use for free." }, { question: How do I book a class?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, and you get a confirmation by mail." }, { question: Can I cancel my booking?, answer: "Yes. You can cancel up to two hours before the class starts, so someone else can take your place." }]
     hero:
-      title: Find your calm, one breath at a time
-      subtitle: Classes for every level with teachers who know you by name. See the week's schedule and book your place online.
+      title: Find your calm on the mat
+      subtitle: Classes for every level with teachers who care. See the week's schedule and book your place online in seconds.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
         generated: true
-    classes:
-      title: Our classes
-    teachers:
-      title: Meet our teachers
-    callToAction:
-      title: Ready to roll out your mat?
-      button: Book a class
-    contact:
-      title: Questions? Write to us
 logo:
   src: images/logo.webp
   alt: A calendar page

@@ -1,22 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: Jobs from our own local, text: "Every post comes from union staff, so you know the work is fair and the employer is known to us." }, { title: Apply in minutes, text: "Sign in, add a short note and your resume, and your application goes straight to the staff." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted, accepted or declined." }]
+      title: How the job board works
     hero:
-      title: Good jobs for union members
-      subtitle: Browse the openings our union has posted, and sign in to apply.
-      button: See all jobs
+      title: Union work, posted for members
+      subtitle: Browse open jobs from our local and apply with a few clicks.
+      button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
     latest:
-      title: Open jobs
-  jobs:
-    title: Jobs
-  myApplications:
-    title: My applications
-  applications:
-    title: Applications
+      title: Latest openings
 logo:
   src: images/logo.webp
   alt: A map pin

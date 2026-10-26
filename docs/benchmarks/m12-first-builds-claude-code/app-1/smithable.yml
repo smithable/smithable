@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Lotus Grove Yoga
+  name: Sundara Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
   currency: EUR
+  timezone: Europe/Stockholm
 models:
   Instructor:
     fields:
@@ -31,7 +32,7 @@ models:
       per: session
       max: session.capacity
       closes: session.startsAt
-      cancelUntil: session.startsAt
+      cancelUntil: 2 hours before session.startsAt
   Message:
     fields:
       name: string!
@@ -53,7 +54,6 @@ pages:
     crud: Booking
   sessions:
     crud: Session
-    sortable: [startsAt, capacity]
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
@@ -65,24 +65,46 @@ pages:
     route: /
     landing:
       hero:
-      classes:
-        records: ClassType
+        button: schedule
       teachers:
         records: Instructor
+      faq:
       callToAction:
         button: schedule
       contact:
         form: Message
+      classes:
+        records: ClassType
       footer:
   privacy:
     route: /privacy
     legal: privacy
+  admin:
+    data: all
   class-types:
     crud: ClassType
     filters: [level]
+timers:
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt
+outgoing:
+  reminder:
+    when: remind
+    to: mail
+    recipient: owner
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner
 navigation:
-  main: [schedule, my-bookings, sessions, instructors, messages, home, privacy, class-types]
+  main: [schedule, my-bookings, sessions, instructors, messages, home, privacy, admin, class-types]
   schedule: [schedule, my-bookings, sessions]
   messages: [messages]
   website: [home]
+  admin: [admin]
   studioSetup: [class-types, instructors]

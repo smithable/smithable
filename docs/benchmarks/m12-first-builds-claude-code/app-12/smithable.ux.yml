@@ -1,4 +1,13 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    record:
+      lists:
+        updates: thread
+  home:
+    sections:
+      services:
+        layout: list
 tones:
   Component.status:
     operational: success
@@ -7,7 +16,6 @@ tones:
   Incident.status:
     investigating: danger
     identified: warning
-    monitoring: warning
     resolved: success
 theme:
   preset: modern

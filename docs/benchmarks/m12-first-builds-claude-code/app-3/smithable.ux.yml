@@ -3,12 +3,17 @@ pages:
   payments:
     table:
       sort: -paidOn
+  invoices:
+    table:
+      columns: [number, client, issuedOn, dueOn, status, total, balance]
+      sort: -issuedOn
+theme:
+  preset: modern
+  brand:
+    primary: "#0f766e"
+    font: Inter
 tones:
   Invoice.status:
     paid: success
     sent: warning
     overdue: danger
-theme:
-  preset: modern
-  brand:
-    primary: "#0f766e"

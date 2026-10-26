@@ -1,18 +1,18 @@
 smithable: 0.1
 app:
-  name: Union Jobs
-  description: A job board where the union posts openings and members apply for them.
+  name: Union Job Board
+  description: Job posts for union members, and a simple way to apply.
   currency: USD
 models:
   Job:
     fields:
       title: string!
       employer: string!
-      description: text!
       location: string
-      trade: string
-      employment: fullTime | partTime | temporary | apprenticeship
-      pay: string
+      trade: electrical | carpentry | plumbing | construction | warehouse | office | other
+      jobType: fullTime | partTime | temporary | apprenticeship
+      payRate: string
+      description: text!
       closesOn: date
       status: open | filled | closed
       applications: Application[]
@@ -25,27 +25,29 @@ models:
       memberNumber: string
       message: text
       resume: file
-      status: submitted | reviewing | accepted | declined
+      status: submitted | shortlisted | accepted | declined
 pages:
   jobs:
+    route: /
     crud: Job
-    search: [title, employer, description, location, trade]
-    filters: [employment, status, closesOn]
+    search: [title, employer, location, description]
+    filters: [trade, jobType, status, closesOn]
     defaultFilter:
       status: open
-    favorites: true
+    sortable: [closesOn, createdAt]
     actions: [markFilled, closeJob]
-  myApplications:
-    crud: Application
-    mine: true
   applications:
     crud: Application
     filters: [job, status]
-    search: [name, email, memberNumber]
+    actions: [shortlist, accept, decline]
+  team:
+    users: manage
   home:
     route: /welcome
     landing:
       hero:
+        button: jobs
+      features:
       latest:
         records: Job
         where:
@@ -61,29 +63,30 @@ actions:
       status: open
     set:
       status: filled
-    intent: Mark a job as filled.
+    intent: Mark a job as filled once someone is hired.
   closeJob:
     on: Job
     when:
       status: open
     set:
       status: closed
-    intent: Close a job to new applications.
-  startReview:
+    intent: Close a job post to new applications.
+  shortlist:
     on: Application
     when:
       status: submitted
     set:
-      status: reviewing
+      status: shortlisted
   accept:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: accepted
   decline:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: declined
+navigation: [jobs, applications, team]

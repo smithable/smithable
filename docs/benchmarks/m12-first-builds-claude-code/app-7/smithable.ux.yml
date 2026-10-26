@@ -17,8 +17,9 @@ tones:
   Match.status:
     played: success
     postponed: warning
+    cancelled: danger
 theme:
   preset: modern
   brand:
     primary: "#15803d"
-    font: Archivo Narrow
+    font: Outfit

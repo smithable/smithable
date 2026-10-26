@@ -1,6 +1,6 @@
 smithableUx: 0.1
 tones:
-  Ticket.status:
+  SupportCase.status:
     open: warning
     reopened: danger
     closed: success

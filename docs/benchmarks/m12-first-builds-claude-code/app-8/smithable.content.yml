@@ -1,11 +1,24 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: A full programme, text: "Browse every talk with its time, room and track, and plan your days ahead." }, { title: Meet the speakers, text: Read about the people on stage and see everything each of them presents. }, { title: Save your seat, text: Register for the talks you want; places are limited and shown as they fill up. }, { title: All in one place, text: "Your registrations are listed together, and you can cancel any time before a talk starts." }]
+    faq:
+      items: [{ question: Do I need an account to register?, answer: "Yes. Anyone can browse the programme, but you sign in with your email address to register for talks." }, { question: Can I cancel a registration?, answer: "Yes, from your registrations, until the talk begins. Your place then goes to someone else." }, { question: What happens when a talk is full?, answer: Registration closes once every place is taken. Keep an eye on the programme in case places open up again. }]
     hero:
+      title: Two days of ideas, talks and people
+      subtitle: See the programme, get to know the speakers and register for the talks you don't want to miss.
+      button: See the talks
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
+    callToAction:
+      title: Seats are limited
+      text: Pick your talks now and make sure there is a place for you.
+      button: Register for talks
+    lineup:
+      title: Speakers
 logo:
   src: images/logo.webp
   alt: A ticket

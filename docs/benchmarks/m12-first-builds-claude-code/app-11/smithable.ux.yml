@@ -1,4 +1,11 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
+  maintenance:
+    table:
+      sort: -startsAt
 tones:
   Component.status:
     operational: success
@@ -10,4 +17,6 @@ tones:
     monitoring: warning
     resolved: success
 theme:
-  preset: minimal
+  preset: modern
+  brand:
+    primary: "#2563eb"

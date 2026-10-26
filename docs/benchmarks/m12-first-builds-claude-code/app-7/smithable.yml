@@ -1,28 +1,28 @@
 smithable: 0.1
 app:
-  name: Club Football
-  description: The club's site with its teams, players, fixtures and results.
+  name: Riverside FC
+  description: "The football club's site: our teams, players, fixtures and results."
   timezone: Europe/Mariehamn
 models:
   Team:
     fields:
       name: string!
-      ageGroup: string
+      ageGroup: senior | youth | women | veterans
       coach: string
-      photo: picture
-      summary: text
+      description: text
+      picture: picture
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
-      position: goalkeeper | defender | midfielder | forward
       number:
         type: int
         min: 1
         max: 99
-      photo: picture
+      position: goalkeeper | defender | midfielder | forward
+      picture: picture
       bio: text
   Match:
     fields:
@@ -30,8 +30,9 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      ground: string
-      status: scheduled | played | postponed
+      location: string
+      competition: string
+      status: scheduled | played | postponed | cancelled
       goalsFor:
         type: int
         min: 0
@@ -43,11 +44,12 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, ground]
+    search: [opponent, competition]
     filters: [team, status, venue, kickoff]
     actions: [recordResult, postpone]
   teams:
     crud: Team
+    filters: [ageGroup]
   players:
     crud: Player
     search: [name]
@@ -56,6 +58,8 @@ pages:
     route: /
     landing:
       hero:
+        button: matches
+        secondButton: teams
       upcoming:
         records: Match
         where:
@@ -80,11 +84,11 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match.
+    intent: Enter the final score of a match once it has been played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a match as postponed.
+    intent: Mark a scheduled match as postponed.
