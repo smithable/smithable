@@ -20,7 +20,19 @@ The difference from prompt-to-code builders: **Smithable understands the applica
 
 **Status:** beta. The engine, CLI, Studio and MCP server in this repository work on their own, on your machine, with no account. The hosted service (smithable.ai, a private beta) lives in a separate repository and builds on them: we can run it, but it's all yours.
 
-**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the ten starters](https://docs.smithable.ai/starters.html), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
+**Quick start** (Node 24):
+
+```sh
+npx smithable@latest new my-crm
+cd my-crm
+npx smithable@latest studio
+```
+
+**Try it in the browser:** [the theme lab](https://docs.smithable.ai/theme-lab/) puts a theme on a starter's real pages, with no install and no sign-in; the hosted beta is at [smithable.ai](https://smithable.ai).
+
+Built by Åland IT AB, with Claude as a pair programmer.
+
+**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the ten starters](https://docs.smithable.ai/starters.html) (seven of them shown on smithable.ai), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
 
 ![The marketplace starter, Torget: a catalog with search, filters and photos](docs/site/starters/marketplace-1.webp)
 

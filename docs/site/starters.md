@@ -1,10 +1,10 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with operations or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Each starter also has a page of its own on smithable.ai; all seven are at [smithable.ai/starters](https://smithable.ai/starters).
+A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with operations or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the ten also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck and the barbershop are made with `smithable new` on your own machine.
 
 ## CRM
 
-*Customers, deals and follow-ups for a sales team.*
+*Customers and their orders for a sales team.*
 
 ![The customers list of the CRM starter](starters/crm-1.webp)
 ![A customer's page in the CRM starter](starters/crm-2.webp)
@@ -34,7 +34,7 @@ See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/booki
 
 ## Invoicing
 
-*Clients, invoices and payments for a freelancer.*
+*Clients and invoices, with their totals, for a freelancer.*
 
 ![The landing page of the invoicing starter, Invoicely](starters/invoicing-1.webp)
 ![An invoice in the invoicing starter](starters/invoicing-2.webp)
