@@ -31,6 +31,7 @@ The texts are written by hand for each (not "A short description of Hatha 2"); t
 
 - Each showcase app is an ordinary published app owned by a Smithable account. The service keeps its **seed**: the data volume right after publishing with the sample data (the backup script's consistent copy, taken once and kept beside the backups as `seed.tar.gz`).
 - Every hour, and when the app's data has grown past a limit (records or uploads), the service restores the seed with the restore path it already has (stop, replace the data, start; a few seconds), so nothing a visitor added survives the hour. The existing per-address write limits apply; a showcase app's uploads are capped at a few megabytes each and a few hundred in all.
+- With `DEMO_VISITORS=1` beside `DEMO_SIGN_IN=1` (2026-10-26), each visitor also works on a copy of the data of their own: a cookie names the visitor, and their first request copies the app's database (as the seed and the hourly reset leave it) into `data/visitors/<id>/`, with their uploads and outbox beside it. What one visitor adds, no other sees, and the app's own data stays as the seed made it. A copy idle an hour is deleted, at most 500 are kept (a new one replaces the visitor seen longest ago), every copy goes when the app starts, and new visitors are limited per address.
 - Showcase apps are excluded from the weekly security republish's owner mails (the owner is the service) but not from the republish itself, and from the usage sampling and the monthly copies (nothing to keep).
 
 ## 5. Where
