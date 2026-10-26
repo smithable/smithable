@@ -52,3 +52,31 @@ test("the conversation shows the body and the side the model names, and the auth
   expect(page).toContain('side={{ field: "direction", ours: "out" }}');
   expect(page).not.toContain('text="summary"');
 });
+
+test("a thread with nothing to add on its page destructures no canAdd it never reads (M12 app 12)", () => {
+  // A required field the reply box cannot fill, and no page of the message's own: no reply box,
+  // no Add button, so the page reads no canAdd (TS6133 otherwise).
+  const strict = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace("      content: text!\n", "      content: text!\n      kind: string!\n"),
+  }).ir as SpecIR;
+  const files = generateApp(strict, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    ux,
+  });
+  const page = files.find((f) => f.path === "src/routes/cases/$id.tsx")?.content ?? "";
+  expect(page).not.toContain("canAdd?.");
+  expect(page).not.toMatch(/const \{[^}]*\bcanAdd\b[^}]*\} = Route\.useLoaderData/);
+  // With the reply box (the first spec), it reads it.
+  const replying = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    ux,
+  });
+  expect(replying.find((f) => f.path === "src/routes/cases/$id.tsx")?.content).toMatch(
+    /const \{[^}]*\bcanAdd\b[^}]*\} = Route\.useLoaderData/,
+  );
+});
