@@ -10,6 +10,7 @@ import type { JsonSchema } from "./section.js";
 import { FONTS } from "./theme.js";
 import {
   CONTROLS,
+  HEADER_LOOKS,
   ICONS,
   RECORD_GRID_COLUMNS,
   SECTION_LOOKS,
@@ -372,6 +373,21 @@ export const UX_SCHEMA: JsonSchema = {
             description:
               "A landing page's sections' looks, by section name: a hero's layout, a feature list's columns.",
             additionalProperties: { oneOf: Object.values(look) },
+          },
+          header: {
+            type: "object",
+            description:
+              "A landing page's header's look: its position, sticky (kept at the top as the page scrolls, the default) or scrolling (away with the page).",
+            additionalProperties: false,
+            properties: Object.fromEntries(
+              Object.entries(HEADER_LOOKS).map(([option, values]) => [
+                option,
+                {
+                  enum: [...values],
+                  description: `One of ${values.join(", ")}; the first is the default.`,
+                },
+              ]),
+            ),
           },
           theme: {
             type: "object",

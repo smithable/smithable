@@ -63,6 +63,7 @@ function LandingLayoutView({
   appName,
   logo,
   link,
+  header,
   footer,
   site,
   viewer,
@@ -73,6 +74,8 @@ function LandingLayoutView({
   /** The app's mark, drawn before its name in the header (with an empty alt: the name says it). */
   logo?: string;
   link?: LandingLink;
+  /** The header's look (smithable.ux.yml): it stays at the top as the page scrolls unless scrolling. */
+  header?: { position?: "sticky" | "scrolling" };
   footer?: LandingFooter;
   site?: LandingSite;
   /** Who is signed in: the menu shows the pages they may open. */
@@ -127,8 +130,19 @@ function LandingLayoutView({
     </ul>
   );
   return (
-    <div data-kit="landing" className="flex min-h-screen flex-col">
-      <header data-part="header" className="border-b bg-card">
+    // A sticky header stays over the page as it scrolls; a part reached by its anchor stops below it.
+    <div
+      data-kit="landing"
+      className={cn(
+        "flex min-h-screen flex-col",
+        header?.position !== "scrolling" && "[&_[id]]:scroll-mt-20",
+      )}
+    >
+      <header
+        data-part="header"
+        data-position={header?.position}
+        className={cn("border-b bg-card", header?.position !== "scrolling" && "sticky top-0 z-30")}
+      >
         <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4 px-5">
           {name}
           {menu.length > 0 && (

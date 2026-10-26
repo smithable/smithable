@@ -502,6 +502,11 @@ ${records.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(
       ? `viewer ? ${link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1)} : { to: "/sign-in", label: w.signIn }`
       : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
   imports.add("#/generated/app", "app");
+  // The header's look from smithable.ux.yml (HEADER_LOOKS), e.g. kept at the top as the page scrolls.
+  const headerLook = Object.entries(ux.pages[page.id]?.header ?? {});
+  const headerProp = headerLook.length
+    ? ` header={{ ${headerLook.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")} }}`
+    : "";
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  component: ${component},
@@ -509,7 +514,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  comp
 
 function ${component}() {
 ${records.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName={app.name}${t.logo} link={${header}}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
+    <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );

@@ -7,6 +7,7 @@ import { parseTheme } from "../theme.js";
 import {
   CONTROLS,
   FONTS,
+  HEADER_LOOKS,
   ICONS,
   SECTION_LOOKS,
   THEME_PRESETS,
@@ -396,30 +397,52 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
 const setSectionLook: Operation<{ page: string; section: string; key: string; value: string }> = {
   name: "setSectionLook",
   summary:
-    'Choose how a landing section looks, e.g. hero layout split|centered|plain|cover|photo, records layout cards|list|grid, features/records/gallery columns 2-6, faq layout accordion|list and columns 1|2, any section but the hero and footer band none|muted|inverse|primary ("default" removes it).',
+    'Choose how a landing section looks, e.g. hero layout split|centered|plain|cover|photo, records layout cards|list|grid, features/records/gallery columns 2-6, faq layout accordion|list and columns 1|2, any section but the hero and footer band none|muted|inverse|primary; and a landing page\'s header (section "header": the top bar with the app\'s name and menu) position sticky (the default: the menu sticks and stays at the top when the page scrolls) or scrolling, away with the page ("default" removes it).',
   schema: {
     type: "object",
     required: ["page", "section", "key", "value"],
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      section: { type: "string", description: "The section's name, e.g. hero." },
+      section: {
+        type: "string",
+        description: "The section's name, e.g. hero, or \"header\" for the page's header.",
+      },
       key: {
         type: "string",
-        description: "layout, image, columns, highlight or band, as the section takes.",
+        description:
+          "layout, image, columns, highlight or band, as the section takes; position for the header.",
       },
       value: { type: "string", description: 'A value the key allows, or "default".' },
     },
   },
   positional: ["page", "section", "key", "value"],
   describe: ({ page, section, key, value }) =>
-    value === "default"
-      ? `Show the ${section} section of ${page} with its own ${key}`
-      : `Show the ${section} section of ${page} with ${key} ${value}`,
+    section === "header"
+      ? value === "default"
+        ? `Show the header of ${page} with its own ${key}`
+        : `Show the header of ${page} with ${key} ${value}`
+      : value === "default"
+        ? `Show the ${section} section of ${page} with its own ${key}`
+        : `Show the ${section} section of ${page} with ${key} ${value}`,
   destructive: () => false,
   apply(editors, { page, section, key, value }, ir) {
     const found = ir.pages.find((p) => p.id === page);
     if (!found) throw new OperationError(`There is no page named "${page}".`);
+    // The header is the landing page's frame's, beside its sections (unless a section has its name).
+    if (section === "header" && !found.sections.some((s) => s.name === section && !s.own)) {
+      if (found.pattern.kind !== "landing")
+        throw new OperationError(`A header's look is for a landing page; ${page} is not one.`);
+      const values = HEADER_LOOKS[key];
+      if (!values)
+        throw new OperationError(
+          `A header has no "${key}": it takes ${Object.keys(HEADER_LOOKS).join(", ")}.`,
+        );
+      if (value !== "default" && !values.includes(value))
+        throw new OperationError(`"${key}" of a header is one of ${values.join(", ")}.`);
+      put(editors.ux, ["pages", page, "header", key], value === "default" ? undefined : value);
+      return [];
+    }
     const kind = found.sections.find((s) => s.name === section && !s.own)?.kind;
     if (!kind) throw new OperationError(`${page} has no section named "${section}".`);
     const allowed = SECTION_LOOKS[kind]?.[key];
