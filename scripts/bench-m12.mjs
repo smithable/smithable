@@ -119,7 +119,8 @@ if (!args.model) {
   });
 } else if (args.model.startsWith("claude-")) {
   // Claude through Anthropic's own API, as global projects are served (Johan, 2026-10-26):
-  // "claude-haiku-5-5>claude-sonnet-5-5" drafts with Haiku and goes to Sonnet when its checks fail.
+  // "claude-haiku-5-5>claude-sonnet-5-5" names both, cheapest first; a first build takes the
+  // strongest first (draftProject), so Sonnet drafts and Haiku only stands behind it.
   Object.assign(process.env, {
     SMITHABLE_FRONTIER: "anthropic",
     SMITHABLE_FRONTIER_MODEL: args.model.split(">").join(","),
