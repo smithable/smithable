@@ -55,8 +55,11 @@ try {
 const OPEN = 100;
 /** A visitor idle this long is forgotten, their copy deleted. */
 const IDLE = 60 * 60_000;
-/** At most this many visitors' copies are kept; the least recently seen go first. */
-const KEPT = 500;
+/**
+ * At most this many visitors' copies are kept (DEMO_VISITORS_KEPT, 500 unless set); the least
+ * recently seen go first.
+ */
+const KEPT = Number(process.env.DEMO_VISITORS_KEPT) || 500;
 
 /**
  * A demo's database (DEMO_VISITORS=1): every call goes to the request's visitor's copy, made from
