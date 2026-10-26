@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Organisers. Manage talks, speakers and registrations.
+  attendee:
+    description: A conference attendee who registers for talks.
+    pages: [my-registrations]
+    create: [Registration]
+assistant:
+  for: signed-in
+defaultRole: attendee
+public:
+  pages: [home, talks, speakers, privacy]
+  read: [Talk, Speaker]
+admins: [johan@smithable.ai]

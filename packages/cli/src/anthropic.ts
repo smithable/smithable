@@ -81,10 +81,13 @@ export function anthropic(
       if (usageLog)
         appendFileSync(usageLog, `${JSON.stringify({ model, fresh, read, write, output })}\n`);
       return {
-        text: (body.content ?? [])
-          .filter((c) => c.type === "text")
-          .map((c) => c.text ?? "")
-          .join(""),
+        // Without structured output a model may still fence its JSON (```json … ```): the JSON alone.
+        text: unfenced(
+          (body.content ?? [])
+            .filter((c) => c.type === "text")
+            .map((c) => c.text ?? "")
+            .join(""),
+        ),
         model,
         inputTokens: fresh + read + write,
         outputTokens: output,
@@ -120,3 +123,7 @@ export function closed(schema: unknown): unknown {
   if (out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
   return out;
 }
+
+/** A JSON answer without the Markdown fence a model may put around it. */
+export const unfenced = (text: string): string =>
+  /^\s*```(?:json)?\s*\n([\s\S]*?)\n?```\s*$/.exec(text)?.[1] ?? text;

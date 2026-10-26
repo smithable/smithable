@@ -1,0 +1,18 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Clients in one place, text: "Keep contact details, addresses and VAT numbers for everyone you bill." }, { title: Invoices with line items, text: Add lines with quantity and price and let the total work itself out. }, { title: Payments recorded, text: Log each payment against its invoice and see what is still owed. }, { title: Overdue invoices flagged, text: "Sent invoices turn overdue a week after their due date, so nothing slips." }, { title: Private to you, text: "Every freelancer sees only their own clients, invoices and payments." }]
+    faq:
+      items: [{ question: Can my clients see my data?, answer: No. Your records are private to your account; clients only receive the invoice email. }, { question: How do I know an invoice is late?, answer: "A sent invoice is marked overdue automatically a week after its due date, and the overview shows the amount outstanding." }, { question: Can I attach a contract to an invoice?, answer: "Yes, each invoice can hold a PDF or document of the agreement it belongs to." }, { question: Can I record partial payments?, answer: Yes. Add a payment for each amount received and the invoice shows what has been paid so far. }]
+    hero:
+      title: Invoicing that keeps up with your freelance work
+      subtitle: Manage your clients, send invoices and track payments without the spreadsheet.
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A receipt with a torn edge and a coin
+  generated: true

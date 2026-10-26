@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Studio staff. Manage the schedule, classes and teachers.
+  member:
+    description: A student who books classes.
+    pages: all
+    create: [Booking]
+assistant:
+  for: signed-in
+defaultRole: member
+public:
+  pages: [home, schedule, privacy]
+  read: [ClassType, Instructor, Session]
+admins: [johan@smithable.ai]

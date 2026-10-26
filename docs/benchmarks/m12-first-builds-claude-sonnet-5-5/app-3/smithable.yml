@@ -1,0 +1,83 @@
+smithable: 0.1
+app:
+  name: Freelance Invoices
+  description: "Invoicing for freelancers: keep track of clients, invoices and the payments received."
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      address: text
+      vatNumber: string
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      payments: Payment[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+      amountPaid:
+        type: money
+        formula: SUM(payments.amount)
+  Payment:
+    fields:
+      invoice: Invoice!
+      paidOn: date! = TODAY()
+      amount: money!
+      method: bankTransfer | card | cash | other
+      note: string
+pages:
+  clients:
+    crud: Client
+  invoice-lines:
+    crud: InvoiceLine
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid, markOverdue]
+  payments:
+    crud: Payment
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+timers:
+  overdueCheck:
+    on: Invoice
+    at: 1 day after dueOn
+    where:
+      status: sent
+    run: markOverdue

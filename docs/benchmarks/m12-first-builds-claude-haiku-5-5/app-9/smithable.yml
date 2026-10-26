@@ -1,0 +1,108 @@
+smithable: 0.1
+app:
+  name: Ticketline
+  description: Tickets from customers, with priorities and who handles each one.
+models:
+  Ticket:
+    fields:
+      subject: string!
+      customerEmail:
+        type: email!
+        locked: true
+      status: open | inProgress | closed | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+      assignee:
+        type: User
+        required:
+          status: [inProgress, closed]
+      body: text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      sender: agent | customer
+      agent:
+        type: User
+        by: app
+        default: ME()
+      fromEmail: email
+      attachments: files
+      ticket: Ticket!
+pages:
+  tickets:
+    crud: Ticket
+    search: [subject, customerEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
+  team:
+    users: manage
+actions:
+  assignToMe:
+    on: Ticket
+    when:
+      assignee: not ME()
+    set:
+      assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: Ticket
+    set:
+      assignee:
+    intent: Give the ticket to an agent, chosen from the team.
+  startWork:
+    on: Ticket
+    when:
+      status: [open, reopened]
+    set:
+      status: inProgress
+    intent: Someone is working on the ticket now; it needs an assignee.
+  close:
+    on: Ticket
+    when:
+      status: [open, inProgress, reopened]
+    set:
+      status: closed
+    intent: The customer has their answer.
+  reopen:
+    on: Ticket
+    when:
+      status: closed
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.
+incoming:
+  support:
+    mail: true
+    create: Ticket
+    set:
+      status: open
+    fields:
+      from: customerEmail
+      subject: subject
+      body: body
+      attachments: attachments
+    reply:
+      create: Message
+      fields:
+        from: fromEmail
+        body: content
+        attachments: attachments
+      set:
+        sender: customer
+outgoing:
+  ticketReceived:
+    when: Ticket created
+    to: mail
+    recipient: customerEmail
+  replySent:
+    when: Message created
+    where:
+      sender: agent
+    to: mail
+    recipient: ticket.customerEmail

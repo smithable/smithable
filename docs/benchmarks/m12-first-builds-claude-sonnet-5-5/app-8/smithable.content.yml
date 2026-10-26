@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Talks for every interest, text: Browse the full program and pick the sessions that matter to you. }, { title: Meet the speakers, text: Learn who is on stage and what they will be sharing. }, { title: Reserve your seat, text: Register for a talk in a click and see how many places are left. }, { title: Your own agenda, text: Keep track of every talk you have signed up for in one place. }]
+    faq:
+      items: [{ question: How do I register for a talk?, answer: "Sign in, open the schedule and press the register button on any talk with places left." }, { question: Can I cancel my registration?, answer: "Yes, you can cancel from your registrations page until the talk starts." }, { question: What happens when a talk is full?, answer: Registration closes for that talk once all its places are taken. }, { question: Can I attend several talks?, answer: "Yes, register for as many talks as you like." }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A long table set for a celebration under string lights in a garden
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A ticket
+  generated: true

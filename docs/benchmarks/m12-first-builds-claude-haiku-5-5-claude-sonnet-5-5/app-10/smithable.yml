@@ -1,0 +1,53 @@
+smithable: 0.1
+app:
+  name: Family Cookbook
+  description: A shared family recipe collection with ingredients and shopping lists.
+models:
+  Recipe:
+    fields:
+      name: string!
+      summary: text
+      category: main | starter | side | dessert | breakfast | snack | drink
+      servings: int = 4
+      prepMinutes: int
+      cookMinutes: int
+      instructions: markdown
+      photo: picture
+      source: url
+      favorite: bool
+      ingredients: Ingredient[]
+  Ingredient:
+    fields:
+      recipe: Recipe!
+      name: string!
+      quantity: string
+      note: string
+  ShoppingList:
+    fields:
+      name: string!
+      status: active | done
+      items: ShoppingItem[]
+  ShoppingItem:
+    fields:
+      shoppingList: ShoppingList!
+      name: string!
+      quantity: string
+      bought: bool
+pages:
+  recipes:
+    crud: Recipe
+    search: [name, summary]
+    filters: [category, favorite]
+  shopping-lists:
+    crud: ShoppingList
+    filters: [status]
+    actions: [complete]
+  team:
+    users: manage
+actions:
+  complete:
+    on: ShoppingList
+    when:
+      status: active
+    set:
+      status: done

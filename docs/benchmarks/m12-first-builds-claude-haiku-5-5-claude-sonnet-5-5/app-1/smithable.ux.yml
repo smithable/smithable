@@ -1,0 +1,5 @@
+smithableUx: 0.1
+theme:
+  preset: nordic
+  brand:
+    primary: "#4f7a6b"

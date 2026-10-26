@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Openings from local employers, text: Browse current positions in our trade without signing in. }, { title: Apply in minutes, text: Send a cover letter and your resume straight to the union office. }, { title: Follow your applications, text: See in one place where each of your applications stands. }, { title: Looked after by the union, text: "Union staff post and review every opening, so you know it is genuine." }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

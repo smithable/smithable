@@ -1,0 +1,12 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: People playing badminton and stretching in a sports hall with a wooden floor
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A football
+  generated: true

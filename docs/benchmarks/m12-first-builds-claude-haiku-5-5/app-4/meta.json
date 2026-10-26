@@ -1,0 +1,9 @@
+{
+  "description": "A tool library where neighbors lend each other tools.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Who can see the tool catalog without signing in?",
+    "Should the app track who has borrowed each tool and when it is due back?"
+  ]
+}

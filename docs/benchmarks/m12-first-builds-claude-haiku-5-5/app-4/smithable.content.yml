@@ -1,0 +1,12 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A toolbox
+  generated: true

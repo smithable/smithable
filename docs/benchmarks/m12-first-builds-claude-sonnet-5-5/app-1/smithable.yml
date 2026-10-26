@@ -1,0 +1,79 @@
+smithable: 0.1
+app:
+  name: Lotus Yoga Studio
+  description: Class schedule, teachers and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/Stockholm
+models:
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      portrait: picture
+      sessions: Session[]
+  Session:
+    fields:
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+      classType: ClassType!
+    namedBy: [classType, startsAt]
+  Booking:
+    fields:
+      session: Session! unique
+      attendee: User
+    namedBy: session
+    ownedBy: attendee
+    capacity:
+      per: session
+      max: session.capacity
+      closes: session.startsAt
+      cancelUntil: session.startsAt
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: allLevels | beginner | advanced
+      durationMinutes: int! = 60
+      sessions: Session[]
+pages:
+  sessions:
+    crud: Session
+    sortable: [startsAt, capacity]
+    filters: [classType, instructor, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+  instructors:
+    crud: Instructor
+  my-bookings:
+    crud: Booking
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  home:
+    route: /
+    landing:
+      hero:
+        button: schedule
+      team:
+        records: Instructor
+      features:
+      faq:
+      callToAction:
+        button: schedule
+      classes:
+        records: ClassType
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  admin:
+    data: all
+  class-types:
+    crud: ClassType
+    filters: [level]

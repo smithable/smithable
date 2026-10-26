@@ -1,0 +1,10 @@
+smithableUx: 0.1
+tones:
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+  Incident.status:
+    investigating: danger
+    identified: warning
+    resolved: success

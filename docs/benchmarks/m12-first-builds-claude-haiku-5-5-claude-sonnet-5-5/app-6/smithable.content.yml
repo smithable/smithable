@@ -1,0 +1,17 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Jobs from the union, text: "Browse openings posted by the union and its partner employers, all in one place." }, { title: Apply in minutes, text: "Sign in, write a short cover letter, attach your resume and send your application." }, { title: Follow your application, text: "See whether your application is being reviewed, shortlisted or has led to a hire." }, { title: Fair and open, text: Every opening is listed with its pay and closing date so members know what to expect. }]
+    faq:
+      items: [{ question: Who can apply?, answer: Union members can sign in and apply for any open job. }, { question: Do I need an account to look at jobs?, answer: "No, anyone can browse open jobs. You sign in only when you want to apply." }, { question: Who sees my application?, answer: Only you and the union administrators who handle hiring. }, { question: How do I know the outcome?, answer: The status of each of your applications is shown on your applications page. }]
+    hero:
+      title: Find your next job through the union
+      image:
+        src: images/hero.webp
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

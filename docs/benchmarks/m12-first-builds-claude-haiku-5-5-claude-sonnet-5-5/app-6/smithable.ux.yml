@@ -1,0 +1,15 @@
+smithableUx: 0.1
+pages:
+  jobs:
+    table:
+      sort: -postedOn
+tones:
+  JobPost.status:
+    open: success
+    closed: danger
+  Application.status:
+    hired: success
+    shortlisted: success
+    rejected: danger
+theme:
+  preset: corporate

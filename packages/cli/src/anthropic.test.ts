@@ -73,3 +73,9 @@ test("a refusal or an error status is an error, not an empty answer", async () =
     anthropic("claude-sonnet-5-5", "k").complete({ system: "", user: "", schema: {} } as never),
   ).rejects.toThrow(/529: overloaded/);
 });
+
+test("a fenced JSON answer is the JSON alone", async () => {
+  const { unfenced } = await import("./anthropic.js");
+  expect(unfenced('```json\n{"kind":"answer"}\n```')).toBe('{"kind":"answer"}');
+  expect(unfenced('{"kind":"answer"}')).toBe('{"kind":"answer"}');
+});

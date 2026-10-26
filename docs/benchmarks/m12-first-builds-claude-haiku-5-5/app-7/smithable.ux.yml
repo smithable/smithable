@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  matches:
+    table:
+      sort: startsAt
+theme:
+  preset: modern
+  brand:
+    primary: "#15803d"

@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  suppliers:
+    table:
+      sort: name
+  ingredients:
+    table:
+      columns: [name, supplier, stockLevel, unit, reorderLevel, expiresOn]
+      sort: name

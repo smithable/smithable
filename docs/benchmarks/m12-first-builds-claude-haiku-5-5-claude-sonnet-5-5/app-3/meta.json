@@ -1,0 +1,9 @@
+{
+  "description": "Invoicing for freelancers, with clients, invoices and payments.",
+  "starter": "invoicing",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Should clients be able to open an invoice through a link without signing in?",
+    "How should payments be tracked?"
+  ]
+}

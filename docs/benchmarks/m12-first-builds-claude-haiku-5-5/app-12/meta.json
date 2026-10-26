@@ -1,0 +1,8 @@
+{
+  "description": "A public uptime page for a web shop: which services work, outages and their updates.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "Who writes the outage updates on the page?"
+  ]
+}

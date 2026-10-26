@@ -1,0 +1,10 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: corporate
+  density: compact          # an internal tool: more rows on screen
+
+
+tones:
+  Order.status: { shipped: success, canceled: danger }
