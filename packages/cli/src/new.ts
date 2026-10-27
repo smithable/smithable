@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+  type Assumption,
   clarifyProject,
   closeShared,
   closestStarter,
@@ -89,7 +90,8 @@ export async function create(
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
     /** Told the drafted app's files as soon as the model has answered, before anything is built. */
-    onDraft?: (files: Record<string, string>) => void;
+    /** The draft's files, and the choices it made where the description left the shape open. */
+    onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
   // A page as the starting point: what it says is the description (first-build.md §2.8).
@@ -226,7 +228,7 @@ export async function create(
     // often a sentence); a name someone typed still wins below.
     const site = siteNameOf(description);
     if (site && !options.name?.trim()) files = named(files, site);
-    options.onDraft?.(files);
+    options.onDraft?.(files, draft.assumptions);
     // An action the model could not get right is left out and said, rather than failing the draft.
     if (draft.dropped?.length)
       io.out(
@@ -245,6 +247,11 @@ export async function create(
       for (const section of summarize(ir, auth, texts))
         io.out(`\n${section.title}\n${section.sentences.map((s) => `  ${s}\n`).join("")}`);
     }
+    // Where the description left the shape open, what the draft went with (smith-first.md §4).
+    if (draft.assumptions?.length)
+      io.out(
+        `\nAssumed:\n${draft.assumptions.map((a) => `  ${a.question} ${a.chosen}${a.options.length ? ` (or: ${a.options.join(", ")})` : ""}\n`).join("")}`,
+      );
     const confirmed = await confirm(io, "\nCreate this app?", options.yes === true);
     if (confirmed !== true) return confirmed;
     const texts =
