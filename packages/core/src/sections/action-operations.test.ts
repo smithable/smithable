@@ -241,3 +241,13 @@ test("trash: true on a model is read, setTrash turns it on and off, and off asks
   expect(off.destructive).toBe(true);
   expect(off.files.spec).not.toContain("trash");
 });
+
+test("addAction lists a custom action on rows where a standard one goes: its model's single crud page (A 171)", () => {
+  const made = applyOperation({ spec, auth }, "addAction", {
+    action: "tagCustomers",
+    input: { customers: "Customer[]", segment: "smb | enterprise" },
+  });
+  if (!made.ok) throw new Error(made.message);
+  expect(made.files.spec).toContain("actions: [mergeCustomers, tagCustomers]");
+  expect(made.files.spec).toContain("customers: Customer[]");
+});

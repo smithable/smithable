@@ -73,7 +73,12 @@ test("all and except resolve against the spec, and only standard actions of offe
     if (!auth) throw new Error("invalid");
     return apiOffers(auth, ir);
   };
-  expect(offers("")).toEqual({ models: [], actions: [], visitors: { read: [], create: [] } });
+  expect(offers("")).toEqual({
+    models: [],
+    actions: [],
+    rowsActions: [],
+    visitors: { read: [], create: [] },
+  });
   expect(offers("api: { models: all, except: [Subscriber], actions: all }\n")).toMatchObject({
     models: ["Component", "Incident"],
     actions: ["resolve", "rename"],
@@ -204,4 +209,36 @@ test("setApi can let assistants delete, which is off unless said", () => {
   const off = applyOperation(on.files, "setApi", { models: ["Incident"], assistants: true });
   if (!off.ok) throw new Error(off.message);
   expect(off.files.auth).toContain("assistants: true");
+});
+
+test("a custom action on rows of an offered model is offered to programs, run on ids (A 171)", () => {
+  const rows = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace(
+      "  purge:\n",
+      "  close:\n    custom: true\n    input: { incidents: 'Incident[]', note: text }\n  purge:\n",
+    ),
+  }).ir as SpecIR;
+  const offers = (api: string) =>
+    validateAuth({ path: "smithable.auth.yml", text: `${head}${api}` }, rows);
+  const closing = offers("api: { models: [Incident], actions: [resolve, close] }\n");
+  expect(closing.diagnostics).toEqual([]);
+  expect(apiOffers(closing.auth as never, rows)).toMatchObject({
+    actions: ["resolve"],
+    rowsActions: ["close"],
+  });
+  expect(
+    apiOffers(offers("api: { models: all, actions: all }\n").auth as never, rows),
+  ).toMatchObject({
+    rowsActions: ["close"],
+  });
+  // Its rows' model must be offered; a custom action without rows stays refused.
+  expect(
+    offers("api: { models: [Component], actions: [close] }\n").diagnostics.map((d) => d.message),
+  ).toEqual([
+    '"close" runs on Incident rows, which "api" does not offer: add Incident to "models".',
+  ]);
+  expect(
+    offers("api: { models: [Incident], actions: [purge] }\n").diagnostics[0]?.message,
+  ).toContain("custom actions on rows (an input like customers: Customer[])");
 });

@@ -297,3 +297,28 @@ test("few tokens: every starter's tools and summary stay within a budget", () =>
     );
   }
 });
+
+test("a custom action on rows is a run on ids for programs and assistants (A 171)", () => {
+  const rows = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Customer:\n    fields: { name: string!, segment: smb | enterprise }\nactions:\n  tag:\n    custom: true\n    input: { customers: 'Customer[]', segment: 'smb | enterprise' }\npages:\n  customers: { crud: Customer, actions: [tag] }\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all }\napi: { models: all, actions: all, assistants: true }\n",
+    },
+    rows,
+  ).auth as AuthIR;
+  const offer = assistantOffer(rows, auth, { role: "admin" });
+  const run = offer.tools.find((t) => t.name === "run");
+  const schema = run?.inputSchema as {
+    required: string[];
+    properties: { action: { enum: string[] }; ids?: unknown };
+  };
+  expect(schema.required).toEqual(["action"]);
+  expect(schema.properties.action.enum).toContain("tag");
+  expect(schema.properties.ids).toBeDefined();
+  expect(run?.description).toContain("tag run on the rows given as `ids`");
+  expect(offer.summary).toContain("tag (Customer rows, by ids; input: segment)");
+});
