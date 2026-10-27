@@ -11,6 +11,7 @@ import {
   type ModelIR,
   type OutgoingIR,
   pageModel,
+  placeholdersOf,
   type RecipientIR,
   type SpecIR,
   sensitiveKind,
@@ -133,33 +134,64 @@ export function outgoingModule(
   };
   // The record's fields as its page shows them: labels, formatted values, references by title;
   // nothing a picture or document field holds, nothing sensitive, and no lists of other records.
+  const sendable = (model: ModelIR) =>
+    model.fields.filter(
+      (f) =>
+        !f.formula &&
+        !isUpload(f) &&
+        // What looks like a card number, a password or an identity number stays in the app.
+        !sensitiveKind(f) &&
+        !(f.type.kind === "relation" && f.type.many),
+    );
+  // Each field's formatted value by its name, and the labels beside, in the page's order.
   const shown = (model: ModelIR) =>
-    model.fields
-      .filter(
-        (f) =>
-          !f.formula &&
-          !isUpload(f) &&
-          // What looks like a card number, a password or an identity number stays in the app.
-          !sensitiveKind(f) &&
-          !(f.type.kind === "relation" && f.type.many),
-      )
-      .map((f) => {
-        const ui = fieldUi(model, f, t, ir, ux);
-        return `      [${JSON.stringify(ui.label)}, ${formatted(f, ui)}],`;
-      });
-  const formatted = (f: FieldIR, ui: ReturnType<typeof fieldUi>): string => {
+    sendable(model).map(
+      (f) =>
+        `        ${JSON.stringify(f.name)}: ${formatted(f, fieldUi(model, f, t, ir, ux), "r")},`,
+    );
+  const labels = (model: ModelIR) =>
+    literal(sendable(model).map((f) => [f.name, fieldUi(model, f, t, ir, ux).label]));
+  const uiLiteral = (ui: ReturnType<typeof fieldUi>) =>
+    literal({
+      name: ui.name,
+      label: ui.label,
+      kind: ui.kind,
+      required: false,
+      ...(ui.choices ? { choices: ui.choices.map(({ value, label }) => ({ value, label })) } : {}),
+    });
+  // A field's value as the record page shows it: `row` is the record's row, or for a hop the
+  // code that reads the referenced record's column.
+  const formatted = (f: FieldIR, ui: ReturnType<typeof fieldUi>, row: string): string => {
+    const id = row === "r" ? `r.${f.name}Id` : row;
     if (f.type.kind !== "relation")
-      return `formatValue(${literal({ name: ui.name, label: ui.label, kind: ui.kind, required: false, ...(ui.choices ? { choices: ui.choices.map(({ value, label }) => ({ value, label })) } : {}) })}, r.${f.name}, app)`;
+      return `formatValue(${uiLiteral(ui)}, ${row === "r" ? `r.${f.name}` : row}, app)`;
     if (f.type.model === USER_MODEL) {
       named = true;
-      return `String(one(tx, schema.user, schema.user.id, schema.user.name, r.${f.name}Id) ?? "—")`;
+      return `String(one(tx, schema.user, schema.user.id, schema.user.name, ${id}) ?? "—")`;
     }
     const target = modelNamed(ir, f.type.model);
-    if (composedName(target)) return namedOne(target, `r.${f.name}Id as number | null`);
+    if (composedName(target)) return namedOne(target, `${id} as number | null`);
     const title = relatedTitle(ir, target.name);
     return title === "id"
-      ? `r.${f.name}Id == null ? "—" : \`#\${r.${f.name}Id}\``
-      : `String(${value(target, title, `r.${f.name}Id`)} ?? "—")`;
+      ? `((v) => (v == null ? "—" : \`#\${v}\`))(${id})`
+      : `String(${value(target, title, id)} ?? "—")`;
+  };
+  // A placeholder one reference away, `{customer.email}` (outgoing-templates.md §3): the referenced
+  // record's field as its page shows it; nothing for a path the model does not have.
+  const hop = (model: ModelIR, path: string): string | undefined => {
+    const [first, second] = path.split(".");
+    const ref = model.fields.find((f) => f.name === first);
+    if (!ref || !second || ref.type.kind !== "relation" || ref.type.many) return undefined;
+    if (ref.type.model === USER_MODEL) {
+      if (second !== "name" && second !== "email") return undefined;
+      named = true;
+      return `String(one(tx, schema.user, schema.user.id, schema.user.${second}, r.${first}Id) ?? "")`;
+    }
+    const target = modelNamed(ir, ref.type.model);
+    const f = target.fields.find((x) => x.name === second);
+    if (!f || !sendable(target).includes(f)) return undefined;
+    const read = value(target, f.type.kind === "relation" ? `${second}Id` : second, `r.${first}Id`);
+    return formatted(f, fieldUi(target, f, t, ir, ux), read);
   };
   const mails = entries.filter((o) => o.to === "mail");
   const calls = entries.filter((o) => o.to !== "mail");
@@ -192,32 +224,40 @@ export function outgoingModule(
     const title = titleField(model);
     const page = ir.pages.find((p) => p.pattern.kind === "crud" && pageModel(p) === model.name);
     const thread = threadOf(model);
+    // The record's own title, as its page's heading.
+    const own = composedName(model)
+      ? namedOne(model, "r.id as number")
+      : title === "id"
+        ? "`#${r.id}`"
+        : shownTitle(model, `r.${title} ?? r.id`);
+    let subject = `\`${n.label.replace(/[`$\\]/g, "\\$&")}: \${title}\``;
+    let rest = page ? `\n      link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : "";
     if (thread) {
       threaded = true;
       const ownerTitle = titleField(thread.owner);
       // The subject is the thread's record's title (its first mail's subject), the tag after it.
-      const subject =
+      subject =
         thread.owner === model
           ? ownerTitle === "id"
-            ? `\`#\${r.id}\``
+            ? "`#${r.id}`"
             : `String(${shownTitle(model, `r.${ownerTitle} ?? r.id`)})`
           : ownerTitle === "id"
             ? `\`#\${${thread.record}}\``
             : `String(${value(thread.owner, ownerTitle, thread.record)} ?? "")`;
-      return `  ${JSON.stringify(model.name)}: (tx, r) => ({
-    subject: ${subject},
-    fields: [
-${lines.join("\n")}
-    ],${thread.letter ? `\n    letter: String(r.${thread.letter} ?? ""),` : page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
-    thread: thread(tx, ${JSON.stringify(thread.owner.name)}, ${thread.record}, ${thread.address}),
-  }),`;
+      rest = `${thread.letter ? `\n      letter: String(r.${thread.letter} ?? ""),` : rest}\n      thread: thread(tx, ${JSON.stringify(thread.owner.name)}, ${thread.record}, ${thread.address}),`;
     }
-    return `  ${JSON.stringify(model.name)}: (${lines.some((l) => /\btx\b/.test(l)) || composedName(model) ? "tx" : "_tx"}, r) => ({
-    subject: \`${n.label.replace(/[`$\\]/g, "\\$&")}: ${composedName(model) ? `\${${namedOne(model, "r.id as number")}}` : title === "id" ? "#${r.id}" : `\${${shownTitle(model, `r.${title} ?? r.id`)}}`}\`,
-    fields: [
+    const usesTx = thread || composedName(model) || lines.some((l) => /\btx\b/.test(l));
+    return `  ${JSON.stringify(model.name)}: (${usesTx ? "tx" : "_tx"}, r) => {
+    const title = String(${own});
+    return {
+      subject: ${subject},
+      title,
+      labels: ${labels(model)},
+      values: {
 ${lines.join("\n")}
-    ],${page ? `\n    link: \`${page.route === "/" ? "" : page.route}/\${r.id}\`,` : ""}
-  }),`;
+      },${rest}
+    };
+  },`;
   });
   // A record as a call sends it: as the API gives it (integrations.md §4.1), without what is
   // worked out on reading or what looks sensitive.
@@ -255,10 +295,17 @@ ${apiFields(model)
           ? o.when.action
           : `timer:${o.when.timer}`;
     const fits = conditions(o);
+    // The texts' placeholders (outgoing-templates.md §3): a hop is read with the record, and
+    // {before.<field>} wants the record before the change shown too.
+    const paths =
+      o.to === "mail" ? placeholdersOf(`${words?.subject ?? ""} ${words?.text ?? ""}`) : [];
+    const hops = [...new Set(paths.filter((p) => p.includes(".") && !p.startsWith("before.")))]
+      .map((p) => [p, hop(model, p)] as const)
+      .filter((x): x is readonly [string, string] => x[1] !== undefined);
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
     ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
@@ -297,7 +344,7 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? 'import { counts } from "#/kit/outgoing";\n' : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
@@ -384,8 +431,15 @@ function thread(tx: Tx, model: string, record: number, replyTo: string | undefin
 }${
   mails.length
     ? `
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
 ${showers.join("\n")}
 };
 `
@@ -412,7 +466,20 @@ const ENTRIES: {
   /** For a change: only one of these fields changing counts. */
   fields?: string[];
   subject?: string;
-  text?: string;${mails.length ? "\n  to?: (tx: Tx, r: Row) => Recipient[];" : ""}${calls.length ? "\n  /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */\n  target?: string;" : ""}
+  text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;${
+    mails.length
+      ? `
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
+  to?: (tx: Tx, r: Row) => Recipient[];`
+      : ""
+  }${calls.length ? "\n  /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */\n  target?: string;" : ""}
 }[] = [
 ${list.join("\n")}
 ];
@@ -434,7 +501,7 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
           model,
           record: record.id as number,
           target: entry.target,
-          body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: sent }),
+          body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: picked(sent, entry.show), ...(entry.previous && before ? { before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show) } : {}) }),
         });
       continue;
     }`
@@ -444,10 +511,16 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
         ? `
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );`

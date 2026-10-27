@@ -265,7 +265,7 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
       "select({ id: schema.user.id, email: schema.user.email, language: schema.user.language })",
     ],
     [
-      "    const shown = SHOWN[model]?.(tx, record);\n    if (!shown || !entry.to) continue;\n    queueMail(",
+      "    const shown = SHOWN[model]?.(tx, record);\n    if (!shown || !entry.to) continue;\n",
       `    if (!entry.to) continue;
     const groups = new Map<string, Recipient[]>();
     for (const person of entry.to(tx, record)) {
@@ -276,7 +276,7 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
       speaking(spoken, () => {
     const shown = SHOWN[model]?.(tx, record);
     if (!shown) return;
-    queueMail(`,
+`,
     ],
     [
       '      entry.to(tx, record),\n      entry.when === "created",\n    );',

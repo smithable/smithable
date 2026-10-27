@@ -1235,6 +1235,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "startsAt",
       ],
       "name": "sessionMoved",
+      "previous": true,
       "recipient": {
         "each": {
           "kind": "owner",
@@ -1243,6 +1244,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "list": "bookings",
         "model": "Booking",
       },
+      "show": [
+        "classType",
+        "startsAt",
+        "instructor",
+      ],
       "to": "mail",
       "when": {
         "event": "changed",

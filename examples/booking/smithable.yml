@@ -106,6 +106,8 @@ outgoing:
   sessionMoved:
     when: Session changed
     fields: [startsAt]                # only a new time counts
+    show: [classType, startsAt, instructor]   # the mail lists these, not the capacity
+    previous: true                    # and says what the time was
     to: mail
     recipient: bookings.owner        # one mail per booking, to the member who booked
 

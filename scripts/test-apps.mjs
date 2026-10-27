@@ -675,7 +675,8 @@ async function outgoingFlow(dir, base) {
     const made = await next(count, "the booking");
     for (const part of [
       /^To: dev-member@/m,
-      /^Subject: Your booking$/m,
+      // The subject names the session through a placeholder (outgoing-templates.md §3).
+      /^Subject: Your booking: \S.* · /m,
       /Thank you for booking/,
       // A session is named by its class and its start (record-names.md).
       /Session: \S.* · /,
@@ -715,6 +716,17 @@ async function outgoingFlow(dir, base) {
     const moved = await next(count, "the move");
     if (!/^To: dev-member@/m.test(moved) || !/^Subject: Your class has a new time$/m.test(moved))
       throw new Error(`the move's mail: ${moved.slice(0, 600)}`);
+    // The text's placeholders: who moved it, the class, the time before and after; the listed
+    // fields (show) with what the time was (previous), and not the capacity.
+    for (const part of [
+      /Dev admin moved \S.* a class you booked, from \S.+ to \S.+\. Your mat/,
+      /^Starts at: .+ \(was .+\)$/m,
+      /^Class type: /m,
+    ])
+      if (!part.test(moved))
+        throw new Error(`the move's mail lacks ${part}: ${moved.slice(0, 900)}`);
+    if (/^Capacity: /m.test(moved))
+      throw new Error(`the move's mail lists a field show leaves out: ${moved.slice(0, 900)}`);
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
     const field = page.getByLabel(/^Session/);
@@ -1619,6 +1631,10 @@ async function callFlow(dir, base, receiver) {
         "status=resolved",
         "--to",
         "statusFeed",
+        "--show",
+        "title,status",
+        "--previous",
+        "true",
       ),
     );
     added = true;
@@ -1657,7 +1673,12 @@ async function callFlow(dir, base, receiver) {
       sent.happened !== "changed" ||
       sent.record?.id !== id ||
       sent.record?.title !== title ||
-      sent.record?.status !== "resolved"
+      sent.record?.status !== "resolved" ||
+      // show: the record carries the listed fields and its id; previous: what the changed ones were.
+      Object.keys(sent.record).join() !== "id,title,status" ||
+      typeof sent.before?.status !== "string" ||
+      sent.before.status === "resolved" ||
+      "title" in sent.before
     )
       throw new Error(`the call: ${call.body.slice(0, 300)}`);
     for (

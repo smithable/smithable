@@ -364,6 +364,7 @@ export const w = {
   useAnotherAddress: "Use another address",
   usingAKey: "Using a key",
   visitor: "visitor",
+  was: "was",
   week: "Week",
   what: "What",
   whatItIsFor: "What it is for",

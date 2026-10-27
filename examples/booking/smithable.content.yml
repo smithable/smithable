@@ -11,7 +11,7 @@ models:
 
 outgoing:
   bookingMade:
-    subject: Your booking
+    subject: "Your booking: {session}"
     text: Thank you for booking. We look forward to seeing you. Please come ten minutes early to settle in; mats, blocks and blankets are by the door. If you cannot come after all, cancel the booking before the class starts so the mat goes to someone else.
   bookingChanged:
     subject: Your booking was changed
@@ -21,7 +21,7 @@ outgoing:
     text: Your booking was cancelled. Here it is as it was. If this was a mistake, book the class again from the schedule while mats are left, or write to us.
   sessionMoved:
     subject: Your class has a new time
-    text: The studio moved a class you booked. Here it is with its new time, and your mat is kept for you. If the new time does not suit you, cancel the booking so the mat goes to someone else.
+    text: "{by} moved {classType}, a class you booked, from {before.startsAt} to {startsAt}. Your mat is kept for you. If the new time does not suit you, cancel the booking so the mat goes to someone else."
 
 menus:
   schedule: { label: Schedule }
