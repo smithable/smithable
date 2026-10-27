@@ -1009,6 +1009,7 @@ export function App() {
                       <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                         <Ask
                           guide={guiding ? guideLine : undefined}
+                          {...(project.beta ? { beta: project.beta } : {})}
                           words={words}
                           waiting={project.waiting}
                           trace={project.trace}

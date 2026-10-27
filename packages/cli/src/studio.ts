@@ -55,6 +55,25 @@ import { warmPreview } from "./warm.js";
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
 /** A message shown once when Studio next opens, e.g. why a description could not be used. */
 export const NOTICE = "data/.smithable/notice.txt";
+/**
+ * The beta's facts, written by the hosted service (smith-first.md §8): `{ until?, invite, guide }`,
+ * `until` when the project is a sandbox. Read on every poll; without it Smith says nothing of a beta.
+ */
+export const BETA = "data/.smithable/beta.json";
+
+/** The beta file's facts, or none when it is missing or unreadable. */
+export function readBeta(
+  dir: string,
+): { until?: string; invite?: string; guide?: string } | undefined {
+  try {
+    const value = JSON.parse(readFileSync(join(dir, BETA), "utf8")) as Record<string, unknown>;
+    const text = (key: string) =>
+      typeof value[key] === "string" ? { [key]: value[key] as string } : {};
+    return { ...text("until"), ...text("invite"), ...text("guide") };
+  } catch {
+    return undefined;
+  }
+}
 // Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
 // repository it is apps/studio's own build.
 const PACKAGED = new URL("../studio/", import.meta.url).pathname;
@@ -667,6 +686,7 @@ export async function studio(
       canRedo: Boolean(redoTarget(dir)),
       preview,
       ...(options.home ? { home: options.home } : {}),
+      ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       ...(notice ? { notice } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),

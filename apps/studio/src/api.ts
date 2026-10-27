@@ -75,6 +75,8 @@ export interface Project {
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
+  /** The hosted beta's facts (smith-first.md §8): a sandbox's end, the invite page, the tester guide. */
+  beta?: { until?: string; invite?: string; guide?: string };
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
   making?: Making;
   /** Requests typed while the app was made, made in order once it is in place. */
