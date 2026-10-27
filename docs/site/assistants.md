@@ -82,7 +82,7 @@ curl -s -X DELETE https://tasks.example.com/api/v1/tasks/8 -H "Authorization: Be
 { "status": 403, "title": "You are not allowed to do this." }
 ```
 
-Without a key nothing answers, since nothing in this app is public: `{"status": 401, "title": "A valid key is needed: Authorization: Bearer <key>."}`. [Let other programs use your app](api.md) has every call and refusal of the API.
+Without a key no record or action can be reached, since nothing in this app is public (only `openapi.json` answers, with what a visitor may do): `{"status": 401, "title": "A valid key is needed: Authorization: Bearer <key>."}`. [Let other programs use your app](api.md) has every call and refusal of the API.
 
 ## 4. Connect an assistant
 

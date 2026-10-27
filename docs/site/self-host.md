@@ -1,6 +1,6 @@
 # Run an app on your own machine
 
-A Smithable app is an ordinary TypeScript project with a Dockerfile, and it depends on nothing from Smithable, so you can run it anywhere Docker runs. This page puts an app into a container, says what it needs, where its data lives, how to back it up and bring it back, and how to update it. Every command was run for real; the output is what it printed (a CRM made with `smithable new my-crm --starter crm`).
+A Smithable app is an ordinary TypeScript project with a Dockerfile, and it depends on nothing from Smithable, so you can run it anywhere Docker runs. This page puts an app into a container, says what it needs, where its data lives, how to back it up and bring it back, and how to update it. Every command was run for real; the output is what it printed (a CRM made with `smithable new my-crm --starter crm`). `smithable deploy` deploys to Docker on this machine unless `--target` says otherwise, and names the image, its container and its volume after the app (`name` in its `package.json`, here `acme-crm`).
 
 ## Deploy to Docker
 
@@ -31,7 +31,7 @@ It took three minutes, most of it the security scans. A failed check stops the d
 
 A deploy that replaces a running version keeps the data volume. If the new version does not start or does not answer `/health`, the previous one runs again; and when the new version had a migration to apply, it first kept a copy of the database as it was (`db/before-migration.db`), which the deploy puts back before the previous version starts, so old code never runs on a changed schema.
 
-The container serves plain HTTP. In front of it, put a proxy that handles HTTPS for your domain (Caddy, nginx or Traefik), and deploy with `--url` set to the address people use. Set `TRUST_PROXY=1` only when such a proxy is in front: the app then takes the visitor's address from the proxy's `X-Forwarded-For` (for its limits) and its `X-Forwarded-Proto` (to send `Strict-Transport-Security`, so browsers keep to HTTPS); without it the app believes neither header, since anyone can send them, and its proxy may send HSTS itself. With `SMTP_HOST` on any port but 465, mail is sent only after the connection turns to TLS (STARTTLS); an `SMTP_URL` is used as written, and `?requireTLS=true` asks for the same. When `SCAN_URL` is set, every uploaded file is sent to it before it is stored (a virus scanner behind a small HTTP front, such as ClamAV), and any answer but OK refuses the upload; without it nothing is scanned.
+The container serves plain HTTP. In front of it, put a proxy that handles HTTPS for your domain (Caddy, nginx or Traefik), and deploy with `--url` set to the address people use. Set `TRUST_PROXY=1` (on the container: `smithable deploy` does not pass it, nor `SCAN_URL` below) only when such a proxy is in front: the app then takes the visitor's address from the proxy's `X-Forwarded-For` (for its limits) and its `X-Forwarded-Proto` (to send `Strict-Transport-Security`, so browsers keep to HTTPS); without it the app believes neither header, since anyone can send them, and its proxy may send HSTS itself. With `SMTP_HOST` on any port but 465, mail is sent only after the connection turns to TLS (STARTTLS); an `SMTP_URL` is used as written, and `?requireTLS=true` asks for the same. When `SCAN_URL` is set, every uploaded file is sent to it before it is stored (a virus scanner behind a small HTTP front, such as ClamAV), and any answer but OK refuses the upload; without it nothing is scanned.
 
 ## What it needs
 
@@ -73,7 +73,7 @@ $ smithable restore --container acme-crm --from s3://backups
 Restored acme-crm/20261003-094317 (1 file(s)).
 ```
 
-The app's name is added to the path, so one bucket holds several apps. A backup is a consistent copy taken while the app runs; `restore` brings back the newest one (or `--backup <time>`) and restarts the app. Run the backup from cron for a nightly copy. Smithable does not encrypt the copies: a folder's permissions, or the bucket's own encryption at rest and its access policy, are what protect them, so keep the folder or the bucket private. For every change as it happens, `smithable backup --continuous` streams the database with [Litestream](https://litestream.io) (installed separately), and `smithable restore --at <time>` then reaches any second of the last 30 days.
+The app's name is added to the path, so one bucket holds several apps. A backup is a consistent copy taken while the app runs; `restore` brings back the newest one (or `--backup <time>`, a backup folder's name such as `20261003-094216`) and restarts the app. Run the backup from cron for a nightly copy. Smithable does not encrypt the copies: a folder's permissions, or the bucket's own encryption at rest and its access policy, are what protect them, so keep the folder or the bucket private. For every change as it happens, `smithable backup --continuous` streams the database with [Litestream](https://litestream.io) (installed separately), and `smithable restore --at <time>` then reaches any second of the last 30 days.
 
 ## With Docker Compose
 
@@ -93,7 +93,7 @@ $ docker compose up -d
  Container my-crm-app-1  Started
 ```
 
-Compose names the volume and the container after the folder (`my-crm_data`, `my-crm-app-1`); back it up with `smithable backup --container my-crm-app-1`.
+Compose names the volume and the container after the folder (`my-crm_data`, `my-crm-app-1`); back it up with `smithable backup --container my-crm-app-1 --to ../backups`.
 
 ## Update
 

@@ -28,7 +28,7 @@ Keys are made in the running app, by an administrator, on the users page (the st
 
 ![The Keys part of the team page: a key for "Uptime monitor" with the role Staff, shown once with a Copy button](api/keys.webp)
 
-Give a key the smallest role that does the job. Here **Staff** may report and resolve incidents but not manage the team. A key owns nothing it creates, can never make keys or manage people (whatever its role), and stops working when it is revoked, when its end date passes, or when the administrator who made it is removed. Every key made or revoked is in the app's activity log, by name, never the key itself.
+Give a key the smallest role that does the job. Here **Staff** may report and resolve incidents but not manage the team. What a key creates has no owner (so `mine=true` finds nothing for a key); a key can never make keys or manage people (whatever its role), and stops working when it is revoked, when its end date passes, or when the administrator who made it is removed. Every key made or revoked is in the app's activity log, by name, never the key itself.
 
 ## 3. Call the API
 
@@ -160,7 +160,7 @@ The tools are the same seven for every app (an eighth, `delete`, where the auth 
 |---|---|
 | `find` | Records of one kind, with `where`, `search`, `sort`, the `fields` wanted, a `limit` (10 unless said, 50 at most) and the total, as `{ columns, rows, total }` |
 | `measure` | A number worked out by the app: how many, or the sum, average, min or max of a number field (`"of": "sum total"`), optionally `by` a field or by month |
-| `read` | One record with all its fields |
+| `read` | One record with its fields and its lists (at most twenty rows of each) |
 | `add` | Add a record |
 | `change` | Change fields of a record |
 | `run` | One of the app's standard actions on a record |
@@ -176,4 +176,4 @@ A refusal comes back as the tool's error, in the app's words, so the assistant c
 
 Each request carries one message (no batches), so every tool call counts toward the key's 60 a minute.
 
-Each call is in the app's access log under the key (`key:<n>`) in place of a person, and every change it makes is in the activity log like anyone's.
+Each call is in the app's access log under the key (`key:<n>`, the key's number) in place of a person, and every change it makes is in the activity log like anyone's.

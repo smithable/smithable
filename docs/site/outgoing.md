@@ -19,7 +19,7 @@ outgoing:
   - a role (every user who has it);
   - an `email` field of the record, or one a reference away (`customer.email`);
   - a field that refers to a user.
-- **The mail** has the subject and text from `smithable.content.yml` (`outgoing: { bookingMade: { subject: Your booking, text: … } }`), then the record's fields as its page shows them, then a link to the record. The person who made the change is not mailed about their own change.
+- **The mail** has the subject and text from `smithable.content.yml` (`outgoing: { bookingMade: { subject: Your booking, text: … } }`), then the record's fields as its page shows them, then a link to the record. The person who made the change is not mailed about their own change, except when they made the record: the owner of a new booking gets its mail as a confirmation.
 
 From the command line: `smithable op addOutgoing bookingMade "Booking created" --to mail --recipient owner`.
 
@@ -50,6 +50,7 @@ A receiver checks the signature like this:
 
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";
+// secret: the target's secret; rawBody: the request's body exactly as it came; signature: its X-Signature-256 header.
 const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
 const ok = expected.length === signature.length && timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 ```
@@ -65,7 +66,7 @@ const ok = expected.length === signature.length && timingSafeEqual(Buffer.from(e
 
 - **The outbox:** a mail or call is written in the same step as the change, and sent right after. So a change never waits for another system, and nothing is sent for a change that didn't happen.
 - **Retries:** a failed one is tried again after 1, 2, 4… minutes, at most three hours apart, for a day. Then it is given up and shown as failed in Activity.
-- **Activity** (Team → Activity, for administrators) has a line for every mail and call. A call's line says when it was sent, which entry it was and the answer's status.
+- **Activity** (Admin → Activity, for administrators) has a line for every mail and call. A call's line says when it was sent, which entry it was and the answer's status.
   - **A target's delivery history is Activity filtered to it:** choose it under *Sent to*, or open `/team/activity?target=statusFeed`. The page then starts with "Calls to statusFeed" and the last call's time and answer, so you see at once whether deliveries work.
   - **Send again:** a mail or call that was given up has a *Send again* button.
 - **On smithable.ai,** a call the service refuses says why in its line. An address you haven't connected yet waits until you add it on the Connections page.
