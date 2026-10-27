@@ -69,7 +69,7 @@ From the command line: `smithable op addIncoming monitorDown --create Incident -
 
 ## 3. The secret, repeats and answers
 
-- **The secret** is a setting, `INCOMING_<NAME>_SECRET`, for example `INCOMING_SUPPORT_SECRET`. The caller sends it as `Authorization: Bearer <secret>`. With `signed: sha256`, it sends a signature of the body in `X-Signature-256` instead. Without the setting, the address refuses every call.
+- **The secret** is a setting, `INCOMING_<NAME>_SECRET`, for example `INCOMING_SUPPORT_SECRET` (the name in capitals: `monitorDown` reads `INCOMING_MONITORDOWN_SECRET`); without it every call is refused with `401`. The caller sends it as `Authorization: Bearer <secret>`. With `signed: sha256`, it sends a signature of the body in `X-Signature-256` instead. Without the setting, the address refuses every call.
 - **Repeats:** services try again when they don't hear back. A call carrying an id the app saw in the last day, in the `Idempotency-Key` header or in the value `id` names, is answered as received and not acted on again.
 - **Answers:** `201` with the new record's id; `200` for a repeat or a custom call; `401` for a wrong secret or signature; `422` when the record is refused, for example a required field left empty.
 

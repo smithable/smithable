@@ -18,6 +18,7 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
   - [Book a person's time](appointments.md): a barber's hours and days off, appointments that never overlap, on the barbers starter.
   - [An app in another language](language.md): Swedish for the booking starter, and what stays English on purpose.
   - [Make a theme](theme.md): a theme of your own as a file, checked for readable colors, and in the [theme lab](https://docs.smithable.ai/theme-lab/index.html) beside a real app.
+  - [Your own code](code.md): custom actions and their tests, hooks, custom pages and sections, incoming calls and plugins, for what the spec cannot say.
   - [Where the pictures come from](pictures.md): the image library, pictures made with an AI and real photographs, each with its source.
   - [Mail and calls out](outgoing.md) and [in](incoming.md): an app that mails people and calls other systems when something happens, and turns mail and calls into records.
   - [Sign in with Google](google-sign-in.md): offering Google beside the default sign-in, a code sent by email.

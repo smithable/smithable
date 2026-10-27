@@ -85,6 +85,23 @@ Add the standard action takeOver. Undo with: smithable undo
 
 **Take over** makes whoever presses it the customer's account manager. With no `--when`, it is offered on every customer.
 
+`ME()` works in three places on an action: as a whole value in `set`, `add` or `copy` (the person pressing the button), and in `when` as `ME()` or `not ME()`, so a button shows only when it changes something. The support desk starter's **Assign to me** is both:
+
+```yaml
+assignToMe:
+  on: SupportCase
+  when: { assignee: not ME() }
+  set: { assignee: ME() }
+```
+
+As a field's default (`default: ME()` on a reference to a user) it fills in whoever makes the record. A list's filter on the signed-in person is written `me` instead (`?assignee=me`, or `defaultFilter`), not `ME()`.
+
+## On several records at once
+
+Ticking rows on a list brings up a selection bar. It offers **Delete** (or **Move to trash**), **Export CSV** for just those rows, and every standard action the list's page offers that fits at least one of them, with how many it fits: **Postpone (3)**. Nothing in the spec says which actions go there: an action on the page's `actions:` is on the bar too, except copy actions (a copy is one record at a time). A field the action asks for is asked once for all the rows.
+
+The action runs on each chosen row it fits and you may run it on, and leaves the others as they are; the bar says how many it changed and how many it skipped. If the server refuses one of the rows it should change, none of them is changed. At most a thousand rows go in one press. Custom actions are not on the bar.
+
 ## What ends up in the spec
 
 After the four invoicing commands, `smithable.yml` has:
@@ -140,6 +157,6 @@ A bare `--when` removes the condition, so the button is offered on every record;
 
 ## Who may press them
 
-An action follows its model's write access: whoever may edit the record may run it, which is each one for their own records and the roles granted `write` on the model in `smithable.auth.yml`. A custom action is run by the roles whose `actions` grant names it (`smithable op grant staff actions resolve`). On a list, ticking several rows offers each action that fits at least one of them, as **Postpone (3)**; it changes the ones it fits and skips the others.
+An action follows its model's write access: whoever may edit the record may run it (each person on their own records, and the roles granted `write` on the model in `smithable.auth.yml`), and so may a role whose `actions` grant names it: `smithable op grant staff actions resolve` lets staff resolve incidents without letting them edit them. A custom action is run only by the roles its grant names, and by administrators.
 
-When a button needs more than setting fields (sending a mail, calling another system, a calculation over many records), a [custom action](../spec/v0.1.md#actions) is code of your own in `src/custom/actions/`. The [spec reference](../spec/v0.1.md#standard-actions) has every rule of standard actions.
+A mail or a call to another system when a button is pressed needs no code: an [outgoing](outgoing.md) entry names the action in its `when`. When a button needs more than that (a calculation over many records, a value you type that is not a field), a custom action is code of your own: [Your own code](code.md) compares the two and writes one. The [spec reference](../spec/v0.1.md#standard-actions) has every rule of standard actions.

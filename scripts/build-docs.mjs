@@ -75,6 +75,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/code.md",
+    out: "code.html",
+    description:
+      "Your own code in a Smithable app: when a custom action beats a standard one, writing and testing one, hooks, custom pages and sections, incoming calls and plugins.",
+    nav: "Your own code",
+    group: "Build",
+  },
+  {
     src: "docs/site/actions.md",
     out: "actions.html",
     description:

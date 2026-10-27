@@ -20,7 +20,7 @@ cafe             built in  Nunito Sans, 16px corners
 Add your own as themes/<name>.yml: see docs/spec/v0.1.md, Themes.
 ```
 
-Sixteen are built in, each in light and dark; the [spec reference](../spec/v0.1.md#themes) says what each looks like. `smithable op setTheme --preset cafe` uses one, and `smithable undo` takes it back.
+Nineteen are built in (the list is cut short above), each in light and dark; the [spec reference](../spec/v0.1.md#themes) says what each looks like. `smithable op setTheme --preset cafe` uses one, and `smithable undo` takes it back.
 
 ## 2. Write the file
 
