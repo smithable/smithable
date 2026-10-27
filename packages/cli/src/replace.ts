@@ -2,6 +2,7 @@
 // (docs/design/fast-start.md): the project's files are replaced by another app's, and only the
 // preview starts again. Every app of a stack profile has the same packages, so what is installed
 // stays. Studio allows it once, and only when it was started as replaceable.
+
 import {
   copyFileSync,
   existsSync,
@@ -16,6 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
+import type { Assumption } from "@smithable/ai";
 import { generate } from "./generate.js";
 import type { Io } from "./io.js";
 import { administered, create, named, withoutSampleDomains } from "./new.js";
@@ -47,7 +49,12 @@ const SPEC_FILES = [
 export type MakingStage = "drafting" | "building" | "arriving";
 /** Before the making: the description is read by a model, or the person is asked. */
 export type AskingStage = "reading" | "asking";
-export type Progress = (stage: MakingStage, draft?: Record<string, string>) => void;
+export type Progress = (
+  stage: MakingStage,
+  draft?: Record<string, string>,
+  /** The draft's choices where the description left the shape open (smith-first.md §4). */
+  assumptions?: Assumption[],
+) => void;
 
 /** What decides the install: the same in both means the packages installed here fit. */
 function installed(dir: string): string {
@@ -245,7 +252,7 @@ export async function replaceProject(
       ...options,
       describe: to.describe,
       answers: to.answers,
-      onDraft: (files) => progress("building", files),
+      onDraft: (files, assumptions) => progress("building", files, assumptions),
     });
     if (made !== 0) {
       io.err(said);

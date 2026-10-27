@@ -16,6 +16,19 @@ import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js"
 
 export type SpecFiles = Record<string, string>;
 
+/**
+ * A choice the draft made where the description left the app's shape open (smith-first.md §4):
+ * asked at the part of the presentation it concerns, with the draft's own answer chosen.
+ */
+export interface Assumption {
+  part: "app" | "pages" | "roles" | "visitors" | "signedIn";
+  question: string;
+  /** What the draft went with. */
+  chosen: string;
+  /** The other answers, each one a change the person can pick instead. */
+  options: string[];
+}
+
 export type Draft =
   | {
       kind: "draft";
@@ -23,6 +36,8 @@ export type Draft =
       usage: Usage[];
       /** What was left out because it could not be made valid, in words. */
       dropped?: string[];
+      /** The choices the draft made where the description left the shape open. */
+      assumptions?: Assumption[];
     }
   | { kind: "failed"; message: string; usage: Usage[] };
 
