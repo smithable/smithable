@@ -52,9 +52,9 @@ const SHOTS = {
     ["cases", "list", "admin"],
     ["cases", 2, "admin", true],
   ],
-  // The menu a visitor orders from, and the orders as staff see them.
+  // Where the truck is this week, under its evening photo, and the orders as staff see them.
   kiosk: [
-    ["menu", "list", "visitor", true],
+    ["where", "list", "visitor", true],
     ["orders", "list", "admin"],
   ],
   // The free times a customer chooses from, and the shop's day with a column per barber (the
