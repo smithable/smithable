@@ -7,6 +7,7 @@ theme:
 pages:
   home:
     sections:
-      hero: { layout: cover }
+      hero: { layout: photo }          # the market across the window, the text on a dark scrim
+      latest: { layout: grid, columns: 3, band: muted }   # the newest items' pictures, two rows of three
   catalog:
     table: { view: cards }

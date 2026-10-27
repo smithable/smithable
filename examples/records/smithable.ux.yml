@@ -8,4 +8,4 @@ pages:
   home:
     theme: { preset: playful }         # the public page warmer than the tool behind it
     sections:
-      items: { layout: grid }          # the items' pictures, titled
+      items: { layout: grid, columns: 3, band: muted }   # the items' pictures, titled, on the muted band
