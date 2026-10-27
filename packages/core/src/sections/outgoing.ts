@@ -1,4 +1,4 @@
-import { isSeq } from "yaml";
+import { isScalar, isSeq } from "yaml";
 import {
   conditionArgs,
   conditionText,
@@ -6,7 +6,7 @@ import {
   lostValues,
   readCondition,
 } from "../condition.js";
-import { checkKeys, mapEntries, readNameList, readString } from "../context.js";
+import { checkKeys, mapEntries, readBoolean, readNameList, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
 import type {
   ActionIR,
@@ -17,9 +17,11 @@ import type {
   StandardActionIR,
   TimerIR,
 } from "../ir.js";
+import { type FieldIR, isUpload } from "../ir.js";
 import { humanize } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import type { SpecSection } from "../section.js";
+import { sensitiveKind } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 
@@ -211,6 +213,69 @@ function readFields(
   return { fields: [...new Set(fields)] };
 }
 
+/**
+ * Why a field never goes in a mail or a call (docs/design/outgoing-templates.md §4): it holds
+ * files, it looks sensitive, or it lists other records. Undefined when it may go.
+ */
+export function notSendable(f: FieldIR): string | undefined {
+  if (isUpload(f)) return "holds files or pictures";
+  if (sensitiveKind(f)) return "looks like a card number, a password or an identity number";
+  if (f.type.kind === "relation" && f.type.many) return "lists other records";
+  return undefined;
+}
+
+/** `show`: the fields the mail lists and a call carries, each one the record page shows. */
+function readShow(names: string[], model: ModelIR): { show: string[] } | { problem: string } {
+  if (!names.length)
+    return { problem: `"show" names at least one field of ${model.name}, or is none.` };
+  for (const name of names) {
+    const f = model.fields.find((x) => x.name === name);
+    if (!f) {
+      const hint = didYouMean(
+        name,
+        model.fields.map((x) => x.name),
+      );
+      return { problem: `${model.name} has no field named "${name}".${hint ? ` ${hint}` : ""}` };
+    }
+    const why = f.formula
+      ? "is worked out when the record is read, which a mail or a call does not do"
+      : notSendable(f);
+    if (why) return { problem: `${model.name}.${name} ${why}, so it cannot be shown.` };
+  }
+  return { show: [...new Set(names)] };
+}
+
+/**
+ * `show` and `previous` as the spec or an operation gives them (outgoing-templates.md §2): the
+ * fields in order or "none", and whether a change says what the fields were.
+ */
+function readBody(
+  body: { show?: string[] | "none"; previous?: boolean },
+  when: When,
+  model: ModelIR,
+): { show?: string[] | "none"; previous?: boolean } | { problem: string } {
+  const out: { show?: string[] | "none"; previous?: boolean } = {};
+  if (body.show !== undefined) {
+    const none =
+      body.show === "none" ||
+      (Array.isArray(body.show) && body.show.length === 1 && body.show[0] === "none");
+    if (none) out.show = "none";
+    else {
+      const r = readShow(body.show as string[], model);
+      if ("problem" in r) return r;
+      out.show = r.show;
+    }
+  }
+  if (body.previous) {
+    if (!("event" in when) || when.event !== "changed")
+      return {
+        problem: `"previous" says what the changed fields were, so it goes with "${model.name} changed" only.`,
+      };
+    out.previous = true;
+  }
+  return out;
+}
+
 const EVENT_WORDS = { created: "added", changed: "changed", deleted: "deleted" } as const;
 
 /**
@@ -234,7 +299,18 @@ export function outgoingText(o: OutgoingIR, label?: (model: string) => string): 
         : "timer" in o.when
           ? `When the timer “${humanize(o.when.timer)}” comes for a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`
           : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
-  return `${what}: ${to}.`;
+  return `${what}: ${to}${bodyText(o)}.`;
+}
+
+/** What the mail or call carries beyond its text, in words: " with its number and date". */
+function bodyText(o: OutgoingIR): string {
+  const shown =
+    o.show === "none"
+      ? " with the text alone"
+      : o.show?.length
+        ? ` with its ${o.show.map((f) => humanize(f).toLowerCase()).join(", ")}`
+        : "";
+  return `${shown}${o.previous ? " and what the changed fields were" : ""}`;
 }
 
 /** Whom an entry tells, in words: "mails its owner", "tells statusfeed". */
@@ -278,11 +354,37 @@ const fieldsSchema = {
     'For "<Model> changed": only a change of one of these fields counts, e.g. [startsAt].',
 };
 
+const showSchema = {
+  anyOf: [
+    {
+      type: "array",
+      items: { type: "string", pattern: FIELD_NAME_PATTERN.source },
+      minItems: 1,
+    },
+    { const: "none" },
+  ],
+  description:
+    "The fields the mail lists under its text and a call's record carries, in this order, e.g. [number, wanted]; none for the text alone. Without it, the fields as the record page shows them.",
+};
+const showArgSchema = {
+  type: "array",
+  items: { type: "string" },
+  minItems: 1,
+  description: `${showSchema.description} "none" for the text alone.`,
+};
+const previousSchema = {
+  type: "boolean",
+  description:
+    'For "<Model> changed": the mail and the call also say what the changed fields were before the change.',
+};
+
 const addOutgoing: Operation<{
   outgoing: string;
   when: string;
   where?: Record<string, string | boolean | string[]>;
   fields?: string[];
+  show?: string[];
+  previous?: boolean;
   to?: string;
   recipient?: string;
 }> = {
@@ -298,6 +400,8 @@ const addOutgoing: Operation<{
       when: whenSchema,
       where: whereSchema,
       fields: fieldsSchema,
+      show: showArgSchema,
+      previous: previousSchema,
       to: {
         type: "string",
         description: '"mail" (the default), or the name of a target whose address is a setting.',
@@ -313,7 +417,7 @@ const addOutgoing: Operation<{
   describe: ({ outgoing, when, to, recipient }) =>
     `Add ${outgoing}: when ${when}, ${to && to !== "mail" ? `tell ${to}` : `mail ${recipient ?? "someone"}`}`,
   destructive: () => false,
-  apply({ spec }, { outgoing, when, where, fields, to = "mail", recipient }, ir) {
+  apply({ spec }, { outgoing, when, where, fields, show, previous, to = "mail", recipient }, ir) {
     if (!FIELD_NAME_PATTERN.test(outgoing))
       throw new OperationError(nameRule("outgoing", outgoing));
     if (ir.outgoing.some((o) => o.name === outgoing))
@@ -322,7 +426,7 @@ const addOutgoing: Operation<{
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
     if ("custom" in read.when) {
-      const r = readCustom(read.when.custom, { where, fields, to, recipient });
+      const r = readCustom(read.when.custom, { where, fields, show, previous, to, recipient });
       if (r) throw new OperationError(r);
     }
     const model = ir.models.find(
@@ -332,6 +436,8 @@ const addOutgoing: Operation<{
       const f = readFields(fields, read.when, model);
       if ("problem" in f) throw new OperationError(f.problem);
     }
+    const body = "custom" in read.when ? {} : readBody({ show, previous }, read.when, model);
+    if ("problem" in body) throw new OperationError(body.problem);
     if (to === "mail") {
       if (!recipient)
         throw new OperationError(
@@ -351,6 +457,8 @@ const addOutgoing: Operation<{
     if (fields?.length) value.fields = [...new Set(fields)];
     value.to = to;
     if (recipient) value.recipient = recipient;
+    if (body.show !== undefined) value.show = body.show;
+    if (body.previous) value.previous = true;
     if (spec.has(["outgoing"])) spec.add(["outgoing"], outgoing, value);
     else spec.add([], "outgoing", { [outgoing]: value });
     return [];
@@ -377,10 +485,68 @@ const removeOutgoing: Operation<{ outgoing: string }> = {
   },
 };
 
+const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?: boolean }> = {
+  name: "setOutgoingBody",
+  summary:
+    "Choose what an outgoing mail lists under its text and a call carries: the fields in order, none for the text alone, or default for the record page's fields; and whether a change's mail or call says what the changed fields were.",
+  schema: {
+    type: "object",
+    required: ["outgoing"],
+    additionalProperties: false,
+    properties: {
+      outgoing: named,
+      show: {
+        ...showArgSchema,
+        description: `${showArgSchema.description} "default" returns to the record page's fields.`,
+      },
+      previous: previousSchema,
+    },
+  },
+  positional: ["outgoing"],
+  describe: ({ outgoing, show, previous }) =>
+    `Set what ${outgoing} carries${show ? `: ${show.join(", ")}` : ""}${previous !== undefined ? `, previous ${previous ? "on" : "off"}` : ""}`,
+  destructive: () => false,
+  apply({ spec }, { outgoing, show, previous }, ir) {
+    const o = ir.outgoing.find((x) => x.name === outgoing);
+    if (!o) throw new OperationError(`There is nothing named "${outgoing}" under outgoing.`);
+    if (show === undefined && previous === undefined)
+      throw new OperationError(
+        "Say --show (fields in order, none, or default) or --previous true|false.",
+      );
+    if ("custom" in o.when)
+      throw new OperationError(
+        `The custom action "${o.when.custom}" has no record, so "show" and "previous" say nothing for "${outgoing}".`,
+      );
+    const model = ir.models.find((m) => "model" in o.when && m.name === o.when.model) as ModelIR;
+    const at = ["outgoing", outgoing];
+    if (show !== undefined) {
+      if (show.length === 1 && show[0] === "default") {
+        if (spec.has([...at, "show"])) spec.remove([...at, "show"]);
+      } else {
+        const r = readBody({ show }, o.when, model);
+        if ("problem" in r) throw new OperationError(r.problem);
+        if (spec.has([...at, "show"])) spec.set([...at, "show"], r.show ?? "none");
+        else spec.add(at, "show", r.show ?? "none");
+      }
+    }
+    if (previous !== undefined) {
+      if (!previous) {
+        if (spec.has([...at, "previous"])) spec.remove([...at, "previous"]);
+      } else {
+        const r = readBody({ previous }, o.when, model);
+        if ("problem" in r) throw new OperationError(r.problem);
+        if (spec.has([...at, "previous"])) spec.set([...at, "previous"], true);
+        else spec.add(at, "previous", true);
+      }
+    }
+    return [];
+  },
+};
+
 export const outgoingSection: SpecSection<"outgoing"> = {
   key: "outgoing",
   required: false,
-  operations: [addOutgoing, removeOutgoing] as AnyOperation[],
+  operations: [addOutgoing, removeOutgoing, setOutgoingBody] as AnyOperation[],
   schema: {
     type: "object",
     description:
@@ -394,6 +560,8 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         when: whenSchema,
         where: whereSchema,
         fields: fieldsSchema,
+        show: showSchema,
+        previous: previousSchema,
         to: {
           type: "string",
           pattern: FIELD_NAME_PATTERN.source,
@@ -420,7 +588,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       const where = `outgoing "${key}"`;
       const known = checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
-        allowed: ["when", "where", "fields", "to", "recipient"],
+        allowed: ["when", "where", "fields", "show", "previous", "to", "recipient"],
       });
       const byKey = new Map(known.map((e) => [e.key, e]));
       const whenEntry = byKey.get("when");
@@ -449,6 +617,8 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         const problem = readCustom(read.when.custom, {
           where: byKey.has("where") ? {} : undefined,
           fields: byKey.has("fields") ? [] : undefined,
+          show: byKey.has("show") ? [] : undefined,
+          previous: byKey.has("previous") ? true : undefined,
           to: byKey.has("to")
             ? readString(ctx, byKey.get("to")?.value, `"to" of ${where}`)
             : undefined,
@@ -495,6 +665,44 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           continue;
         }
         entry.fields = f.fields;
+      }
+      const showEntry = byKey.get("show");
+      if (showEntry) {
+        let show: string[] | "none" | undefined;
+        if (isScalar(showEntry.value)) {
+          const text = readString(ctx, showEntry.value, `"show" of ${where}`);
+          if (text === undefined) continue;
+          if (text !== "none") {
+            ctx.error(
+              showEntry.value,
+              "invalid-outgoing",
+              `${capital(where)}: "show" lists the fields the mail or call carries, or is none; "${text}" is neither.`,
+            );
+            continue;
+          }
+          show = "none";
+        } else {
+          const names = readNameList(ctx, showEntry.value, `"show" of ${where}`).map((n) => n.name);
+          if (!isSeq(showEntry.value)) continue;
+          show = names;
+        }
+        const b = readBody({ show }, read.when, model);
+        if ("problem" in b) {
+          ctx.error(showEntry.value, "invalid-outgoing", `${capital(where)}: ${b.problem}`);
+          continue;
+        }
+        entry.show = b.show;
+      }
+      const previousEntry = byKey.get("previous");
+      if (previousEntry) {
+        const previous = readBoolean(ctx, previousEntry.value, `"previous" of ${where}`);
+        if (previous === undefined) continue;
+        const b = readBody({ previous }, read.when, model);
+        if ("problem" in b) {
+          ctx.error(previousEntry.value, "invalid-outgoing", `${capital(where)}: ${b.problem}`);
+          continue;
+        }
+        if (b.previous) entry.previous = true;
       }
       const recipientEntry = byKey.get("recipient");
       const recipientText = recipientEntry
@@ -557,6 +765,11 @@ export const outgoingSection: SpecSection<"outgoing"> = {
             [...at, "fields"],
             o.fields.map((f) => (f === effect.from ? effect.to : f)),
           );
+        if (o.when.model === effect.model && Array.isArray(o.show) && o.show.includes(effect.from))
+          spec.set(
+            [...at, "show"],
+            o.show.map((f) => (f === effect.from ? effect.to : f)),
+          );
         if (list && o.when.model === effect.model && list.list === effect.from)
           spec.set([...at, "recipient"], recipientText({ ...list, list: effect.to }));
         if (
@@ -602,6 +815,13 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           o.fields?.includes(effect.field)
         )
           return { refusal: uses(effect.model, effect.field) };
+        if (
+          effect.kind === "remove-field" &&
+          o.when.model === effect.model &&
+          Array.isArray(o.show) &&
+          o.show.includes(effect.field)
+        )
+          return { refusal: uses(effect.model, effect.field) };
         if (list && o.when.model === effect.model && list.list === effect.field)
           return { refusal: uses(effect.model, effect.field) };
         if (
@@ -630,10 +850,19 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  */
 function readCustom(
   action: string,
-  o: { where?: object; fields?: string[]; to?: string; recipient?: string },
+  o: {
+    where?: object;
+    fields?: string[];
+    show?: unknown;
+    previous?: unknown;
+    to?: string;
+    recipient?: string;
+  },
 ): string | undefined {
   if (o.where !== undefined || o.fields !== undefined)
     return `the custom action "${action}" has no record, so "where" and "fields" say nothing; leave them out.`;
+  if (o.show !== undefined || o.previous !== undefined)
+    return `the custom action "${action}" has no record, so "show" and "previous" say nothing; leave them out.`;
   if (o.to === "mail" && o.recipient !== undefined && !/^[a-z][A-Za-z0-9]*$/.test(o.recipient))
     return `the custom action "${action}" has no record, so its mail goes to a role; "${o.recipient}" is not one.`;
   if (o.to === "mail" && o.recipient === "owner")

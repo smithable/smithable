@@ -1,4 +1,6 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import { modelAccess } from "./access.js";
+import type { AuthIR } from "./auth.js";
 import {
   checkKeys,
   type Entry,
@@ -8,10 +10,13 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { SpecIR } from "./ir.js";
+import type { OutgoingIR, SpecIR } from "./ir.js";
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
+import { titleField } from "./samples.js";
+import { notSendable } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
+import { placeholdersOf } from "./template.js";
 
 /**
  * Visible text from smithable.content.yml (ARCHITECTURE §3.3). Everything is optional:
@@ -296,6 +301,11 @@ export function validateContent(
   ir: SpecIR,
   /** A language file (smithable.content.<language>.yml): the content file it translates. */
   translation?: { of: ContentIR; language: Language },
+  /**
+   * The auth rules, for the recipient's view of an outgoing text's placeholders
+   * (docs/design/outgoing-templates.md §4); without them only the paths are checked.
+   */
+  auth?: AuthIR,
 ): { content?: ContentIR; diagnostics: Diagnostic[] } {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
@@ -451,10 +461,12 @@ export function validateContent(
         ir.outgoing.map((x) => x.name),
         "outgoing",
       )) {
-        content.outgoing[o.key] = readTexts(ctx, o.value, `outgoing "${o.key}"`, [
-          "subject",
-          "text",
-        ]);
+        const where = `outgoing "${o.key}"`;
+        const texts = checkKeys(ctx, mapEntries(ctx, o.value, where) ?? [], where, {
+          allowed: ["subject", "text"],
+        });
+        content.outgoing[o.key] = readTexts(ctx, o.value, where, ["subject", "text"], texts);
+        checkOutgoingTexts(ctx, texts, o.key, ir, auth);
       }
     }
   }
@@ -844,6 +856,177 @@ function named(
     return false;
   });
 }
+
+/**
+ * The placeholders of an outgoing entry's subject and text (docs/design/outgoing-templates.md
+ * §3 and §4): each a path the entry can fill, and none the recipient may not read.
+ */
+function checkOutgoingTexts(
+  ctx: ParseContext,
+  texts: Entry[],
+  name: string,
+  ir: SpecIR,
+  auth?: AuthIR,
+): void {
+  const entry = ir.outgoing.find((o) => o.name === name);
+  if (!entry) return;
+  let any = false;
+  for (const { key, value } of texts) {
+    if (!isScalar(value) || typeof value.value !== "string") continue;
+    const where = `"${key}" of outgoing "${name}"`;
+    for (const path of new Set(placeholdersOf(value.value))) {
+      // A link or a name reveals nothing of the record; the rest does.
+      if (path !== "link" && path !== "by") any = true;
+      const problem = placeholderProblem(path, entry, ir, auth);
+      if (!problem) continue;
+      if (problem.warning)
+        ctx.warning(value, problem.code, `${where}: ${problem.message}`, problem.hint);
+      else ctx.error(value, problem.code, `${where}: ${problem.message}`, problem.hint);
+    }
+  }
+  // A role that may not read the record is warned about for the default body (auth.ts); a text
+  // written for them with the record's values in it is a mistake, not an oversight.
+  const r = entry.recipient;
+  const when = entry.when;
+  const model = "model" in when ? ir.models.find((m) => m.name === when.model) : undefined;
+  if (any && auth && model && entry.to === "mail" && r?.kind === "role") {
+    const read = modelAccess(model, auth).read;
+    if (!read.public && !read.roles.includes(r.role)) {
+      const at = texts.find((t) => isScalar(t.value))?.value;
+      if (at)
+        ctx.error(
+          at,
+          "recipient-cannot-read",
+          `Outgoing "${name}" mails every ${r.role} the ${model.name}'s values, which ${r.role} may not read.`,
+          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
+        );
+    }
+  }
+}
+
+type PlaceholderProblem = { code: string; message: string; hint?: string; warning?: true };
+
+/**
+ * What is wrong with one placeholder of an outgoing text, if anything: the paths of
+ * outgoing-templates.md §3 and, with the auth rules, the recipient's view of §4.
+ */
+export function placeholderProblem(
+  path: string,
+  entry: OutgoingIR,
+  ir: SpecIR,
+  auth?: AuthIR,
+): PlaceholderProblem | undefined {
+  const bad = (message: string, hint?: string, code = "invalid-placeholder") => ({
+    code,
+    message,
+    ...(hint ? { hint } : {}),
+  });
+  if ("custom" in entry.when)
+    return bad(
+      `a custom action's mail shows its input and output and takes no placeholders; "{${path}}" cannot be filled.`,
+    );
+  const model = ir.models.find((m) => "model" in entry.when && m.name === entry.when.model);
+  if (!model) return undefined;
+  const changed = "event" in entry.when && entry.when.event === "changed";
+  const parts = path.split(".");
+  if (parts.length > 2 || parts.some((p) => !p))
+    return bad(
+      `"{${path}}" is not a field, or a reference's field one hop away, like {number} or {customer.name}.`,
+    );
+  const [first = "", second] = parts;
+  const offered = () => [
+    ...model.fields.filter((f) => !f.formula && !notSendable(f)).map((f) => f.name),
+    "title",
+    "link",
+    "by",
+    ...(changed ? ["before.<field>"] : []),
+  ];
+  const unknown = (of: { name: string; fields: { name: string }[] }, name: string) =>
+    bad(
+      `${of.name} has no field named "${name}".`,
+      didYouMean(name, of === model ? offered() : of.fields.map((f) => f.name)) ??
+        `The placeholders here: ${offered().join(", ")}.`,
+      "unknown-placeholder",
+    );
+  const cannot = (of: string, f: { name: string; formula?: unknown; type: OutgoingFieldType }) => {
+    const why = f.formula
+      ? "is worked out when the record is read, which a mail or a call does not do"
+      : notSendable(f as Parameters<typeof notSendable>[0]);
+    return why ? bad(`${of}.${f.name} ${why}, so it cannot fill a placeholder.`) : undefined;
+  };
+  if (second === undefined) {
+    if (first === "title" || first === "link") return undefined;
+    if (first === "by") {
+      const r = entry.recipient;
+      if (r && (r.kind === "field" || (r.kind === "list" && r.each.kind === "field")))
+        return {
+          code: "by-to-address",
+          message: `"{by}" tells the address on the record the name of the person whose change it is.`,
+          hint: "Leave it out if the people who get this mail should not see who in the app made the change.",
+          warning: true,
+        };
+      return undefined;
+    }
+    if (first === "before")
+      return bad(`"{before}" needs a field: "{before.status}" says what the status was.`);
+    const f = model.fields.find((x) => x.name === first);
+    if (!f) return unknown(model, first);
+    return cannot(model.name, f);
+  }
+  if (first === "before") {
+    if (!changed)
+      return bad(
+        `"{${path}}" says what a field was before a change, so it goes with "${model.name} changed" only.`,
+      );
+    const f = model.fields.find((x) => x.name === second);
+    if (!f) return unknown(model, second);
+    return cannot(model.name, f);
+  }
+  const ref = model.fields.find((x) => x.name === first);
+  if (!ref) return unknown(model, first);
+  if (ref.type.kind !== "relation" || ref.type.many)
+    return bad(
+      `${model.name}.${first} is not a reference to one record, so "{${path}}" leads nowhere.`,
+    );
+  const otherName = ref.type.model;
+  const other = ir.models.find((m) => m.name === otherName);
+  if (!other) return undefined;
+  const f = other.fields.find((x) => x.name === second);
+  if (!f) return unknown(other, second);
+  const why = cannot(other.name, f);
+  if (why) return why;
+  // The recipient's view (§4): the referenced record's title is in every mail already; another
+  // of its fields only for a role that may read the other model.
+  if (second === titleField(other) || other.nameParts?.some((p) => p.field === second))
+    return undefined;
+  if (!auth || entry.to !== "mail") return undefined;
+  const r = entry.recipient;
+  const read = modelAccess(other, auth).read;
+  if (read.public) return undefined;
+  if (r?.kind === "role" && read.roles.includes(r.role)) return undefined;
+  // An owner has some role; when every role that is not admin may read the other model, so may they.
+  if (
+    r?.kind === "owner" &&
+    auth.roles
+      .filter((role) => role.name !== "admin")
+      .every((role) => read.roles.includes(role.name))
+  )
+    return undefined;
+  const who = !r
+    ? "the recipient"
+    : r.kind === "role"
+      ? r.role
+      : r.kind === "owner"
+        ? `a ${model.name}'s owner`
+        : `the address in ${r.kind === "field" ? r.path.join(".") : `${r.list}.${r.each.kind === "owner" ? "owner" : r.each.field}`}`;
+  return {
+    code: "placeholder-not-readable",
+    message: `"{${path}}" would tell ${who} what ${other.name}.${second} holds, which ${who} may not read.`,
+    hint: `Use {${first}} (its title)${r?.kind === "role" ? `, or let ${r.role} read ${other.name}` : ""}.`,
+  };
+}
+
+type OutgoingFieldType = SpecIR["models"][number]["fields"][number]["type"];
 
 /** Reads plain text keys of a mapping (or the given entries). */
 function readTexts(
