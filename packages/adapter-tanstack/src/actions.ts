@@ -17,7 +17,7 @@ import {
 } from "@smithable/core";
 import { checksLoaded, hasLocks, textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
-import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
+import { afterCustom, OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   attr,
   dataKey,
@@ -41,7 +41,13 @@ export function zodFor(field: FieldIR): string {
   let schema: string;
   if (field.type.kind === "choice") schema = `z.enum(${literal(field.type.values)})`;
   else if (field.type.kind === "relation")
-    schema = field.type.model === USER_MODEL ? "z.string()" : "z.number().int()";
+    schema =
+      field.type.model === USER_MODEL
+        ? "z.string()"
+        : field.type.many
+          ? // The rows picked, each once.
+            "z.array(z.number().int()).min(1).transform((ids) => [...new Set(ids)])"
+          : "z.number().int()";
   else {
     switch (field.type.name) {
       case "int":
@@ -163,7 +169,11 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
     (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
   );
   const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
-  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+  // On the rows picked in a list (A 171): what it asks besides them, and one Activity line a run.
+  const rows = action.custom ? action.rows : undefined;
+  const asksMore = Boolean(rows && action.input.length > 1);
+  const told = afterCustom(ir, action.name).length > 0;
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";${rows || told ? '\nimport { db } from "#/db";' : ""}${rows ? '\nimport { audit } from "#/kit/audit.server";' : ""}${told ? '\nimport { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";' : ""}
 import { ${action.name} as implementation } from "${a.custom}";
 import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
@@ -182,7 +192,15 @@ export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
 export type ${a.outputType} = ${output};
 
 export const ${a.ui}: ModelUi = ${literal(ui)};
-
+${
+  rows && asksMore
+    ? `
+/** What a run on the rows picked asks for besides them, once for all of them (the selection bar). */
+export const ${a.askUi}: ModelUi = { ...${a.ui}, fields: ${a.ui}.fields.filter((f) => f.name !== "${rows.field}") };
+export const ${a.asks} = ${a.input}.omit({ ${rows.field}: true });
+`
+    : ""
+}
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${a.input})
   .handler(async ({ data }) => {
@@ -191,15 +209,39 @@ export const ${action.name} = createServerFn({ method: "POST" })
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
 ${records
-  .map(
-    (f, i) =>
-      `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
+  .map((f, i) =>
+    f.type.kind === "relation" && f.type.many
+      ? `    if (!data.${f.name}.every((id) => ${readers[i]?.data}.canRead(viewer, id))) throw new AccessDenied(true);\n`
+      : `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
   )
   .join(
     "",
   )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
-    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
-    return run(data, viewer);
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
+      rows || told
+        ? `
+    const output = await run(data, viewer);${
+      rows
+        ? `
+    // One line in Activity for the run, with the rows it ran on.
+    audit(db, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(rows.model)}, details: { records: data.${rows.field} } });`
+        : ""
+    }${
+      told
+        ? `
+    // Who is told once it has returned without an error (smithable.yml's outgoing, integrations.md §4.3).
+    // The action has run: a mail or call that cannot be queued is logged, never its failure.
+    try {
+      db.transaction((tx) => outgoingAfter(tx, viewer, ${JSON.stringify(action.name)}, data, output));
+    } catch (error) {
+      log.error("What ${action.name} tells could not be queued", { error });
+    }`
+        : ""
+    }
+    return output;`
+        : `
+    return run(data, viewer);`
+    }
   });
 `;
 }

@@ -12,7 +12,7 @@ import {
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { describedWith, type Proposal } from "@smithable/ai";
+import { type Assumption, describedWith, type Proposal } from "@smithable/ai";
 import {
   BUILT_IN_THEMES,
   EDITABLE_FILES,
@@ -631,6 +631,8 @@ export async function studio(
         stage: AskingStage | MakingStage | "failed";
         /** What the description leaves open, while the person is asked (stage "asking"). */
         questions?: { about?: string; question: string; options: string[] }[];
+        /** The choices the draft made where the description left the shape open (smith-first.md §4). */
+        assumptions?: Assumption[];
         since: string;
         usual?: number;
         files?: { spec?: string; auth?: string; content?: string; ux?: string; context?: string };
@@ -720,11 +722,12 @@ export async function studio(
   let asked: Asked | undefined;
   const replaceWith = async (to: Asked) => {
     const result = await capture((io) =>
-      replaceProject(dir, io, to, (stage, draft) => {
+      replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
         making = {
           ...making,
           stage,
+          ...(assumptions?.length ? { assumptions } : {}),
           ...(draft
             ? {
                 files: {

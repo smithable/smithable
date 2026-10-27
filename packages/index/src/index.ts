@@ -3,6 +3,7 @@ export type { ContextOptions, ContextSlice } from "./context.js";
 export { buildContext, estimateTokens } from "./context.js";
 export type { PhraseMatch, PhraseOperation, PhraseRefusal } from "./phrases.js";
 export { matchRequest, refusalOf } from "./phrases.js";
+export { type Part, present } from "./present.js";
 export type {
   ConceptInfo,
   FileRef,

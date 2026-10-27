@@ -1,6 +1,7 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
 import {
   type AuthIR,
+  type CustomActionIR,
   type FieldIR,
   humanize,
   kebab,
@@ -445,7 +446,8 @@ export function listParts(
   const component = `${pascal(page.id)}${within ? pascal(plural(model.name)) : ""}Page`;
   const path = indexPath(page.route);
   const actions = (page.actions ?? []).flatMap((name) =>
-    ir.actions.filter((a) => a.name === name && a.custom),
+    // One on the rows picked is in the selection bar, not a button of its own (A 171).
+    ir.actions.filter((a) => a.name === name && a.custom && !a.rows),
   );
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
@@ -563,6 +565,14 @@ export function listParts(
   if (offered.length > 2) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
+  // Custom actions on the rows picked (A 171): those the page lists whose list is of its records.
+  const onRows = within
+    ? []
+    : (page.actions ?? []).flatMap((name) =>
+        ir.actions.filter(
+          (a): a is CustomActionIR => a.name === name && a.custom && a.rows?.model === model.name,
+        ),
+      );
   // The trash (docs/design/trash.md): Undo after Move to trash, and the way to the Trash page.
   const trash = Boolean(model.trash && !within);
   if (trash)
@@ -570,7 +580,8 @@ export function listParts(
       .add("@tanstack/react-router", "useRouter")
       .add("#/kit/Trash", "TrashNotice")
       .add(n.module, trashNames(model).restore);
-  const selecting = !within && (many.length > 0 || Boolean(auth && hasSignIn(auth)));
+  const selecting =
+    !within && (many.length > 0 || onRows.length > 0 || Boolean(auth && hasSignIn(auth)));
   if (selecting) {
     view
       .add("react", "useState")
@@ -581,6 +592,13 @@ export function listParts(
       .add(n.module, n.removeMany, n.deleteRule);
     if (longTitle(model)) view.add("#/kit/format", "titleOf");
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
+    for (const a of onRows)
+      view.add(
+        actionNames(a).module,
+        a.name,
+        actionNames(a).access,
+        ...(a.input.length > 1 ? [actionNames(a).askUi, actionNames(a).asks] : []),
+      );
   }
   const owner = `row.${ownerKey(model)}`;
   const fits = (a: (typeof many)[number]) =>
@@ -728,7 +746,21 @@ ${
               run: (${askedFields(a).length ? "values" : ""}) => ${actionNames(a).many}({ data: { ids: chosen.map((row) => row.id)${askedFields(a).length ? ", values: values as never" : ""} } }),
             },`,
             )
-            .join("")}${many.length ? "\n          " : ""}]}
+            .join("")}${onRows
+            .map(
+              (a) => `
+            {
+              label: ${JSON.stringify(t.action(a))},${t.actionHelp(a) ? `\n              help: ${JSON.stringify(t.actionHelp(a))},` : ""}
+              concept: "action:${a.name}",
+              // Run once on every row picked, by whoever may run it.
+              applies: allows(${actionNames(a).access}, viewer) ? chosen.length : 0,${a.input.length > 1 ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks} },` : ""}
+              run: async (${a.input.length > 1 ? "values" : ""}) => {
+                await ${a.name}({ data: { ${a.input.length > 1 ? "...(values as object), " : ""}${a.rows?.field}: chosen.map((row) => row.id) } as never });
+                return { changed: chosen.length, skipped: 0 };
+              },
+            },`,
+            )
+            .join("")}${many.length || onRows.length ? "\n          " : ""}]}
           deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
           onDelete={(together) => ${n.removeMany}({ data: { ids: chosen.map((row) => row.id), together } })}${trash ? "\n          trash" : ""}
           onDone={async () => {

@@ -155,6 +155,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/limits.md",
+    out: "limits.html",
+    description:
+      "The limits of Smithable's private beta on smithable.ai: per app (memory, CPU, storage, mail, web calls, traffic, sleep when idle), per account, the workspace and the free sandbox.",
+    nav: "Limits",
+    group: "Run",
+  },
+  {
     src: "docs/site/self-host.md",
     out: "self-host.html",
     description:
@@ -195,6 +203,8 @@ const PAGES = [
       "Questions and answers about Smithable: how it compares, whether an app depends on it, AI models, running costs, hosting, data and what it builds today.",
     nav: "Questions",
     group: "About",
+    // Folded into Why Smithable (Johan, 2026-10-27): a pointer for old links, not in the menu.
+    hidden: true,
   },
   {
     src: "docs/spec/v0.1.md",
@@ -376,7 +386,7 @@ for (const page of PAGES)
     throw new Error(`${page.src} has no menu group in PAGES.`);
 const menu = (page) =>
   GROUPS.map((group) => {
-    const links = PAGES.filter((p) => p.group === group).map(
+    const links = PAGES.filter((p) => p.group === group && !p.hidden).map(
       (p) =>
         `<li><a href="/${p.out}"${p.sub ? ' class="sub"' : ""}${p === page ? ' aria-current="page"' : ""}>${p.nav}</a></li>`,
     );

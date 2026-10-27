@@ -1100,7 +1100,10 @@ function AddCustomAction({ run, initial }: FormProps) {
           onChange={(e) => setIntent(e.target.value)}
         />
       </Label>
-      <Label text="What it needs" hint='One per line, e.g. "keep: Customer!"'>
+      <Label
+        text="What it needs"
+        hint='One per line, e.g. "keep: Customer!"; "customers: Customer[]" runs it on the rows picked in a list'
+      >
         <textarea
           aria-label="What it needs"
           rows={3}
