@@ -642,10 +642,19 @@ async function sessionsListFlow(base) {
   }
 }
 
-/** A mail's text as written: soft line breaks joined and =XX bytes decoded (UTF-8). */
+/**
+ * A mail's text as written: a header's encoded words (`=?UTF-8?Q?…?=`, as a subject with a character
+ * outside ASCII is written, in one or more words) opened, the body's soft line breaks joined and its =XX
+ * bytes decoded (UTF-8).
+ */
 function quotedPrintable(raw) {
   return Buffer.from(
     raw
+      .replace(/=\?UTF-8\?([QB])\?([^?]*)\?=(\s+(?==\?UTF-8\?))?/gi, (_, encoding, text) =>
+        encoding.toUpperCase() === "B"
+          ? Buffer.from(text, "base64").toString("latin1")
+          : text.replace(/_/g, " "),
+      )
       .replace(/=\r?\n/g, "")
       .replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16))),
     "latin1",
