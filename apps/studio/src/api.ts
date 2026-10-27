@@ -60,6 +60,8 @@ export interface Project {
     /** The app's other languages' files (smithable.content.<language>.yml), by language. */
     translations?: Record<string, string>;
   };
+  /** Each model's sample records file (samples/<Model>.yml) as written, for previews. */
+  samples?: Record<string, string>;
   /** The themes the ux file may name: built in or the project's, each with its picture (an SVG). */
   themes: { name: string; source: "built-in" | "project"; font: string; thumbnail: string }[];
   /** The project's own themes (themes/<name>.yml), parsed: `theme.preset` may name them. */
