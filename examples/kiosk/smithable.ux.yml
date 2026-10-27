@@ -3,7 +3,7 @@ smithableUx: 0.1
 
 theme:
   preset: street-food
-  brand: { primary: "#b0402f" }    # the preset's red a notch quieter, in light and dark
+  brand: { primary: "#b0402f", background: "#e8a33d" }   # the red a notch quieter; the string lights' amber: cream in light, a warm deep brown in dark
 
 tones:
   Order.status: { new: warning, accepted: neutral, ready: success, collected: neutral, declined: danger }
