@@ -3,13 +3,18 @@
 // a preview of the mail filled from the model's sample record, so it reads right without a
 // running app.
 import {
+  type AuthIR,
   type FieldIR,
   fillText,
   humanize,
   type ModelIR,
   notSendable,
+  type OutgoingIR,
+  placeholderProblem,
+  placeholdersOf,
   type SpecIR,
   titleField,
+  USER_MODEL,
 } from "@smithable/core";
 import { useState } from "react";
 import { parse } from "yaml";
@@ -36,6 +41,31 @@ function placeholders(model: ModelIR, changed: boolean): string[] {
   return [...fields, "title", "link", "by", ...(changed ? fields.map((f) => `before.${f}`) : [])];
 }
 
+/**
+ * The fields one reference away, by reference ({customer.name}): a user's name and email, another
+ * record's sendable fields that the validator lets this entry's recipient read.
+ */
+function hops(
+  model: ModelIR,
+  entry: OutgoingIR,
+  ir: SpecIR,
+  auth?: AuthIR,
+): { ref: string; paths: string[] }[] {
+  return model.fields.flatMap((f) => {
+    if (f.type.kind !== "relation" || f.type.many) return [];
+    const target = f.type.model;
+    const other = ir.models.find((m) => m.name === target);
+    const names =
+      target === USER_MODEL
+        ? ["name", "email"]
+        : (other?.fields.filter(sendable).map((x) => x.name) ?? []);
+    const paths = names
+      .map((n) => `${f.name}.${n}`)
+      .filter((p) => !placeholderProblem(p, entry, ir, auth));
+    return paths.length ? [{ ref: f.name, paths }] : [];
+  });
+}
+
 /** A sample value as text: a list or object compactly, a missing one as nothing. */
 const shown = (value: unknown): string | undefined =>
   value == null ? undefined : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -43,12 +73,14 @@ const shown = (value: unknown): string | undefined =>
 export function OutgoingTemplate({
   entry,
   ir,
+  auth,
   contentText,
   samples,
   run,
 }: {
   entry: string;
   ir: SpecIR;
+  auth?: AuthIR;
   /** smithable.content.yml as it is, for the entry's subject and text. */
   contentText?: string;
   /** Each model's sample records file (samples/<Model>.yml), as text. */
@@ -81,6 +113,14 @@ export function OutgoingTemplate({
       ] ?? {};
   } catch {}
   const sample = records(samples, on)[0] ?? {};
+  const further = hops(model, o, ir, auth);
+  // What the validator says about the texts' placeholders, warnings included ({by} to an address).
+  const problems = [
+    ...new Set([...placeholdersOf(words.subject ?? ""), ...placeholdersOf(words.text ?? "")]),
+  ].flatMap((p) => {
+    const problem = placeholderProblem(p, o, ir, auth);
+    return problem ? [{ path: p, ...problem }] : [];
+  });
   // A sample names a referenced record by its title: {customer.name} is that record's field.
   const value = (path: string): string | undefined => {
     if (path === "title") return shown(sample[titleField(model)]);
@@ -129,7 +169,33 @@ export function OutgoingTemplate({
             </button>
           ))}
         </div>
+        {further.map(({ ref, paths }) => (
+          <div key={ref} className="flex flex-wrap items-center gap-1">
+            <span className="text-quiet">{humanize(ref)}:</span>
+            {paths.map((p) => (
+              <button
+                key={p}
+                type="button"
+                title="Copy, to paste into the subject or the text"
+                onClick={() => void copy(p)}
+                className="rounded-full border border-line bg-panel px-2 py-0.5 font-mono hover:border-accent hover:text-accent"
+              >
+                {`{${p}}`}
+              </button>
+            ))}
+          </div>
+        ))}
         {copied && <p className="text-quiet">{`{${copied}}`} copied: paste it into a text.</p>}
+        {problems.map((p) => (
+          <p
+            key={p.path}
+            role={p.warning ? undefined : "alert"}
+            className={p.warning ? "text-warning" : "text-red-700"}
+          >
+            {p.message}
+            {p.hint ? ` ${p.hint}` : ""}
+          </p>
+        ))}
       </div>
       {o.to === "mail" && (
         <fieldset className="space-y-1">
