@@ -21,8 +21,8 @@ test("every stop of the guides has its place in Studio, and every place has a st
   expect(stops.filter((a) => !found.has(a))).toEqual([]);
   expect([...found].filter((a) => !stops.includes(a))).toEqual([]);
   expect(TOURS.nocode.map((s) => s.anchor)).toEqual([
-    "layout",
     "preview",
+    "manual",
     "behavior",
     "change",
     "changes",
