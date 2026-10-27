@@ -179,9 +179,10 @@ export function outgoingModule(
   // A placeholder one reference away, `{customer.email}` (outgoing-templates.md §3): the referenced
   // record's field as its page shows it; nothing for a path the model does not have.
   const hop = (model: ModelIR, path: string): string | undefined => {
-    const [first, second] = path.split(".");
+    const [first, second, third] = path.split(".");
     const ref = model.fields.find((f) => f.name === first);
-    if (!ref || !second || ref.type.kind !== "relation" || ref.type.many) return undefined;
+    if (!ref || !second || third !== undefined || ref.type.kind !== "relation" || ref.type.many)
+      return undefined;
     if (ref.type.model === USER_MODEL) {
       if (second !== "name" && second !== "email") return undefined;
       named = true;
