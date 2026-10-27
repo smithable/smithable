@@ -2268,6 +2268,58 @@ async function productionFormFlow(dir, port) {
 }
 
 /**
+ * A demo (DEMO_VISITORS=1) gives each visitor a copy of the app's data of their own
+ * (src/kit/visitor.ts): what one visitor adds, another never sees, and the app's own data is left
+ * as the seed made it.
+ */
+async function demoVisitorsFlow(dir, port) {
+  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1", DEMO_VISITORS: "1" });
+  const browser = await chromium.launch();
+  try {
+    const base = `http://localhost:${port}`;
+    const visitor = async () =>
+      (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+    const [a, b] = [await visitor(), await visitor()];
+    await signInAs(a, base, "admin");
+    await open(a, `${base}/customers/new`);
+    await a.getByRole("textbox", { name: "Name *" }).fill("Visitor A Ltd");
+    await a.getByRole("button", { name: "Create customer" }).click();
+    await a.waitForURL(`${base}/customers`);
+    await a
+      .getByText("Visitor A Ltd")
+      .filter({ visible: true })
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    // Another visitor: their own copy, the seed's customers and not the first visitor's.
+    await signInAs(b, base, "admin");
+    await open(b, `${base}/customers`);
+    await b
+      .getByText("Arctic Outdoor Co")
+      .filter({ visible: true })
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    if (await b.getByText("Visitor A Ltd").count())
+      throw new Error("a visitor sees another's customer");
+    // Each visitor's copy is a database of its own; the app's own has no new customer.
+    const copies = readdirSync(join(dir, "data", "visitors"));
+    if (copies.length < 2) throw new Error(`${copies.length} visitor copies`);
+    const own = run(
+      "node",
+      [
+        "-e",
+        'const D=require("better-sqlite3");console.log(new D("data/db/app.db").prepare("select count(*) n from customers where name = \'Visitor A Ltd\'").get().n)',
+      ],
+      dir,
+    );
+    if (String(own).trim() !== "0")
+      throw new Error("the app's own data got the visitor's customer");
+  } finally {
+    await browser.close();
+    stop();
+  }
+}
+
+/**
  * Contact the owner: the admin adds a customer (and so owns it); a sales user writes from its
  * page; the mail reaches the admin with the sender as reply-to, and the page never shows the
  * admin's address.
@@ -6053,6 +6105,12 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "in the production build an administrator opens a new customer from its address and gets the form, with whom to give it to",
         () => productionFormFlow(dir, port + 450),
+      );
+
+    if (example === "crm")
+      await asyncStep(
+        "a demo (DEMO_VISITORS=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees",
+        () => demoVisitorsFlow(dir, port + 400),
       );
 
     let stop = await serve(dir, port, "production");
