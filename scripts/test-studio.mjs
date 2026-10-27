@@ -347,32 +347,40 @@ try {
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
-    "the guide asks No code or Code, walks the places once, Guide shows it again, its Code puts Code first, a reload shows nothing",
+    "the guide is Smith's: each stop a line in his thread with its place lit, once; Guide says it again; Code's tour with Code open; a reload shows nothing",
     async () => {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.goto(base);
+        // Smith's line for the stop, in his thread (smith-first.md §7).
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
         for (let i = 0; i < 7; i++) {
           await card.waitFor({ timeout: 20000 * P });
           const at = await card.getAttribute("data-guide-card");
           seen.push(at);
-          // Beside a place that is on the screen.
+          // Its place is on the screen, and lit.
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
-            throw new Error(`the card for ${at} is beside nothing`);
-          const button = i === 0 ? "No code" : i === 6 ? "Done" : "Next";
-          await card.getByRole("button", { name: button, exact: true }).click();
+            throw new Error(`the line for ${at} points at nothing`);
+          await fresh.locator(`[data-guide-lit="${at}"]`).waitFor({ state: "attached" });
+          await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
+          if (i < 6)
+            await fresh.waitForFunction(
+              (seen) =>
+                document.querySelector("[data-guide-card]")?.getAttribute("data-guide-card") !==
+                seen,
+              at,
+              { timeout: 20000 * P },
+            );
         }
-        if (seen.join() !== "layout,preview,behavior,change,changes,look,publish")
+        if (seen.join() !== "preview,manual,behavior,change,changes,look,publish")
           throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
+        // With Code open, Guide is Code's own tour.
+        await fresh.getByRole("tab", { name: "Code", exact: true }).click();
+        await fresh.getByRole("region", { name: "Code" }).waitFor();
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
-        await card.waitFor();
-        // The first stop's Code puts Code in the first place, which is remembered, and goes on
-        // with Code's own tour.
-        await card.getByRole("button", { name: "Code", exact: true }).click();
         const code = [];
         for (let i = 0; i < 2; i++) {
           await fresh.waitForFunction(
@@ -382,23 +390,22 @@ try {
                 ?.getAttribute("data-guide-card");
               return at && at !== seen;
             },
-            code.at(-1) ?? "layout",
+            code.at(-1) ?? "",
             { timeout: 20000 * P },
           );
           const at = await card.getAttribute("data-guide-card");
           code.push(at);
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
-            throw new Error(`the Code card for ${at} is beside nothing`);
+            throw new Error(`the Code line for ${at} points at nothing`);
           await card.getByRole("button", { name: i === 1 ? "Done" : "Next", exact: true }).click();
         }
         if (code.join() !== "files,problems") throw new Error(`Code's tour: ${code.join()}`);
         await card.waitFor({ state: "detached" });
-        await fresh.getByRole("region", { name: "Code" }).waitFor();
-        // Guide with Code first is Code's tour.
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await card.waitFor();
         if ((await card.getAttribute("data-guide-card")) !== "files")
-          throw new Error("Guide with Code first did not start Code's tour");
+          throw new Error("Guide with Code open did not start Code's tour");
+        // Esc ends it, as on a card.
         await fresh.keyboard.press("Escape");
         await card.waitFor({ state: "detached" });
         await fresh.reload();

@@ -201,7 +201,7 @@ export function LayoutBar({
 }) {
   const [settings, setSettings] = useState(false);
   return (
-    <div data-guide="layout" className="flex items-center gap-1">
+    <div className="flex items-center gap-1">
       <fieldset className="flex rounded-md bg-subtle p-0.5">
         <legend className="sr-only">Layout</legend>
         {LAYOUTS.map(([layout, , name]) => {

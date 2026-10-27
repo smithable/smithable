@@ -6,6 +6,7 @@ import type { Diagnostic } from "@smithable/core";
 import type { SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal, type TraceEntry } from "../api";
+import type { GuideLine } from "../GuideTour";
 import { Button, cx, Input } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
@@ -32,6 +33,7 @@ interface Said {
 }
 
 export function Ask({
+  guide,
   onDone,
   onEdit,
   words,
@@ -40,6 +42,8 @@ export function Ask({
   trace,
   ready,
 }: {
+  /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
+  guide?: GuideLine;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -234,11 +238,12 @@ export function Ask({
   useEffect(() => {
     const box = scroller.current;
     if (box) box.scrollTop = box.scrollHeight;
-  }, [grown, proposal, busy, docs, output, local, waiting.length]);
+  }, [grown, proposal, busy, docs, output, local, waiting.length, guide]);
   // Smith's face says what is going on: hammering while he works or the app is made, then
   // how the last request went, and waiting while nothing is asked.
-  const mood: Mood =
-    busy || making
+  const mood: Mood = guide
+    ? "pointing"
+    : busy || making
       ? "working"
       : proposal?.kind === "question"
         ? "confused"
@@ -347,6 +352,33 @@ export function Ask({
           </section>
         )}
         {output && <p className={SMITHS}>{output}</p>}
+        {guide && (
+          <div data-guide-card={guide.stop.anchor} className={cx(SMITHS, "space-y-2")}>
+            <p className="text-xs text-quiet">
+              {guide.at + 1} of {guide.count}
+            </p>
+            <p className="font-medium">{guide.stop.title}</p>
+            <p>{guide.stop.text}</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={guide.next}
+                className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+              >
+                {guide.at === guide.count - 1 ? "Done" : "Next"}
+              </button>
+              {guide.at < guide.count - 1 && (
+                <button
+                  type="button"
+                  onClick={guide.end}
+                  className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+                >
+                  Skip guide
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <form
         className="shrink-0 space-y-2 border-t border-line p-3"

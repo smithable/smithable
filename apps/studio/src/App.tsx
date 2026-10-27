@@ -50,6 +50,8 @@ import {
 const Code = lazy(() => import("./studio/Code").then((m) => ({ default: m.Code })));
 const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
 
+import type { GuideLine } from "./GuideTour";
+
 /** A change that stopped to ask, because it loses data. */
 interface Pending {
   name: string;
@@ -230,7 +232,9 @@ export function App() {
             ? "changes"
             : ["behavior", "look"].includes(anchor)
               ? "nocode"
-              : undefined;
+              : anchor === "manual"
+                ? manual
+                : undefined;
     if (!window || slotOf(window) !== undefined) return;
     if (narrow) showWindow(window);
     else workIn(window);
@@ -572,9 +576,14 @@ export function App() {
   // third window comes into view in the same render the tour starts in.
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   const startGuide = () => {
-    if (tour === "nocode" && !narrow) guideStop("change");
+    // The view with No code and Code comes into view for the tour's stops in it.
+    if (tour === "nocode" && !narrow) workIn("nocode");
     setGuiding(true);
   };
+  // Smith says the stops in his thread when he is on the screen (smith-first.md §7); a phone, or
+  // an arrangement without him, shows the cards.
+  const [guideLine, setGuideLine] = useState<GuideLine>();
+  const smithSays = !narrow && slotOf("smith") !== undefined;
   // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up
   useEffect(() => {
     if (firstVisit && previewUp) startGuide();
@@ -600,7 +609,6 @@ export function App() {
         {project.making ? null : narrow ? (
           // A phone: one window at a time.
           <fieldset
-            data-guide="layout"
             className="flex rounded-md bg-subtle p-0.5"
             {...swipe(
               () => stepWindow(1),
@@ -843,8 +851,8 @@ export function App() {
               setGuiding(false);
               if (narrow) showWindow("preview");
             }}
-            onCode={() => workIn("code")}
             onStop={guideStop}
+            asLine={smithSays ? setGuideLine : undefined}
           />
         </Suspense>
       )}
@@ -945,7 +953,10 @@ export function App() {
                 )}
                 {content === "manual" && (
                   // No code and Code: the view's two sub-tabs (smith-first.md §6).
-                  <div className="shrink-0 border-b border-line bg-panel px-3 py-1.5">
+                  <div
+                    data-guide="manual"
+                    className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
+                  >
                     <Tabs
                       tabs={[
                         ["nocode", WINDOW_NAMES.nocode],
@@ -994,9 +1005,10 @@ export function App() {
                       />
                     </Suspense>
                   ) : w === "smith" ? (
-                    <Panel key={w} title="Ask Smith" className="min-h-0 flex-1">
+                    <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
                       <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                         <Ask
+                          guide={guiding ? guideLine : undefined}
                           words={words}
                           waiting={project.waiting}
                           trace={project.trace}
@@ -1023,7 +1035,7 @@ export function App() {
                     <Panel
                       key={w}
                       title="Changes"
-                      className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
+                      className={cx("min-h-0", content === "smith+changes" ? "flex-[2] border-t" : "flex-1")}
                     >
                       <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
                         <Trace
