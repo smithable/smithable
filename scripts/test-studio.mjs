@@ -177,11 +177,11 @@ try {
     return found;
   };
   // The window in the first place: No code or Code (the gear's dialog).
+  // No code or Code: the sub-tab of the view that holds both (smith-first.md §6).
   const firstWindow = async (value) => {
-    await page.getByRole("button", { name: "Which window goes where" }).click();
-    const dialog = page.getByRole("dialog", { name: "Which window goes where" });
-    await dialog.getByLabel("The first window").selectOption(value);
-    await dialog.getByRole("button", { name: "Done" }).click();
+    await page
+      .getByRole("tab", { name: value === "code" ? "Code" : "No code", exact: true })
+      .click();
   };
   const openPreview = async (path) => {
     // A change from the step before reloads the preview a few seconds after it went through:
@@ -217,20 +217,27 @@ try {
   };
 
   console.log("No code");
-  await step("Studio opens on No code's Behavior beside the preview", async () => {
-    await page.goto(`${base}/?guide=off`);
-    await page.getByRole("tab", { name: "Behavior", selected: true }).waitFor();
-    await page.locator("iframe[title='App preview']").waitFor();
-    // The areas of the spec are closed at first.
-    const models = page.locator('details[data-key="models"]');
-    if ((await models.getAttribute("open")) !== null) throw new Error("the models area is open");
-    if (await page.getByRole("list", { name: "Change trace" }).count())
-      throw new Error("two windows show Changes");
-    // A new app has no repository until its first change: its changes are none, not Git's
-    // refusal.
-    const { trace: made } = await (await fetch(`${base}/api/project`)).json();
-    if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
-  });
+  await step(
+    "Studio opens on Smith beside the preview; the arrow at its edge opens No code and Code",
+    async () => {
+      await page.goto(`${base}/?guide=off`);
+      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+      await page.locator("iframe[title='App preview']").waitFor();
+      // Nothing to choose between No code and Code in the header (smith-first.md §6).
+      if (await page.getByRole("tab", { name: "Behavior" }).count())
+        throw new Error("No code shows before the arrow opens it");
+      await page.getByRole("button", { name: "Show the window on the right" }).click();
+      await page.getByRole("tab", { name: "Behavior", selected: true }).waitFor();
+      await page.getByRole("tab", { name: "No code", selected: true }).waitFor();
+      // The areas of the spec are closed at first.
+      const models = page.locator('details[data-key="models"]');
+      if ((await models.getAttribute("open")) !== null) throw new Error("the models area is open");
+      // A new app has no repository until its first change: its changes are none, not Git's
+      // refusal.
+      const { trace: made } = await (await fetch(`${base}/api/project`)).json();
+      if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
+    },
+  );
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
     await alert.waitFor();
@@ -242,12 +249,11 @@ try {
     if (await alert.count()) throw new Error("the notice came back");
   });
   await step(
-    "the bar's three windows add Smith with Changes under it, kept after a reload",
+    "the three windows (Smith with Changes under him, the preview, No code) are kept after a reload",
     async () => {
-      await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
-      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
       await page.reload();
       await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
       await page.getByText("No changes yet.").waitFor();
     },
   );
@@ -279,21 +285,27 @@ try {
     },
   );
   await step(
-    "the gear says which window goes where: Code in the first place, then No code again",
+    "the gear says which window goes where: Changes in the third place, then No code and Code again; Code is the view's other sub-tab",
     async () => {
       await page.getByRole("button", { name: "Which window goes where" }).click();
       const dialog = page.getByRole("dialog", { name: "Which window goes where" });
-      await dialog.getByLabel("The first window").selectOption("code");
+      await dialog.getByLabel("The third window").selectOption("changes");
       await dialog.getByRole("button", { name: "Done" }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor({ state: "detached" });
+      await page.getByRole("button", { name: "Which window goes where" }).click();
+      await dialog.getByLabel("The third window").selectOption("manual");
+      await dialog.getByRole("button", { name: "Done" }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await firstWindow("code");
       await page
         .getByRole("region", { name: "Code" })
         .getByLabel("File", { exact: true })
         .waitFor();
-      if (await page.getByRole("tab", { name: "Behavior" }).count())
-        throw new Error("No code still shows");
-      await page.getByRole("button", { name: "Which window goes where" }).click();
-      await dialog.getByLabel("The first window").selectOption("nocode");
-      await dialog.getByRole("button", { name: "Done" }).click();
+      // The header's tab for the view is named by the sub-tab open.
+      await page
+        .getByRole("checkbox", { name: "Code", exact: true })
+        .waitFor({ state: "attached" });
+      await firstWindow("nocode");
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
     },
   );
@@ -301,9 +313,11 @@ try {
     "the preview's arrow hides the window beside it for a while, and brings it back",
     async () => {
       await page.getByRole("button", { name: "Hide the window on the left" }).click();
-      await page.getByRole("tab", { name: "Behavior" }).waitFor({ state: "detached" });
+      await page
+        .getByRole("heading", { name: "Ask Smith", exact: true })
+        .waitFor({ state: "detached" });
       await page.getByRole("button", { name: "Show the window on the left" }).click();
-      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
     },
   );
   await step("a note in Code applies its advice with Apply, and undo takes it back", async () => {
@@ -1182,8 +1196,10 @@ try {
       );
       if (await page.getByRole("tab", { name: "Behavior" }).count())
         throw new Error("No code shows beside the preview");
-      // Every part is in a phone's header from the start, Code too (A 161).
-      await pick("Code");
+      // Every part is in a phone's header from the start: No code and Code are one window, Code
+      // its sub-tab (A 161, smith-first.md §6).
+      await pick("No code");
+      await page.getByRole("tab", { name: "Code", exact: true }).click();
       await page.waitForFunction(
         () => {
           const code = document.querySelector('section[aria-label="Code"]');
@@ -1198,7 +1214,8 @@ try {
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();
       await page.getByRole("tab", { name: "Smith", exact: true }).click();
-      await pick("No code");
+      await pick("Code");
+      await page.getByRole("tab", { name: "No code", exact: true }).click();
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
       await page.setViewportSize({ width: 1920, height: 1000 });
     },
@@ -1238,7 +1255,7 @@ try {
         throw new Error("the preview lost its page when Code came first");
       await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
       await page.getByRole("radio", { name: "One window" }).check({ force: true });
-      // One window: Preview and Smith are tabs beside No code and Code (A 161).
+      // One window: each window is a tab, the view with No code and Code named by its open one.
       await page.getByRole("checkbox", { name: "Smith", exact: true }).check({ force: true });
       await page.getByLabel("Describe a change").waitFor();
       await page.getByRole("checkbox", { name: "Code", exact: true }).check({ force: true });
