@@ -64,7 +64,16 @@ const content: Companion = {
   key: "content",
   file: "smithable.content.yml",
   empty: "smithableContent: 0.1\n",
-  check: (text, ir) => validateContent({ path: "smithable.content.yml", text }, ir).diagnostics,
+  // With the auth file, the recipient's view of an outgoing text's placeholders is checked too.
+  check: (text, ir, files) =>
+    validateContent(
+      { path: "smithable.content.yml", text },
+      ir,
+      undefined,
+      files?.auth
+        ? validateAuth({ path: "smithable.auth.yml", text: files.auth }, ir).auth
+        : undefined,
+    ).diagnostics,
   operations: contentOperations,
   follow(editor, effect, ir) {
     // A renamed model's or page's texts move to its new name.

@@ -393,3 +393,88 @@ test("a custom action's entry: after it returns, a call or a role's mail, and no
     '"imported" under outgoing waits for the action "importBookings"',
   );
 });
+
+test("show and previous: the fields the mail lists, none, and what changed; refused where they say nothing", () => {
+  const read = (outgoing: string) =>
+    validateSpec({ path: "smithable.yml", text: `${SPEC}outgoing:\n${outgoing}` });
+  const ok = read(
+    "  made:\n    when: Booking changed\n    to: mail\n    recipient: owner\n    show: [title, status]\n    previous: true\n",
+  );
+  expect(ok.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  const entry = ok.ir?.outgoing[0];
+  if (!entry) throw new Error("entry");
+  expect(entry).toMatchObject({ show: ["title", "status"], previous: true });
+  expect(outgoingText(entry)).toBe(
+    "When a booking is changed: mails its owner with its title, status and what the changed fields were.",
+  );
+  const none = read(
+    "  made:\n    when: Booking created\n    to: mail\n    recipient: owner\n    show: none\n",
+  );
+  const alone = none.ir?.outgoing[0];
+  if (!alone) throw new Error("entry");
+  expect(alone.show).toBe("none");
+  expect(outgoingText(alone)).toBe("When a booking is added: mails its owner with the text alone.");
+  const codes = (o: string) => read(o).diagnostics.map((d) => d.code);
+  const made = (rest: string) =>
+    `  made:\n    when: Customer created\n    to: mail\n    recipient: owner\n${rest}`;
+  // A list of other records, a worked-out field, an unknown field, a word that is not none.
+  expect(codes(made("    show: [bookings]\n"))).toContain("invalid-outgoing");
+  expect(codes(made("    show: [count]\n"))).toContain("invalid-outgoing");
+  expect(codes(made("    show: [nothing]\n"))).toContain("invalid-outgoing");
+  expect(codes(made("    show: all\n"))).toContain("invalid-outgoing");
+  // What a field was goes with a change only; a custom action has no record.
+  expect(codes(made("    previous: true\n"))).toContain("invalid-outgoing");
+  expect(
+    codes(
+      "  done:\n    when: merge\n    to: mail\n    recipient: admin\n    show: [name]\n".replace(
+        "merge",
+        "confirm",
+      ),
+    ),
+  ).toContain("invalid-outgoing");
+});
+
+test("setOutgoingBody sets, clears and refuses show and previous; a renamed field follows, a removed one refuses", () => {
+  const files = {
+    spec: `${SPEC}outgoing:\n  made:\n    when: Booking changed\n    to: mail\n    recipient: owner\n`,
+  };
+  const set = applyOperation(files, "setOutgoingBody", {
+    outgoing: "made",
+    show: ["title", "status"],
+    previous: true,
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.spec).toContain("    show: [title, status]\n    previous: true\n");
+  const none = applyOperation(set.files, "setOutgoingBody", { outgoing: "made", show: ["none"] });
+  if (!none.ok) throw new Error(none.message);
+  expect(none.files.spec).toContain("    show: none\n");
+  const back = applyOperation(none.files, "setOutgoingBody", {
+    outgoing: "made",
+    show: ["default"],
+    previous: false,
+  });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.spec).not.toContain("show");
+  expect(back.files.spec).not.toContain("previous");
+  const wrong = applyOperation(files, "setOutgoingBody", { outgoing: "made", show: ["photo"] });
+  expect(wrong.ok).toBe(false);
+  expect(applyOperation(files, "setOutgoingBody", { outgoing: "made" }).ok).toBe(false);
+  // addOutgoing takes them too.
+  const added = applyOperation(files, "addOutgoing", {
+    outgoing: "gone",
+    when: "Booking deleted",
+    recipient: "owner",
+    show: ["title"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.files.spec).toContain("  gone:\n    when: Booking deleted\n    show: [title]\n");
+  const renamed = applyOperation(set.files, "renameField", {
+    model: "Booking",
+    from: "status",
+    to: "state",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toContain("    show: [title, state]\n");
+  const removed = applyOperation(set.files, "removeField", { model: "Booking", field: "title" });
+  expect(removed.ok).toBe(false);
+});

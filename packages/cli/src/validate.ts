@@ -113,6 +113,8 @@ export function loadSpec(
     const result = validateContent(
       { path: contentPath, text: readFileSync(contentPath, "utf8") },
       ir,
+      undefined,
+      auth,
     );
     print(result.diagnostics);
     if (!result.content) return failed(contentPath, result.diagnostics);

@@ -1039,8 +1039,11 @@ function checkAgainstSpec(
       );
     if (r.kind === "role") {
       const read = modelAccess(model, auth).read;
+      // A list of fields chosen for a reader who may not see them is a mistake, not an oversight
+      // (docs/design/outgoing-templates.md §4): an error where the default body is a warning.
       if (!read.public && !read.roles.includes(r.role))
-        ctx.warning(
+        (o.show !== undefined ? ctx.error : ctx.warning).call(
+          ctx,
           accessAt,
           "recipient-cannot-read",
           `"${o.name}" mails every ${r.role} about ${model.name} records, which ${r.role} may not read: the mail would tell them what the record holds.`,

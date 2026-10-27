@@ -210,6 +210,7 @@ export type { SensitiveKind } from "./sensitive.js";
 export { sensitiveKind } from "./sensitive.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
+export { fillText, placeholdersOf } from "./template.js";
 export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
 export {
   BUILT_IN_THEMES,
