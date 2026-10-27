@@ -1042,7 +1042,7 @@ function checkAgainstSpec(
       // A list of fields chosen for a reader who may not see them is a mistake, not an oversight
       // (docs/design/outgoing-templates.md §4): an error where the default body is a warning.
       if (!read.public && !read.roles.includes(r.role))
-        (o.show !== undefined ? ctx.error : ctx.warning).call(
+        (Array.isArray(o.show) ? ctx.error : ctx.warning).call(
           ctx,
           accessAt,
           "recipient-cannot-read",

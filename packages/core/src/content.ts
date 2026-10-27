@@ -875,7 +875,8 @@ function checkOutgoingTexts(
     if (!isScalar(value) || typeof value.value !== "string") continue;
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
-      any = true;
+      // A link or a name reveals nothing of the record; the rest does.
+      if (path !== "link" && path !== "by") any = true;
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
       if (problem.warning)
@@ -1003,7 +1004,13 @@ export function placeholderProblem(
   const read = modelAccess(other, auth).read;
   if (read.public) return undefined;
   if (r?.kind === "role" && read.roles.includes(r.role)) return undefined;
-  if (r?.kind === "owner" && auth.roles.every((role) => read.roles.includes(role.name)))
+  // An owner has some role; when every role that is not admin may read the other model, so may they.
+  if (
+    r?.kind === "owner" &&
+    auth.roles
+      .filter((role) => role.name !== "admin")
+      .every((role) => read.roles.includes(role.name))
+  )
     return undefined;
   const who = !r
     ? "the recipient"

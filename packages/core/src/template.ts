@@ -18,9 +18,12 @@ export function fillText(
   values: Record<string, string | undefined> | ((path: string) => string | undefined),
   oneLine = false,
 ): string {
-  const valueOf = typeof values === "function" ? values : (path: string) => values[path];
+  const lookup =
+    typeof values === "function"
+      ? values
+      : (path: string) => (Object.hasOwn(values, path) ? values[path] : undefined);
   return text.replace(/\{([^{}]+)\}/g, (_, path: string) => {
-    const value = valueOf(path.trim()) ?? "";
+    const value = lookup(path.trim()) ?? "";
     return oneLine ? value.replace(/\r?\n/g, " ") : value;
   });
 }

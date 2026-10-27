@@ -467,7 +467,9 @@ test("setOutgoingBody sets, clears and refuses show and previous; a renamed fiel
     show: ["title"],
   });
   if (!added.ok) throw new Error(added.message);
-  expect(added.files.spec).toContain("  gone:\n    when: Booking deleted\n    show: [title]\n");
+  expect(added.files.spec).toContain(
+    "  gone:\n    when: Booking deleted\n    to: mail\n    recipient: owner\n    show: [title]\n",
+  );
   const renamed = applyOperation(set.files, "renameField", {
     model: "Booking",
     from: "status",

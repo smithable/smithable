@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { applyOperation } from "./apply.js";
 import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
 import type { SpecIR } from "./ir.js";
@@ -479,4 +480,30 @@ test("with the auth rules, a reference's field goes only to a recipient who may 
       spec,
     ).diagnostics,
   ).toEqual([]);
+});
+
+test("an outgoing text's placeholders follow a renamed field, and hold a removed one", () => {
+  const files = {
+    spec: TEMPLATE_SPEC.replace("recipient: customer.email", "recipient: owner"),
+    content:
+      'smithableContent: 0.1\noutgoing:\n  moved: { subject: "{title}: {status}", text: "Was {before.status}; {customer.name}" }\n',
+  };
+  const renamed = applyOperation(files, "renameField", {
+    model: "Booking",
+    from: "status",
+    to: "state",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.content).toContain('subject: "{title}: {state}"');
+  expect(renamed.files.content).toContain('text: "Was {before.state}; {customer.name}"');
+  const other = applyOperation(renamed.files, "renameField", {
+    model: "Customer",
+    from: "name",
+    to: "fullName",
+  });
+  if (!other.ok) throw new Error(other.message);
+  expect(other.files.content).toContain("{customer.fullName}");
+  const removed = applyOperation(other.files, "removeField", { model: "Booking", field: "state" });
+  expect(removed.ok).toBe(false);
+  if (!removed.ok) expect(removed.message).toContain("{state}");
 });

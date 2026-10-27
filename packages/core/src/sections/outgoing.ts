@@ -455,10 +455,10 @@ const addOutgoing: Operation<{
     const value: Record<string, YamlValue> = { when };
     if (where && Object.keys(where).length) value.where = conditionArgs(where);
     if (fields?.length) value.fields = [...new Set(fields)];
-    if (body.show !== undefined) value.show = body.show;
-    if (body.previous) value.previous = true;
     value.to = to;
     if (recipient) value.recipient = recipient;
+    if (body.show !== undefined) value.show = body.show;
+    if (body.previous) value.previous = true;
     if (spec.has(["outgoing"])) spec.add(["outgoing"], outgoing, value);
     else spec.add([], "outgoing", { [outgoing]: value });
     return [];

@@ -17,6 +17,7 @@ import { authOperations } from "./sections/auth-operations.js";
 import { contentOperations } from "./sections/content-operations.js";
 import { contextOperations } from "./sections/context-operations.js";
 import { uxOperations } from "./sections/ux-operations.js";
+import { placeholdersOf } from "./template.js";
 import { validateUx } from "./ux.js";
 
 export interface Companion {
@@ -76,6 +77,54 @@ const content: Companion = {
     ).diagnostics,
   operations: contentOperations,
   follow(editor, effect, ir) {
+    // An outgoing text's placeholders follow a renamed field and hold a removed one
+    // (docs/design/outgoing-templates.md §3): the field's own name and before.<name> on the
+    // entry's model, and <reference>.<name> through a reference to the field's model.
+    if (
+      (effect.kind === "rename-field" || effect.kind === "remove-field") &&
+      editor.has(["outgoing"])
+    ) {
+      const field = effect.kind === "rename-field" ? effect.from : effect.field;
+      for (const o of ir.outgoing) {
+        if ("custom" in o.when) continue;
+        const on = o.when.model;
+        const model = ir.models.find((m) => m.name === on);
+        if (!model) continue;
+        const paths = [
+          ...(on === effect.model ? [field, `before.${field}`] : []),
+          ...model.fields
+            .filter(
+              (f) => f.type.kind === "relation" && !f.type.many && f.type.model === effect.model,
+            )
+            .map((f) => `${f.name}.${field}`),
+        ];
+        for (const key of ["subject", "text"]) {
+          const at = ["outgoing", o.name, key];
+          if (!editor.has(at)) continue;
+          const text = editor.get(at);
+          if (typeof text !== "string") continue;
+          const used = placeholdersOf(text).filter((p) => paths.includes(p));
+          if (!used.length) continue;
+          if (effect.kind === "remove-field")
+            return {
+              refusal: `the ${key} of "${o.name}" under outgoing in smithable.content.yml uses {${used[0]}}; change it first.`,
+            };
+          const to = effect.to;
+          const renamed = (p: string) =>
+            p === field
+              ? to
+              : p.startsWith("before.")
+                ? `before.${to}`
+                : `${p.split(".")[0]}.${to}`;
+          editor.set(
+            at,
+            text.replace(/\{([^{}]+)\}/g, (m, p: string) =>
+              paths.includes(p.trim()) ? `{${renamed(p.trim())}}` : m,
+            ),
+          );
+        }
+      }
+    }
     // A renamed model's or page's texts move to its new name.
     if (effect.kind === "rename-model" || effect.kind === "rename-page") {
       const path = [effect.kind === "rename-model" ? "models" : "pages", effect.from];
