@@ -93,7 +93,7 @@ claude mcp add --transport http team-tasks https://tasks.example.com/mcp \
   --header "Authorization: Bearer $KEY"
 ```
 
-Other assistants that speak MCP over HTTP take the settings shown with the key (step 2). The app offers seven tools, the same in every app: **find** (with a condition, a search, a sort), **measure** (count, sum, average, smallest or largest, split by a field), **read**, **add**, **change**, **run** (an action) and **describe**. With them comes a short summary of the app, which the assistant reads first:
+Other assistants that speak MCP over HTTP take the settings shown with the key (step 2). The app offers seven tools, the same in every app (an eighth, `delete`, where the auth file allows it): **find** (with a condition, a search, a sort), **measure** (count, sum, average, smallest or largest, split by a field), **read**, **add**, **change**, **run** (an action) and **describe**. With them comes a short summary of the app, which the assistant reads first:
 
 ```text
 Team Tasks: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.

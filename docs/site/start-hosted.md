@@ -21,7 +21,7 @@ The sandbox opens Studio, the same editor `smithable studio` opens on your own m
 
 You can switch at the top at any time. Every change is an operation, so **Undo** takes it back.
 
-Here, **Look** and the Coastal theme gave the yoga studio's app new colors and a new font. The line at the top says what changed, and **Undo this change** is right beside it:
+Here, **Look** and the Coastal theme gave the Booking example's app (Stillwater Yoga) new colors and a new font. The line at the top says what changed, and **Undo this change** is right beside it:
 
 ![Studio with the Look tab open, the Coastal theme in use and the preview of the yoga studio's app in its colors](start-hosted/studio.webp)
 
@@ -38,13 +38,13 @@ An invite comes by mail as a link. Opening it makes your account, with Google or
 The app's page has these sections:
 
 - **Publish.** **Publish live** checks the app (type check and tests), builds it and puts it online with backups. Its address is `a-<app id>.smithable.app`. **Publish to staging** makes a separate copy with its own data, for checking a version or showing it to a client first. A problem the check finds, such as an administrator address nobody can receive mail at, is listed before you publish.
-- **Your own domain.** Once the app is live, this section shows an A record and a TXT record to add at your domain's provider. Enter the domain and save. The certificate is made at the first visit.
+- **Your own domain.** Once the app is live, enter the domain and save; the section then shows an A record and a TXT record to add at your domain's provider. The certificate is made at the first visit.
 - **Mail.** The service sends the published app's mail, its sign-in codes included, so you don't need mail settings. The app's page tells you if mail is paused or addresses bounce.
 - **Sign in with Google.** Under Connections, for a "Continue with Google" button beside the code by email. [Sign in with Google](google-sign-in.md) shows how.
 
 ## Where it runs
 
-Every app is hosted in Sweden, with its backups in the same region. An account is global unless its owner makes it an EU account: **Region** on your account page shows the current region and changes it. An EU app also keeps its data and its AI calls in the EU. The [questions and answers](faq.md#where-does-my-data-live) say more.
+Every app is hosted in Sweden, with its backups in the same region. An account is global unless its owner makes it an EU account: **Region** on your account page shows the current region and changes it. An EU app also keeps its data in the EU, and its AI calls too unless its level is Relaxed ([AI setup](../ai.md)). The [questions and answers](faq.md#where-does-my-data-live) say more.
 
 ## Take it with you
 
@@ -53,7 +53,7 @@ Every app is hosted in Sweden, with its backups in the same region. An account i
 - **Download everything (.zip)**: the code with its whole history, the data (also as spreadsheet files), the uploads and a README, ready in under a minute.
 - **Make a transfer link**: a one-time link, valid for seven days, that moves the app, with its published version and its data, to another account.
 
-The download holds the app's code with its whole history (a Git bundle) and its data. Its README has the commands that make it an ordinary Smithable project again:
+The download holds the app's code with its whole history (a Git bundle) and its data. Its README has the commands that make it an ordinary Smithable project again, once Node 24, pnpm and the Smithable CLI are [installed](start-local.md) (`stillwater` is any folder name):
 
 ```sh
 git clone project.bundle stillwater

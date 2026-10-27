@@ -63,7 +63,7 @@ incoming:
 
 - **`set`** gives each field a value: a fixed one, a formula such as `NOW()`, or text with `{path}` placeholders filled from the call's JSON (`{check.name}`, `{items.0.id}`).
 - **`as`** is the role the call acts as; the record goes through that role's rules. Without it the call acts as an administrator, and the app's summary says so.
-- **`custom: true`** hands the call to your own code instead, in `src/custom/incoming/<name>.ts`, for what a template can't say, such as finding a record and changing it.
+- **`custom: true`** hands the call to your own code instead, in `src/custom/incoming/<name>.ts`, for what `set` and `fields` can't say, such as finding a record and changing it.
 
 From the command line: `smithable op addIncoming monitorDown --create Incident --set "status=investigating" --as staff`.
 

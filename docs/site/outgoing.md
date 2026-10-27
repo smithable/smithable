@@ -59,12 +59,12 @@ const ok = expected.length === signature.length && timingSafeEqual(Buffer.from(e
 - On smithable.ai, you set them on the project's Connections page.
 - Until they are set, the calls wait in the outbox, and `smithable deploy` warns about the target.
 
-**Which addresses the app will call.** Only http or https. Never the app itself, and in a published app never a private or local network. The address checked is the one connected to. On smithable.ai, the app reaches the internet only through the service's egress proxy, and only for the Connections you added.
+**Which addresses the app will call.** Only http or https. Never the app itself, and in a published app never a private or local network. The check is made on the address the app actually connects to, so a name that later points somewhere else cannot get round it. On smithable.ai, the app reaches the internet only through the service's outgoing gateway, and only for the Connections you added.
 
 ## 3. Delivery and its history
 
 - **The outbox:** a mail or call is written in the same step as the change, and sent right after. So a change never waits for another system, and nothing is sent for a change that didn't happen.
-- **Retries:** a failed one is tried again after 1, 2, 4… minutes, at most three hours apart, for a day. Then it is given up and shown.
+- **Retries:** a failed one is tried again after 1, 2, 4… minutes, at most three hours apart, for a day. Then it is given up and shown as failed in Activity.
 - **Activity** (Team → Activity, for administrators) has a line for every mail and call. A call's line says when it was sent, which entry it was and the answer's status.
   - **A target's delivery history is Activity filtered to it:** choose it under *Sent to*, or open `/team/activity?target=statusFeed`. The page then starts with "Calls to statusFeed" and the last call's time and answer, so you see at once whether deliveries work.
   - **Send again:** a mail or call that was given up has a *Send again* button.

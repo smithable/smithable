@@ -54,7 +54,7 @@ The app builds its phrases around these names so that they read right in Swedish
 
 ## 3. Translate your own texts
 
-Your own texts are never translated for you: the app shows them as you wrote them. The starter's texts are English, so they are what is left. Click a text in Studio's preview and type, or set it with `setText` and the text's place in the content file:
+Your own texts are never translated for you: the app shows them as you wrote them. The starter's own texts are still in English, so they are what is left to change. Click a text in Studio's preview and type, or set it with `setText` and the text's place in the content file:
 
 ```sh
 smithable op setText "Boka en matta" models Booking reserve book

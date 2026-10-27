@@ -5,7 +5,7 @@ New apps sign people in with a code by email, which needs no keys (see [Getting 
 ## 1. Register the app with Google
 
 1. Open the [Google Cloud console](https://console.cloud.google.com/) and create a project for the app, or pick an existing one. Sign in with your organisation's Google account, such as a Google Workspace account on the app's domain, not a personal Gmail account: the app's sign-in then doesn't depend on one person's private login, and others can be given access to the project later.
-2. Under **Google Auth Platform → Branding** (in older consoles, **APIs & Services → OAuth consent screen**), give the name people see when they sign in and a support address. For an app outside your own Google Workspace, choose the **External** audience.
+2. Under **Google Auth Platform → Branding** (in older consoles, **APIs & Services → OAuth consent screen**), give the name people see when they sign in and a support address. If people outside your own Google Workspace will sign in, choose the **External** audience.
 3. Under **Clients** (or **Credentials → Create credentials → OAuth client ID**), create a client of type **Web application**.
 4. Under **Authorized redirect URIs**, add both addresses the app signs in from:
 
