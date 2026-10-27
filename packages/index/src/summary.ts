@@ -685,7 +685,7 @@ function access(auth: AuthIR): string[] {
 }
 
 /** What a role may do beyond the record rule, as a clause: "opens every page; adds bookings". */
-function grantWords(role: RoleIR): string {
+export function grantWords(role: RoleIR): string {
   if (role.name === "admin" || role.grants === "all") return "everything";
   const names = (g: GrantNames | undefined, one: (n: string) => string, every: string) =>
     g === "all" ? every : g?.length ? list(g.map(one)) : undefined;
@@ -777,7 +777,7 @@ export function whoCan(roles: string[], verb: string, things: string): string {
     : `Each person can ${verb} only the ${things} they own; admins can ${verb} all`;
 }
 
-function list(items: string[], last = "and"): string {
+export function list(items: string[], last = "and"): string {
   if (items.length <= 1) return items[0] ?? "";
   return `${items.slice(0, -1).join(", ")} ${last} ${items.at(-1)}`;
 }
