@@ -169,7 +169,10 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
     (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
   );
   const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
-  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+  // On the rows picked in a list (A 171): what it asks besides them, and one Activity line a run.
+  const rows = action.custom ? action.rows : undefined;
+  const asksMore = Boolean(rows && action.input.length > 1);
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";${rows ? '\nimport { db } from "#/db";\nimport { audit } from "#/kit/audit.server";' : ""}
 import { ${action.name} as implementation } from "${a.custom}";
 import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
@@ -188,7 +191,15 @@ export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
 export type ${a.outputType} = ${output};
 
 export const ${a.ui}: ModelUi = ${literal(ui)};
-
+${
+  rows && asksMore
+    ? `
+/** What a run on the rows picked asks for besides them, once for all of them (the selection bar). */
+export const ${a.askUi}: ModelUi = { ...${a.ui}, fields: ${a.ui}.fields.filter((f) => f.name !== "${rows.field}") };
+export const ${a.asks} = ${a.input}.omit({ ${rows.field}: true });
+`
+    : ""
+}
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${a.input})
   .handler(async ({ data }) => {
@@ -205,8 +216,16 @@ ${records
   .join(
     "",
   )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
-    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
-    return run(data, viewer);
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
+      rows
+        ? `
+    const output = await run(data, viewer);
+    // One line in Activity for the run, with the rows it ran on.
+    audit(db, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(rows.model)}, details: { records: data.${rows.field} } });
+    return output;`
+        : `
+    return run(data, viewer);`
+    }
   });
 `;
 }
