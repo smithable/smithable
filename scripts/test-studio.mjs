@@ -353,6 +353,9 @@ try {
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.goto(base);
+        // A new project: Smith presents it first (smith-first.md §2), then the guide.
+        await fresh.locator('[data-part="app"]').waitFor({ timeout: 30000 * P });
+        await fresh.locator('[data-part="app"]').getByRole("button", { name: "Skip" }).click();
         // Smith's line for the stop, in his thread (smith-first.md §7).
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
@@ -1196,13 +1199,16 @@ try {
         "https://docs.smithable.ai/self-host.html"
       )
         throw new Error("How do I publish? does not lead to the self-hosting page");
+      // What does this app do?: Smith presents it, part by part (smith-first.md §3); a part's
+      // Show me opens its place in Behavior.
       await prompts.getByRole("button", { name: "What does this app do?" }).click();
-      const short = page.getByRole("region", { name: "What the app does, in short" });
-      await short.getByRole("button", { name: "Customers", exact: true }).click();
+      const app = page.locator('[data-part="app"]');
+      await app.waitFor();
+      await app.getByRole("button", { name: "Skip" }).click();
+      await page.locator('[data-part="end"]').waitFor();
+      await page.locator('[data-part="pages"]').getByRole("button", { name: "Show me" }).click();
       await page
-        .getByRole("region", { name: "What the app does" })
-        .locator("details[open]", { has: page.locator('summary:text-is("Customer")') })
-        .first()
+        .getByRole("tab", { name: "Behavior", selected: true })
         .waitFor({ timeout: 10000 * P });
       await prompts.getByRole("button", { name: "Help me add…" }).click();
       if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")

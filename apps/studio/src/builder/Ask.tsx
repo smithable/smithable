@@ -3,7 +3,7 @@
 // design); Discard, Change it in the forms, or Refine it in a few more words (ARCHITECTURE §9.4).
 
 import type { Diagnostic } from "@smithable/core";
-import type { SummarySection } from "@smithable/index";
+import type { Part, SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
@@ -33,6 +33,8 @@ interface Said {
 }
 
 export function Ask({
+  presentFirst = false,
+  onPresented,
   beta,
   guide,
   onDone,
@@ -47,6 +49,10 @@ export function Ask({
   guide?: GuideLine;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
   beta?: Beta;
+  /** A new project: Smith presents the app at once (smith-first.md §2). */
+  presentFirst?: boolean;
+  /** The presentation is over (the guide comes next). */
+  onPresented?: () => void;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -82,7 +88,7 @@ export function Ask({
   };
   const [proposal, setProposal] = useState<Proposal>();
   // A ready prompt's answer, shown until another request.
-  const [local, setLocal] = useState<"next" | "what" | "publish">();
+  const [local, setLocal] = useState<"next" | "publish">();
   // A question's answer from the docs: the parts found, or that the docs cannot be reached.
   const [docs, setDocs] = useState<DocsHit[] | "unreachable">();
   const docsAsked = useRef(0);
@@ -237,33 +243,62 @@ export function Ask({
   // the foot sends, with the ready prompts under it (Johan, 2026-10-27).
   const scroller = useRef<HTMLDivElement>(null);
   const grown = (trace?.length ?? 0) + said.length;
+  // Smith's face says what is going on: hammering while he works or the app is made, then
+  // how the last request went, and waiting while nothing is asked.
+  const left = useMinutesLeft(beta?.until);
+  // The presentation (smith-first.md §3): how many of its parts are said so far, and whether it
+  // is going on; a new project's starts at once, "What does this app do?" starts it again.
+  const parts = ready?.parts ?? [];
+  const [partsSaid, setSaidParts] = useState(0);
+  const [presenting, setPresenting] = useState(false);
+  const presentedOnce = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the parts are there
+  useEffect(() => {
+    if (!presentFirst || presentedOnce.current || !parts.length || making) return;
+    presentedOnce.current = true;
+    setSaidParts(1);
+    setPresenting(true);
+  }, [presentFirst, parts.length, making]);
+  const nextPart = () => {
+    if (partsSaid < parts.length) setSaidParts(partsSaid + 1);
+    else {
+      setPresenting(false);
+      onPresented?.();
+    }
+  };
+  // A part follows the one before after a moment to read it; a tap brings it at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, as it is partsSaid
+  useEffect(() => {
+    if (!presenting || partsSaid >= parts.length) return;
+    const later = setTimeout(nextPart, 4000);
+    return () => clearTimeout(later);
+  }, [presenting, partsSaid]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the conversation grows
   useEffect(() => {
     const box = scroller.current;
     if (box) box.scrollTop = box.scrollHeight;
-  }, [grown, proposal, busy, docs, output, local, waiting.length, guide]);
-  // Smith's face says what is going on: hammering while he works or the app is made, then
-  // how the last request went, and waiting while nothing is asked.
-  const left = useMinutesLeft(beta?.until);
+  }, [grown, proposal, busy, docs, output, local, waiting.length, guide, partsSaid]);
   const mood: Mood = guide
     ? "pointing"
-    : left !== undefined && left <= 15 && !busy && !proposal
-      ? left <= 0
-        ? "sad"
-        : "impatient"
-      : busy || making
-        ? "working"
-        : proposal?.kind === "question"
-          ? "confused"
-          : proposal?.kind === "change"
-            ? "pointing"
-            : output
-              ? output.startsWith("Done: ")
-                ? "happy"
-                : "sad"
-              : docs || local
-                ? "pointing"
-                : "waiting";
+    : presenting && parts[partsSaid - 1]
+      ? (parts[partsSaid - 1]?.expression ?? "pointing")
+      : left !== undefined && left <= 15 && !busy && !proposal
+        ? left <= 0
+          ? "sad"
+          : "impatient"
+        : busy || making
+          ? "working"
+          : proposal?.kind === "question"
+            ? "confused"
+            : proposal?.kind === "change"
+              ? "pointing"
+              : output
+                ? output.startsWith("Done: ")
+                  ? "happy"
+                  : "sad"
+                : docs || local
+                  ? "pointing"
+                  : "waiting";
   const send = () => {
     if (!request.trim()) return;
     if (making)
@@ -275,7 +310,7 @@ export function Ask({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {beta && left !== undefined && left <= 15 && (
         // The sandbox's time, where it stays in view however the thread scrolls.
         <p className="flex shrink-0 items-center gap-2 border-b border-line bg-subtle px-4 py-1.5 text-xs">
@@ -290,6 +325,19 @@ export function Ask({
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {trace && <Thread trace={trace} said={said} words={words} />}
         {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
+        {ready && !making && partsSaid > 0 && (
+          <Presentation
+            parts={parts.slice(0, partsSaid)}
+            going={presenting}
+            onNext={nextPart}
+            onSkip={() => {
+              setSaidParts(parts.length);
+              setPresenting(false);
+              onPresented?.();
+            }}
+            onJump={ready.onJump}
+          />
+        )}
         {waiting.length > 0 && (
           <ul aria-label="Waiting" className="space-y-1">
             {waiting.map((text, i) => (
@@ -433,6 +481,13 @@ export function Ask({
                 setRequest("Help me add ");
                 return;
               }
+              // What does this app do?: Smith presents it again, part by part.
+              if (prompt === "what") {
+                setLocal(undefined);
+                setSaidParts(1);
+                setPresenting(true);
+                return;
+              }
               setLocal(prompt);
             }}
           />
@@ -493,6 +548,8 @@ function threadLines(trace: TraceEntry[], said: Said[], words?: Words) {
 /** What Smith answers by himself (studio-v3.md §2), from the app and its checks. */
 export interface Ready {
   sections: SummarySection[];
+  /** The presentation's parts (smith-first.md §3), from the app by rule. */
+  parts?: Part[];
   /** The app's name, for the greeting. */
   appName?: string;
   /** The validator's notes: advice with its fix. */
@@ -532,6 +589,68 @@ function Greeting({ ready }: { ready: Ready }) {
     <div className={cx(SMITHS, "space-y-1")}>
       <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
     </div>
+  );
+}
+
+/**
+ * Smith's presentation of the app (smith-first.md §3): the parts said so far, each one message
+ * with a way to the places of Behavior it covers; while it goes on, Next and Skip as chips.
+ */
+function Presentation({
+  parts,
+  going,
+  onNext,
+  onSkip,
+  onJump,
+}: {
+  parts: Part[];
+  going: boolean;
+  onNext: () => void;
+  onSkip: () => void;
+  onJump: (concept: string) => void;
+}) {
+  return (
+    <ol aria-label="What the app is" className="space-y-3">
+      {parts.map((p, i) => (
+        <li key={p.part} data-part={p.part} className={cx(SMITHS, "space-y-2")}>
+          <p>{p.text}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {p.concepts[0] && (
+              <button
+                type="button"
+                onClick={() => onJump(p.concepts[0] as string)}
+                className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+              >
+                Show me
+              </button>
+            )}
+            {going && i === parts.length - 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+                >
+                  Next
+                </button>
+                <button
+                  type="button"
+                  onClick={onSkip}
+                  className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+                >
+                  Skip
+                </button>
+              </>
+            )}
+          </div>
+        </li>
+      ))}
+      {!going && (
+        <li className={SMITHS} data-part="end">
+          That is your app. Tell me what to change, or ask me anything about how it works.
+        </li>
+      )}
+    </ol>
   );
 }
 
@@ -592,12 +711,14 @@ function BetaLines({ beta, left }: { beta: Beta; left: number | undefined }) {
       </div>
       {left !== undefined && left <= 15 && left > 0 && (
         <p className={SMITHS} data-beta="soon">
-          {left} minutes of the sandbox are left. Ask for an invite to keep going with this app.
+          {left} minutes of the sandbox are left. Copy your description now if you want to keep it,
+          and ask for an invite to keep your apps.
         </p>
       )}
       {left === 0 && (
         <p className={SMITHS} data-beta="ended">
-          The sandbox has ended. I kept your description; ask for an invite and start from it.
+          The sandbox has ended and is being removed. Copy your description if you want it; ask for
+          an invite to keep your apps.
         </p>
       )}
     </>
@@ -636,7 +757,7 @@ function ReadyChips({
 }
 
 /** The answer to the ready prompt picked, Smith's by rule, shown until another request. */
-function ReadyAnswer({ shown, ready }: { shown: "next" | "what" | "publish"; ready: Ready }) {
+function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready }) {
   return (
     <>
       {shown === "next" && (
@@ -659,25 +780,6 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "what" | "publish"; rea
               </p>
             ))
           )}
-        </section>
-      )}
-      {shown === "what" && (
-        <section aria-label="What the app does, in short" className={cx(SMITHS, "space-y-2")}>
-          {ready.sections.slice(0, 4).map((section) => (
-            <div key={section.concept}>
-              <button
-                type="button"
-                className="font-medium hover:text-accent hover:underline"
-                onClick={() => ready.onJump(section.concept)}
-              >
-                {section.title}
-              </button>
-              {section.sentences.slice(0, 3).map((sentence, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences by their place
-                <p key={i}>{sentence.replace(/^- /, "")}</p>
-              ))}
-            </div>
-          ))}
         </section>
       )}
       {shown === "publish" && (
