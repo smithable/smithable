@@ -7,10 +7,10 @@ roles:
   admin: all
   member:
     description: "A family member: adds and edits recipes and shopping lists."
-    pages: all
+    pages: [recipes, shoppingLists]
     create: all
     write: [Recipe, Ingredient, ShoppingList, ShoppingItem]
-    delete: [Ingredient, ShoppingItem]
+    actions: [markDone]
 assistant:
   for: signed-in
 defaultRole: member

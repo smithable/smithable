@@ -1,7 +1,7 @@
 {
   "description": "A help desk for an IT team: tickets, priorities and who handles them.",
   "starter": "support",
-  "wordStarter": "invoicing",
+  "wordStarter": "booking",
   "questions": [
     "Who opens tickets?",
     "Can the people who reported an issue follow their ticket and reply to it?",

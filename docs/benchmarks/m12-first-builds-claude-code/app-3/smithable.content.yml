@@ -1,24 +1,22 @@
 smithableContent: 0.1
 pages:
-  business:
-    title: Business details
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Ledgerly keeps your clients, invoices and incoming payments in one tidy place, so you always know who owes you what.
+      subtitle: Billfold keeps your clients, invoices and incoming payments in one tidy place, made for freelancers.
       button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
-      title: Your next invoice is two minutes away
-      text: Sign in with your email address and send your first invoice today.
-      button: Sign in
+      title: Your next invoice takes two minutes
+      text: Add a client, list your hours and send it off.
+      button: Get started
     features:
-      items: [{ title: Clients at hand, text: "Store each client's contact details and VAT number once, and see every invoice you have sent them." }, { title: Invoices with lines, text: Add lines with quantity and price; the total adds itself up as you go. }, { title: Payments tracked, text: Record full or partial payments against an invoice and see the remaining balance at a glance. }, { title: Overdue spotted for you, text: A sent invoice that stays unpaid past its due date is flagged as overdue automatically. }]
+      items: [{ title: Clients at hand, text: Keep each client's contact and VAT details once and reuse them on every invoice. }, { title: Invoices in minutes, text: Add lines with quantities and prices; totals add themselves up. }, { title: Payments tracked, text: Record full or partial payments and always see what is still owed. }, { title: Late invoices flagged, text: Invoices left unpaid past their due date are marked overdue for you. }]
     faq:
-      items: [{ question: Can other people see my clients?, answer: "No. Every freelancer sees only their own clients, invoices and payments." }, { question: Does the client get the invoice by email?, answer: "Yes. When you mark an invoice as sent, your client is notified at the address you saved for them." }, { question: What if a client pays in parts?, answer: Add each payment as it arrives; the invoice shows how much is still open. }, { question: Can I attach the contract?, answer: "Yes, each invoice can carry a PDF or document of the agreement it is for." }]
+      items: [{ question: Who can see my clients and invoices?, answer: Only you. Every freelancer's records are private to their own account. }, { question: Can a client pay in instalments?, answer: Yes. Record each payment as it arrives and the remaining balance updates on the invoice. }, { question: Does the client get the invoice by mail?, answer: "When you mark an invoice as sent, your client is notified at the address you saved for them." }, { question: Can I attach a contract?, answer: "Yes, each invoice can carry the agreement it is based on as a PDF or document." }]
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

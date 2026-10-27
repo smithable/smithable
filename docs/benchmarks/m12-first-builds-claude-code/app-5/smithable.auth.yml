@@ -5,7 +5,12 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: Works in the bakery and keeps the stock up to date.
+    pages: [ingredients, suppliers]
+    create: [Ingredient, Supplier]
+    write: [Ingredient, Supplier]
 assistant:
   for: signed-in
+defaultRole: member
 admins: [johan@smithable.ai]

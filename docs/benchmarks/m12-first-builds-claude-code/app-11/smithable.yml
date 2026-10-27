@@ -2,7 +2,7 @@ smithable: 0.1
 app:
   name: API Status
   description: "The live state of our API: open incidents, their updates and planned maintenance."
-  timezone: UTC
+  timezone: Etc/UTC
 models:
   Component:
     fields:
@@ -34,36 +34,6 @@ models:
       endsAt: datetime!
       description: text
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      planned:
-        records: Maintenance
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      footer:
-  incidents:
-    crud: Incident
-    filters: [status, component]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  maintenance:
-    crud: Maintenance
-  components:
-    crud: Component
-  privacy:
-    route: /privacy
-    legal: privacy
   overview:
     dashboard:
       open:
@@ -76,6 +46,36 @@ pages:
       latest:
         list: Incident
         limit: 5
+  incidents:
+    crud: Incident
+    filters: [status]
+    actions: [identified, monitoring, resolve]
+  updates:
+    crud: IncidentUpdate
+  maintenance:
+    crud: Maintenance
+  components:
+    crud: Component
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
   team:
     users: manage
 actions:
@@ -89,7 +89,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: The cause is found and a fix is being worked on.
+        message: We have found the cause and are working on a fix.
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -101,7 +101,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is out. We are watching before we close this.
+        message: A fix has been deployed. We are monitoring the results.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -114,6 +114,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved.
+        message: This incident has been resolved.
     intent: The incident is over, with an update saying so.
 navigation: [overview, incidents, updates, maintenance, components, team]

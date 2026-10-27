@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Ledgerly
-  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
+  name: Billfold
+  description: "Invoicing for freelancers: keep your clients, send invoices and track the payments that come in."
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -19,28 +19,12 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
-  InvoiceLine:
-    fields:
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
-      invoice: Invoice!
-  Payment:
-    fields:
-      paidOn: date! = TODAY()
-      amount: money!
-      method: bankTransfer | card | cash | other
-      reference: string
-      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date!
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       contract: file
       lines: InvoiceLine[]
@@ -54,20 +38,26 @@ models:
       balance:
         type: money
         formula: total - paid
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  Payment:
+    fields:
+      invoice: Invoice!
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      reference: string
+      note: text
 pages:
-  clients:
-    crud: Client
-    search: [name, email]
-  payments:
-    crud: Payment
-    filters: [invoice, method, paidOn]
-  business:
-    crud: BusinessProfile
   overview:
     dashboard:
-      received:
-        sum: Payment.amount
-        by: paidOn
       outstanding:
         sum: Invoice.balance
         where:
@@ -76,12 +66,29 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
+      received:
+        sum: Payment.amount
+        by: paidOn
       invoiced:
         sum: Invoice.total
         by: issuedOn
       latest:
         list: Invoice
         limit: 5
+  invoices:
+    crud: Invoice
+    filters: [client, status, issuedOn]
+    actions: [markSent, recordPayment, markPaid, markOverdue]
+  clients:
+    crud: Client
+    search: [name, email]
+  payments:
+    crud: Payment
+    filters: [invoice, method, paidOn]
+  invoice-lines:
+    crud: InvoiceLine
+  settings:
+    crud: BusinessProfile
   home:
     route: /
     landing:
@@ -95,10 +102,7 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    actions: [markSent, markPaid, markOverdue]
+navigation: [overview, invoices, clients, payments, settings]
 actions:
   markSent:
     on: Invoice
@@ -107,18 +111,23 @@ actions:
     set:
       status: sent
     intent: The invoice went to the client.
+  recordPayment:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    add:
+      Payment:
+        amount:
+        paidOn: TODAY()
+        method:
+    intent: Record a payment received from the client for this invoice.
   markPaid:
     on: Invoice
     when:
       status: [sent, overdue]
     set:
       status: paid
-    add:
-      Payment:
-        paidOn: TODAY()
-        amount:
-        method:
-    intent: The client paid the invoice; the payment is recorded with it.
+    intent: The client paid the invoice in full.
   markOverdue:
     on: Invoice
     when:
@@ -127,9 +136,9 @@ actions:
       status: overdue
     intent: The invoice is late.
 timers:
-  flagOverdue:
+  markOverdue:
     on: Invoice
-    at: dueOn
+    at: 7 days after dueOn
     where:
       status: sent
     run: markOverdue
@@ -138,4 +147,3 @@ outgoing:
     when: markSent
     to: mail
     recipient: client.email
-navigation: [overview, invoices, clients, payments, business]

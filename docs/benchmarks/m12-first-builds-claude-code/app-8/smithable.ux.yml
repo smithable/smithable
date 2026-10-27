@@ -4,7 +4,10 @@ pages:
     table:
       sort: startsAt
   speakers:
-    table:
-      view: cards
+    icon: users
+  my-registrations:
+    icon: star
 theme:
   preset: modern
+  brand:
+    primary: "#4f46e5"

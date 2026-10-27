@@ -1,10 +1,17 @@
 smithableUx: 0.1
+pages:
+  jobs:
+    table:
+      columns: [title, employer, trade, location, type, closesOn, status]
 tones:
   Job.status:
     open: success
+    closed: warning
   Application.status:
-    accepted: success
     shortlisted: warning
+    hired: success
     declined: danger
 theme:
   preset: navy
+  brand:
+    font: Source Sans 3

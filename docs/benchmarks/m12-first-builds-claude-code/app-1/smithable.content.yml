@@ -1,16 +1,16 @@
 smithableContent: 0.1
 pages:
   home:
-    faq:
-      items: [{ question: I have never done yoga. Where should I start?, answer: Pick a class marked for beginners. Our teachers show you each pose step by step and offer easier versions whenever you need them. }, { question: What do I need to bring?, answer: "Comfortable clothes and some water. We have mats, blocks and blankets you can use for free." }, { question: How do I book a class?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, and you get a confirmation by mail." }, { question: Can I cancel my booking?, answer: "Yes. You can cancel up to two hours before the class starts, so someone else can take your place." }]
     hero:
-      title: Find your calm on the mat
-      subtitle: Classes for every level with teachers who care. See the week's schedule and book your place online in seconds.
+      title: Find your breath, one class at a time
+      subtitle: Gentle, strong and everything in between. See the week's classes, meet our teachers and book your mat online.
       button: See the schedule
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
         generated: true
+    faq:
+      items: [{ question: I've never done yoga. Where should I start?, answer: "Pick any class marked for beginners. The teacher will offer simpler options throughout, so you can go at your own pace." }, { question: How do I book a class?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, and the place is yours." }, { question: Can I cancel a booking?, answer: "Yes. You can cancel from My bookings any time before the class starts, which frees the place for someone else." }, { question: What should I bring?, answer: Comfortable clothes and a bottle of water. We have mats and props at the studio for everyone. }]
 logo:
   src: images/logo.webp
   alt: A calendar page

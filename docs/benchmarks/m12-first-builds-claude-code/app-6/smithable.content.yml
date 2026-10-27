@@ -1,19 +1,22 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: Jobs from our own local, text: "Every post comes from union staff, so you know the work is fair and the employer is known to us." }, { title: Apply in minutes, text: "Sign in, add a short note and your resume, and your application goes straight to the staff." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted, accepted or declined." }]
-      title: How the job board works
     hero:
-      title: Union work, posted for members
-      subtitle: Browse open jobs from our local and apply with a few clicks.
+      title: Union work, posted first at the hall
+      subtitle: Browse the open positions our signatory employers have sent us, and apply as a member in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    latest:
-      title: Latest openings
+    openJobs:
+      title: Open right now
+    features:
+      title: How the board works
+      items: [{ title: Every job in one place, text: Positions from union employers are posted here as soon as the hall receives them. }, { title: Apply from your phone, text: "Sign in, add your member number and résumé, and send your application right away." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or filled, without calling the hall." }]
+    faq:
+      title: Questions from members
+      items: [{ question: Who can apply?, answer: Members of the local. Sign in with your email address and include your member number when you apply. }, { question: Do I need a résumé?, answer: "It helps, but it is optional. A short note about your experience and certifications is often enough." }, { question: Who sees my application?, answer: Only you and the hall staff who handle job postings. Applications are never shown to the public. }, { question: How do I know if I got the job?, answer: "The status of your application changes on your Applications page, and the hall will contact you." }]
 logo:
   src: images/logo.webp
   alt: A map pin
