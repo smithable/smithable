@@ -44,7 +44,7 @@ The app's page has these sections:
 
 ## Where it runs
 
-Every app is hosted in Sweden, with its backups in the same region. An account is global unless its owner makes it an EU account: **Region** on your account page shows the current region and changes it. An EU app also keeps its data in the EU, and its AI calls too unless its level is Relaxed ([AI setup](../ai.md)). The [questions and answers](why.md#where-does-my-data-live) say more.
+Every app is hosted in Sweden, with its backups in the same region, within the beta's [limits](limits.md). An account is global unless its owner makes it an EU account: **Region** on your account page shows the current region and changes it. An EU app also keeps its data in the EU, and its AI calls too unless its level is Relaxed ([AI setup](../ai.md)). The [questions and answers](why.md#where-does-my-data-live) say more.
 
 ## Take it with you
 

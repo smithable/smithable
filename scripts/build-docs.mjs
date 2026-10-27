@@ -155,6 +155,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/limits.md",
+    out: "limits.html",
+    description:
+      "The limits of Smithable's private beta on smithable.ai: per app (memory, CPU, storage, mail, web calls, traffic, sleep when idle), per account, the workspace and the free sandbox.",
+    nav: "Limits",
+    group: "Run",
+  },
+  {
     src: "docs/site/self-host.md",
     out: "self-host.html",
     description:
