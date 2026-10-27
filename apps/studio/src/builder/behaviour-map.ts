@@ -142,6 +142,13 @@ export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: Behavi
         target: `outgoing:${o.name}`,
         label: "ran",
       });
+    else if ("custom" in w)
+      edges.push({
+        id: `when:${o.name}`,
+        source: `action:${w.custom}`,
+        target: `outgoing:${o.name}`,
+        label: "returned",
+      });
     else
       edges.push({
         id: `when:${o.name}`,

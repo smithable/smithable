@@ -1017,8 +1017,10 @@ function checkAgainstSpec(
   // it holds.
   for (const o of ir.outgoing) {
     const r = o.recipient;
-    if (o.to !== "mail" || !r) continue;
-    const model = ir.models.find((m) => m.name === o.when.model);
+    // A custom action's mail goes to a role and tells no record.
+    if (o.to !== "mail" || !r || "custom" in o.when) continue;
+    const on = o.when.model;
+    const model = ir.models.find((m) => m.name === on);
     if (!model) continue;
     // The address is typed on the record itself, or on each record of a list of them.
     const typed =

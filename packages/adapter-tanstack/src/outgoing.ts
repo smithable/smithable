@@ -5,6 +5,7 @@ import {
   type ContentIR,
   camel,
   type FieldIR,
+  humanize,
   isUpload,
   kebab,
   type ModelIR,
@@ -39,8 +40,17 @@ import {
  * Entries on a timer fire from the timers' tick (timed-actions.md §5), not from a write: they are
  * in the module's table as "timer:<name>", which no write says.
  */
-export function outgoingOf(ir: SpecIR): OutgoingIR[] {
-  return ir.outgoing.filter((o) => !("timer" in o.when));
+export function outgoingOf(ir: SpecIR): RecordOutgoing[] {
+  return ir.outgoing.filter(onRecords).filter((o) => !("timer" in o.when));
+}
+
+/** An entry about a record (a write, a standard action, a timer): it has a model. */
+type RecordOutgoing = OutgoingIR & { when: Exclude<OutgoingIR["when"], { custom: string }> };
+const onRecords = (o: OutgoingIR): o is RecordOutgoing => !("custom" in o.when);
+
+/** The entries a custom action fires once it has returned (integrations.md §4.3). */
+export function afterCustom(ir: SpecIR, action: string): OutgoingIR[] {
+  return ir.outgoing.filter((o) => "custom" in o.when && o.when.custom === action);
 }
 
 /** Whether a change to the model's records may tell someone: its writes call `outgoing`. */
@@ -57,7 +67,9 @@ export function outgoingModule(
   ux: UxIR,
   content: ContentIR | undefined,
 ): string {
-  const entries = ir.outgoing;
+  const entries = ir.outgoing.filter(onRecords);
+  // A custom action's entries: no record, its input and output instead.
+  const after = ir.outgoing.filter((o) => "custom" in o.when);
   const tables = new Set<string>();
   let users = false;
   // A user's name shown in the mail (the schema's user table, not the people() helper).
@@ -151,7 +163,9 @@ export function outgoingModule(
   };
   const mails = entries.filter((o) => o.to === "mail");
   const calls = entries.filter((o) => o.to !== "mail");
-  const modelsOf = (list: OutgoingIR[]) =>
+  const mailsAfter = after.some((o) => o.to === "mail");
+  const callsAfter = after.some((o) => o.to !== "mail");
+  const modelsOf = (list: RecordOutgoing[]) =>
     [...new Set(list.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
   // Mail threads (mail-threads.md §4): the record an incoming mail entry makes, and its replies.
   const threadOf = (model: ModelIR) => {
@@ -248,7 +262,28 @@ ${apiFields(model)
     ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
   },`;
   });
-  const body = [...showers, ...senders, ...list].join("\n");
+  // A custom action's entries: the mail shows its input and output by their labels.
+  const afterList = after.map((o) => {
+    const action = ir.actions.find((a) => "custom" in o.when && a.name === o.when.custom);
+    const words = content?.outgoing?.[o.name];
+    const shownFields = [
+      ...(action?.input ?? []).map((f) => [f.name, "input"] as const),
+      ...(action?.output ?? []).map((f) => [f.name, "output"] as const),
+    ];
+    const subject = words?.subject ?? (action ? t.action(action) : o.name);
+    return `  {
+    name: ${JSON.stringify(o.name)},
+    action: ${JSON.stringify(action?.name ?? "")},${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}
+    ${
+      o.to === "mail"
+        ? `subject: ${JSON.stringify(subject)},
+    fields: (${shownFields.some(([, from]) => from === "input") ? "input" : "_input"}, ${shownFields.some(([, from]) => from === "output") ? "output" : "_output"}) => [${shownFields.map(([name, from]) => `[${JSON.stringify(humanize(name))}, shownValue(${from}?.${name})]`).join(", ")}],
+    ${toCode(people(`eq(schema.user.role, ${JSON.stringify(o.recipient?.kind === "role" ? o.recipient.role : "admin")})`))}`
+        : `target: ${JSON.stringify(o.to)},`
+    }
+  },`;
+  });
+  const body = [...showers, ...senders, ...list, ...afterList].join("\n");
   const ones = body.includes("one(tx,");
   const trashOne = body.includes(".deletedAt)");
   const imports = threading ? 'import { AsyncLocalStorage } from "node:async_hooks";\n' : "";
@@ -262,11 +297,14 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}import { counts } from "#/kit/outgoing";
-${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length ? ["queueCall"] : []), ...(mails.length ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? 'import { counts } from "#/kit/outgoing";\n' : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
+
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = ${literal([...new Set(ir.outgoing.filter((o) => o.to !== "mail").map((o) => o.to))])} as const;
+export type Target = (typeof TARGETS)[number];
 ${[...composedUsed]
   .map(
     (m) => `
@@ -362,6 +400,9 @@ ${senders.join("\n")}
 `
     : ""
 }
+${
+  entries.length
+    ? `
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
   name: string;
@@ -414,5 +455,61 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     }
   }
 }
-`;
+`
+    : ""
+}${
+  after.length
+    ? `
+/** A value of a custom action's input or output as its mail shows it. */
+function shownValue(value: unknown): string {
+  return value == null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+/** The entries of smithable.yml's outgoing section that wait for a custom action. */
+const AFTER: {
+  name: string;
+  action: string;
+  text?: string;${mailsAfter ? "\n  subject?: string;\n  fields?: (input: Row, output: Row | undefined) => [string, string][];\n  to?: (tx: Tx, r: Row) => Recipient[];" : ""}${callsAfter ? "\n  target?: string;" : ""}
+}[] = [
+${afterList.join("\n")}
+];
+
+/**
+ * Queues what a custom action asks for once it has returned without an error (integrations.md
+ * §4.3): a call carries its input and output, a mail shows them; there is no record.
+ */
+export function outgoingAfter(tx: Tx, ${mailsAfter ? "viewer" : "_viewer"}: Viewer | null, action: string, input: Row, output: unknown): void {
+  for (const entry of AFTER) {
+    if (entry.action !== action) continue;${
+      callsAfter
+        ? `
+    if (entry.target) {
+      queueCall(tx, {
+        entry: entry.name,
+        model: null,
+        record: null,
+        target: entry.target,
+        body: JSON.stringify({ event: entry.name, action, at: new Date().toISOString(), input, output: output ?? null }),
+      });
+      continue;
+    }`
+        : ""
+    }${
+      mailsAfter
+        ? `
+    if (!entry.to || !entry.fields) continue;
+    const out = output && typeof output === "object" ? (output as Row) : undefined;
+    queueMail(
+      tx,
+      viewer,
+      { entry: entry.name, model: null, record: null, subject: entry.subject ?? entry.name, ...(entry.text ? { text: entry.text } : {}), fields: entry.fields(input, out) },
+      entry.to(tx, {}),
+    );`
+        : ""
+    }
+  }
+}
+`
+    : ""
+}`;
 }

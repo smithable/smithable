@@ -79,8 +79,17 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
       ...new Set(
         ir.outgoing
           .filter((o) => o.to === "mail")
-          .map((o) => ir.models.find((m) => m.name === o.when.model))
-          .flatMap((m) => (m ? [t.modelPluralLabel(m).toLowerCase()] : [])),
+          // A custom action's mail is about the records its input names.
+          .flatMap((o) =>
+            "model" in o.when
+              ? ir.models.filter((m) => "model" in o.when && m.name === o.when.model)
+              : ir.models.filter((m) =>
+                  ir.actions
+                    .find((a) => "custom" in o.when && a.name === o.when.custom)
+                    ?.input.some((f) => f.type.kind === "relation" && f.type.model === m.name),
+                ),
+          )
+          .map((m) => t.modelPluralLabel(m).toLowerCase()),
       ),
     ],
   };

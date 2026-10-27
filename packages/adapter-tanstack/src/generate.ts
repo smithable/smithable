@@ -766,7 +766,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         // Outgoing mail (integrations.md §4.1b): the outbox and its sender.
-        files: ["src/kit/outgoing.ts", "src/kit/outgoing.server.ts", "src/kit/call.server.ts"],
+        files: [
+          "src/kit/outgoing.ts",
+          "src/kit/outgoing.server.ts",
+          "src/kit/call.server.ts",
+          // Telling from src/custom code (integrations.md §4.3).
+          "src/kit/tell.server.ts",
+        ],
         used: ({ ir }) => ir.outgoing.length > 0,
       },
       {
