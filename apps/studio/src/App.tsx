@@ -32,7 +32,9 @@ import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import {
   gridOf,
   LayoutBar,
+  type ManualView,
   PhoneSettingsButton,
+  type PhoneWindow,
   phoneWindows,
   type SlotContent,
   shownSlots,
@@ -47,6 +49,8 @@ import {
 // starts without them (the main chunk under Vite's 500 kB, backlog A 64).
 const Code = lazy(() => import("./studio/Code").then((m) => ({ default: m.Code })));
 const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
+
+import type { GuideLine } from "./GuideTour";
 
 /** A change that stopped to ask, because it loses data. */
 interface Pending {
@@ -148,31 +152,40 @@ export function App() {
     [changeKey, concepts],
   );
   // A phone shows one window at a time (studio-v3.md §8), chosen in the header or by a swipe
-  // across it; No code, Preview, Smith and Code by default, Changes as its settings say. It opens on
-  // the preview (A 161).
+  // across it: Smith, the preview, No code and Code, Changes as its settings say
+  // (smith-first.md §6). It opens on the preview (A 161).
   const narrow = useMedia("(max-width: 1023px)");
   const [phone, setPhone] = usePhoneSettings();
   const phoneList = phoneWindows(phone);
-  const phoneWindow = (
-    phoneList.includes(place.window as WindowId)
-      ? place.window
-      : place.window === "changes" && phone.changesUnderSmith
-        ? "smith"
-        : "preview"
-  ) as WindowId;
+  const phoneWindow: PhoneWindow = phoneList.includes(place.window as PhoneWindow)
+    ? (place.window as PhoneWindow)
+    : place.window === "changes" && phone.changesUnderSmith
+      ? "smith"
+      : place.window === "nocode" || place.window === "code"
+        ? "manual"
+        : "preview";
+  // Which of No code and Code the view shows; a phone without Code shows No code.
+  const manual = narrow && !phone.code ? "nocode" : (arrangement.manual ?? "nocode");
   // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
   const [visualize, setVisualize] = useState(false);
-  const showWindow = (window: WindowId) => {
+  const showWindow = (window: WindowId | PhoneWindow) => {
     setVisualize(false);
+    if (window === "nocode" || window === "code")
+      setArrangement({ ...arrangement, manual: window });
     setPlace((p) => ({
       ...p,
-      window: window === "changes" && phone.changesUnderSmith ? "smith" : window,
+      window:
+        window === "changes" && phone.changesUnderSmith
+          ? "smith"
+          : window === "nocode" || window === "code"
+            ? "manual"
+            : window,
     }));
   };
   const stepWindow = (by: number) =>
     showWindow(
       phoneList[(phoneList.indexOf(phoneWindow) + by + phoneList.length) % phoneList.length] ??
-        "nocode",
+        "smith",
     );
   // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
   const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
@@ -183,12 +196,16 @@ export function App() {
     ? [phoneWindow === "smith" && phone.changesUnderSmith ? "smith+changes" : phoneWindow]
     : arrangement.slots;
   const shown = shownSlots(layout, narrow ? { left: false, right: false } : hidden);
-  /** The slot a window is in among those shown (the first that names it), or none. */
+  /**
+   * The slot a window is in among those shown (the first that names it), or none. No code and
+   * Code are in the view's slot when it shows them.
+   */
   const slotOf = (window: WindowId) =>
     shown.find(
       (s) =>
         slots[s] === window ||
-        (slots[s] === "smith+changes" && (window === "smith" || window === "changes")),
+        (slots[s] === "smith+changes" && (window === "smith" || window === "changes")) ||
+        (slots[s] === "manual" && window === manual),
     );
   // The creation wizard's "Ask Smith for help": Smith comes into view to take the words.
   const smithRef = useRef(() => {});
@@ -215,14 +232,12 @@ export function App() {
             ? "changes"
             : ["behavior", "look"].includes(anchor)
               ? "nocode"
-              : undefined;
+              : anchor === "manual"
+                ? manual
+                : undefined;
     if (!window || slotOf(window) !== undefined) return;
     if (narrow) showWindow(window);
-    // Smith and Changes are the third place's by default: the layout with three shows them.
-    else if (arrangement.slots[2] === window || arrangement.slots[2] === "smith+changes")
-      setArrangement({ ...arrangement, layout: "three" });
-    else
-      setArrangement({ ...arrangement, slots: [window, ...arrangement.slots.slice(1)] as never });
+    else workIn(window);
   };
   // A setting another window names (Who can's Why?): the Code window on screen, beside No code
   // and not over the preview where there is room, and the setting shown there.
@@ -233,52 +248,56 @@ export function App() {
       const { file, path } = (e as CustomEvent<Omit<CodeJump, "at">>).detail;
       setCodeJump({ file, path, at: Date.now() });
       if (narrow) showWindow("code");
-      else if (slotOf("code") === undefined) {
-        // Beside No code among the slots on screen, keeping the preview where another is free.
-        const free =
-          shown.find((i) => slots[i] !== "nocode" && slots[i] !== "preview") ??
-          shown.find((i) => slots[i] !== "nocode") ??
-          0;
-        setArrangement({
-          ...arrangement,
-          slots: arrangement.slots.map((s, i) =>
-            i === free ? "code" : s,
-          ) as typeof arrangement.slots,
-        });
-      }
+      else workIn("code");
     };
     window.addEventListener(SHOW_CODE, onShow);
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
   /**
-   * A window on screen from the header's tabs. No code or Code goes in the place of the other one,
-   * or the first place when neither is; Preview or Smith in the last place on screen that holds
-   * neither, or the only one in one window (A 161). The window moved out takes the place the
-   * other left, so none is lost from the arrangement.
+   * A window on screen from the header's tabs, a guide's stop or a link (smith-first.md §6). No
+   * code or Code: the view switches to it, and comes into view. A window in the third place,
+   * the arrow's (the view with No code and Code by default), opens the three windows; one hidden
+   * by an arrow comes back; any other takes the last place on screen that is not the preview, or
+   * the only one in one window, and the window moved out takes its place, so none is lost.
    */
   const workIn = (window: WindowId) => {
     setVisualize(false);
+    const sub = window === "nocode" || window === "code" ? window : undefined;
+    const kept = { ...arrangement, ...(sub ? { manual: sub } : {}) };
     if (slotOf(window) !== undefined) return;
-    const work = (s: SlotContent | undefined) => s === "nocode" || s === "code";
-    const at = work(window)
-      ? (slotOf(window === "code" ? "nocode" : "code") ?? shown[0] ?? 0)
-      : layout === "one"
-        ? (shown[0] ?? 0)
-        : ([...shown].reverse().find((i) => !work(slots[i])) ?? shown[0] ?? 0);
+    const content: SlotContent = window === "nocode" || window === "code" ? "manual" : window;
     const from = arrangement.slots.findIndex(
-      (s) => s === window || (s === "smith+changes" && window === "smith"),
+      (s) =>
+        s === content || (s === "smith+changes" && (window === "smith" || window === "changes")),
     );
+    if (from >= 0 && shown.includes(from as 0 | 1 | 2)) return setArrangement(kept);
+    if (from === 0 && hidden.left) {
+      setHidden((h) => ({ ...h, left: false }));
+      return setArrangement(kept);
+    }
+    if (from === 2 && (layout === "two" || layout === "three")) {
+      setHidden((h) => ({ ...h, right: false }));
+      return setArrangement({ ...kept, layout: "three" });
+    }
+    const at =
+      layout === "one"
+        ? (shown[0] ?? 0)
+        : ([...shown].reverse().find((i) => slots[i] !== "preview") ?? shown[0] ?? 0);
     const next = [...arrangement.slots] as typeof arrangement.slots;
     if (from >= 0) [next[at], next[from]] = [next[from] as SlotContent, next[at] as SlotContent];
-    else next[at] = window;
-    setArrangement({ ...arrangement, slots: next });
+    else next[at] = content;
+    setArrangement({ ...kept, slots: next });
   };
-  // Preview and Smith are tabs too when one of them is off screen: in one window always.
-  const tabs: WindowId[] =
-    layout === "one" || slotOf("preview") === undefined || slotOf("smith") === undefined
-      ? ["nocode", "code", "preview", "smith"]
-      : ["nocode", "code"];
+  // The header's tabs: the windows of the arrangement in their order, the view with No code and
+  // Code named by the one it shows, and a window off screen brought back by its tab.
+  const tabs: WindowId[] = [
+    ...new Set(
+      arrangement.slots.map(
+        (s): WindowId => (s === "smith+changes" ? "smith" : s === "manual" ? manual : s),
+      ),
+    ),
+  ];
 
   // The spec the preview shows now, for what a change touches (refresh).
   const shownIR = useRef<Spec["ir"]>(undefined);
@@ -536,7 +555,7 @@ export function App() {
   // screen, never with ?guide=off; Guide in the header shows it again. Code's tour when Code is
   // the first window.
   const [guiding, setGuiding] = useState(false);
-  const tour = arrangement.slots[0] === "code" && !narrow ? "code" : "nocode";
+  const tour = manual === "code" && slotOf("code") !== undefined && !narrow ? "code" : "nocode";
   const firstVisit = project && !project.making && !guideOff() && !seenGuide(project.name);
   // The first tour waits for the preview's page (its second stop points at the running app),
   // or twenty seconds when the preview is slow to start.
@@ -557,9 +576,14 @@ export function App() {
   // third window comes into view in the same render the tour starts in.
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   const startGuide = () => {
-    if (tour === "nocode" && !narrow) guideStop("change");
+    // The view with No code and Code comes into view for the tour's stops in it.
+    if (tour === "nocode" && !narrow) workIn("nocode");
     setGuiding(true);
   };
+  // Smith says the stops in his thread when he is on the screen (smith-first.md §7); a phone, or
+  // an arrangement without him, shows the cards.
+  const [guideLine, setGuideLine] = useState<GuideLine>();
+  const smithSays = !narrow && slotOf("smith") !== undefined;
   // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up
   useEffect(() => {
     if (firstVisit && previewUp) startGuide();
@@ -585,7 +609,6 @@ export function App() {
         {project.making ? null : narrow ? (
           // A phone: one window at a time.
           <fieldset
-            data-guide="layout"
             className="flex rounded-md bg-subtle p-0.5"
             {...swipe(
               () => stepWindow(1),
@@ -608,7 +631,7 @@ export function App() {
                   checked={phoneWindow === w && !visualize}
                   onChange={() => showWindow(w)}
                 />
-                {WINDOW_NAMES[w]}
+                {WINDOW_NAMES[w === "manual" ? manual : w]}
               </label>
             ))}
             {/* Visualize on a narrow screen too, over the window shown (A 150). */}
@@ -630,10 +653,10 @@ export function App() {
         ) : (
           <>
             <LayoutBar arrangement={arrangement} onChange={setArrangement} />
-            {/* No code or Code, back and forth in one click: the one chosen takes the other's
-                place (Johan, 2026-10-23); Preview and Smith when one is off screen (A 161). */}
+            {/* The windows of the arrangement, each brought into view by its tab; the view with
+                No code and Code named by the one it shows (smith-first.md §6). */}
             <fieldset className="flex rounded-md bg-subtle p-0.5">
-              <legend className="sr-only">Way of working</legend>
+              <legend className="sr-only">Windows</legend>
               {tabs.map((mode) => (
                 <label
                   key={mode}
@@ -828,13 +851,8 @@ export function App() {
               setGuiding(false);
               if (narrow) showWindow("preview");
             }}
-            onCode={() =>
-              setArrangement({
-                ...arrangement,
-                slots: ["code", ...arrangement.slots.slice(1)] as typeof arrangement.slots,
-              })
-            }
             onStop={guideStop}
+            asLine={smithSays ? setGuideLine : undefined}
           />
         </Suspense>
       )}
@@ -849,7 +867,7 @@ export function App() {
         // in no slot shown is not drawn, except the preview, hidden.
         <main
           className="relative grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0"
-          style={gridOf(layout, shown)}
+          style={gridOf(layout, shown, slots)}
         >
           <div
             key="preview"
@@ -881,19 +899,28 @@ export function App() {
                     : undefined
                 }
                 right={
-                  layout === "three" && slotOf("preview") !== 2
+                  // In two windows the arrow opens the third (No code and Code by default).
+                  layout === "two" && slotOf("preview") === 1
                     ? {
-                        hidden: hidden.right,
-                        toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
+                        hidden: true,
+                        toggle: () => {
+                          setHidden((h) => ({ ...h, right: false }));
+                          setArrangement({ ...arrangement, layout: "three" });
+                        },
                       }
-                    : undefined
+                    : layout === "three" && slotOf("preview") !== 2
+                      ? {
+                          hidden: hidden.right,
+                          toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
+                        }
+                      : undefined
                 }
               />
             )}
           </div>
           {shown.map((s) => {
             const content = slots[s] as SlotContent;
-            if (content === "preview" || slotOf(windowsIn(content)[0] as WindowId) !== s)
+            if (content === "preview" || slotOf(windowsIn(content, manual)[0] as WindowId) !== s)
               return null;
             return (
               <div
@@ -924,86 +951,105 @@ export function App() {
                     />
                   </div>
                 )}
-                {(narrow && content === "smith+changes" ? [phoneSub] : windowsIn(content)).map(
-                  (w) =>
-                    w === "nocode" ? (
-                      <NoCode
-                        key={w}
+                {content === "manual" && (
+                  // No code and Code: the view's two sub-tabs (smith-first.md §6).
+                  <div
+                    data-guide="manual"
+                    className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
+                  >
+                    <Tabs
+                      tabs={[
+                        ["nocode", WINDOW_NAMES.nocode],
+                        ...(narrow && !phone.code
+                          ? []
+                          : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
+                      ]}
+                      value={manual}
+                      onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
+                    />
+                  </div>
+                )}
+                {(narrow && content === "smith+changes"
+                  ? [phoneSub]
+                  : content === "manual"
+                    ? [manual]
+                    : windowsIn(content)
+                ).map((w) =>
+                  w === "nocode" ? (
+                    <NoCode
+                      key={w}
+                      project={project}
+                      spec={spec}
+                      run={run}
+                      place={place.nocode}
+                      onPlace={nocodePlace}
+                    />
+                  ) : w === "code" ? (
+                    <Suspense
+                      key={w}
+                      fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
+                    >
+                      <Code
                         project={project}
                         spec={spec}
                         run={run}
-                        place={place.nocode}
-                        onPlace={nocodePlace}
+                        place={place.code}
+                        onPlace={codePlace}
+                        jumpTo={codeJump}
+                        onJumped={forgetJump}
+                        onLook={() => {
+                          nocodePlace({ sub: "look" });
+                          if (narrow) showWindow("nocode");
+                          else workIn("nocode");
+                        }}
                       />
-                    ) : w === "code" ? (
-                      <Suspense
-                        key={w}
-                        fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
-                      >
-                        <Code
-                          project={project}
-                          spec={spec}
-                          run={run}
-                          place={place.code}
-                          onPlace={codePlace}
-                          jumpTo={codeJump}
-                          onJumped={forgetJump}
-                          onLook={() => {
-                            nocodePlace({ sub: "look" });
-                            if (narrow) showWindow("nocode");
-                            else if (slotOf("nocode") === undefined)
-                              setArrangement({
-                                ...arrangement,
-                                slots: [
-                                  "nocode",
-                                  ...arrangement.slots.slice(1),
-                                ] as typeof arrangement.slots,
-                              });
+                    </Suspense>
+                  ) : w === "smith" ? (
+                    <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
+                      <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
+                        <Ask
+                          guide={guiding ? guideLine : undefined}
+                          words={words}
+                          waiting={project.waiting}
+                          trace={project.trace}
+                          ready={{
+                            sections,
+                            appName: project.name,
+                            notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
+                            ...(project.home ? { home: project.home } : {}),
+                            apply: (op, args) => void run(op, args),
+                            onJump: (concept) => {
+                              guideStop("behavior");
+                              // After No code is on screen to hear it.
+                              setTimeout(() =>
+                                window.dispatchEvent(
+                                  new CustomEvent(OPEN_PART, { detail: concept }),
+                                ),
+                              );
+                            },
                           }}
                         />
-                      </Suspense>
-                    ) : w === "smith" ? (
-                      <Panel key={w} title="Ask Smith" className="min-h-0 flex-1">
-                        <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
-                          <Ask
-                            words={words}
-                            waiting={project.waiting}
-                            trace={project.trace}
-                            ready={{
-                              sections,
-                              appName: project.name,
-                              notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
-                              ...(project.home ? { home: project.home } : {}),
-                              apply: (op, args) => void run(op, args),
-                              onJump: (concept) => {
-                                guideStop("behavior");
-                                // After No code is on screen to hear it.
-                                setTimeout(() =>
-                                  window.dispatchEvent(
-                                    new CustomEvent(OPEN_PART, { detail: concept }),
-                                  ),
-                                );
-                              },
-                            }}
-                          />
-                        </div>
-                      </Panel>
-                    ) : (
-                      <Panel
-                        key={w}
-                        title="Changes"
-                        className={cx("min-h-0 flex-1", content === "smith+changes" && "border-t")}
-                      >
-                        <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                          <Trace
-                            entries={project.trace}
-                            words={words}
-                            plugins={spec.plugins}
-                            onUndo={(ids) => void undoChanges(ids)}
-                          />
-                        </div>
-                      </Panel>
-                    ),
+                      </div>
+                    </Panel>
+                  ) : (
+                    <Panel
+                      key={w}
+                      title="Changes"
+                      className={cx(
+                        "min-h-0",
+                        content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
+                      )}
+                    >
+                      <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+                        <Trace
+                          entries={project.trace}
+                          words={words}
+                          plugins={spec.plugins}
+                          onUndo={(ids) => void undoChanges(ids)}
+                        />
+                      </div>
+                    </Panel>
+                  ),
                 )}
               </div>
             );
@@ -1030,9 +1076,9 @@ export function App() {
   );
 }
 
-/** The windows a slot holds. */
-const windowsIn = (content: SlotContent): WindowId[] =>
-  content === "smith+changes" ? ["smith", "changes"] : [content];
+/** The windows a slot holds (the view with No code and Code: the one it shows, chosen by the caller). */
+const windowsIn = (content: SlotContent, manual: ManualView = "nocode"): WindowId[] =>
+  content === "smith+changes" ? ["smith", "changes"] : content === "manual" ? [manual] : [content];
 
 /** A slot's grid area. */
 const area = (slot: number | undefined) => (slot === undefined ? undefined : "abc"[slot]);

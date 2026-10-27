@@ -1082,6 +1082,26 @@
             "minItems": 1,
             "description": "For \"<Model> changed\": only a change of one of these fields counts, e.g. [startsAt]."
           },
+          "show": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][A-Za-z0-9]*$"
+                },
+                "minItems": 1
+              },
+              {
+                "const": "none"
+              }
+            ],
+            "description": "The fields the mail lists under its text and a call's record carries, in this order, e.g. [number, wanted]; none for the text alone. Without it, the fields as the record page shows them."
+          },
+          "previous": {
+            "type": "boolean",
+            "description": "For \"<Model> changed\": the mail and the call also say what the changed fields were before the change."
+          },
           "to": {
             "type": "string",
             "pattern": "^[a-z][A-Za-z0-9]*$",

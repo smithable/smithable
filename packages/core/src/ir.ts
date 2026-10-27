@@ -665,6 +665,14 @@ export interface OutgoingIR {
   to: string;
   /** For mail: who gets it. */
   recipient?: RecipientIR;
+  /**
+   * The fields the mail lists under its text and a call's record carries, in this order; "none"
+   * for the text alone (a call's record with its id only). Without it, the fields as the record
+   * page shows them (docs/design/outgoing-templates.md §2).
+   */
+  show?: string[] | "none";
+  /** For `<Model> changed`: what the changed fields among the sent ones were, before the change. */
+  previous?: boolean;
 }
 
 export type RecipientIR =

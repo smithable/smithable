@@ -23,9 +23,11 @@ pages:
       title: Give things a second home
       subtitle: Sell what you no longer use, and find what you need, from people nearby.
       button: Browse items
+      secondButton: Sell something
       image:
         src: images/hero.webp
         alt: An outdoor market with stalls of vegetables and flowers
         generated: true
     latest:
+      eyebrow: Near you
       title: Just in

@@ -4804,7 +4804,7 @@ async function aiMarkCheck(dir, base) {
   const sampled = samples.includes("generated: true");
   // Switched off by the owner (aiBadge: false), the theme hides every mark.
   if ((!gallery && !hero && !sampled) || /^aiBadge: false/m.test(ux)) return;
-  const veiled = /hero: \{[^}]*layout: (cover|centered)/.test(ux);
+  const veiled = /hero: \{[^}]*layout: (cover|centered|photo)/.test(ux);
   // The landing pages: the routes that use the kit's landing sections.
   const routes = [];
   const walk = (at, route) => {
