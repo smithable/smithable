@@ -13,6 +13,5 @@ export const FILE_DOCS: Record<EditableFile, string> = {
   "smithable.context.yml": `${SPEC_REFERENCE}#smithablecontextyml-how-the-app-is-built`,
 };
 
-/** The docs' answer on custom code: what it is for and that the file is the person's to keep. */
-export const CUSTOM_CODE_DOCS =
-  "https://docs.smithable.ai/faq.html#what-happens-when-the-spec-cannot-say-what-i-need";
+/** The docs on custom code: what it is for, how to write it, and that the file is the person's to keep. */
+export const CUSTOM_CODE_DOCS = "https://docs.smithable.ai/code.html";
