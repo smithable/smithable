@@ -40,8 +40,9 @@ export interface Recipient {
 export interface Happening {
   /** The entry's name in smithable.yml, e.g. bookingMade. */
   entry: string;
-  model: string;
-  record: number;
+  /** The record's model and id; none for a custom action's or custom code's mail. */
+  model: string | null;
+  record: number | null;
   subject: string;
   /** The content file's text, above the record. */
   text?: string;
@@ -142,8 +143,9 @@ export function queueMail(
 /** A call to a named target: the record as the API gives it, with what happened and when. */
 export interface Call {
   entry: string;
-  model: string;
-  record: number;
+  /** The record's model and id; none for a custom action's or custom code's call. */
+  model: string | null;
+  record: number | null;
   target: string;
   /** The JSON sent, and signed. */
   body: string;
@@ -218,7 +220,7 @@ export async function sendDue(now = Date.now()): Promise<number> {
       )
       .all();
     for (const mail of due) {
-      const about = { model: mail.model, record: mail.recordId };
+      const about = { model: mail.model ?? undefined, record: mail.recordId ?? undefined };
       try {
         await sendMail({
           to: mail.to,
@@ -302,7 +304,7 @@ async function sendCalls(now: number): Promise<number> {
     const settings = targetSettings(call.target);
     const url = process.env[settings.url];
     const secret = process.env[settings.secret];
-    const about = { model: call.model, record: call.recordId };
+    const about = { model: call.model ?? undefined, record: call.recordId ?? undefined };
     if (!url || !secret) {
       // The preview has no addresses for its connections (and no internet): the call is
       // skipped, once, and Activity says so. A published app waits for the settings instead.

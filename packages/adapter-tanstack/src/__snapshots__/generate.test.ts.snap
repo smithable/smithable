@@ -9874,8 +9874,9 @@ export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -9900,8 +9901,9 @@ export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),
@@ -11894,6 +11896,10 @@ import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
 
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = [] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** One column of the record with the id, inside the transaction. */
 function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
   if (value == null) return undefined;
@@ -11931,6 +11937,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     link: \`/appointments/\${r.id}\`,
   }),
 };
+
 
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
@@ -14997,6 +15004,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
   "kit: src/kit/slots.ts",
+  "kit: src/kit/tell.server.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
@@ -15069,7 +15077,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "1a0527ae generated",
+  "src/db/schema.ts": "90c30a3e generated",
   "src/db/seed.ts": "aeda6345 generated",
   "src/generated/access.test.ts": "5b7039fb generated",
   "src/generated/actions/cancel.server.ts": "2de134e2 generated",
@@ -15085,7 +15093,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "199beb1e generated",
-  "src/generated/outgoing.server.ts": "2f0e2785 generated",
+  "src/generated/outgoing.server.ts": "6e790541 generated",
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
@@ -15135,7 +15143,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "7b8ce12b kit",
+  "src/kit/outgoing.server.ts": "6838ea7e kit",
   "src/kit/outgoing.ts": "778b9552 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -15143,6 +15151,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/slots.ts": "911e04a7 kit",
+  "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -15471,8 +15480,9 @@ export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -15497,8 +15507,9 @@ export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),
@@ -20215,6 +20226,10 @@ import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server
 type Tx = Pick<typeof db, "select" | "insert" | "query">;
 type Row = Record<string, unknown>;
 
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = [] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** A session's name, read with what it needs (record-names.md); one in the trash is gone. */
 function sessionNamed(tx: Tx, id: number | null): string {
   if (id == null) return "—";
@@ -20261,6 +20276,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     link: \`/sessions/\${r.id}\`,
   }),
 };
+
 
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
@@ -26619,6 +26635,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
+  "kit: src/kit/tell.server.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
@@ -26723,7 +26740,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "6a2e62d7 generated",
+  "src/db/schema.ts": "5b764a9f generated",
   "src/db/seed.ts": "64b9d0a4 generated",
   "src/generated/access.test.ts": "55ac05e0 generated",
   "src/generated/actions/publish.server.ts": "ecb9a2f6 generated",
@@ -26748,7 +26765,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "e1a37127 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "7985fe8c generated",
+  "src/generated/outgoing.server.ts": "3541a8ea generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "ce740b8c generated",
@@ -26813,13 +26830,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "7b8ce12b kit",
+  "src/kit/outgoing.server.ts": "6838ea7e kit",
   "src/kit/outgoing.ts": "778b9552 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "a4d49d3f kit",
@@ -33061,8 +33079,9 @@ export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -33087,8 +33106,9 @@ export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),
@@ -37767,6 +37787,10 @@ import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
 
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = [] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** One column of the record with the id, inside the transaction. */
 function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
   if (value == null) return undefined;
@@ -37798,6 +37822,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     link: \`/invoices/\${r.id}\`,
   }),
 };
+
 
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
@@ -40186,6 +40211,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
+  "kit: src/kit/tell.server.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
@@ -40258,7 +40284,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "ddadc73d generated",
+  "src/db/schema.ts": "635f945d generated",
   "src/db/seed.ts": "9bacb9ab generated",
   "src/generated/access.test.ts": "d18de62d generated",
   "src/generated/actions/mark-overdue.server.ts": "a437fc92 generated",
@@ -40286,7 +40312,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "2d2c76c1 generated",
   "src/generated/invoice.ts": "b569c412 generated",
-  "src/generated/outgoing.server.ts": "4b29e5a5 generated",
+  "src/generated/outgoing.server.ts": "6e8755af generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -40337,13 +40363,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "7b8ce12b kit",
+  "src/kit/outgoing.server.ts": "6838ea7e kit",
   "src/kit/outgoing.ts": "778b9552 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "a4d49d3f kit",
@@ -40688,8 +40715,9 @@ export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -40714,8 +40742,9 @@ export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),
@@ -43860,6 +43889,10 @@ import { type Happening, queueCall, queueMail, type Recipient } from "#/kit/outg
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
 
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = ["kitchen"] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** The users that fit, with their addresses. */
 function people(tx: Tx, where: SQL): Recipient[] {
   return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
@@ -43911,6 +43944,7 @@ const SENT: Record<string, (row: Row) => Row> = {
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   }),
 };
+
 
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
@@ -47214,6 +47248,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
   "kit: src/kit/sequence.server.ts",
+  "kit: src/kit/tell.server.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
@@ -47284,7 +47319,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "1578ee4c generated",
+  "src/db/schema.ts": "4e6dc7c4 generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "ae254a9d generated",
   "src/generated/actions/accept.server.ts": "978806c7 generated",
@@ -47313,7 +47348,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "3bdf1e53 generated",
   "src/generated/order.ts": "4fdb55f6 generated",
-  "src/generated/outgoing.server.ts": "844b85db generated",
+  "src/generated/outgoing.server.ts": "a20d6ecd generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
@@ -47362,7 +47397,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "7b8ce12b kit",
+  "src/kit/outgoing.server.ts": "6838ea7e kit",
   "src/kit/outgoing.ts": "778b9552 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -47370,6 +47405,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
+  "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -66111,8 +66147,9 @@ export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -66137,8 +66174,9 @@ export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),
@@ -68875,6 +68913,10 @@ import { type Happening, queueMail, type Recipient, type Thread } from "#/kit/ou
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
 
+/** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
+export const TARGETS = [] as const;
+export type Target = (typeof TARGETS)[number];
+
 /** One column of the record with the id, inside the transaction. */
 function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn, value: unknown): unknown {
   if (value == null) return undefined;
@@ -68969,6 +69011,7 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     thread: thread(tx, "SupportCase", r.supportCaseId as number, process.env.INCOMING_SUPPORT_ADDRESS),
   }),
 };
+
 
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
@@ -72042,6 +72085,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
+  "kit: src/kit/tell.server.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
   "kit: src/kit/uploads.ts",
@@ -72107,7 +72151,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "2566c3ce generated",
+  "src/db/schema.ts": "d7ea4a26 generated",
   "src/db/seed.ts": "59920618 generated",
   "src/generated/access.test.ts": "caa1406d generated",
   "src/generated/actions/assign-to-me.server.ts": "6abf9eb9 generated",
@@ -72127,7 +72171,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "00275f2b generated",
   "src/generated/message.ts": "f4cafefa generated",
-  "src/generated/outgoing.server.ts": "d9f41429 generated",
+  "src/generated/outgoing.server.ts": "7981c349 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
@@ -72179,13 +72223,14 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "7b8ce12b kit",
+  "src/kit/outgoing.server.ts": "6838ea7e kit",
   "src/kit/outgoing.ts": "778b9552 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "a4d49d3f kit",

@@ -89,6 +89,19 @@ The coder is subject to the same AI policy as every model call: Claude Code coun
 
 `smithable ask` runs the coder by itself when its proposal adds a query. `smithable code hooks "email the customer when an order ships"` has it write a hook in `src/custom/hooks.ts`, what happens after a record is created, changed or deleted, or once a day; `ask` points there when a request describes such behaviour. The coder is asked to read only the project, edit only `src/custom/`, and run only the type check (Claude Code runs with `--permission-mode dontAsk` and path-scoped rules). It never runs the tests: they execute the code it wrote, so Smithable runs them itself afterwards. Be clear about the boundary: the coder is a program running with your privileges, and those rules are its tool's settings, not a sandbox. What Smithable guarantees is what gets committed: every changed file, ignored file and Git hook is checked, and so are the installed packages, build output and dev database, before any test runs (except the caches the preview's dev server writes, and Smithable's own snapshots and token log). A change anywhere else undoes everything: Git's undo, the hooks put back, build output removed, packages installed again, and a changed dev database named so it can be restored. A failing type check or test undoes everything too. The result is one commit that `smithable undo` reverts. Measured: "Prioritise customers most likely to churn on the dashboard" became a query, a dashboard tile and tested code for $0.45 with Sonnet.
 
+### Telling from your own code
+
+Code in `src/custom/` can tell someone through the same outbox the spec's `outgoing` entries use, so it gets the signing, the retries for a day, Activity's line and "Send again" without writing them:
+
+```ts
+import { tell, tellMail } from "#/kit/tell.server";
+
+await tell("crmFeed", { customer: id, merged: true }); // a target the spec's outgoing names (to: crmFeed)
+await tellMail("admin", "Customers merged", `#${keep} kept, #${duplicate} merged into it.`); // a role, or an address
+```
+
+The target must be one the spec's `outgoing` section calls (`to: crmFeed`), so where the app may call stays the administrator's; its address and secret are the settings `OUTGOING_CRMFEED_URL` and `OUTGOING_CRMFEED_SECRET`. A visitor's request (no one signed in) mails a role, never an address. For a call that needs its answer at once, use `fetch`. A custom action can also be told about without code: `outgoing: { customersMerged: { when: mergeCustomers, to: crmFeed } }` calls the target after the action returns, with its input and output.
+
 ## A language's first draft
 
 `smithable translate sv` (and **Draft them with the model** in Studio's Languages tab) gives the texts still empty in one of the app's other languages to the configured model in one request, and saves what comes back as one change: read them after, since a model's words are a first draft, and `smithable undo` takes them all back. The policy (below) says which model may do it.

@@ -37,7 +37,7 @@ actions:
     custom: true
     input:
       who: Custmer!                # expect: unknown-model
-      all: Customer[]              # expect: invalid-field
+      all: User[]                  # expect: invalid-field
       when: date = 2026-01-01      # expect: invalid-field
   Export:                          # expect: invalid-name
     custom: true

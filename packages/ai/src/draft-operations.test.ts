@@ -793,3 +793,52 @@ test("a drafted landing page keeps its footer last, and its sections get the ite
   expect(footerLast(files, done)).toBe(files);
   expect(done).toEqual([]);
 });
+
+test("the draft's assumptions come back whole, the first answer's, and never a broken one (smith-first.md §4)", async () => {
+  const steps = [
+    { op: "setApp", args: { name: "Tasks" } },
+    { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+    { op: "addPage", args: { page: "tasks", model: "Task" } },
+  ];
+  const provider = (answer: unknown): Provider => ({
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete() {
+      return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+    },
+  });
+  const draft = await draftProjectByOperations({
+    description: "a task list",
+    providers: [
+      provider({
+        operations: steps,
+        assumptions: [
+          {
+            part: "roles",
+            question: "Who signs in?",
+            chosen: " Your team ",
+            options: ["Only me", "Anyone", ""],
+          },
+          { part: "elsewhere", question: "Not a part", chosen: "x", options: [] },
+          { part: "visitors", question: "", chosen: "nothing", options: [] },
+        ],
+      }),
+    ],
+  });
+  if (draft.kind !== "draft") throw new Error("no draft");
+  expect(draft.assumptions).toEqual([
+    {
+      part: "roles",
+      question: "Who signs in?",
+      chosen: "Your team",
+      options: ["Only me", "Anyone"],
+    },
+  ]);
+  const none = await draftProjectByOperations({
+    description: "a task list",
+    providers: [provider({ operations: steps })],
+  });
+  expect(none.kind === "draft" && none.assumptions).toBeUndefined();
+});

@@ -9,7 +9,7 @@ Routine changes are made by deterministic generators, not by an AI rewriting cod
 - **[Getting started](start.md)**: in the browser [on smithable.ai](start-hosted.md), with nothing to install, or [on your own machine](start-local.md) with the command line and Studio, the visual editor.
 - **[Starters](starters.md)**: the ten apps to begin from, with pictures: a CRM, a booking site, invoicing, a marketplace, records, a status page, tasks and notes an AI assistant keeps, a support desk fed by mail, a food truck people order ahead from, and a barbershop booked by its barbers' time.
 - **[Why Smithable](why.md)**: what is different about changes, cost, ownership, security and where things run, with the measurements.
-- **[Questions and answers](faq.md)**: how it compares, what it can build today, hosting, data, contributing.
+- **[Questions and answers](why.md#questions-and-answers)**, at the end of Why Smithable: how it compares, what it can build today, hosting, data, contributing.
 - **How-tos:**
   - [Change an app without writing code](change.md): four changes and an undo through operations on the status starter.
   - [Buttons that change a record](actions.md): standard actions, from setting a field to copying a record with its lines.
