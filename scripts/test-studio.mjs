@@ -644,6 +644,8 @@ try {
         if ((await selects.nth(i).inputValue()) !== before[i])
           await selects.nth(i).selectOption(before[i]);
       await dialog.getByRole("button", { name: "Done" }).click();
+      // Code was shown in the view for the reason: back to No code.
+      await firstWindow("nocode");
       await sub("Behavior");
     },
   );
