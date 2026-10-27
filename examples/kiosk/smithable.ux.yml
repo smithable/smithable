@@ -11,6 +11,7 @@ tones:
 pages:
   where:
     sections:
+      hero: { layout: photo }          # the evening by the truck across the window, the text on a dark scrim
       stops: { band: muted }           # the week's stops apart from the hero; the cards read better than on the red
   orders:
     table:

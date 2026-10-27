@@ -15,6 +15,10 @@ pages:
     hero:
       title: Find the truck
       subtitle: Fish soup, salmon, burgers and cinnamon buns from a small truck that moves around Mariehamn during the week. Order ahead on the menu, tell us when you come, and pick up at the hatch. Or just walk up and order there.
+      image:
+        src: images/hero.webp
+        alt: People at tables under string lights by a food truck on a summer evening
+        generated: false
     stops:
       title: This week
 
