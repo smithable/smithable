@@ -1,6 +1,6 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with operations or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the ten also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck and the barbershop are made with `smithable new` on your own machine.
+A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the ten also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck and the barbershop are made with `smithable new` on your own machine.
 
 ## CRM
 
@@ -84,13 +84,13 @@ See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/statu
 ![The cases of the support starter, Harbour Support, with their unread messages](starters/support-1.webp)
 ![A case's conversation, with the reply box](starters/support-2.webp)
 
-For a small team that answers customers by mail. A mail to the support address becomes a case; the acknowledgement carries the case's number in its subject, and a reply to any of the case's mails joins it as a message, found by its headers or by that number. On a case's page its messages read as a conversation, the customer's on one side and the team's on the other, with a reply box that mails the customer from the page; the cases list counts each case's messages and marks those you have not read, with an Unread filter. A case has a priority from 1 to 5 and needs an assignee once it is in progress or closed; agents take a case or give it to a colleague, and the customer's address stays as it came. The mailbox is a setting: on smithable.ai you connect one, self-hosted your own receiver posts to `/incoming/support`.
+For a small team that answers customers by mail. A mail to the support address becomes a case; the acknowledgement carries the case's number in its subject, and a reply to any of the case's mails joins it as a message, matched by its mail headers or by that number. On a case's page its messages read as a conversation, the customer's on one side and the team's on the other, with a reply box that mails the customer from the page; the cases list counts each case's messages and marks those you have not read, with an Unread filter. A case has a priority from 1 to 5 and needs an assignee once it is in progress or closed; agents take a case or give it to a colleague, and the customer's email address cannot be changed. The mailbox is a setting: on smithable.ai you connect one; self-hosted, your own receiver posts each mail to `/incoming/support` ([mail and calls in](incoming.md)).
 
 ```sh
 smithable new my-support --starter support
 ```
 
-See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/support](https://smithable.ai/starters/support).
+See it live: coming soon.
 
 ## Food truck
 
@@ -144,7 +144,7 @@ See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/recor
 ![The tasks on the data page of the api starter, Team Tasks](starters/api-1.webp)
 ![Keys on the team page, with a call to copy](starters/api-2.webp)
 
-An app for programs and AI assistants, with no pages of its own: projects, tasks with a status, a due date and who they are for, and notes, all reached through the API and the tools for assistants at `/mcp`. Its only screens are the team page, where an administrator makes keys, and a data page for the team. A key with the `assistant` role reads everything, adds and changes tasks and notes, and deletes nothing; complete and reopen are standard actions. Nothing is public: an assistant's memory is private.
+An app for programs and AI assistants, with no public pages: projects, tasks with a status, a due date and who they are for, and notes, all reached through the API and the tools for assistants at `/mcp`. Its only screens are **Team**, where an administrator makes keys, and **Admin**, with every record. A key with the `assistant` role reads everything, adds and changes tasks and notes, and deletes nothing; complete and reopen are standard actions. Nothing is public: an assistant's memory is private.
 
 ```sh
 smithable new my-tasks --starter api

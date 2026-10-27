@@ -1,10 +1,10 @@
 # Where the pictures come from
 
-A new app has pictures from the start: the starters' sample records each have one, and `smithable new` gives an app a picture for its landing page and a logo. They come from the Smithable image library, served at `https://docs.smithable.ai/images/`, with its list of every picture in `https://docs.smithable.ai/images/index.json`. This page says where the library's pictures come from, what you may do with them, and how an app marks the ones an AI made.
+A new app has pictures from the start: the sample records of the starters that show pictures each have one, and `smithable new` gives an app a picture for its landing page and a logo. They come from the Smithable image library, served at `https://docs.smithable.ai/images/`, with its list of every picture in `https://docs.smithable.ai/images/index.json`. This page says where the library's pictures come from, what you may do with them, and how an app marks the ones an AI made.
 
 ## Pictures made with an AI
 
-Most of the library is made with an AI image model, for Smithable, each picture from a prompt kept in the library's own repository ([smithable/smithable-images](https://github.com/smithable/smithable-images)); none is copied from another site. Smithable waives whatever rights it has in them under CC0 1.0: use them, change them, or sell an app that shows them, with nothing to credit. Like any CC0 work they come without a warranty.
+Most pictures in the library were made for Smithable with an AI image model; the prompt for each is kept in the library's own repository ([smithable/smithable-images](https://github.com/smithable/smithable-images)); none is copied from another site. Smithable waives whatever rights it has in them under CC0 1.0: use them, change them, or sell an app that shows them, with nothing to credit. Like any CC0 work they come without a warranty.
 
 An app marks these pictures with a small "AI-generated" or "AI" badge where they could pass for photographs. The badge is on unless you switch it off (`aiBadge: false` in `smithable.ux.yml`, or `smithable op setAiBadge false`). Rules on labelling pictures an AI made differ from place to place; whether your audience needs the badge is your responsibility.
 
@@ -15,7 +15,7 @@ Some pictures are real photographs, released under CC0 or in the public domain, 
 - its page marks it CC0 or public domain, read again from Commons when the picture is fetched, never trusted from an earlier search;
 - its page carries no restriction notice (personality rights, trademarks, insignia).
 
-It is cut to 3:2, made smaller, and saved without its metadata. A real photograph carries no badge. An app that has one lists it, with its author and source, in `public/images/CREDITS.md`, a file for you and not shown in the app's pages. CC0 and public domain ask for no credit, but where a picture came from should be easy to find.
+It is cut to 3:2, made smaller, and saved without its metadata. A real photograph carries no badge. An app that uses a real photograph lists it, with its author and source, in `public/images/CREDITS.md`: a file for you, not linked from the app's pages (it is served like any file in `public/`). CC0 and public domain ask for no credit, but where a picture came from should be easy to find.
 
 A product's brand can still show in a photograph (a laptop's, a bike's, a record player's); CC0 covers the photograph, not the brand.
 

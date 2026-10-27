@@ -92,7 +92,7 @@ The theme lab is at http://localhost:4330 (the app at http://localhost:4331). A 
 
 The lab opens in the browser beside a real app: by default a booking app with a field for every kind of control. **App** at the top makes another starter's app in its place (a few seconds), so a theme is judged on the kind of app it is for; `--starter crm` starts with that one. On the left are the theme's fields, grouped as the file is. In the middle, one of the app's pages is shown at full size: the landing page, a list, its form or a record, each chosen by its tab, in light or in dark. The width buttons (phone 390, tablet 820, laptop 1280, desktop 1600) set the frame's width, and its edge drags to any width in between. The frame is scaled down only when the window is narrower than the width. **Phone beside** shows the phone's width next to it. At the bottom is the theme file itself as text. A change to a control or to the text shows in the frame at once, with no regeneration in between.
 
-- **Start from theme** picks any of the built-in themes or the project's own, then rename it.
+- **Start from theme** picks any of the built-in themes or the project's own, to rename and change.
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.
 - **Show the motion** plays the landing page once, with the theme's motion: `none`, `subtle` or `lively`.
 - Under the pages, a line for each look the app can ask for says whether the theme suits it ("flat cards on this background have no edge"), and the check's errors are shown in red.

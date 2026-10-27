@@ -104,7 +104,7 @@ The same list as CSV: add `.csv` to its address, with the same filters, `search`
 curl -s "https://status.example.com/api/v1/incidents.csv?status=resolved&sort=-detectedAt" -H "Authorization: Bearer $KEY" -o incidents.csv
 ```
 
-The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates and times ISO, a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's saves the chosen records; neither needs the API.
+The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates and times ISO, a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's Export CSV saves only the chosen records; neither needs the API.
 
 ### The trash
 
@@ -154,7 +154,7 @@ A refusal is a JSON problem (`application/problem+json`) in the app's own words,
 
 With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`.
 
-The tools are the same seven for every app, whatever its size:
+The tools are the same seven for every app (an eighth, `delete`, where the auth file allows it), whatever its size:
 
 | Tool | What it does |
 |---|---|

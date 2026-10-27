@@ -12,7 +12,7 @@ No. A generated app has no Smithable package at build time or run time; a test i
 
 ## Do I need an AI model?
 
-No. Everything in [Getting started on your own machine](start-local.md) works without one: starters, Studio, every operation, deploy, backup. A model adds two things: `smithable ask "<request>"`, which turns your words into operations, and `smithable new --describe`, which drafts an app from a sentence. You can run a local model with Ollama, a hosted model with your own key, or none. See [AI setup](../ai.md).
+No. Everything in [Getting started on your own machine](start-local.md) works without one: starters, Studio, every operation, deploy, backup. A model adds three things: `smithable ask "<request>"`, which turns your words into operations, `smithable new --describe`, which drafts an app from a sentence, and `smithable new --from <url>`, which drafts one from a web page. You can run a local model with Ollama, a hosted model with your own key, or none. See [AI setup](../ai.md).
 
 ## What does it cost to run?
 
@@ -20,23 +20,23 @@ The software is free and open source under Apache-2.0. Operations cost nothing. 
 
 ## Can I host it myself?
 
-Yes. `smithable deploy --target docker` runs the release checks and builds a container that keeps its data in a `/data` volume; `--target compose` writes a `compose.yaml`, and `ssh://user@host` deploys to a remote Docker host. `smithable backup` copies the database and uploads to a folder or an S3-compatible bucket, and `smithable restore` brings them back, to a point in time when continuous backup is on.
+Yes. `smithable deploy --target docker` runs the release checks and builds a container that keeps its data in a `/data` volume; `--target compose` writes a `compose.yaml`, and `--target ssh://user@host` deploys to a remote Docker host. `smithable backup` copies the database and the uploaded files to a folder or an S3-compatible bucket, and `smithable restore` brings them back, to a point in time when continuous backup is on.
 
 ## Is there a hosted version?
 
-We can run it, but it's all yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up; [ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
+Yes, and what you build stays yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up; [ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
 
 ## Where does my data live?
 
-On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its sub-processors, and a project that must keep its data and model calls in the EU says so with the `eu-only` policy. The hosted service's legal documents are drafts until the public beta and say exactly what is kept and for how long.
+On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its [sub-processors](https://smithable.ai/legal/sub-processors). An account is global unless its owner makes it an EU account (**Region** on the account page, [getting started](start-hosted.md)); an EU app keeps its data in the EU, and its AI at the level the app chooses. The hosted service's privacy notice and terms are drafts until the public beta; they will say what is kept and for how long.
 
 ## What can it build today?
 
-Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Seven starters show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget), a plain records app, a status page, and an app for programs and assistants. Not yet: payments, integrations with other systems, automatic flows ("when an order is placed, email the customer"), and rules across fields, which need a few lines of custom code for now.
+Business applications with records, relations, formulas, status workflows, roles and access rules, custom actions, dashboards, calendars, bookings with capacity, articles with pictures and Markdown, calculators, landing pages, invitations and user management; and marketplaces, with several pictures per record, filters and sorting on lists, favorites, "my" pages that show only your own records, and contacting a record's owner. Ten [starters](starters.md) show the range: a CRM, a booking site, an invoicing app, a marketplace (Torget), a plain records app, a status page, an app for programs and assistants, a support desk fed by mail, a food truck's orders and a barbershop's appointments. Not yet: payments, which need a few lines of custom code for now. An app already mails people and calls other systems when something happens ([mail and calls out](outgoing.md)) and takes mail and calls in ([mail and calls in](incoming.md)).
 
 ## Will search engines find my public pages?
 
-Yes, and nothing else. A public app also gets a privacy page written from itself (`legal: privacy`): who runs it, what it stores and why, cookies, mail, logs, your rights, in the app's language and true as the app changes; you fill in who you are. Every app answers `/robots.txt` from the auth file's `public` block: the public pages and their pictures are allowed, everything behind sign-in is refused, and with nothing public all of it is. With public pages the app also serves `/sitemap.xml`, listing them and a public blog's published posts with their dates, and robots.txt names it. Each page's tab says its name and the app's; a `description` under the page in `smithable.content.yml` is what a search engine shows under the link. Article pages carry Open Graph tags for links shared elsewhere.
+Yes, but only your public pages. A public app also gets a privacy page written from itself (`legal: privacy`): who runs it, what it stores and why, cookies, mail, logs, your rights, in the app's language and kept true as the app changes; you fill in who you are. Every app answers `/robots.txt` from the `public` block of `smithable.auth.yml`: the public pages and their pictures are allowed, everything behind sign-in is refused, and with no public pages, everything is. With public pages the app also serves `/sitemap.xml`, listing them and a public blog's published posts with their dates, and robots.txt names it. Each page's tab says its name and the app's; a `description` under the page in `smithable.content.yml` is what a search engine shows under the link. Article pages carry Open Graph tags for links shared elsewhere.
 
 ## What happens when the spec cannot say what I need?
 

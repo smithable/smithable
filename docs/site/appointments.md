@@ -56,7 +56,7 @@ In words: *"An appointment takes its barber's time"*. The start and the length a
 
 ## 3. What the app does
 
-- **The form** shows a strip of days from today and the chosen day's free times, every quarter hour (or the service's length, when shorter) where the whole appointment fits. The first day with a free time is chosen at first, so the earliest time is one tap away. Leave the barber empty for *anyone*: each time goes to the first barber free then, and choosing it fills in the barber.
+- **The form** shows a strip of days from today and the chosen day's free times, every quarter hour (or the service's length, when shorter) where the whole appointment fits. The form opens on the first day with a free time, so the earliest time is one tap away. Leave the barber empty for *anyone*: each time goes to the first barber free then, and choosing it fills in the barber.
 - **Never two at once.** The time is checked again where the appointment is saved, in the same transaction: outside the hours, in a break, while away, or over another appointment (with the gap after it), it is refused with the next free times that day. Two people taking the same time at once cannot both get it. Moving an appointment is checked the same way.
 - **The shop's day.** A calendar of appointments has a **Day** button beside Month: the day with a column for each barber.
 - **Tests.** The generated access test books a free time and sees the same time refused the second time.

@@ -1,6 +1,6 @@
 # Change an app without writing code
 
-Five changes to a status page, each one command. Every command here was run on a fresh app, and the output is what it printed. Each change checks itself, regenerates the code, migrates the database and commits a checkpoint, so `smithable undo` takes it back.
+Four changes to a status page and an undo, each one command. Every command here was run on a fresh app, and the output is what it printed. Each change is checked, regenerates the code, migrates the database and commits a checkpoint, so `smithable undo` takes it back.
 
 Start from the status starter:
 
@@ -68,8 +68,8 @@ Undid: Set the theme: primary #0f766e. The dev database is back as it was before
 Restart the dev server if it is running.
 ```
 
-Each change is a Git commit, so `git log` lists them, and `smithable undo` takes back the last one, database included. Run it again to go further back. `smithable undo --change <id>` takes back an earlier change by its id (from `git log`, or the X on a change in Studio) as a new change, as long as no later change depends on it: a page that shows a kind of record the change added, say, is named, and that later change is undone first. `--check` only tells you whether it is safe.
+Each change is a Git commit, so `git log` lists them, and `smithable undo` takes back the last one, database included. Run it again to go further back. `smithable undo --change <id>` takes back an earlier change by its id (from `git log`, or the X on a change in Studio) as a new change, as long as no later change depends on it. If one does (say, a page that shows a kind of record the change added), undo names that later change, and you undo it first. `smithable undo --change <id> --check` only tells you whether it is safe.
 
 ## In your own words
 
-The same changes can be asked for in a sentence. `smithable ask` shows the operation it would run and applies it with `--yes`; a wording rule understands many sentences without a model, and the rest go to the model you set up ([AI setup](../ai.md)). `smithable op` lists every operation, `smithable op <name> --help` explains one, and the [operations reference](operations.md) describes them all, with their arguments and an example.
+The same changes can be asked for in a sentence. `smithable ask` shows the operation it would run and applies it with `--yes`; built-in wording rules understand many sentences without a model, and the rest go to the model you set up ([AI setup](../ai.md)). `smithable op` lists every operation, `smithable op <name> --help` explains one, and the [operations reference](operations.md) describes them all, with their arguments and an example.
