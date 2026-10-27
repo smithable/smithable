@@ -1,5 +1,5 @@
 import { humanize } from "@smithable/core";
-import { describeChange, summarize } from "@smithable/index";
+import { describeChange, present, summarize } from "@smithable/index";
 import {
   lazy,
   Suspense,
@@ -10,7 +10,14 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { api, EXPECT_RELOAD, type Making as MakingState, type Project, waking } from "./api";
+import {
+  type Assumption,
+  api,
+  EXPECT_RELOAD,
+  type Making as MakingState,
+  type Project,
+  waking,
+} from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask } from "./builder/Ask";
@@ -355,6 +362,11 @@ export function App() {
   const spec = useSpec(project);
   shownIR.current = spec.ir;
   // The app in words, for Smith's "What does this app do?".
+  // Smith's presentation of the app (smith-first.md §3).
+  const parts = useMemo(
+    () => (spec.ir ? present(spec.ir, spec.auth, spec.content) : []),
+    [spec.ir, spec.auth, spec.content],
+  );
   const sections = useMemo(
     () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
     [spec],
@@ -587,10 +599,30 @@ export function App() {
   // an arrangement without him, shows the cards.
   const [guideLine, setGuideLine] = useState<GuideLine>();
   const smithSays = !narrow && slotOf("smith") !== undefined;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up
+  // What the draft assumed (smith-first.md §4), kept from the making for Smith to ask at its
+  // part, for the browser tab's session.
+  const [assumptions, setAssumptions] = useState<Assumption[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("smithable:assumptions") ?? "[]") as Assumption[];
+    } catch {
+      return [];
+    }
+  });
+  const madeAssumptions = project?.making?.assumptions;
   useEffect(() => {
-    if (firstVisit && previewUp) startGuide();
-  }, [firstVisit, previewUp]);
+    if (!madeAssumptions?.length) return;
+    setAssumptions(madeAssumptions);
+    try {
+      sessionStorage.setItem("smithable:assumptions", JSON.stringify(madeAssumptions));
+    } catch {}
+  }, [madeAssumptions]);
+  // A new project: Smith presents it first, then the guide (smith-first.md §2), once the
+  // preview is up.
+  const [presented, setPresented] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up and Smith has presented
+  useEffect(() => {
+    if (firstVisit && previewUp && (presented || !smithSays)) startGuide();
+  }, [firstVisit, previewUp, presented]);
 
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   return (
@@ -1009,15 +1041,19 @@ export function App() {
                     </Suspense>
                   ) : w === "smith" ? (
                     <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
-                      <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
+                      <div data-guide="change" className="flex h-full min-h-0 flex-col">
                         <Ask
                           guide={guiding ? guideLine : undefined}
+                          presentFirst={Boolean(firstVisit)}
+                          assumptions={assumptions}
+                          onPresented={() => setPresented(true)}
                           {...(project.beta ? { beta: project.beta } : {})}
                           words={words}
                           waiting={project.waiting}
                           trace={project.trace}
                           ready={{
                             sections,
+                            parts,
                             appName: project.name,
                             notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
                             ...(project.home ? { home: project.home } : {}),
