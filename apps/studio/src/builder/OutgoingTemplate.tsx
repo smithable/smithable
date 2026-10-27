@@ -22,7 +22,9 @@ const sendable = (f: FieldIR) => !f.formula && !notSendable(f);
 function records(samples: Record<string, string>, model: string): Record<string, unknown>[] {
   try {
     const list = parse(samples[model] ?? "");
-    return Array.isArray(list) ? list : [];
+    return Array.isArray(list)
+      ? list.filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === "object")
+      : [];
   } catch {
     return [];
   }
@@ -85,7 +87,11 @@ export function OutgoingTemplate({
     if (path === "link") return "https://your-app.example/…";
     if (path === "by") return "Sam Sample";
     const [first = "", second] = path.split(".");
-    if (first === "before") return shown(sample[second ?? ""]);
+    // A sample has one state: the value before a change is marked as such, not made up.
+    if (first === "before") {
+      const before = shown(sample[second ?? ""]);
+      return before === undefined ? undefined : `${before} (before)`;
+    }
     const v = sample[first];
     if (second === undefined) return shown(v);
     const type = model.fields.find((x) => x.name === first)?.type;
@@ -185,6 +191,7 @@ export function OutgoingTemplate({
           <p className="font-medium">Preview, from the first sample {model.name.toLowerCase()}</p>
           <div className="space-y-2 rounded-md border border-line bg-panel p-2 whitespace-pre-wrap">
             <p className="font-semibold">
+              {/* A subject is one line: a value's newlines become spaces. */}
               {fillText(words.subject ?? `${humanize(model.name)}: {title}`, value, true)}
             </p>
             {words.text && <p>{fillText(words.text, value)}</p>}

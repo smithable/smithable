@@ -302,6 +302,7 @@ export function NoCode({
               path[0] === "outgoing" &&
               typeof path[1] === "string" ? (
                 <OutgoingTemplate
+                  key={path[1]}
                   entry={path[1]}
                   ir={spec.ir}
                   contentText={project.files.content}
