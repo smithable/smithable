@@ -1249,6 +1249,44 @@ try {
       );
       await pick("Smith");
       await page.getByLabel("Describe a change").waitFor();
+      // A swipe anywhere in a window moves the row (A 173–174): Smith's thread to the preview,
+      // and back from the preview's toolbar; a finger, not a mouse.
+      const swipe = async (selector, by) =>
+        page.evaluate(
+          ({ selector, by }) => {
+            const element = document.querySelector(selector);
+            const box = element.getBoundingClientRect();
+            const y = box.top + box.height / 2;
+            const x = box.left + box.width / 2;
+            const at = (type, dx) =>
+              element.dispatchEvent(
+                new PointerEvent(type, {
+                  bubbles: true,
+                  pointerType: "touch",
+                  isPrimary: true,
+                  clientX: x + dx,
+                  clientY: y,
+                }),
+              );
+            at("pointerdown", 0);
+            for (let i = 1; i <= 10; i++) at("pointermove", (by * i) / 10);
+            at("pointerup", by);
+          },
+          { selector, by },
+        );
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
+      // Smith's window has Smith and Changes: a swipe in it goes to Changes first, then on.
+      await swipe('[data-guide="change"]', -400);
+      await page.getByRole("tab", { name: "Changes", exact: true, selected: true }).waitFor();
+      await swipe('[data-guide="changes"]', -400);
+      await page
+        .getByRole("radio", { name: "Preview", exact: true, checked: true })
+        .waitFor({ state: "attached" });
+      await swipe('[aria-label="Preview address"]', 400);
+      await page
+        .getByRole("radio", { name: "Smith", exact: true, checked: true })
+        .waitFor({ state: "attached" });
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
       // Changes is under Smith on a phone: its tab beside his.
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();

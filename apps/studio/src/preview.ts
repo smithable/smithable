@@ -19,6 +19,8 @@ export type PreviewMessage =
   | { type: "text"; path: string; text: string }
   /** Ctrl+Z in the preview, outside a text field. */
   | { type: "undo" }
+  /** A sideways swipe over the page where nothing scrolls sideways (a phone, A 174): 1 the next window. */
+  | { type: "swipe"; direction: 1 | -1 }
   /** The page loaded without its stylesheet (the theme's variables are missing). */
   | { type: "unstyled" };
 
