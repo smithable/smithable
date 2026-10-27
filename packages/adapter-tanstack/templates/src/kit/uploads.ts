@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { dataDir, ownDataDir } from "./visitor";
 import { w } from "./words";
 
 /** What a picture field stores: the file under uploads/, its description, and its size. */
@@ -31,7 +32,17 @@ export const PICTURE_MAX_BYTES = 1_000_000;
 /** The longest side a browser scales a picture to before sending it. */
 export const PICTURE_MAX_SIDE = 1600;
 
-const uploadsDir = () => join(process.env.DATA_DIR ?? "data", "uploads");
+/** Where files are written: the app's uploads, or in a demo the visitor's own (src/kit/visitor.ts). */
+const uploadsDir = () => join(ownDataDir(), "uploads");
+/** Where a stored file is: the visitor's own in a demo, else the app's (the seed's pictures). */
+const storedPath = (file: string) => {
+  const own = join(uploadsDir(), file);
+  return existsSync(own) ? own : join(dataDir, "uploads", file);
+};
+
+/** A stored picture's and document's name under uploads/: nothing that leads out of it. */
+const PICTURE_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.webp$/;
+const STORED_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/;
 
 /** Refused pictures say why in words the form shows. */
 export class BadPicture extends Error {}
@@ -71,14 +82,16 @@ export function savePicture(model: string, bytes: Uint8Array, alt: string): Pict
 
 /** The file of a stored picture, or undefined when it is gone. */
 export function readPicture(picture: Picture): Buffer | undefined {
-  if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.webp$/.test(picture.file)) return undefined;
-  const path = join(uploadsDir(), picture.file);
+  if (!PICTURE_FILE.test(picture.file)) return undefined;
+  const path = storedPath(picture.file);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 
 /** Removes a picture's file, unless `stillUsed` says another record keeps it. */
 export function deletePicture(picture: Picture | null | undefined, stillUsed: boolean): void {
-  if (!picture || stillUsed || !readPicture(picture)) return;
+  // Only a file of the app's (or the visitor's) own: a demo never deletes the seed's.
+  if (!picture || stillUsed || !PICTURE_FILE.test(picture.file)) return;
+  if (!existsSync(join(uploadsDir(), picture.file))) return;
   unlinkSync(join(uploadsDir(), picture.file));
 }
 
@@ -215,9 +228,10 @@ export function fileKind(
 }
 
 /** All stored pictures and documents together, in bytes: counted at most once a minute. */
-let counted: { bytes: number; at: number } | undefined;
+const counted = new Map<string, { bytes: number; at: number }>();
 function storedBytes(): number {
-  if (counted && Date.now() - counted.at < 60_000) return counted.bytes;
+  const kept = counted.get(uploadsDir());
+  if (kept && Date.now() - kept.at < 60_000) return kept.bytes;
   let bytes = 0;
   const walk = (dir: string) => {
     if (!existsSync(dir)) return;
@@ -226,7 +240,7 @@ function storedBytes(): number {
       else bytes += statSync(join(dir, entry.name)).size;
   };
   walk(uploadsDir());
-  counted = { bytes, at: Date.now() };
+  counted.set(uploadsDir(), { bytes, at: Date.now() });
   return bytes;
 }
 
@@ -239,7 +253,8 @@ export function roomFor(bytes: number): boolean {
   const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
   if (!max) return true;
   if (storedBytes() + bytes > max) return false;
-  if (counted) counted.bytes += bytes;
+  const kept = counted.get(uploadsDir());
+  if (kept) kept.bytes += bytes;
   return true;
 }
 
@@ -278,14 +293,15 @@ export async function scanned(bytes: Uint8Array): Promise<void> {
 
 /** The bytes of a stored document, or undefined when it is gone. */
 export function readFile(stored: StoredFile): Buffer | undefined {
-  if (!/^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/.test(stored.file)) return undefined;
-  const path = join(uploadsDir(), stored.file);
+  if (!STORED_FILE.test(stored.file)) return undefined;
+  const path = storedPath(stored.file);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 
 /** Removes a document's file, unless `stillUsed` says another record keeps it. */
 export function deleteFile(stored: StoredFile | null | undefined, stillUsed: boolean): void {
-  if (!stored || stillUsed || !readFile(stored)) return;
+  if (!stored || stillUsed || !STORED_FILE.test(stored.file)) return;
+  if (!existsSync(join(uploadsDir(), stored.file))) return;
   unlinkSync(join(uploadsDir(), stored.file));
 }
 

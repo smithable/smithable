@@ -501,6 +501,8 @@ export interface CustomActionIR extends ActionBase {
   custom: true;
   input: FieldIR[];
   output?: FieldIR[];
+  /** The one list of records among the inputs, when there is one: the action runs on the rows picked. */
+  rows?: { field: string; model: string };
 }
 
 /** Changes one record of `on`, offered and allowed only when `when` fits it. */

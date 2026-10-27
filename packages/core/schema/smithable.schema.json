@@ -914,7 +914,7 @@
             },
             "additionalProperties": {
               "type": "string",
-              "description": "Field shorthand, e.g. \"Customer!\" or \"int\"."
+              "description": "Field shorthand, e.g. \"Customer!\" or \"int\"; one input may be a list of records, \"Customer[]\", the rows the action runs on."
             },
             "description": "The values the action needs."
           },

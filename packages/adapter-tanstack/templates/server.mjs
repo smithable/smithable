@@ -2,6 +2,8 @@
 // built files and the app, and gives every response the security headers and a cache rule (the
 // hashed build files kept a year, pages never); pages also get a Content Security Policy from
 // the root route (src/kit/security.ts).
+import { AsyncLocalStorage } from "node:async_hooks";
+import { randomUUID } from "node:crypto";
 import { serve } from "srvx";
 import { staticMiddleware } from "srvx/static";
 import app from "./dist/server/server.js";
@@ -17,6 +19,20 @@ const HEADERS = {
 };
 
 const TRUST_PROXY = process.env.TRUST_PROXY === "1";
+
+/**
+ * A demo (DEMO_VISITORS=1): each visitor works on a copy of the app's data of their own
+ * (src/kit/visitor.ts), named by a cookie set on their first request. The request runs as its
+ * visitor, which the database, the uploads and the outbox read through this shared store.
+ */
+const VISITOR = process.env.DEMO_VISITORS === "1" ? new AsyncLocalStorage() : undefined;
+if (VISITOR) globalThis[Symbol.for("app.visitor")] = VISITOR;
+const VISITOR_COOKIE = "demo_visitor";
+function visitorOf(request) {
+  const cookie = request.headers.get("cookie") ?? "";
+  const id = new RegExp(`(?:^|;\\s*)${VISITOR_COOKIE}=([0-9a-f-]{36})(?:;|$)`).exec(cookie)?.[1];
+  return id ? { id, fresh: false } : { id: randomUUID(), fresh: true };
+}
 
 /**
  * A limit per address of `burst` changes, then one a second, for at most `size` addresses: one
@@ -52,14 +68,24 @@ function rateLimiter(burst, size) {
  */
 const limited = rateLimiter(60, 10_000);
 
+/**
+ * A demo's new visitors per address (each a copy of the database): a burst of 20, then one a
+ * second, so a client that never sends its cookie back cannot make copies without end.
+ */
+const newVisitors = rateLimiter(20, 10_000);
+
 function allowed(request) {
   if (request.method === "GET" || request.method === "HEAD") return true;
+  return limited(addressOf(request));
+}
+
+function addressOf(request) {
   // Only behind a proxy that says who the visitor is (TRUST_PROXY=1, e.g. the hosted service)
   // is X-Forwarded-For believed, and then only its last hop, the one that proxy added; anyone
   // else could send a new address with every request.
   const forwarded =
     TRUST_PROXY && request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  return limited(forwarded || request.ip || "");
+  return forwarded || request.ip || "";
 }
 
 /**
@@ -113,7 +139,19 @@ serve({
           // The body was not read: the connection closes, so no unread bytes meet the next request.
           { status: refused, headers: { ...HEADERS, Connection: "close" } },
         );
-      const response = await next();
+      // A demo's request runs as its visitor; a new one gets their cookie with the answer.
+      const guest = VISITOR && visitorOf(request);
+      if (guest?.fresh && !newVisitors(addressOf(request)))
+        return new Response("Too many new visitors; try again in a moment.", {
+          status: 429,
+          headers: { "Retry-After": "5", ...HEADERS },
+        });
+      const response = guest ? await VISITOR.run(guest.id, next) : await next();
+      if (guest?.fresh)
+        response.headers.append(
+          "Set-Cookie",
+          `${VISITOR_COOKIE}=${guest.id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${overHttps(request) ? "; Secure" : ""}`,
+        );
       for (const [name, value] of Object.entries(HEADERS))
         if (!response.headers.has(name)) response.headers.set(name, value);
       // Reached over https (or, behind a trusted proxy, its visitor was): the browser keeps to

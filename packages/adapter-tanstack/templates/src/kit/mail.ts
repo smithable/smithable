@@ -10,6 +10,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
 import { log } from "./log.server";
+import { ownDataDir } from "./visitor";
 
 export interface Mail {
   to: string | string[];
@@ -24,8 +25,8 @@ export interface Mail {
   references?: string;
 }
 
-/** Where mails go without SMTP settings. */
-export const OUTBOX = join(process.env.DATA_DIR ?? "data", "mail", "outbox");
+/** Where mails go without SMTP settings: in a demo, the visitor's own (src/kit/visitor.ts). */
+const outboxDir = () => join(ownDataDir(), "mail", "outbox");
 
 function smtp() {
   const env = process.env;
@@ -66,15 +67,15 @@ export async function sendMail(mail: Mail): Promise<void> {
   }
   const transport = createTransport({ streamTransport: true, buffer: true, newline: "unix" });
   const info = await transport.sendMail(message);
-  mkdirSync(OUTBOX, { recursive: true });
+  mkdirSync(outboxDir(), { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const id = String(info.messageId)
     .replace(/[^\w.-]/g, "")
     .slice(0, 40);
-  writeFileSync(join(OUTBOX, `${stamp}-${id}.eml`), info.message as Buffer);
+  writeFileSync(join(outboxDir(), `${stamp}-${id}.eml`), info.message as Buffer);
   if (process.env.NODE_ENV === "production")
     log.warn("A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)", {
-      kept: OUTBOX,
+      kept: outboxDir(),
     });
 }
 
@@ -91,14 +92,14 @@ export function outbox(): {
 }[] {
   let files: string[];
   try {
-    files = readdirSync(OUTBOX)
+    files = readdirSync(outboxDir())
       .filter((f) => f.endsWith(".eml"))
       .sort();
   } catch {
     return [];
   }
   return files.map((file) => {
-    const raw = readFileSync(join(OUTBOX, file), "utf8");
+    const raw = readFileSync(join(outboxDir(), file), "utf8");
     const at = raw.indexOf("\n\n");
     const headers = raw.slice(0, at);
     const header = (name: string) =>

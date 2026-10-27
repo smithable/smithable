@@ -6,6 +6,7 @@ import { CircleAlert, CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
 import { AppLink } from "./AppLink";
+import { textMarker } from "./model";
 import { w } from "./words";
 
 export interface Places {
@@ -41,6 +42,7 @@ export function Reserve({
   cancelLabel = w.cancelBooking,
   fullLabel = w.full,
   bookedLabel = w.youAreBooked,
+  texts,
   timeZone,
 }: {
   /** The record whose places these are (the session). */
@@ -53,6 +55,8 @@ export function Reserve({
   cancelLabel?: string;
   fullLabel?: string;
   bookedLabel?: string;
+  /** Where the labels are in the content file, for the preview's Select (models.<Model>.reserve). */
+  texts?: string;
   /** The app's time zone, for the deadlines. */
   timeZone?: string;
 }) {
@@ -101,17 +105,18 @@ export function Reserve({
   const bookingClosed = past(places.closesAt);
   const cancellingClosed = past(places.cancelUntilAt);
   const note = (text: string) => <p className="text-sm text-muted-foreground">{text}</p>;
+  const mark = (key: string) => (texts ? textMarker(`${texts}.${key}`) : {});
 
   return (
     <div data-kit="reserve" className="space-y-3">
       <p className="font-semibold tabular-nums">
-        {full ? fullLabel : w.placesLeft(places.left, places.max)}
+        {full ? <span {...mark("full")}>{fullLabel}</span> : w.placesLeft(places.left, places.max)}
       </p>
       {places.mine !== undefined ? (
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-success">
             <CircleCheck aria-hidden className="size-5 shrink-0" />
-            {bookedLabel}
+            <span {...mark("booked")}>{bookedLabel}</span>
           </p>
           {cancellingClosed && places.cancelUntilAt ? (
             note(w.cancellingClosedAt(deadline(places.cancelUntilAt, timeZone)))
@@ -138,7 +143,7 @@ export function Reserve({
           ) : (
             <>
               <Button type="button" variant="outline" onClick={() => setAsking(true)}>
-                {cancelLabel}
+                <span {...mark("cancel")}>{cancelLabel}</span>
               </Button>
               {places.cancelUntilAt &&
                 note(w.cancelUntil(deadline(places.cancelUntilAt, timeZone)))}
@@ -157,7 +162,7 @@ export function Reserve({
       ) : places.canBook && !full ? (
         <>
           <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
-            {busy ? w.booking : bookLabel}
+            {busy ? w.booking : <span {...mark("book")}>{bookLabel}</span>}
           </Button>
           {places.closesAt && note(w.bookUntil(deadline(places.closesAt, timeZone)))}
         </>

@@ -1,6 +1,6 @@
 import { EDITABLE_FILES, type EditableFile } from "@smithable/core";
 import { expect, test } from "vitest";
-import faq from "../../../docs/site/faq.md?raw";
+import code from "../../../docs/site/code.md?raw";
 import reference from "../../../docs/spec/v0.1.md?raw";
 import { CUSTOM_CODE_DOCS, FILE_DOCS } from "./docs";
 
@@ -22,8 +22,8 @@ test("each file's docs link lands on a heading of the spec reference", () => {
   expect(missing).toEqual([]);
 });
 
-test("the custom-code line's link lands on the FAQ's answer", () => {
-  const anchors = [...faq.matchAll(/^#{1,6} (.+)$/gm)].map((m) => slug(m[1] ?? ""));
-  expect(CUSTOM_CODE_DOCS.startsWith("https://docs.smithable.ai/faq.html#")).toBe(true);
-  expect(anchors).toContain(CUSTOM_CODE_DOCS.split("#")[1]);
+test("the custom-code line's link lands on Your own code", () => {
+  expect(CUSTOM_CODE_DOCS).toBe("https://docs.smithable.ai/code.html");
+  expect(code).toMatch(/^# Your own code\n/);
+  expect(code).toContain("never overwrites `src/custom/`");
 });

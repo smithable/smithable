@@ -48,6 +48,15 @@ const fieldsSchema: JsonSchema = {
     description: 'Field shorthand, e.g. "Customer!" or "int".',
   },
 };
+/** The input's fields: as the output's, and one of them may be a list of records. */
+const inputSchema: JsonSchema = {
+  ...fieldsSchema,
+  additionalProperties: {
+    type: "string",
+    description:
+      'Field shorthand, e.g. "Customer!" or "int"; one input may be a list of records, "Customer[]", the rows the action runs on.',
+  },
+};
 
 /**
  * Actions: operations of the application beyond create, edit and delete. A custom action
@@ -115,7 +124,7 @@ export const actionsSection: SpecSection<"actions"> = {
           items: { type: "string" },
           description: "Lists of the model whose records a copy takes along, e.g. [lines].",
         },
-        input: { ...fieldsSchema, description: "The values the action needs." },
+        input: { ...inputSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
         allow: {
           type: "array",
@@ -327,11 +336,17 @@ function readAction(
   }
   const input = byKey.get("input");
   const output = byKey.get("output");
+  const inputs = input ? readFields(ctx, input, `the input of ${where}`, "one") : [];
+  // The one list of records among the inputs: the action runs on the rows picked (A 171).
+  const list = inputs.find((f) => f.type.kind === "relation" && f.type.many);
   return {
     ...common,
     custom: true,
-    input: input ? readFields(ctx, input, `the input of ${where}`) : [],
-    ...(output ? { output: readFields(ctx, output, `the output of ${where}`) } : {}),
+    input: inputs,
+    ...(output ? { output: readFields(ctx, output, `the output of ${where}`, "none") } : {}),
+    ...(list && list.type.kind === "relation"
+      ? { rows: { field: list.name, model: list.type.model } }
+      : {}),
   };
 }
 
@@ -734,8 +749,19 @@ function readValues(
 }
 
 /** Input or output fields: shorthand only; no lists, no defaults. */
-function readFields(ctx: ParseContext, entry: Entry, where: string): FieldIR[] {
+/**
+ * The fields of an action's input or output. An input may hold one list of records
+ * (`Customer[]`, always required, never of users): the rows the action runs on, picked in a
+ * list (docs/design/actions.md); an output holds no list.
+ */
+function readFields(
+  ctx: ParseContext,
+  entry: Entry,
+  where: string,
+  lists: "one" | "none",
+): FieldIR[] {
   const fields: FieldIR[] = [];
+  let list: string | undefined;
   for (const { key, keyNode, value } of mapEntries(ctx, entry.value, where) ?? []) {
     if (!FIELD_NAME_PATTERN.test(key)) {
       ctx.error(
@@ -757,12 +783,19 @@ function readFields(ctx: ParseContext, entry: Entry, where: string): FieldIR[] {
     }
     const { type, required, unique, defaultText } = parsed.value;
     if (type.kind === "relation" && type.many) {
-      ctx.error(
-        value,
-        "invalid-field",
-        `"${key}" in ${where}: a list of records cannot be an input or output.`,
-      );
-      continue;
+      const problem =
+        lists === "none"
+          ? "a list of records cannot be an output."
+          : type.model === USER_MODEL
+            ? "a list of users is not an input; a list of records is (Customer[])."
+            : list !== undefined
+              ? `one list of records at most; "${list}" is already it.`
+              : undefined;
+      if (problem) {
+        ctx.error(value, "invalid-field", `"${key}" in ${where}: ${problem}`);
+        continue;
+      }
+      list = key;
     }
     if (unique || defaultText !== undefined) {
       ctx.error(
@@ -773,7 +806,9 @@ function readFields(ctx: ParseContext, entry: Entry, where: string): FieldIR[] {
       continue;
     }
     if (type.kind === "relation") ctx.reference("model", type.model, value);
-    fields.push({ name: key, type, required: required || type.kind === "choice", unique: false });
+    // A list of records is always required: it is the rows the action runs on.
+    const must = required || type.kind === "choice" || (type.kind === "relation" && type.many);
+    fields.push({ name: key, type, required: must, unique: false });
   }
   return fields;
 }

@@ -41,7 +41,13 @@ export function zodFor(field: FieldIR): string {
   let schema: string;
   if (field.type.kind === "choice") schema = `z.enum(${literal(field.type.values)})`;
   else if (field.type.kind === "relation")
-    schema = field.type.model === USER_MODEL ? "z.string()" : "z.number().int()";
+    schema =
+      field.type.model === USER_MODEL
+        ? "z.string()"
+        : field.type.many
+          ? // The rows picked, each once.
+            "z.array(z.number().int()).min(1).transform((ids) => [...new Set(ids)])"
+          : "z.number().int()";
   else {
     switch (field.type.name) {
       case "int":
@@ -192,9 +198,10 @@ export const ${action.name} = createServerFn({ method: "POST" })
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
 ${records
-  .map(
-    (f, i) =>
-      `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
+  .map((f, i) =>
+    f.type.kind === "relation" && f.type.many
+      ? `    if (!data.${f.name}.every((id) => ${readers[i]?.data}.canRead(viewer, id))) throw new AccessDenied(true);\n`
+      : `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
   )
   .join(
     "",
