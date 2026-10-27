@@ -1,6 +1,7 @@
-// The Studio guide (docs/design/studio-guide.md): a card beside each place, in order, with Next
-// and Skip; the rest of the screen dims and takes no clicks while it runs. A stop whose place is
-// not on the screen is left out, except the preview, which is brought on screen (onStop).
+// The Studio guide (docs/design/studio-guide.md): each place lit in order, and what it is said
+// by Smith in his thread with Next and Skip as chips (smith-first.md §7, `asLine`); on a phone,
+// or with Smith off screen, a card beside the place, the rest of the screen dimmed. A stop whose
+// place is not on the screen is left out, except the preview, which is brought on screen (onStop).
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { doneKey, type Stop } from "./guide";
 import { Button } from "./ui";
@@ -39,21 +40,30 @@ function cardAt(box: DOMRect): { top: number; left: number } {
   };
 }
 
+/** A stop as Smith says it: its words, where it is in the tour, and the chips' actions. */
+export interface GuideLine {
+  stop: Stop;
+  at: number;
+  count: number;
+  next: () => void;
+  end: () => void;
+}
+
 export function Guide({
   app,
   stops: tour,
   onEnd,
-  onCode,
   onStop,
+  asLine,
 }: {
   app: string;
-  /** The tour of the mode it was started in (guide.ts). */
+  /** The tour of the view's open sub-tab (guide.ts). */
   stops: Stop[];
   onEnd: () => void;
-  /** A choice stop's Code: Studio switches to Code mode (remembered) and its tour follows. */
-  onCode: () => void;
   /** Each stop as it opens, so a place that is not shown (the preview) can be. */
   onStop?: (anchor: string) => void;
+  /** Smith says the stops (his thread shows the line); none for the cards. */
+  asLine?: (line: GuideLine | undefined) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // Found once the tour's mode is on the screen: after the render that may have just switched to
@@ -72,6 +82,7 @@ export function Guide({
       // Without storage the tour may show again next time; nothing else depends on it.
     }
     dialog.current?.close();
+    asLine?.(undefined);
     (before.current as HTMLElement | null)?.focus?.();
     onEnd();
   };
@@ -90,7 +101,7 @@ export function Guide({
       }
       if (found.length === 0) return end();
       setStops(found);
-      if (!dialog.current?.open) dialog.current?.showModal();
+      if (!asLine && !dialog.current?.open) dialog.current?.showModal();
     };
     let timer: ReturnType<typeof setTimeout> | undefined;
     look();
@@ -116,6 +127,39 @@ export function Guide({
   }, [current]);
 
   const last = at === stops.length - 1;
+  // Smith's line for the stop, with its chips; Esc ends the tour as on a card.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each stop once, as it opens
+  useEffect(() => {
+    if (!asLine || !current) return;
+    asLine({
+      stop: current.stop,
+      at,
+      count: stops.length,
+      next: () => (last ? end() : setAt(at + 1)),
+      end,
+    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") end();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current, asLine]);
+  if (asLine)
+    return box ? (
+      // The place lit, nothing dimmed: the person reads Smith's line beside it and may go on
+      // working.
+      <div
+        aria-hidden
+        data-guide-lit={current?.stop.anchor}
+        className="pointer-events-none fixed z-30 rounded-md ring-2 ring-accent"
+        style={{
+          top: box.top - 4,
+          left: box.left - 4,
+          width: box.width + 8,
+          height: box.height + 8,
+        }}
+      />
+    ) : null;
   const position = box && cardAt(box);
   return (
     <dialog
@@ -165,40 +209,20 @@ export function Guide({
           <p id="guide-text" className="text-sm text-fg-soft">
             {current.stop.text}
           </p>
-          {current.stop.choice ? (
-            // How the person wants to work: No code goes on with the tour, Code switches to it, and
-            // Skip guide ends it here (in the mode Studio is in).
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" className="mr-auto" onClick={end}>
-                Skip guide
+          <div className="flex justify-end gap-2">
+            {!last && (
+              <Button variant="ghost" onClick={end}>
+                Skip
               </Button>
-              <Button variant="ghost" onClick={onCode}>
-                Code
-              </Button>
-              <Button
-                // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
-                autoFocus
-                onClick={() => setAt(at + 1)}
-              >
-                No code
-              </Button>
-            </div>
-          ) : (
-            <div className="flex justify-end gap-2">
-              {!last && (
-                <Button variant="ghost" onClick={end}>
-                  Skip
-                </Button>
-              )}
-              <Button
-                // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
-                autoFocus
-                onClick={() => (last ? end() : setAt(at + 1))}
-              >
-                {last ? "Done" : "Next"}
-              </Button>
-            </div>
-          )}
+            )}
+            <Button
+              // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
+              autoFocus
+              onClick={() => (last ? end() : setAt(at + 1))}
+            >
+              {last ? "Done" : "Next"}
+            </Button>
+          </div>
         </section>
       )}
     </dialog>

@@ -115,7 +115,7 @@ pages:
   home:
     route: /
     landing:
-      hero: { button: schedule, shortcuts: [schedule, blog] }   # round links over the picture's edge
+      hero: { button: schedule, secondButton: blog, shortcuts: [schedule, blog] }   # round links over the picture's edge
       classes: { records: ClassType }
       estimate:                         # does a monthly pass pay off? Worked out as you type
         calculator:

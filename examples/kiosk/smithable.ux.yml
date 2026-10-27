@@ -3,11 +3,16 @@ smithableUx: 0.1
 
 theme:
   preset: street-food
+  brand: { primary: "#b0402f", background: "#e8a33d" }   # the red a notch quieter; the string lights' amber: cream in light, a warm deep brown in dark
 
 tones:
   Order.status: { new: warning, accepted: neutral, ready: success, collected: neutral, declined: danger }
 
 pages:
+  where:
+    sections:
+      hero: { layout: photo }          # the evening by the truck across the window, the text on a dark scrim
+      stops: { band: muted }           # the week's stops apart from the hero; the cards read better than on the red
   orders:
     table:
       columns: [number, name, status, wanted, total]

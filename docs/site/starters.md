@@ -96,7 +96,7 @@ See it live: coming soon.
 
 *A menu people order from on their phone, and the orders for your staff.*
 
-![The menu of the kiosk starter, Kiosken, with its sections and the order bar](starters/kiosk-1.webp)
+![The kiosk starter, Kiosken: where the truck stands this week, under an evening photo of the truck and its tables](starters/kiosk-1.webp)
 ![The orders as the staff see them, with their status and Accept](starters/kiosk-2.webp)
 
 For a food truck, a café's takeaway or a bakery's pre-orders. Visitors open the menu, grouped by section with a picture and price for each dish, add what they want, and send it with their name and phone; the order gets a number they can say at the hatch. The prices are read again on the server, a dish sold out in the meantime is refused, and outside the opening hours the menu says when it opens. Staff see today's orders, accept, mark them ready and collected, or decline with a reason; the customer is mailed when the order is accepted and when it is ready, if they gave an email. Marking a dish sold out and back is one button. Where the truck stands this week is a page of its own.

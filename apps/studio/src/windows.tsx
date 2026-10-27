@@ -6,13 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import { Button, cx, Select } from "./ui";
 
 export type WindowId = "nocode" | "code" | "preview" | "smith" | "changes";
-/** A slot holds one window, or Smith with Changes under it. */
-export type SlotContent = WindowId | "smith+changes";
+/**
+ * No code and Code are the two sub-tabs of one window, the view for changing the app by hand
+ * (smith-first.md §6), named by the one open; nothing calls it "manual" on the screen.
+ */
+export type ManualView = "nocode" | "code";
+/** A slot holds one window, Smith with Changes under it, or the view with No code and Code. */
+export type SlotContent = "manual" | "preview" | "smith" | "changes" | "smith+changes";
 export type Layout = "one" | "two" | "three" | "three-below";
 
-export const WINDOW_NAMES: Record<SlotContent, string> = {
+export const WINDOW_NAMES: Record<SlotContent | WindowId, string> = {
   nocode: "No code",
   code: "Code",
+  manual: "No code and Code",
   preview: "Preview",
   smith: "Smith",
   changes: "Changes",
@@ -30,17 +36,55 @@ export const LAYOUTS: [Layout, number, string][] = [
 export interface Arrangement {
   layout: Layout;
   slots: [SlotContent, SlotContent, SlotContent];
+  /** Which of No code and Code the view shows. */
+  manual?: ManualView;
 }
 
-const DEFAULT: Arrangement = { layout: "two", slots: ["nocode", "preview", "smith+changes"] };
+/**
+ * Smith first (smith-first.md §6): Smith with Changes under him, the preview beside him, and No
+ * code and Code as the third place, which the arrow at the preview's edge opens.
+ */
+const DEFAULT: Arrangement = {
+  layout: "two",
+  slots: ["smith+changes", "preview", "manual"],
+  manual: "nocode",
+};
 const KEY = "smithable:windows";
+
+/**
+ * An arrangement kept before No code and Code were one window: either becomes that window (the
+ * first one found decides which it shows), and a second place it held gets the window missing.
+ */
+export function keptArrangement(kept: {
+  layout: Layout;
+  slots: string[];
+  manual?: ManualView;
+}): Arrangement {
+  const old = kept.slots.find((s): s is ManualView => s === "nocode" || s === "code");
+  const slots = kept.slots.map((s) => (s === "nocode" || s === "code" ? "manual" : s));
+  const missing = (["manual", "preview", "smith+changes"] as SlotContent[]).filter(
+    (w) =>
+      !slots.some((s) => s === w || (w === "smith+changes" && (s === "smith" || s === "changes"))),
+  );
+  const seen = new Set<string>();
+  const unique = slots.map((s) => {
+    if (!seen.has(s)) {
+      seen.add(s);
+      return s;
+    }
+    return missing.shift() ?? s;
+  }) as Arrangement["slots"];
+  return { layout: kept.layout, slots: unique, manual: kept.manual ?? old ?? "nocode" };
+}
 
 /** The arrangement kept in this browser, and a way to change it. */
 export function useArrangement(): [Arrangement, (next: Arrangement) => void] {
   const [arrangement, setArrangement] = useState<Arrangement>(() => {
     try {
       const kept = JSON.parse(localStorage.getItem(KEY) ?? "null") as Arrangement | null;
-      return kept?.slots?.length === 3 && LAYOUTS.some(([l]) => l === kept.layout) ? kept : DEFAULT;
+      return kept?.slots?.length === 3 && LAYOUTS.some(([l]) => l === kept.layout)
+        ? keptArrangement(kept)
+        : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -71,7 +115,11 @@ export function shownSlots(
  * window and the preview share the room and a third is a narrow column; below, the third is a
  * row across the foot.
  */
-export function gridOf(layout: Layout, slots: (0 | 1 | 2)[]): React.CSSProperties {
+export function gridOf(
+  layout: Layout,
+  slots: (0 | 1 | 2)[],
+  contents: SlotContent[] = [],
+): React.CSSProperties {
   const area = (s: number) => "abc"[s] as string;
   if (layout === "three-below" && slots.includes(2)) {
     const top = slots.filter((s) => s !== 2);
@@ -81,8 +129,24 @@ export function gridOf(layout: Layout, slots: (0 | 1 | 2)[]): React.CSSPropertie
       gridTemplateRows: "minmax(0, 3fr) minmax(0, 2fr)",
     };
   }
+  // Three side by side: Smith (or Changes) is a column of its own width, the preview and No code
+  // or Code share the rest.
+  const narrow = (s: number) => {
+    const c = contents[s];
+    return c === "smith" || c === "changes" || c === "smith+changes";
+  };
   const widths = slots.map((s) =>
-    s === 2 ? "22rem" : s === 0 && slots.includes(1) ? "45fr" : "55fr",
+    slots.length === 3 && narrow(s)
+      ? "24rem"
+      : slots.length === 3
+        ? contents[s] === "preview"
+          ? "55fr"
+          : "45fr"
+        : s === 2
+          ? "22rem"
+          : s === 0 && slots.includes(1)
+            ? "45fr"
+            : "55fr",
   );
   return {
     gridTemplateAreas: `"${slots.map(area).join(" ")}"`,
@@ -137,7 +201,7 @@ export function LayoutBar({
 }) {
   const [settings, setSettings] = useState(false);
   return (
-    <div data-guide="layout" className="flex items-center gap-1">
+    <div className="flex items-center gap-1">
       <fieldset className="flex rounded-md bg-subtle p-0.5">
         <legend className="sr-only">Layout</legend>
         {LAYOUTS.map(([layout, , name]) => {
@@ -202,7 +266,9 @@ function WindowSettings({
   onChange: (next: Arrangement) => void;
   onClose: () => void;
 }) {
-  const options = Object.entries(WINDOW_NAMES) as [SlotContent, string][];
+  const options = (Object.entries(WINDOW_NAMES) as [SlotContent | WindowId, string][]).filter(
+    (o): o is [SlotContent, string] => o[0] !== "nocode" && o[0] !== "code",
+  );
   // The browser's own modal dialog: Escape closes it and the focus stays inside.
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -271,13 +337,19 @@ export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => voi
   return [settings, setSettings];
 }
 
-/** A phone's main windows, in their order: No code, Preview, Smith, then Changes and Code as set (Code by default: every part is in the header from the start, A 161). */
-export const phoneWindows = (s: PhoneSettings): WindowId[] => [
-  "nocode",
-  "preview",
+/** A window a phone shows on its own. */
+export type PhoneWindow = "smith" | "preview" | "manual" | "changes";
+
+/**
+ * A phone's windows, in their order (smith-first.md §6): Smith, the preview, No code and Code,
+ * then Changes when it is not under Smith. Whether Code is one of the view's sub-tabs is a
+ * setting (on by default, A 161).
+ */
+export const phoneWindows = (s: PhoneSettings): PhoneWindow[] => [
   "smith",
+  "preview",
+  "manual",
   ...(s.changesUnderSmith ? [] : (["changes"] as const)),
-  ...(s.code ? (["code"] as const) : []),
 ];
 
 /** Where a touch began, by the element it began on: kept across renders (a status poll re-renders mid-swipe). */

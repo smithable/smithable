@@ -1266,6 +1266,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "button": "schedule",
             "kind": "hero",
             "name": "hero",
+            "secondButton": "blog",
             "shortcuts": [
               "schedule",
               "blog",
@@ -1416,6 +1417,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "button": "schedule",
           "kind": "hero",
           "name": "hero",
+          "secondButton": "blog",
           "shortcuts": [
             "schedule",
             "blog",
@@ -3675,6 +3677,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
             "button": "catalog",
             "kind": "hero",
             "name": "hero",
+            "secondButton": "myItems",
           },
           {
             "filters": [
@@ -3698,6 +3701,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
           "button": "catalog",
           "kind": "hero",
           "name": "hero",
+          "secondButton": "myItems",
         },
         {
           "filters": [

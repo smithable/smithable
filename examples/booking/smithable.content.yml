@@ -82,14 +82,17 @@ pages:
       title: Find your calm
       subtitle: Small yoga classes for every level, a short walk from the harbour in Mariehamn. Book a mat online and come as you are.
       button: See the schedule
+      secondButton: Read the blog
       image:
         src: images/hero.webp
         alt: People stretching on yoga mats in a bright studio with large windows
         generated: true
     classes:
+      eyebrow: Small groups
       title: Our classes
       text: Six kinds of class, from first steps to deep stretches and arm balances. Each has an easier version of every posture, so you can start where you are.
     faq:
+      eyebrow: New here?
       title: Before your first class
       items:
         - question: Do I need experience?
@@ -106,6 +109,7 @@ pages:
       title: Your first class is waiting
       button: Book a class
     gallery:
+      eyebrow: The studio
       title: Inside the studio
       items:
         - image: { src: images/gallery/studio.webp, alt: A rolled-up yoga mat and a water bottle on a wooden floor by a window, generated: true }

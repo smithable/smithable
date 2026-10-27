@@ -28,6 +28,7 @@ pages:
         alt: A calculator, receipts and a laptop on a wooden desk
         generated: true
     features:
+      eyebrow: Why Invoicely
       title: Everything a freelancer needs
       items:
         - title: Invoices in a minute
@@ -39,6 +40,7 @@ pages:
         - title: The contract with the invoice
           text: Attach the agreement as a PDF, so the work and the bill stay together when a client asks.
     pricing:
+      eyebrow: Pricing
       title: Simple pricing
       text: Example plans; the prices are illustrative.
       items:
@@ -53,6 +55,7 @@ pages:
           features: [Unlimited clients, Reminders for overdue invoices, Priority support]
           button: Try Pro
     faq:
+      eyebrow: Good to know
       title: Questions
       items:
         - question: Can I use my own invoice numbers?
