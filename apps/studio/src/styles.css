@@ -91,3 +91,48 @@ body {
 .appear-late {
   animation: appear 200ms ease-out 600ms both;
 }
+
+/*
+ * Smith hammering (src/builder/SmithFace.tsx): eight frames side by side in working.webp, 81 by
+ * 96 px each, shown at half size, held as long as the drawing's own frames (550, 160, 180, 220,
+ * 70, 100, 140 and 300 ms).
+ */
+@keyframes smith-working {
+  0% {
+    background-position-x: 0;
+  }
+  31.98% {
+    background-position-x: -40.5px;
+  }
+  41.28% {
+    background-position-x: -81px;
+  }
+  51.74% {
+    background-position-x: -121.5px;
+  }
+  64.53% {
+    background-position-x: -162px;
+  }
+  68.6% {
+    background-position-x: -202.5px;
+  }
+  74.42% {
+    background-position-x: -243px;
+  }
+  82.56% {
+    background-position-x: -283.5px;
+  }
+}
+.smith-working {
+  display: block;
+  width: 40.5px;
+  height: 48px;
+  background-size: 324px 48px;
+  background-repeat: no-repeat;
+  animation: smith-working 1720ms step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .smith-working {
+    animation: none;
+  }
+}

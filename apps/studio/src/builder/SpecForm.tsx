@@ -191,6 +191,11 @@ const AREAS: Record<string, { label: string; icon: string }> = {
   actions: { label: "Actions", icon: "M13 3 5 14h6l-1 7 8-11h-6l1-7Z" },
   pages: { label: "Pages", icon: "M7 3h7l4 4v14H7zM14 3v4h4" },
   navigation: { label: "Menus", icon: "M5 7h14M5 12h14M5 17h14" },
+  // Every area has its own (Johan, 2026-10-27): a clock, a paper plane, a tray, a magnifier.
+  timers: { label: "Timers", icon: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM12 9v4l2.5 1.5M10 2h4" },
+  outgoing: { label: "Outgoing", icon: "M21 3 3 10.5l7 2.5 2.5 7L21 3ZM10 13l5-5" },
+  incoming: { label: "Incoming", icon: "M3 13h5l2 3h4l2-3h5M5.5 5h13L21 13v6H3v-6l2.5-8Z" },
+  queries: { label: "Queries", icon: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-4-4" },
 };
 
 function AreaIcon({ d }: { d: string }) {
@@ -573,10 +578,10 @@ function Key({
           className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium"
           title={typeof schema.description === "string" ? schema.description : undefined}
         >
-          {AREAS[name] && !schema.title ? (
+          {AREAS[name] ? (
             <>
               <AreaIcon d={AREAS[name].icon} />
-              {AREAS[name].label}
+              {schema.title ? labelOf(name, schema) : AREAS[name].label}
             </>
           ) : (
             labelOf(name, schema)

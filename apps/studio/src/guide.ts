@@ -31,7 +31,7 @@ const NOCODE: Stop[] = [
   },
   {
     anchor: "change",
-    title: "Ask agent Smith",
+    title: "Ask Smith",
     text: "Ask Smith for a change or a question about the app. A change is checked and shown before it is kept.",
   },
   {

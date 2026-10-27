@@ -10,7 +10,7 @@ Studio is five windows and nothing else: **No code**, **Preview**, **Code**, **C
 - **Preview**: the app, as today (studio-v2.md §1: one frame, kept across everything else; one reload per change, #684).
 - **Code**: the files, nothing else: the spec files in the editor (§4). No concepts, no logs, no operation forms, no changes.
 - **Changes**: what was done, in plain language, the same window whichever way the change was made (§3).
-- **Smith**: the assistant (§2). "Ask" in Studio is called Smith, in full "Agent Smith"; the apps' own Ask button keeps its name.
+- **Smith**: the assistant (§2). "Ask" in Studio is called Smith, and only Smith (Johan, 2026-10-27); the apps' own Ask button keeps its name.
 
 ## 2. Smith
 
