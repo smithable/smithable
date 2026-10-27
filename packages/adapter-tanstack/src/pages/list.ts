@@ -565,10 +565,14 @@ export function listParts(
   if (offered.length > 2) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
-  // Custom actions on the rows picked (A 171): each one whose list is of this page's records.
+  // Custom actions on the rows picked (A 171): those the page lists whose list is of its records.
   const onRows = within
     ? []
-    : ir.actions.filter((a): a is CustomActionIR => a.custom && a.rows?.model === model.name);
+    : (page.actions ?? []).flatMap((name) =>
+        ir.actions.filter(
+          (a): a is CustomActionIR => a.name === name && a.custom && a.rows?.model === model.name,
+        ),
+      );
   // The trash (docs/design/trash.md): Undo after Move to trash, and the way to the Trash page.
   const trash = Boolean(model.trash && !within);
   if (trash)

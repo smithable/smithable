@@ -57,4 +57,15 @@ test("the list's selection bar runs it on the rows picked, asking the rest once;
   expect(list).toContain(
     "await tag({ data: { ...(values as object), customers: chosen.map((row) => row.id) } as never });",
   );
+  // A page that does not list it has no such button.
+  const other = generateApp(
+    validateSpec({
+      path: "smithable.yml",
+      text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Customer:\n    fields: { name: string!, segment: smb | enterprise }\nactions:\n  tag:\n    custom: true\n    input: { customers: 'Customer[]', segment: 'smb | enterprise' }\npages:\n  customers: { crud: Customer }\n",
+    }).ir as SpecIR,
+    { smithableVersion: "0.0.0", auth, content: emptyContent() },
+  );
+  expect(other.find((f) => f.path === "src/routes/customers/index.tsx")?.content).not.toContain(
+    "tagAccess",
+  );
 });
