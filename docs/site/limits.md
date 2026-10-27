@@ -4,6 +4,16 @@ These are the limits of Smithable's private beta on smithable.ai. They keep the 
 
 An app you run yourself has none of these: it has what your machine gives it ([self-hosting](self-host.md)), and its AI is the model you set up ([AI setup](../ai.md)).
 
+## Per account
+
+| | Limit |
+|---|---|
+| Apps | 10, each with a live and a staging copy |
+| AI allowance | €2 a month, for every model together: first builds and changes made with AI |
+| Mail | 1,000 recipients a month, across your apps |
+
+The service also has its own caps on what it spends with each AI provider in a month. They are safety caps for the whole service, shared by everyone, not an amount any account has: your account's AI is the €2 above. When the AI allowance is used up, first builds and changes in your own words wait for the next month; changes made through forms, in the code, or in words the built-in rules understand without a model still work.
+
 ## Per app
 
 Each published app runs with these, and so does its staging copy, separately:
@@ -19,16 +29,6 @@ Each published app runs with these, and so does its staging copy, separately:
 | When idle | sleeps after an hour without visits, and wakes on the next one in a few seconds |
 
 Past its storage, an app takes no new files; at a quarter more (2.5 GB, as its database grows), it takes no changes either, though its pages still show. Mail pauses for an address that keeps bouncing.
-
-## Per account
-
-| | Limit |
-|---|---|
-| Apps | 10, each with a live and a staging copy |
-| AI allowance | €2 a month, for first builds and changes made with AI |
-| Mail | 1,000 recipients a month, across your apps |
-
-When the AI allowance is used up, first builds and changes in your own words wait for the next month; changes made through forms, in the code, or in words the built-in rules understand without a model still work.
 
 ## While you change an app
 
