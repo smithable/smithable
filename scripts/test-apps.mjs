@@ -725,6 +725,10 @@ async function outgoingFlow(dir, base) {
     ])
       if (!part.test(moved))
         throw new Error(`the move's mail lacks ${part}: ${moved.slice(0, 900)}`);
+    // The time before and after differ: the row before the change is the one read.
+    const times = /from (\S.+?) to (\S.+?)\. Your mat/.exec(moved);
+    if (!times || times[1] === times[2])
+      throw new Error(`the move's mail says the same time twice: ${times?.[0]}`);
     if (/^Capacity: /m.test(moved))
       throw new Error(`the move's mail lists a field show leaves out: ${moved.slice(0, 900)}`);
     await open(page, `${base}/my-bookings/${id}`);
