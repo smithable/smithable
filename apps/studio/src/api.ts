@@ -259,7 +259,10 @@ export const api = {
   waiting: (change: { add: string } | { remove: number }) =>
     call<{ ok: boolean; waiting: string[] }>("/api/waiting", change),
   events(
-    onEvent: (event: "changed" | "log" | "open" | "making" | "waiting", data: unknown) => void,
+    onEvent: (
+      event: "changed" | "log" | "open" | "making" | "waiting" | "beta",
+      data: unknown,
+    ) => void,
   ): () => void {
     const source = new EventSource("/api/events");
     // Also after a reconnect: whatever changed meanwhile is fetched again.
@@ -274,6 +277,7 @@ export const api = {
     source.addEventListener("waiting", (e) =>
       onEvent("waiting", JSON.parse((e as MessageEvent).data)),
     );
+    source.addEventListener("beta", (e) => onEvent("beta", JSON.parse((e as MessageEvent).data)));
     return () => source.close();
   },
 };

@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watchFile,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -433,6 +441,11 @@ export async function studio(
     for (const client of clients)
       client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
+  // The beta file written by the hosted service at a sandbox's hand-over (smith-first.md §8): its
+  // facts sent to the page when it changes, without reloading anything.
+  watchFile(join(dir, BETA), { interval: 2000, persistent: false }, () =>
+    send("beta", readBeta(dir) ?? null),
+  );
   // When the app was last replaced: the dev server's last word about the old app's modules comes
   // just after, and is not about the app that is here now.
   let replacedAt = 0;
