@@ -1,4 +1,4 @@
-import { humanize, pageModel, plural } from "@smithable/core";
+import { humanize } from "@smithable/core";
 import { describeChange, summarize } from "@smithable/index";
 import {
   lazy,
@@ -340,19 +340,6 @@ export function App() {
   // A change in the words Changes and Smith use ("Customers: added a website").
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
-  // Smith's example in the app's own records (a booking app has no customers): the first listed
-  // on a page, and the last.
-  const example = useMemo(() => {
-    const ir = spec.ir;
-    if (!ir) return undefined;
-    const listed = ir.pages.flatMap((p) => (p.pattern.kind === "crud" ? [pageModel(p)] : []));
-    const models = ir.models.filter((m) => listed.includes(m.name));
-    const [first, last] = [models[0] ?? ir.models[0], models.at(-1) ?? ir.models.at(-1)];
-    if (!first || !last) return undefined;
-    const many = (name: string) => humanize(plural(name)).toLowerCase();
-    const field = first.fields.some((f) => f.name === "phone") ? "a website" : "a phone number";
-    return `For example: ${many(first.name)} should have ${field}. Or: who can delete ${many(last.name)}?`;
-  }, [spec]);
   // The pages the preview's address offers: each page's address and title, and sign-in.
   const pages = useMemo(
     (): [string, string][] => [
@@ -976,10 +963,9 @@ export function App() {
                         />
                       </Suspense>
                     ) : w === "smith" ? (
-                      <Panel key={w} title="Ask agent Smith" className="min-h-0 flex-1">
+                      <Panel key={w} title="Ask Smith" className="min-h-0 flex-1">
                         <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                           <Ask
-                            example={example}
                             words={words}
                             waiting={project.waiting}
                             trace={project.trace}

@@ -10,6 +10,7 @@ import { Button, cx, Input } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CustomCode, customFile } from "./custom-code";
 import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search";
+import { type Mood, SmithFace } from "./SmithFace";
 import { ASK_SMITH, HANDED } from "./Wizard";
 
 /**
@@ -31,7 +32,6 @@ interface Said {
 }
 
 export function Ask({
-  example,
   onDone,
   onEdit,
   words,
@@ -40,8 +40,6 @@ export function Ask({
   trace,
   ready,
 }: {
-  /** The box's example, in the app's own words. */
-  example?: string;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -227,8 +225,9 @@ export function Ask({
     }
   };
 
-  // A chat (A 162): the conversation fills the window, oldest first with the newest in view,
-  // the person's words on the right and Smith's on the left; one box at the foot sends.
+  // A chat (A 162): the conversation fills the window top down, the greeting first and the
+  // newest last, in view; the person's words on the right and Smith's on the left; one box at
+  // the foot sends, with the ready prompts under it (Johan, 2026-10-27).
   const scroller = useRef<HTMLDivElement>(null);
   const grown = (trace?.length ?? 0) + said.length;
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the conversation grows
@@ -236,6 +235,22 @@ export function Ask({
     const box = scroller.current;
     if (box) box.scrollTop = box.scrollHeight;
   }, [grown, proposal, busy, docs, output, local, waiting.length]);
+  // Smith's face says what is going on: hammering while he works or the app is made, then
+  // how the last request went, and waiting while nothing is asked.
+  const mood: Mood =
+    busy || making
+      ? "working"
+      : proposal?.kind === "question"
+        ? "confused"
+        : proposal?.kind === "change"
+          ? "pointing"
+          : output
+            ? output.startsWith("Done: ")
+              ? "happy"
+              : "sad"
+            : docs || local
+              ? "pointing"
+              : "waiting";
   const send = () => {
     if (!request.trim()) return;
     if (making)
@@ -249,20 +264,9 @@ export function Ask({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+        {ready && !making && <Greeting ready={ready} />}
         {trace && <Thread trace={trace} said={said} words={words} />}
-        {ready && !making && !proposal && !request.trim() && (
-          <ReadyPrompts
-            shown={local}
-            ready={ready}
-            onPick={(prompt) => {
-              if (prompt === "add") {
-                setRequest("Help me add ");
-                return;
-              }
-              setLocal(prompt);
-            }}
-          />
-        )}
+        {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
         {waiting.length > 0 && (
           <ul aria-label="Waiting" className="space-y-1">
             {waiting.map((text, i) => (
@@ -345,32 +349,44 @@ export function Ask({
         {output && <p className={SMITHS}>{output}</p>}
       </div>
       <form
-        className="flex shrink-0 items-end gap-2 border-t border-line p-3"
+        className="shrink-0 space-y-2 border-t border-line p-3"
         onSubmit={(e) => {
           e.preventDefault();
           send();
         }}
       >
-        <textarea
-          aria-label="Describe a change, or ask a question"
-          placeholder={
-            example ??
-            "For example: customers should have a mobile number. Or: who can delete orders?"
-          }
-          value={request}
-          onChange={(e) => setRequest(e.target.value)}
-          // Enter sends, as in any chat; Shift-Enter starts a new line.
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            if (!busy) send();
-          }}
-          rows={2}
-          className="block min-w-0 flex-1 resize-none rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-        />
-        <Button type="submit" disabled={busy || !request.trim()}>
-          {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
-        </Button>
+        <div className="flex items-end gap-2">
+          <SmithFace mood={mood} />
+          <textarea
+            aria-label="Describe a change, or ask a question"
+            value={request}
+            onChange={(e) => setRequest(e.target.value)}
+            // Enter sends, as in any chat; Shift-Enter starts a new line.
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              if (!busy) send();
+            }}
+            rows={2}
+            className="block min-w-0 flex-1 resize-none rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+          <Button type="submit" disabled={busy || !request.trim()}>
+            {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
+          </Button>
+        </div>
+        {ready && !making && (
+          <ReadyChips
+            // Words in the box are a request of their own: the prompts rest until it is sent.
+            disabled={busy || Boolean(request.trim())}
+            onPick={(prompt) => {
+              if (prompt === "add") {
+                setRequest("Help me add ");
+                return;
+              }
+              setLocal(prompt);
+            }}
+          />
+        )}
       </form>
     </div>
   );
@@ -460,14 +476,22 @@ export function followUp(
   return (short || leaning) && recent ? `${last.text} (${text})` : text;
 }
 
-/** The ready prompts, while no discussion is going on, and the answer to the one picked. */
-function ReadyPrompts({
-  shown,
-  ready,
+/** Smith's greeting, by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */
+function Greeting({ ready }: { ready: Ready }) {
+  return (
+    <div className={cx(SMITHS, "space-y-1")}>
+      <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
+      <p className="text-muted">Perhaps you want to…</p>
+    </div>
+  );
+}
+
+/** The ready prompts, under the box: resting while words are in it. */
+function ReadyChips({
+  disabled,
   onPick,
 }: {
-  shown?: "next" | "what" | "publish";
-  ready: Ready;
+  disabled: boolean;
   onPick: (prompt: "next" | "what" | "publish" | "add") => void;
 }) {
   const chips: ["next" | "what" | "publish" | "add", string][] = [
@@ -477,25 +501,26 @@ function ReadyPrompts({
     ["publish", "How do I publish?"],
   ];
   return (
-    <div className="space-y-3">
-      {/* A greeting by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */}
-      <div className={cx(SMITHS, "space-y-1")}>
-        <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
-        <p className="text-muted">Perhaps you want to…</p>
-      </div>
-      <fieldset aria-label="Ready prompts" className="flex flex-wrap gap-1.5">
-        <legend className="sr-only">Ready prompts</legend>
-        {chips.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onPick(id)}
-            className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-          >
-            {label}
-          </button>
-        ))}
-      </fieldset>
+    <fieldset aria-label="Ready prompts" disabled={disabled} className="flex flex-wrap gap-1.5">
+      <legend className="sr-only">Ready prompts</legend>
+      {chips.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onPick(id)}
+          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-50"
+        >
+          {label}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** The answer to the ready prompt picked, Smith's by rule, shown until another request. */
+function ReadyAnswer({ shown, ready }: { shown: "next" | "what" | "publish"; ready: Ready }) {
+  return (
+    <>
       {shown === "next" && (
         <section aria-label="What to do next" className={cx(SMITHS, "space-y-1")}>
           {ready.notes.length === 0 ? (
@@ -563,7 +588,7 @@ function ReadyPrompts({
           )}
         </section>
       )}
-    </div>
+    </>
   );
 }
 

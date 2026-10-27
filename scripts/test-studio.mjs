@@ -245,9 +245,9 @@ try {
     "the bar's three windows add Smith with Changes under it, kept after a reload",
     async () => {
       await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
-      await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
       await page.reload();
-      await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
       await page.getByText("No changes yet.").waitFor();
     },
   );
@@ -329,7 +329,7 @@ try {
     await note.waitFor();
     await note.getByRole("button", { name: "Dismiss" }).click();
     await page.reload();
-    await page.getByRole("heading", { name: "Ask agent Smith", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
@@ -1160,6 +1160,9 @@ try {
       await prompts.getByRole("button", { name: "Help me add…" }).click();
       if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")
         throw new Error("Help me add did not start the request");
+      // Words in the box rest the prompts until they are sent or cleared (Johan, 2026-10-27).
+      if (!(await prompts.getByRole("button", { name: "How do I publish?" }).isDisabled()))
+        throw new Error("the ready prompts stay active while words are in the box");
       await page.getByLabel("Describe a change").fill("");
     },
   );
