@@ -173,3 +173,34 @@ test("an action named with a reserved word or a model's name is refused with one
   // Any word may name a field: only an action's name becomes code of its own.
   expect(actions("  Tool:\n    fields: { return: string!, default: bool }\n", "")).toEqual([]);
 });
+
+test("a custom action's input may be one required list of records: the rows it runs on (A 171)", () => {
+  const spec = (input: string, output = "") =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp: { name: Shop }\nmodels:\n  Customer:\n    fields: { name: string! }\n  Order:\n    fields: { number: string!, customer: Customer! }\nactions:\n  merge:\n    custom: true\n    input: ${input}\n${output ? `    output: ${output}\n` : ""}pages:\n  customers: { crud: Customer }\n`,
+    });
+  const errors = (r: ReturnType<typeof validateSpec>) =>
+    r.diagnostics.filter((d) => d.severity === "error").map((d) => d.message);
+  const ok = spec("{ customers: 'Customer[]', note: text }");
+  expect(errors(ok)).toEqual([]);
+  expect((ok.ir?.actions[0] as { rows?: unknown } | undefined)?.rows).toEqual({
+    field: "customers",
+    model: "Customer",
+  });
+  // A single reference is no list: no rows.
+  expect(
+    (spec("{ customer: 'Customer!' }").ir?.actions[0] as { rows?: unknown } | undefined)?.rows,
+  ).toBeUndefined();
+  // The list is always required: the rows picked.
+  expect(ok.ir?.actions[0]?.input.find((f) => f.name === "customers")?.required).toBe(true);
+  expect(errors(spec("{ customers: 'Customer[]', orders: 'Order[]' }"))).toEqual([
+    '"orders" in the input of action "merge": one list of records at most; "customers" is already it.',
+  ]);
+  expect(errors(spec("{ people: 'User[]' }"))).toEqual([
+    '"people" in the input of action "merge": a list of users is not an input; a list of records is (Customer[]).',
+  ]);
+  expect(errors(spec("{ customer: 'Customer!' }", "{ merged: 'Customer[]' }"))).toEqual([
+    '"merged" in the output of action "merge": a list of records cannot be an output.',
+  ]);
+});
