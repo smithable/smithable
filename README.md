@@ -30,7 +30,7 @@ npx smithable@latest studio
 
 **Try it in the browser:** [the theme lab](https://docs.smithable.ai/theme-lab/) puts a theme on a starter's real pages, with no install and no sign-in; the hosted beta is at [smithable.ai](https://smithable.ai).
 
-Built by Åland IT AB, with Claude as a pair programmer.
+Built by Åland IT AB, in the Åland Islands, Finland.
 
 **Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the ten starters](https://docs.smithable.ai/starters.html) (seven of them shown on smithable.ai), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
 
