@@ -2,7 +2,6 @@ smithable: 0.1
 app:
   name: Shop Status
   description: Is the shop working? The live state of our web shop's services, outages and their updates.
-  timezone: Europe/Stockholm
 models:
   Component:
     fields:
@@ -30,6 +29,8 @@ pages:
     crud: Incident
     filters: [status, component]
     actions: [identified, monitoring, resolve]
+  updates:
+    crud: IncidentUpdate
   components:
     crud: Component
   overview:
@@ -44,6 +45,8 @@ pages:
       latest:
         list: Incident
         limit: 5
+  team:
+    users: manage
   home:
     route: /
     landing:
@@ -62,8 +65,6 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
 actions:
   identified:
     on: Incident
@@ -100,6 +101,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved.
+        message: This incident is resolved and the shop is working normally.
     intent: The incident is over, with an update saying so.
-navigation: [overview, incidents, components, team]
+navigation: [overview, incidents, updates, components, team]

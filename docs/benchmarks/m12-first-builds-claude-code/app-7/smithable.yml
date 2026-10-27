@@ -1,28 +1,29 @@
 smithable: 0.1
 app:
-  name: Riverside FC
-  description: "The football club's site: our teams, players, fixtures and results."
-  timezone: Europe/Mariehamn
+  name: Club Pitch
+  description: A football club's site with its teams, players, fixtures and results.
+  currency: GBP
+  timezone: Europe/London
 models:
   Team:
     fields:
       name: string!
-      ageGroup: senior | youth | women | veterans
+      ageGroup: senior | youth | junior | veterans
       coach: string
-      description: text
-      picture: picture
+      about: text
+      photo: picture
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
-      number:
+      position: goalkeeper | defender | midfielder | forward
+      shirtNumber:
         type: int
         min: 1
         max: 99
-      position: goalkeeper | defender | midfielder | forward
-      picture: picture
+      photo: picture
       bio: text
   Match:
     fields:
@@ -30,13 +31,12 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      location: string
-      competition: string
+      ground: string
       status: scheduled | played | postponed | cancelled
-      goalsFor:
+      ourScore:
         type: int
         min: 0
-      goalsAgainst:
+      theirScore:
         type: int
         min: 0
       report: text
@@ -44,29 +44,28 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, competition]
     filters: [team, status, venue, kickoff]
+    search: [opponent, ground]
     actions: [recordResult, postpone]
   teams:
     crud: Team
     filters: [ageGroup]
   players:
     crud: Player
-    search: [name]
     filters: [team, position]
+    search: [name]
   home:
     route: /
     landing:
       hero:
         button: matches
         secondButton: teams
-      upcoming:
+      fixtures:
         records: Match
         where:
           status: scheduled
       results:
         records: Match
-        view: table
         where:
           status: played
       ourTeams:
@@ -82,13 +81,13 @@ actions:
       status: [scheduled, postponed]
     set:
       status: played
-      goalsFor:
-      goalsAgainst:
-    intent: Enter the final score of a match once it has been played.
+      ourScore:
+      theirScore:
+    intent: Enter the final score of a match that has been played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a scheduled match as postponed.
+    intent: Mark a fixture as postponed.

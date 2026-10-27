@@ -1,13 +1,14 @@
 smithable: 0.1
 app:
-  name: Summit Registration
-  description: The programme of a conference, its speakers, and registration for talks for attendees.
+  name: Northlight Conference
+  description: Talks, speakers and attendee registration for a one-track conference.
   currency: EUR
   timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
+      title: string
       company: string
       bio: markdown
       portrait: picture
@@ -17,10 +18,10 @@ models:
       title: string!
       abstract: markdown
       speaker: Speaker!
-      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
-      track: general | technical | business | workshop
+      room: string
+      track: general | technical | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -37,38 +38,52 @@ models:
       max: talk.capacity
       closes: talk.startsAt
       cancelUntil: talk.startsAt
+  Message:
+    fields:
+      name: string!
+      email: email!
+      message: text!
 pages:
-  talks:
-    crud: Talk
-    filters: [speaker, track, startsAt]
-  speakers:
-    crud: Speaker
+  home:
+    route: /
+    landing:
+      hero:
+        button: schedule
+      features:
+      lineup:
+        records: Speaker
+      program:
+        records: Talk
+      faq:
+      callToAction:
+        button: schedule
+      contact:
+        form: Message
+      footer:
   schedule:
     calendar:
       model: Talk
       starts: startsAt
   my-registrations:
     crud: Registration
-  home:
-    route: /
-    landing:
-      hero:
-        button: talks
-        secondButton: speakers
-      features:
-      lineup:
-        records: Speaker
-      faq:
-      callToAction:
-        button: talks
-      footer:
+  talks:
+    crud: Talk
+    filters: [speaker, track, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+  speakers:
+    crud: Speaker
+    search: [name, company]
+  messages:
+    crud: Message
+  admin:
+    data: all
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
 navigation:
-  main: [talks, speakers, schedule, my-registrations, home, privacy, admin]
-  programme: [talks, schedule, speakers, my-registrations]
+  main: [home, schedule, my-registrations, talks, speakers, messages, admin, privacy]
+  program: [schedule, my-registrations, talks, speakers]
+  messages: [messages]
   website: [home]
   admin: [admin]

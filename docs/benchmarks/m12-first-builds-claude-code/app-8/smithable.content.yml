@@ -1,24 +1,28 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: A full programme, text: "Browse every talk with its time, room and track, and plan your days ahead." }, { title: Meet the speakers, text: Read about the people on stage and see everything each of them presents. }, { title: Save your seat, text: Register for the talks you want; places are limited and shown as they fill up. }, { title: All in one place, text: "Your registrations are listed together, and you can cancel any time before a talk starts." }]
-    faq:
-      items: [{ question: Do I need an account to register?, answer: "Yes. Anyone can browse the programme, but you sign in with your email address to register for talks." }, { question: Can I cancel a registration?, answer: "Yes, from your registrations, until the talk begins. Your place then goes to someone else." }, { question: What happens when a talk is full?, answer: Registration closes once every place is taken. Keep an eye on the programme in case places open up again. }]
     hero:
-      title: Two days of ideas, talks and people
-      subtitle: See the programme, get to know the speakers and register for the talks you don't want to miss.
-      button: See the talks
+      title: Two days of ideas worth sharing
+      subtitle: Browse the program, meet the speakers and save your seat at the talks you don't want to miss.
+      button: See the program
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    callToAction:
-      title: Seats are limited
-      text: Pick your talks now and make sure there is a place for you.
-      button: Register for talks
     lineup:
       title: Speakers
+    program:
+      title: Talks
+    callToAction:
+      title: Seats are limited
+      text: Sign in and register for the talks you want to attend before they fill up.
+      button: Pick your talks
+    contact:
+      title: Questions? Get in touch
+    features:
+      items: [{ title: A full program, text: "Keynotes, technical sessions and hands-on workshops across two days." }, { title: Speakers from the field, text: "Practitioners sharing what they have built, learned and got wrong." }, { title: Reserve your seat, text: Register for each talk in a few clicks and see how many places are left. }]
+    faq:
+      items: [{ question: Do I need an account to register?, answer: Yes. Sign in with your email address and you can register for any talk that still has places. }, { question: Can I cancel a registration?, answer: "You can cancel from My registrations at any time before the talk begins, freeing your seat for someone else." }, { question: What happens when a talk is full?, answer: "Registration closes once every place is taken. Keep an eye on the program, as seats open up when others cancel." }, { question: Are workshops included?, answer: "Workshops are listed in the program like any other talk, usually with fewer places, so register early." }]
 logo:
   src: images/logo.webp
   alt: A ticket

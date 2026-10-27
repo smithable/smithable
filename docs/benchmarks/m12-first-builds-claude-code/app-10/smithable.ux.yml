@@ -3,8 +3,11 @@ pages:
   recipes:
     table:
       view: cards
+      columns: [name, category, servings, minutes, favorite]
     icon: book
   shoppingLists:
+    table:
+      sort: -forDate
     icon: cart
 tones:
   ShoppingList.status:

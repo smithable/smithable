@@ -1,10 +1,3 @@
 smithableUx: 0.1
-pages:
-  sessions:
-    table:
-      sort: startsAt
 theme:
   preset: nordic
-  motion: subtle
-  brand:
-    font: Nunito Sans

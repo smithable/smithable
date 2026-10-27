@@ -2,17 +2,20 @@ smithableUx: 0.1
 pages:
   matches:
     table:
+      columns: [kickoff, team, opponent, venue, status, ourScore, theirScore]
       sort: -kickoff
-      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
+    icon: calendar
   players:
     table:
       view: cards
     record:
       subtitle: team
-      detail: [position, number]
+      detail: [position, shirtNumber]
+    icon: user
   teams:
     table:
       view: cards
+    icon: users
 tones:
   Match.status:
     played: success

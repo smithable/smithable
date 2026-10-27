@@ -2,27 +2,17 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? A neighbor down the street probably has one sitting in a drawer. }, { title: Share what you own, text: "Put your ladder, hedge trimmer or pressure washer to use by listing it in a minute with a photo." }, { title: Ask the owner directly, text: Send a message from the tool's page to agree on when to pick it up and bring it back. }, { title: Keep it local, text: "Every tool shows roughly where it is, so you can find what's close enough to walk to." }]
-      title: How it works
+      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Someone down the street probably has one sitting in a drawer. }, { title: Share what you own, text: Add the tools in your shed with a photo and say where to pick them up. }, { title: Keep track of loans, text: "Note who has your tool and when it is due back, then mark it returned when it comes home." }]
     faq:
-      items: [{ question: Does borrowing cost anything?, answer: No. The library runs on neighbors trusting each other; owners and borrowers agree on the details between themselves. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message. Together you settle when to collect it and when it comes back." }, { question: What if a tool is already lent out?, answer: The owner marks it as not available while it is away. Save it with the heart and check again later. }, { question: Who can see my contact details?, answer: Nobody browsing the catalog. Your address is only shared with the neighbors you exchange messages with. }]
-      title: Questions
+      items: [{ question: Does it cost anything?, answer: No. Neighbors lend their tools for free; agree on anything else between yourselves. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message to arrange a time to pick it up." }, { question: What if something breaks?, answer: Talk it over with the owner and treat borrowed tools as carefully as your own. }]
     hero:
-      title: Your neighborhood's shared toolshed
-      subtitle: Find the tool you need a few doors away, and lend out the ones gathering dust in your garage.
+      title: Tools for the whole street
+      subtitle: Lend what sits in your shed and borrow what you need from the neighbors.
       button: Browse tools
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-    latest:
-      title: Ready to borrow
-  catalog:
-    title: Tools
-  myTools:
-    title: My tools
-  saved:
-    title: Saved
 logo:
   src: images/logo.webp
   alt: A toolbox

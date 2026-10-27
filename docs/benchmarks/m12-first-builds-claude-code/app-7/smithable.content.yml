@@ -2,19 +2,25 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Welcome to Riverside FC
-      subtitle: Follow our teams, meet the squad and catch every fixture and result of the season.
+      title: Home of our football club
+      subtitle: Follow every team, meet the squad and catch up on fixtures and results.
       button: Fixtures & results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    upcoming:
-      title: Upcoming matches
+    fixtures:
+      title: Upcoming fixtures
     results:
       title: Latest results
     ourTeams:
       title: Our teams
+  matches:
+    title: Matches
+  teams:
+    title: Teams
+  players:
+    title: Players
 logo:
   src: images/logo.webp
   alt: A football

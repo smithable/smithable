@@ -8,7 +8,7 @@ models:
       segment:
         values: { smb: Small business }
       creditLimit:
-        help: Orders are held when the outstanding balance goes above this amount.
+        help: Orders are held when the outstanding balance goes above this amount. Agree a higher limit with the customer before you change it.
   Order:
     fields:
       placedAt: { label: Placed on }

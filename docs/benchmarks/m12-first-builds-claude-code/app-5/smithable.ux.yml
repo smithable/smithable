@@ -2,7 +2,7 @@ smithableUx: 0.1
 pages:
   ingredients:
     table:
-      columns: [name, category, inStock, unit, reorderLevel, lowStock, supplier]
+      columns: [name, category, inStock, unit, reorderLevel, lowStock, supplier, lastCounted]
       sort: name
   suppliers:
     table:

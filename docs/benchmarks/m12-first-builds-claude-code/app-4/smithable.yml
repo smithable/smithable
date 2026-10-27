@@ -13,21 +13,38 @@ models:
       condition: likeNew | good | worn
       place: string
       available: bool = true
+    review: [photos]
+  Loan:
+    fields:
+      tool: Tool!
+      borrower: string!
+      borrowerContact: string
+      from: date!
+      due: date
+      status: out | returned
+      note: text
 pages:
   catalog:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
-    sortable: [title, createdAt]
     favorites: true
     contact: owner
   myTools:
     crud: Tool
     mine: true
+  loans:
+    crud: Loan
+    filters: [status, due]
+    defaultFilter:
+      status: out
+    actions: [markReturned]
   saved:
     crud: Tool
     favorites: only
+  review:
+    review: all
   home:
     route: /welcome
     landing:
@@ -35,12 +52,18 @@ pages:
         button: catalog
       latest:
         records: Tool
-        where:
-          available: true
       features:
       faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [catalog, myTools, saved]
+actions:
+  markReturned:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+    intent: Record that the borrowed tool has come back.
+navigation: [catalog, myTools, loans, saved, review]
