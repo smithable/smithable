@@ -34,6 +34,14 @@ export interface ChangeDetail {
 }
 
 /** A described app being made (docs/design/while-it-is-made.md). */
+/** One of the draft's assumptions (smith-first.md §4): asked with its answer already chosen. */
+export interface Assumption {
+  part: "app" | "pages" | "roles" | "visitors" | "signedIn";
+  question: string;
+  chosen: string;
+  options: string[];
+}
+
 export interface Making {
   description: string;
   stage: "reading" | "asking" | "drafting" | "building" | "arriving" | "failed";
@@ -45,6 +53,8 @@ export interface Making {
   usual?: number;
   /** The drafted app, once the model has answered. */
   files?: Project["files"];
+  /** What the draft assumed, to be asked at the part of Smith's presentation it concerns. */
+  assumptions?: Assumption[];
   /** What went wrong, when it failed. */
   error?: string;
 }

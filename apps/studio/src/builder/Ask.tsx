@@ -5,7 +5,7 @@
 import type { Diagnostic } from "@smithable/core";
 import type { Part, SummarySection } from "@smithable/index";
 import { useEffect, useRef, useState } from "react";
-import { api, type Proposal, type TraceEntry } from "../api";
+import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { Button, cx, Input } from "../ui";
 import { PREFILLED, type Prefill } from "./ChangeForms";
@@ -33,6 +33,7 @@ interface Said {
 }
 
 export function Ask({
+  assumptions = [],
   presentFirst = false,
   onPresented,
   beta,
@@ -51,6 +52,8 @@ export function Ask({
   beta?: Beta;
   /** A new project: Smith presents the app at once (smith-first.md §2). */
   presentFirst?: boolean;
+  /** What the draft assumed, asked at the part each concerns (smith-first.md §4). */
+  assumptions?: Assumption[];
   /** The presentation is over (the guide comes next). */
   onPresented?: () => void;
   /** A change was made. */
@@ -266,10 +269,31 @@ export function Ask({
       onPresented?.();
     }
   };
+  // The draft's assumptions (smith-first.md §4): each asked at the end of its part, with the
+  // draft's answer chosen; kept, answered (a change proposed as any other), or left open, which
+  // the ready prompts offer again.
+  const [settled, setSettled] = useState<Set<string>>(() => new Set());
+  const [reasked, setReasked] = useState<Assumption>();
+  const openAt = (part: string) =>
+    assumptions.filter((a) => a.part === part && !settled.has(a.question));
+  const settle = (a: Assumption) => setSettled((s) => new Set([...s, a.question]));
+  const answer = (a: Assumption, option: string) => {
+    settle(a);
+    setReasked(undefined);
+    const text = `${a.question} ${option}`;
+    setRequest(text);
+    void propose(text);
+  };
+  const leftOpen =
+    !presenting && partsSaid >= parts.length
+      ? assumptions.filter((a) => !settled.has(a.question))
+      : [];
   // A part follows the one before after a moment to read it; a tap brings it at once.
   // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, as it is partsSaid
   useEffect(() => {
     if (!presenting || partsSaid >= parts.length) return;
+    // A question at the part waits for its answer, or a tap.
+    if (openAt(parts[partsSaid - 1]?.part ?? "").length) return;
     const later = setTimeout(nextPart, 4000);
     return () => clearTimeout(later);
   }, [presenting, partsSaid]);
@@ -336,6 +360,19 @@ export function Ask({
               onPresented?.();
             }}
             onJump={ready.onJump}
+            questions={(part) => openAt(part)}
+            onKeep={settle}
+            onAnswer={answer}
+          />
+        )}
+        {reasked && (
+          <AssumptionLine
+            a={reasked}
+            onKeep={(a) => {
+              settle(a);
+              setReasked(undefined);
+            }}
+            onAnswer={answer}
           />
         )}
         {waiting.length > 0 && (
@@ -476,6 +513,8 @@ export function Ask({
           <ReadyChips
             // Words in the box are a request of their own: the prompts rest until it is sent.
             disabled={busy || Boolean(request.trim())}
+            leftOpen={leftOpen}
+            onReask={setReasked}
             onPick={(prompt) => {
               if (prompt === "add") {
                 setRequest("Help me add ");
@@ -602,47 +641,59 @@ function Presentation({
   onNext,
   onSkip,
   onJump,
+  questions,
+  onKeep,
+  onAnswer,
 }: {
   parts: Part[];
   going: boolean;
   onNext: () => void;
   onSkip: () => void;
   onJump: (concept: string) => void;
+  /** The draft's open assumptions at a part, asked after it. */
+  questions: (part: string) => Assumption[];
+  onKeep: (a: Assumption) => void;
+  onAnswer: (a: Assumption, option: string) => void;
 }) {
   return (
     <ol aria-label="What the app is" className="space-y-3">
       {parts.map((p, i) => (
-        <li key={p.part} data-part={p.part} className={cx(SMITHS, "space-y-2")}>
-          <p>{p.text}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {p.concepts[0] && (
-              <button
-                type="button"
-                onClick={() => onJump(p.concepts[0] as string)}
-                className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-              >
-                Show me
-              </button>
-            )}
-            {going && i === parts.length - 1 && (
-              <>
+        <li key={p.part} className="space-y-3">
+          <div data-part={p.part} className={cx(SMITHS, "space-y-2")}>
+            <p>{p.text}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {p.concepts[0] && (
                 <button
                   type="button"
-                  onClick={onNext}
-                  className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-                >
-                  Next
-                </button>
-                <button
-                  type="button"
-                  onClick={onSkip}
+                  onClick={() => onJump(p.concepts[0] as string)}
                   className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
                 >
-                  Skip
+                  Show me
                 </button>
-              </>
-            )}
+              )}
+              {going && i === parts.length - 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onNext}
+                    className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+                  >
+                    Next
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onSkip}
+                    className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+                  >
+                    Skip
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+          {questions(p.part).map((a) => (
+            <AssumptionLine key={a.question} a={a} onKeep={onKeep} onAnswer={onAnswer} />
+          ))}
         </li>
       ))}
       {!going && (
@@ -651,6 +702,50 @@ function Presentation({
         </li>
       )}
     </ol>
+  );
+}
+
+/**
+ * One of the draft's assumptions, asked (smith-first.md §4): the question, what the draft went
+ * with, the other answers as chips, and Keep it. An answer is a change proposed as any other.
+ */
+function AssumptionLine({
+  a,
+  onKeep,
+  onAnswer,
+}: {
+  a: Assumption;
+  onKeep: (a: Assumption) => void;
+  onAnswer: (a: Assumption, option: string) => void;
+}) {
+  return (
+    <div data-assumption={a.part} className={cx(SMITHS, "space-y-2")}>
+      <p>{a.question}</p>
+      <p className="text-muted">
+        I went with: <strong className="font-medium text-fg">{a.chosen}</strong>
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => onKeep(a)}
+          className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+        >
+          Keep it
+        </button>
+        {a.options
+          .filter((o) => o !== a.chosen)
+          .map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => onAnswer(a, o)}
+              className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
+            >
+              {o}
+            </button>
+          ))}
+      </div>
+    </div>
   );
 }
 
@@ -729,8 +824,13 @@ function BetaLines({ beta, left }: { beta: Beta; left: number | undefined }) {
 function ReadyChips({
   disabled,
   onPick,
+  leftOpen = [],
+  onReask,
 }: {
   disabled: boolean;
+  /** The draft's assumptions nobody answered: offered again ("You left open: …"). */
+  leftOpen?: Assumption[];
+  onReask?: (a: Assumption) => void;
   onPick: (prompt: "next" | "what" | "publish" | "add") => void;
 }) {
   const chips: ["next" | "what" | "publish" | "add", string][] = [
@@ -750,6 +850,16 @@ function ReadyChips({
           className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-50"
         >
           {label}
+        </button>
+      ))}
+      {leftOpen.map((a) => (
+        <button
+          key={a.question}
+          type="button"
+          onClick={() => onReask?.(a)}
+          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-50"
+        >
+          You left open: {a.question}
         </button>
       ))}
     </fieldset>
