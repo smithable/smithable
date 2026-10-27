@@ -342,3 +342,54 @@ test("addOutgoing and removeOutgoing, and what a change to the model does to an 
   if (!gone.ok) throw new Error(gone.message);
   expect(gone.files.spec).not.toContain("outgoing");
 });
+
+test("a custom action's entry: after it returns, a call or a role's mail, and no record's words", () => {
+  const custom = `${SPEC.replace(
+    "actions:\n",
+    "actions:\n  importBookings:\n    custom: true\n    input: { file: string! }\n    output: { added: int }\n",
+  )}outgoing:\n`;
+  const readCustom = (entries: string) =>
+    validateSpec(
+      { path: "smithable.yml", text: `${custom}${entries}` },
+      { roles: ["admin", "staff"] },
+    );
+  const good = readCustom(
+    "  imported: { when: importBookings, to: feed }\n  importMailed: { when: importBookings, to: mail, recipient: staff }\n",
+  );
+  expect(good.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(good.ir?.outgoing).toEqual([
+    { name: "imported", when: { custom: "importBookings" }, to: "feed" },
+    {
+      name: "importMailed",
+      when: { custom: "importBookings" },
+      to: "mail",
+      recipient: { kind: "role", role: "staff" },
+    },
+  ]);
+  expect(good.ir && outgoingText(good.ir.outgoing[0] as never)).toBe(
+    "When “Import bookings” runs: tells feed.",
+  );
+  // No record: no owner, no address field, no where.
+  for (const [entry, says] of [
+    ["  a: { when: importBookings, to: mail, recipient: owner }\n", "no owner"],
+    ["  a: { when: importBookings, to: mail, recipient: customer.email }\n", "goes to a role"],
+    ["  a: { when: importBookings, where: { status: confirmed }, to: feed }\n", '"where"'],
+  ] as const)
+    expect(
+      readCustom(entry)
+        .diagnostics.map((d) => d.message)
+        .join(" "),
+    ).toContain(says);
+  // The action cannot go while an entry waits for it.
+  const removed = applyOperation(
+    {
+      spec: `${custom}  imported: { when: importBookings, to: feed }\n`,
+      auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\nroles:\n  admin: { description: Runs it. }\n  staff: { description: Works. }\ndefaultRole: staff\n",
+    },
+    "removeAction",
+    { action: "importBookings" },
+  );
+  expect(removed.ok ? "" : removed.message).toContain(
+    '"imported" under outgoing waits for the action "importBookings"',
+  );
+});

@@ -17,7 +17,7 @@ import {
 } from "@smithable/core";
 import { checksLoaded, hasLocks, textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
-import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
+import { afterCustom, OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   attr,
   dataKey,
@@ -169,7 +169,8 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
     (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
   );
   const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
-  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+  const told = afterCustom(ir, action.name).length > 0;
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";${told ? '\nimport { db } from "#/db";\nimport { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";' : ""}
 import { ${action.name} as implementation } from "${a.custom}";
 import { w } from "#/kit/words";
 ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
@@ -205,8 +206,21 @@ ${records
   .join(
     "",
   )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
-    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;
-    return run(data, viewer);
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
+      told
+        ? `
+    const output = await run(data, viewer);
+    // Who is told once it has returned without an error (smithable.yml's outgoing, integrations.md §4.3).
+    // The action has run: a mail or call that cannot be queued is logged, never its failure.
+    try {
+      db.transaction((tx) => outgoingAfter(tx, viewer, ${JSON.stringify(action.name)}, data, output));
+    } catch (error) {
+      log.error("What ${action.name} tells could not be queued", { error });
+    }
+    return output;`
+        : `
+    return run(data, viewer);`
+    }
   });
 `;
 }

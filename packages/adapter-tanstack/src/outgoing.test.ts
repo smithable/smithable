@@ -342,3 +342,54 @@ test("a target's settings, and the addresses the guard refuses", () => {
   ])
     expect(privateAddress(ip), ip).toBe(false);
 });
+
+test("a custom action's entries are told once it returns: its input and output, no record", () => {
+  const custom = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Shop }
+models:
+  Customer:
+    fields: { name: string! }
+actions:
+  importCustomers:
+    custom: true
+    input: { file: string! }
+    output: { added: int }
+outgoing:
+  imported: { when: importCustomers, to: crmFeed }
+  importMailed: { when: importCustomers, to: mail, recipient: admin }
+pages:
+  customers: { crud: Customer }
+`,
+  }).ir as SpecIR;
+  const files = generateApp(custom, {
+    smithableVersion: "0.0.0",
+    auth: validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\n",
+      },
+      custom,
+    ).auth as AuthIR,
+    content: emptyContent(),
+  });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  expect(module).toContain('export const TARGETS = ["crmFeed"] as const;');
+  expect(module).toContain("export function outgoingAfter(");
+  expect(module).toContain(
+    "body: JSON.stringify({ event: entry.name, action, at: new Date().toISOString(), input, output: output ?? null }),",
+  );
+  expect(module).toContain(
+    'fields: (input, output) => [["File", shownValue(input?.file)], ["Added", shownValue(output?.added)]],',
+  );
+  const action =
+    files.find((f) => f.path === "src/generated/actions/import-customers.ts")?.content ?? "";
+  expect(action).toContain(
+    'db.transaction((tx) => outgoingAfter(tx, viewer, "importCustomers", data, output));',
+  );
+  // The kit's tell for src/custom code comes with the outbox, and the outbox's record is optional.
+  expect(files.some((f) => f.path === "src/kit/tell.server.ts")).toBe(true);
+  const schema = files.find((f) => f.path === "src/db/schema.ts")?.content ?? "";
+  expect(schema).not.toContain("recordId: integer().notNull()");
+});

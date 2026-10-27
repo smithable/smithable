@@ -646,12 +646,14 @@ export interface OutgoingIR {
   name: string;
   /**
    * A record of `model` created, changed or deleted; the standard action `action` (on `model`) ran;
-   * or the timer `timer` (whose records are `model`'s) came for a record.
+   * the timer `timer` (whose records are `model`'s) came for a record; or the custom action
+   * `custom` returned without an error (no record: the call carries its input and output).
    */
   when:
     | { model: string; event: "created" | "changed" | "deleted" }
     | { model: string; action: string }
-    | { model: string; timer: string };
+    | { model: string; timer: string }
+    | { custom: string };
   /**
    * Only for records that fit: a creation or deletion when the record fits, a change when the
    * record fits after it and did not before.
