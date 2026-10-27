@@ -129,7 +129,7 @@ A plugin (ARCHITECTURE §5.1) may contribute a connection to one service: its ke
 
 ### 4.3 Custom: code
 
-`src/custom/hooks.ts` is already there for anything else. The kit gains one function, `tell(target, body)`, which puts a call into the same outbox, so custom code gets signing, retries and the log without writing them; plain `fetch` stays available for what needs an answer at once.
+`src/custom/hooks.ts` is already there for anything else. The kit gains one function, `tell(target, body)`, which puts a call into the same outbox, so custom code gets signing, retries and the log without writing them; plain `fetch` stays available for what needs an answer at once. (Built 2026-10-27: `tell(target, body)` and `tellMail(to, subject, body)` in src/kit/tell.server.ts, a target being one the outgoing section names; and `outgoing`'s `when` takes a custom action, fired after it returns, with its input and output and no record. The outbox's model and record are empty for these.)
 
 ## 5. Middleware
 

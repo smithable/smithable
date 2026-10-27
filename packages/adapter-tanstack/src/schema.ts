@@ -337,8 +337,9 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     /** The outgoing entry's name in smithable.yml. */
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     to: text().notNull(),
     subject: text().notNull(),
     text: text().notNull(),
@@ -367,8 +368,9 @@ const OUTGOING_CALL_TABLE = `export const outgoingCall = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     entry: text().notNull(),
-    model: text().notNull(),
-    recordId: integer().notNull(),
+    /** The record told about; none for a custom action's or custom code's (integrations.md §4.3). */
+    model: text(),
+    recordId: integer(),
     /** The target's name; its address and secret are OUTGOING_<TARGET>_URL and _SECRET. */
     target: text().notNull(),
     body: text().notNull(),

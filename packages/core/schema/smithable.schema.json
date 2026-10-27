@@ -1054,7 +1054,7 @@
         "properties": {
           "when": {
             "type": "string",
-            "description": "What happens: \"<Model> created\", \"<Model> changed\" or \"<Model> deleted\", or the name of a standard action, e.g. \"Booking created\" or \"resolve\"."
+            "description": "What happens: \"<Model> created\", \"<Model> changed\" or \"<Model> deleted\", or the name of an action (a custom one too: after it returns), e.g. \"Booking created\" or \"resolve\"."
           },
           "where": {
             "type": "object",

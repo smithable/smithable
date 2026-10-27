@@ -9,6 +9,7 @@ import {
 import { checkKeys, mapEntries, readNameList, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
 import type {
+  ActionIR,
   Condition,
   ModelIR,
   OutgoingIR,
@@ -36,11 +37,14 @@ const WHEN = /^([A-Z][A-Za-z0-9]*)\s+(created|changed|deleted)$/;
 
 type When = OutgoingIR["when"];
 
-/** Reads `when`: a model's event, a standard action or a timer; says what is wrong otherwise. */
+/**
+ * Reads `when`: a model's event, an action (standard or custom) or a timer; says what is wrong
+ * otherwise.
+ */
 function readWhen(
   text: string,
   models: ModelIR[],
-  actions: StandardActionIR[],
+  actions: ActionIR[],
   timers: TimerIR[] = [],
 ): { when: When } | { problem: string; hint?: string } {
   const event = WHEN.exec(text.trim());
@@ -64,7 +68,11 @@ function readWhen(
     return {
       problem: `"${text.trim()}" is both an action and a timer, so "when" cannot tell which; rename one of them.`,
     };
-  if (action) return { when: { model: action.on, action: action.name } };
+  // A custom action has no record: the call carries its input and output (integrations.md §4.3).
+  if (action)
+    return {
+      when: action.custom ? { custom: action.name } : { model: action.on, action: action.name },
+    };
   if (timer) {
     // A timer's event comes per record; one without records has nothing to tell about.
     if (!timer.on)
@@ -74,7 +82,7 @@ function readWhen(
     return { when: { model: timer.on, timer: timer.name } };
   }
   return {
-    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of a standard action or the name of a timer; "${text}" is none of them.`,
+    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of an action or the name of a timer; "${text}" is none of them.`,
     hint: didYouMean(text.trim(), [...actions.map((a) => a.name), ...timers.map((t) => t.name)]),
   };
 }
@@ -210,6 +218,8 @@ const EVENT_WORDS = { created: "added", changed: "changed", deleted: "deleted" }
  * `label` when the summary has the content file's labels.
  */
 export function outgoingText(o: OutgoingIR, label?: (model: string) => string): string {
+  const to = toText(o, label);
+  if ("custom" in o.when) return `When “${humanize(o.when.custom)}” runs: ${to}.`;
   const name = (label ?? ((m: string) => humanize(m).toLowerCase()))(o.when.model);
   const changes = "event" in o.when && o.when.event === "changed" && o.where;
   const watched = o.fields?.length
@@ -224,19 +234,22 @@ export function outgoingText(o: OutgoingIR, label?: (model: string) => string): 
         : "timer" in o.when
           ? `When the timer “${humanize(o.when.timer)}” comes for a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`
           : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
-  const to =
-    o.to !== "mail"
-      ? `tells ${humanize(o.to).toLowerCase()}`
-      : !o.recipient
-        ? "mails"
-        : o.recipient.kind === "owner"
-          ? "mails its owner"
-          : o.recipient.kind === "role"
-            ? `mails every ${o.recipient.role}`
-            : o.recipient.kind === "list"
-              ? `mails every ${(label ?? ((m: string) => humanize(m).toLowerCase()))(o.recipient.model)}'s ${o.recipient.each.kind === "owner" ? "owner" : humanize(o.recipient.each.field).toLowerCase()}`
-              : `mails ${o.recipient.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
   return `${what}: ${to}.`;
+}
+
+/** Whom an entry tells, in words: "mails its owner", "tells statusfeed". */
+function toText(o: OutgoingIR, label?: (model: string) => string): string {
+  return o.to !== "mail"
+    ? `tells ${humanize(o.to).toLowerCase()}`
+    : !o.recipient
+      ? "mails"
+      : o.recipient.kind === "owner"
+        ? "mails its owner"
+        : o.recipient.kind === "role"
+          ? `mails every ${o.recipient.role}`
+          : o.recipient.kind === "list"
+            ? `mails every ${(label ?? ((m: string) => humanize(m).toLowerCase()))(o.recipient.model)}'s ${o.recipient.each.kind === "owner" ? "owner" : humanize(o.recipient.each.field).toLowerCase()}`
+            : `mails ${o.recipient.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
 }
 
 const named = refTo(
@@ -247,7 +260,7 @@ const named = refTo(
 const whenSchema = {
   type: "string",
   description:
-    'What happens: "<Model> created", "<Model> changed" or "<Model> deleted", or the name of a standard action, e.g. "Booking created" or "resolve".',
+    'What happens: "<Model> created", "<Model> changed" or "<Model> deleted", or the name of an action (a custom one too: after it returns), e.g. "Booking created" or "resolve".',
 };
 const whereSchema = {
   type: "object",
@@ -305,16 +318,17 @@ const addOutgoing: Operation<{
       throw new OperationError(nameRule("outgoing", outgoing));
     if (ir.outgoing.some((o) => o.name === outgoing))
       throw new OperationError(`"${outgoing}" exists already under outgoing.`);
-    const read = readWhen(
-      when,
-      ir.models,
-      ir.actions.filter((a): a is StandardActionIR => !a.custom),
-      ir.timers,
-    );
+    const read = readWhen(when, ir.models, ir.actions, ir.timers);
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
-    const model = ir.models.find((m) => m.name === read.when.model) as ModelIR;
-    if (fields) {
+    if ("custom" in read.when) {
+      const r = readCustom(read.when.custom, { where, fields, to, recipient });
+      if (r) throw new OperationError(r);
+    }
+    const model = ir.models.find(
+      (m) => "model" in read.when && m.name === read.when.model,
+    ) as ModelIR;
+    if (fields && !("custom" in read.when)) {
       const f = readFields(fields, read.when, model);
       if ("problem" in f) throw new OperationError(f.problem);
     }
@@ -323,8 +337,10 @@ const addOutgoing: Operation<{
         throw new OperationError(
           "Mail needs a recipient: --recipient owner, a role, or a field with an address (email, customer.email).",
         );
-      const r = readRecipient(recipient, model, ir.models);
-      if ("problem" in r) throw new OperationError(r.problem);
+      if (!("custom" in read.when)) {
+        const r = readRecipient(recipient, model, ir.models);
+        if ("problem" in r) throw new OperationError(r.problem);
+      }
     } else {
       if (!FIELD_NAME_PATTERN.test(to)) throw new OperationError(nameRule("outgoing", to));
       if (recipient)
@@ -395,7 +411,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
   parse(ctx, node, parsed) {
     if (node === undefined) return [];
     const models = parsed.models ?? [];
-    const actions = (parsed.actions ?? []).filter((a): a is StandardActionIR => !a.custom);
+    const actions = parsed.actions ?? [];
     const out: OutgoingIR[] = [];
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"outgoing"`) ?? []) {
       if (!FIELD_NAME_PATTERN.test(key)) {
@@ -424,9 +440,27 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         );
         continue;
       }
-      const model = models.find((m) => m.name === read.when.model) as ModelIR;
+      const model = models.find(
+        (m) => "model" in read.when && m.name === read.when.model,
+      ) as ModelIR;
       // A model's event names the model in the text; a standard action names only the action.
       if ("event" in read.when) ctx.reference("model", read.when.model, whenEntry.value);
+      if ("custom" in read.when) {
+        const problem = readCustom(read.when.custom, {
+          where: byKey.has("where") ? {} : undefined,
+          fields: byKey.has("fields") ? [] : undefined,
+          to: byKey.has("to")
+            ? readString(ctx, byKey.get("to")?.value, `"to" of ${where}`)
+            : undefined,
+          recipient: byKey.has("recipient")
+            ? readString(ctx, byKey.get("recipient")?.value, `"recipient" of ${where}`)
+            : undefined,
+        });
+        if (problem) {
+          ctx.error(whenEntry.value, "invalid-outgoing", `${capital(where)}: ${problem}`);
+          continue;
+        }
+      }
       const toEntry = byKey.get("to");
       if (!toEntry) {
         ctx.error(keyNode, "missing-key", `${capital(where)} needs "to": mail, or a target.`);
@@ -476,6 +510,12 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           continue;
         }
         if (recipientText === undefined) continue;
+        if ("custom" in read.when) {
+          ctx.reference("role", recipientText, recipientEntry.value);
+          entry.recipient = { kind: "role", role: recipientText };
+          out.push(entry);
+          continue;
+        }
         const r = readRecipient(recipientText, model, models);
         if ("problem" in r) {
           ctx.error(recipientEntry.value, "invalid-outgoing", `${capital(where)}: ${r.problem}`);
@@ -499,10 +539,15 @@ export const outgoingSection: SpecSection<"outgoing"> = {
     for (const o of ir.outgoing) {
       const at = ["outgoing", o.name];
       const path = o.recipient?.kind === "field" ? o.recipient.path : [];
-      if (effect.kind === "remove-action" && "action" in o.when && o.when.action === effect.action)
+      const waits =
+        "action" in o.when ? o.when.action : "custom" in o.when ? o.when.custom : undefined;
+      if (effect.kind === "remove-action" && waits === effect.action)
         return {
           refusal: `"${o.name}" under outgoing waits for the action "${effect.action}"; remove it first.`,
         };
+      // A custom action's entry names no field of a record.
+      if ("custom" in o.when) continue;
+      const on = o.when.model;
       const list = o.recipient?.kind === "list" ? o.recipient : undefined;
       if (effect.kind === "rename-field") {
         if (o.when.model === effect.model && o.where?.[effect.from] !== undefined)
@@ -527,9 +572,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         if (path[0] === effect.from && o.when.model === effect.model)
           spec.set([...at, "recipient"], [effect.to, ...path.slice(1)].join("."));
         if (path.length === 2 && path[1] === effect.from) {
-          const ref = ir.models
-            .find((m) => m.name === o.when.model)
-            ?.fields.find((f) => f.name === path[0]);
+          const ref = ir.models.find((m) => m.name === on)?.fields.find((f) => f.name === path[0]);
           if (ref?.type.kind === "relation" && ref.type.model === effect.model)
             spec.set([...at, "recipient"], [path[0], effect.to].join("."));
         }
@@ -569,9 +612,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         )
           return { refusal: uses(effect.model, effect.field) };
         if (path.length === 2 && path[1] === effect.field) {
-          const ref = ir.models
-            .find((m) => m.name === o.when.model)
-            ?.fields.find((f) => f.name === path[0]);
+          const ref = ir.models.find((m) => m.name === on)?.fields.find((f) => f.name === path[0]);
           if (ref?.type.kind === "relation" && ref.type.model === effect.model)
             return { refusal: uses(effect.model, effect.field) };
         }
@@ -582,3 +623,20 @@ export const outgoingSection: SpecSection<"outgoing"> = {
 };
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * What a custom action's entry may say: it has no record, so no `where` or `fields`, and a mail
+ * goes to a role (an owner or an address field would be a record's). Returns what is wrong.
+ */
+function readCustom(
+  action: string,
+  o: { where?: object; fields?: string[]; to?: string; recipient?: string },
+): string | undefined {
+  if (o.where !== undefined || o.fields !== undefined)
+    return `the custom action "${action}" has no record, so "where" and "fields" say nothing; leave them out.`;
+  if (o.to === "mail" && o.recipient !== undefined && !/^[a-z][A-Za-z0-9]*$/.test(o.recipient))
+    return `the custom action "${action}" has no record, so its mail goes to a role; "${o.recipient}" is not one.`;
+  if (o.to === "mail" && o.recipient === "owner")
+    return `the custom action "${action}" has no record and so no owner; mail a role instead.`;
+  return undefined;
+}
