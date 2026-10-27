@@ -1035,7 +1035,10 @@ export function App() {
                     <Panel
                       key={w}
                       title="Changes"
-                      className={cx("min-h-0", content === "smith+changes" ? "flex-[2] border-t" : "flex-1")}
+                      className={cx(
+                        "min-h-0",
+                        content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
+                      )}
                     >
                       <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
                         <Trace
