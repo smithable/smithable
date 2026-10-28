@@ -14,16 +14,13 @@ The sandbox is yours for two hours from the moment it starts. Then it is removed
 
 ## Change it in the browser
 
-The sandbox opens Studio, the same editor `smithable studio` opens on your own machine, with the app's preview beside it. A short guide asks how you want to work:
+The sandbox opens Studio, the same editor `smithable studio` opens on your own machine. Smith, Studio's assistant, is on the left, with the app's preview beside him. First he presents the app, part by part: what it is for, its pages, who can do what. If you started from your own words rather than an example, the draft had to assume a few things, and he asks about each at its part: keep it, choose another answer, or leave it open; his suggestions offer what you left open again later. Then he shows you round Studio; **Guide** in the top bar shows the tour again.
 
-- **No code**: change the app in plain words and forms.
-- **Code**: the spec files, every operation as a form, the generated code's last change and the logs.
-
-You can switch at the top at any time. Every change is an operation, so **Undo** takes it back.
+Tell Smith what to change in your own words, or ask him how the app works. He shows a change in plain words and makes it when you confirm. To change the app by hand, open **No code** in the top bar: **Behavior**, **Look**, **Who can** and **Content**, in plain words and forms. **Code** beside it has the app's files themselves (the [spec](../spec/v0.1.md)), to edit by hand. Smith stays on the left either way. Every change is an operation, so **Undo** takes it back.
 
 Here, **Look** and the Coastal theme gave the Booking example's app (Stillwater Yoga) new colors and a new font. The line at the top says what changed, and **Undo this change** is right beside it:
 
-![Studio with the Look tab open, the Coastal theme in use and the preview of the yoga studio's app in its colors](start-hosted/studio.webp)
+![Studio with Smith on the left, the preview of the yoga studio's app in the Coastal theme's colors, and the Look tab open with Coastal in use](start-hosted/studio.webp)
 
 The records in the preview are samples for trying the app. The published app starts empty.
 
