@@ -257,11 +257,13 @@ export function Ask({
   const presentedOnce = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the parts are there
   useEffect(() => {
-    if (!presentFirst || presentedOnce.current || !parts.length || making) return;
+    if (!presentFirst || presentedOnce.current || !ready || making) return;
     presentedOnce.current = true;
+    // An app with nothing to present: the guide comes at once.
+    if (!parts.length) return void onPresented?.();
     setSaidParts(1);
     setPresenting(true);
-  }, [presentFirst, parts.length, making]);
+  }, [presentFirst, parts.length, making, ready]);
   const nextPart = () => {
     if (partsSaid < parts.length) setSaidParts(partsSaid + 1);
     else {
@@ -288,15 +290,16 @@ export function Ask({
     !presenting && partsSaid >= parts.length
       ? assumptions.filter((a) => !settled.has(a.question))
       : [];
-  // A part follows the one before after a moment to read it; a tap brings it at once.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, as it is partsSaid
+  // A part follows the one before after a moment to read it, and after the last the guide comes; a
+  // tap brings it at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, as it is partsSaid, and again once its question is settled
   useEffect(() => {
-    if (!presenting || partsSaid >= parts.length) return;
+    if (!presenting) return;
     // A question at the part waits for its answer, or a tap.
     if (openAt(parts[partsSaid - 1]?.part ?? "").length) return;
     const later = setTimeout(nextPart, 4000);
     return () => clearTimeout(later);
-  }, [presenting, partsSaid]);
+  }, [presenting, partsSaid, settled]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the conversation grows
   useEffect(() => {
     const box = scroller.current;

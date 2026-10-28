@@ -33,7 +33,6 @@ export interface ChangeDetail {
   after: Project["files"];
 }
 
-/** A described app being made (docs/design/while-it-is-made.md). */
 /** One of the draft's assumptions (smith-first.md §4): asked with its answer already chosen. */
 export interface Assumption {
   part: "app" | "pages" | "roles" | "visitors" | "signedIn";
@@ -42,6 +41,7 @@ export interface Assumption {
   options: string[];
 }
 
+/** A described app being made (docs/design/while-it-is-made.md). */
 export interface Making {
   description: string;
   stage: "reading" | "asking" | "drafting" | "building" | "arriving" | "failed";

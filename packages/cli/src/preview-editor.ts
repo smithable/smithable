@@ -285,6 +285,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   document.addEventListener("touchstart", (event) => {
     const t = event.touches[0];
+    // A second finger (a pinch) is no swipe: what the first began is dropped.
     touch = t && event.touches.length === 1 && !sideways(event.target) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
   }, { passive: true });
   document.addEventListener("touchend", (event) => {

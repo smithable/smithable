@@ -247,7 +247,7 @@ export function App() {
   };
   const swipeKey = useRef<(direction: 1 | -1) => void>(() => {});
   swipeKey.current = (direction) => {
-    if (narrow) stepRow(direction);
+    if (narrow && !project?.making) stepRow(direction);
   };
   const rowPan = usePan({
     enabled: narrow && !project?.making,
@@ -646,19 +646,31 @@ export function App() {
   const smithSays = narrow || slotOf("smith") !== undefined;
   // What the draft assumed (smith-first.md §4), kept from the making for Smith to ask at its
   // part, for the browser tab's session.
-  const [assumptions, setAssumptions] = useState<Assumption[]>(() => {
+  // Kept with the app's name: another app opened in the same tab has its own.
+  const app = project?.name;
+  const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  useEffect(() => {
+    if (!app) return;
     try {
-      return JSON.parse(sessionStorage.getItem("smithable:assumptions") ?? "[]") as Assumption[];
+      const kept = JSON.parse(sessionStorage.getItem("smithable:assumptions") ?? "null") as {
+        app?: string;
+        assumptions?: Assumption[];
+      } | null;
+      setAssumptions(kept?.app === app ? (kept.assumptions ?? []) : []);
     } catch {
-      return [];
+      setAssumptions([]);
     }
-  });
+  }, [app]);
   const madeAssumptions = project?.making?.assumptions;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: kept when a making gives them
   useEffect(() => {
     if (!madeAssumptions?.length) return;
     setAssumptions(madeAssumptions);
     try {
-      sessionStorage.setItem("smithable:assumptions", JSON.stringify(madeAssumptions));
+      sessionStorage.setItem(
+        "smithable:assumptions",
+        JSON.stringify({ app, assumptions: madeAssumptions }),
+      );
     } catch {}
   }, [madeAssumptions]);
   // A new project: Smith presents it first, then the guide (smith-first.md §2), once the
@@ -1062,93 +1074,100 @@ export function App() {
                       />
                     </div>
                   )}
-                  {(narrow && content === "smith+changes"
-                    ? [phoneSub]
-                    : content === "manual"
-                      ? [manual]
-                      : windowsIn(content)
-                  ).map((w) =>
-                    w === "nocode" ? (
-                      <NoCode
-                        key={w}
-                        project={project}
-                        spec={spec}
-                        run={run}
-                        place={place.nocode}
-                        onPlace={nocodePlace}
-                      />
-                    ) : w === "code" ? (
-                      <Suspense
-                        key={w}
-                        fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
-                      >
-                        <Code
+                  {(content === "manual" ? [manual] : windowsIn(content)).map((w) => {
+                    const made =
+                      w === "nocode" ? (
+                        <NoCode
+                          key={w}
                           project={project}
                           spec={spec}
                           run={run}
-                          place={place.code}
-                          onPlace={codePlace}
-                          jumpTo={codeJump}
-                          onJumped={forgetJump}
-                          onLook={() => {
-                            nocodePlace({ sub: "look" });
-                            if (narrow) showWindow("nocode");
-                            else workIn("nocode");
-                          }}
+                          place={place.nocode}
+                          onPlace={nocodePlace}
                         />
-                      </Suspense>
-                    ) : w === "smith" ? (
-                      <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
-                        <div data-guide="change" className="flex h-full min-h-0 flex-col">
-                          <Ask
-                            guide={guiding ? guideLine : undefined}
-                            presentFirst={Boolean(firstVisit)}
-                            assumptions={assumptions}
-                            onPresented={() => setPresented(true)}
-                            {...(project.beta ? { beta: project.beta } : {})}
-                            words={words}
-                            waiting={project.waiting}
-                            trace={project.trace}
-                            ready={{
-                              sections,
-                              parts,
-                              appName: project.name,
-                              notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
-                              ...(project.home ? { home: project.home } : {}),
-                              apply: (op, args) => void run(op, args),
-                              onJump: (concept) => {
-                                guideStop("behavior");
-                                // After No code is on screen to hear it.
-                                setTimeout(() =>
-                                  window.dispatchEvent(
-                                    new CustomEvent(OPEN_PART, { detail: concept }),
-                                  ),
-                                );
-                              },
+                      ) : w === "code" ? (
+                        <Suspense
+                          key={w}
+                          fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
+                        >
+                          <Code
+                            project={project}
+                            spec={spec}
+                            run={run}
+                            place={place.code}
+                            onPlace={codePlace}
+                            jumpTo={codeJump}
+                            onJumped={forgetJump}
+                            onLook={() => {
+                              nocodePlace({ sub: "look" });
+                              if (narrow) showWindow("nocode");
+                              else workIn("nocode");
                             }}
                           />
-                        </div>
-                      </Panel>
+                        </Suspense>
+                      ) : w === "smith" ? (
+                        <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
+                          <div data-guide="change" className="flex h-full min-h-0 flex-col">
+                            <Ask
+                              guide={guiding ? guideLine : undefined}
+                              presentFirst={Boolean(firstVisit)}
+                              assumptions={assumptions}
+                              onPresented={() => setPresented(true)}
+                              {...(project.beta ? { beta: project.beta } : {})}
+                              words={words}
+                              waiting={project.waiting}
+                              trace={project.trace}
+                              ready={{
+                                sections,
+                                parts,
+                                appName: project.name,
+                                notes: (spec.diagnostics ?? []).filter(
+                                  (d) => d.severity === "note",
+                                ),
+                                ...(project.home ? { home: project.home } : {}),
+                                apply: (op, args) => void run(op, args),
+                                onJump: (concept) => {
+                                  guideStop("behavior");
+                                  // After No code is on screen to hear it.
+                                  setTimeout(() =>
+                                    window.dispatchEvent(
+                                      new CustomEvent(OPEN_PART, { detail: concept }),
+                                    ),
+                                  );
+                                },
+                              }}
+                            />
+                          </div>
+                        </Panel>
+                      ) : (
+                        <Panel
+                          key={w}
+                          title="Changes"
+                          className={cx(
+                            "min-h-0",
+                            content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
+                          )}
+                        >
+                          <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+                            <Trace
+                              entries={project.trace}
+                              words={words}
+                              plugins={spec.plugins}
+                              onUndo={(ids) => void undoChanges(ids)}
+                            />
+                          </div>
+                        </Panel>
+                      );
+                    // On a phone Smith and Changes share a window: the one not shown stays,
+                    // hidden, so Smith's presentation and the guide's line go on.
+                    return narrow && content === "smith+changes" ? (
+                      <div key={w} className={w === phoneSub ? "contents" : "hidden"}>
+                        {made}
+                      </div>
                     ) : (
-                      <Panel
-                        key={w}
-                        title="Changes"
-                        className={cx(
-                          "min-h-0",
-                          content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
-                        )}
-                      >
-                        <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                          <Trace
-                            entries={project.trace}
-                            words={words}
-                            plugins={spec.plugins}
-                            onUndo={(ids) => void undoChanges(ids)}
-                          />
-                        </div>
-                      </Panel>
-                    ),
-                  )}
+                      made
+                    );
+                  })}
                 </div>
               );
             })}
