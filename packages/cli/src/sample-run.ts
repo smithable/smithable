@@ -54,19 +54,23 @@ const FEED_MAX = 200;
 /** The pause between moves in a fast run, so the preview still shows them land. */
 const FAST_GAP = 250;
 
-/** A move in the feed's words. */
-export function moveWords(move: OpenMove): string {
+/** A move in the feed's words, with the app's labels: "Added a booking", "Ran Cancel on a booking". */
+export function moveWords(move: OpenMove, labels: Record<string, string> = {}): string {
+  const one = (model: string) => {
+    const label = (labels[model] ?? model).toLowerCase();
+    return `${/^[aeiou]/.test(label) ? "an" : "a"} ${label}`;
+  };
   switch (move.kind) {
     case "open":
       return `Opened ${move.route}`;
     case "add":
-      return `Added a ${move.model}`;
+      return `Added ${one(move.model)}`;
     case "change":
-      return `Changed a ${move.model}`;
+      return `Changed ${one(move.model)}`;
     case "delete":
-      return `Deleted a ${move.model}`;
+      return `Deleted ${one(move.model)}`;
     case "run":
-      return `Ran ${move.action}${move.model ? ` on a ${move.model}` : ""}`;
+      return `Ran ${labels[move.action] ?? move.action}${move.model ? ` on ${one(move.model)}` : ""}`;
   }
 }
 
@@ -74,7 +78,7 @@ export function sampleRunner(options: {
   /** A call on the app's door: `moves?user=…`, or a side with its body. */
   door: (path: string, body?: unknown) => Promise<Response>;
   /** The project's sample users and the app in words, read at each start. */
-  load: () => { people: SamplePerson[]; summary: string };
+  load: () => { people: SamplePerson[]; summary: string; labels?: Record<string, string> };
   providers: () => Provider[];
   changed: (state: PeopleState) => void;
   now?: () => number;
@@ -91,6 +95,7 @@ export function sampleRunner(options: {
     currency: "EUR",
   };
   let summary = "";
+  let labels: Record<string, string> = {};
   let seed = options.seed ?? now() % 1_000_000;
   let turns = 0;
   let lines = 0;
@@ -135,6 +140,7 @@ export function sampleRunner(options: {
   function load(): boolean {
     const loaded = options.load();
     summary = loaded.summary;
+    labels = loaded.labels ?? {};
     // What each did last stays with them across a new read of the file.
     const last = new Map(state.people.map((p) => [p.id, p.last]));
     state.people = loaded.people.slice(0, PEOPLE_MAX).map((p) => {
@@ -220,7 +226,7 @@ export function sampleRunner(options: {
       .catch(() => undefined);
     state.moves++;
     if (!providers[0]) hour.push(now());
-    const text = moveWords(move);
+    const text = moveWords(move, labels);
     if (answer?.ok) {
       line(person, { text, outcome: "done", ...(why ? { why } : {}) });
       return;
