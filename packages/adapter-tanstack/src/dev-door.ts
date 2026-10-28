@@ -190,9 +190,9 @@ export function doorModule(
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}allows, type Viewer } from "#/kit/access";
+${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("allows") ? "allows, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
-import { ${uses("record") ? "BadInput, " : ""}NotFound } from "#/kit/refusal";
+import { BadInput, NotFound } from "#/kit/refusal";
 ${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { pageAccess } from "./pages";
 ${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
 ${actionImports.join("\n")}
@@ -228,14 +228,18 @@ ${used.map(({ model, n: mn }) => `  ${JSON.stringify(model.name)}: async (viewer
 
 `
     : ""
-}/** A move is open when it has a record to be made on, if it needs one, and a choice for each required reference. */
+}${
+  uses("ready")
+    ? `/** A move is open when it has a record to be made on, if it needs one, and a choice for each required reference. */
 function ready(move: OpenMove): OpenMove | undefined {
   if (move.records && !move.records.length) return undefined;
   for (const slot of move.slots ?? [])
     if (slot.model && slot.required && !move.candidates?.[slot.field]?.length) return undefined;
   return move;
 }
-
+`
+    : ""
+}
 const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<OpenMove | undefined>> = {
 ${open.join("\n")}
 };
@@ -273,6 +277,13 @@ ${acts.join("\n")}
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, ${writes ? "headers" : "_headers"}: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -282,7 +293,11 @@ ${writes ? '  if (move.kind !== "open") writeAllowed(viewer, headers);\n' : ""} 
 }
 
 /** The door's routes, at /_dev/… (a bracketed segment is a literal one, not a layout). */
-export function doorRoutes(ir: SpecIR, auth: AuthIR): Record<string, string> {
+export function doorRoutes(
+  ir: SpecIR,
+  auth: AuthIR,
+  people: readonly SampleUser[] = [],
+): Record<string, string> {
   const refusedUser =
     'Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 })';
   const files: Record<string, string> = {
@@ -373,7 +388,8 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
-const ROLES: string[] = ${literal(hasSignIn(auth) ? auth.roles.map((r) => r.name) : [])};
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
+const ROLES: string[] = ${literal(hasSignIn(auth) ? auth.roles.map((r) => r.name).filter((r) => !people.some((p) => p.role === r)) : [])};
 
 export const Route = createFileRoute("/_dev/ask")({
   server: {

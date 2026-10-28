@@ -3606,6 +3606,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -7413,6 +7420,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "member", "assistant"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -10022,7 +10030,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/app.ts": "309f73cb generated",
   "src/generated/ask.server.ts": "3aa97fb5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "8090d210 generated",
+  "src/generated/dev-door.server.ts": "1bd0cfb6 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
@@ -10073,7 +10081,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -10103,7 +10111,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "6f3c847d generated",
+  "src/routes/[_dev]/ask.ts": "7266fbb2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "d036a1bb generated",
@@ -12732,6 +12740,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -16157,7 +16172,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.server.ts": "2d15e0eb generated",
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "7635564c generated",
+  "src/generated/dev-door.server.ts": "87ba71fa generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/outgoing.server.ts": "fac1c733 generated",
   "src/generated/pages.ts": "0bc41f9d generated",
@@ -16201,7 +16216,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -20382,6 +20397,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -23935,6 +23957,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "member"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -28521,7 +28544,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/class-type.server.ts": "00d73d14 generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "2971ac3e generated",
+  "src/generated/dev-door.server.ts": "0607fee4 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
@@ -28588,7 +28611,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -28621,7 +28644,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "70cc8f77 generated",
+  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "b9438c31 generated",
@@ -31335,6 +31358,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -33044,6 +33074,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "sales"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -34970,7 +35001,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "611c2893 generated",
   "src/generated/customer.ts": "d44b6a34 generated",
-  "src/generated/dev-door.server.ts": "5e865b4b generated",
+  "src/generated/dev-door.server.ts": "e0ea3b0f generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
@@ -35014,7 +35045,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -35042,7 +35073,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "b7f8955f generated",
+  "src/routes/[_dev]/ask.ts": "bd24beb4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "01060509 generated",
@@ -39073,6 +39104,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -41228,6 +41266,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "member"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -43279,7 +43318,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/client.server.ts": "768541de generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "2ad0dcf9 generated",
+  "src/generated/dev-door.server.ts": "d6d2a60d generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
@@ -43332,7 +43371,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -43365,7 +43404,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "70cc8f77 generated",
+  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "d287a838 generated",
@@ -46082,6 +46121,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -51112,7 +51158,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/actions/sold-out.ts": "d324a1d9 generated",
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "c3c6f116 generated",
+  "src/generated/dev-door.server.ts": "9bf3121c generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
   "src/generated/dish.server.ts": "f5e71811 generated",
   "src/generated/dish.ts": "b7cb2173 generated",
@@ -51165,7 +51211,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -52607,6 +52653,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -54146,6 +54199,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "member"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -55876,7 +55930,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/ask.server.ts": "06676a98 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "479d238c generated",
+  "src/generated/dev-door.server.ts": "5f63b63a generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
   "src/generated/item.server.ts": "84d584a3 generated",
@@ -55920,7 +55974,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -55952,7 +56006,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "44a3df32 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "70cc8f77 generated",
+  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "fb4e1e0e generated",
@@ -57252,6 +57306,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -58251,6 +58312,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "member"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -59352,7 +59414,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "433cdd26 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "663efcef generated",
+  "src/generated/dev-door.server.ts": "4b5053db generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
@@ -59390,7 +59452,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -59418,7 +59480,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "70cc8f77 generated",
+  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "5e4c2437 generated",
@@ -63927,6 +63989,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -67675,6 +67744,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "staff"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -70817,7 +70887,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/component.server.ts": "2f6960e5 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "caa016c5 generated",
+  "src/generated/dev-door.server.ts": "c0ef9601 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
   "src/generated/incident-update.server.ts": "becee6e2 generated",
@@ -70873,7 +70943,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -70902,7 +70972,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "b993c3a5 generated",
+  "src/routes/[_dev]/ask.ts": "4a0b13f2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "b94262ff generated",
@@ -73662,6 +73732,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
 export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: Headers): Promise<unknown> {
+  const { values, record, records } = body ?? {};
+  if (
+    (values !== undefined && (typeof values !== "object" || values === null || Array.isArray(values))) ||
+    (record !== undefined && typeof record !== "number") ||
+    (records !== undefined && !(Array.isArray(records) && records.every((id) => typeof id === "number")))
+  )
+    throw new BadInput("A move is { user, move, values, and its record or records }.");
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
@@ -76046,6 +76123,7 @@ import { viewerFor } from "#/generated/dev-door.server";
 import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
+/** The roles no sample user has: Ask answers as one of those by a session made for the call. */
 const ROLES: string[] = ["admin", "agent"];
 
 export const Route = createFileRoute("/_dev/ask")({
@@ -77826,7 +77904,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "b365bd87 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "6156a2d7 generated",
+  "src/generated/dev-door.server.ts": "6c1250a3 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "00275f2b generated",
@@ -77874,7 +77952,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "115fbd08 kit",
+  "src/kit/dev-door.server.ts": "6019f65f kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -77907,7 +77985,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "5fdf03a4 generated",
+  "src/routes/[_dev]/ask.ts": "76641e97 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "07b6bb15 generated",

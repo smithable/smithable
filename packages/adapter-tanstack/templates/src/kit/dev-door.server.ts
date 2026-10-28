@@ -5,6 +5,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { ZodError } from "zod";
 import { AccessDenied, Conflict } from "./access";
+import { TooMany } from "./limit";
 import { BadInput, NotFound } from "./refusal";
 
 /** How a move's slot is filled, as the generated moves name it. */
@@ -38,14 +39,9 @@ export type OpenMove = DoorMove & { records?: number[]; candidates?: Record<stri
 /** A 404 unless the door is open: a development build (a demo too, unless `devOnly`) and the secret. */
 export function doorShut(request: Request, devOnly = false): Response | undefined {
   const open = import.meta.env.DEV || (!devOnly && process.env.DEMO_SIGN_IN === "1");
-  const secret = process.env.SMITHABLE_DEV_DOOR ?? "";
+  const secret = Buffer.from(process.env.SMITHABLE_DEV_DOOR ?? "");
   const given = Buffer.from(request.headers.get("x-smithable-dev-door") ?? "");
-  if (
-    open &&
-    secret &&
-    given.length === secret.length &&
-    timingSafeEqual(given, Buffer.from(secret))
-  )
+  if (open && secret.length && given.length === secret.length && timingSafeEqual(given, secret))
     return undefined;
   return new Response("Not found", { status: 404 });
 }
@@ -78,17 +74,21 @@ export function stored(
  */
 export function refused(error: unknown): Response {
   const status =
-    error instanceof AccessDenied
-      ? 403
-      : error instanceof Conflict
-        ? 409
-        : error instanceof ZodError
-          ? 422
-          : error instanceof BadInput
-            ? 400
-            : error instanceof NotFound
-              ? 404
-              : 500;
+    error instanceof TooMany
+      ? 429
+      : error instanceof AccessDenied
+        ? 403
+        : error instanceof Conflict ||
+            // An action whose condition no longer fits the record: someone moved first.
+            (error as Error)?.message === "This cannot be done now."
+          ? 409
+          : error instanceof ZodError
+            ? 422
+            : error instanceof BadInput
+              ? 400
+              : error instanceof NotFound
+                ? 404
+                : 500;
   const message =
     error instanceof ZodError
       ? error.issues.map((i) => i.message).join("; ")

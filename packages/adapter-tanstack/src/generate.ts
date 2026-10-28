@@ -976,7 +976,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         "src/generated/dev-door.server.ts",
         doorModule(ir, auth, t, hasSignIn(auth) ? samplePeople(options.people) : []),
       ),
-      ...Object.entries(doorRoutes(ir, auth)).map(([path, source]) => generated(path, source)),
+      ...Object.entries(
+        doorRoutes(ir, auth, hasSignIn(auth) ? samplePeople(options.people) : []),
+      ).map(([path, source]) => generated(path, source)),
     ],
   },
   {

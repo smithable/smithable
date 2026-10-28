@@ -469,13 +469,20 @@ async function devDoorFlow(dir, base) {
     const stranger = (await fetch(`${base}/_dev/moves?user=dev-admin`, { headers: door })).status;
     if (shut !== 404 || stranger !== 403)
       throw new Error(`without the secret: ${shut}; someone not a sample user: ${stranger}`);
-    // Ask as a sample user, and as a role no sample user needs to have (ask-words.md §3.2).
-    for (const user of ["sample-maja-lindqvist", "role:admin"]) {
-      const asked = await call("ask", { user, question: "How many sessions are there?" });
-      const answer = await asked.json();
-      if (!asked.ok || !answer.steps?.some((s) => s.tool === "measure"))
-        throw new Error(`Ask as ${user}: ${asked.status} ${JSON.stringify(answer).slice(0, 200)}`);
-    }
+    // Ask as a sample user (ask-words.md §3.2); a role a sample user has is asked as that person.
+    const asked = await call("ask", {
+      user: "sample-maja-lindqvist",
+      question: "How many sessions are there?",
+    });
+    const answer = await asked.json();
+    if (!asked.ok || !answer.steps?.some((s) => s.tool === "measure"))
+      throw new Error(
+        `Ask as a sample user: ${asked.status} ${JSON.stringify(answer).slice(0, 200)}`,
+      );
+    const byRole = (
+      await call("ask", { user: "role:admin", question: "How many sessions are there?" })
+    ).status;
+    if (byRole !== 403) throw new Error(`Ask as a role a sample user has: ${byRole}`);
     const people = ["sample-maja-lindqvist", "sample-tomas-berg", "sample-reception"];
     const pick = seeded(seed);
     const one = (ids) => ids[Math.floor(pick() * ids.length)];
@@ -523,7 +530,7 @@ async function devDoorFlow(dir, base) {
     if (!done || !n)
       throw new Error(`${done} moves went through, ${n} lines in Activity by a sample user`);
     console.log(
-      `  ✓ the development door: shut without the secret, refused to anyone else; Ask as a sample user and as a role; twenty changes by the sample users, the clock a week on (${week.slice(0, 10)}): ${done} done, ${refused} refused by the app, ${n} in Activity (seed ${seed})`,
+      `  ✓ the development door: shut without the secret, refused to anyone else; Ask as a sample user; twenty changes by the sample users, the clock a week on (${week.slice(0, 10)}): ${done} done, ${refused} refused by the app, ${n} in Activity (seed ${seed})`,
     );
   } catch (error) {
     console.log(`  ✗ the development door: ${error.message} (DOOR_SEED=${seed})`);
