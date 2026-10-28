@@ -82,6 +82,8 @@ export interface ApiOffers {
   models: string[];
   /** The standard actions offered to a key. */
   actions: string[];
+  /** The custom actions on rows offered to a key: run on the ids given, with their other inputs. */
+  rowsActions: string[];
   /**
    * What a call without a key may reach (docs/design/api-only.md §3.4): it is the visitor, so it
    * reads the offered models `public.read` lists (within their `where`) and adds the offered
@@ -94,7 +96,7 @@ export interface ApiOffers {
 /** The models and standard actions an app's `api` block offers, with `all` and `except` resolved. */
 export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
   const api = auth.api;
-  if (!api) return { models: [], actions: [], visitors: { read: [], create: [] } };
+  if (!api) return { models: [], actions: [], rowsActions: [], visitors: { read: [], create: [] } };
   const known = ir.models.map((m) => m.name);
   const models =
     api.models === "all"
@@ -105,11 +107,17 @@ export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
     api.actions === "all"
       ? standard.map((a) => a.name)
       : api.actions.filter((name) => standard.some((a) => a.name === name));
+  // A custom action on rows of an offered model is offered too, run on the ids given.
+  const onRows = ir.actions.filter((a) => a.custom && a.rows && models.includes(a.rows.model));
+  const rowsActions =
+    api.actions === "all"
+      ? onRows.map((a) => a.name)
+      : api.actions.filter((name) => onRows.some((a) => a.name === name));
   const visitors = {
     read: models.filter((m) => auth.public.read.includes(m)),
     create: models.filter((m) => auth.public.create.includes(m)),
   };
-  return { models, actions, visitors };
+  return { models, actions, rowsActions, visitors };
 }
 
 export interface SignInIR {
@@ -653,13 +661,19 @@ function checkApi(ctx: ParseContext, auth: AuthIR, ir: SpecIR, nodes: ApiNodes):
           ir.actions.map((a) => a.name),
         ),
       );
-    else if (action.custom)
+    else if (action.custom && !action.rows)
       ctx.error(
         at,
         "invalid-api",
-        `"${name}" is a custom action: only standard actions (on, set) can be offered to other programs.`,
+        `"${name}" is a custom action with no list of records in its input: only standard actions (on, set) and custom actions on rows (an input like customers: Customer[]) can be offered to other programs.`,
       );
-    else if (!offered.includes(action.on))
+    else if (action.custom && action.rows && !offered.includes(action.rows.model))
+      ctx.error(
+        at,
+        "invalid-api",
+        `"${name}" runs on ${action.rows.model} rows, which "api" does not offer: add ${action.rows.model} to "models".`,
+      );
+    else if (!action.custom && !offered.includes(action.on))
       ctx.error(
         at,
         "invalid-api",

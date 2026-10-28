@@ -151,6 +151,17 @@ const addAction: Operation<{
         ...(Object.keys(output).length ? { output } : {}),
         ...text,
       });
+      // A rows action (one input a list of records) shows where a standard action would: on its
+      // model's crud page, when there is just one (the page's "actions" is where an action shows).
+      const rows = Object.values(input)
+        .map((text) => /^([A-Z][A-Za-z0-9]*)\[\]$/.exec(String(text).trim())?.[1])
+        .find((model) => model && ir.models.some((m) => m.name === model));
+      if (rows) {
+        const pages = ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === rows);
+        const page = pages.length === 1 ? pages[0] : undefined;
+        if (page?.actions) spec.set(["pages", page.id, "actions"], [...page.actions, action]);
+        else if (page) spec.add(["pages", page.id], "actions", [action]);
+      }
       return [];
     }
     if (Object.keys(input).length || Object.keys(output).length)
