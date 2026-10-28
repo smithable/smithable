@@ -23,6 +23,8 @@ export interface AskKind {
   numbers: string[];
   /** Fields a number can be split by. */
   by: string[];
+  /** The list page, where a record is at path/id; none when the kind has no page. */
+  path?: string;
 }
 
 export type Range = { from?: string | number; to?: string | number; over?: number; under?: number };

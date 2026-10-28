@@ -3106,7 +3106,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","member":"model","assistant":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -3120,6 +3120,7 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
@@ -9353,6 +9354,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/api.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
@@ -9466,7 +9468,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/api.server.ts": "2103f8c1 generated",
   "src/generated/app.ts": "309f73cb generated",
-  "src/generated/ask.server.ts": "3aa97fb5 generated",
+  "src/generated/ask.server.ts": "7d9e8d19 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
@@ -9498,7 +9500,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -9513,8 +9515,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -9538,7 +9541,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -15018,6 +15021,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
   "kit: src/kit/consent.ts",
@@ -15165,6 +15169,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -15190,7 +15195,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -17422,7 +17427,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","member":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -17436,26 +17441,27 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"]),
-    kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], []),
-    kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"]),
-    kindWords(bookingUi, ["session","attendee"], [{"field":"session","by":"reference","model":"Session"},{"field":"attendee","by":"reference","model":"User"}], [], ["session","attendee"]),
-    kindWords(postUi, ["title","address","summary","cover","body","publishedOn","status"], [{"field":"title","by":"text"},{"field":"address","by":"text"},{"field":"publishedOn","by":"date"},{"field":"status","by":"value","values":["draft","published"]}], [], ["publishedOn","status"]),
-    kindWords(messageUi, ["name","email","message"], [{"field":"name","by":"text"},{"field":"email","by":"text"}], [], []),
+    kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"], "/class-types"),
+    kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], [], "/instructors"),
+    kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"], "/sessions"),
+    kindWords(bookingUi, ["session","attendee"], [{"field":"session","by":"reference","model":"Session"},{"field":"attendee","by":"reference","model":"User"}], [], ["session","attendee"], "/my-bookings"),
+    kindWords(postUi, ["title","address","summary","cover","body","publishedOn","status"], [{"field":"title","by":"text"},{"field":"address","by":"text"},{"field":"publishedOn","by":"date"},{"field":"status","by":"value","values":["draft","published"]}], [], ["publishedOn","status"], "/posts"),
+    kindWords(messageUi, ["name","email","message"], [{"field":"name","by":"text"},{"field":"email","by":"text"}], [], [], "/messages"),
   ],
   "member": () => [
-    kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"]),
-    kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], []),
-    kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"]),
-    kindWords(bookingUi, ["session","attendee"], [{"field":"session","by":"reference","model":"Session"},{"field":"attendee","by":"reference","model":"User"}], [], ["session","attendee"]),
-    kindWords(postUi, ["title","address","summary","cover","body","publishedOn","status"], [{"field":"title","by":"text"},{"field":"address","by":"text"},{"field":"publishedOn","by":"date"},{"field":"status","by":"value","values":["draft","published"]}], [], ["publishedOn","status"]),
-    kindWords(messageUi, ["name","email","message"], [{"field":"name","by":"text"},{"field":"email","by":"text"}], [], []),
+    kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"], "/class-types"),
+    kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], [], "/instructors"),
+    kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"], "/sessions"),
+    kindWords(bookingUi, ["session","attendee"], [{"field":"session","by":"reference","model":"Session"},{"field":"attendee","by":"reference","model":"User"}], [], ["session","attendee"], "/my-bookings"),
+    kindWords(postUi, ["title","address","summary","cover","body","publishedOn","status"], [{"field":"title","by":"text"},{"field":"address","by":"text"},{"field":"publishedOn","by":"date"},{"field":"status","by":"value","values":["draft","published"]}], [], ["publishedOn","status"], "/posts"),
+    kindWords(messageUi, ["name","email","message"], [{"field":"name","by":"text"},{"field":"email","by":"text"}], [], [], "/messages"),
   ],
 };
 
@@ -26686,6 +26692,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
@@ -26819,7 +26826,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.server.ts": "ecb9a2f6 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "88b814a0 generated",
+  "src/generated/ask.server.ts": "ec69c6ae generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
   "src/generated/booking.server.ts": "d60caf17 generated",
@@ -26869,7 +26876,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
@@ -26887,8 +26894,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -26917,7 +26925,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -28368,7 +28376,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","sales":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -28382,18 +28390,19 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"]),
-    kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"]),
+    kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"], "/customers"),
+    kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"], "/orders"),
   ],
   "sales": () => [
-    kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"]),
-    kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"]),
+    kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"], "/customers"),
+    kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"], "/orders"),
   ],
 };
 
@@ -32677,6 +32686,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
@@ -32768,7 +32778,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
   "src/generated/actions/merge-customers.ts": "87b0df12 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "9675d6b9 generated",
+  "src/generated/ask.server.ts": "5f5d0e49 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "611c2893 generated",
@@ -32797,7 +32807,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -32811,8 +32821,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -32834,7 +32845,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -35062,7 +35073,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","member":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -35076,6 +35087,7 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
@@ -35083,15 +35095,15 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
     kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
-    kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], []),
-    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"]),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
+    kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
+    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"], "/invoice-lines"),
   ],
   "member": () => [
     kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
-    kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], []),
-    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"]),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
+    kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
+    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"], "/invoice-lines"),
   ],
 };
 
@@ -40294,6 +40306,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/aggregate.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
@@ -40399,7 +40412,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.server.ts": "46da1dda generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "e381fb12 generated",
+  "src/generated/ask.server.ts": "9c4f19ba generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "2394bb3d generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -40436,7 +40449,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -40452,8 +40465,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -40482,7 +40496,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -47367,6 +47381,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/access.ts",
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
   "kit: src/kit/consent.ts",
@@ -47524,6 +47539,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -47550,7 +47566,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -48718,7 +48734,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","member":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -48732,16 +48748,17 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(itemUi, ["title","photos","description","price","category","condition","place","available"], [{"field":"title","by":"text"},{"field":"price","by":"number"},{"field":"category","by":"value","values":["furniture","bikes","electronics","sports","kids","other"]},{"field":"condition","by":"value","values":["likeNew","good","worn"]},{"field":"place","by":"text"},{"field":"available","by":"yesNo"}], ["price"], ["category","condition","available"]),
+    kindWords(itemUi, ["title","photos","description","price","category","condition","place","available"], [{"field":"title","by":"text"},{"field":"price","by":"number"},{"field":"category","by":"value","values":["furniture","bikes","electronics","sports","kids","other"]},{"field":"condition","by":"value","values":["likeNew","good","worn"]},{"field":"place","by":"text"},{"field":"available","by":"yesNo"}], ["price"], ["category","condition","available"], "/"),
   ],
   "member": () => [
-    kindWords(itemUi, ["title","photos","description","price","category","condition","place","available"], [{"field":"title","by":"text"},{"field":"price","by":"number"},{"field":"category","by":"value","values":["furniture","bikes","electronics","sports","kids","other"]},{"field":"condition","by":"value","values":["likeNew","good","worn"]},{"field":"place","by":"text"},{"field":"available","by":"yesNo"}], ["price"], ["category","condition","available"]),
+    kindWords(itemUi, ["title","photos","description","price","category","condition","place","available"], [{"field":"title","by":"text"},{"field":"price","by":"number"},{"field":"category","by":"value","values":["furniture","bikes","electronics","sports","kids","other"]},{"field":"condition","by":"value","values":["likeNew","good","worn"]},{"field":"place","by":"text"},{"field":"available","by":"yesNo"}], ["price"], ["category","condition","available"], "/"),
   ],
 };
 
@@ -51828,6 +51845,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
@@ -51922,7 +51940,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/seed.ts": "c3d62db3 generated",
   "src/generated/access.test.ts": "c18d562c generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "06676a98 generated",
+  "src/generated/ask.server.ts": "64d900e8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
@@ -51947,7 +51965,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -51962,8 +51980,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -51988,7 +52007,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -53075,7 +53094,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","member":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -53089,16 +53108,17 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(itemUi, ["name","summary","kind","link","addedOn"], [{"field":"name","by":"text"},{"field":"kind","by":"value","values":["general","favorite","archived"]},{"field":"link","by":"text"},{"field":"addedOn","by":"date"}], [], ["kind","addedOn"]),
+    kindWords(itemUi, ["name","summary","kind","link","addedOn"], [{"field":"name","by":"text"},{"field":"kind","by":"value","values":["general","favorite","archived"]},{"field":"link","by":"text"},{"field":"addedOn","by":"date"}], [], ["kind","addedOn"], "/items"),
   ],
   "member": () => [
-    kindWords(itemUi, ["name","summary","kind","link","addedOn"], [{"field":"name","by":"text"},{"field":"kind","by":"value","values":["general","favorite","archived"]},{"field":"link","by":"text"},{"field":"addedOn","by":"date"}], [], ["kind","addedOn"]),
+    kindWords(itemUi, ["name","summary","kind","link","addedOn"], [{"field":"name","by":"text"},{"field":"kind","by":"value","values":["general","favorite","archived"]},{"field":"link","by":"text"},{"field":"addedOn","by":"date"}], [], ["kind","addedOn"], "/items"),
   ],
 };
 
@@ -55030,6 +55050,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
@@ -55110,7 +55131,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/seed.ts": "71825882 generated",
   "src/generated/access.test.ts": "4951fd9a generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "433cdd26 generated",
+  "src/generated/ask.server.ts": "14fea678 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
@@ -55131,7 +55152,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
@@ -55144,8 +55165,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -55167,7 +55189,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -58423,7 +58445,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","staff":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -58437,22 +58459,23 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(componentUi, ["name","status","description"], [{"field":"name","by":"text"},{"field":"status","by":"value","values":["operational","degraded","down","maintenance"]}], [], ["status"]),
-    kindWords(incidentUi, ["title","status","component","detectedAt","resolvedAt","summary"], [{"field":"title","by":"text"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]},{"field":"component","by":"reference","model":"Component"},{"field":"detectedAt","by":"date"},{"field":"resolvedAt","by":"date"}], [], ["status","component","detectedAt","resolvedAt"]),
-    kindWords(incidentUpdateUi, ["incident","at","status","message"], [{"field":"incident","by":"reference","model":"Incident"},{"field":"at","by":"date"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]}], [], ["incident","at","status"]),
-    kindWords(maintenanceUi, ["title","component","startsAt","endsAt","description"], [{"field":"title","by":"text"},{"field":"component","by":"reference","model":"Component"},{"field":"startsAt","by":"date"},{"field":"endsAt","by":"date"}], [], ["component","startsAt","endsAt"]),
+    kindWords(componentUi, ["name","status","description"], [{"field":"name","by":"text"},{"field":"status","by":"value","values":["operational","degraded","down","maintenance"]}], [], ["status"], "/components"),
+    kindWords(incidentUi, ["title","status","component","detectedAt","resolvedAt","summary"], [{"field":"title","by":"text"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]},{"field":"component","by":"reference","model":"Component"},{"field":"detectedAt","by":"date"},{"field":"resolvedAt","by":"date"}], [], ["status","component","detectedAt","resolvedAt"], "/incidents"),
+    kindWords(incidentUpdateUi, ["incident","at","status","message"], [{"field":"incident","by":"reference","model":"Incident"},{"field":"at","by":"date"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]}], [], ["incident","at","status"], "/updates"),
+    kindWords(maintenanceUi, ["title","component","startsAt","endsAt","description"], [{"field":"title","by":"text"},{"field":"component","by":"reference","model":"Component"},{"field":"startsAt","by":"date"},{"field":"endsAt","by":"date"}], [], ["component","startsAt","endsAt"], "/maintenance"),
   ],
   "staff": () => [
-    kindWords(componentUi, ["name","status","description"], [{"field":"name","by":"text"},{"field":"status","by":"value","values":["operational","degraded","down","maintenance"]}], [], ["status"]),
-    kindWords(incidentUi, ["title","status","component","detectedAt","resolvedAt","summary"], [{"field":"title","by":"text"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]},{"field":"component","by":"reference","model":"Component"},{"field":"detectedAt","by":"date"},{"field":"resolvedAt","by":"date"}], [], ["status","component","detectedAt","resolvedAt"]),
-    kindWords(incidentUpdateUi, ["incident","at","status","message"], [{"field":"incident","by":"reference","model":"Incident"},{"field":"at","by":"date"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]}], [], ["incident","at","status"]),
-    kindWords(maintenanceUi, ["title","component","startsAt","endsAt","description"], [{"field":"title","by":"text"},{"field":"component","by":"reference","model":"Component"},{"field":"startsAt","by":"date"},{"field":"endsAt","by":"date"}], [], ["component","startsAt","endsAt"]),
+    kindWords(componentUi, ["name","status","description"], [{"field":"name","by":"text"},{"field":"status","by":"value","values":["operational","degraded","down","maintenance"]}], [], ["status"], "/components"),
+    kindWords(incidentUi, ["title","status","component","detectedAt","resolvedAt","summary"], [{"field":"title","by":"text"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]},{"field":"component","by":"reference","model":"Component"},{"field":"detectedAt","by":"date"},{"field":"resolvedAt","by":"date"}], [], ["status","component","detectedAt","resolvedAt"], "/incidents"),
+    kindWords(incidentUpdateUi, ["incident","at","status","message"], [{"field":"incident","by":"reference","model":"Incident"},{"field":"at","by":"date"},{"field":"status","by":"value","values":["investigating","identified","monitoring","resolved"]}], [], ["incident","at","status"], "/updates"),
+    kindWords(maintenanceUi, ["title","component","startsAt","endsAt","description"], [{"field":"title","by":"text"},{"field":"component","by":"reference","model":"Component"},{"field":"startsAt","by":"date"},{"field":"endsAt","by":"date"}], [], ["component","startsAt","endsAt"], "/maintenance"),
   ],
 };
 
@@ -65748,6 +65771,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/api.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/consent.ts",
@@ -65860,7 +65884,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "554eddc2 generated",
+  "src/generated/ask.server.ts": "fb1bef3e generated",
   "src/generated/component.schema.ts": "8a49641f generated",
   "src/generated/component.server.ts": "2f6960e5 generated",
   "src/generated/component.ts": "04dc29d8 generated",
@@ -65896,7 +65920,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Dashboard.tsx": "2b64ff8a kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
@@ -65915,8 +65939,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/aggregate.ts": "34d3fc40 kit",
   "src/kit/api.server.ts": "c180c7c0 kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -65939,7 +65964,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -68249,7 +68274,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 const ASKS: Record<string, string> = {"admin":"model","agent":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -68263,17 +68288,18 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(supportCaseUi, ["subject","customerEmail","status","priority","assignee","body","attachments"], [{"field":"subject","by":"text"},{"field":"customerEmail","by":"text"},{"field":"status","by":"value","values":["open","inProgress","closed","reopened"]},{"field":"priority","by":"number"},{"field":"assignee","by":"reference","model":"User"}], ["priority"], ["status","assignee"]),
+    kindWords(supportCaseUi, ["subject","customerEmail","status","priority","assignee","body","attachments"], [{"field":"subject","by":"text"},{"field":"customerEmail","by":"text"},{"field":"status","by":"value","values":["open","inProgress","closed","reopened"]},{"field":"priority","by":"number"},{"field":"assignee","by":"reference","model":"User"}], ["priority"], ["status","assignee"], "/cases"),
     kindWords(messageUi, ["content","sender","agent","fromEmail","attachments","supportCase"], [{"field":"sender","by":"value","values":["agent","customer"]},{"field":"agent","by":"reference","model":"User"},{"field":"fromEmail","by":"text"},{"field":"supportCase","by":"reference","model":"SupportCase"}], [], ["sender","agent","supportCase"]),
   ],
   "agent": () => [
-    kindWords(supportCaseUi, ["subject","customerEmail","status","priority","assignee","body","attachments"], [{"field":"subject","by":"text"},{"field":"customerEmail","by":"text"},{"field":"status","by":"value","values":["open","inProgress","closed","reopened"]},{"field":"priority","by":"number"},{"field":"assignee","by":"reference","model":"User"}], ["priority"], ["status","assignee"]),
+    kindWords(supportCaseUi, ["subject","customerEmail","status","priority","assignee","body","attachments"], [{"field":"subject","by":"text"},{"field":"customerEmail","by":"text"},{"field":"status","by":"value","values":["open","inProgress","closed","reopened"]},{"field":"priority","by":"number"},{"field":"assignee","by":"reference","model":"User"}], ["priority"], ["status","assignee"], "/cases"),
     kindWords(messageUi, ["content","sender","agent","fromEmail","attachments","supportCase"], [{"field":"sender","by":"value","values":["agent","customer"]},{"field":"agent","by":"reference","model":"User"},{"field":"fromEmail","by":"text"},{"field":"supportCase","by":"reference","model":"SupportCase"}], [], ["sender","agent","supportCase"]),
   ],
 };
@@ -72249,6 +72275,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/address.server.ts",
   "kit: src/kit/appearance.ts",
   "kit: src/kit/ask.ts",
+  "kit: src/kit/asked.ts",
   "kit: src/kit/assistant.server.ts",
   "kit: src/kit/audit.server.ts",
   "kit: src/kit/call.server.ts",
@@ -72350,7 +72377,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.server.ts": "08a8ba4b generated",
   "src/generated/actions/start-work.ts": "a9a3970e generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "b365bd87 generated",
+  "src/generated/ask.server.ts": "0de998a9 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
@@ -72379,7 +72406,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
-  "src/kit/Inspector.tsx": "7931b5f4 kit",
+  "src/kit/Inspector.tsx": "701dd21a kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -72393,8 +72420,9 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/ask.ts": "f4e59e1f kit",
-  "src/kit/assistant.server.ts": "d3d8275f kit",
+  "src/kit/ask.ts": "9693f2f8 kit",
+  "src/kit/asked.ts": "be1fc9b1 kit",
+  "src/kit/assistant.server.ts": "a7b00ac2 kit",
   "src/kit/audit.server.ts": "cdf305d4 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -72422,7 +72450,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "7a8f0103 kit",
+  "src/kit/words/en.ts": "5227b626 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
