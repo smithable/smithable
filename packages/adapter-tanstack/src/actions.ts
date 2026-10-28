@@ -137,8 +137,8 @@ export type ${a.inputType} = z.infer<typeof ${a.input}>;
 }
 
 /**
- * What running a custom action does once the viewer is known: inline in its server function, or for
- * a rows action in its own server module, which the API and the assistants' tools run too.
+ * What running a custom action does once the viewer is known, in its own server module: its server
+ * function, the API, the assistants' tools and the development door all run it.
  */
 function customRun(action: ActionIR, ir: SpecIR, t: Texts) {
   const a = actionNames(action);
@@ -217,16 +217,17 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
         : {}),
     })),
   };
-  const { records, rows, runImports, body } = customRun(action, ir, t);
+  const rows = action.custom ? action.rows : undefined;
   const asksMore = Boolean(rows && action.input.length > 1);
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-${rows ? "" : runImports}import { w } from "#/kit/words";
-import { ${!rows && records.length ? "AccessDenied, " : ""}check, type Rule${rows ? "" : ", type Viewer"} } from "#/kit/access";
+import { w } from "#/kit/words";
+import { check, type Rule } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { ${a.input}${rows ? "" : `, type ${a.inputType}`} } from "./${kebab(action.name)}.input";${rows ? `\nimport { ${a.run} } from "./${kebab(action.name)}.server";` : ""}
+import { ${a.input} } from "./${kebab(action.name)}.input";
+import { ${a.run} } from "./${kebab(action.name)}.server";
 
 export type { ${a.inputType} } from "./${kebab(action.name)}.input";
 
@@ -253,14 +254,14 @@ export const ${action.name} = createServerFn({ method: "POST" })
     check(${a.access}, viewer);
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
-${rows ? `    return ${a.run}(viewer, data);` : body}
+    return ${a.run}(viewer, data);
   });
 `;
 }
 
 /**
- * A custom action on rows, run as a viewer (A 171): the list page's server function, the API's
- * route and the assistants' tools all run it, so each checks and records a run the same way.
+ * A custom action, run as a viewer: its server function, the API's route for one on rows (A 171),
+ * the assistants' tools and the development door all run it, so each checks and records it alike.
  */
 export function customActionServer(action: ActionIR, ir: SpecIR, t: Texts): string {
   const a = actionNames(action);
@@ -269,7 +270,7 @@ export function customActionServer(action: ActionIR, ir: SpecIR, t: Texts): stri
 import { ${a.access}, type ${a.outputType} } from "./${kebab(action.name)}";
 import type { ${a.inputType} } from "./${kebab(action.name)}.input";
 
-/** Runs "${action.name}" as \`viewer\` on the rows in its input. */
+/** Runs "${action.name}" as \`viewer\`: its rule, the records it names, the run, what it records and tells. */
 export async function ${a.run}(viewer: Viewer | null, data: ${a.inputType}): Promise<${a.outputType}> {
   check(${a.access}, viewer);
 ${body.replace(/^ {2}/gm, "")}

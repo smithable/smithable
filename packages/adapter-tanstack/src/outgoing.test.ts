@@ -486,7 +486,7 @@ pages:
     'fields: (input, output) => [["File", shownValue(input?.file)], ["Added", shownValue(output?.added)]],',
   );
   const action =
-    files.find((f) => f.path === "src/generated/actions/import-customers.ts")?.content ?? "";
+    files.find((f) => f.path === "src/generated/actions/import-customers.server.ts")?.content ?? "";
   expect(action).toContain(
     'db.transaction((tx) => outgoingAfter(tx, viewer, "importCustomers", data, output));',
   );

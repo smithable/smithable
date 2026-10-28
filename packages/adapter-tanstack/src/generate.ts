@@ -939,14 +939,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 `src/generated/actions/${kebab(action.name)}.input.ts`,
                 actionInputModule(action),
               ),
-              ...(action.rows
-                ? [
-                    generated(
-                      `src/generated/actions/${kebab(action.name)}.server.ts`,
-                      customActionServer(action, ir, t),
-                    ),
-                  ]
-                : []),
+              generated(
+                `src/generated/actions/${kebab(action.name)}.server.ts`,
+                customActionServer(action, ir, t),
+              ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]
           : [
