@@ -1,0 +1,53 @@
+smithableContent: 0.1
+pages:
+  home:
+    faq:
+      items: [{ question: Tarvitseeko minun kokemusta?, answer: "Ei tarvitse. Valitse tunti, jonka taso sopii sinulle, ja tule paikalle mukavissa vaatteissa." }, { question: Voinko perua varauksen?, answer: Voit perua varauksesi viimeistään kaksi tuntia ennen tunnin alkua. }, { question: Mitä otan mukaan?, answer: Riittää mukavat vaatteet ja vesipullo. Jooga-alustat ovat studiolla. }, { question: Miten saan muistutuksen?, answer: Lähetämme sähköpostimuistutuksen päivää ennen varattua tuntia. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  about:
+    faq:
+      items: [{ question: Keitä studiolla opettaa?, answer: "Ohjaajamme ovat kokeneita joogaohjaajia, ja heidät näet tiimisivulla." }, { question: Onko studiolla aloittelijoille tunteja?, answer: "Kyllä, osa tunneista sopii kaikille tasoille ja osa on suunnattu aloittelijoille." }]
+    title: Tietoa meistä
+  schedule:
+    title: Aikataulu
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntilajit
+  instructors:
+    title: Ohjaajat
+  messages:
+    title: Viestit
+  blog:
+    title: Blogi
+  posts:
+    title: Artikkelit
+  my-bookings:
+    title: Omat varaukset
+models:
+  ClassType:
+    label: Tuntilaji
+    pluralLabel: Tuntilajit
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+  Post:
+    label: Artikkeli
+    pluralLabel: Artikkelit
+  Message:
+    label: Viesti
+    pluralLabel: Viestit
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

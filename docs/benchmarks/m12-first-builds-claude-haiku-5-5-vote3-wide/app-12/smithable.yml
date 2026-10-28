@@ -1,0 +1,58 @@
+smithable: 0.1
+app:
+  name: Service status
+  description: Shows the current status of the municipality's online services so residents can check outages.
+models:
+  Service:
+    fields:
+      name: string!
+      description: text
+      status: operational | degraded | outage | maintenance
+  Incident:
+    fields:
+      title: string!
+      service: Service!
+      status: investigating | identified | monitoring | resolved
+      startedAt: datetime!
+      resolvedAt: datetime
+      summary: text
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+      at: datetime!
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Service
+      activeIncidents:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      footer:
+  services:
+    crud: Service
+  incidents:
+    crud: Incident
+    filters: [status, service]
+    actions: [resolve]
+  team:
+    users: manage
+actions:
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        status: resolved
+        message:
+        at: NOW()

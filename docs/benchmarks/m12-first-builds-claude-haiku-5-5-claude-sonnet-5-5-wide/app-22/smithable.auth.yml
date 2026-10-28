@@ -1,0 +1,21 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  staff:
+    description: Nimmt Vorbestellungen an und pflegt Produkte und Abholzeiten.
+    pages: [orders, products, pickups]
+    create: all
+    write: all
+    actions: all
+assistant:
+  for: signed-in
+public:
+  pages: [abholung, privacy]
+  read: [Product, PickupSlot]
+  create: [Order]
+defaultRole: staff
+admins: [johan@smithable.ai]

@@ -1,0 +1,8 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+tones:
+  Invoice.status:
+    paid: success
+    sent: warning
+    overdue: danger

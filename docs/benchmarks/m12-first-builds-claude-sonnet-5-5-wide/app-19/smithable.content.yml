@@ -1,0 +1,56 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Rubrik
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      category:
+        label: Kategori
+        values:
+          furniture: Möbler
+          bikes: Cyklar
+          electronics: Elektronik
+          sports: Sport
+          kids: Barn
+          other: Övrigt
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Bra
+          worn: Sliten
+      place:
+        label: Plats
+      available:
+        label: Tillgänglig
+pages:
+  catalog:
+    title: Alla saker
+  myItems:
+    title: Mina saker
+  saved:
+    title: Sparade
+  review:
+    title: Granska bilder
+  home:
+    title: Start
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  privacy:
+    title: Integritet
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

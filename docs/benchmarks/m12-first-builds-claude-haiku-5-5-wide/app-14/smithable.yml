@@ -1,0 +1,45 @@
+smithable: 0.1
+app:
+  name: Our Wedding
+  description: The guest list and seating plan for our wedding, with who has answered and their meal choices.
+models:
+  Table:
+    fields:
+      name: string!
+      seats: int! = 8
+  Guest:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      side: bride | groom | both
+      status: invited | attending | declined
+      meal: pending | beef | fish | vegetarian | vegan
+      plusOne: bool
+      dietaryNotes: text
+      table:
+        type: Table
+        required:
+          status: [invited, attending, declined]
+pages:
+  tables:
+    crud: Table
+  team:
+    users: manage
+  guests:
+    crud: Guest
+    search: [name, email]
+    filters: [status, meal, side, table]
+actions:
+  accept:
+    on: Guest
+    when:
+      status: [invited, declined]
+    set:
+      status: attending
+  decline:
+    on: Guest
+    when:
+      status: [invited, attending]
+    set:
+      status: declined

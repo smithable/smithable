@@ -1,0 +1,130 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Ein kleiner Hofladen, in dem Kundinnen und Kunden Produkte vorbestellen und zu festen Abholzeiten abholen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      unit: string
+      category: vegetables | fruit | eggs | dairy | bakery | other
+      picture: picture
+      organic: bool
+      available: bool = true
+  PickupSlot:
+    fields:
+      day: date!
+      hours: string!
+      capacity: int! = 10
+      note: text
+  Order:
+    fields:
+      name: string!
+      phone: phone!
+      email: email
+      pickup: PickupSlot!
+      note: text
+      status: new | accepted | ready | collected | declined
+      reason: text
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+    capacity:
+      per: pickup
+      max: pickup.capacity
+      where:
+        status: [new, accepted, ready, collected]
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity: int! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      pickups:
+        records: PickupSlot
+      footer:
+  orders:
+    crud: Order
+    filters: [status, pickup]
+    actions: [accept, ready, collected, decline]
+  products:
+    crud: Product
+    filters: [category, available]
+    actions: [soldOut, backOn]
+  pickups:
+    crud: PickupSlot
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
+actions:
+  soldOut:
+    on: Product
+    when:
+      available: true
+    set:
+      available: false
+    intent: Nothing more of it today.
+  backOn:
+    on: Product
+    when:
+      available: false
+    set:
+      available: true
+    intent: It can be ordered again.
+  accept:
+    on: Order
+    when:
+      status: new
+    set:
+      status: accepted
+    intent: The order is accepted.
+  ready:
+    on: Order
+    when:
+      status: accepted
+    set:
+      status: ready
+    intent: The order is ready for pickup.
+  collected:
+    on: Order
+    when:
+      status: ready
+    set:
+      status: collected
+    intent: The customer has picked it up.
+  decline:
+    on: Order
+    when:
+      status: [new, accepted]
+    set:
+      status: declined
+      reason:
+    intent: "The order cannot be filled: say why."
+outgoing:
+  orderPlaced:
+    when: Order created
+    to: mail
+    recipient: admin
+  orderAccepted:
+    when: accept
+    to: mail
+    recipient: email
+  orderReady:
+    when: ready
+    to: mail
+    recipient: email

@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -issuedOn
+      columns: [number, household, issuedOn, dueOn, status]
+    icon: receipt
+  households:
+    icon: home
+tones:
+  Invoice.status:
+    paid: success

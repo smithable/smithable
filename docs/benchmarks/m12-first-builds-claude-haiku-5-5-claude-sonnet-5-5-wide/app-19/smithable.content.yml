@@ -1,0 +1,61 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Rubrik
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      category:
+        label: Kategori
+        values:
+          furniture: Möbler
+          bikes: Cyklar
+          electronics: Elektronik
+          sports: Sport
+          kids: Barn
+          other: Övrigt
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Bra
+          worn: Sliten
+      place:
+        label: Plats
+      available:
+        label: Finns kvar
+pages:
+  catalog:
+    title: Saker till salu
+  myItems:
+    title: Mina saker
+  saved:
+    title: Sparade
+  review:
+    title: Granskning
+  home:
+    title: Hem
+    hero:
+      title: Välkommen till Loppisen
+      subtitle: Hitta fina fynd från grannskapet eller lägg upp det du inte längre behöver, med bilder och pris.
+      button: Se alla saker
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    latest:
+      title: Senaste sakerna
+  privacy:
+    title: Integritet
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

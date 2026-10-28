@@ -1,0 +1,9 @@
+{
+  "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+  "starter": "records",
+  "wordStarter": "status",
+  "questions": [
+    "Who will use this app?",
+    "How do you want to record what each pupil practises?"
+  ]
+}

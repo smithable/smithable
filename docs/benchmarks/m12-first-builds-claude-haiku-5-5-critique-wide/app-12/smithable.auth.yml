@@ -1,0 +1,20 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  staff:
+    description: Writes incidents and their updates.
+    pages: [incidents, maintenance]
+    create: all
+    write: all
+    actions: [identified, monitoring, resolve]
+assistant:
+  for: signed-in
+public:
+  pages: [home]
+  read: [Service, Incident, IncidentUpdate, Maintenance]
+defaultRole: staff
+admins: [johan@smithable.ai]

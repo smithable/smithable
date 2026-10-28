@@ -1,0 +1,117 @@
+smithableContent: 0.1
+language: sv
+models:
+  Customer:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      invoices:
+        label: Fakturor
+      name:
+        label: Namn
+      email:
+        label: E-post
+      phone:
+        label: Telefon
+      address:
+        label: Adress
+      quotes:
+        label: Offerter
+  Quote:
+    fields:
+      customer:
+        label: Kund
+      number:
+        label: Nummer
+      issuedOn:
+        label: Datum
+      validUntil:
+        label: Giltig till
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          accepted: Accepterad
+          rejected: Avvisad
+      workDescription:
+        label: Arbete
+      lines:
+        label: Rader
+      total:
+        label: Summa
+    label: Offert
+    pluralLabel: Offerter
+  QuoteLine:
+    fields:
+      quote:
+        label: Offert
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: Á-pris
+      amount:
+        label: Belopp
+    label: Offertrad
+    pluralLabel: Offertrader
+  InvoiceLine:
+    label: Fakturarad
+    pluralLabel: Fakturarader
+    fields:
+      invoice:
+        label: Faktura
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: Á-pris
+      amount:
+        label: Belopp
+  Invoice:
+    label: Faktura
+    pluralLabel: Fakturor
+    fields:
+      number:
+        label: Nummer
+      customer:
+        label: Kund
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+      lines:
+        label: Rader
+      total:
+        label: Summa
+pages:
+  quotes:
+    title: Offerter
+  invoices:
+    title: Fakturor
+  customers:
+    title: Kunder
+  team:
+    title: Medarbetare
+actions:
+  markQuoteSent:
+    label: Skicka offert
+  markQuoteAccepted:
+    label: Markera som accepterad
+  markInvoiceSent:
+    label: Skicka faktura
+  markInvoicePaid:
+    label: Markera som betald
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

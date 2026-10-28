@@ -1,0 +1,8 @@
+{
+  "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
+  "starter": "marketplace",
+  "wordStarter": "booking",
+  "questions": [
+    "Can visitors browse the listings without signing in?"
+  ]
+}

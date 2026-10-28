@@ -1,0 +1,32 @@
+smithable: 0.1
+app:
+  name: Vinyl Shelf
+  description: "A personal catalogue of my vinyl records: albums, artists, condition and what I paid."
+models:
+  Artist:
+    fields:
+      name: string! unique
+      country: string
+      notes: text
+  Album:
+    fields:
+      title: string!
+      artist: Artist!
+      year:
+        type: int
+        min: 1900
+        max: 2100
+      label: string
+      condition: mint | nearMint | veryGood | good | fair | poor
+      pricePaid: money
+      purchasedOn: date
+      cover: picture
+      notes: text
+pages:
+  albums:
+    crud: Album
+    search: [title, label]
+    filters: [artist, condition]
+  artists:
+    crud: Artist
+    search: [name, country]

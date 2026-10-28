@@ -1,0 +1,10 @@
+smithableUx: 0.1
+tones:
+  Item.status:
+    offered: success
+pages:
+  shelf:
+    table:
+      view: cards
+theme:
+  preset: quiet-workspace

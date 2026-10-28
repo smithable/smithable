@@ -754,9 +754,16 @@ const toFiles = (files: ProjectFiles): SpecFiles => ({
   ),
 });
 
-/** At most this many operations in one draft, and rounds of corrections. */
+/** At most this many operations in one draft. */
 const MAX_OPERATIONS = 160;
-const MAX_ROUNDS = 1 + REPAIRS;
+
+/**
+ * A harness round the drafting model, for the bench (backlog Experiments 7): `critique` makes
+ * one draft, then asks once more with the spec it became and the checks' findings, to mend it;
+ * `vote3` makes three single-call drafts and keeps the one whose operations the other two share
+ * most. Without it (and without `repairs`) the draft is made as always.
+ */
+export type DraftHarness = "critique" | "vote3";
 
 /**
  * Drafts a project as operations from the description, with the strongest allowed model
@@ -769,7 +776,15 @@ export async function draftProjectByOperations(options: {
   /** The closest starter (clarify's choice): the example of shape, and the access default. */
   starter?: { name: string; files: SpecFiles };
   operations?: AnyOperation[];
+  /** Rounds of corrections after the first answer (default REPAIRS; 0 is a single call). */
+  repairs?: number;
+  harness?: DraftHarness;
+  /** Which of several drafts this is (vote3): said in the request, so each is its own. */
+  attempt?: string;
 }): Promise<Draft & { operations?: Step[] }> {
+  if (options.harness === "vote3") return draftByVote(options);
+  const critique = options.harness === "critique";
+  const MAX_ROUNDS = critique ? 2 : 1 + (options.repairs ?? REPAIRS);
   const usage: Usage[] = [];
   if (options.providers.length === 0)
     return { kind: "failed", message: "No model is available under the AI policy.", usage };
@@ -794,7 +809,7 @@ export async function draftProjectByOperations(options: {
     const language = textLanguage(options.description);
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
-    let prompt = `Description: ${options.description}${languageNote(options.description)}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
+    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${languageNote(options.description)}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
     let round = 0;
     let assumptions: Assumption[] = [];
     let refused: { step: Step; message: string }[] = [];
@@ -885,6 +900,17 @@ export async function draftProjectByOperations(options: {
           if (!best || weigh(found) < best.score)
             best = { files, count: done.length, score: weigh(found) };
           const flaws = last ? [] : found.map((f) => f.message);
+          if (critique && round === 1) {
+            // The critique: the spec the draft became and what the checks find, to mend once.
+            droppedBefore = dropped;
+            refused = [];
+            const spec = Object.entries(toFiles(files))
+              .filter(([, text]) => text.trim())
+              .map(([name, text]) => `${name}:\n\`\`\`yaml\n${text.trim()}\n\`\`\``)
+              .join("\n");
+            prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
+            continue;
+          }
           if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
           for (const f of flaws) told.add(f);
           droppedBefore = dropped;
@@ -905,4 +931,32 @@ export async function draftProjectByOperations(options: {
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };
+}
+
+/** vote3: three single-call drafts; the one whose operations the other two share most. */
+async function draftByVote(
+  options: Parameters<typeof draftProjectByOperations>[0],
+): Promise<Draft & { operations?: Step[] }> {
+  const drafts: (Draft & { operations?: Step[] })[] = [];
+  for (const n of [1, 2, 3])
+    drafts.push(
+      await draftProjectByOperations({
+        ...options,
+        harness: undefined,
+        repairs: 0,
+        attempt: `Draft ${n} of 3`,
+      }),
+    );
+  const usage = drafts.flatMap((d) => d.usage);
+  const made = drafts.filter((d) => d.kind === "draft");
+  if (made.length === 0) return { ...drafts[0], usage } as Draft;
+  const steps = (d: (typeof made)[number]) =>
+    new Set((d.operations ?? []).map((o) => JSON.stringify(o)));
+  const shared = (a: Set<string>, b: Set<string>) => {
+    const both = [...a].filter((x) => b.has(x)).length;
+    return both / Math.max(1, a.size + b.size - both);
+  };
+  const sets = made.map(steps);
+  const score = sets.map((a, i) => sets.reduce((n, b, j) => (i === j ? n : n + shared(a, b)), 0));
+  return { ...made[score.indexOf(Math.max(...score))], usage } as Draft & { operations?: Step[] };
 }

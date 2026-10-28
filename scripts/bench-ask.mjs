@@ -5,6 +5,7 @@
 //   models: eu.anthropic.… (Amazon Bedrock, EU), mistral-… (Mistral's API), claude-… (Anthropic's
 //   own API), or the hosted assistant's cascade, cascade:mistral-small-latest>eu.anthropic.… or
 //   'cascade:claude-haiku-5-5>claude-sonnet-5-5' (quoted: > is the shell's); ask before running.
+//   wrap:<alone|critique|vote3>:<model> puts a harness round a model (Experiments 7, see wrapped()).
 // Each starter is made, offers everything to programs and assistants (setApi all), gets an admin
 // key, and is served; questions that change records each start from the starter's records again.
 // --voice sets Ask's voice (setAssistantVoice) and gives the model the generated kit's line for it,
@@ -481,6 +482,7 @@ async function ask(model, call, tools, system, question, check) {
         moved,
         checks: check ? checks : undefined,
         unconfirmed: Boolean(why) || undefined,
+        steps,
       };
     const done = [];
     for (const c of turn.calls) {
@@ -527,6 +529,63 @@ async function ask(model, call, tools, system, question, check) {
     moved,
     checks: check ? checks : undefined,
   };
+}
+
+/**
+ * A small model with a harness around it (backlog Experiments 7, "Haiku 5.5 wrapped"), named
+ * `wrap:<mode>:<model>`: `alone` asks once with no answer check going back; `critique` asks so,
+ * then once more with the question, the tool results and the first answer (and what the app's
+ * check says of it), to check it and answer again; `vote3` asks three times and keeps the answer
+ * nearest the other two (a change is made once: it is asked as `alone`). The plain model name is
+ * the harness as the app has it (its check feeding back). The checks stay the app's.
+ */
+async function wrapped(mode, model, call, tools, system, question, check, kind) {
+  const sum = (runs) => {
+    const last = runs.at(-1);
+    const total = (key) => runs.reduce((n, r) => n + (r[key] ?? 0), 0);
+    const [pin, pout] = price(model);
+    return {
+      ...last,
+      calls: total("calls"),
+      toolCalls: total("toolCalls"),
+      tokensIn: total("tokensIn"),
+      tokensOut: total("tokensOut"),
+      resultTokens: total("resultTokens"),
+      // What the calls cost as the model reported it (with its prompt cache), else at list price.
+      cost: runs.every((r) => r.cost !== undefined)
+        ? total("cost")
+        : (total("tokensIn") * pin + total("tokensOut") * pout) / 1e6,
+      trace: runs.flatMap((r, i) => [
+        ...(runs.length > 1 ? [`— pass ${i + 1}`] : []),
+        ...(r.trace ?? []),
+      ]),
+    };
+  };
+  const once = () => ask(model, call, tools, system, question, undefined);
+  if (mode === "alone" || (mode === "vote3" && kind === "change")) return sum([await once()]);
+  if (mode === "critique") {
+    const first = await once();
+    const verdict = first.text.trim() && check?.(first.text, question, first.steps ?? []);
+    const review = `${question}\n\nA first answer was given after these tool calls:\n${(first.trace ?? []).join("\n").slice(0, 6000)}\n\nThe first answer: ${first.text || "(none)"}${verdict ? `\n\nThe app's check says of it: ${verdict}` : ""}\n\nCheck the first answer against the tool results and the question. If it is wrong or incomplete, use the tools and answer again${kind === "change" ? " (the changes above are already made: make only what is missing or wrong)" : ""}; if it is right, give it again. Answer the person, not this note.`;
+    const second = await ask(model, call, tools, system, review, undefined);
+    return sum([first, second]);
+  }
+  if (mode === "vote3") {
+    const runs = [await once(), await once(), await once()];
+    const words = (t) => new Set(t.toLowerCase().match(/[\p{L}\p{N}.,-]+/gu) ?? []);
+    const near = (a, b) => {
+      const x = words(a);
+      const y = words(b);
+      const both = [...x].filter((w) => y.has(w)).length;
+      return both / Math.max(1, x.size + y.size - both);
+    };
+    const scores = runs.map((r, i) =>
+      runs.reduce((n, o, j) => (i === j ? n : n + near(r.text, o.text)), 0),
+    );
+    const pick = scores.indexOf(Math.max(...scores));
+    return { ...sum(runs), text: runs[pick].text, gaveUp: runs[pick].gaveUp };
+  }
+  throw new Error(`wrap:${mode}: alone, critique or vote3.`);
 }
 
 // ── The apps ────────────────────────────────────────────────────────────────
@@ -712,14 +771,16 @@ for (const starter of rescore ? [] : starters) {
   };
   const before = await records(base, key, ir);
   for (const model of models) {
-    const call = model.startsWith("eu.anthropic.")
-      ? bedrock(model)
-      : model.startsWith("mistral-")
-        ? mistral(model)
-        : model.startsWith("claude-")
-          ? anthropicModel(model)
-          : model.startsWith("cascade:")
-            ? cascade(...model.slice("cascade:".length).split(">"))
+    const [, mode, inner] = /^wrap:([a-z0-9]+):(.+)$/.exec(model) ?? [];
+    const named = inner ?? model;
+    const call = named.startsWith("eu.anthropic.")
+      ? bedrock(named)
+      : named.startsWith("mistral-")
+        ? mistral(named)
+        : named.startsWith("claude-")
+          ? anthropicModel(named)
+          : named.startsWith("cascade:")
+            ? cascade(...named.slice("cascade:".length).split(">"))
             : null;
     if (!call)
       throw new Error(`${model}: eu.anthropic.…, mistral-…, claude-… or cascade:<cheap>><better>.`);
@@ -747,7 +808,9 @@ for (const starter of rescore ? [] : starters) {
         if (question.kind === "change") await reset();
         let r;
         try {
-          r = await ask(model, call, tools, system, question.q, check);
+          r = mode
+            ? await wrapped(mode, named, call, tools, system, question.q, check, question.kind)
+            : await ask(model, call, tools, system, question.q, check);
         } catch (error) {
           r = {
             text: "",
@@ -769,7 +832,7 @@ for (const starter of rescore ? [] : starters) {
           also = question.also?.expect(before);
           right = answered(question, r.text, expected, also);
         }
-        const [pin, pout] = price(model);
+        const [pin, pout] = price(named);
         const row = {
           model,
           starter,

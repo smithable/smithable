@@ -1,0 +1,10 @@
+smithableContent: 0.1
+actions:
+  finishJob:
+    label: Merkitse valmiiksi
+  markPaid:
+    label: Merkitse maksetuksi
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

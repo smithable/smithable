@@ -1,0 +1,5 @@
+smithableUx: 0.1
+pages:
+  invoices:
+    table:
+      sort: -issuedOn

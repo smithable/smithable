@@ -1,0 +1,62 @@
+smithable: 0.1
+app:
+  name: Clean Invoices
+  description: One place where our cleaning company of three creates and sends its monthly invoices to households and tracks which are paid.
+models:
+  Household:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+      invoices: Invoice[]
+  Invoice:
+    fields:
+      number: string! unique
+      household: Household!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [status, household]
+    search: [number]
+  households:
+    crud: Household
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the household.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The household paid the invoice.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: household.email

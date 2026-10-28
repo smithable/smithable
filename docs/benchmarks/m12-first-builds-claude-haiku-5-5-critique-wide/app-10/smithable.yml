@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Local Museum Collection
+  description: An online collection where visitors browse the museum's objects and read their stories.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: collection
+      highlights:
+        records: Artifact
+        where:
+          featured: true
+      footer:
+  team:
+    users: manage
+  collection:
+    route: /collection
+    crud: Artifact
+    search: [title, origin, period]
+    filters: [category]
+models:
+  Artifact:
+    fields:
+      title: string!
+      story: markdown
+      period: string
+      origin: string
+      category: painting | photograph | tool | textile | document | other
+      inventoryNumber: string! unique
+      image: picture
+      gallery: pictures
+      published: bool
+      featured: bool

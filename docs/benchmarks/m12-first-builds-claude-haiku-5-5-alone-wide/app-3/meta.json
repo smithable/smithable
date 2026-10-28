@@ -1,0 +1,9 @@
+{
+  "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+  "starter": "barbers",
+  "wordStarter": "barbers",
+  "questions": [
+    "Do customers need an account to book an appointment?",
+    "Who manages the stylists' schedules and time off?"
+  ]
+}

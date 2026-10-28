@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  follow-ups:
+    table:
+      sort: dueAt
+tones:
+  Deal.stage:
+    won: success
+    lost: danger
+  Lead.status:
+    qualified: success
+    lost: danger
+  FollowUp.status:
+    done: success

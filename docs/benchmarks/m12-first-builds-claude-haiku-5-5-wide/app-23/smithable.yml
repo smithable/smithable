@@ -1,0 +1,34 @@
+smithable: 0.1
+app:
+  name: Habit Tracker
+  description: A backend for tracking daily habits, with check-ins and streaks.
+  timezone: Europe/Mariehamn
+models:
+  Habit:
+    fields:
+      name: string!
+      goal: text
+      frequency: daily | weekdays | weekly
+      startedOn: date! = TODAY()
+      checkIns: CheckIn[]
+  CheckIn:
+    fields:
+      habit: Habit!
+      day: date! = TODAY()
+      done: bool = true
+      note: text
+    unique: [{ fields: [habit, day], scope: owner }]
+    namedBy: [habit, day]
+pages:
+  habits:
+    crud: Habit
+    search: [name, goal]
+    filters: [frequency]
+  checkins:
+    crud: CheckIn
+    filters: [habit, done, day]
+queries:
+  streaks:
+    custom: true
+    returns: Habit[]
+    intent: Habits ordered by their current streak of consecutive check-ins, longest first.

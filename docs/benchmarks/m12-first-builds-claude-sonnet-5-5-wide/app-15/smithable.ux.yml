@@ -1,0 +1,6 @@
+smithableUx: 0.1
+pages:
+  sightings:
+    table:
+      sort: -seenOn
+      columns: [species, place, seenOn, count, seenBy]

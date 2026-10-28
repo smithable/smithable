@@ -1,0 +1,90 @@
+smithableContent: 0.1
+language: sv
+models:
+  Service:
+    label: Behandling
+    pluralLabel: Behandlingar
+    fields:
+      name:
+        label: Namn
+      summary:
+        label: Beskrivning
+      minutes:
+        label: Minuter
+      price:
+        label: Pris
+  Barber:
+    label: Frisör
+    pluralLabel: Frisörer
+    fields:
+      name:
+        label: Namn
+      bio:
+        label: Presentation
+      portrait:
+        label: Porträtt
+      timeOffs:
+        label: Ledigheter
+  TimeOff:
+    label: Ledighet
+    pluralLabel: Ledigheter
+    fields:
+      barber:
+        label: Frisör
+      from:
+        label: Från
+      until:
+        label: Till
+      note:
+        label: Anteckning
+  Appointment:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      service:
+        label: Behandling
+      barber:
+        label: Frisör
+      startsAt:
+        label: Tid
+      name:
+        label: Namn
+      phone:
+        label: Telefon
+      note:
+        label: Meddelande
+      status:
+        label: Status
+        values:
+          requested: Förfrågad
+          confirmed: Bekräftad
+          cancelled: Avbokad
+actions:
+  confirm:
+    label: Bekräfta
+  cancel:
+    label: Avboka
+pages:
+  appointments:
+    title: Bokningar
+  day:
+    title: Dagens schema
+  services:
+    title: Behandlingar
+  barbers:
+    title: Frisörer
+  time-off:
+    title: Ledigheter
+  home:
+    title: Hem
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  privacy:
+    title: Integritet
+logo:
+  src: images/logo.webp
+  alt: Three nested arcs
+  generated: true

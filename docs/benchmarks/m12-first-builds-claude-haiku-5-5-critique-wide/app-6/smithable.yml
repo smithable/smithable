@@ -1,0 +1,78 @@
+smithable: 0.1
+app:
+  name: Household Invoices
+  description: One place for the cleaning company's monthly invoices to its households.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      address: text
+  BusinessProfile:
+    fields:
+      businessName: string!
+      iban: string
+      paymentTermDays:
+        type: int!
+        min: 1
+        max: 90
+        default: 30
+      invoiceFooter: text
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      servicePeriod: string
+      issuedOn: date! = TODAY()
+      dueOn:
+        type: date
+        formula: DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+pages:
+  clients:
+    crud: Client
+  settings:
+    crud: BusinessProfile
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid, markOverdue]
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the household.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The household paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

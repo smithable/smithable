@@ -842,3 +842,54 @@ test("the draft's assumptions come back whole, the first answer's, and never a b
   });
   expect(none.kind === "draft" && none.assumptions).toBeUndefined();
 });
+
+test("the bench's harness switches (Experiments 7): one call alone, a critique round, three votes", async () => {
+  const prompts: string[] = [];
+  const steps = [
+    { op: "setApp", args: { name: "Tasks" } },
+    { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+    { op: "addPage", args: { page: "tasks", model: "Task" } },
+  ];
+  const provider: Provider = {
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 1, output: 3 },
+    async complete({ user }) {
+      prompts.push(user);
+      // The critique and the votes after the first draft answer with nothing more to do.
+      const first = !user.includes("Applied so far");
+      return {
+        text: JSON.stringify({ operations: first ? steps : [] }),
+        model: "fake",
+        inputTokens: 10,
+        outputTokens: 10,
+      };
+    },
+  };
+  const description = "a task list for our team";
+  const alone = await draftProjectByOperations({ description, providers: [provider], repairs: 0 });
+  expect(alone.kind).toBe("draft");
+  expect(prompts).toHaveLength(1);
+
+  prompts.length = 0;
+  const critique = await draftProjectByOperations({
+    description,
+    providers: [provider],
+    harness: "critique",
+  });
+  expect(critique.kind).toBe("draft");
+  expect(prompts).toHaveLength(2);
+  expect(prompts[1]).toContain("The app they made:");
+  expect(prompts[1]).toContain("smithable.yml:\n```yaml\nsmithable: 0.1");
+
+  prompts.length = 0;
+  const vote = await draftProjectByOperations({
+    description,
+    providers: [provider],
+    harness: "vote3",
+  });
+  expect(vote.kind).toBe("draft");
+  expect(prompts.map((p) => /^\(Draft (\d) of 3\.\)/.exec(p)?.[1])).toEqual(["1", "2", "3"]);
+  expect(vote.usage).toHaveLength(3);
+});

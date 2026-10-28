@@ -1,0 +1,8 @@
+{
+  "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+  "starter": "barbers",
+  "wordStarter": "barbers",
+  "questions": [
+    "Can visitors see free times and stylists without signing in?"
+  ]
+}

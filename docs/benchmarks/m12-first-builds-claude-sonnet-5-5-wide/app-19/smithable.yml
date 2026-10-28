@@ -1,0 +1,46 @@
+smithable: 0.1
+app:
+  name: Loppisen
+  description: Lägg upp saker du vill sälja på vår loppis, med bilder och pris.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures!
+      description: text!
+      price: money
+      category: furniture | bikes | electronics | sports | kids | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+    review: [photos]
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description, place]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    favorites: true
+    contact: owner
+  myItems:
+    crud: Item
+    mine: true
+  saved:
+    crud: Item
+    favorites: only
+  review:
+    review: all
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: catalog
+      latest:
+        records: Item
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy

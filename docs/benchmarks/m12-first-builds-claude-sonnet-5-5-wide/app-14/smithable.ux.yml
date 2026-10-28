@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      columns: [name, rsvp, meal, table]
+tones:
+  Guest.rsvp:
+    attending: success
+    declined: danger
+    waiting: warning
+theme:
+  preset: editorial
+  brand:
+    font: Fraunces

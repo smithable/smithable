@@ -1,0 +1,41 @@
+smithable: 0.1
+app:
+  name: Translation Ledger
+  description: Keeps track of a freelance translator's clients, the quotes sent to them, and what they have paid.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      company: string
+      phone: phone
+      notes: text
+      quotes: Quote[]
+  Quote:
+    fields:
+      client: Client!
+      description: string!
+      amount: money!
+      quotedOn: date! = TODAY()
+      status: quoted | accepted | declined
+      payments: Payment[]
+      paid:
+        type: money
+        formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: amount - SUM(payments.amount)
+  Payment:
+    fields:
+      quote: Quote!
+      amount: money!
+      paidOn: date! = TODAY()
+      note: string
+pages:
+  clients:
+    crud: Client
+  quotes:
+    crud: Quote
+    filters: [client, status]
+  payments:
+    crud: Payment

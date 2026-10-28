@@ -1,0 +1,22 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Titel
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      photos:
+        label: Bilder
+pages:
+  saker:
+    title: Saker till salu
+logo:
+  src: images/logo.webp
+  alt: Three nested arcs
+  generated: true

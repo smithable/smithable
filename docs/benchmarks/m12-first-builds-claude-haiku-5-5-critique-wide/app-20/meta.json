@@ -1,0 +1,10 @@
+{
+  "description": "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.",
+  "starter": "booking",
+  "wordStarter": "records",
+  "questions": [
+    "Saavatko vierailijat nähdä tuntikalenterin ilman kirjautumista?",
+    "Kuka hallinnoi järjestelmää?"
+  ],
+  "lang": "fi"
+}

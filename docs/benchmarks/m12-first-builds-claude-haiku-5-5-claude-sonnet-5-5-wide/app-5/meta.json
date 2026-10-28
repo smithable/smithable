@@ -1,0 +1,8 @@
+{
+  "description": "Invoices for my photography work: clients, shoots and what is still unpaid.",
+  "starter": "invoicing",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Should each shoot be its own record with a date, place and people, or is it enough to note it on the invoice?"
+  ]
+}

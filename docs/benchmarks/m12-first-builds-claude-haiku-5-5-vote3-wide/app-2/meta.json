@@ -1,0 +1,6 @@
+{
+  "description": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
+  "starter": "crm",
+  "wordStarter": "invoicing",
+  "questions": []
+}

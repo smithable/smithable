@@ -1,0 +1,68 @@
+smithable: 0.1
+app:
+  name: Lingo Ledger
+  description: Tracks a freelance translator's clients, the quotes sent to them and the payments received.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+      jobs: Job[]
+  Job:
+    fields:
+      client: Client!
+      title: string!
+      sourceLanguage: string!
+      targetLanguage: string!
+      quoted: money!
+      quotedOn: date! = TODAY()
+      status: quoted | accepted | delivered
+      payments: Payment[]
+      paid:
+        type: money
+        formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: quoted - SUM(payments.amount)
+    namedBy: title
+  Payment:
+    fields:
+      job: Job!
+      amount: money!
+      paidOn: date! = TODAY()
+      note: string
+actions:
+  accept:
+    on: Job
+    when:
+      status: quoted
+    set:
+      status: accepted
+    intent: The client accepted the quote.
+  deliver:
+    on: Job
+    when:
+      status: accepted
+    set:
+      status: delivered
+    intent: The translation was delivered to the client.
+pages:
+  jobs:
+    crud: Job
+    filters: [client, status]
+  clients:
+    crud: Client
+    search: [name, email]
+  payments:
+    crud: Payment
+  overview:
+    dashboard:
+      quoted:
+        sum: Job.quoted
+      received:
+        sum: Payment.amount
+      latest:
+        list: Job
+        limit: 5

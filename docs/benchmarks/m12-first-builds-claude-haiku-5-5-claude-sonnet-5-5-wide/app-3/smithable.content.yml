@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Book your next haircut online
+      button: Book now
+      image:
+        src: images/hero.webp
+        alt: A hair salon with mirrors, chairs and plants in daylight
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Open scissors
+  generated: true

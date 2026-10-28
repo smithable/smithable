@@ -1,0 +1,32 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Vara
+    pluralLabel: Varor
+    fields:
+      title:
+        label: Titel
+      photos:
+        label: Bilder
+      price:
+        label: Pris
+      description:
+        label: Beskrivning
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Gott skick
+          worn: Slitet
+      available:
+        label: Till salu
+pages:
+  varor:
+    title: Till salu
+  mina-varor:
+    title: Mina varor
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

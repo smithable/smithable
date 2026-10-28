@@ -1,0 +1,522 @@
+[
+  {
+    "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+    "starter": "invoicing",
+    "created": false,
+    "typecheck": false,
+    "tokens": 28897,
+    "tokensIn": 26031,
+    "tokensOut": 2866,
+    "cost": 0.0046,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 60,
+    "summary": "No model drafted a valid project.\naddModel: addModel would make smithable.yml invalid. Field \"Quote.balance\": Quote has no field \"paid\".\naddPage: There is no model named \"Quote\".\naddField: addField would make smithable.yml invalid. There is no model named \"Quote\".\naddField: There is no model named \"Quote\".\naddField: addField would make smithable.yml invalid. There is no model named \"Quote\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-1 --starter invoicing",
+    "error": "ng starter.\nFrontier model (claude-haiku-5-5) · 28,897 tokens (26,031 in, 2,866 out) · $0.0046\nNo model drafted a valid project.\naddModel: addModel would make smithable.yml invalid. Field \"Quote.balance\": Quote has no field \"paid\".\naddPage: There is no model named \"Quote\".\naddField: addField would make smithable.yml invalid. There is no model named \"Quote\".\naddField: There is no model named \"Quote\".\naddField: addField would make smithable.yml invalid. There is no model named \"Quote\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-1 --starter invoicing\n",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": []
+    }
+  },
+  {
+    "description": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
+    "starter": "crm",
+    "created": false,
+    "typecheck": false,
+    "tokens": 28442,
+    "tokensIn": 25774,
+    "tokensOut": 2668,
+    "cost": 0.0017,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 39,
+    "summary": "No model drafted a valid project.\naddModel: Choice value \"cold outreach\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Lead\".\naddField: addField would make smithable.yml invalid. There is no model named \"Lead\". Did you mean \"Deal\"?\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-2 --starter crm",
+    "error": "Starting from the crm starter.\nFrontier model (claude-haiku-5-5) · 28,442 tokens (25,774 in, 2,668 out) · $0.0017\nNo model drafted a valid project.\naddModel: Choice value \"cold outreach\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Lead\".\naddField: addField would make smithable.yml invalid. There is no model named \"Lead\". Did you mean \"Deal\"?\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-2 --starter crm\n",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": []
+    }
+  },
+  {
+    "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+    "starter": "barbers",
+    "created": true,
+    "typecheck": true,
+    "tokens": 31394,
+    "tokensIn": 25904,
+    "tokensOut": 5490,
+    "cost": 0.0031,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 437,
+    "summary": "Velvet Scissors\n  Online booking for a hair salon, where customers pick a stylist and a free time themselves.\n\nPages\n  - Home (a landing page: hero, services, stylists and footer)\n  - Appointments (lists appointments; filter by status)\n  - Day (a calendar of appointments by week or month; only for admins)\n  - Services (lists services; only for admins; visitors see services on the Home page)\n  - Stylists (lists stylists; only for admins; visitors see stylists on the Home page)\n  - Time off (lists time offs; only for admins)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nServices\n  Services have:\n  - a name (required)\n  - a summary\n  - minutes (a whole number, required, 30 by default)\n  - a price (an amount)\n\nStylists\n  Stylists have:\n  - a name (required)\n  - a bio\n  - a portrait (picture)\n  Each stylist lists its time offs.\n  Stylists are booked by their time: Mon–Fri 09:00–17:00, Sat 10:00–14:00, a break 12:00–12:30, 10 minutes kept free after each booking, away during their time offs (by their fields from and until).\n\nTime offs\n  Time offs have:\n  - a stylist (a stylist, required)\n  - a date and time (from, required)\n  - a date and time (until, required)\n  - a note\n\nAppointments\n  Appointments have:\n  - a service (a service, required)\n  - a stylist (a stylist, required)\n  - starts at (a date and time, required)\n  - a name (required)\n  - a phone\n  - a note\n  - status (requested, confirmed or cancelled, requested by default, filled by the app)\n  An appointment takes its stylist's time from its starts at for the number of minutes in its service's minutes while status is requested or confirmed; whoever made it may cancel it until 12 hours before.\n\nConfirm\n  For an appointment that is requested; sets status to confirmed.\n\nCancel\n  For an appointment that is requested or confirmed; sets status to cancelled.\n\nAppointment requested\n  When a appointment is added: mails every admin.\n\nAppointment made\n  When a appointment is added: mails its owner.\n\nAppointment confirmed\n  When “Confirm” runs on a appointment: mails its owner.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin (The salon. Keeps the services, the stylists and their time off; confirms appointments): everything\n  - member (A customer who books appointments): opens the appointments page; adds appointments\n  New users get the member role.\n  Open to anyone without signing in: the home page, the privacy page, reading services and reading stylists.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,516 tokens (460 in, 2,056 out) · $0.0011\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 148 files (148 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-3. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-3\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-TvAhnF/app-3/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Do customers need an account to book an appointment?",
+        "Who manages the stylists' schedules and time off?"
+      ]
+    }
+  },
+  {
+    "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+    "starter": "booking",
+    "created": false,
+    "typecheck": false,
+    "tokens": 29592,
+    "tokensIn": 27087,
+    "tokensOut": 2505,
+    "cost": 0.0046,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 36,
+    "summary": "No model drafted a valid project.\naddModel: Choice value \"to learn\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Piece\".\naddField: addField would make smithable.yml invalid. There is no model named \"Piece\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-4 --starter booking",
+    "error": "Starting from the booking starter.\nFrontier model (claude-haiku-5-5) · 29,592 tokens (27,087 in, 2,505 out) · $0.0046\nNo model drafted a valid project.\naddModel: Choice value \"to learn\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Piece\".\naddField: addField would make smithable.yml invalid. There is no model named \"Piece\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-4 --starter booking\n",
+    "meta": {
+      "wordStarter": "status",
+      "questions": [
+        "Will pupils or parents sign in to see their own lesson times and practice?"
+      ]
+    }
+  },
+  {
+    "description": "Invoices for my photography work: clients, shoots and what is still unpaid.",
+    "starter": "invoicing",
+    "created": false,
+    "typecheck": false,
+    "tokens": 30978,
+    "tokensIn": 26030,
+    "tokensOut": 4948,
+    "cost": 0.0029,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 42,
+    "summary": "No model drafted a valid project.\naddModel: Field \"dueOn\": the long form is for a formula, bounds (min, max) or rules (by, locked, required); otherwise write the shorthand, like \"int! = 3\".\naddPage: There is no model named \"Invoice\".\naddField: addField would make smithable.yml invalid. There is no model named \"Invoice\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-5 --starter invoicing",
+    "error": "Starting from the invoicing starter.\nFrontier model (claude-haiku-5-5) · 30,978 tokens (26,030 in, 4,948 out) · $0.0029\nNo model drafted a valid project.\naddModel: Field \"dueOn\": the long form is for a formula, bounds (min, max) or rules (by, locked, required); otherwise write the shorthand, like \"int! = 3\".\naddPage: There is no model named \"Invoice\".\naddField: addField would make smithable.yml invalid. There is no model named \"Invoice\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-5 --starter invoicing\n",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Should each shoot be recorded as its own item, with its date and client, or do you only need invoices per client?",
+        "Should clients be able to see their own invoices online?"
+      ]
+    }
+  },
+  {
+    "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+    "starter": "invoicing",
+    "created": false,
+    "typecheck": false,
+    "tokens": 29716,
+    "tokensIn": 26031,
+    "tokensOut": 3685,
+    "cost": 0.0022,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 46,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1449 (line 1 column 1450)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-6 --starter invoicing",
+    "error": "Starting from the invoicing starter.\nFrontier model (claude-haiku-5-5) · 29,716 tokens (26,031 in, 3,685 out) · $0.0022\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1449 (line 1 column 1450)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-6 --starter invoicing\n",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Who should be able to see and manage the invoices?",
+        "Should households see their invoices without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 29147,
+    "tokensIn": 25310,
+    "tokensOut": 3837,
+    "cost": 0.0022,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 377,
+    "summary": "Town Flea Market\n  Post things you no longer need to sell, with photos and a price, and browse what others offer.\n\nPages\n  - Catalog (lists items; search by title, description or place; filter by category, price, condition or available; sort by price or date added; records can be saved as favorites; contact the owner by mail)\n  - Home (a landing page: hero, items and footer)\n  - My items (lists items; only the viewer's own records)\n  - Saved (lists items; only the viewer's saved records)\n  - Review (the pictures and files waiting for review (items), to approve or reject; only for admins)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a price (an amount)\n  - a category (furniture, bikes, electronics, sports, kids or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - available (yes or no, true by default)\n  Photos of items are reviewed before others see them; an item waits until its photos are.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Sells and saves items): opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page, the privacy page and reading items.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,718 tokens (411 in, 1,307 out) · $0.0007\nPictures from the Smithable image library: samples/item-1.webp, samples/item-2.webp, samples/item-3.webp, samples/item-4.webp, samples/item-5.webp, samples/item-6.webp, hero.webp, logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-7. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-7\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-TvAhnF/app-7/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Can visitors browse listings without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27592,
+    "tokensIn": 25314,
+    "tokensOut": 2278,
+    "cost": 0.0043,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 321,
+    "summary": "Office Swap Shelf\n  Colleagues offer things they no longer need and others claim them from the office shelf.\n\nPages\n  - Shelf (lists items; search by title, description or place; filter by condition or status)\n  - Mine (lists items; only the viewer's own records)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nItems\n  Items have:\n  - a title (required)\n  - a description\n  - a photo (picture)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - status (available or claimed, available by default)\n  Each item can have a claimed by (a user).\n\nClaim\n  For an item that is available; sets status to claimed and claimed by to whoever presses it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record; runs “Claim”\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,393 tokens (390 in, 1,003 out) · $0.0005\nPictures from the Smithable image library: samples/item-1.webp, samples/item-2.webp, samples/item-3.webp, samples/item-4.webp, samples/item-5.webp, samples/item-6.webp, logo.webp.\nGenerated 125 files (125 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-8. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-8\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Can people who aren't signed in see what is on the shelf?",
+        "When someone claims an item, should the app keep a record of who claimed it and when?"
+      ]
+    }
+  },
+  {
+    "description": "My vinyl record collection: albums, artists, condition and what I paid.",
+    "starter": "records",
+    "created": false,
+    "typecheck": false,
+    "tokens": 26929,
+    "tokensIn": 25102,
+    "tokensOut": 1827,
+    "cost": 0.004,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 23,
+    "summary": "No model drafted a valid project.\naddModel: Choice value \"very good\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Album\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-9 --starter records",
+    "error": "Starting from the records starter.\nFrontier model (claude-haiku-5-5) · 26,929 tokens (25,102 in, 1,827 out) · $0.0040\nNo model drafted a valid project.\naddModel: Choice value \"very good\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Album\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-9 --starter records\n",
+    "meta": {
+      "wordStarter": "crm",
+      "questions": [
+        "Who may see your collection?"
+      ]
+    }
+  },
+  {
+    "description": "Our local museum's collection online, so visitors can browse the objects and their stories.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27314,
+    "tokensIn": 25104,
+    "tokensOut": 2210,
+    "cost": 0.0014,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 232,
+    "summary": "Local Museum Collection\n  An online collection where visitors browse the museum's objects and read their stories.\n\nPages\n  - Our collection online (a landing page: hero, objects where featured is yes and footer)\n  - Collection (lists objects; search by title or story; filter by category)\n\nObjects\n  Objects have:\n  - a title (required)\n  - a story (formatted text)\n  - a period\n  - an origin\n  - a category (painting, textile, tool, photograph or other, painting by default)\n  - an image (picture)\n  - featured (yes or no)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the collection page and reading artifacts.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,962 tokens (392 in, 1,570 out) · $0.0008\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 118 files (118 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-10. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-10\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "marketplace",
+      "questions": [
+        "Who adds and edits the objects?",
+        "How are the stories written?",
+        "Can visitors leave comments or questions?"
+      ]
+    }
+  },
+  {
+    "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 30092,
+    "tokensIn": 26250,
+    "tokensOut": 3842,
+    "cost": 0.0023,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 257,
+    "summary": "IT Status Board\n  Shows which IT systems are down, what is being done about it, and when they are expected back.\n\nPages\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n  - Incidents (lists incidents; filter by status or component; “Monitoring”; “Resolve”)\n  - Components (lists components; search by name)\n\nComponents\n  Components have:\n  - a name (required, unique)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - a component (a component, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - started at (a date and time, required)\n  - an expected back (a date and time)\n  - resolved at (a date and time)\n  - a summary (formatted text)\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is in place. We are watching before we close this.).\n  A fix is in place; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so. The component's state stays what the team sets.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,828 tokens (538 in, 4,290 out) · $0.0022\nPictures from the Smithable image library: logo.webp.\nGenerated 126 files (126 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-11. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-11\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "status",
+      "questions": [
+        "Who may see the board?",
+        "Should planned maintenance windows be listed as well as current outages?"
+      ]
+    }
+  },
+  {
+    "description": "Service status for our municipality's online services, for residents to check outages.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 31541,
+    "tokensIn": 26245,
+    "tokensOut": 5296,
+    "cost": 0.0031,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 308,
+    "summary": "Municipal Service Status\n  Live status of the municipality's online services, so residents can check outages and planned work.\n\nPages\n  - Home (a landing page: hero, services, incidents where status is investigating or identified or monitoring, incidents where status is resolved, maintenances and footer)\n  - Incidents (lists incidents; filter by status)\n  - Updates (lists incident updates)\n  - Components (lists services; only for admins; visitors see services on the Home page)\n  - Maintenance (lists maintenances)\n  - Overview (a dashboard: open now, per month and latest)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nServices\n  Services have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each service lists its incidents.\n  Each service lists its maintenances.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a service (a service)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary (formatted text)\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nMaintenances\n  Maintenances have:\n  - a title (required)\n  - a service (a service)\n  - starts at (a date and time, required)\n  - ends at (a date and time, required)\n  - a description\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is in place. We are watching the service before closing this incident.).\n  A fix is in place; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved and the service is working again.).\n  The incident is over, with an update saying so. The service's state stays what the team sets.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - staff (Writes incidents and their updates): opens the overview page, the incidents page, the updates page and the maintenance page; adds every kind of record; changes everyone's records; runs every custom action\n  New users get the staff role.\n  Open to anyone without signing in: the home page, reading components, reading incidents, reading incident updates and reading maintenances.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 6,016 tokens (596 in, 5,420 out) · $0.0028\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 142 files (142 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-12. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-12\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Can residents see the service status without signing in?",
+        "Who may post incidents and updates about outages?"
+      ]
+    }
+  },
+  {
+    "description": "A log of my car's fuel, service visits and costs.",
+    "starter": "records",
+    "created": false,
+    "typecheck": false,
+    "tokens": 27529,
+    "tokensIn": 25096,
+    "tokensOut": 2433,
+    "cost": 0.0043,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 21,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 738 (line 1 column 739)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-13 --starter records",
+    "error": "Starting from the records starter.\nFrontier model (claude-haiku-5-5) · 27,529 tokens (25,096 in, 2,433 out) · $0.0043\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 738 (line 1 column 739)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-13 --starter records\n",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": []
+    }
+  },
+  {
+    "description": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+    "starter": "records",
+    "created": false,
+    "typecheck": false,
+    "tokens": 28864,
+    "tokensIn": 25106,
+    "tokensOut": 3758,
+    "cost": 0.0022,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 35,
+    "summary": "No model drafted a valid project.\naddModel: addModel would make smithable.yml invalid. Field \"Guest.meal\" is always required (its type says \"!\", or a choice has a default), so a condition on \"required\" adds nothing.\naddField: addField would make smithable.yml invalid. There is no model named \"Guest\".\naddPage: There is no model named \"Guest\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-14 --starter records",
+    "error": "Starting from the records starter.\nFrontier model (claude-haiku-5-5) · 28,864 tokens (25,106 in, 3,758 out) · $0.0022\nNo model drafted a valid project.\naddModel: addModel would make smithable.yml invalid. Field \"Guest.meal\" is always required (its type says \"!\", or a choice has a default), so a condition on \"required\" adds nothing.\naddField: addField would make smithable.yml invalid. There is no model named \"Guest\".\naddPage: There is no model named \"Guest\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-14 --starter records\n",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who uses the app?",
+        "What can visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 26648,
+    "tokensIn": 25105,
+    "tokensOut": 1543,
+    "cost": 0.0011,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 155,
+    "summary": "Bird Sightings\n  Records the birds the club sees, with species, place, date and who saw them.\n\nPages\n  - Sightings (lists sightings; search by species or place)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nSightings\n  Sightings have:\n  - species (required)\n  - a place (required)\n  - seen on (a date, required, today by default)\n  - notes\n  Each sighting can have an observer (a user, who makes it, by default, filled by the app).\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,425 tokens (374 in, 1,051 out) · $0.0006\nPictures from the Smithable image library: logo.webp.\nGenerated 111 files (111 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-15. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-15\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who should be able to use the app?",
+        "What can visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Our allotment society: who has which plot, the waiting list and the yearly fee.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 28071,
+    "tokensIn": 25105,
+    "tokensOut": 2966,
+    "cost": 0.0018,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 280,
+    "summary": "Allotment Society\n  Keeps track of which member holds which plot, the waiting list and each year's fee.\n\nPages\n  - Plots (lists plots; filter by status)\n  - Members (lists members; search by name or email; only for admins)\n  - Waiting list (lists waiting entries; only for admins)\n  - Fees (lists fees; filter by status or year; only for admins)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nMembers\n  Members have:\n  - a name (required)\n  - an email\n  - a phone\n  - joined on (a date, required, today by default)\n\nPlots\n  Plots have:\n  - a number (required, unique)\n  - status (let or free, let by default)\n  - a holder (a member)\n  - notes\n\nWaiting entries\n  Waiting entries have:\n  - a name (required)\n  - an email\n  - a phone\n  - requested on (a date, required, today by default)\n  - status (waiting, offered or withdrawn, waiting by default)\n  - a note\n\nFees\n  Fees have:\n  - a member (a member, required)\n  - a year (a whole number, required, 2026 by default)\n  - an amount (an amount)\n  - status (due or paid, due by default)\n  - paid on (a date)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens the plots page\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,171 tokens (548 in, 3,623 out) · $0.0019\nPictures from the Smithable image library: logo.webp.\nGenerated 130 files (130 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-16. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-16\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Who uses the app?",
+        "What can visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet.",
+    "starter": "barbers",
+    "created": false,
+    "typecheck": false,
+    "tokens": 32565,
+    "tokensIn": 25956,
+    "tokensOut": 6609,
+    "cost": 0.0037,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 43,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 878 (line 1 column 879)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-17 --starter barbers",
+    "error": "Starting from the barbers starter.\nFrontier model (claude-haiku-5-5) · 32,565 tokens (25,956 in, 6,609 out) · $0.0037\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 878 (line 1 column 879)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-17 --starter barbers\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Har varje frisör sin egen kalender, eller finns en gemensam kalender för hela salongen?",
+        "Kan kunden välja en specifik frisör när hen bokar, eller bokar kunden bara en tid?"
+      ]
+    }
+  },
+  {
+    "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+    "starter": "invoicing",
+    "created": false,
+    "typecheck": false,
+    "tokens": 34838,
+    "tokensIn": 26086,
+    "tokensOut": 8752,
+    "cost": 0.0048,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 54,
+    "summary": "No model drafted a valid project.\naddModel: Field \"dueOn\": the long form is for a formula, bounds (min, max) or rules (by, locked, required); otherwise write the shorthand, like \"int! = 3\".\naddPage: There is no model named \"Invoice\".\naddField: addField would make smithable.yml invalid. There is no model named \"Invoice\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-18 --starter invoicing",
+    "error": "Starting from the invoicing starter.\nFrontier model (claude-haiku-5-5) · 34,838 tokens (26,086 in, 8,752 out) · $0.0048\nNo model drafted a valid project.\naddModel: Field \"dueOn\": the long form is for a formula, bounds (min, max) or rules (by, locked, required); otherwise write the shorthand, like \"int! = 3\".\naddPage: There is no model named \"Invoice\".\naddField: addField would make smithable.yml invalid. There is no model named \"Invoice\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-18 --starter invoicing\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Vem ska använda appen?",
+        "Ska offerter vara egna dokument?"
+      ]
+    }
+  },
+  {
+    "description": "En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 28047,
+    "tokensIn": 25368,
+    "tokensOut": 2679,
+    "cost": 0.0017,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 340,
+    "summary": "Loppisen\n  Här lägger folk upp begagnade saker de vill sälja, med bilder och pris.\n\nPages\n  - Till salu (lists “Varor”; search by “Titel” or “Beskrivning”; filter by “Skick”, “Pris” or “Till salu”; sort by “Pris” or date added)\n  - Mina varor (lists “Varor”; only the viewer's own records)\n\nVaror\n  Varor have:\n  - a field “Titel” (required)\n  - a field “Bilder” (pictures, required)\n  - a field “Pris” (an amount, required)\n  - a field “Beskrivning”\n  - a field “Skick” (“Som ny”, “Gott skick” or “Slitet”, “Som ny” by default)\n  - a field “Till salu” (yes or no, true by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the varor page and reading items.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,484 tokens (445 in, 1,039 out) · $0.0006\nPictures from the Smithable image library: logo.webp.\nGenerated 118 files (118 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-19. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-19\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Vem ska kunna använda sidan?",
+        "Vad ska besökare kunna se utan att logga in?"
+      ]
+    }
+  },
+  {
+    "description": "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.",
+    "starter": "booking",
+    "created": false,
+    "typecheck": false,
+    "tokens": 35142,
+    "tokensIn": 27058,
+    "tokensOut": 8084,
+    "cost": 0.0074,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "fi",
+    "seconds": 50,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 4653 (line 67 column 4)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-20 --starter booking",
+    "error": "Starting from the booking starter.\nFrontier model (claude-haiku-5-5) · 35,142 tokens (27,058 in, 8,084 out) · $0.0074\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 4653 (line 67 column 4)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-20 --starter booking\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Näkevätkö vierailijat tuntirivit ilman kirjautumista?",
+        "Kuka hallinnoi tunteja ja ohjaajien tietoja?"
+      ]
+    }
+  },
+  {
+    "description": "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.",
+    "starter": "crm",
+    "created": false,
+    "typecheck": false,
+    "tokens": 32374,
+    "tokensIn": 25748,
+    "tokensOut": 6626,
+    "cost": 0.0037,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "fi",
+    "seconds": 41,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1581 (line 1 column 1582)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-21 --starter crm",
+    "error": "Starting from the crm starter.\nFrontier model (claude-haiku-5-5) · 32,374 tokens (25,748 in, 6,626 out) · $0.0037\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1581 (line 1 column 1582)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-21 --starter crm\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Kuka käyttää sovellusta?",
+        "Mitä kirjautumaton kävijä saa nähdä?"
+      ]
+    }
+  },
+  {
+    "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+    "starter": "kiosk",
+    "created": false,
+    "typecheck": false,
+    "tokens": 35417,
+    "tokensIn": 25971,
+    "tokensOut": 9446,
+    "cost": 0.0051,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "de",
+    "seconds": 54,
+    "summary": "No model drafted a valid project.\naddModel: Choice value \"Gemüse\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddModel: Choice value \"bestätigt\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Product\".\naddPage: There is no model named \"Order\".\naddField: addField would make smithable.yml invalid. There is no model named \"Order\".\naddField: addField would make smithable.yml invalid. There is no model named \"Product\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-22 --starter kiosk",
+    "error": " Choice value \"Gemüse\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddModel: Choice value \"bestätigt\" must start with a lowercase letter and use only letters and digits, like \"inProgress\".\naddPage: There is no model named \"Product\".\naddPage: There is no model named \"Order\".\naddField: addField would make smithable.yml invalid. There is no model named \"Order\".\naddField: addField would make smithable.yml invalid. There is no model named \"Product\".\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-TvAhnF/app-22 --starter kiosk\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Wer soll die Produkte und Abholzeiten verwalten?",
+        "Was sollen Besucher ohne Anmeldung sehen und tun können?"
+      ]
+    }
+  },
+  {
+    "description": "A backend for my habit app: habits, daily check-ins and streaks.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 26883,
+    "tokensIn": 25102,
+    "tokensOut": 1781,
+    "cost": 0.0012,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 153,
+    "summary": "Habit Tracker\n  Track the habits you want to keep, check them in each day and see your streaks.\n\nPages\n  - Habits (lists habits; search by name; filter by frequency or active)\n  - Check ins (lists check ins; filter by habit, done or date)\n\nHabits\n  Habits have:\n  - a name (required)\n  - a frequency (daily or weekly, daily by default)\n  - started on (a date, required, today by default)\n  - active (yes or no, true by default)\n  Each habit lists its check ins.\n\nCheck ins\n  Check ins have:\n  - a habit (a habit, required)\n  - a date (required, today by default)\n  - done (yes or no)\n  - a note\n  No two check ins have the same habit and date for one owner.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,035 tokens (423 in, 1,612 out) · $0.0008\nPictures from the Smithable image library: logo.webp.\nGenerated 113 files (113 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-23. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-23\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Who uses the app?",
+        "What can visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Somewhere my AI assistant keeps my tasks and notes, by project.",
+    "starter": "api",
+    "created": true,
+    "typecheck": true,
+    "tokens": 26984,
+    "tokensIn": 25386,
+    "tokensOut": 1598,
+    "cost": 0.0011,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 129,
+    "summary": "Project Memory\n  Tasks and notes, grouped by project, that my AI assistant keeps for me.\n\nPages\n  - Projects (lists projects)\n  - Tasks (lists tasks; “Complete”; “Reopen”)\n  - Notes (lists notes)\n\nProjects\n  Projects have:\n  - a name (required)\n  - a description\n  Each project lists its tasks.\n  Each project lists its notes.\n\nTasks\n  Tasks have:\n  - a title (required)\n  - a project (a project, required)\n  - status (todo, doing or done, todo by default)\n  - a due date\n  - details\n\nNotes\n  Notes have:\n  - a title (required)\n  - a project (a project, required)\n  - a body\n  - an attachment (a document)\n\nComplete\n  For a task that is todo or doing; sets status to done.\n  Mark a task as done.\n\nReopen\n  For a task that is done; sets status to todo.\n  Open a finished task again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,795 tokens (445 in, 2,350 out) · $0.0012\nPictures from the Smithable image library: logo.webp.\nGenerated 127 files (127 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-TvAhnF/app-24. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-TvAhnF/app-24\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "api",
+      "questions": []
+    }
+  }
+]

@@ -1,0 +1,125 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Ein kleiner Hofladen, bei dem Kunden Produkte vorbestellen und zu festen Zeiten abholen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      unit: string
+      category: vegetables | fruit | dairy | meat | bakery | other
+      picture: picture
+      available: bool = true
+  Order:
+    fields:
+      name: string!
+      phone: phone!
+      email: email
+      wanted: datetime
+      note: text
+      status: new | accepted | ready | collected | declined
+      reason: text
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity: int! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  PickupSlot:
+    fields:
+      place: string!
+      day: date!
+      hours: string!
+      note: text
+pages:
+  orders:
+    crud: Order
+    filters: [status]
+    sortable: [createdAt, wanted]
+    actions: [accept, ready, collected, decline]
+  products:
+    crud: Product
+    filters: [category, available]
+    actions: [soldOut, backOn]
+  pickups:
+    crud: PickupSlot
+  abholung:
+    route: /
+    landing:
+      hero:
+      slots:
+        records: PickupSlot
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
+actions:
+  soldOut:
+    on: Product
+    when:
+      available: true
+    set:
+      available: false
+    intent: Heute nichts mehr davon.
+  backOn:
+    on: Product
+    when:
+      available: false
+    set:
+      available: true
+    intent: Wieder vorbestellbar.
+  accept:
+    on: Order
+    when:
+      status: new
+    set:
+      status: accepted
+    intent: Die Vorbestellung wird angenommen.
+  ready:
+    on: Order
+    when:
+      status: accepted
+    set:
+      status: ready
+    intent: Die Bestellung liegt zur Abholung bereit.
+  collected:
+    on: Order
+    when:
+      status: ready
+    set:
+      status: collected
+    intent: Der Kunde hat die Bestellung abgeholt.
+  decline:
+    on: Order
+    when:
+      status: [new, accepted]
+    set:
+      status: declined
+      reason:
+    intent: "Die Bestellung ist nicht möglich: Grund angeben."
+outgoing:
+  orderPlaced:
+    when: Order created
+    to: mail
+    recipient: admin
+  orderAccepted:
+    when: accept
+    to: mail
+    recipient: email
+  orderReady:
+    when: ready
+    to: mail
+    recipient: email

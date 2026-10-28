@@ -1,0 +1,12 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: An outdoor market with stalls of vegetables and flowers
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A price tag
+  generated: true

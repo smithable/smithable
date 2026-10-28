@@ -1,0 +1,6 @@
+smithableUx: 0.1
+tones:
+  Job.status:
+    done: success
+  Invoice.status:
+    paid: success

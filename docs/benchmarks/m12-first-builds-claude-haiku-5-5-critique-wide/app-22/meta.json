@@ -1,0 +1,10 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "kiosk",
+  "wordStarter": "records",
+  "questions": [
+    "Wer darf die Produktseite ohne Anmeldung sehen?",
+    "Brauchen Kunden ein Konto, um vorzubestellen?"
+  ],
+  "lang": "de"
+}

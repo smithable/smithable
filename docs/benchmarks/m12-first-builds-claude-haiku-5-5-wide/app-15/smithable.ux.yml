@@ -1,0 +1,5 @@
+smithableUx: 0.1
+pages:
+  sightings:
+    table:
+      columns: [species, place, seenOn, observer]

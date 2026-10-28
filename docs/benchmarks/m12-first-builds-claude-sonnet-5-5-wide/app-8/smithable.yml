@@ -1,0 +1,41 @@
+smithable: 0.1
+app:
+  name: Office Swap Shelf
+  description: Colleagues offer things they no longer need and others claim them.
+models:
+  Item:
+    fields:
+      title: string!
+      description: text
+      photo: picture
+      category: furniture | books | electronics | kitchen | clothing | other
+      condition: likeNew | good | worn
+      pickupSpot: string
+      status: available | claimed
+      claimedBy:
+        type: User
+        by: app
+      claimedAt: datetime
+pages:
+  shelf:
+    route: /
+    crud: Item
+    search: [title, description, pickupSpot]
+    filters: [category, condition, status]
+    defaultFilter:
+      status: available
+  myItems:
+    crud: Item
+    mine: true
+  team:
+    users: manage
+actions:
+  claim:
+    on: Item
+    when:
+      status: available
+    set:
+      status: claimed
+      claimedBy: ME()
+      claimedAt: NOW()
+    intent: A colleague claims an item from the shelf.
