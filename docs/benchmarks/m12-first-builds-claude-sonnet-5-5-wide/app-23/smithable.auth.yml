@@ -1,0 +1,13 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  member: { pages: all, create: all }
+assistant:
+  for: signed-in
+api:
+  models: [Habit, CheckIn]
+  actions: [checkInHabit]
+admins: [johan@smithable.ai]

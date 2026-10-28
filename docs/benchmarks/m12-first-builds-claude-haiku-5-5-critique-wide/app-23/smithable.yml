@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Habit Tracker
+  description: Track daily habits with check-ins and streaks.
+models:
+  Habit:
+    fields:
+      name: string!
+      notes: text
+      startedOn: date! = TODAY()
+      archived: bool
+      checkIns: CheckIn[]
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date! = TODAY()
+      note: string
+queries:
+  longestStreaks:
+    custom: true
+    returns: Habit[]
+    intent: Habits ordered by their current streak of consecutive days checked in, longest first.
+pages:
+  habits:
+    crud: Habit
+    filters: [archived]
+    search: [name]
+    actions: [checkInHabit]
+actions:
+  checkInHabit:
+    on: Habit
+    add:
+      CheckIn:
+        date: TODAY()
+        note:
+    intent: Record that the habit was done today.

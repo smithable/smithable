@@ -1,0 +1,76 @@
+smithable: 0.1
+app:
+  name: Photo Invoices
+  description: "Invoices for a photographer's work: clients, shoots and what is still unpaid."
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+  Shoot:
+    fields:
+      title: string!
+      client: Client!
+      shotOn: date! = TODAY()
+      location: string
+      notes: text
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      shoot: Shoot
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  InvoiceLine:
+    fields:
+      invoice: Invoice!
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+pages:
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    search: [number]
+    actions: [markSent, markPaid, markOverdue]
+  clients:
+    crud: Client
+  shoots:
+    crud: Shoot
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.

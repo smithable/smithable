@@ -1,0 +1,9 @@
+{
+  "description": "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.",
+  "starter": "records",
+  "wordStarter": "records",
+  "questions": [
+    "Kuka käyttää sovellusta?"
+  ],
+  "lang": "fi"
+}

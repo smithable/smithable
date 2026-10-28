@@ -1,0 +1,10 @@
+smithableUx: 0.1
+tones:
+  Quote.status:
+    accepted: success
+    declined: danger
+  Invoice.status:
+    paid: success
+    overdue: danger
+theme:
+  preset: corporate

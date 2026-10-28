@@ -10,4 +10,4 @@ tones:
     monitoring: warning
     resolved: success
 theme:
-  preset: minimal
+  preset: modern

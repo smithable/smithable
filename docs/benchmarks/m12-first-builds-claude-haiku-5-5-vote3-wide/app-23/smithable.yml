@@ -1,0 +1,25 @@
+smithable: 0.1
+app:
+  name: Habits
+  description: Track your daily habits, check-ins and streaks.
+models:
+  Habit:
+    fields:
+      name: string!
+      notes: text
+      frequency: daily | weekly
+      startedOn: date! = TODAY()
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date! = TODAY()
+      done: bool = true
+    unique: [{ fields: [habit, date], scope: owner }]
+    namedBy: [habit, date]
+pages:
+  habits:
+    crud: Habit
+  checkins:
+    crud: CheckIn
+  streaks:
+    custom: Streaks

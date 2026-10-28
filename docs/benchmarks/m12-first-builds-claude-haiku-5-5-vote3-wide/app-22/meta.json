@@ -1,0 +1,10 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "kiosk",
+  "wordStarter": "records",
+  "questions": [
+    "Wer benutzt die App außer dir?",
+    "Was dürfen Besucher sehen, ohne sich anzumelden?"
+  ],
+  "lang": "de"
+}

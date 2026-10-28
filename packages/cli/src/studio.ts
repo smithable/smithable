@@ -690,6 +690,13 @@ export async function studio(
         context: read("smithable.context.yml"),
         translations: projectTranslations(dir),
       },
+      // Each model's sample records as written, for an outgoing mail's preview in Content.
+      samples: Object.fromEntries(
+        (ir?.models ?? []).flatMap((m) => {
+          const text = read(`samples/${m.name}.yml`);
+          return text === undefined ? [] : [[m.name, text]];
+        }),
+      ),
       // For the engine in the tab, which imports them from /api/plugins/; the version is for
       // its module cache.
       plugins: declaredPlugins(dir)

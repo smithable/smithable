@@ -4,6 +4,12 @@ smithableUx: 0.1
 theme:
   preset: minimal
 
+pages:
+  home:
+    sections:
+      recent: { layout: list }         # the resolved incidents as quiet rows
+      planned: { band: muted }
+
 tones:
   Component.status: { operational: success, degraded: warning, down: danger, maintenance: neutral }
   Incident.status: { investigating: danger, identified: warning, monitoring: warning, resolved: success }

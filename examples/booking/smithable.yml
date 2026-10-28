@@ -106,6 +106,8 @@ outgoing:
   sessionMoved:
     when: Session changed
     fields: [startsAt]                # only a new time counts
+    show: [classType, startsAt, instructor]   # the mail lists these, not the capacity
+    previous: true                    # and says what the time was
     to: mail
     recipient: bookings.owner        # one mail per booking, to the member who booked
 
@@ -113,7 +115,7 @@ pages:
   home:
     route: /
     landing:
-      hero: { button: schedule, shortcuts: [schedule, blog] }   # round links over the picture's edge
+      hero: { button: schedule, secondButton: blog, shortcuts: [schedule, blog] }   # round links over the picture's edge
       classes: { records: ClassType }
       estimate:                         # does a monthly pass pay off? Worked out as you type
         calculator:

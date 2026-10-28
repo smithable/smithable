@@ -1,0 +1,68 @@
+smithable: 0.1
+app:
+  name: Joogastudio
+  description: Joogastudion tuntien selaus ja varaus verkossa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: allLevels | beginner | advanced
+      durationMinutes: int! = 60
+      sessions: Session[]
+  Instructor:
+    fields:
+      name: string!
+      bio: markdown
+      sessions: Session[]
+  Session:
+    fields:
+      classType: ClassType!
+      instructor: Instructor!
+      startsAt: datetime!
+      capacity: int! = 12
+      bookings: Booking[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(bookings)
+    namedBy: [classType, startsAt]
+  Booking:
+    fields:
+      session: Session! unique
+      attendee: User
+    namedBy: session
+    ownedBy: attendee
+    capacity:
+      per: session
+      max: session.capacity
+      closes: session.startsAt
+      cancelUntil: 2 hours before session.startsAt
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      classes:
+        records: ClassType
+      footer:
+  schedule:
+    calendar:
+      model: Session
+      starts: startsAt
+  sessions:
+    crud: Session
+    filters: [classType, instructor, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+  class-types:
+    crud: ClassType
+  instructors:
+    crud: Instructor
+  my-bookings:
+    route: /my-bookings
+    crud: Booking
+  privacy:
+    route: /privacy
+    legal: privacy

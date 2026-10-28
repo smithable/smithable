@@ -9,6 +9,7 @@ import {
   asksWith,
   assistantOffer,
   type ContentIR,
+  type CustomActionIR,
   FILES_MAX,
   type FieldIR,
   isFiles,
@@ -58,6 +59,11 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
     }),
     actions: ir.actions.filter(
       (a): a is StandardActionIR => !a.custom && offered.actions.includes(a.name),
+    ),
+    /** The custom actions on rows offered (A 171): run on the ids a program gives. */
+    rowsActions: ir.actions.filter(
+      (a): a is CustomActionIR & { rows: { field: string; model: string } } =>
+        Boolean(a.custom && a.rows && offered.rowsActions.includes(a.name)),
     ),
     /** What a call without a key may do (api-only.md §3.4): read and add, never more. */
     visitors: offered.visitors,
@@ -120,7 +126,7 @@ function fieldSchema(f: FieldIR): Record<string, unknown> {
 
 /** src/generated/api.server.ts: each offered model's conversions, and the OpenAPI description. */
 export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
-  const { models, actions } = apiParts(ir, auth, t);
+  const { models, actions, rowsActions } = apiParts(ir, auth, t);
   const paths: Record<string, unknown> = {};
   const schemas: Record<string, unknown> = {};
   const problem = {
@@ -269,6 +275,35 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       },
     };
   }
+  for (const action of rowsActions) {
+    const path = models.find((m) => m.model.name === action.rows.model)?.path;
+    const others = action.input.filter((f) => f.name !== action.rows.field).map((f) => f.name);
+    paths[`/api/v1/${path}/actions/${action.name}`] = {
+      post: {
+        summary: action.intent ?? action.name,
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["ids"],
+                properties: {
+                  ids: { type: "array", items: { type: "integer" }, minItems: 1, maxItems: 1000 },
+                },
+                description: `The rows to run it on${others.length ? `, and what it asks for: ${others.join(", ")}` : ""}`,
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Done: what the action returns" },
+          400: problem,
+          403: problem,
+        },
+      },
+    };
+  }
   schemas.Problem = {
     type: "object",
     properties: {
@@ -406,7 +441,7 @@ ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCod
 
 /** The routes: list and add, one record, its actions, and the description. */
 export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, string> {
-  const { models, actions, visitors } = apiParts(ir, auth, t);
+  const { models, actions, rowsActions, visitors } = apiParts(ir, auth, t);
   const users = ir.pages.find((p) => p.pattern.kind === "users");
   const files: Record<string, string> = {
     "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
@@ -690,6 +725,36 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
   },
 });
 `;
+    const onRows = rowsActions.filter((a) => a.rows.model === model.name);
+    if (onRows.length)
+      files[`src/routes/api/v1/${path}/actions.$action.ts`] =
+        `${HEADER}// The custom actions offered on ${n.pluralLabel.toLowerCase()} picked by id, for programs with a key.
+import { createFileRoute } from "@tanstack/react-router";
+${onRows.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "#/generated/actions/${kebab(a.name)}.input";`).join("\n")}
+import { apiCall, NotFound } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/${path}/actions/$action")({
+  server: {
+    handlers: {
+      POST: ({ request, params }) =>
+        apiCall(request, async (viewer, body) => {
+          // The rows as ids, beside what the action asks for.
+          const { ids, ...rest } = (body ?? {}) as Record<string, unknown>;
+          switch (params.action) {
+${onRows
+  .map(
+    (a) => `            case ${JSON.stringify(a.name)}:
+              return (await ${actionNames(a).run}(viewer, ${actionNames(a).input}.parse({ ...rest, ${a.rows.field}: ids }))) ?? {};`,
+  )
+  .join("\n")}
+            default:
+              throw new NotFound(\`There is no action "\${params.action}" here.\`);
+          }
+        }),
+    },
+  },
+});
+`;
     if (own.length)
       files[`src/routes/api/v1/${path}/$id.actions.$action.ts`] =
         `${HEADER}// The standard actions offered on a ${n.label.toLowerCase()}, for programs with a key.
@@ -761,10 +826,14 @@ function toolsModule(
   const app = scope === "app";
   // Ask may change things (each confirmed by the person) only when the block says so.
   const confirms = app && auth.assistant?.may === "change";
-  const { models, actions } = app
+  const { models, actions, rowsActions } = app
     ? {
         models: ir.models.map((model) => ({ model, n: names(model, t) })),
         actions: ir.actions.filter((a): a is StandardActionIR => !a.custom),
+        rowsActions: ir.actions.filter(
+          (a): a is CustomActionIR & { rows: { field: string; model: string } } =>
+            Boolean(a.custom && a.rows),
+        ),
       }
     : apiParts(ir, auth, t);
   const callers: AssistantCaller[] = [
@@ -845,6 +914,12 @@ function toolsModule(
       return ${c}ToApi(${action.copy ? `(await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any>` : ran});
     }`;
   });
+  // A custom action on rows: on the ids given, with what else it asks for.
+  for (const action of rowsActions) {
+    const a = actionNames(action);
+    runs.push(`    case ${JSON.stringify(action.name)}:
+      return (await ${a.run}(keyed(viewer), ${a.input}.parse({ ...((args.input ?? {}) as object), ${action.rows.field}: args.ids }))) ?? {};`);
+  }
   // Each caller's kinds of record in the words people use, for the wording rules (only what they
   // read): the words themselves read from each kind's module, which has them once.
   const worded = new Set<string>();
@@ -876,7 +951,7 @@ function toolsModule(
 // tools whatever the app's size, and the app's summary as the server's instructions, both as core
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
-${actions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
+${actions.length || rowsActions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
 ${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
@@ -901,7 +976,12 @@ ${actions
     ];
     return `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${fromModule.length ? `\nimport { ${fromModule.join(", ")} } from "./actions/${kebab(a.name)}";` : ""}`;
   })
-  .join("\n")}
+  .join("\n")}${rowsActions
+  .map(
+    (a) =>
+      `\nimport { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "./actions/${kebab(a.name)}.input";${confirms ? `\nimport { ${actionNames(a).access} } from "./actions/${kebab(a.name)}";` : ""}`,
+  )
+  .join("")}
 ${app ? conversionsCode(models) : ""}
 
 /**
@@ -970,7 +1050,7 @@ function measureOf(of: unknown): { how: "count" | "sum" | "average" | "smallest"
   return { how, field };
 }
 ${
-  actions.length
+  actions.length || rowsActions.length
     ? `
 /** An action is a key's: a visitor is never offered one, and is refused here too. */
 const keyed = (viewer: Viewer | null): Viewer => {
@@ -1164,7 +1244,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
-    turns,
+    turns,${ir.app.timezone ? `\n    timeZone: ${JSON.stringify(ir.app.timezone)},` : ""}
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
@@ -1179,6 +1259,18 @@ ${
 /** Each action Ask may propose: the kind it runs on, its rule, when it fits, its name in words. */
 const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never, viewer: { id: string } | null) => boolean; label: string; asks?: { parse: (input: unknown) => unknown } }> = {
 ${proposals.join("\n")}
+};
+
+/** Each custom action on rows Ask may propose: its rule, its input with the rows, its name in words. */
+const ROWS_RUNS: Record<string, { access: Rule; input: { parse: (input: unknown) => unknown }; field: string; label: string; plural: string }> = {
+${rowsActions
+  .map((action) => {
+    const a = actionNames(action);
+    const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+    const n = names(modelNamed(ir, action.rows.model), t);
+    return `  ${JSON.stringify(action.name)}: { access: ${a.access}, input: ${a.input}, field: ${JSON.stringify(action.rows.field)}, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}, plural: ${JSON.stringify(n.pluralLabel.toLowerCase())} },`;
+  })
+  .join("\n")}
 };
 
 /**
@@ -1208,7 +1300,25 @@ function cardValue(value: unknown): Json {
 async function propose(viewer: Viewer, tool: string, args: Record<string, unknown>): Promise<{ id: string; card: Card }> {
   let kept = args;
   let card: Card;
-  if (tool === "run") {
+  const onRows = tool === "run" && Object.hasOwn(ROWS_RUNS, String(args.action)) ? ROWS_RUNS[String(args.action)] : undefined;
+  if (onRows) {
+    // The rows by id and what else it asks for, checked now; the run checks each row's reading.
+    if (!allows(onRows.access, viewer)) throw new AccessDenied(true);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = onRows.input.parse({ ...((args.input ?? {}) as object), [onRows.field]: args.ids }) as Record<string, unknown>;
+    } catch (error) {
+      const issues = (error as { issues?: { path: unknown[]; message: string }[] }).issues ?? [];
+      throw new BadInput(\`\${onRows.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
+    }
+    // The card says what the run will be given, as checked: which rows, and the rest.
+    const { [onRows.field]: rows, ...rest } = parsed;
+    const ids = rows as number[];
+    card = {
+      title: \`\${onRows.label}: \${ids.length} \${onRows.plural}\`,
+      changes: [{ label: onRows.plural, to: ids.join(", ") }, ...Object.entries(rest).map(([k, v]) => ({ label: k, to: cardValue(v) }))],
+    };
+  } else if (tool === "run") {
     const run = Object.hasOwn(RUNS, String(args.action)) ? RUNS[String(args.action)] : undefined;
     if (!run) throw new NotFound(\`There is no action "\${String(args.action)}".\`);
     const kind = Object.hasOwn(KINDS, run.kind) ? KINDS[run.kind] : undefined;

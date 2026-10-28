@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  collection:
+    title: Collection
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Rows of bookshelves and reading tables in a quiet library
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

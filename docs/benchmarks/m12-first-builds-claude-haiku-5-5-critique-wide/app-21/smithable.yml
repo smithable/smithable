@@ -1,0 +1,72 @@
+smithable: 0.1
+app:
+  name: Autokorjaamo
+  description: Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa pienelle autokorjaamolle.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      phone: phone
+      email: email
+      notes: text
+      cars: Car[]
+      invoices: Invoice[]
+  Car:
+    fields:
+      registration: string! unique
+      make: string
+      model: string
+      year: int
+      mileage: int
+      customer: Customer!
+      jobs: Job[]
+  Job:
+    fields:
+      title: string!
+      car: Car!
+      description: text
+      status: open | inProgress | done
+      price: money
+      date: date
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      total: money!
+      status: draft | sent | paid
+      dueDate: date
+pages:
+  asiakkaat:
+    crud: Customer
+    search: [name, phone]
+  autot:
+    crud: Car
+    search: [registration, make]
+  tyot:
+    crud: Job
+    filters: [status]
+    actions: [finish]
+  laskut:
+    crud: Invoice
+    search: [number]
+    filters: [status]
+    actions: [markPaid]
+  team:
+    users: manage
+actions:
+  finish:
+    on: Job
+    when:
+      status: [open, inProgress]
+    set:
+      status: done
+    intent: Merkitsee huoltotyön valmiiksi.
+  markPaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid
+    intent: Merkitsee laskun maksetuksi.

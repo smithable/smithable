@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: Salongen. Sköter behandlingar, frisörer och ledigheter samt bekräftar bokningar.
+  member:
+    description: En kund som bokar tid.
+    pages: [appointments]
+    create: [Appointment]
+assistant:
+  for: signed-in
+public:
+  pages: [home, privacy]
+  read: [Service, Barber]
+defaultRole: member
+admins: [johan@smithable.ai]

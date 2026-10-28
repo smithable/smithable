@@ -1,0 +1,10 @@
+smithableUx: 0.1
+tones:
+  Order.status:
+    ready: success
+    collected: success
+    declined: danger
+theme:
+  preset: woodland
+  brand:
+    font: Nunito Sans

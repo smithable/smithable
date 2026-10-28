@@ -22,7 +22,7 @@ A placeholder is `{path}`, filled from the record the event is about, formatted 
 
 | Path | Fills with | Where |
 |---|---|---|
-| `{field}` | a stored or worked-out field of the model, as the record page shows it | every entry on a model |
+| `{field}` | a stored field of the model, as the record page shows it | every entry on a model |
 | `{reference}` | the title of the record a reference field points to | every entry on a model |
 | `{reference.field}` | a field of that record, one hop (§4 says which) | every entry on a model |
 | `{title}` | the record's title, as the record page's heading | every entry on a model |
@@ -34,7 +34,7 @@ A placeholder is `{path}`, filled from the record the event is about, formatted 
 - **Empty is empty.** A field with no value, a reference that points nowhere, `{by}` for the app's own change: the placeholder renders as nothing, and the words around it stay. A text that reads oddly with a gap is the writer's to word ("Pick up: {wanted}" rather than "Pick up at {wanted} sharp"). No fallback syntax (`{wanted|soon}`): that is the template language the design keeps out; a sentence that needs one is written without the placeholder, or as code.
 - **The subject** takes the same placeholders and renders on one line: a newline in a value becomes a space. The mail is plain text, as today (the kit's `html` is optional and unused by the spec's mails), so nothing is escaped in a mail; a call's body is JSON, and a value in it is encoded by the JSON writer, never spliced into a string.
 - **A deleted record** fills from the record as it was, as its mail does today.
-- **What a path cannot be:** a picture, document or files field (nothing to write), a list of other records (`bookings`), a password or secret kind (`sensitiveKind`), two hops (`customer.company.name`), or a name the model does not have. Each is an error at validation (`unknown-placeholder`, with the fields the model has, or `invalid-placeholder` saying why), as a bad `{path}` in an incoming entry is today. A worked-out field goes as the record page shows it, the same as today's list; what it reads to get there is the page's concern, not the template's.
+- **What a path cannot be:** a picture, document or files field (nothing to write), a list of other records (`bookings`), a password or secret kind (`sensitiveKind`), two hops (`customer.company.name`), or a name the model does not have. Each is an error at validation (`unknown-placeholder`, with the fields the model has, or `invalid-placeholder` saying why), as a bad `{path}` in an incoming entry is today. A worked-out field (a formula) is none either in this step: today's list and a call's record leave formulas out, since they are computed when a record is read and the mail is written in the change's own transaction; a later step may add them with the record page's formatter.
 - **The preview** renders `{by}` as the first sample user's name, `{before.field}` as the sample's own value and a reference from the referenced model's sample; a missing sample renders empty, so the preview shows gaps only where a real mail could have them.
 - **A renamed field** is followed in the texts, as the summary's and the entries' references are; a removed field a text uses is refused, naming the text.
 - **A text without placeholders** renders as today, byte for byte: a template is only what has braces. A literal brace is not a need the spec has had; `{{` is not a syntax.

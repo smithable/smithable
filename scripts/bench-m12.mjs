@@ -66,6 +66,7 @@ const { values: args } = parseArgs({
     force: { type: "boolean", default: false },
     "no-cache": { type: "boolean", default: false },
     model: { type: "string" },
+    harness: { type: "string" },
   },
 });
 
@@ -131,6 +132,15 @@ if (!args.model) {
   throw new Error(
     `--model ${args.model}: a mistral-…, gpt-…, eu.anthropic.… or claude-… model, or none for Claude.`,
   );
+// A harness round the drafting model (backlog Experiments 7): `alone` is one call with no
+// corrections, `critique` one draft and one call to mend it, `vote3` the best-shared of three.
+// The CLI passes them to the drafting (SMITHABLE_REPAIRS, SMITHABLE_HARNESS); the report is its own.
+delete process.env.SMITHABLE_REPAIRS;
+delete process.env.SMITHABLE_HARNESS;
+if (args.harness === "alone") process.env.SMITHABLE_REPAIRS = "0";
+else if (["critique", "vote3"].includes(args.harness)) process.env.SMITHABLE_HARNESS = args.harness;
+else if (args.harness)
+  throw new Error(`--harness is alone, critique or vote3, not ${args.harness}`);
 // The response cache, for every `smithable` the bench starts (see the header).
 if (args["no-cache"]) delete process.env.SMITHABLE_LLM_CACHE;
 else process.env.SMITHABLE_LLM_CACHE ??= join(homedir(), ".cache/smithable/llm");
@@ -475,7 +485,7 @@ const set = args.set === "wide" ? WIDE : DESCRIPTIONS.map((text) => ({ text }));
 if (!["core", "wide"].includes(args.set)) throw new Error(`--set is core or wide, not ${args.set}`);
 
 // Each draft's spec files, kept next to the report so what the model made can be read later.
-const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.set === "wide" ? "-wide" : ""}`;
+const slug = `m12-first-builds-${model.replace(/[^a-z0-9.-]+/gi, "-")}${args.harness ? `-${args.harness}` : ""}${args.set === "wide" ? "-wide" : ""}`;
 const kept = join(repo, "docs/benchmarks", slug);
 const stampFile = join(kept, "meta.json");
 const rowsFile = join(kept, "rows.json");

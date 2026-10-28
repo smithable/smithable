@@ -1235,6 +1235,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "startsAt",
       ],
       "name": "sessionMoved",
+      "previous": true,
       "recipient": {
         "each": {
           "kind": "owner",
@@ -1243,6 +1244,11 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "list": "bookings",
         "model": "Booking",
       },
+      "show": [
+        "classType",
+        "startsAt",
+        "instructor",
+      ],
       "to": "mail",
       "when": {
         "event": "changed",
@@ -1260,6 +1266,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "button": "schedule",
             "kind": "hero",
             "name": "hero",
+            "secondButton": "blog",
             "shortcuts": [
               "schedule",
               "blog",
@@ -1410,6 +1417,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "button": "schedule",
           "kind": "hero",
           "name": "hero",
+          "secondButton": "blog",
           "shortcuts": [
             "schedule",
             "blog",
@@ -3669,6 +3677,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
             "button": "catalog",
             "kind": "hero",
             "name": "hero",
+            "secondButton": "myItems",
           },
           {
             "filters": [
@@ -3692,6 +3701,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
           "button": "catalog",
           "kind": "hero",
           "name": "hero",
+          "secondButton": "myItems",
         },
         {
           "filters": [

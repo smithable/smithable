@@ -1,0 +1,12 @@
+smithableUx: 0.1
+theme:
+  preset: editorial
+  brand:
+    font: Fraunces
+pages:
+  collection:
+    record:
+      subtitle: category
+      detail: [period, origin]
+    table:
+      view: cards

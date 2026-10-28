@@ -136,3 +136,60 @@ export function privateAddress(ip: string): boolean {
   // Neither form of address: refused, never guessed at.
   return true;
 }
+
+/**
+ * Fills `{path}` placeholders in an outgoing entry's subject or text (docs/design/
+ * outgoing-templates.md §3) from `values` (a map or a function of the path); a value that is
+ * missing renders as nothing. `oneLine` (a subject) turns a newline in a value into a space. The
+ * same twenty lines as Smithable's own, kept alike by the adapter's test.
+ */
+export function fillText(
+  text: string,
+  values: Record<string, string | undefined> | ((path: string) => string | undefined),
+  oneLine = false,
+): string {
+  const lookup =
+    typeof values === "function"
+      ? values
+      : (path: string) => (Object.hasOwn(values, path) ? values[path] : undefined);
+  return text.replace(/\{([^{}]+)\}/g, (_, path: string) => {
+    const value = lookup(path.trim()) ?? "";
+    return oneLine ? value.replace(/\r?\n/g, " ") : value;
+  });
+}
+
+/**
+ * A call's record with the entry's `show` fields in their order, and its id (outgoing-templates.md
+ * §2); "none" leaves the id alone, and without `show` the record goes as the API gives it.
+ */
+export function picked(
+  row: Record<string, unknown>,
+  show?: string[] | "none",
+): Record<string, unknown> {
+  if (!show) return row;
+  const out: Record<string, unknown> = { id: row.id };
+  if (show !== "none") for (const name of show) if (name in row) out[name] = row[name];
+  return out;
+}
+
+/** What the fields a call carries were before a change, those with another value only. */
+export function changedBefore(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  show?: string[] | "none",
+): Record<string, unknown> {
+  const names =
+    show === "none"
+      ? []
+      : (show ?? Object.keys(after).filter((k) => !["id", "createdAt", "updatedAt"].includes(k)));
+  const out: Record<string, unknown> = {};
+  for (const name of names)
+    if (name in before && JSON.stringify(before[name]) !== JSON.stringify(after[name]))
+      out[name] = before[name];
+  return out;
+}
+
+/** A placeholder's value from a formatted one: the record page's dash for nothing is nothing. */
+export function blank(value: string | undefined): string | undefined {
+  return value === "—" ? undefined : value;
+}

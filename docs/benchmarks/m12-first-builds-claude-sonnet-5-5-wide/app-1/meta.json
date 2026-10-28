@@ -1,0 +1,9 @@
+{
+  "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "Do you want to send invoices to clients from the app, or only keep track of quotes and payments?",
+    "What should each job or quote record besides the amount?"
+  ]
+}

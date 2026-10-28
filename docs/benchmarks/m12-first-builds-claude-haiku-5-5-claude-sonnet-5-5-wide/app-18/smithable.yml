@@ -1,0 +1,84 @@
+smithable: 0.1
+app:
+  name: Byggkoll
+  description: Offerter, kunder och fakturor för en liten byggfirma.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+      quotes: Quote[]
+      invoices: Invoice[]
+  Quote:
+    fields:
+      number: string! unique
+      customer: Customer!
+      title: string!
+      description: text
+      amount: money!
+      issuedOn: date! = TODAY()
+      validUntil: date
+      status: draft | sent | accepted | declined
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      quote: Quote
+      amount: money!
+      issuedOn: date! = TODAY()
+      dueOn: date
+      status: draft | sent | paid | overdue
+pages:
+  quotes:
+    crud: Quote
+    actions: [sendQuote, acceptQuote, declineQuote]
+    filters: [customer, status]
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid]
+    filters: [customer, status]
+  team:
+    users: manage
+actions:
+  sendQuote:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Offerten har skickats till kunden.
+  acceptQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: Kunden har tackat ja till offerten.
+  declineQuote:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: declined
+    intent: Kunden har tackat nej till offerten.
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: Fakturan har skickats till kunden.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: Kunden har betalat fakturan.

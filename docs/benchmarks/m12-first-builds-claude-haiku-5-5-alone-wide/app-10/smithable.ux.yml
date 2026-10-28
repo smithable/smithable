@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  collection:
+    table:
+      columns: [title, category, period, origin]
+      sort: title
+theme:
+  preset: editorial
+  brand:
+    font: Source Serif 4

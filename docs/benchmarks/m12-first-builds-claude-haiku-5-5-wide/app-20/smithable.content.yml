@@ -1,0 +1,64 @@
+smithableContent: 0.1
+models:
+  ClassType:
+    label: Tuntityyppi
+    pluralLabel: Tuntityypit
+    fields:
+      name:
+        label: Nimi
+      summary:
+        label: Kuvaus
+      level:
+        label: Taso
+        values:
+          allLevels: Kaikki tasot
+          beginner: Aloittelija
+          advanced: Edistynyt
+      durationMinutes:
+        label: Kesto minuutteina
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+    fields:
+      classType:
+        label: Tuntityyppi
+      instructor:
+        label: Ohjaaja
+      startsAt:
+        label: Alkaa
+      capacity:
+        label: Paikkoja
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+    fields:
+      session:
+        label: Tunti
+      attendee:
+        label: Osallistuja
+pages:
+  schedule:
+    title: Tuntikalenteri
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntityypit
+  instructors:
+    title: Ohjaajat
+  my-bookings:
+    title: Omat varaukset
+  privacy:
+    title: Tietosuoja
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

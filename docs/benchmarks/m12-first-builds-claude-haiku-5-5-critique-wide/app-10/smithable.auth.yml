@@ -1,0 +1,15 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Visitors who sign in and look at the collection.
+assistant:
+  for: [admin]
+public:
+  pages: [home]
+defaultRole: member
+admins: [johan@smithable.ai]

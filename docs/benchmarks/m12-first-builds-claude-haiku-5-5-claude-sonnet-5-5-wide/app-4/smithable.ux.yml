@@ -1,0 +1,8 @@
+smithableUx: 0.1
+pages:
+  pupils:
+    table:
+      columns: [name, weekday, lessonTime, minutes, active]
+tones:
+  Practice.status:
+    performed: success

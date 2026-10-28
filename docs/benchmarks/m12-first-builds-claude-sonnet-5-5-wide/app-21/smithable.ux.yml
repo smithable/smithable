@@ -1,0 +1,7 @@
+smithableUx: 0.1
+tones:
+  WorkOrder.status:
+    done: success
+    canceled: danger
+  Invoice.status:
+    paid: success

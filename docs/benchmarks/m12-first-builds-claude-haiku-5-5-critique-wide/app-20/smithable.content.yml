@@ -1,0 +1,65 @@
+smithableContent: 0.1
+pages:
+  home:
+    faq:
+      items: [{ question: Tarvitsenko kokemusta?, answer: "Ei tarvitse. Useimmat tunnit sopivat kaikille, ja ohjaaja auttaa aloittelijoita." }, { question: Miten varaan paikan?, answer: Valitse tunti aikataulusta ja kirjaudu sisään. Varaus näkyy sivulla Omat varaukset. }, { question: Voinko perua varauksen?, answer: Voit perua varauksen tuntia edeltävään ajankohtaan asti. Myöhemmin peruminen ei ole mahdollista. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  sessions:
+    title: Tunnit
+  class-types:
+    title: Tuntilajit
+  instructors:
+    title: Ohjaajat
+  messages:
+    title: Viestit
+  posts:
+    title: Jutut
+  my-bookings:
+    title: Omat varaukset
+  schedule:
+    title: Aikataulu
+  blog:
+    title: Blogi
+  about:
+    title: Tietoa meistä
+models:
+  ClassType:
+    label: Tuntilaji
+    pluralLabel: Tuntilajit
+    fields:
+      level:
+        values:
+          allLevels: Kaikki tasot
+          beginner: Aloittelija
+          advanced: Edistynyt
+  Instructor:
+    label: Ohjaaja
+    pluralLabel: Ohjaajat
+  Session:
+    label: Tunti
+    pluralLabel: Tunnit
+  Booking:
+    label: Varaus
+    pluralLabel: Varaukset
+  Post:
+    label: Juttu
+    pluralLabel: Jutut
+    fields:
+      status:
+        values:
+          draft: Luonnos
+          published: Julkaistu
+  Message:
+    label: Viesti
+    pluralLabel: Viestit
+actions:
+  publish:
+    label: Julkaise
+logo:
+  src: images/logo.webp
+  alt: Two triangles as mountains
+  generated: true

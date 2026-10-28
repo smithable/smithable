@@ -1,7 +1,7 @@
 {
   "description": "A football club's site: teams, players, matches and results.",
   "starter": "records",
-  "wordStarter": "records",
+  "wordStarter": "booking",
   "questions": [
     "Who updates the site's teams, players and results?",
     "What can visitors see without signing in?",

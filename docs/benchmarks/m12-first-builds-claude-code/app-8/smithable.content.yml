@@ -2,27 +2,16 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Two days of ideas worth sharing
-      subtitle: Browse the program, meet the speakers and save your seat at the talks you don't want to miss.
-      button: See the program
+      title: Pick your talks, save your seat
+      subtitle: Browse the conference program, meet the speakers and register for the sessions you don't want to miss.
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    lineup:
-      title: Speakers
-    program:
-      title: Talks
-    callToAction:
-      title: Seats are limited
-      text: Sign in and register for the talks you want to attend before they fill up.
-      button: Pick your talks
-    contact:
-      title: Questions? Get in touch
     features:
-      items: [{ title: A full program, text: "Keynotes, technical sessions and hands-on workshops across two days." }, { title: Speakers from the field, text: "Practitioners sharing what they have built, learned and got wrong." }, { title: Reserve your seat, text: Register for each talk in a few clicks and see how many places are left. }]
+      items: [{ title: The full program, text: "See every talk by day and time, with its room and length." }, { title: Meet the speakers, text: "Read who is on stage, where they work and what they will cover." }, { title: Register in a click, text: Reserve a seat in the talks you want; the places left are shown as they fill up. }, { title: Your own schedule, text: "All your registrations in one list, and you can cancel until the talk begins." }]
     faq:
-      items: [{ question: Do I need an account to register?, answer: Yes. Sign in with your email address and you can register for any talk that still has places. }, { question: Can I cancel a registration?, answer: "You can cancel from My registrations at any time before the talk begins, freeing your seat for someone else." }, { question: What happens when a talk is full?, answer: "Registration closes once every place is taken. Keep an eye on the program, as seats open up when others cancel." }, { question: Are workshops included?, answer: "Workshops are listed in the program like any other talk, usually with fewer places, so register early." }]
+      items: [{ question: Do I need an account to register?, answer: You can browse the program freely; sign in with your email to register for talks. }, { question: What happens when a talk is full?, answer: "Registration closes once every seat is taken, so register early for popular talks." }, { question: Can I cancel a registration?, answer: "Yes, from your registrations, any time before the talk starts." }]
 logo:
   src: images/logo.webp
   alt: A ticket

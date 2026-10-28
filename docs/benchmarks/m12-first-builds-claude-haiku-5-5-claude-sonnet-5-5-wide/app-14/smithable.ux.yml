@@ -1,0 +1,12 @@
+smithableUx: 0.1
+pages:
+  guests:
+    table:
+      columns: [name, rsvp, meal, table, side]
+tones:
+  Guest.rsvp:
+    attending: success
+    declined: danger
+    pending: warning
+theme:
+  preset: editorial

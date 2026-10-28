@@ -12,6 +12,7 @@ import type { Run } from "./ChangeForms";
 import { ImportRecords, OwnCode } from "./EntryTools";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
+import { OutgoingTemplate } from "./OutgoingTemplate";
 import { SpecForm } from "./SpecForm";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
@@ -284,6 +285,22 @@ export function NoCode({
             ir={spec.ir}
             parts={["content"]}
             open={opened}
+            tools={(path) =>
+              spec.ir &&
+              path.length === 2 &&
+              path[0] === "outgoing" &&
+              typeof path[1] === "string" ? (
+                <OutgoingTemplate
+                  key={path[1]}
+                  entry={path[1]}
+                  ir={spec.ir}
+                  auth={spec.auth}
+                  contentText={project.files.content}
+                  samples={project.samples ?? {}}
+                  run={run}
+                />
+              ) : undefined
+            }
           />
           <section aria-label="Languages">
             <h2 className="px-4 pt-4 text-xs font-semibold tracking-wide text-quiet uppercase">

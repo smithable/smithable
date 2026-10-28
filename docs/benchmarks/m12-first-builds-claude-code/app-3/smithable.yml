@@ -1,17 +1,9 @@
 smithable: 0.1
 app:
-  name: Billfold
-  description: "Invoicing for freelancers: keep your clients, send invoices and track the payments that come in."
+  name: Paidup
+  description: "Simple invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
   currency: EUR
-  timezone: Europe/Stockholm
 models:
-  BusinessProfile:
-    fields:
-      businessName: string!
-      vatNumber: string
-      iban: string
-      paymentTermDays: int! = 30
-      invoiceFooter: text
   Client:
     fields:
       name: string!
@@ -19,6 +11,22 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Payment:
+    fields:
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      reference: string
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -26,38 +34,23 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
-      contract: file
       lines: InvoiceLine[]
       payments: Payment[]
       total:
         type: money
         formula: SUM(lines.amount)
-      paid:
+      paidAmount:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: total - paid
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
-  Payment:
-    fields:
-      invoice: Invoice!
-      amount: money!
-      paidOn: date! = TODAY()
-      method: bankTransfer | card | cash | other
-      reference: string
-      note: text
+        formula: total - paidAmount
 pages:
   overview:
     dashboard:
+      received:
+        sum: Payment.amount
+        by: paidOn
       outstanding:
         sum: Invoice.balance
         where:
@@ -66,29 +59,19 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
-      received:
-        sum: Payment.amount
-        by: paidOn
       invoiced:
         sum: Invoice.total
         by: issuedOn
       latest:
         list: Invoice
         limit: 5
-  invoices:
-    crud: Invoice
-    filters: [client, status, issuedOn]
-    actions: [markSent, recordPayment, markPaid, markOverdue]
   clients:
     crud: Client
-    search: [name, email]
   payments:
     crud: Payment
     filters: [invoice, method, paidOn]
   invoice-lines:
     crud: InvoiceLine
-  settings:
-    crud: BusinessProfile
   home:
     route: /
     landing:
@@ -102,7 +85,10 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [overview, invoices, clients, payments, settings]
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
     on: Invoice
@@ -111,23 +97,18 @@ actions:
     set:
       status: sent
     intent: The invoice went to the client.
-  recordPayment:
-    on: Invoice
-    when:
-      status: [sent, overdue]
-    add:
-      Payment:
-        amount:
-        paidOn: TODAY()
-        method:
-    intent: Record a payment received from the client for this invoice.
   markPaid:
     on: Invoice
     when:
       status: [sent, overdue]
     set:
       status: paid
-    intent: The client paid the invoice in full.
+    add:
+      Payment:
+        amount:
+        paidOn: TODAY()
+        method:
+    intent: The client paid the invoice; the payment is recorded with it.
   markOverdue:
     on: Invoice
     when:
@@ -136,9 +117,9 @@ actions:
       status: overdue
     intent: The invoice is late.
 timers:
-  markOverdue:
+  flagOverdue:
     on: Invoice
-    at: 7 days after dueOn
+    at: 1 day after dueOn
     where:
       status: sent
     run: markOverdue

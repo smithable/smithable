@@ -1,4 +1,6 @@
 import { expect, test } from "vitest";
+import { applyOperation } from "./apply.js";
+import { validateAuth } from "./auth.js";
 import { validateContent } from "./content.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -362,4 +364,146 @@ test("reads the app's logo, and says what is wrong with one", () => {
   expect(
     check("smithableContent: 0.1\nlogo: { src: images/logo.webp }\n").diagnostics,
   ).toMatchObject([{ code: "logo-alt" }]);
+});
+
+const TEMPLATE_SPEC = `smithable: 0.1
+app:
+  name: X
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      notes: text
+      bookings: Booking[]
+      count: { type: int, formula: COUNT(bookings) }
+  Booking:
+    fields:
+      title: string!
+      status: pending | confirmed
+      customer: Customer!
+      photo: picture
+outgoing:
+  moved:
+    when: Booking changed
+    to: mail
+    recipient: owner
+  made:
+    when: Booking created
+    to: mail
+    recipient: customer.email
+  told:
+    when: Booking created
+    to: mail
+    recipient: member
+`;
+
+test("an outgoing text's placeholders: fields, a reference and its title, title, link, by, before; the rest refused", () => {
+  const spec = validateSpec(
+    {
+      path: "smithable.yml",
+      text: TEMPLATE_SPEC.replace("recipient: customer.email", "recipient: owner"),
+    },
+    { roles: ["member"] },
+  ).ir;
+  if (!spec) throw new Error("spec");
+  const codes = (entry: string, subject: string, text = "") =>
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: `smithableContent: 0.1\noutgoing:\n  ${entry}: { subject: ${JSON.stringify(subject)}${text ? `, text: ${JSON.stringify(text)}` : ""} }\n`,
+      },
+      spec,
+    ).diagnostics.map((d) => `${d.severity} ${d.code}`);
+  expect(
+    codes(
+      "moved",
+      "{title} is now {status}",
+      "Was {before.status}. {customer}, {customer.name}. {link} by {by}",
+    ),
+  ).toEqual([]);
+  expect(codes("moved", "No braces", "None here either.")).toEqual([]);
+  expect(codes("moved", "{nothing}")).toEqual(["error unknown-placeholder"]);
+  expect(codes("moved", "{customer.nothing}")).toEqual(["error unknown-placeholder"]);
+  expect(codes("moved", "{photo}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("moved", "{customer.bookings}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("moved", "{customer.count}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("moved", "{customer.name.x}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("moved", "{title.x}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("moved", "{before}")).toEqual(["error invalid-placeholder"]);
+  expect(codes("made", "{before.status}")).toEqual(["error invalid-placeholder"]);
+  // A placeholder said twice is one diagnostic; two texts are two.
+  expect(codes("made", "{x} {x}", "{x}")).toEqual([
+    "error unknown-placeholder",
+    "error unknown-placeholder",
+  ]);
+});
+
+test("with the auth rules, a reference's field goes only to a recipient who may read that model; by to an address warns", () => {
+  const spec = validateSpec(
+    { path: "smithable.yml", text: TEMPLATE_SPEC },
+    { roles: ["member"] },
+  ).ir;
+  if (!spec) throw new Error("spec");
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles:\n  member: { pages: all, read: [Booking] }\ndefaultRole: member\n",
+    },
+    spec,
+  ).auth;
+  if (!auth) throw new Error("auth");
+  const codes = (entry: string, text: string) =>
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: `smithableContent: 0.1\noutgoing:\n  ${entry}: { text: ${JSON.stringify(text)} }\n`,
+      },
+      spec,
+      undefined,
+      auth,
+    ).diagnostics.map((d) => `${d.severity} ${d.code}`);
+  // The title of the referenced record is in every mail; its notes are not the member's to read.
+  expect(codes("told", "{customer} {customer.name} {title}")).toEqual([]);
+  expect(codes("told", "{customer.notes}")).toEqual(["error placeholder-not-readable"]);
+  // An address on the record (an outside person): the title only, and {by} is a warning.
+  expect(codes("made", "{customer.notes}")).toEqual(["error placeholder-not-readable"]);
+  expect(codes("made", "{by}")).toEqual(["warning by-to-address"]);
+  expect(codes("moved", "{by}")).toEqual([]);
+  // Without the auth rules only the paths are checked.
+  expect(
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: 'smithableContent: 0.1\noutgoing:\n  told: { text: "{customer.notes}" }\n',
+      },
+      spec,
+    ).diagnostics,
+  ).toEqual([]);
+});
+
+test("an outgoing text's placeholders follow a renamed field, and hold a removed one", () => {
+  const files = {
+    spec: TEMPLATE_SPEC.replace("recipient: customer.email", "recipient: owner"),
+    content:
+      'smithableContent: 0.1\noutgoing:\n  moved: { subject: "{title}: {status}", text: "Was {before.status}; {customer.name}" }\n',
+  };
+  const renamed = applyOperation(files, "renameField", {
+    model: "Booking",
+    from: "status",
+    to: "state",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.content).toContain('subject: "{title}: {state}"');
+  expect(renamed.files.content).toContain('text: "Was {before.state}; {customer.name}"');
+  const other = applyOperation(renamed.files, "renameField", {
+    model: "Customer",
+    from: "name",
+    to: "fullName",
+  });
+  if (!other.ok) throw new Error(other.message);
+  expect(other.files.content).toContain("{customer.fullName}");
+  const removed = applyOperation(other.files, "removeField", { model: "Booking", field: "state" });
+  expect(removed.ok).toBe(false);
+  if (!removed.ok) expect(removed.message).toContain("{state}");
 });

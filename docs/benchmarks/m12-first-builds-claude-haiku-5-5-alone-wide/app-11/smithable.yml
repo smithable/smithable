@@ -1,0 +1,64 @@
+smithable: 0.1
+app:
+  name: IT Status Board
+  description: Shows which IT systems are down, what is being done about it, and when they are expected back.
+pages:
+  team:
+    users: manage
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    defaultFilter:
+      status: [investigating, identified, monitoring]
+    actions: [monitoring, resolve]
+  components:
+    crud: Component
+    search: [name]
+models:
+  Component:
+    fields:
+      name: string! unique
+      status: operational | degraded | down | maintenance
+      description: text
+  Incident:
+    fields:
+      title: string!
+      component: Component!
+      status: investigating | identified | monitoring | resolved
+      startedAt: datetime!
+      expectedBack: datetime
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+actions:
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is in place. We are watching before we close this.
+    intent: A fix is in place; the incident is watched before it is closed, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.

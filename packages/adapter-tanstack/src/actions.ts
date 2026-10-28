@@ -45,8 +45,8 @@ export function zodFor(field: FieldIR): string {
       field.type.model === USER_MODEL
         ? "z.string()"
         : field.type.many
-          ? // The rows picked, each once.
-            "z.array(z.number().int()).min(1).transform((ids) => [...new Set(ids)])"
+          ? // The rows picked, each once; a program gives at most a thousand at a time.
+            "z.array(z.number().int()).min(1).max(1000).transform((ids) => [...new Set(ids)])"
           : "z.number().int()";
   else {
     switch (field.type.name) {
@@ -136,6 +136,59 @@ export type ${a.inputType} = z.infer<typeof ${a.input}>;
 `;
 }
 
+/**
+ * What running a custom action does once the viewer is known: inline in its server function, or for
+ * a rows action in its own server module, which the API and the assistants' tools run too.
+ */
+function customRun(action: ActionIR, ir: SpecIR, t: Texts) {
+  const a = actionNames(action);
+  // Records the input refers to: the viewer must be able to read each (not users).
+  const records = action.input.filter(
+    (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
+  );
+  const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
+  // On the rows picked in a list (A 171): what it asks besides them, and one Activity line a run.
+  const rows = action.custom ? action.rows : undefined;
+  const told = afterCustom(ir, action.name).length > 0;
+  const runImports = `${rows || told ? 'import { db } from "#/db";\n' : ""}${rows ? 'import { audit } from "#/kit/audit.server";\n' : ""}${told ? 'import { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";\n' : ""}import { ${action.name} as implementation } from "${a.custom}";
+${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";\n`))].join("")}`;
+  const body = `${records
+    .map((f, i) =>
+      f.type.kind === "relation" && f.type.many
+        ? `    if (!${readers[i]?.data}.canReadAll(viewer, data.${f.name})) throw new AccessDenied(true);\n`
+        : `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
+    )
+    .join(
+      "",
+    )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
+    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
+      rows || told
+        ? `
+    const output = await run(data, viewer);${
+      rows
+        ? `
+    // One line in Activity for the run, with the rows it ran on.
+    audit(db, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(rows.model)}, details: { records: data.${rows.field} } });`
+        : ""
+    }${
+      told
+        ? `
+    // Who is told once it has returned without an error (smithable.yml's outgoing, integrations.md §4.3).
+    // The action has run: a mail or call that cannot be queued is logged, never its failure.
+    try {
+      db.transaction((tx) => outgoingAfter(tx, viewer, ${JSON.stringify(action.name)}, data, output));
+    } catch (error) {
+      log.error("What ${action.name} tells could not be queued", { error });
+    }`
+        : ""
+    }
+    return output;`
+        : `
+    return run(data, viewer);`
+    }`;
+  return { records, rows, runImports, body };
+}
+
 export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Texts): string {
   const a = actionNames(action);
   const output = action.output?.length
@@ -164,24 +217,16 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
         : {}),
     })),
   };
-  // Records the input refers to: the viewer must be able to read each (not users).
-  const records = action.input.filter(
-    (f) => f.type.kind === "relation" && f.type.model !== USER_MODEL,
-  );
-  const readers = records.map((f) => names(modelNamed(ir, (f.type as { model: string }).model), t));
-  // On the rows picked in a list (A 171): what it asks besides them, and one Activity line a run.
-  const rows = action.custom ? action.rows : undefined;
+  const { records, rows, runImports, body } = customRun(action, ir, t);
   const asksMore = Boolean(rows && action.input.length > 1);
-  const told = afterCustom(ir, action.name).length > 0;
-  return `${HEADER}import { createServerFn } from "@tanstack/react-start";${rows || told ? '\nimport { db } from "#/db";' : ""}${rows ? '\nimport { audit } from "#/kit/audit.server";' : ""}${told ? '\nimport { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";' : ""}
-import { ${action.name} as implementation } from "${a.custom}";
-import { w } from "#/kit/words";
-${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";`))].join("\n")}${readers.length ? "\n" : ""}import { ${records.length ? "AccessDenied, " : ""}check, type Rule, type Viewer } from "#/kit/access";
+  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+${rows ? "" : runImports}import { w } from "#/kit/words";
+import { ${!rows && records.length ? "AccessDenied, " : ""}check, type Rule${rows ? "" : ", type Viewer"} } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { ${a.input}, type ${a.inputType} } from "./${kebab(action.name)}.input";
+import { ${a.input}${rows ? "" : `, type ${a.inputType}`} } from "./${kebab(action.name)}.input";${rows ? `\nimport { ${a.run} } from "./${kebab(action.name)}.server";` : ""}
 
 export type { ${a.inputType} } from "./${kebab(action.name)}.input";
 
@@ -208,41 +253,27 @@ export const ${action.name} = createServerFn({ method: "POST" })
     check(${a.access}, viewer);
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
-${records
-  .map((f, i) =>
-    f.type.kind === "relation" && f.type.many
-      ? `    if (!data.${f.name}.every((id) => ${readers[i]?.data}.canRead(viewer, id))) throw new AccessDenied(true);\n`
-      : `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
-  )
-  .join(
-    "",
-  )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
-    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
-      rows || told
-        ? `
-    const output = await run(data, viewer);${
-      rows
-        ? `
-    // One line in Activity for the run, with the rows it ran on.
-    audit(db, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(rows.model)}, details: { records: data.${rows.field} } });`
-        : ""
-    }${
-      told
-        ? `
-    // Who is told once it has returned without an error (smithable.yml's outgoing, integrations.md §4.3).
-    // The action has run: a mail or call that cannot be queued is logged, never its failure.
-    try {
-      db.transaction((tx) => outgoingAfter(tx, viewer, ${JSON.stringify(action.name)}, data, output));
-    } catch (error) {
-      log.error("What ${action.name} tells could not be queued", { error });
-    }`
-        : ""
-    }
-    return output;`
-        : `
-    return run(data, viewer);`
-    }
+${rows ? `    return ${a.run}(viewer, data);` : body}
   });
+`;
+}
+
+/**
+ * A custom action on rows, run as a viewer (A 171): the list page's server function, the API's
+ * route and the assistants' tools all run it, so each checks and records a run the same way.
+ */
+export function customActionServer(action: ActionIR, ir: SpecIR, t: Texts): string {
+  const a = actionNames(action);
+  const { runImports, body } = customRun(action, ir, t);
+  return `${HEADER}${runImports}import { AccessDenied, check, type Viewer } from "#/kit/access";
+import { ${a.access}, type ${a.outputType} } from "./${kebab(action.name)}";
+import type { ${a.inputType} } from "./${kebab(action.name)}.input";
+
+/** Runs "${action.name}" as \`viewer\` on the rows in its input. */
+export async function ${a.run}(viewer: Viewer | null, data: ${a.inputType}): Promise<${a.outputType}> {
+  check(${a.access}, viewer);
+${body.replace(/^ {2}/gm, "")}
+}
 `;
 }
 

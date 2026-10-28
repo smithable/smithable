@@ -1,28 +1,26 @@
 smithable: 0.1
 app:
-  name: Northlight Conference
-  description: Talks, speakers and attendee registration for a one-track conference.
+  name: Conference Hub
+  description: The conference program with its talks and speakers, where attendees register for the talks they want to attend.
   currency: EUR
   timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
-      title: string
       company: string
       bio: markdown
-      portrait: picture
+      photo: picture
       talks: Talk[]
   Talk:
     fields:
       title: string!
-      abstract: markdown
+      summary: text
       speaker: Speaker!
+      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
-      room: string
-      track: general | technical | workshop
-      capacity: int! = 100
+      capacity: int! = 50
       registrations: Registration[]
       placesLeft:
         type: int
@@ -38,29 +36,8 @@ models:
       max: talk.capacity
       closes: talk.startsAt
       cancelUntil: talk.startsAt
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-        button: schedule
-      features:
-      lineup:
-        records: Speaker
-      program:
-        records: Talk
-      faq:
-      callToAction:
-        button: schedule
-      contact:
-        form: Message
-      footer:
-  schedule:
+  program:
     calendar:
       model: Talk
       starts: startsAt
@@ -68,22 +45,29 @@ pages:
     crud: Registration
   talks:
     crud: Talk
-    filters: [speaker, track, startsAt]
+    filters: [speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
   speakers:
     crud: Speaker
-    search: [name, company]
-  messages:
-    crud: Message
-  admin:
-    data: all
+  home:
+    route: /
+    landing:
+      hero:
+        button: program
+        secondButton: speakers
+      features:
+      speakersList:
+        records: Speaker
+      faq:
+      callToAction:
+        button: program
+      footer:
   privacy:
     route: /privacy
     legal: privacy
+  admin:
+    data: all
 navigation:
-  main: [home, schedule, my-registrations, talks, speakers, messages, admin, privacy]
-  program: [schedule, my-registrations, talks, speakers]
-  messages: [messages]
-  website: [home]
-  admin: [admin]
+  main: [program, my-registrations, talks, speakers, home, privacy, admin]
+  program: [program, my-registrations, talks, speakers]

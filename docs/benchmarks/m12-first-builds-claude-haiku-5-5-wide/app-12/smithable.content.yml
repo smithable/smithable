@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    title: Service status
+    subtitle: See which of our online services work right now, and what is being fixed.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A pulse line in a circle
+  generated: true

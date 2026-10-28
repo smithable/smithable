@@ -1,0 +1,129 @@
+smithableContent: 0.1
+language: sv
+models:
+  Customer:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      phone:
+        label: Telefon
+      address:
+        label: Adress
+      orgNumber:
+        label: Organisations-/personnummer
+  Quote:
+    label: Offert
+    pluralLabel: Offerter
+    fields:
+      number:
+        label: Nummer
+      title:
+        label: Projekt
+      customer:
+        label: Kund
+      issuedOn:
+        label: Offertdatum
+      validUntil:
+        label: Giltig till
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          accepted: Godkänd
+          declined: Avslagen
+      notes:
+        label: Anteckningar
+      lines:
+        label: Rader
+      total:
+        label: Summa
+  QuoteLine:
+    label: Offertrad
+    pluralLabel: Offertrader
+    fields:
+      quote:
+        label: Offert
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: Á-pris
+      amount:
+        label: Belopp
+  Invoice:
+    label: Faktura
+    pluralLabel: Fakturor
+    fields:
+      number:
+        label: Fakturanummer
+      customer:
+        label: Kund
+      quote:
+        label: Offert
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+      lines:
+        label: Rader
+      total:
+        label: Summa
+  InvoiceLine:
+    label: Fakturarad
+    pluralLabel: Fakturarader
+    fields:
+      invoice:
+        label: Faktura
+      description:
+        label: Beskrivning
+      quantity:
+        label: Antal
+      unitPrice:
+        label: Á-pris
+      amount:
+        label: Belopp
+actions:
+  sendQuote:
+    label: Skicka offert
+  acceptQuote:
+    label: Offert godkänd
+  declineQuote:
+    label: Offert avslagen
+  markSent:
+    label: Markera som skickad
+  markPaid:
+    label: Markera som betald
+  markOverdue:
+    label: Markera som förfallen
+pages:
+  quotes:
+    title: Offerter
+  customers:
+    title: Kunder
+  invoices:
+    title: Fakturor
+  quote-lines:
+    title: Offertrader
+  invoice-lines:
+    title: Fakturarader
+  overview:
+    title: Översikt
+  team:
+    title: Team
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

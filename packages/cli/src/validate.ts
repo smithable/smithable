@@ -8,6 +8,8 @@ import {
   formatDiagnostic,
   hasErrors,
   LANGUAGES,
+  PEOPLE_FILE,
+  type PersonIR,
   pageModel,
   parseTheme,
   type SamplesIR,
@@ -23,6 +25,7 @@ import {
   validateAuth,
   validateContent,
   validateContext,
+  validatePeople,
   validateSamples,
   validateSpec,
   validateUx,
@@ -53,6 +56,8 @@ export function loadSpec(
   themes?: ThemeIR[];
   /** The project's sample records (samples/<Model>.yml). */
   samples?: SamplesIR;
+  /** The project's sample users (samples/people.yml). */
+  people?: PersonIR[];
   plugins?: SpecPlugin[];
   path: string;
 } {
@@ -113,6 +118,8 @@ export function loadSpec(
     const result = validateContent(
       { path: contentPath, text: readFileSync(contentPath, "utf8") },
       ir,
+      undefined,
+      auth,
     );
     print(result.diagnostics);
     if (!result.content) return failed(contentPath, result.diagnostics);
@@ -126,10 +133,12 @@ export function loadSpec(
         );
         continue;
       }
-      const read = validateContent({ path: file, text: readFileSync(file, "utf8") }, ir, {
-        of: content,
-        language,
-      });
+      const read = validateContent(
+        { path: file, text: readFileSync(file, "utf8") },
+        ir,
+        { of: content, language },
+        auth,
+      );
       print(read.diagnostics);
       if (!read.content) return failed(file, read.diagnostics);
       content.translations = { ...content.translations, [language]: read.content };
@@ -165,6 +174,21 @@ export function loadSpec(
     if (bad) return failed(join(dirname(path), "samples"), result.diagnostics);
     samples = result.samples;
   }
+  // The sample users, people of the sample data who act in a development build.
+  let people: PersonIR[] | undefined;
+  const peopleFile = sampleFiles.find(
+    (file) => file.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "") === PEOPLE_FILE,
+  );
+  if (peopleFile) {
+    const result = validatePeople(
+      { path: peopleFile, text: readFileSync(peopleFile, "utf8") },
+      auth,
+    );
+    print(result.diagnostics);
+    if (result.diagnostics.some((d) => d.severity === "error"))
+      return failed(peopleFile, result.diagnostics);
+    people = result.people;
+  }
   const contextPath = join(dirname(path), "smithable.context.yml");
   if (existsSync(contextPath)) {
     const problems = validateContext({
@@ -183,6 +207,7 @@ export function loadSpec(
     ...(ux ? { ux } : {}),
     ...(themes.length ? { themes } : {}),
     ...(samples ? { samples } : {}),
+    ...(people ? { people } : {}),
   };
 }
 

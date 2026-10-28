@@ -1,0 +1,72 @@
+smithable: 0.1
+app:
+  name: Pipeline
+  description: "A sales pipeline for a small web agency: leads, deals and who follows up when."
+  currency: EUR
+models:
+  Lead:
+    fields:
+      name: string!
+      company: string
+      email: email
+      phone: phone
+      source: referral | website | outreach | event
+      status: new | contacted | qualified | lost
+      notes: text
+      deals: Deal[]
+  Deal:
+    fields:
+      title: string!
+      lead: Lead!
+      stage: qualifying | proposal | negotiation | won | lost
+      value:
+        type: money
+        min: 0
+      expectedClose: date
+      notes: text
+  FollowUp:
+    fields:
+      lead: Lead!
+      deal: Deal
+      dueAt: date!
+      assignee: User!
+      status: open | done
+      note: text
+    ownedBy: assignee
+pages:
+  leads:
+    crud: Lead
+    search: [name, company, email]
+    filters: [status, source]
+  deals:
+    crud: Deal
+    actions: [win, lose]
+    search: [title]
+    filters: [stage]
+  follow-ups:
+    crud: FollowUp
+    actions: [complete]
+    filters: [status, assignee, dueAt]
+    defaultFilter:
+      status: open
+  team:
+    users: manage
+actions:
+  win:
+    on: Deal
+    when:
+      stage: [qualifying, proposal, negotiation]
+    set:
+      stage: won
+  lose:
+    on: Deal
+    when:
+      stage: [qualifying, proposal, negotiation]
+    set:
+      stage: lost
+  complete:
+    on: FollowUp
+    when:
+      status: open
+    set:
+      status: done

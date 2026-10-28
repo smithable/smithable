@@ -1,0 +1,8 @@
+{
+  "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
+  "starter": "records",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who may see the sightings without signing in?"
+  ]
+}

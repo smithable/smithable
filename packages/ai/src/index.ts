@@ -5,6 +5,7 @@ export { checkSpecFiles, closestStarter, draftProject, REFERENCE } from "./draft
 export {
   BLANK,
   closeShared,
+  type DraftHarness,
   draftOperations,
   draftProjectByOperations,
   dropForbidden,

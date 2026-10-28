@@ -1,0 +1,125 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Produkte des Hofladens, Vorbestellungen der Kunden und die Abholzeiten.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      unit: string
+      category: vegetables | fruit | dairy | meat | bakery | other
+      picture: picture
+      available: bool = true
+  Order:
+    fields:
+      name: string!
+      phone: phone!
+      email: email
+      pickup: datetime
+      note: text
+      status: new | confirmed | ready | collected | declined
+      reason: text
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity: int! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+  PickupSlot:
+    fields:
+      day: date!
+      hours: string!
+      place: string
+      note: text
+pages:
+  bestellungen:
+    crud: Order
+    actions: [confirm, ready, collected, decline]
+    filters: [status]
+  produkte:
+    crud: Product
+    actions: [soldOut, backOn]
+    filters: [category, available]
+  abholzeiten:
+    crud: PickupSlot
+  hof:
+    route: /hof
+    landing:
+      hero:
+      pickups:
+        records: PickupSlot
+      features:
+      footer:
+  datenschutz:
+    route: /datenschutz
+    legal: privacy
+  team:
+    users: manage
+actions:
+  confirm:
+    on: Order
+    when:
+      status: new
+    set:
+      status: confirmed
+    intent: Die Bestellung wird angenommen.
+  ready:
+    on: Order
+    when:
+      status: confirmed
+    set:
+      status: ready
+    intent: Die Bestellung liegt zur Abholung bereit.
+  collected:
+    on: Order
+    when:
+      status: ready
+    set:
+      status: collected
+    intent: Der Kunde hat die Bestellung abgeholt.
+  decline:
+    on: Order
+    when:
+      status: [new, confirmed]
+    set:
+      status: declined
+      reason:
+    intent: "Die Bestellung kann nicht erfüllt werden: Grund angeben."
+  soldOut:
+    on: Product
+    when:
+      available: true
+    set:
+      available: false
+    intent: Das Produkt ist ausverkauft.
+  backOn:
+    on: Product
+    when:
+      available: false
+    set:
+      available: true
+    intent: Das Produkt ist wieder vorbestellbar.
+outgoing:
+  orderPlaced:
+    when: Order created
+    to: mail
+    recipient: admin
+  orderConfirmed:
+    when: confirm
+    to: mail
+    recipient: email
+  orderReady:
+    when: ready
+    to: mail
+    recipient: email

@@ -77,6 +77,15 @@ curl -s -X POST https://status.example.com/api/v1/incidents/3/actions/resolve -H
 { "id": 3, "title": "Checkout is slow", "status": "resolved", "resolvedAt": "2026-10-04T06:54:25.856Z", "…": "…" }
 ```
 
+**Run an action on several records:** a custom action on rows (its input names a list, like `customers: Customer[]`), offered in `actions`, runs on the ids given, with whatever else it asks for beside them. It answers with what the action returns, and Activity has one line for the run.
+
+```sh
+curl -s -X POST https://crm.example.com/api/v1/customers/actions/setSegment -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: application/json" -d '{"ids": [4, 7], "segment": "enterprise"}'
+```
+
+The key's role must be allowed to run it and to read every one of the records; otherwise nothing runs and the answer is `403`.
+
 ### Without a key
 
 What the app lets anyone read or add (`public` in `smithable.auth.yml`) can be called without a key, as a visitor. A status page that shows its incidents to everyone lets a program list and read them too: `curl -s https://status.example.com/api/v1/incidents`. Changing, deleting and actions always need a key, and so does everything when nothing is public. Without a key, the description at `/api/v1/openapi.json` and the tools at `/mcp` show only what a visitor may do.

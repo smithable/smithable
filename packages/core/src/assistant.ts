@@ -153,6 +153,17 @@ export function assistantOffer(
       reachable.includes(a.on) &&
       may(actionAccess(a, auth, ir.models), caller),
   );
+  // A custom action on rows runs on the ids given, with its other inputs.
+  const onRows = ir.actions.filter(
+    (a) =>
+      a.custom &&
+      a.rows !== undefined &&
+      changes &&
+      caller !== "visitor" &&
+      (scope === "app" || offered.rowsActions.includes(a.name)) &&
+      reachable.includes(a.rows.model) &&
+      may(actionAccess(a, auth, ir.models), caller),
+  );
 
   const kinds: AssistantKind[] = [];
   for (const model of ir.models) {
@@ -212,7 +223,7 @@ export function assistantOffer(
       {
         name: "find",
         description:
-          "Records of one kind the caller may read, newest first, as {columns, rows, total}. Ask only for the fields needed; id and title always come.",
+          "Records of one kind the caller may read, last added first (sort by a date for the newest by it), as {columns, rows, total}. Ask only for the fields needed; id and title always come.",
         inputSchema: {
           type: "object",
           required: ["kind"],
@@ -291,19 +302,28 @@ export function assistantOffer(
       },
       annotations: changing,
     });
-  if (actions.length || trashing.length)
+  if (actions.length || onRows.length || trashing.length)
     tools.push({
       name: "run",
-      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
+      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${onRows.length ? ` ${onRows.map((a) => a.name).join(", ")} run on the rows given as \`ids\` instead of one \`id\`.` : ""}${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
       inputSchema: {
         type: "object",
-        required: ["action", "id"],
+        required: ["action"],
+        // A record's action takes id; a rows action takes ids.
+        ...(onRows.length
+          ? { anyOf: [{ required: ["id"] }, { required: ["ids"] }] }
+          : { required: ["action", "id"] }),
         properties: {
           action: {
             type: "string",
-            enum: [...actions.map((a) => a.name), ...trashing.map((m) => `restore${m}`)],
+            enum: [
+              ...actions.map((a) => a.name),
+              ...onRows.map((a) => a.name),
+              ...trashing.map((m) => `restore${m}`),
+            ],
           },
           id,
+          ...(onRows.length ? { ids: { type: "array", items: id, minItems: 1 } } : {}),
           input: { type: "object" },
         },
       },
@@ -356,16 +376,21 @@ export function assistantOffer(
     const only = k.may.read ? "" : " Adding only.";
     return `${k.model} (${k.pluralLabel.toLowerCase()}): ${fields}. Title: ${k.title}.${only}`;
   });
-  const actionLine = actions.length
-    ? [
-        `Actions: ${actions
-          .map((a) => {
-            const when = !a.custom && a.when ? `, when ${conditionText(a.when)}` : "";
-            return `${a.name} (${!a.custom ? a.on : ""}${when})`;
-          })
-          .join(", ")}.`,
-      ]
-    : [];
+  const actionLine =
+    actions.length || onRows.length
+      ? [
+          `Actions: ${[...actions, ...onRows]
+            .map((a) => {
+              if (a.custom) {
+                const inputs = a.input.filter((f) => f.name !== a.rows?.field).map((f) => f.name);
+                return `${a.name} (${a.rows?.model ?? ""} rows, by ids${inputs.length ? `; input: ${inputs.join(", ")}` : ""})`;
+              }
+              const when = a.when ? `, when ${conditionText(a.when)}` : "";
+              return `${a.name} (${a.on}${when})`;
+            })
+            .join(", ")}.`,
+        ]
+      : [];
   const who =
     caller === "visitor" ? "a visitor, without a key" : `someone with the role ${caller.role}`;
   const summary = kinds.length

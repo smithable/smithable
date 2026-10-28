@@ -1,0 +1,42 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: A piano teacher's pupils, their weekly lesson times and what each one is practising.
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      level: beginner | intermediate | advanced
+      lessonDay: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      lessonTime: string!
+      lessonMinutes: int! = 30
+      notes: text
+  PracticeItem:
+    fields:
+      pupil: Pupil!
+      piece: string!
+      focus: text
+      assignedOn: date! = TODAY()
+      status: practising | polishing | done
+pages:
+  pupils:
+    crud: Pupil
+    search: [name, email]
+    filters: [lessonDay, level]
+  practice:
+    crud: PracticeItem
+    search: [piece, focus]
+    filters: [pupil, status]
+    defaultFilter:
+      status: [practising, polishing]
+    actions: [markDone]
+actions:
+  markDone:
+    on: PracticeItem
+    when:
+      status: [practising, polishing]
+    set:
+      status: done
+navigation: [pupils, practice]

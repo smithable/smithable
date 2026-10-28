@@ -1,0 +1,9 @@
+{
+  "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "Should your clients be able to view their quotes or invoices without signing in?",
+    "Should quotes and invoices be kept as separate records, or is a quote just an invoice that hasn't been sent yet?"
+  ]
+}

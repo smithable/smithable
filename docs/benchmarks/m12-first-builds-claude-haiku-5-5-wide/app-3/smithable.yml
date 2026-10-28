@@ -1,0 +1,87 @@
+smithable: 0.1
+app:
+  name: Corner Salon
+  description: Online booking for a hair salon, where customers pick a stylist and a free time themselves.
+models:
+  Service:
+    fields:
+      name: string!
+      minutes: int! = 30
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      timeOffs: TimeOff[]
+    schedule:
+      hours:
+        tue-sat: 09:00-18:00
+      breaks: 12:00-12:30
+      gap: 10
+      away: TimeOff
+  TimeOff:
+    fields:
+      stylist: Stylist!
+      from: datetime!
+      until: datetime!
+      note: string
+  Booking:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      name: string!
+      phone: phone
+      note: text
+      status:
+        type: booked | cancelled
+        by: app
+    occupies:
+      resource: stylist
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: booked
+      cancelUntil: 12h
+actions:
+  cancel:
+    on: Booking
+    when:
+      status: booked
+    set:
+      status: cancelled
+    intent: Cancel a booking.
+outgoing:
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingReceived:
+    when: Booking created
+    to: mail
+    recipient: admin
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: bookings
+      services:
+        records: Service
+      stylists:
+        records: Stylist
+      footer:
+  bookings:
+    crud: Booking
+  services:
+    crud: Service
+  stylists:
+    crud: Stylist
+  time-off:
+    crud: TimeOff
+  schedule:
+    calendar:
+      model: Booking
+      starts: startsAt
+  privacy:
+    route: /privacy
+    legal: privacy

@@ -10,10 +10,12 @@ tones:
 
 pages:
   home:
+    theme: { brand: { font: Outfit } }   # the public page in a rounder face than the tool behind it
     sections:                          # how the landing page's sections look
       hero: { layout: centered }       # the text over the picture
       pricing: { highlight: Pro }      # the plan drawn forward
-      faq: { layout: list }            # every answer shown
+      faq: { layout: list, columns: 2 }   # every answer shown, two abreast
+      callToAction: { band: primary }  # the one band on an otherwise open page
   invoices:
     table:
       columns: [number, client, status, issuedOn, total]

@@ -1,0 +1,52 @@
+smithable: 0.1
+app:
+  name: Agency Pipeline
+  description: Tracks the leads and deals of our six-person web agency and who follows up on each, and when.
+models:
+  Lead:
+    fields:
+      name: string!
+      company: string
+      email: email
+      phone: phone
+      source: referral | website | outbound | event
+      status: new | contacted | qualified | lost
+      followUp: User
+      followUpOn: date
+      notes: text
+      deals: Deal[]
+    ownedBy: followUp
+  Deal:
+    fields:
+      name: string!
+      lead: Lead!
+      value: money
+      stage: proposal | negotiation | won | lost
+      closeDate: date
+      followUp: User
+    ownedBy: followUp
+pages:
+  leads:
+    crud: Lead
+    search: [name, company]
+    filters: [status, source, followUp]
+  deals:
+    crud: Deal
+    filters: [stage, followUp]
+    actions: [win]
+  team:
+    users: manage
+actions:
+  win:
+    on: Deal
+    when:
+      stage: [proposal, negotiation]
+    set:
+      stage: won
+outgoing:
+  followUpAssigned:
+    when: Lead changed
+    fields: [followUp]
+    to: mail
+    recipient: followUp
+navigation: [leads, deals, team]

@@ -1,0 +1,115 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      email:
+        label: Sähköposti
+      phone:
+        label: Puhelin
+      address:
+        label: Osoite
+      notes:
+        label: Muistiinpanot
+      vehicles:
+        label: Autot
+  Vehicle:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      plate:
+        label: Rekisterinumero
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      year:
+        label: Vuosimalli
+      vin:
+        label: Valmistenumero
+      mileage:
+        label: Mittarilukema (km)
+      customer:
+        label: Asiakas
+      notes:
+        label: Muistiinpanot
+  WorkOrder:
+    label: Huoltotyö
+    pluralLabel: Huoltotyöt
+    fields:
+      title:
+        label: Otsikko
+      vehicle:
+        label: Auto
+      status:
+        label: Tila
+        values:
+          booked: Varattu
+          inProgress: Työn alla
+          done: Valmis
+          canceled: Peruttu
+      description:
+        label: Kuvaus
+      openedAt:
+        label: Avattu
+      laborHours:
+        label: Työtunnit
+      laborRate:
+        label: Tuntihinta
+      parts:
+        label: Varaosat
+      total:
+        label: Yhteensä
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Laskun numero
+      customer:
+        label: Asiakas
+      workOrder:
+        label: Huoltotyö
+      status:
+        label: Tila
+        values:
+          draft: Luonnos
+          sent: Lähetetty
+          paid: Maksettu
+      amount:
+        label: Summa
+      issuedOn:
+        label: Laskun päivä
+      dueOn:
+        label: Eräpäivä
+      paidOn:
+        label: Maksupäivä
+actions:
+  startWork:
+    label: Aloita työ
+  completeWork:
+    label: Merkitse valmiiksi
+  cancelWork:
+    label: Peru työ
+  sendInvoice:
+    label: Lähetä lasku
+  markPaid:
+    label: Merkitse maksetuksi
+pages:
+  customers:
+    title: Asiakkaat
+  vehicles:
+    title: Autot
+  work-orders:
+    title: Huoltotyöt
+  invoices:
+    title: Laskut
+  team:
+    title: Tiimi
+logo:
+  src: images/logo.webp
+  alt: Two triangles as mountains
+  generated: true

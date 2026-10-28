@@ -1,0 +1,14 @@
+smithableUx: 0.1
+pages:
+  fuel:
+    table:
+      sort: -filledOn
+      columns: [filledOn, odometer, liters, pricePerLiter, totalCost]
+  service:
+    table:
+      sort: -visitedOn
+      columns: [visitedOn, kind, workshop, odometer, cost]
+  expenses:
+    table:
+      sort: -spentOn
+      columns: [spentOn, category, amount, note]

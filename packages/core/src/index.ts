@@ -27,6 +27,7 @@ export type {
   FieldFilter,
 } from "./assistant.js";
 export { asksWith, assistantOffer, refersToUser } from "./assistant.js";
+export { type AtRisk, EVERYDAY_WORDS, everyday, wordsAtRisk } from "./at-risk.js";
 export type {
   ApiIR,
   ApiOffers,
@@ -77,6 +78,7 @@ export {
   LANGUAGES,
   type Language,
   LOGO_SRC,
+  placeholderProblem,
   RESERVE_TEXTS,
   textPaths,
   textsToTranslate,
@@ -139,6 +141,17 @@ export {
 } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export {
+  type Actor,
+  type Move,
+  movesFor,
+  type Slot,
+  type SlotKind,
+  type Step as MoveStep,
+  seeded,
+  valueFor,
+  walk,
+} from "./moves.js";
 export { writeNamedBy } from "./named-by.js";
 export {
   camel,
@@ -170,6 +183,14 @@ export {
   partSections,
   patternInfo,
 } from "./patterns.js";
+export {
+  PACE_DEFAULT,
+  PACE_MAX,
+  PACE_MIN,
+  PEOPLE_MAX,
+  type PersonIR,
+  validatePeople,
+} from "./people.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export {
@@ -182,6 +203,7 @@ export {
 } from "./records.js";
 export {
   fitSamples,
+  PEOPLE_FILE,
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,
@@ -202,7 +224,7 @@ export {
 } from "./sections/list-keys.js";
 export { partText, readNamePart } from "./sections/name-parts.js";
 export { type NameKind, nameProblem, RESERVED_WORDS } from "./sections/names.js";
-export { outgoingText } from "./sections/outgoing.js";
+export { notSendable, outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
 export { cronText, timerText } from "./sections/timers.js";
@@ -210,6 +232,7 @@ export type { SensitiveKind } from "./sensitive.js";
 export { sensitiveKind } from "./sensitive.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";
 export { compareVersions, SECTIONS, SPEC_VERSION, validateSpec } from "./spec.js";
+export { fillText, placeholdersOf } from "./template.js";
 export type { Mode, ThemeIR, TokenName, Tokens } from "./theme.js";
 export {
   BUILT_IN_THEMES,

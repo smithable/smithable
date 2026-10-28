@@ -1,0 +1,8 @@
+{
+  "description": "A log of my car's fuel, service visits and costs.",
+  "starter": "records",
+  "wordStarter": "barbers",
+  "questions": [
+    "Should anyone be able to see the car log without signing in?"
+  ]
+}

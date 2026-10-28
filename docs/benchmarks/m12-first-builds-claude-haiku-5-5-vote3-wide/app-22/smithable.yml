@@ -1,0 +1,108 @@
+smithable: 0.1
+app:
+  name: Hofladen
+  description: Ein kleiner Hofladen, bei dem Kunden Produkte vorbestellen und zu einer Abholzeit abholen.
+  currency: EUR
+  timezone: Europe/Berlin
+models:
+  Product:
+    fields:
+      name: string!
+      description: text
+      price: money!
+      unit: string
+      category: vegetables | fruit | dairy | eggs | other
+      picture: picture
+      available: bool = true
+  PickupTime:
+    fields:
+      startsAt: datetime!
+      places:
+        type: int!
+        min: 1
+        max: 100
+        default: 10
+      note: string
+  Order:
+    fields:
+      name: string!
+      phone: phone!
+      email: email
+      pickup: PickupTime!
+      note: text
+      status: new | ready | collected | cancelled
+      lines: OrderLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+    capacity:
+      per: pickup
+      max: pickup.places
+      where:
+        status: [new, ready, collected]
+  OrderLine:
+    fields:
+      order: Order!
+      product: Product!
+      quantity:
+        type: int!
+        min: 1
+        max: 99
+        default: 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+actions:
+  ready:
+    on: Order
+    when:
+      status: new
+    set:
+      status: ready
+    intent: Die Bestellung ist fertig zur Abholung.
+  collected:
+    on: Order
+    when:
+      status: ready
+    set:
+      status: collected
+    intent: Der Kunde hat die Bestellung abgeholt.
+  cancel:
+    on: Order
+    when:
+      status: [new, ready]
+    set:
+      status: cancelled
+    intent: Die Vorbestellung wird storniert.
+pages:
+  orders:
+    crud: Order
+    filters: [status, pickup]
+  products:
+    crud: Product
+  pickups:
+    crud: PickupTime
+  home:
+    route: /
+    landing:
+      hero:
+      products:
+        records: Product
+        where:
+          available: true
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
+outgoing:
+  orderConfirmed:
+    when: Order created
+    to: mail
+    recipient: email
+  orderReady:
+    when: ready
+    to: mail
+    recipient: email

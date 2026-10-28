@@ -1,0 +1,31 @@
+smithable: 0.1
+app:
+  name: Vinyl Collection
+  description: A personal catalogue of my vinyl records, with artists, condition and what I paid for each.
+  timezone: Europe/Mariehamn
+models:
+  Artist:
+    fields:
+      name: string!
+      country: string
+  Album:
+    fields:
+      title: string!
+      artist: Artist!
+      year:
+        type: int!
+        min: 1900
+        max: 2100
+      condition: mint | nearMint | veryGood | good | fair | poor
+      pricePaid: money
+      purchasedOn: date
+      cover: picture
+      notes: text
+pages:
+  artists:
+    crud: Artist
+  albums:
+    crud: Album
+    search: [title]
+    filters: [condition, artist]
+    sortable: [title, year, pricePaid, purchasedOn]
