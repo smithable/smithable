@@ -233,7 +233,8 @@ export class YamlEditor {
       else {
         const colon = this.source.indexOf(":", this.pair(path).key.range[1]);
         // From right after "key:" when only spaces separate it from the list; else from the list.
-        const from = this.source.slice(colon + 1, seq.range[0]).trim() === "" ? colon + 1 : seq.range[0];
+        const from =
+          this.source.slice(colon + 1, seq.range[0]).trim() === "" ? colon + 1 : seq.range[0];
         this.splice(from, seq.range[1], `\n${text.trimEnd()}`);
       }
       return;
@@ -260,7 +261,9 @@ export class YamlEditor {
     // The item's dash may be on its own line ("-" then the mapping below it): the lines go from it.
     const dash = this.source.lastIndexOf("-", item.range[0] - 1);
     const start = this.lineStart(
-      dash >= 0 && this.source.slice(this.lineStart(dash), dash).trim() === "" ? dash : item.range[0],
+      dash >= 0 && this.source.slice(this.lineStart(dash), dash).trim() === ""
+        ? dash
+        : item.range[0],
     );
     this.splice(start, Math.min(this.lineEnd(this.itemEnd(item) - 1) + 1, this.source.length), "");
   }

@@ -113,7 +113,9 @@ const removeSampleUser: Operation<{ name: string }> = {
   apply(editors, { name }) {
     const people = editors.people;
     const have = people ? listed(people) : [];
-    const at = have.findIndex((p) => typeof p.name === "string" && p.name.toLowerCase() === name.toLowerCase());
+    const at = have.findIndex(
+      (p) => typeof p.name === "string" && p.name.toLowerCase() === name.toLowerCase(),
+    );
     if (!people || at < 0) {
       const names = have.map((p) => p.name).filter((n): n is string => typeof n === "string");
       throw new OperationError(
