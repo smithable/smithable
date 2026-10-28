@@ -43,7 +43,7 @@ function placeholders(model: ModelIR, changed: boolean): string[] {
 
 /**
  * The fields one reference away, by reference ({customer.name}): a user's name and email, another
- * record's sendable fields that the validator lets this entry's recipient read.
+ * record's sendable fields that the validator accepts (with a warning or without).
  */
 function hops(
   model: ModelIR,
@@ -61,7 +61,10 @@ function hops(
         : (other?.fields.filter(sendable).map((x) => x.name) ?? []);
     const paths = names
       .map((n) => `${f.name}.${n}`)
-      .filter((p) => !placeholderProblem(p, entry, ir, auth));
+      .filter((p) => {
+        const problem = placeholderProblem(p, entry, ir, auth);
+        return !problem || problem.warning === true;
+      });
     return paths.length ? [{ ref: f.name, paths }] : [];
   });
 }
