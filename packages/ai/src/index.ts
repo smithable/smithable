@@ -49,6 +49,7 @@ export {
   type Reading,
   readDescription,
 } from "./read-description.js";
+export { chooseMove, type MoveChoice, type OpenMove } from "./sample-move.js";
 export { type DraftedSamples, draftSamples, sampledModels } from "./samples.js";
 export { type Edit, readEdit, STARTER_TEXTS } from "./starter-descriptions.js";
 export { draftTranslation } from "./translate.js";

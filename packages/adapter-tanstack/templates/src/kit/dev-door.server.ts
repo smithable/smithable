@@ -6,7 +6,7 @@ import { timingSafeEqual } from "node:crypto";
 import { ZodError } from "zod";
 import { AccessDenied, Conflict } from "./access";
 import { TooMany } from "./limit";
-import { BadInput, NotFound } from "./refusal";
+import { BadInput, conflict, NotFound } from "./refusal";
 
 /** How a move's slot is filled, as the generated moves name it. */
 export interface Slot {
@@ -92,6 +92,9 @@ export function refused(error: unknown): Response {
   const message =
     error instanceof ZodError
       ? error.issues.map((i) => i.message).join("; ")
-      : String((error as Error)?.message ?? error);
+      : // A conflict in words ("No places left."), as the API says it, not its code.
+        error instanceof Conflict
+        ? conflict(error.message)
+        : String((error as Error)?.message ?? error);
   return Response.json({ refused: status < 500, status, message }, { status });
 }
