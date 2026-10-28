@@ -97,9 +97,20 @@ async function fillAndSave(page, values) {
     const field = page.getByLabel(new RegExp(`^${label}`, "i")).first();
     if (!(await field.count())) return false;
     const tag = await field.evaluate((e) => e.tagName.toLowerCase());
-    if (tag === "select")
-      await field.selectOption({ label: value }).catch(() => field.selectOption(value));
-    else await field.fill(value);
+    if (tag === "select") {
+      // The option whose label or value is the word, whatever its case ("SMB" is shown as "Smb").
+      const options = await field
+        .locator("option")
+        .evaluateAll((os) =>
+          os.map((o) => ({ value: o.value, label: (o.textContent ?? "").trim() })),
+        );
+      const want = String(value).toLowerCase();
+      const found = options.find(
+        (o) => o.label.toLowerCase() === want || o.value.toLowerCase() === want,
+      );
+      if (!found) return false;
+      await field.selectOption(found.value);
+    } else await field.fill(value);
   }
   const save = page.getByRole("button", { name: /^(save|create|add)/i }).first();
   if (!(await save.count())) return false;
@@ -395,7 +406,8 @@ const dependsOn = (id, earlier) => earlier === 4 && [6, 7, 8].includes(id);
 /** Smith takes the request; the trace line gives the model, the tokens and the price. */
 function askSmith(dir, prompt) {
   const asked = sh("node", [cli, "ask", prompt, "--yes", "--dir", dir], repo);
-  const used = /\(([^)]+)\) · ([\d,]+) tokens(?: · ([€$])([\d.]+))?/.exec(asked.out);
+  // "Smithable model (mistral-small-latest) · 17,602 tokens (17,497 in, 105 out) · $0.0027".
+  const used = /\(([^)]+)\) · ([\d,]+) tokens(?: \([^)]*\))?(?: · ([€$])([\d.]+))?/.exec(asked.out);
   const lines = asked.out.split("\n").filter(Boolean);
   const applied = /^Generator |applied|Applied/m.test(asked.out);
   return {
