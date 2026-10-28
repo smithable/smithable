@@ -418,6 +418,32 @@ try {
     },
   );
   await step(
+    "the hosted beta in Smith's words: a sandbox's minutes in his header from fifteen left, with the invite",
+    async () => {
+      const file = join(dir, "data/.smithable/beta.json");
+      writeFileSync(
+        file,
+        JSON.stringify({
+          until: new Date(Date.now() + 10 * 60_000).toISOString(),
+          invite: "https://smithable.ai/invite",
+          guide: "https://docs.smithable.ai/beta.html",
+        }),
+      );
+      try {
+        await page.locator('[data-beta="intro"]').waitFor({ timeout: 30000 * P });
+        await page.getByText(/^Sandbox: (9|10) min left$/).waitFor({ timeout: 10000 * P });
+        await page.locator('[data-beta="soon"]').waitFor();
+        const invite = page.getByRole("link", { name: "Ask for an invite" }).first();
+        if ((await invite.getAttribute("href")) !== "https://smithable.ai/invite")
+          throw new Error("the invite chip does not lead to the invite page");
+      } finally {
+        rmSync(file, { force: true });
+      }
+      // No file, no beta.
+      await page.locator('[data-beta="intro"]').waitFor({ state: "detached", timeout: 30000 * P });
+    },
+  );
+  await step(
     "the preview opens with the owner signed in as an administrator (finding 15)",
     async () => {
       // Signed in by Studio, without a click: the customers page, which needs sign-in, opens.

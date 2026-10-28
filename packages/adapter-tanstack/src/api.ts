@@ -927,10 +927,14 @@ function toolsModule(
     .map((caller) => {
       const kinds = assistantOffer(ir, auth, caller, { scope, content }).kinds.map((k) => {
         const n = models.find((m) => m.model.name === k.model)?.n;
+        // The list page the kind is read on, where a row's record opens; a kind without one has no link.
+        const page = ir.pages.find(
+          (p) => p.pattern.kind === "crud" && p.pattern.model === k.model,
+        )?.route;
         const filters = k.filters.map((f) => (f.by === "value" ? { ...f, labels: undefined } : f));
         if (!n) return JSON.stringify({ ...k, description: undefined });
         worded.add(`import { ${n.ui} } from "./${n.module.slice("#/generated/".length)}";`);
-        return `kindWords(${n.ui}, ${JSON.stringify(k.fields.map((f) => f.name))}, ${JSON.stringify(filters)}, ${JSON.stringify(k.numbers)}, ${JSON.stringify(k.by)})`;
+        return `kindWords(${n.ui}, ${JSON.stringify(k.fields.map((f) => f.name))}, ${JSON.stringify(filters)}, ${JSON.stringify(k.numbers)}, ${JSON.stringify(k.by)}${page ? `, ${JSON.stringify(page)}` : ""})`;
       });
       return `  ${JSON.stringify(caller === "visitor" ? "visitor" : caller.role)}: () => [${kinds.map((k) => `\n    ${k},`).join("")}\n  ],`;
     })
@@ -1207,7 +1211,7 @@ const ASKS: Record<string, string> = ${JSON.stringify(asks)};
 ${
   worded.size
     ? `/** A kind's words for the wording rules, read from its module: the fields the caller reads. */
-function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[]): AskKind {
+function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
   const field = (name: string) => ui.fields.find((f) => f.name === name || f.relation?.key === name);
   return {
     model: ui.model ?? "",
@@ -1221,6 +1225,7 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
     ),
     numbers,
     by,
+    path,
   };
 }
 
@@ -1244,7 +1249,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
-    turns,
+    turns,${ir.app.timezone ? `\n    timeZone: ${JSON.stringify(ir.app.timezone)},` : ""}
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer

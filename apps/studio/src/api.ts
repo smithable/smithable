@@ -77,6 +77,8 @@ export interface Project {
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
+  /** The hosted beta's facts (smith-first.md §8): a sandbox's end, the invite page, the tester guide. */
+  beta?: { until?: string; invite?: string; guide?: string };
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
   making?: Making;
   /** Requests typed while the app was made, made in order once it is in place. */
@@ -259,7 +261,10 @@ export const api = {
   waiting: (change: { add: string } | { remove: number }) =>
     call<{ ok: boolean; waiting: string[] }>("/api/waiting", change),
   events(
-    onEvent: (event: "changed" | "log" | "open" | "making" | "waiting", data: unknown) => void,
+    onEvent: (
+      event: "changed" | "log" | "open" | "making" | "waiting" | "beta",
+      data: unknown,
+    ) => void,
   ): () => void {
     const source = new EventSource("/api/events");
     // Also after a reconnect: whatever changed meanwhile is fetched again.
@@ -274,6 +279,7 @@ export const api = {
     source.addEventListener("waiting", (e) =>
       onEvent("waiting", JSON.parse((e as MessageEvent).data)),
     );
+    source.addEventListener("beta", (e) => onEvent("beta", JSON.parse((e as MessageEvent).data)));
     return () => source.close();
   },
 };

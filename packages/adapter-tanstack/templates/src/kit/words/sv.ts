@@ -396,6 +396,27 @@ export const w = {
   found: (total: number, first: string[]) =>
     `${total} hittades${first.length ? `: ${first.join(", ")}` : ""}.`,
   fromValue: (from: string) => `från ${from}`,
+  askedFind: (plural: string, conditions: string[], sort: string, shown: number, total?: number) =>
+    `${plural}${conditions.length ? ` där ${conditions.join(", ")}` : ""}${sort ? `, ${sort}` : ""} · ${total === undefined || total === shown ? shown : `${shown} av ${total}`}`,
+  askedMeasure: (
+    how: string,
+    field: string | undefined,
+    plural: string,
+    conditions: string[],
+    by?: string,
+  ) =>
+    `${{ count: "Antal", sum: "Summa av", average: "Medel av", min: "Minsta", max: "Största" }[how] ?? how}${field ? ` ${field} för` : ""} ${plural.toLowerCase()}${conditions.length ? ` där ${conditions.join(", ")}` : ""}${by ? `, per ${by}` : ""}`,
+  askedRead: (label: string, id: string) => `${label} ${id}`,
+  fieldIs: (label: string, value: string) => `${label} är ${value}`,
+  fromTo: (from?: string, to?: string) =>
+    from && to ? `från ${from} till ${to}` : from ? `från ${from}` : `till ${to}`,
+  orList: (values: string[]) => values.join(" eller "),
+  over: (n: string) => `över ${n}`,
+  sortedBy: (label: string, largestFirst: boolean) =>
+    largestFirst ? `största ${label} först` : `efter ${label}`,
+  under: (n: string) => `under ${n}`,
+  withWords: (search: string) => `med "${search}"`,
+  yoursOnly: "dina",
   inAll: (total: number) => `${total} totalt`,
   invitationKept: (address: string) =>
     `Inbjudan till ${address} ligger i förhandsvisningens utkorg, inte skickad: förhandsvisningen skickar ingen e-post. Studios Utkorg visar den.`,

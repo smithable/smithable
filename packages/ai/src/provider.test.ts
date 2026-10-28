@@ -171,3 +171,28 @@ test("a prompt over 100k tokens is never sent: the model charges more above it",
   expect(complete).not.toHaveBeenCalled();
   expect(usage).toEqual([]);
 });
+
+test("a repair, the second try after an answer that could not be applied, says so with a header", async () => {
+  const fetch = vi.fn(async (_url: string, _init?: RequestInit) =>
+    Response.json({
+      model: "m",
+      choices: [{ message: { content: '{"kind":"none"}' } }],
+      usage: { prompt_tokens: 1, completion_tokens: 1 },
+    }),
+  );
+  vi.stubGlobal("fetch", fetch);
+  const provider = openAICompatible({
+    name: "hosted",
+    baseUrl: "https://example.eu/v1",
+    model: "m",
+    apiKey: "key",
+    tier: "smithable",
+    location: "eu",
+  });
+  await provider.complete({ system: "s", user: "u", schema: {} });
+  await provider.complete({ system: "s", user: "u again", schema: {}, repair: true });
+  const headers = (i: number) =>
+    (fetch.mock.calls[i]?.[1]?.headers ?? {}) as Record<string, string>;
+  expect(headers(0)["X-Smithable-Repair"]).toBeUndefined();
+  expect(headers(1)["X-Smithable-Repair"]).toBe("1");
+});

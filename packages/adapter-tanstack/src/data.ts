@@ -1909,6 +1909,20 @@ ${
     return found !== undefined;
   },
 ${
+  ir.actions.some((a) => a.custom && a.rows?.model === model.name)
+    ? `
+  /** Whether the viewer may read every one of these ids, in one read: the rows a custom action runs on. */
+  canReadAll(viewer: Viewer | null, ids: number[]): boolean {
+    const found = db
+      .select({ id: ${n.table}.id })
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), ${self}.readable(viewer)))
+      .all();
+    return found.length === new Set(ids).size;
+  },
+`
+    : ""
+}${
   reads && threadTarget && threadRef
     ? `
   /** Marks the ${n.label.toLowerCase()}'s conversation read for the viewer, now. */

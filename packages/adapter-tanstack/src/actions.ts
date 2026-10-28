@@ -155,7 +155,7 @@ ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(
   const body = `${records
     .map((f, i) =>
       f.type.kind === "relation" && f.type.many
-        ? `    if (!data.${f.name}.every((id) => ${readers[i]?.data}.canRead(viewer, id))) throw new AccessDenied(true);\n`
+        ? `    if (!${readers[i]?.data}.canReadAll(viewer, data.${f.name})) throw new AccessDenied(true);\n`
         : `    if (data.${f.name} != null && !${readers[i]?.data}.canRead(viewer, data.${f.name})) throw new AccessDenied(true);\n`,
     )
     .join(

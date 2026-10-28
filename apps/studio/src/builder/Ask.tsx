@@ -33,6 +33,7 @@ interface Said {
 }
 
 export function Ask({
+  beta,
   guide,
   onDone,
   onEdit,
@@ -44,6 +45,8 @@ export function Ask({
 }: {
   /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
   guide?: GuideLine;
+  /** The hosted beta, said in Smith's words (smith-first.md §8). */
+  beta?: Beta;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -241,21 +244,26 @@ export function Ask({
   }, [grown, proposal, busy, docs, output, local, waiting.length, guide]);
   // Smith's face says what is going on: hammering while he works or the app is made, then
   // how the last request went, and waiting while nothing is asked.
+  const left = useMinutesLeft(beta?.until);
   const mood: Mood = guide
     ? "pointing"
-    : busy || making
-      ? "working"
-      : proposal?.kind === "question"
-        ? "confused"
-        : proposal?.kind === "change"
-          ? "pointing"
-          : output
-            ? output.startsWith("Done: ")
-              ? "happy"
-              : "sad"
-            : docs || local
-              ? "pointing"
-              : "waiting";
+    : left !== undefined && left <= 15 && !busy && !proposal
+      ? left <= 0
+        ? "sad"
+        : "impatient"
+      : busy || making
+        ? "working"
+        : proposal?.kind === "question"
+          ? "confused"
+          : proposal?.kind === "change"
+            ? "pointing"
+            : output
+              ? output.startsWith("Done: ")
+                ? "happy"
+                : "sad"
+              : docs || local
+                ? "pointing"
+                : "waiting";
   const send = () => {
     if (!request.trim()) return;
     if (making)
@@ -268,8 +276,18 @@ export function Ask({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {beta && left !== undefined && left <= 15 && (
+        // The sandbox's time, where it stays in view however the thread scrolls.
+        <p className="flex shrink-0 items-center gap-2 border-b border-line bg-subtle px-4 py-1.5 text-xs">
+          <span className="flex-1">
+            {left > 0 ? `Sandbox: ${left} min left` : "The sandbox has ended"}
+          </span>
+          {beta.invite && <InviteChip href={beta.invite} />}
+        </p>
+      )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {ready && !making && <Greeting ready={ready} />}
+        {beta && !making && <BetaLines beta={beta} left={left} />}
         {trace && <Thread trace={trace} said={said} words={words} />}
         {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
         {waiting.length > 0 && (
@@ -513,8 +531,78 @@ function Greeting({ ready }: { ready: Ready }) {
   return (
     <div className={cx(SMITHS, "space-y-1")}>
       <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
-      <p className="text-muted">Perhaps you want to…</p>
     </div>
+  );
+}
+
+/** The hosted beta's facts (smith-first.md §8). */
+export interface Beta {
+  until?: string;
+  invite?: string;
+  guide?: string;
+}
+
+/** Whole minutes until `until`, counted again every half minute; none without it. */
+function useMinutesLeft(until: string | undefined): number | undefined {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!until) return;
+    // Counted from now, not from when the panel opened: the beta file may come later.
+    setNow(Date.now());
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, [until]);
+  if (!until || Number.isNaN(Date.parse(until))) return undefined;
+  return Math.max(0, Math.ceil((Date.parse(until) - now) / 60_000));
+}
+
+/** "Ask for an invite": the invite page, the email filled in by the service where it knows it. */
+function InviteChip({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+    >
+      Ask for an invite
+    </a>
+  );
+}
+
+/**
+ * The beta in Smith's words: what it is and the tester guide; in a sandbox how long it lasts and
+ * how to keep the app, again at fifteen minutes left, and at its end.
+ */
+function BetaLines({ beta, left }: { beta: Beta; left: number | undefined }) {
+  const guide = beta.guide && (
+    <a href={beta.guide} target="_blank" rel="noreferrer" className="text-accent underline">
+      the tester guide
+    </a>
+  );
+  return (
+    <>
+      <div className={cx(SMITHS, "space-y-2")} data-beta="intro">
+        <p>
+          Smithable is in a private beta.{" "}
+          {guide ? <>Everything a tester needs is in {guide}.</> : null}
+          {beta.until && left !== undefined
+            ? ` This is a sandbox, open until ${new Date(beta.until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}: ask for an invite to keep what you make.`
+            : ""}
+        </p>
+        {left !== undefined && beta.invite && <InviteChip href={beta.invite} />}
+      </div>
+      {left !== undefined && left <= 15 && left > 0 && (
+        <p className={SMITHS} data-beta="soon">
+          {left} minutes of the sandbox are left. Ask for an invite to keep going with this app.
+        </p>
+      )}
+      {left === 0 && (
+        <p className={SMITHS} data-beta="ended">
+          The sandbox has ended. I kept your description; ask for an invite and start from it.
+        </p>
+      )}
+    </>
   );
 }
 

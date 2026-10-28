@@ -841,6 +841,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // wording rules (§5), the answering loop and the panel.
         files: [
           "src/kit/ask.ts",
+          "src/kit/asked.ts",
           "src/kit/assistant.server.ts",
           "src/kit/grounded.ts",
           "src/kit/Inspector.tsx",

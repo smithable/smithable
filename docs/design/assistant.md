@@ -66,6 +66,8 @@ Actions: markShipped (Order, when confirmed), cancel (Order, when draft or confi
 
 It lists only what the caller's role may reach. A model's `description` and `intent`, a field's label and help text, and an action's rules are in `describe`, fetched when needed and not sent every time.
 
+A choice field's `description`, when it is short (120 characters at most), follows its values in the line (`status (operational | degraded | down; down means unreachable; a degraded component is not down)`), so the model reads the app's words for the values before it filters on one; a longer one stays in `describe` (Fable 79). Under each read's result the panel says what was asked, in the app's words ("Components where status is down · 0 of 4"), with how the records split by the field when a filter on a choice found none, counted by the app; a row's title opens its record (Fable 78).
+
 What this costs, for the same CRM:
 
 | | Today | Proposed |
