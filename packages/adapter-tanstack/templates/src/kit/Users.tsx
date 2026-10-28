@@ -331,9 +331,7 @@ export function Users({
                   </TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{roleControl(u)}</TableCell>
-                  <TableCell>
-                    {status(u)}
-                  </TableCell>
+                  <TableCell>{status(u)}</TableCell>
                   <TableCell className="text-right">{removeButton(u)}</TableCell>
                 </TableRow>
               ))}

@@ -1,5 +1,6 @@
 // Smithable app kit: the spreadsheet functions used by the formulas in src/generated/*.formulas.ts.
 // Blank values behave like blank spreadsheet cells: 0 in arithmetic, "" in text.
+import { now } from "./now";
 
 type Value = unknown;
 
@@ -57,12 +58,12 @@ function ROUND(value: number, digits = 0): number {
 }
 
 function TODAY(): string {
-  return new Date().toISOString().slice(0, 10);
+  return now().toISOString().slice(0, 10);
 }
 
 /** The current date and time, e.g. for "placed at" when a record is created. */
 function NOW(): string {
-  return new Date().toISOString();
+  return now().toISOString();
 }
 
 function DATEADD(date: string, amount: number, unit: "day" | "month" | "year"): string {

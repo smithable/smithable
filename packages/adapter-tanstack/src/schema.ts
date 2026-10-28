@@ -481,7 +481,8 @@ function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
 
 export function seedModule(
   ir: SpecIR,
-  options: Pick<GenerateOptions, "samples" | "people"> & Partial<Pick<GenerateOptions, "auth">> = {},
+  options: Pick<GenerateOptions, "samples" | "people"> &
+    Partial<Pick<GenerateOptions, "auth">> = {},
 ): string {
   // A record that must refer to a user cannot be invented, nor can records that need it; nor
   // a person's place (a model with a capacity): every place stays free. Nor bookings of someone's

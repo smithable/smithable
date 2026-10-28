@@ -36,6 +36,7 @@ import {
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
+import { peopleModule, samplePeople } from "./dev-door.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
@@ -50,7 +51,6 @@ import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
-import { peopleModule, samplePeople } from "./dev-door.js";
 import {
   dataKey,
   type GenContext,
