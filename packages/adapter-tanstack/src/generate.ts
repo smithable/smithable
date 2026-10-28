@@ -36,7 +36,7 @@ import {
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
-import { peopleModule, samplePeople } from "./dev-door.js";
+import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
@@ -967,6 +967,17 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ? [custom(`src/custom/incoming/${kebab(incoming.name)}.ts`, incomingStub(incoming))]
           : []),
       ]),
+  },
+  {
+    key: "door",
+    // The development door the host makes sample users act through (docs/design/sample-users.md §4).
+    files: ({ ir, t, auth, options }) => [
+      generated(
+        "src/generated/dev-door.server.ts",
+        doorModule(ir, auth, t, hasSignIn(auth) ? samplePeople(options.people) : []),
+      ),
+      ...Object.entries(doorRoutes(ir, auth)).map(([path, source]) => generated(path, source)),
+    ],
   },
   {
     key: "timers",
