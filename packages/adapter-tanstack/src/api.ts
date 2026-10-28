@@ -1309,7 +1309,11 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
       const issues = (error as { issues?: { path: unknown[]; message: string }[] }).issues ?? [];
       throw new BadInput(\`\${onRows.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
     }
-    card = { title: \`\${onRows.label}: \${ids.length} \${onRows.plural}\`, changes: [] };
+    // What else it is given, said on the card beside how many rows.
+    card = {
+      title: \`\${onRows.label}: \${ids.length} \${onRows.plural}\`,
+      changes: Object.entries((args.input ?? {}) as Record<string, unknown>).map(([k, v]) => ({ label: k, to: cardValue(v) })),
+    };
   } else if (tool === "run") {
     const run = Object.hasOwn(RUNS, String(args.action)) ? RUNS[String(args.action)] : undefined;
     if (!run) throw new NotFound(\`There is no action "\${String(args.action)}".\`);

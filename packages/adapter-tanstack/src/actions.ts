@@ -221,7 +221,7 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
   const asksMore = Boolean(rows && action.input.length > 1);
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 ${rows ? "" : runImports}import { w } from "#/kit/words";
-import { ${!rows && records.length ? "AccessDenied, " : ""}${rows ? "" : "check, "}type Rule${rows ? "" : ", type Viewer"} } from "#/kit/access";
+import { ${!rows && records.length ? "AccessDenied, " : ""}check, type Rule${rows ? "" : ", type Viewer"} } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
@@ -249,7 +249,8 @@ export const ${a.asks} = ${a.input}.omit({ ${rows.field}: true });
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${a.input})
   .handler(async ({ data }) => {
-    const viewer = await currentViewer();${rows ? "" : `\n    check(${a.access}, viewer);`}
+    const viewer = await currentViewer();
+    check(${a.access}, viewer);
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
 ${rows ? `    return ${a.run}(viewer, data);` : body}
