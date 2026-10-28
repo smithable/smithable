@@ -1,0 +1,39 @@
+smithable: 0.1
+app:
+  name: Swap Shelf
+  description: Colleagues offer things they no longer need and others claim them.
+models:
+  Item:
+    fields:
+      title: string!
+      description: text
+      condition: likeNew | good | worn
+      status: available | claimed | gone
+      claimedBy: User
+actions:
+  claim:
+    on: Item
+    when:
+      status: available
+    set:
+      status: claimed
+      claimedBy: ME()
+  markGone:
+    on: Item
+    when:
+      status: claimed
+    set:
+      status: gone
+pages:
+  shelf:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [status, condition]
+    defaultFilter:
+      status: available
+  myItems:
+    crud: Item
+    mine: true
+  team:
+    users: manage

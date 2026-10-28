@@ -1,0 +1,32 @@
+smithable: 0.1
+app:
+  name: Birdwatching Club Sightings
+  description: "A shared log of the birds the club sees: species, place, date and who saw them."
+models:
+  Species:
+    fields:
+      name: string! unique
+      latinName: string
+  Sighting:
+    fields:
+      species: Species!
+      place: string!
+      seenOn: date! = TODAY()
+      observer:
+        type: User
+        by: app
+        default: ME()
+      count:
+        type: int!
+        min: 1
+        default: 1
+      notes: text
+pages:
+  sightings:
+    crud: Sighting
+    search: [place, notes]
+    filters: [species, seenOn]
+  species:
+    crud: Species
+  team:
+    users: manage

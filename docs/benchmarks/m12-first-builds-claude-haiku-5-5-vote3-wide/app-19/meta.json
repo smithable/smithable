@@ -1,0 +1,10 @@
+{
+  "description": "En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.",
+  "starter": "marketplace",
+  "wordStarter": "records",
+  "questions": [
+    "Vem ska kunna se annonserna utan att logga in?",
+    "Vem får lägga upp annonser?"
+  ],
+  "lang": "sv"
+}

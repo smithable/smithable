@@ -1,0 +1,11 @@
+{
+  "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+  "starter": "invoicing",
+  "wordStarter": "records",
+  "questions": [
+    "Vem ska använda appen?",
+    "Vad ska en offert eller faktura innehålla?",
+    "Ska kunder kunna se något utan att logga in?"
+  ],
+  "lang": "sv"
+}

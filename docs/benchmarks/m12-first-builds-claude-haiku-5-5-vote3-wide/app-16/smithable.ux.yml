@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  plots:
+    table:
+      sort: number
+tones:
+  Plot.status:
+    reserved: warning
+  WaitingEntry.status:
+    offered: success

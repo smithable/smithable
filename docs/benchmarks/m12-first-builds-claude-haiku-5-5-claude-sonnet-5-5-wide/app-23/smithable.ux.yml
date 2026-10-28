@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  check-ins:
+    table:
+      sort: -doneOn
+tones:
+  Habit.status:
+    active: success
+    paused: warning

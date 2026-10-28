@@ -1,0 +1,97 @@
+smithable: 0.1
+app:
+  name: Shutter Ledger
+  description: Invoices for a photographer's clients and shoots, with a view of what is still unpaid.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: text
+      shoots: Shoot[]
+      invoices: Invoice[]
+  Shoot:
+    fields:
+      title: string!
+      client: Client!
+      shotOn: date! = TODAY()
+      location: string
+      notes: text
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number:
+        type: string! unique
+        locked:
+          status: [sent, paid, overdue]
+      client:
+        type: Client!
+        locked:
+          status: [sent, paid, overdue]
+      shoot: Shoot
+      issuedOn:
+        type: date!
+        default: TODAY()
+        locked:
+          status: [sent, paid, overdue]
+      dueOn:
+        type: date
+        formula: DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+pages:
+  clients:
+    crud: Client
+  shoots:
+    crud: Shoot
+  invoices:
+    crud: Invoice
+    filters: [client, status]
+    actions: [markSent, markPaid, markOverdue]
+  overview:
+    dashboard:
+      unpaid:
+        sum: Invoice.total
+        where:
+          status: [sent, overdue]
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      latest:
+        list: Invoice
+        limit: 5
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the client.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The client paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.

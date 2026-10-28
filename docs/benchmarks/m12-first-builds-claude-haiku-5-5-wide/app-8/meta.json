@@ -1,0 +1,8 @@
+{
+  "description": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+  "starter": "marketplace",
+  "wordStarter": "booking",
+  "questions": [
+    "When a colleague claims an item, what should the app keep?"
+  ]
+}

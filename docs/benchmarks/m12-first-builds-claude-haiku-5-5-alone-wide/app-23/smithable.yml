@@ -1,0 +1,28 @@
+smithable: 0.1
+app:
+  name: Habit Tracker
+  description: Track the habits you want to keep, check them in each day and see your streaks.
+models:
+  Habit:
+    fields:
+      name: string!
+      frequency: daily | weekly
+      startedOn: date! = TODAY()
+      active: bool = true
+      checkIns: CheckIn[]
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date! = TODAY()
+      done: bool
+      note: text
+    unique: [{ fields: [habit, date], scope: owner }]
+pages:
+  habits:
+    crud: Habit
+    search: [name]
+    filters: [frequency, active]
+  checkIns:
+    route: /check-ins
+    crud: CheckIn
+    filters: [habit, done, date]

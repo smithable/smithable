@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Post in a minute, text: "Add a title, a few photos and a price, and your item is ready for the town to see." }, { title: Browse without an account, text: "Anyone can look through everything on offer, search it and filter by category or price." }, { title: Contact the seller, text: Found something you like? Send the seller a message and arrange the rest between you. }]
+    hero:
+      title: Your town's flea market, online
+      subtitle: Sell what you no longer need and find a bargain from a neighbor.
+      image:
+        src: images/hero.webp
+        alt: An outdoor market with stalls of vegetables and flowers
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A price tag
+  generated: true

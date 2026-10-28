@@ -1,0 +1,40 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: Keeps a piano teacher's pupils, their weekly lesson times and what each pupil practises.
+pages:
+  team:
+    users: manage
+  pupils:
+    crud: Pupil
+    search: [name]
+  lessons:
+    crud: Lesson
+    filters: [weekday]
+  practice:
+    crud: Assignment
+    filters: [status]
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      startedOn: date
+      notes: text
+      lessons: Lesson[]
+      assignments: Assignment[]
+  Lesson:
+    fields:
+      pupil: Pupil!
+      weekday: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      startTime: string!
+    namedBy: [pupil.name, weekday, startTime]
+  Assignment:
+    fields:
+      pupil: Pupil!
+      piece: string!
+      composer: string
+      assignedOn: date! = TODAY()
+      status: practising | learned
+      notes: text

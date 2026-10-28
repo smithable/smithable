@@ -1,0 +1,27 @@
+smithable: 0.1
+app:
+  name: Club Sightings
+  description: A shared log of the birds our birdwatching club has spotted, with species, place, date and who saw them.
+  timezone: Europe/Mariehamn
+models:
+  Sighting:
+    fields:
+      species: string!
+      place: string!
+      seenOn: date! = TODAY()
+      count:
+        type: int
+        min: 1
+        default: 1
+      observer:
+        type: User
+        by: app
+        default: ME()
+      notes: text
+pages:
+  sightings:
+    crud: Sighting
+    search: [species, place]
+    filters: [seenOn, observer]
+  team:
+    users: manage

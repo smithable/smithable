@@ -1,0 +1,100 @@
+smithable: 0.1
+app:
+  name: Korjaamo
+  description: Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: string
+      notes: text
+      vehicles: Vehicle[]
+  Vehicle:
+    fields:
+      plate: string! unique
+      make: string!
+      model: string
+      year:
+        type: int
+        min: 1900
+        max: 2100
+      vin: string
+      mileage: int
+      customer: Customer!
+      notes: text
+  WorkOrder:
+    fields:
+      title: string!
+      vehicle: Vehicle!
+      status: booked | inProgress | done | canceled
+      description: text
+      openedAt: datetime = NOW()
+      laborHours: decimal
+      laborRate: money
+      parts: money
+      total:
+        type: money
+        formula: laborHours * laborRate + parts
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      workOrder: WorkOrder!
+      status: draft | sent | paid
+      amount: money!
+      issuedOn: date = TODAY()
+      dueOn: date
+      paidOn: date
+pages:
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  vehicles:
+    crud: Vehicle
+    search: [plate, make, model]
+  work-orders:
+    crud: WorkOrder
+    filters: [status]
+    actions: [startWork, completeWork, cancelWork]
+  invoices:
+    crud: Invoice
+    filters: [status]
+    actions: [sendInvoice, markPaid]
+  team:
+    users: manage
+actions:
+  startWork:
+    on: WorkOrder
+    when:
+      status: booked
+    set:
+      status: inProgress
+  completeWork:
+    on: WorkOrder
+    when:
+      status: inProgress
+    set:
+      status: done
+  cancelWork:
+    on: WorkOrder
+    when:
+      status: [booked, inProgress]
+    set:
+      status: canceled
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+  markPaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid
+      paidOn: TODAY()

@@ -1,0 +1,12 @@
+smithableContent: 0.1
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

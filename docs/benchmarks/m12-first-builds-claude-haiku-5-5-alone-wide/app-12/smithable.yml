@@ -1,0 +1,113 @@
+smithable: 0.1
+app:
+  name: Municipal Service Status
+  description: Live status of the municipality's online services, so residents can check outages and planned work.
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+      maintenances: Maintenance[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+  Maintenance:
+    fields:
+      title: string!
+      component: Component
+      startsAt: datetime!
+      endsAt: datetime!
+      description: text
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is in place. We are watching the service before closing this incident.
+    intent: A fix is in place; the incident is watched before it is closed, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved and the service is working again.
+    intent: The incident is over, with an update saying so. The service's state stays what the team sets.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
+      footer:
+  incidents:
+    crud: Incident
+    filters: [status]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+  maintenance:
+    crud: Maintenance
+  overview:
+    dashboard:
+      openNow:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
+  team:
+    users: manage

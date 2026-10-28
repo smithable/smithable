@@ -1,0 +1,16 @@
+smithableContent: 0.1
+models:
+  Artifact:
+    label: Object
+    pluralLabel: Objects
+pages:
+  home:
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Rows of bookshelves and reading tables in a quiet library
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: Joogaaja, joka varaa tunteja.
+    pages: [my-bookings]
+    create: [Booking]
+assistant:
+  for: signed-in
+defaultRole: member
+public:
+  pages: [home, schedule, privacy]
+  read: [ClassType, Instructor, Session]
+admins: [johan@smithable.ai]

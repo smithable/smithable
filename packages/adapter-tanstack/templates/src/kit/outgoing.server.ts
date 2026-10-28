@@ -78,15 +78,43 @@ function base(): string {
   return process.env.BETTER_AUTH_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : "");
 }
 
+/** A record page's full address, for the link in a mail and the `{link}` placeholder; nothing without a base. */
+export function linkTo(path: string | undefined, at = base()): string {
+  return path && at ? `${at.replace(/\/$/, "")}${path}` : "";
+}
+
 /** The mail's text: the content file's words, the record's fields, a link to it. */
 export function mailText(happening: Happening, at = base()): string {
+  const link = linkTo(happening.link, at);
   return [
     happening.text,
     happening.fields.map(([label, value]) => `${label}: ${value}`).join("\n"),
-    happening.link && at ? `${w.openIt}: ${at.replace(/\/$/, "")}${happening.link}` : undefined,
+    link ? `${w.openIt}: ${link}` : undefined,
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+/**
+ * The fields a mail lists under its text (outgoing-templates.md §2): the entry's `show` in its
+ * order, none, or all of the record page's; with `previous`, a listed field with another value
+ * before the change says what it was.
+ */
+export function shownFields(
+  labels: [string, string][],
+  values: Record<string, string>,
+  before: Record<string, string> | undefined,
+  show?: string[] | "none",
+  previous?: boolean,
+): [string, string][] {
+  if (show === "none") return [];
+  const names = show ?? labels.map(([name]) => name);
+  return names.map((name) => {
+    const now = values[name] ?? "";
+    const was = before?.[name];
+    const label = labels.find(([n]) => n === name)?.[1] ?? name;
+    return [label, previous && was !== undefined && was !== now ? `${now} (${w.was} ${was})` : now];
+  });
 }
 
 /**

@@ -1,0 +1,65 @@
+smithable: 0.1
+app:
+  name: Pieni autokorjaamo
+  description: Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa pienelle autokorjaamolle.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+      cars: Car[]
+  Car:
+    fields:
+      registration: string! unique
+      make: string
+      model: string
+      year: int
+      mileage:
+        type: int
+        min: 0
+      customer: Customer!
+  Job:
+    fields:
+      car: Car!
+      description: text!
+      status: planned | inProgress | done
+      price: money
+      startedAt: date
+      invoice: Invoice
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      status: draft | sent | paid
+      total: money!
+      dueDate: date
+pages:
+  asiakkaat:
+    crud: Customer
+  autot:
+    crud: Car
+  huoltotyot:
+    crud: Job
+    actions: [finishJob]
+  laskut:
+    crud: Invoice
+    actions: [markPaid]
+  team:
+    users: manage
+actions:
+  finishJob:
+    on: Job
+    when:
+      status: [planned, inProgress]
+    set:
+      status: done
+  markPaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid

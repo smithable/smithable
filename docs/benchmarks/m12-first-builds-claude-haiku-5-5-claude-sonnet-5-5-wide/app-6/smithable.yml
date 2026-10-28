@@ -1,0 +1,78 @@
+smithable: 0.1
+app:
+  name: Tidy Books
+  description: Monthly invoicing for a small cleaning company, with its household clients and invoices in one shared place.
+  currency: EUR
+models:
+  Client:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      address: text
+      invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date!
+      status: draft | sent | paid | overdue
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)
+pages:
+  clients:
+    crud: Client
+  invoice-lines:
+    crud: InvoiceLine
+  invoices:
+    crud: Invoice
+    actions: [markSent, markPaid, markOverdue]
+    filters: [client, status]
+  team:
+    users: manage
+actions:
+  markSent:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The invoice went to the household.
+  markPaid:
+    on: Invoice
+    when:
+      status: [sent, overdue]
+    set:
+      status: paid
+    intent: The household paid the invoice.
+  markOverdue:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: overdue
+    intent: The invoice is late.
+timers:
+  overdueCheck:
+    on: Invoice
+    at: dueOn
+    where:
+      status: sent
+    run: markOverdue
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email

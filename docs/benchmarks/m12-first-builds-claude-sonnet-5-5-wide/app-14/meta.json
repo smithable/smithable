@@ -1,0 +1,10 @@
+{
+  "description": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+  "starter": "records",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who will use this app?",
+    "What should guests be able to see without signing in?",
+    "What do you want to keep for each guest?"
+  ]
+}

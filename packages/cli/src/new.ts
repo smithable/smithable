@@ -215,7 +215,19 @@ export async function create(
     const draft =
       process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
-        : await draftProjectByOperations({ description, providers, starter: { name, files } });
+        : await draftProjectByOperations({
+            description,
+            providers,
+            starter: { name, files },
+            // The bench's harness switches (backlog Experiments 7); unset, the draft is made as always.
+            ...(/^\d+$/.test(process.env.SMITHABLE_REPAIRS ?? "")
+              ? { repairs: Number(process.env.SMITHABLE_REPAIRS) }
+              : {}),
+            ...(process.env.SMITHABLE_HARNESS === "critique" ||
+            process.env.SMITHABLE_HARNESS === "vote3"
+              ? { harness: process.env.SMITHABLE_HARNESS }
+              : {}),
+          });
     io.out(`${usageLine(draft.usage)}\n`);
     if (draft.kind === "failed") {
       io.err(

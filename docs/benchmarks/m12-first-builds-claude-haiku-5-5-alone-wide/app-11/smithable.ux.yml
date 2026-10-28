@@ -1,0 +1,19 @@
+smithableUx: 0.1
+theme:
+  preset: corporate
+pages:
+  incidents:
+    record:
+      subtitle: component.name
+      detail: [status]
+    table:
+      sort: -startedAt
+tones:
+  Incident.status:
+    investigating: danger
+    monitoring: warning
+    resolved: success
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger

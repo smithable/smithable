@@ -1,0 +1,8 @@
+{
+  "description": "A backend for my habit app: habits, daily check-ins and streaks.",
+  "starter": "records",
+  "wordStarter": "barbers",
+  "questions": [
+    "Who uses the app?"
+  ]
+}

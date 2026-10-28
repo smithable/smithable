@@ -1,0 +1,18 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin:
+    description: The salon. Keeps the services, the stylists and their time off; confirms appointments.
+  member:
+    description: A customer who books appointments.
+    pages: [appointments]
+    create: [Appointment]
+assistant:
+  for: signed-in
+public:
+  pages: [home, privacy]
+  read: [Service, Stylist]
+defaultRole: member
+admins: [johan@smithable.ai]

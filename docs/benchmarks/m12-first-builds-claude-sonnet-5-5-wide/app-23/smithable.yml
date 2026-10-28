@@ -1,0 +1,49 @@
+smithable: 0.1
+app:
+  name: Habit Tracker Backend
+  description: Keeps habits, daily check-ins and streaks for a habit app.
+models:
+  Habit:
+    fields:
+      name: string!
+      description: text
+      frequency: daily | weekdays | weekly
+      active: bool = true
+      startedOn: date! = TODAY()
+      lastCheckIn: date
+      currentStreak:
+        type: int!
+        min: 0
+        default: 0
+      longestStreak:
+        type: int!
+        min: 0
+        default: 0
+      checkIns: CheckIn[]
+  CheckIn:
+    fields:
+      habit: Habit!
+      date: date! = TODAY()
+      completed: bool = true
+      note: text
+    unique: [{ fields: [habit, date], scope: owner }]
+pages:
+  habits:
+    crud: Habit
+    search: [name, description]
+    filters: [frequency, active]
+    actions: [checkInHabit]
+  check-ins:
+    crud: CheckIn
+    filters: [habit, date, completed]
+actions:
+  checkInHabit:
+    on: Habit
+    when:
+      active: true
+    set:
+      lastCheckIn: TODAY()
+    add:
+      CheckIn:
+        date: TODAY()
+        completed: true

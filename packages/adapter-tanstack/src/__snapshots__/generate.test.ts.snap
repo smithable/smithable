@@ -9538,7 +9538,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -11890,8 +11890,8 @@ import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import type { Viewer } from "#/kit/access";
 import { formatValue } from "#/kit/format";
-import { counts } from "#/kit/outgoing";
-import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+import { blank, counts, fillText } from "#/kit/outgoing";
+import { type Happening, linkTo, queueMail, type Recipient, shownFields } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -11911,18 +11911,37 @@ function people(tx: Tx, where: SQL): Recipient[] {
   return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
 }
 
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
-  "Appointment": (tx, r) => ({
-    subject: \`Appointment: \${String(r.name ?? r.id)}\`,
-    fields: [
-      ["Service", String(one(tx, schema.services, schema.services.id, schema.services.name, r.serviceId) ?? "—")],
-      ["Barber", String(one(tx, schema.barbers, schema.barbers.id, schema.barbers.name, r.barberId) ?? "—")],
-      ["Starts at", formatValue({ name: "startsAt", label: "Starts at", kind: "datetime", required: false }, r.startsAt, app)],
-      ["Name", formatValue({ name: "name", label: "Name", kind: "string", required: false }, r.name, app)],
-      ["Phone", formatValue({ name: "phone", label: "Phone", kind: "phone", required: false }, r.phone, app)],
-      ["Note", formatValue({ name: "note", label: "Note", kind: "text", required: false }, r.note, app)],
-      ["Status", formatValue({
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
+  "Appointment": (tx, r) => {
+    const title = String(String(r.name ?? r.id));
+    return {
+      subject: \`Appointment: \${title}\`,
+      title,
+      labels: [
+  ["service", "Service"],
+  ["barber", "Barber"],
+  ["startsAt", "Starts at"],
+  ["name", "Name"],
+  ["phone", "Phone"],
+  ["note", "Note"],
+  ["status", "Status"],
+],
+      values: {
+        "service": String(one(tx, schema.services, schema.services.id, schema.services.name, r.serviceId) ?? "—"),
+        "barber": String(one(tx, schema.barbers, schema.barbers.id, schema.barbers.name, r.barberId) ?? "—"),
+        "startsAt": formatValue({ name: "startsAt", label: "Starts at", kind: "datetime", required: false }, r.startsAt, app),
+        "name": formatValue({ name: "name", label: "Name", kind: "string", required: false }, r.name, app),
+        "phone": formatValue({ name: "phone", label: "Phone", kind: "phone", required: false }, r.phone, app),
+        "note": formatValue({ name: "note", label: "Note", kind: "text", required: false }, r.note, app),
+        "status": formatValue({
   name: "status",
   label: "Status",
   kind: "choice",
@@ -11932,10 +11951,11 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     { value: "confirmed", label: "Confirmed" },
     { value: "cancelled", label: "Cancelled" },
   ],
-}, r.status, app)],
-    ],
-    link: \`/appointments/\${r.id}\`,
-  }),
+}, r.status, app),
+      },
+      link: \`/appointments/\${r.id}\`,
+    };
+  },
 };
 
 
@@ -11949,6 +11969,14 @@ const ENTRIES: {
   fields?: string[];
   subject?: string;
   text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
@@ -11980,10 +12008,16 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );
@@ -15093,7 +15127,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/hooks.ts": "199beb1e generated",
-  "src/generated/outgoing.server.ts": "6e790541 generated",
+  "src/generated/outgoing.server.ts": "fac1c733 generated",
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
@@ -15143,8 +15177,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "6838ea7e kit",
-  "src/kit/outgoing.ts": "778b9552 kit",
+  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -15156,7 +15190,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -20218,10 +20252,10 @@ import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import type { Viewer } from "#/kit/access";
 import { formatValue } from "#/kit/format";
-import { counts } from "#/kit/outgoing";
+import { blank, counts, fillText } from "#/kit/outgoing";
 import { sessionName } from "./session.name";
 import { bookingName } from "./booking.name";
-import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+import { type Happening, linkTo, queueMail, type Recipient, shownFields } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert" | "query">;
 type Row = Record<string, unknown>;
@@ -20255,26 +20289,48 @@ function people(tx: Tx, where: SQL): Recipient[] {
   return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
 }
 
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
-  "Booking": (tx, r) => ({
-    subject: \`Booking: \${bookingNamed(tx, r.id as number)}\`,
-    fields: [
-      ["Session", sessionNamed(tx, r.sessionId as number | null)],
-      ["Attendee", String(one(tx, schema.user, schema.user.id, schema.user.name, r.attendeeId) ?? "—")],
-    ],
-    link: \`/my-bookings/\${r.id}\`,
-  }),
-  "Session": (tx, r) => ({
-    subject: \`Session: \${sessionNamed(tx, r.id as number)}\`,
-    fields: [
-      ["Class type", String(one(tx, schema.classTypes, schema.classTypes.id, schema.classTypes.name, r.classTypeId) ?? "—")],
-      ["Instructor", String(one(tx, schema.instructors, schema.instructors.id, schema.instructors.name, r.instructorId) ?? "—")],
-      ["Starts at", formatValue({ name: "startsAt", label: "Starts at", kind: "datetime", required: false }, r.startsAt, app)],
-      ["Capacity", formatValue({ name: "capacity", label: "Capacity", kind: "int", required: false }, r.capacity, app)],
-    ],
-    link: \`/sessions/\${r.id}\`,
-  }),
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
+  "Booking": (tx, r) => {
+    const title = String(bookingNamed(tx, r.id as number));
+    return {
+      subject: \`Booking: \${title}\`,
+      title,
+      labels: [["session", "Session"], ["attendee", "Attendee"]],
+      values: {
+        "session": sessionNamed(tx, r.sessionId as number | null),
+        "attendee": String(one(tx, schema.user, schema.user.id, schema.user.name, r.attendeeId) ?? "—"),
+      },
+      link: \`/my-bookings/\${r.id}\`,
+    };
+  },
+  "Session": (tx, r) => {
+    const title = String(sessionNamed(tx, r.id as number));
+    return {
+      subject: \`Session: \${title}\`,
+      title,
+      labels: [
+  ["classType", "Class type"],
+  ["instructor", "Instructor"],
+  ["startsAt", "Starts at"],
+  ["capacity", "Capacity"],
+],
+      values: {
+        "classType": String(one(tx, schema.classTypes, schema.classTypes.id, schema.classTypes.name, r.classTypeId) ?? "—"),
+        "instructor": String(one(tx, schema.instructors, schema.instructors.id, schema.instructors.name, r.instructorId) ?? "—"),
+        "startsAt": formatValue({ name: "startsAt", label: "Starts at", kind: "datetime", required: false }, r.startsAt, app),
+        "capacity": formatValue({ name: "capacity", label: "Capacity", kind: "int", required: false }, r.capacity, app),
+      },
+      link: \`/sessions/\${r.id}\`,
+    };
+  },
 };
 
 
@@ -20288,6 +20344,14 @@ const ENTRIES: {
   fields?: string[];
   subject?: string;
   text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
@@ -20319,6 +20383,8 @@ const ENTRIES: {
     model: "Session",
     when: "changed",
     fields: ["startsAt"],
+    show: ["classType","startsAt","instructor"],
+    previous: true,
     to: (tx, r) => ((ids) => (ids.length ? people(tx, inArray(schema.user.id, ids)) : []))(tx.select({ v: schema.bookings.attendeeId }).from(schema.bookings).where(eq(schema.bookings.sessionId, r.id as number)).all().map((x) => x.v).filter((v) => v != null).map(String)),
   },
 ];
@@ -20332,10 +20398,16 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );
@@ -26766,7 +26838,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "e1a37127 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "3541a8ea generated",
+  "src/generated/outgoing.server.ts": "f981b018 generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "ce740b8c generated",
@@ -26831,8 +26903,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "6838ea7e kit",
-  "src/kit/outgoing.ts": "778b9552 kit",
+  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -26845,7 +26917,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -32762,7 +32834,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -37782,8 +37854,8 @@ import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import type { Viewer } from "#/kit/access";
 import { formatValue } from "#/kit/format";
-import { counts } from "#/kit/outgoing";
-import { type Happening, queueMail, type Recipient } from "#/kit/outgoing.server";
+import { blank, counts, fillText } from "#/kit/outgoing";
+import { type Happening, linkTo, queueMail, type Recipient, shownFields } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -37798,16 +37870,33 @@ function one(tx: Tx, table: SQLiteTable, id: SQLiteColumn, column: SQLiteColumn,
   return tx.select({ v: column }).from(table).where(eq(id, value)).get()?.v;
 }
 
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
-  "Invoice": (tx, r) => ({
-    subject: \`Invoice: \${String(r.number ?? r.id)}\`,
-    fields: [
-      ["Number", formatValue({ name: "number", label: "Number", kind: "string", required: false }, r.number, app)],
-      ["Client", String(one(tx, schema.clients, schema.clients.id, schema.clients.name, r.clientId) ?? "—")],
-      ["Issued on", formatValue({ name: "issuedOn", label: "Issued on", kind: "date", required: false }, r.issuedOn, app)],
-      ["Due on", formatValue({ name: "dueOn", label: "Due on", kind: "date", required: false }, r.dueOn, app)],
-      ["Status", formatValue({
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
+  "Invoice": (tx, r) => {
+    const title = String(String(r.number ?? r.id));
+    return {
+      subject: \`Invoice: \${title}\`,
+      title,
+      labels: [
+  ["number", "Number"],
+  ["client", "Client"],
+  ["issuedOn", "Issued on"],
+  ["dueOn", "Due on"],
+  ["status", "Status"],
+],
+      values: {
+        "number": formatValue({ name: "number", label: "Number", kind: "string", required: false }, r.number, app),
+        "client": String(one(tx, schema.clients, schema.clients.id, schema.clients.name, r.clientId) ?? "—"),
+        "issuedOn": formatValue({ name: "issuedOn", label: "Issued on", kind: "date", required: false }, r.issuedOn, app),
+        "dueOn": formatValue({ name: "dueOn", label: "Due on", kind: "date", required: false }, r.dueOn, app),
+        "status": formatValue({
   name: "status",
   label: "Status",
   kind: "choice",
@@ -37818,10 +37907,11 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     { value: "paid", label: "Paid" },
     { value: "overdue", label: "Overdue" },
   ],
-}, r.status, app)],
-    ],
-    link: \`/invoices/\${r.id}\`,
-  }),
+}, r.status, app),
+      },
+      link: \`/invoices/\${r.id}\`,
+    };
+  },
 };
 
 
@@ -37835,6 +37925,14 @@ const ENTRIES: {
   fields?: string[];
   subject?: string;
   text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
@@ -37854,10 +37952,16 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );
@@ -40313,7 +40417,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "2d2c76c1 generated",
   "src/generated/invoice.ts": "b569c412 generated",
-  "src/generated/outgoing.server.ts": "6e8755af generated",
+  "src/generated/outgoing.server.ts": "11bc8997 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -40364,8 +40468,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "6838ea7e kit",
-  "src/kit/outgoing.ts": "778b9552 kit",
+  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -40378,7 +40482,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -43884,8 +43988,8 @@ import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import type { Viewer } from "#/kit/access";
 import { formatValue } from "#/kit/format";
-import { counts } from "#/kit/outgoing";
-import { type Happening, queueCall, queueMail, type Recipient } from "#/kit/outgoing.server";
+import { blank, changedBefore, counts, fillText, picked } from "#/kit/outgoing";
+import { type Happening, linkTo, queueCall, queueMail, type Recipient, shownFields } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -43899,18 +44003,38 @@ function people(tx: Tx, where: SQL): Recipient[] {
   return tx.select({ id: schema.user.id, email: schema.user.email }).from(schema.user).where(where).all();
 }
 
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
-  "Order": (_tx, r) => ({
-    subject: \`Order: \${String(r.name ?? r.id)}\`,
-    fields: [
-      ["Number", formatValue({ name: "number", label: "Number", kind: "int", required: false }, r.number, app)],
-      ["Name", formatValue({ name: "name", label: "Name", kind: "string", required: false }, r.name, app)],
-      ["Phone", formatValue({ name: "phone", label: "Phone", kind: "phone", required: false }, r.phone, app)],
-      ["Email", formatValue({ name: "email", label: "Email", kind: "email", required: false }, r.email, app)],
-      ["Wanted", formatValue({ name: "wanted", label: "Wanted", kind: "datetime", required: false }, r.wanted, app)],
-      ["Note", formatValue({ name: "note", label: "Note", kind: "text", required: false }, r.note, app)],
-      ["Status", formatValue({
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
+  "Order": (_tx, r) => {
+    const title = String(String(r.name ?? r.id));
+    return {
+      subject: \`Order: \${title}\`,
+      title,
+      labels: [
+  ["number", "Number"],
+  ["name", "Name"],
+  ["phone", "Phone"],
+  ["email", "Email"],
+  ["wanted", "Wanted"],
+  ["note", "Note"],
+  ["status", "Status"],
+  ["reason", "Reason"],
+],
+      values: {
+        "number": formatValue({ name: "number", label: "Number", kind: "int", required: false }, r.number, app),
+        "name": formatValue({ name: "name", label: "Name", kind: "string", required: false }, r.name, app),
+        "phone": formatValue({ name: "phone", label: "Phone", kind: "phone", required: false }, r.phone, app),
+        "email": formatValue({ name: "email", label: "Email", kind: "email", required: false }, r.email, app),
+        "wanted": formatValue({ name: "wanted", label: "Wanted", kind: "datetime", required: false }, r.wanted, app),
+        "note": formatValue({ name: "note", label: "Note", kind: "text", required: false }, r.note, app),
+        "status": formatValue({
   name: "status",
   label: "Status",
   kind: "choice",
@@ -43922,11 +44046,12 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     { value: "collected", label: "Collected" },
     { value: "declined", label: "Declined" },
   ],
-}, r.status, app)],
-      ["Reason", formatValue({ name: "reason", label: "Reason", kind: "text", required: false }, r.reason, app)],
-    ],
-    link: \`/orders/\${r.id}\`,
-  }),
+}, r.status, app),
+        "reason": formatValue({ name: "reason", label: "Reason", kind: "text", required: false }, r.reason, app),
+      },
+      link: \`/orders/\${r.id}\`,
+    };
+  },
 };
 
 /** Each model's record as a call sends it: as the API gives it. */
@@ -43957,6 +44082,14 @@ const ENTRIES: {
   fields?: string[];
   subject?: string;
   text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
   /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */
   target?: string;
@@ -44002,16 +44135,22 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
           model,
           record: record.id as number,
           target: entry.target,
-          body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: sent }),
+          body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: picked(sent, entry.show), ...(entry.previous && before ? { before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show) } : {}) }),
         });
       continue;
     }
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );
@@ -47349,7 +47488,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "3bdf1e53 generated",
   "src/generated/order.ts": "4fdb55f6 generated",
-  "src/generated/outgoing.server.ts": "a20d6ecd generated",
+  "src/generated/outgoing.server.ts": "14522d6c generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
@@ -47398,8 +47537,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "6838ea7e kit",
-  "src/kit/outgoing.ts": "778b9552 kit",
+  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -47411,7 +47550,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -51849,7 +51988,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -55028,7 +55167,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -65800,7 +65939,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -68908,9 +69047,9 @@ import type { db } from "#/db";
 import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import type { Viewer } from "#/kit/access";
-import { formatValue } from "#/kit/format";
-import { counts } from "#/kit/outgoing";
-import { type Happening, queueMail, type Recipient, type Thread } from "#/kit/outgoing.server";
+import { formatValue, titleOf } from "#/kit/format";
+import { blank, counts, fillText } from "#/kit/outgoing";
+import { type Happening, linkTo, queueMail, type Recipient, shownFields, type Thread } from "#/kit/outgoing.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -68963,19 +69102,37 @@ function thread(tx: Tx, model: string, record: number, replyTo: string | undefin
   };
 }
 
-/** Each model's record as a mail shows it: the subject, its fields, its page. */
-const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model" | "record">> = {
-  "SupportCase": (tx, r) => ({
-    subject: String(String(r.subject ?? r.id)),
-    fields: [
-      ["Subject", formatValue({ name: "subject", label: "Subject", kind: "string", required: false }, r.subject, app)],
-      ["Customer email", formatValue({
+/** A record as a mail shows it: its subject and title, each field's label and value by its name, its page. */
+type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+};
+
+/** Each model's record as a mail shows it. */
+const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
+  "SupportCase": (tx, r) => {
+    const title = String(String(r.subject ?? r.id));
+    return {
+      subject: String(String(r.subject ?? r.id)),
+      title,
+      labels: [
+  ["subject", "Subject"],
+  ["customerEmail", "Customer email"],
+  ["status", "Status"],
+  ["priority", "Priority"],
+  ["assignee", "Assignee"],
+  ["body", "Body"],
+],
+      values: {
+        "subject": formatValue({ name: "subject", label: "Subject", kind: "string", required: false }, r.subject, app),
+        "customerEmail": formatValue({
   name: "customerEmail",
   label: "Customer email",
   kind: "email",
   required: false,
-}, r.customerEmail, app)],
-      ["Status", formatValue({
+}, r.customerEmail, app),
+        "status": formatValue({
   name: "status",
   label: "Status",
   kind: "choice",
@@ -68986,32 +69143,44 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Omit<Happening, "entry" | "model
     { value: "closed", label: "Closed" },
     { value: "reopened", label: "Reopened" },
   ],
-}, r.status, app)],
-      ["Priority", formatValue({ name: "priority", label: "Priority", kind: "int", required: false }, r.priority, app)],
-      ["Assignee", String(one(tx, schema.user, schema.user.id, schema.user.name, r.assigneeId) ?? "—")],
-      ["Body", formatValue({ name: "body", label: "Body", kind: "text", required: false }, r.body, app)],
-    ],
-    link: \`/cases/\${r.id}\`,
-    thread: thread(tx, "SupportCase", r.id as number, process.env.INCOMING_SUPPORT_ADDRESS),
-  }),
-  "Message": (tx, r) => ({
-    subject: String(one(tx, schema.supportCases, schema.supportCases.id, schema.supportCases.subject, r.supportCaseId as number) ?? ""),
-    fields: [
-      ["Content", formatValue({ name: "content", label: "Content", kind: "text", required: false }, r.content, app)],
-      ["Sender", formatValue({
+}, r.status, app),
+        "priority": formatValue({ name: "priority", label: "Priority", kind: "int", required: false }, r.priority, app),
+        "assignee": String(one(tx, schema.user, schema.user.id, schema.user.name, r.assigneeId) ?? "—"),
+        "body": formatValue({ name: "body", label: "Body", kind: "text", required: false }, r.body, app),
+      },
+      link: \`/cases/\${r.id}\`,
+      thread: thread(tx, "SupportCase", r.id as number, process.env.INCOMING_SUPPORT_ADDRESS),
+    };
+  },
+  "Message": (tx, r) => {
+    const title = String(titleOf(r.content ?? r.id));
+    return {
+      subject: String(one(tx, schema.supportCases, schema.supportCases.id, schema.supportCases.subject, r.supportCaseId as number) ?? ""),
+      title,
+      labels: [
+  ["content", "Content"],
+  ["sender", "Sender"],
+  ["agent", "Agent"],
+  ["fromEmail", "From email"],
+  ["supportCase", "Support case"],
+],
+      values: {
+        "content": formatValue({ name: "content", label: "Content", kind: "text", required: false }, r.content, app),
+        "sender": formatValue({
   name: "sender",
   label: "Sender",
   kind: "choice",
   required: false,
   choices: [{ value: "agent", label: "Agent" }, { value: "customer", label: "Customer" }],
-}, r.sender, app)],
-      ["Agent", String(one(tx, schema.user, schema.user.id, schema.user.name, r.agentId) ?? "—")],
-      ["From email", formatValue({ name: "fromEmail", label: "From email", kind: "email", required: false }, r.fromEmail, app)],
-      ["Support case", String(one(tx, schema.supportCases, schema.supportCases.id, schema.supportCases.subject, r.supportCaseId) ?? "—")],
-    ],
-    letter: String(r.content ?? ""),
-    thread: thread(tx, "SupportCase", r.supportCaseId as number, process.env.INCOMING_SUPPORT_ADDRESS),
-  }),
+}, r.sender, app),
+        "agent": String(one(tx, schema.user, schema.user.id, schema.user.name, r.agentId) ?? "—"),
+        "fromEmail": formatValue({ name: "fromEmail", label: "From email", kind: "email", required: false }, r.fromEmail, app),
+        "supportCase": String(one(tx, schema.supportCases, schema.supportCases.id, schema.supportCases.subject, r.supportCaseId) ?? "—"),
+      },
+      letter: String(r.content ?? ""),
+      thread: thread(tx, "SupportCase", r.supportCaseId as number, process.env.INCOMING_SUPPORT_ADDRESS),
+    };
+  },
 };
 
 
@@ -69025,6 +69194,14 @@ const ENTRIES: {
   fields?: string[];
   subject?: string;
   text?: string;
+  /** The fields the mail lists and a call's record carries (outgoing-templates.md §2); none for the text alone. */
+  show?: string[] | "none";
+  /** For a change: what the listed fields were before, too. */
+  previous?: true;
+  /** The texts use {before.<field>}: the record before the change is read too. */
+  before?: true;
+  /** The texts' placeholders one reference away, read with the record. */
+  more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
 }[] = [
   {
@@ -69052,10 +69229,16 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    const { title, labels, values, ...rest } = shown;
+    const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
+    const more = entry.more?.(tx, record);
+    // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
+    const fill = (text: string, oneLine = false) =>
+      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     queueMail(
       tx,
       viewer,
-      { ...shown, ...(entry.subject ? { subject: entry.subject } : {}), ...(entry.text ? { text: entry.text } : {}), entry: entry.name, model, record: record.id as number },
+      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
       entry.to(tx, record),
       entry.when === "created",
     );
@@ -72173,7 +72356,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "00275f2b generated",
   "src/generated/message.ts": "f4cafefa generated",
-  "src/generated/outgoing.server.ts": "7981c349 generated",
+  "src/generated/outgoing.server.ts": "0dc0e782 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
@@ -72225,8 +72408,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/mail.ts": "db90c965 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "6838ea7e kit",
-  "src/kit/outgoing.ts": "778b9552 kit",
+  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "ffa20d54 kit",
@@ -72239,7 +72422,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2d1a8547 kit",
+  "src/kit/words/en.ts": "7a8f0103 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

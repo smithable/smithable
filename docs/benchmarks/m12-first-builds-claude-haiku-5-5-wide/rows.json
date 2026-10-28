@@ -1,0 +1,518 @@
+[
+  {
+    "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+    "starter": "invoicing",
+    "created": true,
+    "typecheck": true,
+    "tokens": 59538,
+    "tokensIn": 52062,
+    "tokensOut": 7476,
+    "cost": 0.0045,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 143,
+    "summary": "Lingo Ledger\n  Tracks a freelance translator's clients, the quotes sent to them and the payments received.\n\nPages\n  - Jobs (lists jobs; filter by client or status)\n  - Clients (lists clients; search by name or email)\n  - Payments (lists payments)\n  - Overview (a dashboard: quoted, received and latest)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email\n  - a phone\n  - notes\n  Each client lists its jobs.\n\nJobs\n  Jobs have:\n  - a client (a client, required)\n  - a title (required)\n  - a source language (required)\n  - a target language (required)\n  - a quoted (an amount, required)\n  - quoted on (a date, required, today by default)\n  - status (quoted, accepted or delivered, quoted by default)\n  Each job lists its payments.\n  The paid is calculated as the total amount of its payments.\n  The balance is calculated as the quoted minus the total amount of its payments.\n  A job is named after its title.\n\nPayments\n  Payments have:\n  - a job (a job, required)\n  - an amount (an amount, required)\n  - paid on (a date, required, today by default)\n  - a note\n\nAccept\n  For a job that is quoted; sets status to accepted.\n  The client accepted the quote.\n\nDeliver\n  For a job that is accepted; sets status to delivered.\n  The translation was delivered to the client.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 3,157 tokens (507 in, 2,650 out) · $0.0014\nPictures from the Smithable image library: logo.webp.\nGenerated 126 files (126 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-1. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-1\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Do quotes need to be kept as separate documents from invoices?",
+        "Do you need to record partial payments against an invoice?"
+      ]
+    }
+  },
+  {
+    "description": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
+    "starter": "crm",
+    "created": true,
+    "typecheck": true,
+    "tokens": 28437,
+    "tokensIn": 25774,
+    "tokensOut": 2663,
+    "cost": 0.0017,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 88,
+    "summary": "Agency Pipeline\n  Tracks the agency's leads, deals and who follows up with each lead, and when.\n\nPages\n  - Leads (lists leads; search by name or company; filter by status or source)\n  - Deals (lists deals; filter by stage or lead)\n  - Follow ups (lists follow ups; filter by assignee or done)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nLeads\n  Leads have:\n  - a name (required)\n  - a company\n  - an email\n  - a phone\n  - a source (referral, website, event or cold, referral by default)\n  - status (new, contacted, qualified or lost, new by default)\n  - notes\n  Each lead can have an account manager (a user).\n  Each lead lists its deals.\n  Each lead lists its follow ups.\n  The account manager owns the lead.\n\nDeals\n  Deals have:\n  - a title (required)\n  - a lead (a lead, required)\n  - a value (an amount)\n  - a stage (proposal, negotiation, won or lost, proposal by default)\n  - a close date\n\nFollow ups\n  Follow ups have:\n  - a lead (a lead, required)\n  - due at (a date and time, required)\n  - a note (required)\n  - done (yes or no)\n  Each follow up can have an assignee (a user).\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,802 tokens (474 in, 2,328 out) · $0.0012\nPictures from the Smithable image library: logo.webp.\nGenerated 124 files (124 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-2. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-2\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Should people outside the agency be able to submit a lead through a public form on your website?"
+      ]
+    }
+  },
+  {
+    "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+    "starter": "barbers",
+    "created": true,
+    "typecheck": true,
+    "tokens": 126118,
+    "tokensIn": 103616,
+    "tokensOut": 22502,
+    "cost": 0.0128,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 186,
+    "summary": "Corner Salon\n  Online booking for a hair salon, where customers pick a stylist and a free time themselves.\n\nPages\n  - Home (a landing page: hero, services, stylists and footer)\n  - Bookings (lists bookings; only for admins)\n  - Services (lists services; only for admins; visitors see services on the Home page)\n  - Stylists (lists stylists; only for admins; visitors see stylists on the Home page)\n  - Time off (lists time offs; only for admins)\n  - Schedule (a calendar of bookings by week or month; only for admins)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nServices\n  Services have:\n  - a name (required)\n  - minutes (a whole number, required, 30 by default)\n\nStylists\n  Stylists have:\n  - a name (required)\n  - a bio\n  Each stylist lists its time offs.\n  Stylists are booked by their time: Tue–Sat 09:00–18:00, a break 12:00–12:30, 10 minutes kept free after each booking, away during their time offs (by their fields from and until).\n\nTime offs\n  Time offs have:\n  - a stylist (a stylist, required)\n  - a date and time (from, required)\n  - a date and time (until, required)\n  - a note\n\nBookings\n  Bookings have:\n  - a service (a service, required)\n  - a stylist (a stylist, required)\n  - starts at (a date and time, required)\n  - a name (required)\n  - a phone\n  - a note\n  - status (booked or cancelled, booked by default, filled by the app)\n  A booking takes its stylist's time from its starts at for the number of minutes in its service's minutes while status is booked; whoever made it may cancel it until 12 hours before.\n\nCancel\n  For a booking that is booked; sets status to cancelled.\n  Cancel a booking.\n\nBooking made\n  When a booking is added: mails its owner.\n\nBooking received\n  When a booking is added: mails every admin.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - customer (Books appointments with a stylist): adds bookings; runs “Cancel”\n  New users get the customer role.\n  Open to anyone without signing in: the home page, the privacy page, reading services and reading stylists.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,076 tokens (449 in, 1,627 out) · $0.0009\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 136 files (136 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-3. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-3\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-KMclTb/app-3/smithable.yml:83:14  warning  Page \"schedule\" is a calendar, but the app has no time zone: records are placed in UTC.\n    hint: Set \"timezone\" under \"app\", e.g. \"Europe/Mariehamn\".\n/tmp/smithable-bench-m12-KMclTb/app-3/smithable.auth.yml:7:3  warning  customer can open no page: a role opens only the pages its \"pages\" lists.\n    hint: Add \"pages: all\" (or a list of pages) under roles.customer in smithable.auth.yml.\n/tmp/smithable-bench-m12-KMclTb/app-3/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Can someone see the services and free times without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+    "starter": "booking",
+    "created": true,
+    "typecheck": true,
+    "tokens": 56011,
+    "tokensIn": 52423,
+    "tokensOut": 3588,
+    "cost": 0.0026,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 86,
+    "summary": "Piano Lessons\n  A piano teacher's record of pupils, their weekly lesson times and the pieces each one practises.\n\nPages\n  - Pupils (lists pupils)\n  - Lessons (lists lessons; filter by day or pupil)\n  - Pieces (lists pieces; filter by status or pupil)\n\nPupils\n  Pupils have:\n  - a name (required)\n  - an email\n  - a phone\n  - notes\n  Each pupil lists its lessons.\n  Each pupil lists its pieces.\n\nLessons\n  Lessons have:\n  - a pupil (a pupil, required)\n  - a day (mon, tue, wed, thu, fri, sat or sun, mon by default)\n  - a time (required)\n  - minutes (a whole number, required, 30 by default)\n  A lesson is named after its pupil, its day and its time.\n\nPieces\n  Pieces have:\n  - a title (required)\n  - a composer\n  - status (to learn, practising or learned, to learn by default)\n  - a pupil (a pupil, required)\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,775 tokens (514 in, 2,261 out) · $0.0012\nPictures from the Smithable image library: logo.webp.\nGenerated 118 files (118 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-4. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-4\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "status",
+      "questions": []
+    }
+  },
+  {
+    "description": "Invoices for my photography work: clients, shoots and what is still unpaid.",
+    "starter": "invoicing",
+    "created": true,
+    "typecheck": true,
+    "tokens": 62523,
+    "tokensIn": 52871,
+    "tokensOut": 9652,
+    "cost": 0.0057,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 118,
+    "summary": "Shutter Ledger\n  Invoices for a photographer's clients and shoots, with a view of what is still unpaid.\n\nPages\n  - Clients (lists clients)\n  - Shoots (lists shoots)\n  - Invoices (lists invoices; filter by client or status; “Mark sent”; “Mark paid”; “Mark overdue”)\n  - Overview (a dashboard: unpaid, overdue and latest)\n\nClients\n  Clients have:\n  - a name (required)\n  - an email\n  - a phone\n  - address\n  Each client lists its shoots.\n  Each client lists its invoices.\n\nShoots\n  Shoots have:\n  - a title (required)\n  - a client (a client, required)\n  - shot on (a date, required, today by default)\n  - a location\n  - notes\n\nInvoice lines\n  Invoice lines have:\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  - an invoice (an invoice, required)\n  The amount is calculated as the quantity times the unit price.\n\nInvoices\n  Invoices have:\n  - a number (required, unique, fixed when status is sent or paid or overdue)\n  - a client (a client, required, fixed when status is sent or paid or overdue)\n  - a shoot (a shoot)\n  - issued on (a date, required, today by default, fixed when status is sent or paid or overdue)\n  - status (draft, sent, paid or overdue, draft by default)\n  The due on is calculated as the issued on plus 30 days.\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice went to the client.\n\nMark paid\n  For an invoice that is sent or overdue; sets status to paid.\n  The client paid the invoice.\n\nMark overdue\n  For an invoice that is sent; sets status to overdue.\n  The invoice is late.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 6,423 tokens (562 in, 5,861 out) · $0.0030\nPictures from the Smithable image library: logo.webp.\nGenerated 132 files (132 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-5. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-5\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Should clients be able to see their own invoices and mark them as paid?",
+        "How should shoots be recorded?"
+      ]
+    }
+  },
+  {
+    "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+    "starter": "invoicing",
+    "created": true,
+    "typecheck": true,
+    "tokens": 56297,
+    "tokensIn": 51726,
+    "tokensOut": 4571,
+    "cost": 0.0031,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 229,
+    "summary": "Clean Invoices\n  One place for the cleaning company's monthly invoices to its household clients.\n\nPages\n  - Invoices (lists invoices; search by number; filter by status or household; “Duplicate”)\n  - Households (lists households)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nHouseholds\n  Households have:\n  - a name (required)\n  - an email (required)\n  - address\n  Each household lists its invoices.\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a household (a household, required)\n  - issued on (a date, required, today by default)\n  - due on (a date, required)\n  - status (draft, sent or paid, draft by default)\n  Each invoice lists its invoice lines.\n  The total is calculated as the total amount of its lines.\n\nInvoice lines\n  Invoice lines have:\n  - an invoice (an invoice, required)\n  - a description (required)\n  - a quantity (a number, required, 1 by default)\n  - a unit price (an amount, required)\n  The amount is calculated as the quantity times the unit price.\n\nMark sent\n  For an invoice that is draft; sets status to sent.\n  The invoice was sent to the household.\n\nMark paid\n  For an invoice that is sent; sets status to paid.\n  The household paid the invoice.\n\nDuplicate\n  Makes a copy of an invoice with status draft and issued on today, asking for the number.\n  Make next month's invoice from this one.\n\nInvoice sent\n  When “Mark sent” runs on a invoice: mails household's email.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,222 tokens (493 in, 3,729 out) · $0.0019\nPictures from the Smithable image library: logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-6. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-6\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Should households be able to see their own invoices?"
+      ]
+    }
+  },
+  {
+    "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 28255,
+    "tokensIn": 25310,
+    "tokensOut": 2945,
+    "cost": 0.0018,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 178,
+    "summary": "Town Flea Market\n  A town flea market where anyone can post things to sell, with photos and a price.\n\nPages\n  - Catalog (lists items; search by title, description or place; filter by category, price, condition or available; sort by price or date added; records can be saved as favorites; contact the owner by mail)\n  - Home (a landing page: hero, items and footer)\n  - My items (lists items; only the viewer's own records)\n  - Saved (lists items; only the viewer's saved records)\n  - Review (the pictures and files waiting for review, to approve or reject; only for admins)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nItems\n  Items have:\n  - a title (required)\n  - photos (pictures, required)\n  - a description (required)\n  - a price (an amount)\n  - a category (furniture, bikes, electronics, sports, kids or other, furniture by default)\n  - a condition (like new, good or worn, like new by default)\n  - a place\n  - available (yes or no, true by default)\n  Photos of items are reviewed before others see them; an item waits until its photos are.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Sells and saves items): opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page, the privacy page and reading items where available is yes.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,703 tokens (407 in, 1,296 out) · $0.0007\nPictures from the Smithable image library: samples/item-1.webp, samples/item-2.webp, samples/item-3.webp, samples/item-4.webp, samples/item-5.webp, samples/item-6.webp, hero.webp, logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-7. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-7\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-KMclTb/app-7/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Can someone browse listings without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27556,
+    "tokensIn": 25314,
+    "tokensOut": 2242,
+    "cost": 0.0014,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 181,
+    "summary": "Swap Shelf\n  Colleagues offer things they no longer need on the office shelf, and others claim them.\n\nPages\n  - Shelf (lists items; search by title or description; filter by status or condition; “Claim”)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nItems\n  Items have:\n  - a title (required)\n  - a description\n  - a photo (picture)\n  - a condition (like new, good or worn, like new by default)\n  - status (offered or claimed, offered by default)\n  Each item can have a claimed by (a user).\n\nClaim\n  For an item that is offered; sets status to claimed and claimed by to whoever presses it.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,242 tokens (386 in, 856 out) · $0.0005\nPictures from the Smithable image library: logo.webp.\nGenerated 121 files (121 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-8. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-8\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "When a colleague claims an item, what should the app keep?"
+      ]
+    }
+  },
+  {
+    "description": "My vinyl record collection: albums, artists, condition and what I paid.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 53144,
+    "tokensIn": 50546,
+    "tokensOut": 2598,
+    "cost": 0.0019,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 169,
+    "summary": "Vinyl Collection\n  A personal catalogue of my vinyl records, with artists, condition and what I paid for each.\n\nPages\n  - Artists (lists artists)\n  - Albums (lists albums; search by title; filter by condition or artist; sort by title, year, price paid or purchased on)\n\nArtists\n  Artists have:\n  - a name (required)\n  - a country\n\nAlbums\n  Albums have:\n  - a title (required)\n  - an artist (an artist, required)\n  - a year (a whole number, required)\n  - a condition (mint, near mint, very good, good, fair or poor, mint by default)\n  - a price paid (an amount)\n  - purchased on (a date)\n  - a cover (picture)\n  - notes\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,216 tokens (448 in, 1,768 out) · $0.0009\nPictures from the Smithable image library: logo.webp.\nGenerated 119 files (119 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-9. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-9\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "crm",
+      "questions": [
+        "Who should be able to see your collection?"
+      ]
+    }
+  },
+  {
+    "description": "Our local museum's collection online, so visitors can browse the objects and their stories.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27086,
+    "tokensIn": 25104,
+    "tokensOut": 1982,
+    "cost": 0.0013,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 158,
+    "summary": "Local Museum Collection\n  An online collection where visitors browse the museum's objects and read their stories.\n\nPages\n  - Home (a landing page: hero, artifacts where featured is yes and footer)\n  - Collection (lists artifacts; search by name or period)\n  - Privacy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nArtifacts\n  Artifacts have:\n  - a name (required)\n  - a period\n  - an origin\n  - a story (formatted text)\n  - a photo (picture)\n  - featured (yes or no)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member (Looks at the collection): opens every page\n  New users get the member role.\n  Open to anyone without signing in: the home page, the collection page and reading artifacts.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,823 tokens (375 in, 1,448 out) · $0.0008\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 124 files (124 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-10. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-10\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-KMclTb/app-10/smithable.content.yml:3:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "marketplace",
+      "questions": [
+        "Who may add and edit the objects and their stories?"
+      ]
+    }
+  },
+  {
+    "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 30671,
+    "tokensIn": 26250,
+    "tokensOut": 4421,
+    "cost": 0.0026,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 173,
+    "summary": "Status Board\n  A live board of our IT systems: what is down, what is being fixed, and when it is back.\n\nPages\n  - Services (lists services)\n  - Incidents (lists incidents; filter by status; “Identified”; “Monitoring”; “Resolve”)\n  - Overview (a dashboard: open incidents)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nServices\n  Services have:\n  - a name (required, unique)\n  - status (operational, degraded or down, operational by default)\n  - a description\n  Each service lists its incidents.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a service (a service, required)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary (formatted text)\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so. The service's state stays what the team sets.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - staff (Works the incidents: opens them, posts updates and moves them on): opens the services page, the incidents page and the overview page; adds every kind of record; changes everyone's records; runs “Identified”, “Monitoring” and “Resolve”\n  New users get the staff role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,322 tokens (523 in, 3,799 out) · $0.0020\nPictures from the Smithable image library: logo.webp.\nGenerated 131 files (131 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-11. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-11\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "status",
+      "questions": [
+        "Should people see the status board without signing in, or only after logging in?"
+      ]
+    }
+  },
+  {
+    "description": "Service status for our municipality's online services, for residents to check outages.",
+    "starter": "status",
+    "created": true,
+    "typecheck": true,
+    "tokens": 32494,
+    "tokensIn": 26245,
+    "tokensOut": 6249,
+    "cost": 0.0035,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 178,
+    "summary": "Service Status\n  Shows which of the municipality's online services work right now, what is being fixed, and what happened before.\n\nPages\n  - Service status (a landing page: hero, components, incidents where status is investigating or identified or monitoring, incidents where status is resolved and footer)\n  - Incidents (lists incidents; filter by status)\n  - Components (lists components; only for admins; visitors see components on the Service status page)\n  - Overview (a dashboard: open, per month and latest)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nComponents\n  Components have:\n  - a name (required)\n  - status (operational, degraded, down or maintenance, operational by default)\n  - a description\n  Each component lists its incidents.\n\nIncidents\n  Incidents have:\n  - a title (required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a component (a component)\n  - detected at (a date and time, required)\n  - resolved at (a date and time)\n  - a summary (formatted text)\n  Each incident lists its incident updates.\n\nIncident updates\n  Incident updates have:\n  - an incident (an incident, required)\n  - a date and time (at, required)\n  - status (investigating, identified, monitoring or resolved, investigating by default)\n  - a message (required)\n\nIdentified\n  For an incident that is investigating; sets status to identified; adds an incident update (at now, status identified, message The cause is found and a fix is being worked on.).\n  The cause is found; the incident moves to identified, with an update saying so.\n\nMonitoring\n  For an incident that is investigating or identified; sets status to monitoring; adds an incident update (at now, status monitoring, message A fix is out. We are watching before we close this.).\n  A fix is out; the incident is watched before it is closed, with an update saying so.\n\nResolve\n  For an incident that is investigating, identified or monitoring; sets status to resolved and resolved at to now; adds an incident update (at now, status resolved, message This incident is resolved.).\n  The incident is over, with an update saying so.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - staff (Writes incidents and their updates): opens the overview page and the incidents page; adds incidents and incident updates; changes everyone's records; runs every custom action\n  New users get the staff role.\n  Open to anyone without signing in: the home page, reading components, reading incidents and reading incident updates.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,847 tokens (520 in, 4,327 out) · $0.0022\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 133 files (133 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-12. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-12\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Besides live outages, should the page also show planned maintenance windows?",
+        "Who posts status updates?"
+      ]
+    }
+  },
+  {
+    "description": "A log of my car's fuel, service visits and costs.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27637,
+    "tokensIn": 25096,
+    "tokensOut": 2541,
+    "cost": 0.0016,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 208,
+    "summary": "Car Log\n  A log of my car's fuel, service visits and costs.\n\nPages\n  - Fuel (lists fuel fills; filter by car)\n  - Services (lists service visits; filter by car or kind)\n  - Cars (lists cars)\n\nCars\n  Cars have:\n  - a name (required)\n  - a make\n  - a model\n  - a year (a whole number)\n  - a plate\n\nFuel fills\n  Fuel fills have:\n  - a car (a car, required)\n  - a date (required, today by default)\n  - an odometer (a whole number, required)\n  - liters (a number, required)\n  - a price per liter (a number, required)\n  - full tank (yes or no, true by default)\n  - a station\n  The total is calculated as the liters times the price per liter.\n  A fuel fill is named after its car's name and its date.\n\nService visits\n  Service visits have:\n  - a car (a car, required)\n  - a date (required, today by default)\n  - an odometer (a whole number)\n  - a kind (service, repair, inspection or tyres, service by default)\n  - a garage\n  - a cost (an amount, required)\n  - notes\n  A service visit is named after its car's name and its date.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,299 tokens (510 in, 3,789 out) · $0.0019\nPictures from the Smithable image library: logo.webp.\nGenerated 121 files (121 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-13. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-13\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": []
+    }
+  },
+  {
+    "description": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 107097,
+    "tokensIn": 101452,
+    "tokensOut": 5645,
+    "cost": 0.0042,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 205,
+    "summary": "Our Wedding\n  The guest list and seating plan for our wedding, with who has answered and their meal choices.\n\nPages\n  - Tables (lists tables)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n  - Guests (lists guests; search by name or email; filter by status, meal, side or table)\n\nTables\n  Tables have:\n  - a name (required)\n  - seats (a whole number, required, 8 by default)\n\nGuests\n  Guests have:\n  - a name (required)\n  - an email\n  - a phone\n  - a side (bride, groom or both, bride by default)\n  - status (invited, attending or declined, invited by default)\n  - a meal (pending, beef, fish, vegetarian or vegan, pending by default)\n  - plus one (yes or no)\n  - dietary notes\n  - a table (a table, required when status is invited or attending or declined)\n\nAccept\n  For a guest that is invited or declined; sets status to attending.\n\nDecline\n  For a guest that is invited or attending; sets status to declined.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,040 tokens (470 in, 1,570 out) · $0.0008\nPictures from the Smithable image library: logo.webp.\nGenerated 120 files (120 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-14. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-14\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who uses the app besides you two?",
+        "What may someone see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 26813,
+    "tokensIn": 25105,
+    "tokensOut": 1708,
+    "cost": 0.0012,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 205,
+    "summary": "Birdwatching Club Sightings\n  A shared log of the birds the club sees: species, place, date and who saw them.\n\nPages\n  - Sightings (lists sightings; search by place or notes; filter by species or seen on)\n  - Species (lists specieses)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nSpecieses\n  Specieses have:\n  - a name (required, unique)\n  - a latin name\n\nSightings\n  Sightings have:\n  - species (a species, required)\n  - a place (required)\n  - seen on (a date, required, today by default)\n  - a count (a whole number, required, 1 by default)\n  - notes\n  Each sighting can have an observer (a user, who makes it, by default, filled by the app).\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,046 tokens (421 in, 1,625 out) · $0.0009\nPictures from the Smithable image library: logo.webp.\nGenerated 119 files (119 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-15. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-15\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "invoicing",
+      "questions": [
+        "Who may see the sightings without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Our allotment society: who has which plot, the waiting list and the yearly fee.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27766,
+    "tokensIn": 25105,
+    "tokensOut": 2661,
+    "cost": 0.0016,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 243,
+    "summary": "Allotment Society\n  Keeps track of which member holds which plot, the waiting list and each year's fee.\n\nPages\n  - Plots (lists plots)\n  - Members (lists members; search by name or email)\n  - Fees (lists fees; filter by status)\n  - Waiting (lists waiting entries)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nMembers\n  Members have:\n  - a name (required)\n  - an email\n  - a phone\n  - joined on (a date, required, today by default)\n\nPlots\n  Plots have:\n  - a number (required, unique)\n  - a holder (a member)\n  - notes\n\nFees\n  Fees have:\n  - a member (a member, required)\n  - a year (a whole number, required)\n  - an amount (an amount, required)\n  - status (unpaid or paid, unpaid by default)\n\nWaiting entries\n  Waiting entries have:\n  - a name (required)\n  - an email\n  - a phone\n  - requested on (a date, required, today by default)\n  - status (waiting, allocated or withdrawn, waiting by default)\n  - notes\n\nMark paid\n  For a fee that is unpaid; sets status to paid.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 3,947 tokens (540 in, 3,407 out) · $0.0018\nPictures from the Smithable image library: logo.webp.\nGenerated 133 files (133 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-16. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-16\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "booking",
+      "questions": [
+        "Who uses the app?",
+        "What may visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet.",
+    "starter": "barbers",
+    "created": true,
+    "typecheck": false,
+    "tokens": 152891,
+    "tokensIn": 130269,
+    "tokensOut": 22622,
+    "cost": 0.0133,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 250,
+    "summary": "Frisörbokning\n  Kunderna bokar tid hos frisörerna i salongen själva på nätet.\n\nPages\n  - Boka tid (a landing page: hero, “Tjänster”, “Frisörer” and footer)\n  - Bokningar (lists “Bokningar”; “Confirm”)\n  - Tjänster (lists “Tjänster”; only for admins; visitors see “Tjänster” on the Boka tid page)\n  - Frisörer (lists “Frisörer”; only for admins; visitors see “Frisörer” on the Boka tid page)\n  - Schema (a calendar of appointments by week or month; only for admins)\n  - Integritetspolicy (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nTjänster\n  Tjänster have:\n  - a field “Namn” (required)\n  - a field “Beskrivning”\n  - a field “Minuter” (a whole number, required, 30 by default)\n  - a field “Pris” (an amount)\n\nFrisörer\n  Frisörer have:\n  - a field “Namn” (required)\n  - a field “Presentation”\n  “Frisörer” are booked by their time: Mon–Fri 09:00–17:00, Sat 10:00–14:00, 10 minutes kept free after each booking.\n\nBokningar\n  Bokningar have:\n  - a field “Tjänst” (a “Tjänst”, required)\n  - a field “Frisör” (a “Frisör”, required)\n  - a field “Tid” (a date and time, required)\n  - a field “Ditt namn” (required)\n  - a field “Telefon” (a phone number, required)\n  - a field “Meddelande”\n  - a field “Status” (“Väntar”, “Bekräftad” or “Avbokad”, “Väntar” by default, filled by the app)\n  A “Bokning” takes its “Frisör”'s time from its “Tid” for the number of minutes in its “Tjänst”'s minutes while status is requested or confirmed; whoever made it may cancel it until 12 hours before.\n\nConfirm\n  For a “Bokning” that is “Väntar”; sets “Status” to “Bekräftad”.\n\nAppointment made\n  When a “Bokning” is added: mails its owner.\n\nAppointment requested\n  When a “Bokning” is added: mails every admin.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin (Salongen. Har tjänsterna, frisörerna och schemat och bekräftar bokningar): everything\n  - member (Kund som bokar tid): opens the bokningar page; adds appointments\n  New users get the member role.\n  Open to anyone without signing in: the home page, the privacy page, reading services and reading stylists.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 2,037 tokens (472 in, 1,565 out) · $0.0008\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 130 files (130 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-17. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-17\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-KMclTb/app-17/smithable.content.yml:50:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Behöver kunderna skapa ett konto för att boka tid?",
+        "Vem ska kunna ändra bokningar och tider i systemet?"
+      ]
+    }
+  },
+  {
+    "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+    "starter": "invoicing",
+    "created": true,
+    "typecheck": true,
+    "tokens": 92165,
+    "tokensIn": 81587,
+    "tokensOut": 10578,
+    "cost": 0.0068,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 212,
+    "summary": "Byggkoll\n  Håller koll på offerter, kunder och fakturor för en liten byggfirma.\n\nPages\n  - Offerter (lists “Offerter”; filter by “Status” or “Kund”; “Mark quote sent”; “Mark quote accepted”)\n  - Kunder (lists “Kunder”; search by “Namn”)\n  - Fakturor (lists “Fakturor”; filter by “Status” or “Kund”; “Mark invoice sent”; “Mark invoice paid”)\n  - Medarbetare (who has access: invite people, change roles, remove users; only for admins)\n\nKunder\n  Kunder have:\n  - a field “Namn” (required)\n  - a field “E-post” (an email address)\n  - a field “Telefon” (a phone number)\n  - a field “Adress”\n  Each “Kund” lists its “Offerter”.\n  Each “Kund” lists its “Fakturor”.\n\nOfferter\n  Offerter have:\n  - a field “Nummer” (required, unique)\n  - a field “Kund” (a “Kund”, required)\n  - a field “Datum” (a date, required, today by default)\n  - a field “Giltig till” (a date)\n  - a field “Status” (“Utkast”, “Skickad”, “Accepterad” or “Avvisad”, “Utkast” by default)\n  - a field “Arbete”\n  Each “Offert” lists its “Offertrader”.\n  The “Summa” is calculated as the total “Belopp” of its “Rader”.\n\nOffertrader\n  Offertrader have:\n  - a field “Offert” (a “Offert”, required)\n  - a field “Beskrivning” (required)\n  - a field “Antal” (a number, required, 1 by default)\n  - a field “Á-pris” (an amount, required)\n  The “Belopp” is calculated as the “Antal” times the “Á-pris”.\n\nFakturarader\n  Fakturarader have:\n  - a field “Beskrivning” (required)\n  - a field “Antal” (a number, required, 1 by default)\n  - a field “Á-pris” (an amount, required)\n  - a field “Faktura” (a “Faktura”, required)\n  The “Belopp” is calculated as the “Antal” times the “Á-pris”.\n\nFakturor\n  Fakturor have:\n  - a field “Nummer” (required, unique)\n  - a field “Kund” (a “Kund”, required)\n  - a field “Fakturadatum” (a date, required, today by default)\n  - a field “Status” (“Utkast”, “Skickad”, “Betald” or “Förfallen”, “Utkast” by default)\n  The “Förfallodatum” is calculated as the “Fakturadatum” plus 30 days.\n  Each “Faktura” lists its “Fakturarader”.\n  The “Summa” is calculated as the total “Belopp” of its “Rader”.\n\nMark quote sent\n  For a “Offert” that is “Utkast”; sets “Status” to “Skickad”.\n  Offerten har skickats till kunden.\n\nMark quote accepted\n  For a “Offert” that is “Skickad”; sets “Status” to “Accepterad”.\n  Kunden har accepterat offerten.\n\nMark invoice sent\n  For a “Faktura” that is “Utkast”; sets “Status” to “Skickad”.\n  Fakturan har skickats till kunden.\n\nMark invoice paid\n  For a “Faktura” that is “Skickad” or “Förfallen”; sets “Status” to “Betald”.\n  Kunden har betalat fakturan.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record; runs “Mark quote sent”, “Mark quote accepted”, “Mark invoice sent” and “Mark invoice paid”\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 4,996 tokens (863 in, 4,133 out) · $0.0022\nPictures from the Smithable image library: logo.webp.\nGenerated 140 files (140 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-18. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-18\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Vem ska använda appen?",
+        "Ska någon kunna se något utan att logga in, till exempel en offert via en länk?"
+      ]
+    }
+  },
+  {
+    "description": "En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.",
+    "starter": "marketplace",
+    "created": true,
+    "typecheck": true,
+    "tokens": 55118,
+    "tokensIn": 51045,
+    "tokensOut": 4073,
+    "cost": 0.0027,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "sv",
+    "seconds": 185,
+    "summary": "Loppis\n  En loppis där folk lägger upp saker de vill sälja, med bilder och pris.\n\nPages\n  - Loppis (lists “Saker”; search by “Titel” or “Beskrivning”; filter by “Skick”, “Pris” or “Till salu”; sort by “Pris” or date added; contact the owner by mail)\n  - Mina saker (lists “Saker”; only the viewer's own records)\n  - Loppis (a landing page: hero and footer)\n  - Medlemmar (who has access: invite people, change roles, remove users; only for admins)\n\nSaker\n  Saker have:\n  - a field “Titel” (required)\n  - a field “Bilder” (pictures, required)\n  - a field “Beskrivning”\n  - a field “Pris” (an amount)\n  - a field “Skick” (“Som ny”, “Bra” or “Sliten”, “Som ny” by default)\n  - a field “Till salu” (yes or no, true by default)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Open to anyone without signing in: the home page, the catalog page and reading items.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,542 tokens (441 in, 1,101 out) · $0.0006\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 125 files (125 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-19. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-19\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Vem ska kunna se annonserna?",
+        "Vem ska kunna lägga upp saker?"
+      ]
+    }
+  },
+  {
+    "description": "Varausjärjestelmä joogastudiollemme: tunnit, ohjaajat ja varaukset verkossa.",
+    "starter": "booking",
+    "created": true,
+    "typecheck": true,
+    "tokens": 34287,
+    "tokensIn": 27058,
+    "tokensOut": 7229,
+    "cost": 0.0041,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "fi",
+    "seconds": 199,
+    "summary": "Joogastudio\n  Joogastudion tuntien selaus ja varaus verkossa.\n\nPages\n  - Home (a landing page: hero, tuntityypit and footer)\n  - Tuntikalenteri (a calendar of sessions by week or month)\n  - Tunnit (lists tunnit; filter by tuntityyppi, ohjaaja or alkaa; only for admins)\n  - Tuntityypit (lists tuntityypit; only for admins; visitors see tuntityypit on the Home page)\n  - Ohjaajat (lists ohjaajat; only for admins)\n  - Omat varaukset (lists varaukset)\n  - Tietosuoja (a privacy page written from the app: who runs it, what it stores and why, cookies, mail, logs, your rights)\n\nTuntityypit\n  Tuntityypit have:\n  - a nimi (required)\n  - kuvaus\n  - a taso (kaikki tasot, aloittelija or edistynyt, kaikki tasot by default)\n  - a kesto minuutteina (a whole number, required, 60 by default)\n  Each tuntityyppi lists its tunnit.\n\nOhjaajat\n  Ohjaajat have:\n  - a name (required)\n  - a bio (formatted text)\n  Each ohjaaja lists its tunnit.\n\nTunnit\n  Tunnit have:\n  - a tuntityyppi (a tuntityyppi, required)\n  - an ohjaaja (an ohjaaja, required)\n  - an alkaa (a date and time, required)\n  - a paikkoja (a whole number, required, 12 by default)\n  Each tunti lists its varaukset.\n  The places left is calculated as the paikkoja minus the number of its bookings.\n  A tunti is named after its tuntityyppi and its alkaa.\n\nVaraukset\n  Varaukset have:\n  - a tunti (a tunti, required, unique)\n  Each varaus can have an osallistuja (a user).\n  The osallistuja owns the varaus.\n  At most the session's capacity varaukset per session.\n  A varaus is added until the session's alkaa.\n  Its owner deletes it until 2 hours before the session's alkaa.\n  A varaus is named after its tunti.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member (Joogaaja, joka varaa tunteja): opens the my bookings page; adds bookings\n  New users get the member role.\n  Open to anyone without signing in: the home page, the schedule page, the privacy page, reading class types, reading instructors and reading sessions.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 3,364 tokens (598 in, 2,766 out) · $0.0014\nPictures from the Smithable image library: hero.webp, logo.webp.\nGenerated 138 files (138 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-20. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-20\n  smithable studio\n\nor only run the app with smithable run.\n/tmp/smithable-bench-m12-KMclTb/app-20/smithable.content.yml:43:3  warning  The privacy page \"privacy\" does not say who runs the app: give the operator's name under pages.privacy.operator (name, address, email, country, hosting).",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Voivatko kävijät nähdä tuntilistan ilman kirjautumista?",
+        "Kuka voi tehdä varauksen?"
+      ]
+    }
+  },
+  {
+    "description": "Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.",
+    "starter": "crm",
+    "created": true,
+    "typecheck": true,
+    "tokens": 30832,
+    "tokensIn": 25748,
+    "tokensOut": 5084,
+    "cost": 0.0029,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "fi",
+    "seconds": 198,
+    "summary": "Pieni autokorjaamo\n  Asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa pienelle autokorjaamolle.\n\nPages\n  - Asiakkaat (lists customers)\n  - Autot (lists cars)\n  - Huoltotyot (lists jobs; “Finish job”)\n  - Laskut (lists invoices; “Mark paid”)\n  - Team (who has access: invite people, change roles, remove users; only for admins)\n\nCustomers\n  Customers have:\n  - a name (required)\n  - an email\n  - a phone\n  - notes\n  Each customer lists its cars.\n\nCars\n  Cars have:\n  - a registration (required, unique)\n  - a make\n  - a model\n  - a year (a whole number)\n  - a mileage (a whole number)\n  - a customer (a customer, required)\n\nJobs\n  Jobs have:\n  - a car (a car, required)\n  - a description (required)\n  - status (planned, in progress or done, planned by default)\n  - a price (an amount)\n  - started at (a date)\n  - an invoice (an invoice)\n\nInvoices\n  Invoices have:\n  - a number (required, unique)\n  - a customer (a customer, required)\n  - status (draft, sent or paid, draft by default)\n  - a total (an amount, required)\n  - a due date\n\nFinish job\n  For a job that is planned or in progress; sets status to done.\n\nMark paid\n  For an invoice that is sent; sets status to paid.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone who signs in sees all records, and changes and deletes the ones they own.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 6,431 tokens (599 in, 5,832 out) · $0.0030\nPictures from the Smithable image library: logo.webp.\nGenerated 130 files (130 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-21. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-21\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Kuka käyttää sovellusta?",
+        "Mitä kirjautumatta näkee?"
+      ]
+    }
+  },
+  {
+    "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+    "starter": "kiosk",
+    "created": false,
+    "typecheck": false,
+    "tokens": 164585,
+    "tokensIn": 133481,
+    "tokensOut": 31104,
+    "cost": 0.0179,
+    "currency": "$",
+    "fromCache": 0,
+    "lang": "de",
+    "seconds": 143,
+    "summary": "No model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1305 (line 9 column 205)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-KMclTb/app-22 --starter kiosk",
+    "error": "Starting from the kiosk starter.\nFrontier model (claude-haiku-5-5) · 164,585 tokens (133,481 in, 31,104 out) · $0.0179\nNo model drafted a valid project.\nExpected ',' or ']' after array element in JSON at position 1305 (line 9 column 205)\nWithout a model, start from a starter: smithable new /tmp/smithable-bench-m12-KMclTb/app-22 --starter kiosk\n",
+    "meta": {
+      "wordStarter": "records",
+      "questions": [
+        "Wer pflegt Produkte und Abholzeiten?",
+        "Müssen Kundinnen und Kunden sich anmelden, um vorzubestellen?"
+      ]
+    }
+  },
+  {
+    "description": "A backend for my habit app: habits, daily check-ins and streaks.",
+    "starter": "records",
+    "created": true,
+    "typecheck": true,
+    "tokens": 26734,
+    "tokensIn": 25102,
+    "tokensOut": 1632,
+    "cost": 0.0011,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 86,
+    "summary": "Habit Tracker\n  A backend for tracking daily habits, with check-ins and streaks.\n\nPages\n  - Habits (lists habits; search by name or goal; filter by frequency)\n  - Checkins (lists check ins; filter by habit, done or day)\n\nHabits\n  Habits have:\n  - a name (required)\n  - a goal\n  - a frequency (daily, weekdays or weekly, daily by default)\n  - started on (a date, required, today by default)\n  Each habit lists its check ins.\n\nCheck ins\n  Check ins have:\n  - a habit (a habit, required)\n  - a day (a date, required, today by default)\n  - done (yes or no, true by default)\n  - a note\n  A check in is named after its habit and its day.\n  No two check ins have the same habit and day for one owner.\n\nStreaks\n  Habits ordered by their current streak of consecutive check-ins, longest first. (habits)\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 1,829 tokens (427 in, 1,402 out) · $0.0007\nPictures from the Smithable image library: logo.webp.\nGenerated 116 files (116 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-23. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-23\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "barbers",
+      "questions": [
+        "Who uses the app?",
+        "What can visitors see without signing in?"
+      ]
+    }
+  },
+  {
+    "description": "Somewhere my AI assistant keeps my tasks and notes, by project.",
+    "starter": "api",
+    "created": true,
+    "typecheck": true,
+    "tokens": 27138,
+    "tokensIn": 25386,
+    "tokensOut": 1752,
+    "cost": 0.0012,
+    "currency": "$",
+    "fromCache": 0,
+    "seconds": 89,
+    "summary": "Tasks and Notes\n  Tasks and notes, grouped by project, that my AI assistant keeps for me.\n\nPages\n  - Projects (lists projects)\n  - Tasks (lists tasks; “Complete”; “Reopen”)\n  - Notes (lists notes)\n\nProjects\n  Projects have:\n  - a name (required)\n  - a description\n  Each project lists its tasks.\n  Each project lists its notes.\n\nTasks\n  Tasks have:\n  - a title (required)\n  - a project (a project, required)\n  - status (todo, doing or done, todo by default)\n  - a due date\n  - details\n\nNotes\n  Notes have:\n  - a title (required)\n  - a project (a project, required)\n  - a body\n  - an attachment (a document)\n\nComplete\n  For a task that is todo or doing; sets status to done.\n  Mark a task as done.\n\nReopen\n  For a task that is done; sets status to todo.\n  Open a finished task again.\n\nSign-in and access\n  People sign in with a code sent to their email.\n  Everyone sees, changes and deletes only their own records.\n  Roles:\n  - admin: everything\n  - member: opens every page; adds every kind of record\n  New users get the member role.\n  Other programs can read and change every kind of record, also ones added later, with a key, and run complete and reopen. AI assistants can use it too.\n  Everyone who signs in can ask the app questions; it changes nothing. It answers plainly.\nFrontier model (claude-haiku-5-5) · 3,144 tokens (448 in, 2,696 out) · $0.0014\nPictures from the Smithable image library: logo.webp.\nGenerated 127 files (127 changed, 0 removed).\n\nCreated /tmp/smithable-bench-m12-KMclTb/app-24. Open it in Studio, to see it and change it:\n\n  cd /tmp/smithable-bench-m12-KMclTb/app-24\n  smithable studio\n\nor only run the app with smithable run.",
+    "error": "",
+    "meta": {
+      "wordStarter": "api",
+      "questions": []
+    }
+  }
+]

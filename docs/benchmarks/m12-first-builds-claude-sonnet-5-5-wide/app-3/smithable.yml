@@ -1,0 +1,103 @@
+smithable: 0.1
+app:
+  name: Lumen Hair Studio
+  description: Online booking for a hair salon, where customers pick a stylist and a free time themselves.
+  currency: EUR
+  timezone: Europe/Mariehamn
+models:
+  Service:
+    fields:
+      name: string!
+      summary: text
+      minutes: int! = 45
+      price: money
+  Barber:
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+      timeOffs: TimeOff[]
+    schedule:
+      hours:
+        mon-fri: 09:00-17:00
+        sat: 10:00-14:00
+      breaks: 12:00-12:30
+      gap: 10
+      away: TimeOff
+  TimeOff:
+    fields:
+      barber: Barber!
+      from: datetime!
+      until: datetime!
+      note: string
+  Appointment:
+    fields:
+      service: Service!
+      barber: Barber!
+      startsAt: datetime!
+      name: string!
+      phone: phone
+      note: text
+      status:
+        type: requested | confirmed | cancelled
+        by: app
+    occupies:
+      resource: barber
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: [requested, confirmed]
+      cancelUntil: 12h
+      cancelTo: cancelled
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+  cancel:
+    on: Appointment
+    when:
+      status: [requested, confirmed]
+    set:
+      status: cancelled
+pages:
+  appointments:
+    crud: Appointment
+    filters: [status]
+  day:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  services:
+    crud: Service
+  barbers:
+    crud: Barber
+  time-off:
+    crud: TimeOff
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Service
+      barbers:
+        records: Barber
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+outgoing:
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner
+  appointmentConfirmed:
+    when: confirm
+    to: mail
+    recipient: owner

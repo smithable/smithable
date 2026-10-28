@@ -1,0 +1,9 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  brand:
+    font: Inter
+tones:
+  Invoice.status:
+    paid: success
+    overdue: danger

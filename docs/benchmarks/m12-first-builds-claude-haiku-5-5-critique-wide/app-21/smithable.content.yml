@@ -1,0 +1,92 @@
+smithableContent: 0.1
+models:
+  Customer:
+    label: Asiakas
+    pluralLabel: Asiakkaat
+    fields:
+      name:
+        label: Nimi
+      phone:
+        label: Puhelin
+      email:
+        label: Sähköposti
+      notes:
+        label: Muistiinpanot
+      cars:
+        label: Autot
+      invoices:
+        label: Laskut
+  Car:
+    label: Auto
+    pluralLabel: Autot
+    fields:
+      registration:
+        label: Rekisterinumero
+      make:
+        label: Merkki
+      model:
+        label: Malli
+      year:
+        label: Vuosimalli
+      mileage:
+        label: Mittarilukema (km)
+      customer:
+        label: Asiakas
+      jobs:
+        label: Huoltotyöt
+  Job:
+    label: Huoltotyö
+    pluralLabel: Huoltotyöt
+    fields:
+      title:
+        label: Työ
+      car:
+        label: Auto
+      description:
+        label: Kuvaus
+      status:
+        label: Tila
+        values:
+          open: Avoin
+          inProgress: Käynnissä
+          done: Valmis
+      price:
+        label: Hinta
+      date:
+        label: Päivämäärä
+  Invoice:
+    label: Lasku
+    pluralLabel: Laskut
+    fields:
+      number:
+        label: Laskunumero
+      customer:
+        label: Asiakas
+      total:
+        label: Summa
+      status:
+        label: Tila
+        values:
+          draft: Luonnos
+          sent: Lähetetty
+          paid: Maksettu
+      dueDate:
+        label: Eräpäivä
+actions:
+  finish:
+    label: Merkitse valmiiksi
+  markPaid:
+    label: Merkitse maksetuksi
+pages:
+  asiakkaat:
+    title: Asiakkaat
+  autot:
+    title: Autot
+  tyot:
+    title: Huoltotyöt
+  laskut:
+    title: Laskut
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

@@ -1,0 +1,54 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Shows which member holds which plot, the waiting list for plots, and each member's yearly fee.
+models:
+  Member:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      joinedOn: date! = TODAY()
+  Plot:
+    fields:
+      number: int! unique
+      size: small | medium | large
+      status: vacant | let | reserved
+      holder: Member
+  WaitingEntry:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      requestedOn: date! = TODAY()
+      status: waiting | offered | declined
+  Fee:
+    fields:
+      member: Member!
+      year: int! = 2026
+      amount: money!
+      paid: bool
+pages:
+  plots:
+    crud: Plot
+    filters: [status, size]
+  members:
+    crud: Member
+    search: [name, email]
+  waiting-list:
+    crud: WaitingEntry
+    filters: [status]
+  fees:
+    crud: Fee
+    actions: [markPaid]
+    filters: [paid, year]
+  team:
+    users: manage
+actions:
+  markPaid:
+    on: Fee
+    when:
+      paid: false
+    set:
+      paid: true
+    intent: Mark the yearly fee as paid.

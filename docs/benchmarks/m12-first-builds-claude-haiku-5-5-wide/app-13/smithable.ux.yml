@@ -1,0 +1,8 @@
+smithableUx: 0.1
+pages:
+  fuel:
+    table:
+      sort: -date
+  services:
+    table:
+      sort: -date

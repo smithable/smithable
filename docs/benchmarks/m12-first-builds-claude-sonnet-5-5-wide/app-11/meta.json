@@ -1,0 +1,9 @@
+{
+  "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "Who can see the status board?",
+    "Who posts and updates incidents?"
+  ]
+}

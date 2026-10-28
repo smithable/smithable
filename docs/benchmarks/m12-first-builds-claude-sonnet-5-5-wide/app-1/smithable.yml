@@ -1,0 +1,69 @@
+smithable: 0.1
+app:
+  name: Translator Ledger
+  description: Keep track of my translation clients, the quotes I gave them and what they have paid.
+models:
+  Client:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      company: string
+      notes: text
+      quotes: Quote[]
+  Quote:
+    fields:
+      title: string!
+      client: Client!
+      sourceLanguage: string
+      targetLanguage: string
+      wordCount: int
+      amount: money!
+      quotedOn: date! = TODAY()
+      status: draft | sent | accepted | declined
+      payments: Payment[]
+      paid:
+        type: money
+        formula: SUM(payments.amount)
+      balance:
+        type: money
+        formula: amount - paid
+  Payment:
+    fields:
+      quote: Quote!
+      amount: money!
+      paidOn: date! = TODAY()
+      method: bankTransfer | card | cash | other
+      note: string
+pages:
+  clients:
+    crud: Client
+    search: [name, email, company]
+  quotes:
+    crud: Quote
+    actions: [markSent, accept, decline]
+    filters: [client, status]
+  payments:
+    crud: Payment
+actions:
+  markSent:
+    on: Quote
+    when:
+      status: draft
+    set:
+      status: sent
+    intent: The quote was sent to the client.
+  accept:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: accepted
+    intent: The client accepted the quote.
+  decline:
+    on: Quote
+    when:
+      status: sent
+    set:
+      status: declined
+    intent: The client declined the quote.

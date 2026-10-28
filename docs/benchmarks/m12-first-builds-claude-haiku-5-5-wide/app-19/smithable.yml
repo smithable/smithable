@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Loppis
+  description: En loppis där folk lägger upp saker de vill sälja, med bilder och pris.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures!
+      description: text
+      price: money
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [condition, price, available]
+    sortable: [price, createdAt]
+    contact: owner
+  myItems:
+    route: /mina-saker
+    crud: Item
+    mine: true
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: catalog
+      footer:
+  team:
+    users: manage

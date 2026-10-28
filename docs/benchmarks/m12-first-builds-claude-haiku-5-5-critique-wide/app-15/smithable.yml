@@ -1,0 +1,20 @@
+smithable: 0.1
+app:
+  name: Bird Sightings
+  description: "Records the birds the club sees: species, place, date and who saw them."
+models:
+  Sighting:
+    fields:
+      species: string!
+      place: string!
+      seenOn: date! = TODAY()
+      observer: User!
+      notes: text
+    namedBy: [species, place]
+pages:
+  sightings:
+    crud: Sighting
+    search: [species, place, notes]
+    filters: [seenOn, observer]
+  team:
+    users: manage

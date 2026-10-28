@@ -1,0 +1,17 @@
+smithableUx: 0.1
+pages:
+  fuel:
+    table:
+      sort: -date
+    record:
+      subtitle: car.name
+      detail: [liters, cost]
+  services:
+    table:
+      sort: -date
+    record:
+      subtitle: car.name
+      detail: [kind, cost]
+tones:
+  ServiceVisit.kind:
+    repair: warning

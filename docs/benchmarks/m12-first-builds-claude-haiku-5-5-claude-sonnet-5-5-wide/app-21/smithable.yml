@@ -1,0 +1,88 @@
+smithable: 0.1
+app:
+  name: Pikku-Korjaamo
+  description: Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
+  currency: EUR
+  timezone: Europe/Helsinki
+models:
+  Customer:
+    fields:
+      name: string!
+      phone: phone
+      email: email
+      address: string
+      notes: text
+      cars: Car[]
+  Car:
+    fields:
+      registration: string! unique
+      make: string!
+      carModel: string
+      year: int
+      customer: Customer!
+      notes: text
+      jobs: ServiceJob[]
+  ServiceJob:
+    fields:
+      car: Car!
+      description: text!
+      status: booked | inProgress | done | invoiced
+      receivedOn: date! = TODAY()
+      completedOn: date
+      mileage: int
+      laborHours: decimal
+      partsCost: money
+  Invoice:
+    fields:
+      number: string! unique
+      customer: Customer!
+      job: ServiceJob!
+      issuedOn: date! = TODAY()
+      dueOn: date
+      amount: money!
+      status: draft | sent | paid
+pages:
+  customers:
+    crud: Customer
+    search: [name, email, phone]
+  cars:
+    crud: Car
+    search: [registration, make, carModel]
+  jobs:
+    crud: ServiceJob
+    search: [description]
+    filters: [status, car]
+    actions: [startJob, completeJob]
+  invoices:
+    crud: Invoice
+    search: [number]
+    filters: [status, customer]
+    actions: [sendInvoice, markPaid]
+  team:
+    users: manage
+actions:
+  startJob:
+    on: ServiceJob
+    when:
+      status: booked
+    set:
+      status: inProgress
+  completeJob:
+    on: ServiceJob
+    when:
+      status: inProgress
+    set:
+      status: done
+      completedOn: TODAY()
+  sendInvoice:
+    on: Invoice
+    when:
+      status: draft
+    set:
+      status: sent
+  markPaid:
+    on: Invoice
+    when:
+      status: sent
+    set:
+      status: paid

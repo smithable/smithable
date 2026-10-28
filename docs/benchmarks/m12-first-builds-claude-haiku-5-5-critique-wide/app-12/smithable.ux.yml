@@ -1,0 +1,9 @@
+smithableUx: 0.1
+tones:
+  Service.status:
+    operational: success
+    down: danger
+  Incident.status:
+    resolved: success
+theme:
+  preset: minimal

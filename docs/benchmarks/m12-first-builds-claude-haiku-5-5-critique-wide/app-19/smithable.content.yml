@@ -1,0 +1,54 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Titel
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      category:
+        label: Kategori
+        values:
+          furniture: Möbler
+          bikes: Cyklar
+          electronics: Elektronik
+          sports: Sport
+          kids: Barn
+          other: Övrigt
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Bra skick
+          worn: Slitet
+      place:
+        label: Plats
+      available:
+        label: Till salu
+pages:
+  catalog:
+    title: Loppis
+  mina-saker:
+    title: Mina saker
+  privacy:
+    title: Integritetspolicy
+  home:
+    hero:
+      title: Sälj det du inte längre behöver
+      button: Till loppisen
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    title: Hem
+logo:
+  src: images/logo.webp
+  alt: A flower of five round petals
+  generated: true

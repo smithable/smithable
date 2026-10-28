@@ -1,0 +1,6 @@
+smithableUx: 0.1
+pages:
+  collection:
+    record:
+      subtitle: period
+      detail: [origin]

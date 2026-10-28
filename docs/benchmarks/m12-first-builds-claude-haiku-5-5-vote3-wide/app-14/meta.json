@@ -1,0 +1,11 @@
+{
+  "description": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+  "starter": "records",
+  "wordStarter": "invoicing",
+  "questions": [
+    "Who uses the app?",
+    "What can someone see without signing in?",
+    "Are guests recorded one by one, or as groups such as a family or a couple who answer together?"
+  ],
+  "dropped": "setCapacity Guest"
+}

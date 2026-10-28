@@ -1,0 +1,5 @@
+smithableContent: 0.1
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

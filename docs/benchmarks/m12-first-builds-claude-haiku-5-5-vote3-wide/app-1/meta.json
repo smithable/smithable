@@ -1,0 +1,9 @@
+{
+  "description": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "Should quotes be kept separate from invoices?",
+    "Do you need to record partial payments against one invoice?"
+  ]
+}

@@ -1,0 +1,70 @@
+smithableContent: 0.1
+language: sv
+models:
+  Service:
+    label: Tjänst
+    pluralLabel: Tjänster
+    fields:
+      summary:
+        label: Beskrivning
+      minutes:
+        label: Minuter
+      price:
+        label: Pris
+      name:
+        label: Namn
+  Stylist:
+    label: Frisör
+    pluralLabel: Frisörer
+    fields:
+      bio:
+        label: Presentation
+      name:
+        label: Namn
+  Appointment:
+    label: Bokning
+    pluralLabel: Bokningar
+    fields:
+      service:
+        label: Tjänst
+      stylist:
+        label: Frisör
+      startsAt:
+        label: Tid
+      name:
+        label: Ditt namn
+      phone:
+        label: Telefon
+      note:
+        label: Meddelande
+      status:
+        label: Status
+        values:
+          requested: Väntar
+          confirmed: Bekräftad
+          cancelled: Avbokad
+actions:
+  confirm:
+    label: Bekräfta
+pages:
+  bokningar:
+    title: Bokningar
+  tjanster:
+    title: Tjänster
+  frisorer:
+    title: Frisörer
+  schema:
+    title: Schema
+  home:
+    title: Boka tid
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  privacy:
+    title: Integritetspolicy
+logo:
+  src: images/logo.webp
+  alt: A half sun over a line
+  generated: true

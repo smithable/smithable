@@ -1,0 +1,33 @@
+smithable: 0.1
+app:
+  name: Museum Collection Online
+  description: The museum's collection online, where visitors browse the objects and read their stories.
+models:
+  Artifact:
+    fields:
+      name: string!
+      accessionNumber: string unique
+      category: painting | photograph | tool | textile | document | other
+      dated: string
+      origin: string
+      summary: text
+      story: markdown
+      photos: pictures
+      onDisplay: bool = true
+pages:
+  artifacts:
+    crud: Artifact
+    search: [name, summary, origin, category]
+    filters: [category, onDisplay]
+  home:
+    route: /
+    landing:
+      hero:
+        button: artifacts
+      collection:
+        records: Artifact
+      features:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy

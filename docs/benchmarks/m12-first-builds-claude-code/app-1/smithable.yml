@@ -1,9 +1,15 @@
 smithable: 0.1
 app:
-  name: Willow & Breath Yoga
+  name: Lotus Room Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: EUR
 models:
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: allLevels | beginner | advanced
+      durationMinutes: int! = 60
+      sessions: Session[]
   Instructor:
     fields:
       name: string!
@@ -12,6 +18,7 @@ models:
       sessions: Session[]
   Session:
     fields:
+      classType: ClassType!
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
@@ -19,7 +26,6 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
-      classType: ClassType!
     namedBy: [classType, startsAt]
   Booking:
     fields:
@@ -31,19 +37,12 @@ models:
       per: session
       max: session.capacity
       closes: session.startsAt
-      cancelUntil: session.startsAt
+      cancelUntil: 2 hours before session.startsAt
   Message:
     fields:
       name: string!
       email: email!
       message: text!
-  ClassType:
-    fields:
-      name: string!
-      summary: text
-      level: allLevels | beginner | advanced
-      durationMinutes: int! = 60
-      sessions: Session[]
 pages:
   schedule:
     calendar:
@@ -53,10 +52,13 @@ pages:
     crud: Booking
   sessions:
     crud: Session
-    sortable: [startsAt, capacity]
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
+    sortable: [startsAt, capacity]
+  class-types:
+    crud: ClassType
+    filters: [level]
   instructors:
     crud: Instructor
   messages:
@@ -66,6 +68,8 @@ pages:
     landing:
       hero:
         button: schedule
+      classes:
+        records: ClassType
       teachers:
         records: Instructor
       faq:
@@ -73,13 +77,13 @@ pages:
         button: schedule
       contact:
         form: Message
-      classes:
-        records: ClassType
       footer:
   privacy:
     route: /privacy
     legal: privacy
-  class-types:
-    crud: ClassType
-    filters: [level]
-navigation: [schedule, my-bookings, sessions, class-types, instructors, messages, home]
+navigation:
+  main: [schedule, my-bookings, sessions, class-types, instructors, messages, home, privacy]
+  schedule: [schedule, my-bookings, sessions]
+  messages: [messages]
+  studioSetup: [class-types, instructors]
+  website: [home]

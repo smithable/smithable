@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  hof:
+    features:
+      items: [{ title: Frisch vom Hof, text: "Gemüse, Obst und mehr aus eigener Erzeugung, so frisch wie möglich." }, { title: Online vorbestellen, text: "Legen Sie Ihre Wunschprodukte vorab zur Seite, ganz ohne Konto." }, { title: "Abholen, wann es passt", text: Wählen Sie eine Abholzeit und holen Sie Ihre Bestellung im Hofladen ab. }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true
