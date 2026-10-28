@@ -559,6 +559,26 @@ async function withApp(dir, body) {
   }
 }
 
+/** The four core flows at the end: sign in, the list, adding a customer, editing it. */
+function coreFlows(dir) {
+  return withApp(dir, async ({ page, base }) => {
+    const signedIn = await signIn(page, base, "admin");
+    const listed = await customersKept(page, base);
+    // The choice is "Segment" until request 9 renames it to "Market".
+    const added =
+      (await openAddForm(page, base, CUSTOMERS_PAGE)) &&
+      (await fillAndSave(page, {
+        Name: "Final Check Oy",
+        Email: "final@check.example",
+        "(Segment|Market)": "SMB",
+      }));
+    let edited = false;
+    if ((await openRecord(page, base, CUSTOMERS_PAGE, "Final Check Oy")) && (await openEdit(page)))
+      edited = await fillAndSave(page, { Notes: "Edited at the end." });
+    return { signedIn, listed, added, edited };
+  });
+}
+
 /** The acceptance checks up to `upTo`, each in a fresh admin session; a thrown check is a fail. */
 async function checkAll(dir, upTo) {
   return withApp(dir, async (app) => {
@@ -749,21 +769,7 @@ async function oneRun(run) {
 
   // The final pass: every check once more, and the four core flows.
   const finalChecks = await checkAll(dir, REQUESTS.length - 1);
-  const flows = await withApp(dir, async ({ page, base }) => {
-    const signedIn = await signIn(page, base, "admin");
-    const listed = await customersKept(page, base);
-    const added =
-      (await openAddForm(page, base, CUSTOMERS_PAGE)) &&
-      (await fillAndSave(page, {
-        Name: "Final Check Oy",
-        Email: "final@check.example",
-        Segment: "SMB",
-      }));
-    let edited = false;
-    if ((await openRecord(page, base, CUSTOMERS_PAGE, "Final Check Oy")) && (await openEdit(page)))
-      edited = await fillAndSave(page, { Notes: "Edited at the end." });
-    return { signedIn, listed, added, edited };
-  });
+  const flows = await coreFlows(dir);
   return {
     dir,
     start: { ...start, missing, typed },
@@ -782,6 +788,7 @@ if (option("check-only")) {
   // The checks alone, against an app a run kept: for mending a check without a model.
   const results = await checkAll(option("check-only"), REQUESTS.length - 1);
   console.log(JSON.stringify(results));
+  console.log(JSON.stringify(await coreFlows(option("check-only"))));
   process.exit(0);
 }
 
