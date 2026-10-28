@@ -2,13 +2,14 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Someone down the street probably has one sitting in a drawer. }, { title: Share what you own, text: Add the tools in your shed with a photo and say where to pick them up. }, { title: Keep track of loans, text: "Note who has your tool and when it is due back, then mark it returned when it comes home." }]
+      items: [{ title: Borrow instead of buying, text: Need a drill for one afternoon? Find one a few doors away instead of buying one. }, { title: Share what sits in your shed, text: Post the tools you rarely use so your neighbors can put them to work. }, { title: Ask the owner directly, text: Send the owner a message from the tool's page and agree on when to pick it up. }, { title: Save your favorites, text: Heart the tools you will need again and find them in one place. }]
     faq:
-      items: [{ question: Does it cost anything?, answer: No. Neighbors lend their tools for free; agree on anything else between yourselves. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message to arrange a time to pick it up." }, { question: What if something breaks?, answer: Talk it over with the owner and treat borrowed tools as carefully as your own. }]
+      items: [{ question: Does it cost anything?, answer: No. Neighbors lend their tools for free; anything else is between you and the owner. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message. You agree on pick-up and return together." }, { question: Who sees my contact details?, answer: Nobody browsing the catalog. The owner only hears from you when you write to them. }, { question: Why does my tool not show yet?, answer: "Photos are checked before a tool is listed, so it shows up as soon as they are approved." }]
     hero:
-      title: Tools for the whole street
-      subtitle: Lend what sits in your shed and borrow what you need from the neighbors.
+      title: Your neighborhood's toolshed
+      subtitle: Borrow the tools you need from people nearby, and lend out the ones gathering dust.
       button: Browse tools
+      secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
