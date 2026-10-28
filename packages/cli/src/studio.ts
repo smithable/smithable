@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watchFile,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -55,6 +63,25 @@ import { warmPreview } from "./warm.js";
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
 /** A message shown once when Studio next opens, e.g. why a description could not be used. */
 export const NOTICE = "data/.smithable/notice.txt";
+/**
+ * The beta's facts, written by the hosted service (smith-first.md §8): `{ until?, invite, guide }`,
+ * `until` when the project is a sandbox. Read on every poll; without it Smith says nothing of a beta.
+ */
+export const BETA = "data/.smithable/beta.json";
+
+/** The beta file's facts, or none when it is missing or unreadable. */
+export function readBeta(
+  dir: string,
+): { until?: string; invite?: string; guide?: string } | undefined {
+  try {
+    const value = JSON.parse(readFileSync(join(dir, BETA), "utf8")) as Record<string, unknown>;
+    const text = (key: string) =>
+      typeof value[key] === "string" ? { [key]: value[key] as string } : {};
+    return { ...text("until"), ...text("invite"), ...text("guide") };
+  } catch {
+    return undefined;
+  }
+}
 // Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
 // repository it is apps/studio's own build.
 const PACKAGED = new URL("../studio/", import.meta.url).pathname;
@@ -414,6 +441,11 @@ export async function studio(
     for (const client of clients)
       client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
+  // The beta file written by the hosted service at a sandbox's hand-over (smith-first.md §8): its
+  // facts sent to the page when it changes, without reloading anything.
+  watchFile(join(dir, BETA), { interval: 2000, persistent: false }, () =>
+    send("beta", readBeta(dir) ?? null),
+  );
   // When the app was last replaced: the dev server's last word about the old app's modules comes
   // just after, and is not about the app that is here now.
   let replacedAt = 0;
@@ -676,6 +708,7 @@ export async function studio(
       canRedo: Boolean(redoTarget(dir)),
       preview,
       ...(options.home ? { home: options.home } : {}),
+      ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       ...(notice ? { notice } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),

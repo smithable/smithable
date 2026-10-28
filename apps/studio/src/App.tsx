@@ -343,6 +343,9 @@ export function App() {
         setProject((p) => p && { ...p, making: (data as MakingState | null) ?? undefined });
       else if (event === "waiting")
         setProject((p) => p && { ...p, waiting: (data as string[] | null) ?? undefined });
+      // The hosted beta's facts, written at a sandbox's hand-over (smith-first.md §8).
+      else if (event === "beta")
+        setProject((p) => p && { ...p, beta: (data as Project["beta"] | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
       else if (event === "open") api.project().then(setProject, () => {});
       else logStore.push(String(data));
@@ -1009,6 +1012,7 @@ export function App() {
                       <div data-guide="change" className="min-h-0 flex-1 overflow-auto">
                         <Ask
                           guide={guiding ? guideLine : undefined}
+                          {...(project.beta ? { beta: project.beta } : {})}
                           words={words}
                           waiting={project.waiting}
                           trace={project.trace}
