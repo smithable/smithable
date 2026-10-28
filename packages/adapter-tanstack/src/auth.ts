@@ -482,9 +482,9 @@ const devSignIn = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/sign-in")({
   // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
-  // which a browser reads as "//host".
+  // which a browser reads as "//host"; and no control character, which no address header takes.
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),${
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])[^\\x00-\\x1f\\x7f]*$/),${
       invitations
         ? `
     invite: text(s.invite, 100),`
