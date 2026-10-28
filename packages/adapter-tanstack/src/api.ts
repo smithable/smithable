@@ -1244,7 +1244,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
     offer: offerFor(viewer),
     kinds: WORDS[caller]?.() ?? [],
     call: (tool, args) => callTool(viewer, tool, args),
-    turns,
+    turns,${ir.app.timezone ? `\n    timeZone: ${JSON.stringify(ir.app.timezone)},` : ""}
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
     // A visitor is never answered by a model; a person signed in is told in the kit's words.
     unread: viewer
