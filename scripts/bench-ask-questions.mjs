@@ -773,30 +773,32 @@ export const QUESTIONS = {
       kind: "change",
       check: (a) => named(a.Item, "title", "Turntable")?.available === false,
     },
+    // The items since the real photographs (7c44d218). A new item needs its photos, which the
+    // tools cannot add, so no change here puts one up.
     {
-      q: "Lower the price of the sailing dinghy to 950.",
+      q: "Lower the price of the rowing boat to 550.",
       kind: "change",
-      check: (a) => n(named(a.Item, "title", "Sailing dinghy with trailer")?.price) === 950,
+      check: (a) => n(named(a.Item, "title", "Rowing boat with oars")?.price) === 550,
     },
     {
-      q: "Put up a tent for sale: two-person tent, sports, good condition, 45 €, in Sund.",
+      q: "The laptop is more worn than we said: mark it as worn.",
       kind: "change",
-      check: (a, b) =>
-        a.Item.length === b.Item.length + 1 &&
-        a.Item.some((i) => /tent/i.test(i.title) && i.category === "sports" && n(i.price) === 45),
+      check: (a) => named(a.Item, "title", "Laptop, 13 inch")?.condition === "worn",
     },
     {
-      q: "Take the balance bike off the site.",
+      q: "Take the wooden toys off the site.",
       kind: "change",
       check: (a, b) => {
-        const x = named(a.Item, "title", "Balance bike");
-        return Boolean(named(b.Item, "title", "Balance bike")) && (!x || x.available === false);
+        const x = named(a.Item, "title", "Wooden pull-along toys");
+        return (
+          Boolean(named(b.Item, "title", "Wooden pull-along toys")) && (!x || x.available === false)
+        );
       },
     },
     {
-      q: "The car roof box is in Jomala, not Mariehamn.",
+      q: "The armchair is in Jomala, not Mariehamn.",
       kind: "change",
-      check: (a) => named(a.Item, "title", "Car roof box")?.place === "Jomala",
+      check: (a) => named(a.Item, "title", "Light gray armchair")?.place === "Jomala",
     },
   ],
 
