@@ -55,7 +55,7 @@ export const ROLE_LABELS: Record<string, string> = ${literal(roleLabels(auth))};
  * the users page's roles) does with them. Acceptance is by verified email address at sign-in
  * (src/lib/auth.ts); the token in the link only tells the sign-in page whom it is for.
  */
-export function usersServerModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
+export function usersServerModule(ir: SpecIR, auth: AuthIR, t: Texts, sampled = false): string {
   const roles = auth.roles.map((r) => r.name);
   const uses = userUses(ir, auth, t);
   return `${HEADER}// Who has access: the users and the open invitations, and what an administrator does with them.
@@ -66,7 +66,7 @@ import { ${hasKeys(ir, auth) ? "and, asc, eq, isNull" : "asc, eq"} } from "drizz
 import { db } from "#/db";
 import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";${uses.length ? '\nimport * as schema from "#/db/schema";' : ""}
 import { app } from "#/generated/app";
-import { pageAccess } from "#/generated/pages";
+import { pageAccess } from "#/generated/pages";${sampled ? '\nimport { SAMPLE_PEOPLE } from "#/generated/people";' : ""}
 import { ROLE_LABELS } from "#/generated/roles";
 import { AccessDenied, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
@@ -85,7 +85,7 @@ export interface UserRow {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: string;${sampled ? "\n  /** One of the sample users (samples/people.yml), in a development or demo build. */\n  sample?: boolean;" : ""}
 }
 
 export interface InvitationRow {
@@ -127,7 +127,7 @@ export async function listUsers(
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
       .orderBy(asc(user.name))
-      .all(),
+      .all()${sampled ? ".map((u) => (SAMPLE_PEOPLE.some((p) => p.id === u.id) ? { ...u, sample: true } : u))" : ""},
     invitations: db
       .select()
       .from(invitation)

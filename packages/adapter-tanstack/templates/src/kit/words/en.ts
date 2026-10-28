@@ -15,6 +15,7 @@ export const w = {
   actAs: "Act as",
   actions: "Actions",
   active: "Active",
+  sampleUser: "Sample user",
   activeFilters: "Active filters",
   activity: "Activity",
   activityLead: "Who did what, and when. Kept 12 months; the client's details 90 days.",

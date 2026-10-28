@@ -50,6 +50,7 @@ import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
+import { peopleModule, samplePeople } from "./dev-door.js";
 import {
   dataKey,
   type GenContext,
@@ -692,8 +693,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       const users =
         ir.models.some((m) => userFields(m).length) ||
         ir.actions.some((a) => userFields(a.input).length);
+      const people = samplePeople(options.people);
       return [
         generated("src/lib/auth.ts", authModule(auth, ir)),
+        // The sample users the development door acts as (docs/design/sample-users.md §5).
+        ...(people.length ? [generated("src/generated/people.ts", peopleModule(people))] : []),
         generated("src/generated/roles.ts", rolesModule(auth)),
         generated(
           "src/routes/sign-in.tsx",
@@ -708,7 +712,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Invitations and user management, for the users page (see users.ts).
         ...(hasInvitations(ir, auth)
           ? [
-              generated("src/generated/users.server.ts", usersServerModule(ir, auth, t)),
+              generated(
+                "src/generated/users.server.ts",
+                usersServerModule(ir, auth, t, people.length > 0),
+              ),
               generated("src/generated/users.test.ts", usersTestSource(ir, auth)),
             ]
           : []),
