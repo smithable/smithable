@@ -84,6 +84,18 @@ function filterOf(field: FieldIR, labels?: Record<string, string>): FieldFilter 
   return undefined;
 }
 
+/**
+ * A choice field's description, when short, goes in its line of the summary, so the model reads
+ * the app's words for its values before it filters on one ("down means unreachable; a degraded
+ * component is not down"). Longer meanings stay behind `describe`.
+ */
+export const MEANING_MAX = 120;
+const meaning = (description?: string): string => {
+  // One line, as the summary is read: a description written over several lines is joined.
+  const text = description?.replace(/\s+/g, " ").trim().replace(/\.$/, "") ?? "";
+  return text && text.length <= MEANING_MAX ? `; ${text}` : "";
+};
+
 /** A field in the summary: its name, "*" when required, and what it holds when not a text. */
 function fieldWord(field: FieldIR): string {
   const { type } = field;
@@ -93,7 +105,7 @@ function fieldWord(field: FieldIR): string {
   // url" was taken for a field called "link url").
   const holds =
     type.kind === "choice"
-      ? type.values.join(" | ")
+      ? `${type.values.join(" | ")}${meaning(field.description)}`
       : type.name === "bool"
         ? "yes/no"
         : type.name === "money"

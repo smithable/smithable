@@ -322,3 +322,33 @@ test("a custom action on rows is a run on ids for programs and assistants (A 171
   expect(run?.description).toContain("tag run on the rows given as `ids`");
   expect(offer.summary).toContain("tag (Customer rows, by ids; input: segment)");
 });
+
+test("a short description of a choice field is in its line; a long one stays in describe", () => {
+  const meant = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Status }
+models:
+  Component:
+    fields:
+      name: string!
+      status: { type: "operational | degraded | down", description: "down means unreachable; a degraded component is not down." }
+      kind: { type: "api | site", description: "${"x".repeat(121)}" }
+pages:
+  components: { crud: Component }
+`,
+  }).ir as SpecIR;
+  const read = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all }\napi: { models: all, assistants: true }\n",
+    },
+    meant,
+  );
+  const offer = assistantOffer(meant, read.auth as AuthIR, { role: "admin" });
+  expect(offer.summary).toContain(
+    "status* (operational | degraded | down; down means unreachable; a degraded component is not down)",
+  );
+  expect(offer.summary).toContain("kind* (api | site)");
+  expect(offer.summary).not.toContain("xxxx");
+});

@@ -3,6 +3,7 @@
 // calls the same tools an outside assistant gets. The app runs every call itself and shows what
 // came back; a call that would change something is only proposed, never run here.
 import { type AskKind, readQuestion, smallTalk, suggestions, type Turn } from "./ask";
+import { asked, foundNone, type Spread, spreadField, spreadWords } from "./asked";
 import { ungrounded } from "./grounded";
 import { type Offer, offered } from "./tools";
 import { w } from "./words";
@@ -22,6 +23,12 @@ export interface Step {
   /** Ask with may: change: the proposal kept on the server, and what its card says. */
   proposal?: string;
   card?: Card;
+  /** What a read asked of the records, in words: the kind, the conditions, how many of all. */
+  asked?: string;
+  /** When a filter on a choice found none: how the records split by that field. */
+  spread?: string;
+  /** The kind's list page, where a row's record is at path/id. */
+  path?: string;
   ms: number;
 }
 
@@ -125,6 +132,27 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     steps,
     ms: Date.now() - started,
   });
+  // Under a read's result, what was asked in words; when a filter on a choice found none, how
+  // the records split by that field, counted by the app (one more query, no model), so a
+  // question read one of two ways shows how it was read.
+  const explain = async (step: Step) => {
+    const kind = parts.kinds.find((k) => k.model === step.args.kind);
+    if (!kind) return;
+    // Not for the trash: its records are not the live ones a spread would count.
+    const counted = (step.tool === "find" || step.tool === "measure") && !step.args.trash;
+    const field =
+      counted && foundNone(step.result) ? spreadField(kind, step.args.where) : undefined;
+    let split: Spread | undefined;
+    if (field) {
+      const { [field]: _asked, ...where } = step.args.where as { [key: string]: Json };
+      const count: { [key: string]: Json } = { kind: kind.model, of: "count", by: field, where };
+      if (typeof step.args.search === "string") count.search = step.args.search;
+      split = (await parts.call("measure", count).catch(() => undefined)) as Spread | undefined;
+    }
+    step.asked = asked(step.tool, step.args, step.result, kind, split);
+    if (field && split?.rows?.length) step.spread = spreadWords(kind, field, split.rows);
+    if (kind.path) step.path = kind.path;
+  };
   const run = async (tool: string, args: { [key: string]: Json }): Promise<Step> => {
     const at = Date.now();
     const step: Step = { tool, args, ms: 0 };
@@ -143,6 +171,8 @@ export async function answer(question: string, parts: Parts): Promise<Answer> {
     } catch (error) {
       step.error = error instanceof Error ? error.message : String(error);
     }
+    // The words about the result never cost the result: a fault here is swallowed.
+    if (step.result !== undefined) await explain(step).catch(() => undefined);
     step.ms = Date.now() - at;
     steps.push(step);
     return step;

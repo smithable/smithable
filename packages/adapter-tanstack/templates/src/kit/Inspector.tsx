@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { AppLink } from "./AppLink";
 import type { Answer, Step } from "./assistant.server";
 import { w } from "./words";
 
@@ -134,7 +135,15 @@ export function Shown({
         step.proposal && step.card && confirm ? (
           <Proposal key={`${i}-${step.tool}`} step={step} confirm={confirm} />
         ) : (
-          <Result key={`${i}-${step.tool}`} step={step} />
+          <div key={`${i}-${step.tool}`} className="space-y-1">
+            <Result step={step} />
+            {step.asked && (
+              <p className="text-xs text-muted-foreground" data-asked>
+                {step.asked}
+                {step.spread ? ` · ${step.spread}` : ""}
+              </p>
+            )}
+          </div>
         ),
       )}
       {answer.note && <p className="text-sm text-muted-foreground">{answer.note}</p>}
@@ -294,6 +303,7 @@ function Result({ step }: { step: Step }) {
         head={r.columns as string[]}
         rows={(r.rows as unknown[][]).map((row) => row.map(cell))}
         note={typeof r.total === "number" ? w.inAll(r.total) : undefined}
+        link={step.path && r.columns[0] === "id" ? (row) => `${step.path}/${row[0]}` : undefined}
       />
     );
   if (typeof r.by === "string" && Array.isArray(r.rows))
@@ -328,7 +338,18 @@ function Result({ step }: { step: Step }) {
   );
 }
 
-function Table({ head, rows, note }: { head: string[]; rows: string[][]; note?: string }) {
+/** Rows of cells; with `link`, a row's title (its second cell) opens its record. */
+function Table({
+  head,
+  rows,
+  note,
+  link,
+}: {
+  head: string[];
+  rows: string[][];
+  note?: string;
+  link?: (row: string[]) => string;
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -346,7 +367,13 @@ function Table({ head, rows, note }: { head: string[]; rows: string[][]; note?: 
             <tr key={`${i}-${row[0]}`} className="border-t border-border">
               {row.map((c, j) => (
                 <td key={`${j}-${head[j]}`} className="px-2 py-1">
-                  {c}
+                  {j === 1 && link ? (
+                    <AppLink href={link(row)} className="underline">
+                      {c}
+                    </AppLink>
+                  ) : (
+                    c
+                  )}
                 </td>
               ))}
             </tr>

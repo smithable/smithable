@@ -427,6 +427,27 @@ export const w = {
     `${total} found${first.length ? `: ${first.join(", ")}` : ""}.`,
   /** A range filter with no end. */
   fromValue: (from: string) => `from ${from}`,
+  askedFind: (plural: string, conditions: string[], sort: string, shown: number, total?: number) =>
+    `${plural}${conditions.length ? ` where ${conditions.join(", ")}` : ""}${sort ? `, ${sort}` : ""} · ${total === undefined || total === shown ? shown : `${shown} of ${total}`}`,
+  askedMeasure: (
+    how: string,
+    field: string | undefined,
+    plural: string,
+    conditions: string[],
+    by?: string,
+  ) =>
+    `${{ count: "Count of", sum: "Sum of", average: "Average", min: "Smallest", max: "Largest" }[how] ?? how}${field ? ` ${field} over` : ""} ${plural.toLowerCase()}${conditions.length ? ` where ${conditions.join(", ")}` : ""}${by ? `, per ${by}` : ""}`,
+  askedRead: (label: string, id: string) => `${label} ${id}`,
+  fieldIs: (label: string, value: string) => `${label} is ${value}`,
+  fromTo: (from?: string, to?: string) =>
+    from && to ? `from ${from} to ${to}` : from ? `from ${from}` : `to ${to}`,
+  orList: (values: string[]) => values.join(" or "),
+  over: (n: string) => `over ${n}`,
+  sortedBy: (label: string, largestFirst: boolean) =>
+    largestFirst ? `largest ${label} first` : `by ${label}`,
+  under: (n: string) => `under ${n}`,
+  withWords: (search: string) => `with "${search}"`,
+  yoursOnly: "yours",
   inAll: (total: number) => `${total} in all`,
   invitationKept: (address: string) =>
     `Invitation to ${address} written to the preview's outbox, not sent: the preview sends no mail. Studio's Outbox shows it.`,
