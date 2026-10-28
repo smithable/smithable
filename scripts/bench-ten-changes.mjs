@@ -8,8 +8,9 @@
 // build, the app's own tests and whether the code is still what the spec generates. (The Builder
 // changes bench, bench-changes.mjs, is another thing: single requests on fresh starters, checked in
 // the spec they leave.)
-// Needs the models set up in the environment (docs/ai.md: the Smithable model) and Playwright.
-// Costs the model's tokens (cents a run): ask before running.
+// Needs the models set up in the environment (docs/ai.md: the Smithable model; on a machine that
+// keeps them in a file, source it first: `set -a; . ~/.config/smithable/<model>.env; set +a`) and
+// Playwright. Costs the model's tokens (cents a run): ask before running.
 //   node scripts/bench-ten-changes.mjs [--runs N] [--extra <file.md>] [--port P] [--keep]
 // --extra: more requests in the results sheet's table form ("| H1 | request | acceptance |"),
 // run after the ten with no check and no repair: a person judges them from the app and the
