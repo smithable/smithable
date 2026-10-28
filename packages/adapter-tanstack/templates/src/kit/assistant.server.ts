@@ -52,6 +52,8 @@ export interface Answer {
   unconfirmed?: boolean;
   tokens?: { in: number; out: number };
   ms: number;
+  /** The app's time zone, for showing the results' date-times as its pages do. */
+  timeZone?: string;
 }
 
 /** A chat service that can call tools, as the host gives it (ASSISTANT_URL, _KEY, _MODEL). */
@@ -124,7 +126,13 @@ function nowLine(timeZone?: string): string {
   return `It is now ${wall}${timeZone ? ` in the app's time zone (${timeZone})` : ""}. Give a date-time as such a wall time ("2026-10-27T14:05"); for something that happens now, this one.`;
 }
 
+/** The answer, with the app's time zone for showing it. */
 export async function answer(question: string, parts: Parts): Promise<Answer> {
+  const given = await answered(question, parts);
+  return parts.timeZone ? { ...given, timeZone: parts.timeZone } : given;
+}
+
+async function answered(question: string, parts: Parts): Promise<Answer> {
   const started = Date.now();
   const steps: Step[] = [];
   const done = (rest: Omit<Answer, "steps" | "ms">): Answer => ({
