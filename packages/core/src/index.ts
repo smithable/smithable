@@ -77,6 +77,7 @@ export {
   LANGUAGES,
   type Language,
   LOGO_SRC,
+  placeholderProblem,
   RESERVE_TEXTS,
   textPaths,
   textsToTranslate,

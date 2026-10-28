@@ -305,6 +305,7 @@ export function NoCode({
                   key={path[1]}
                   entry={path[1]}
                   ir={spec.ir}
+                  auth={spec.auth}
                   contentText={project.files.content}
                   samples={project.samples ?? {}}
                   run={run}
