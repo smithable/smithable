@@ -90,6 +90,8 @@ pages:
 
 The customers page then offers **Set segment** in its selection bar when rows are ticked, not as a header button; the other inputs are asked once, in the same dialog a standard action uses. The function gets the list as ids, each once, and the generated server function has checked that the person may read every one of them before it runs. Activity has one line for the run, with the records it ran on.
 
+Offered to programs (`api.actions` in `smithable.auth.yml`), it runs on the ids a call gives: `POST /api/v1/customers/actions/setSegment` with `{ "ids": [3, 7], "segment": "enterprise" }`, at most a thousand a run ([the API](api.md)). An assistant runs it through its `run` tool the same way, and Ask, when it may change records, proposes it with a card naming the rows, for the person to confirm. Each way goes through the same server function, so access, the reading of every row and the Activity line are the same.
+
 ### Its test
 
 A test is yours to write, next to the code, with Vitest: the CRM's is `src/custom/actions/merge-customers.test.ts`. It makes two customers and two orders on the duplicate, calls `mergeCustomers({ keep: keep.id, duplicate: duplicate.id }, null)`, and checks that the kept customer's own fields stayed, an empty one was filled from the duplicate, the duplicate is gone and both orders moved; a second test checks that merging a customer into itself is refused. The tests call the function directly, so they test the merge, not who may run it; access is the generated server function's, and has generated tests of its own. Run the app's tests with:
