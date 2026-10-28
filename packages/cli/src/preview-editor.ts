@@ -520,9 +520,11 @@ export type Middleware = (
 export const framedLocally: Middleware = (req, res, next) => {
   const host = req.headers.host;
   if (typeof host === "string" && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host))
+    // CSP's sources have no form for an IPv6 literal ([::1]): a browser drops such a source and
+    // logs an error each load, so only the names it takes are listed.
     res.setHeader(
       "Content-Security-Policy",
-      "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* http://[::1]:* https://localhost:* https://127.0.0.1:* https://[::1]:*",
+      "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:*",
     );
   next();
 };
