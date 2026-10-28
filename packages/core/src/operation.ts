@@ -21,6 +21,8 @@ export interface Editors {
   ux: YamlEditor;
   /** smithable.context.yml (implementation choices); written only when it changed. */
   context: YamlEditor;
+  /** samples/people.yml, the sample users (docs/design/sample-users.md §5); written only when the project has one or it changed. */
+  people?: YamlEditor;
   themes: ThemeFiles;
   /** The language files, smithable.content.<language>.yml (docs/design/languages.md §2). */
   translations: TranslationFiles;

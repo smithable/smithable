@@ -22,6 +22,7 @@ import {
   type OperationArgs,
   OperationError,
   operationsFor,
+  PEOPLE_PATH,
   parseOperationArgs,
   type SpecIR,
   storageOf,
@@ -235,12 +236,14 @@ async function applyAndCheckpoint(
   const authPath = join(dir, AUTH);
   const uxPath = join(dir, UX);
   const contextPath = join(dir, "smithable.context.yml");
+  const peoplePath = join(dir, PEOPLE_PATH);
   const files = {
     spec: readFileSync(join(dir, SPEC), "utf8"),
     ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
     ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
     ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
     ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
+    ...(existsSync(peoplePath) ? { people: readFileSync(peoplePath, "utf8") } : {}),
     plugins,
     themes: projectThemes(dir),
     translations: projectTranslations(dir),
@@ -337,6 +340,10 @@ async function applyAndCheckpoint(
     if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
     if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
     if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
+    if (result.files.people !== undefined) {
+      mkdirSync(dirname(peoplePath), { recursive: true });
+      writeFileSync(peoplePath, result.files.people);
+    }
     for (const [language, text] of Object.entries(result.files.translations ?? {}))
       writeFileSync(join(dir, translationPath(language)), text);
     for (const path of result.removed) rmSync(join(dir, path), { force: true });

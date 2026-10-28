@@ -246,3 +246,40 @@ describe("YamlEditor moves an entry", () => {
     expect(e.text).toBe(spec);
   });
 });
+
+test("appendItem adds a block list item at the end, from an empty document or a flow list too", () => {
+  const list = new YamlEditor("- name: Maja\n  role: customer\n# a comment after\n");
+  list.appendItem([], { name: "Tomas", role: "visitor", pace: 5 });
+  expect(list.text).toBe(
+    "- name: Maja\n  role: customer\n- name: Tomas\n  role: visitor\n  pace: 5\n# a comment after\n",
+  );
+  const empty = new YamlEditor("");
+  empty.appendItem([], { name: "Maja", persona: "Books: a lot, often" });
+  expect(empty.text).toBe('- name: Maja\n  persona: "Books: a lot, often"\n');
+  const comments = new YamlEditor("# people\n");
+  comments.appendItem([], { name: "Maja" });
+  expect(comments.text).toBe("# people\n- name: Maja\n");
+  const flow = new YamlEditor("# tags\ntags: [a, b] # two\n");
+  flow.appendItem(["tags"], "c");
+  expect(flow.text).toBe("# tags\ntags:\n  - a\n  - b\n  - c # two\n");
+  const root = new YamlEditor("# all\n[a, b]\n");
+  root.appendItem([], "c");
+  expect(root.text).toBe("# all\n- a\n- b\n- c\n");
+  const nested = new YamlEditor("- name: Maja\n  tags:\n    - x\n# after\n");
+  nested.appendItem([], { name: "Tomas" });
+  expect(nested.text).toBe("- name: Maja\n  tags:\n    - x\n- name: Tomas\n# after\n");
+  expect(() => new YamlEditor("name: x\n").appendItem([], "y")).toThrow("not a list");
+});
+
+test("removeItem takes a block list item with its lines, or an item of a flow list", () => {
+  const list = new YamlEditor("- name: Maja\n  role: customer\n- name: Tomas\n  role: visitor\n");
+  list.removeItem([], 0);
+  expect(list.text).toBe("- name: Tomas\n  role: visitor\n");
+  const dashed = new YamlEditor("-\n  name: Maja\n-\n  name: Tomas\n");
+  dashed.removeItem([], 1);
+  expect(dashed.text).toBe("-\n  name: Maja\n");
+  const flow = new YamlEditor("tags: [a, b, c]\n");
+  flow.removeItem(["tags"], 1);
+  expect(flow.text).toBe("tags: [a, c]\n");
+  expect(() => list.removeItem([], 4)).toThrow("has no item 5");
+});

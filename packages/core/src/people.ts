@@ -25,13 +25,15 @@ export const PACE_MIN = 0.25;
 export const PACE_MAX = 60;
 /** How many sample users may act in one project (sample-users.md §4). */
 export const PEOPLE_MAX = 5;
+/** The file, in the project. */
+export const PEOPLE_PATH = "samples/people.yml";
 
 const KEYS = { allowed: ["name", "role", "persona", "pace"] } as const;
 
 /** Reads samples/people.yml against the auth file's roles. */
 export function validatePeople(
   file: { path: string; text: string },
-  auth: AuthIR,
+  auth: Pick<AuthIR, "roles">,
 ): { people: PersonIR[]; diagnostics: Diagnostic[] } {
   const counter = new LineCounter();
   const doc = parseDocument(file.text, { lineCounter: counter, keepSourceTokens: true });
@@ -39,6 +41,8 @@ export function validatePeople(
   for (const error of doc.errors) ctx.error(null, "yaml", error.message);
   const people: PersonIR[] = [];
   if (doc.errors.length) return { people, diagnostics: ctx.diagnostics };
+  // An empty file, or one of comments only: no people yet (removing the last one leaves it so).
+  if (doc.contents === null) return { people, diagnostics: ctx.diagnostics };
   if (!isSeq(doc.contents)) {
     ctx.error(doc.contents, "expected-list", "samples/people.yml must be a list of people.");
     return { people, diagnostics: ctx.diagnostics };
