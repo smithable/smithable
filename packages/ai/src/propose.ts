@@ -297,7 +297,8 @@ export async function proposeChange(options: {
       try {
         answer = (await completeJson(
           provider,
-          { system, user: prompt, schema, fallbackSchema },
+          // The second round says so, for a gateway that sends repairs to a stronger model.
+          { system, user: prompt, schema, fallbackSchema, ...(attempt ? { repair: true } : {}) },
           usage,
         )) as Answer;
       } catch (error) {

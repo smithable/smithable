@@ -18,6 +18,11 @@ export interface CompletionRequest {
    * had to fall back keeps using the simpler form.
    */
   fallbackSchema?: object;
+  /**
+   * A second try after an answer that could not be applied: sent with `X-Smithable-Repair: 1`,
+   * so a gateway that cascades to a stronger model knows without reading the prompt.
+   */
+  repair?: boolean;
 }
 
 export interface Completion {
@@ -92,7 +97,7 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
     model: options.model,
     price: options.price ?? listed ?? { input: 0, output: 0 },
     currency: listed ? "USD" : "EUR",
-    async complete({ system, user, schema, fallbackSchema }) {
+    async complete({ system, user, schema, fallbackSchema, repair }) {
       const post = (answerSchema: object) =>
         fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
@@ -102,6 +107,7 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
           headers: {
             "Content-Type": "application/json",
             ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
+            ...(repair ? { "X-Smithable-Repair": "1" } : {}),
           },
           body: JSON.stringify({
             model: options.model,
