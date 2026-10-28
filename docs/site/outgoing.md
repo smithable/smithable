@@ -14,12 +14,39 @@ outgoing:
 
 - **`when`** is `<Model> created`, `changed` or `deleted`, or the name of a button's action (it fires once the action has run). For a [custom action](code.md) there is no record: a call's body carries the action's input and output, a mail shows them and goes to a role, and `where` and `fields` are refused. Code of your own can queue mail and calls the same way with `tell` and `tellMail` ([your own code](code.md#mail-and-web-calls-from-code)).
 - **`where`** (optional) narrows it: `where: { status: shipped }`. A change counts only when the record fits afterwards and did not fit before, so editing an order that is already shipped sends nothing.
+- **`fields`** (optional, for `<Model> changed`): only a change of one of these fields counts. `fields: [startsAt]` tells people when a class moves, not when its description is edited.
 - **`recipient`** can be:
   - `owner`;
   - a role (every user who has it);
   - an `email` field of the record, or one a reference away (`customer.email`);
-  - a field that refers to a user.
-- **The mail** has the subject and text from `smithable.content.yml` (`outgoing: { bookingMade: { subject: Your booking, text: … } }`), then the record's fields as its page shows them, then a link to the record. The person who made the change is not mailed about their own change, except when they made the record: the owner of a new booking gets its mail as a confirmation.
+  - a field that refers to a user;
+  - a list field of the record, followed by the owner or an email field of each record in it: `bookings.owner` mails everyone who booked the class, each person once.
+- **The mail** has the subject and text from `smithable.content.yml`, then the record's fields as its page shows them, then a link to the record. The person who made the change is not mailed about their own change, except when they made the record: the owner of a new booking gets its mail as a confirmation.
+
+### The mail's words
+
+The subject and text are in `smithable.content.yml`, under the entry's name, and may name the record's values in braces:
+
+```yaml
+outgoing:
+  bookingMade:
+    subject: "Your booking: {session}"
+  sessionMoved:
+    subject: Your class has a new time
+    text: "{by} moved {classType}, a class you booked, from {before.startsAt} to {startsAt}."
+```
+
+- **`{startsAt}`** is a field of the record, as its page shows it; **`{session}`** a reference's record by its title, and **`{session.startsAt}`** a field of that record, one reference away at most.
+- **`{title}`** is the record's title, **`{link}`** its page's address, **`{by}`** the name of the person who made the change, and, on `<Model> changed` only, **`{before.startsAt}`** what a field was.
+- An empty value is an empty text. There are no conditions or formats: the value is written as the record page shows it.
+- The texts are checked with the rest of the app: a placeholder that is not a field, holds files or something sensitive, lists records, or names what the recipient may not read is refused, with the reason.
+
+In Studio, the **Content** panel edits these texts, offers the placeholders the entry may use (grouped by reference), shows a mail made from a sample record, and says what is wrong with a placeholder as you type.
+
+What the mail lists under its text is yours too, on the entry in `smithable.yml`:
+
+- **`show: [number, wanted, total]`** lists those fields, in that order (and a call's record carries only them); `show: none` sends the text alone.
+- **`previous: true`**, on `<Model> changed`, adds what the changed fields were: the line reads "Status: ready (was accepted)", and a call's body gets `before` with those fields.
 
 From the command line: `smithable op addOutgoing bookingMade "Booking created" --to mail --recipient owner`.
 
