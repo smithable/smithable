@@ -4,13 +4,13 @@ Most of an app is generated from its spec and changes with it. When the spec can
 
 ## Standard or custom action
 
-A button is a standard action when it can be said in the spec, and a custom action when it needs code. A standard action is a button on a record; a custom action is a button in a list page's header that opens a form. Try the standard one first: it needs no code, is checked against the spec, runs on several records at once, and stays right as the spec changes.
+A button is a standard action when it can be said in the spec, and a custom action when it needs code. A standard action is a button on a record; a custom action is a button in a list page's header that opens a form, or, when its input includes a list of records, a button in the list's selection bar. Try the standard one first: it needs no code, is checked against the spec and stays right as the spec changes.
 
 | | Standard action | Custom action |
 |---|---|---|
-| **Input** | The record it is pressed on, or the rows ticked on a list. A field left empty in `set` is asked for. | Typed values you declare (`input:`), references to records included. There is no current record. |
+| **Input** | The record it is pressed on, or the rows ticked on a list. A field left empty in `set` is asked for. | Typed values you declare (`input:`), references to records included, and at most one list of records (`customers: Customer[]`), the rows ticked on a list. There is no current record. |
 | **What it does** | Sets fields (a value, a formula, `ME()`), adds one related record, or copies the record with its lists. | Anything the code does: other records, other models, a calculation over many records, a value it returns (`output:`). |
-| **Mail and calls** | An [outgoing](outgoing.md) entry with the action's name in `when`: queued, retried for a day, listed in the app's Activity page. | In the code: `sendMail` from `#/kit/mail`, or `fetch` for a web call. |
+| **Mail and calls** | An [outgoing](outgoing.md) entry with the action's name in `when`: queued, retried for a day, listed in the app's Activity page. | The same: an outgoing entry with its name in `when`, sent once the function returns without an error. In the code itself, `tell` and `tellMail` from `#/kit/tell.server`, which use the same outbox; `sendMail` and `fetch` send straight away, without it. |
 | **Who may run it** | Whoever may edit the record, or a role whose `actions` grant names it. | Only the roles whose `actions` grant names it, and administrators. |
 | **Where it is** | In `smithable.yml`, under `actions:`. See [buttons on a record](actions.md). | Declared in `smithable.yml`, written in `src/custom/actions/`. |
 
@@ -71,6 +71,25 @@ The duplicate is deleted before its values move, so a unique value such as its e
 
 Who may run it is a grant: `smithable op grant sales actions mergeCustomers` lets the sales role merge (`roles.sales.actions` in `smithable.auth.yml`). The CRM grants it to no one, so only administrators can.
 
+### On the rows picked
+
+A custom action whose input holds a list of records runs on the rows ticked in a list, once for all of them. One input may be such a list (always required, so it needs no `!`; never of users; and an output holds none):
+
+```yaml
+actions:
+  setSegment:
+    custom: true
+    input: { customers: Customer[], segment: string! }
+    intent: Move the customers picked to another segment.
+
+pages:
+  customers:
+    crud: Customer
+    actions: [setSegment]
+```
+
+The customers page then offers **Set segment** in its selection bar when rows are ticked, not as a header button; the other inputs are asked once, in the same dialog a standard action uses. The function gets the list as ids, each once, and the generated server function has checked that the person may read every one of them before it runs. Activity has one line for the run, with the records it ran on.
+
 ### Its test
 
 A test is yours to write, next to the code, with Vitest: the CRM's is `src/custom/actions/merge-customers.test.ts`. It makes two customers and two orders on the duplicate, calls `mergeCustomers({ keep: keep.id, duplicate: duplicate.id }, null)`, and checks that the kept customer's own fields stayed, an empty one was filled from the duplicate, the duplicate is gone and both orders moved; a second test checks that merging a customer into itself is refused. The tests call the function directly, so they test the merge, not who may run it; access is the generated server function's, and has generated tests of its own. Run the app's tests with:
@@ -87,7 +106,16 @@ Tests run against an empty database of their own (`data/test`), wiped when the r
 
 - **Mail:** `sendMail({ to, subject, text })` from `#/kit/mail` (the app kit: the small library every generated app carries in `src/kit/`) sends at once through the app's mail settings (`SMTP_URL`, or `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` and `SMTP_PASSWORD`; the sender is `MAIL_FROM`). Without them the mail is written to the outbox folder (`data/mail/outbox`), where a test can read it with `outbox()` from the same file.
 - **Web calls:** plain `fetch`. On smithable.ai every call leaves through the service's gateway, which checks where it goes against the app's level and counts it towards the day's limit ([mail and calls out](outgoing.md)).
-- What an [outgoing](outgoing.md) entry gives (a queue, retries for a day, a line in Activity) is for record changes and standard actions; a helper that queues mail and calls from your own code is planned.
+- **Through the outbox:** `tell` and `tellMail` from `#/kit/tell.server` give your code what an [outgoing](outgoing.md) entry gives: a queue, retries for a day, a line in Activity and **Send again**. `tell(target, body)` calls one of the targets the spec's outgoing section names (`to:`), with the body as JSON, signed with the target's secret; the target's address and secret stay settings, so where the app may call stays the administrator's. `tellMail(to, subject, text)` mails an address or a role (every user who has it); in a visitor's request it mails a role only, never an address, since the code might pass on what a stranger typed. Use `fetch` when the code needs the answer at once.
+
+  ```ts
+  import { tell, tellMail } from "#/kit/tell.server";
+
+  await tell("crmFeed", { customer: keep, merged: duplicate });
+  await tellMail("admin", "Customers merged", `#${keep} kept, #${duplicate} merged into it.`);
+  ```
+
+- **After the action:** an outgoing entry may also name a custom action in `when` (`customersMerged: { when: mergeCustomers, to: crmFeed }`): it is sent once the function returns without an error, with the action's input and output, since there is no record. Its mail goes to a role, and `where` and `fields` are refused ([mail and calls out](outgoing.md)).
 
 ## Hooks
 

@@ -12,7 +12,7 @@ outgoing:
     recipient: owner                 # the record's owner, a role (admin), or an email field
 ```
 
-- **`when`** is `<Model> created`, `changed` or `deleted`, or the name of a button's action (it fires once the action has run).
+- **`when`** is `<Model> created`, `changed` or `deleted`, or the name of a button's action (it fires once the action has run). For a [custom action](code.md) there is no record: a call's body carries the action's input and output, a mail shows them and goes to a role, and `where` and `fields` are refused. Code of your own can queue mail and calls the same way with `tell` and `tellMail` ([your own code](code.md#mail-and-web-calls-from-code)).
 - **`where`** (optional) narrows it: `where: { status: shipped }`. A change counts only when the record fits afterwards and did not fit before, so editing an order that is already shipped sends nothing.
 - **`recipient`** can be:
   - `owner`;
