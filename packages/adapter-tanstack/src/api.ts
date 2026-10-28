@@ -288,7 +288,9 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
               schema: {
                 type: "object",
                 required: ["ids"],
-                properties: { ids: { type: "array", items: { type: "integer" }, minItems: 1 } },
+                properties: {
+                  ids: { type: "array", items: { type: "integer" }, minItems: 1, maxItems: 1000 },
+                },
                 description: `The rows to run it on${others.length ? `, and what it asks for: ${others.join(", ")}` : ""}`,
               },
             },
@@ -1302,17 +1304,19 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
   if (onRows) {
     // The rows by id and what else it asks for, checked now; the run checks each row's reading.
     if (!allows(onRows.access, viewer)) throw new AccessDenied(true);
-    const ids = Array.isArray(args.ids) ? args.ids : [];
+    let parsed: Record<string, unknown>;
     try {
-      onRows.input.parse({ ...((args.input ?? {}) as object), [onRows.field]: ids });
+      parsed = onRows.input.parse({ ...((args.input ?? {}) as object), [onRows.field]: args.ids }) as Record<string, unknown>;
     } catch (error) {
       const issues = (error as { issues?: { path: unknown[]; message: string }[] }).issues ?? [];
       throw new BadInput(\`\${onRows.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
     }
-    // What else it is given, said on the card beside how many rows.
+    // The card says what the run will be given, as checked: which rows, and the rest.
+    const { [onRows.field]: rows, ...rest } = parsed;
+    const ids = rows as number[];
     card = {
       title: \`\${onRows.label}: \${ids.length} \${onRows.plural}\`,
-      changes: Object.entries((args.input ?? {}) as Record<string, unknown>).map(([k, v]) => ({ label: k, to: cardValue(v) })),
+      changes: [{ label: onRows.plural, to: ids.join(", ") }, ...Object.entries(rest).map(([k, v]) => ({ label: k, to: cardValue(v) }))],
     };
   } else if (tool === "run") {
     const run = Object.hasOwn(RUNS, String(args.action)) ? RUNS[String(args.action)] : undefined;

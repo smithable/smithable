@@ -45,8 +45,8 @@ export function zodFor(field: FieldIR): string {
       field.type.model === USER_MODEL
         ? "z.string()"
         : field.type.many
-          ? // The rows picked, each once.
-            "z.array(z.number().int()).min(1).transform((ids) => [...new Set(ids)])"
+          ? // The rows picked, each once; a program gives at most a thousand at a time.
+            "z.array(z.number().int()).min(1).max(1000).transform((ids) => [...new Set(ids)])"
           : "z.number().int()";
   else {
     switch (field.type.name) {

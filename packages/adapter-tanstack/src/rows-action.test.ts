@@ -25,7 +25,7 @@ test("a custom action's list input is an array of ids, each checked for reading"
   const out = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const of = (path: string) => out.find((f) => f.path === path)?.content ?? "";
   expect(of("src/generated/actions/tag.input.ts")).toContain(
-    "customers: z.array(z.number().int()).min(1)",
+    "customers: z.array(z.number().int()).min(1).max(1000)",
   );
   expect(of("src/generated/actions/tag.server.ts")).toContain(
     "if (!data.customers.every((id) => customerData.canRead(viewer, id))) throw new AccessDenied(true);",
