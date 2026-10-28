@@ -91,6 +91,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/ask.md",
+    out: "ask.html",
+    description:
+      "Ask your app a question: the line under each answer that says what was looked up, and a word Ask could read two ways explained with a description, on the status starter.",
+    nav: "Ask",
+    group: "Build",
+  },
+  {
     src: "docs/site/api.md",
     out: "api.html",
     description:
