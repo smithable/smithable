@@ -701,7 +701,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         generated("src/generated/roles.ts", rolesModule(auth)),
         generated(
           "src/routes/sign-in.tsx",
-          signInRoute(auth, onboarding?.route, hasInvitations(ir, auth)),
+          signInRoute(auth, onboarding?.route, hasInvitations(ir, auth), people.length > 0),
         ),
         ...(users
           ? [

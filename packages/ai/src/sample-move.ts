@@ -100,12 +100,13 @@ ${moves.map(moveLine).join("\n")}`;
   const out: Record<string, FieldValue> = {};
   for (const [field, value] of Object.entries(values as Record<string, unknown>)) {
     const slot = slots.get(field);
-    if (!slot || slot.kind === "reference")
+    if (!slot)
       return {
         miss: `The model gave a value for "${field}", which ${move.id} does not ask.`,
         usage,
       };
-    if (value === null) continue;
+    // A reference is the app's pick among the records the person may see, whatever it says.
+    if (value === null || slot.kind === "reference") continue;
     if (!["string", "number", "boolean"].includes(typeof value))
       return { miss: `The model gave "${field}" a value of no kind a form takes.`, usage };
     out[field] = value as FieldValue;

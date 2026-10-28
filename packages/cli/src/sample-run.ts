@@ -124,7 +124,12 @@ export function sampleRunner(options: {
   function load(): boolean {
     const loaded = options.load();
     summary = loaded.summary;
-    state.people = loaded.people.slice(0, PEOPLE_MAX);
+    // What each did last stays with them across a new read of the file.
+    const last = new Map(state.people.map((p) => [p.id, p.last]));
+    state.people = loaded.people.slice(0, PEOPLE_MAX).map((p) => {
+      const was = last.get(p.id);
+      return was ? { ...p, last: was } : p;
+    });
     return state.people.length > 0;
   }
 
@@ -260,7 +265,11 @@ export function sampleRunner(options: {
   }
 
   return {
-    state: snapshot,
+    /** The state, with the people as samples/people.yml has them now unless a run is under way. */
+    state() {
+      if (!state.running) load();
+      return snapshot();
+    },
     /** Studio was used: the idle stop counts from now. */
     touch() {
       touched = now();
@@ -275,7 +284,8 @@ export function sampleRunner(options: {
       state.fast = fast;
       next.clear();
       // One after another at first, a few seconds apart, rather than all at once.
-      state.people.forEach((p, i) => next.set(p.id, now() + i * (fast ? FAST_GAP : 3000)));
+      for (const [i, p] of state.people.entries())
+        next.set(p.id, now() + i * (fast ? FAST_GAP : 3000));
       changed();
       schedule();
     },

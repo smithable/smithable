@@ -218,10 +218,45 @@ export interface KeptMail {
   text: string;
 }
 
+/** A sample user's move as the People panel shows it (sample-users.md §6). */
+export interface FeedLine {
+  at: string;
+  id: string;
+  who: string;
+  text: string;
+  why?: string;
+  outcome: "done" | "refused" | "finding" | "miss";
+  message?: string;
+  seed?: number;
+}
+
+/** The sample users and their runner: who they are, whether they run, what they did. */
+export interface PeopleState {
+  running: boolean;
+  fast: boolean;
+  people: {
+    id: string;
+    name: string;
+    role: string;
+    persona: string;
+    pace: number;
+    last?: string;
+  }[];
+  feed: FeedLine[];
+  moves: number;
+  cost: number;
+  currency: string;
+  stopped?: string;
+}
+
 export const api = {
   project: () => call<Project>("/api/project"),
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
+  people: () => call<PeopleState>("/api/people"),
+  /** Lets the sample users run (with the model, or `fast`: the random walk), pauses them, or one move. */
+  peopleDo: (what: "run" | "fast" | "pause" | "step" | "clear") =>
+    call<PeopleState>("/api/people", { do: what }),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
   /** `file`: a picture the change brings, written under its path in the project (base64). */
   operation: (
@@ -272,7 +307,7 @@ export const api = {
     call<{ ok: boolean; waiting: string[] }>("/api/waiting", change),
   events(
     onEvent: (
-      event: "changed" | "log" | "open" | "making" | "waiting" | "beta",
+      event: "changed" | "log" | "open" | "making" | "waiting" | "beta" | "people",
       data: unknown,
     ) => void,
   ): () => void {
@@ -290,6 +325,9 @@ export const api = {
       onEvent("waiting", JSON.parse((e as MessageEvent).data)),
     );
     source.addEventListener("beta", (e) => onEvent("beta", JSON.parse((e as MessageEvent).data)));
+    source.addEventListener("people", (e) =>
+      onEvent("people", JSON.parse((e as MessageEvent).data)),
+    );
     return () => source.close();
   },
 };

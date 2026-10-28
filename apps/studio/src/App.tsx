@@ -15,6 +15,7 @@ import {
   api,
   EXPECT_RELOAD,
   type Making as MakingState,
+  type PeopleState,
   type Project,
   waking,
 } from "./api";
@@ -30,6 +31,7 @@ import { doneKey, guideOff, TOURS } from "./guide";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
+import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
 import { ReportDialog } from "./Report";
@@ -106,6 +108,10 @@ export function App() {
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
+  // The sample users' panel, their state as the daemon last said, and a page for the preview (Follow).
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [people, setPeople] = useState<PeopleState>();
+  const [go, setGo] = useState<{ path: string; key: number }>();
   const [holding, setHolding] = useState(false);
   useEffect(() => {
     if (!message?.ok || holding) return;
@@ -397,6 +403,7 @@ export function App() {
         setProject((p) => p && { ...p, beta: (data as Project["beta"] | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
       else if (event === "open") api.project().then(setProject, () => {});
+      else if (event === "people") setPeople(data as PeopleState);
       else logStore.push(String(data));
     });
   }, [refresh]);
@@ -818,6 +825,14 @@ export function App() {
           )}
           <button
             type="button"
+            title="People of the sample data who use the app by themselves in the preview"
+            onClick={() => setPeopleOpen(true)}
+            className="text-xs font-medium text-muted hover:underline"
+          >
+            Sample users{people?.running ? " (running)" : ""}
+          </button>
+          <button
+            type="button"
             title="The mail the preview kept instead of sending: invitations, sign-in codes"
             onClick={() => setOutbox(true)}
             className="text-xs font-medium text-muted hover:underline"
@@ -931,6 +946,19 @@ export function App() {
         />
       )}
       {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
+      {peopleOpen && (
+        <PeoplePanel
+          state={people}
+          onState={setPeople}
+          onFollow={(id) =>
+            setGo((g) => ({
+              path: `/sign-in?as=${encodeURIComponent(id)}&redirect=/`,
+              key: (g?.key ?? 0) + 1,
+            }))
+          }
+          onClose={() => setPeopleOpen(false)}
+        />
+      )}
       {guiding && !project.making && (
         // Made again for the other way's tour, which finds its own places.
         <Suspense fallback={null}>
@@ -993,6 +1021,7 @@ export function App() {
                 onSelecting={setSelecting}
                 highlight={highlight}
                 pages={pages}
+                go={go}
               />
               {!narrow && (
                 <PreviewArrows

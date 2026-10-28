@@ -394,7 +394,13 @@ export const userChoices = () =>
  * The sign-in page, with a development-only sign-in as any role. Without a page to return
  * to, signing in goes to `start` (the onboarding, when the app has one).
  */
-export function signInRoute(auth: AuthIR, start = "/", invitations = false): string {
+export function signInRoute(
+  auth: AuthIR,
+  start = "/",
+  invitations = false,
+  /** Whether the project has sample users, whom Studio's Follow signs in as (sample-users.md §6). */
+  people = false,
+): string {
   const roles = auth.roles.map((r) => r.name);
   const email = auth.signIn !== "none" && auth.signIn.providers.includes("email");
   const codes = email ? ", codes: codesReachPeople(), kept: mailKept()" : "";
@@ -438,14 +444,31 @@ import { app } from "#/generated/app";${invitations ? '\nimport { ROLE_LABELS } 
 import { SignIn } from "#/kit/SignIn";
 import { w } from "#/kit/words";
 import { auth, ${email ? "codesReachPeople, " : ""}configuredProviders, demoSignIn, ${email ? "mailKept, " : ""}PROVIDERS } from "#/lib/auth";
-import { authClient } from "#/lib/auth-client";
+import { authClient } from "#/lib/auth-client";${people ? '\nimport { SAMPLE_PEOPLE } from "#/generated/people";\nimport { useEffect, useRef } from "react";' : ""}
 
 const ROLES = ${JSON.stringify(roles)} as const;
 ${options}
 /** The development sign-in's passwords, by address, for this process only. */
 const devPasswords = new Map<string, string>();
 
-/** Development, or a demo: signs in as a user with the role, without a provider. */
+${
+  people
+    ? `/** Development, or a demo: signs in as a user with the role, or as a sample user (Studio's Follow), without a provider. */
+const devSignIn = createServerFn({ method: "POST" })
+  .validator((who: unknown) => {
+    const person = SAMPLE_PEOPLE.find((p) => p.id === who);
+    if (person) return person;
+    const known = oneOf(who, ROLES);
+    if (!known) throw new Error("No such role.");
+    return known;
+  })
+  .handler(async ({ data: who }) => {
+    if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
+    const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
+    // A sample user is seeded with their role; a role signs in as its own development user.
+    const role = typeof who === "string" ? who : who.role;
+    const email = typeof who === "string" ? \`\${prefix}-\${role}@${devDomain(auth)}\` : who.email;`
+    : `/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
     const known = oneOf(role, ROLES);
@@ -455,7 +478,8 @@ const devSignIn = createServerFn({ method: "POST" })
   .handler(async ({ data: role }) => {
     if (!import.meta.env.DEV && !demoSignIn) throw new Error(w.developmentOnlyNote);
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
-    const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;
+    const email = \`\${prefix}-\${role}@${devDomain(auth)}\`;`
+}
     // One password per user while this process runs, never a known one: nobody signs in as them
     // without this button, and two tabs signing in at once (Studio and its guide) use the same.
     const password = devPasswords.get(email) ?? crypto.randomUUID() + crypto.randomUUID();
@@ -474,8 +498,18 @@ const devSignIn = createServerFn({ method: "POST" })
     db.update(user).set({ role }).where(eq(user.email, email)).run();
     const signIn = () => auth.api.signInEmail({ body: { email, password }, headers: getRequestHeaders() });
     // After a restart (or a password someone changed) the user's is another one: set anew.
-    await signIn().catch(async () => {
-      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));
+    await signIn().catch(async () => {${
+      people
+        ? `
+      const id = made()?.id as string;
+      const hash = await context.password.hash(password);
+      // A sample user is seeded without a password: the first Follow gives them one.
+      if (!(await context.internalAdapter.findAccounts(id)).some((a) => a.providerId === "credential"))
+        await context.internalAdapter.linkAccount({ providerId: "credential", accountId: id, password: hash, userId: id });
+      else await context.internalAdapter.updatePassword(id, hash);`
+        : `
+      await context.internalAdapter.updatePassword(made()?.id as string, await context.password.hash(password));`
+    }
       await signIn();
     });
   });
@@ -485,6 +519,11 @@ export const Route = createFileRoute("/sign-in")({
   // which a browser reads as "//host"; and no control character, which no address header takes.
   validateSearch: (s: Search) => optional({
     redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])[^\\x00-\\x1f\\x7f]*$/),${
+      people
+        ? `
+    as: shaped(s.as, /^sample-[a-z0-9-]+$/),`
+        : ""
+    }${
       invitations
         ? `
     invite: text(s.invite, 100),`
@@ -495,7 +534,7 @@ export const Route = createFileRoute("/sign-in")({
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
   // stays, to sign in as someone else.
   beforeLoad: ({ context, search }) => {
-    if (context.viewer && search.redirect${invitations ? " && !search.invite" : ""}) throw redirect({ href: search.redirect });
+    if (context.viewer && search.redirect${invitations ? " && !search.invite" : ""}${people ? " && !search.as" : ""}) throw redirect({ href: search.redirect });
   },${
     invitations
       ? `
@@ -510,8 +549,21 @@ export const Route = createFileRoute("/sign-in")({
 function SignInPage() {
   const options = Route.useLoaderData();
   const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes, kept" : ""} } = options ?? ({} as NonNullable<typeof options>);
-  const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
-  const router = useRouter();
+  const { redirect = ${JSON.stringify(start)}${people ? ", as" : ""} } = Route.useSearch();
+  const router = useRouter();${
+    people
+      ? `
+  // Studio's Follow (sample-users.md §6): the preview opened as one sample user signs in as them.
+  const following = useRef(false);
+  useEffect(() => {
+    if (!as || following.current || !(import.meta.env.DEV || options?.demo)) return;
+    following.current = true;
+    void devSignIn({ data: as })
+      .then(() => router.invalidate())
+      .then(() => router.navigate({ href: redirect }));
+  }, [as, options?.demo, redirect, router]);`
+      : ""
+  }
   // No options while the server restarts (a regeneration): nothing, rather than an error page.
   if (!options) return null;
   return (
