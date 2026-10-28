@@ -1,0 +1,13 @@
+smithableUx: 0.1
+pages:
+  artists:
+    icon: user
+  albums:
+    table:
+      columns: [title, artist, year, condition, pricePaid]
+      sort: title
+    icon: layers
+tones:
+  Album.condition:
+    mint: success
+    poor: warning

@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+defaultAccess: private
+roles:
+  admin: all
+  customer:
+    description: Books appointments with a stylist.
+    create: [Booking]
+    actions: [cancel]
+assistant:
+  for: signed-in
+defaultRole: customer
+public:
+  pages: [home, privacy]
+  read: [Service, Stylist]
+admins: [johan@smithable.ai]

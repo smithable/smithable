@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  albums:
+    record:
+      subtitle: artist.name
+      detail: [year, condition]
+tones:
+  Album.condition:
+    mint: success
+    poor: danger
+    fair: warning

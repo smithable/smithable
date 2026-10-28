@@ -1,0 +1,13 @@
+smithableUx: 0.1
+theme:
+  preset: minimal
+  brand:
+    primary: "#8a6f5a"
+pages:
+  guests:
+    table:
+      columns: [name, answer, meal, side, table]
+tones:
+  Guest.answer:
+    yes: success
+    no: danger

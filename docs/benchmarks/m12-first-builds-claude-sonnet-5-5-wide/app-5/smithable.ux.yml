@@ -1,0 +1,10 @@
+smithableUx: 0.1
+pages:
+  shoots:
+    table:
+      sort: -shootDate
+tones:
+  Invoice.status:
+    sent: warning
+    paid: success
+    overdue: danger

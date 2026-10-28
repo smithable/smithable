@@ -1,0 +1,80 @@
+smithable: 0.1
+app:
+  name: Allotment Society
+  description: Keeps track of who holds which plot, the waiting list and each year's membership fee.
+  currency: EUR
+models:
+  Member:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      address: string
+      joinedOn: date! = TODAY()
+      status: active | resigned
+      notes: text
+  Plot:
+    fields:
+      number: string! unique
+      sizeSqm: int
+      location: string
+      holder: Member
+      holderSince: date
+      hasWater: bool
+      notes: text
+  WaitingListEntry:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      appliedOn: date! = TODAY()
+      status: waiting | offered | allocated | withdrawn
+      preferences: text
+  Fee:
+    fields:
+      member: Member!
+      year: int!
+      amount: money!
+      dueOn: date
+      status: unpaid | paid
+      paidOn: date
+    unique: [{ fields: [member, year], scope: app }]
+pages:
+  plots:
+    crud: Plot
+    search: [number, location]
+  members:
+    crud: Member
+    search: [name, email, phone]
+    filters: [status]
+  waiting-list:
+    crud: WaitingListEntry
+    actions: [offerPlot, markAllocated]
+    search: [name, email]
+    filters: [status]
+  fees:
+    crud: Fee
+    actions: [markPaid]
+    filters: [status, year, member]
+  team:
+    users: manage
+actions:
+  markPaid:
+    on: Fee
+    when:
+      status: unpaid
+    set:
+      status: paid
+      paidOn: TODAY()
+  offerPlot:
+    on: WaitingListEntry
+    when:
+      status: waiting
+    set:
+      status: offered
+  markAllocated:
+    on: WaitingListEntry
+    when:
+      status: offered
+    set:
+      status: allocated

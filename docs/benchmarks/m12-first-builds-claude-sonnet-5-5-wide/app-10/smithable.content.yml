@@ -1,0 +1,16 @@
+smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Browse the collection, text: "Look through every object the museum cares for, with photographs and details." }, { title: Read their stories, text: Each object comes with the story of where it came from and why it matters. }, { title: Search and filter, text: "Find objects by name, category or whether they are on display right now." }]
+    hero:
+      title: Explore our collection
+      subtitle: Browse the museum's objects and discover the stories behind them.
+      image:
+        src: images/hero.webp
+        alt: Rows of bookshelves and reading tables in a quiet library
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

@@ -1,0 +1,8 @@
+{
+  "description": "An internal status board for our IT systems, so staff see what is down and when it is back.",
+  "starter": "status",
+  "wordStarter": "status",
+  "questions": [
+    "Should people see the status board without signing in, or only after logging in?"
+  ]
+}

@@ -1,0 +1,14 @@
+smithableContent: 0.1
+pages:
+  home:
+    faq:
+      items: [{ question: Miten varaan paikan tunnille?, answer: "Kirjaudu sisään sähköpostikoodilla, valitse tunti tuntikalenterista ja paina Varaa-painiketta." }, { question: Voinko perua varauksen?, answer: "Voit perua varauksesi omista varauksistasi aina siihen asti, kun tunti alkaa." }, { question: Mitä jos tunti on täynnä?, answer: "Kun kaikki paikat on varattu, tunnille ei voi enää varata. Katso kalenterista toinen aika." }, { question: Sopiiko jooga aloittelijalle?, answer: "Kyllä. Tuntien tasot näkyvät tuntityypeissä, ja moni tunti sopii kaikille." }]
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+logo:
+  src: images/logo.webp
+  alt: A four-pointed star
+  generated: true

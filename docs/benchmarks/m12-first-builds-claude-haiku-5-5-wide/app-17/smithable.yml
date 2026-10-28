@@ -1,0 +1,80 @@
+smithable: 0.1
+app:
+  name: Frisörbokning
+  description: Kunderna bokar tid hos frisörerna i salongen själva på nätet.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Service:
+    fields:
+      name: string!
+      summary: text
+      minutes: int! = 30
+      price: money
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+    schedule:
+      hours:
+        mon-fri: 09:00-17:00
+        sat: 10:00-14:00
+      gap: 10
+  Appointment:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      name: string!
+      phone: phone!
+      note: text
+      status:
+        type: requested | confirmed | cancelled
+        by: app
+    occupies:
+      resource: stylist
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: [requested, confirmed]
+      cancelUntil: 12h
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Service
+      stylists:
+        records: Stylist
+      footer:
+  bokningar:
+    crud: Appointment
+    actions: [confirm]
+  tjanster:
+    crud: Service
+  frisorer:
+    crud: Stylist
+  schema:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  privacy:
+    route: /privacy
+    legal: privacy
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+outgoing:
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin

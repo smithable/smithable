@@ -1,0 +1,102 @@
+smithable: 0.1
+app:
+  name: Salon Booking
+  description: Online booking for a hair salon, where customers pick a stylist and a free time themselves.
+  currency: EUR
+models:
+  Service:
+    fields:
+      name: string!
+      summary: text
+      minutes: int! = 45
+      price: money
+  Stylist:
+    fields:
+      name: string!
+      bio: text
+      portrait: picture
+      timeOffs: TimeOff[]
+    schedule:
+      hours:
+        mon-fri: 09:00-17:00
+        sat: 10:00-14:00
+      breaks: 12:00-12:30
+      gap: 10
+      away: TimeOff
+  TimeOff:
+    fields:
+      stylist: Stylist!
+      from: datetime!
+      until: datetime!
+      note: string
+  Appointment:
+    fields:
+      service: Service!
+      stylist: Stylist!
+      startsAt: datetime!
+      name: string!
+      phone: phone
+      note: text
+      status:
+        type: requested | confirmed | cancelled
+        by: app
+    occupies:
+      resource: stylist
+      starts: startsAt
+      duration: service.minutes
+      while:
+        status: [requested, confirmed]
+      cancelUntil: 12h
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+  cancel:
+    on: Appointment
+    when:
+      status: [requested, confirmed]
+    set:
+      status: cancelled
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: appointments
+      services:
+        records: Service
+      stylists:
+        records: Stylist
+      footer:
+  appointments:
+    crud: Appointment
+    filters: [status]
+  day:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  services:
+    crud: Service
+  stylists:
+    crud: Stylist
+  time-off:
+    crud: TimeOff
+  privacy:
+    route: /privacy
+    legal: privacy
+outgoing:
+  appointmentRequested:
+    when: Appointment created
+    to: mail
+    recipient: admin
+  appointmentMade:
+    when: Appointment created
+    to: mail
+    recipient: owner
+  appointmentConfirmed:
+    when: confirm
+    to: mail
+    recipient: owner

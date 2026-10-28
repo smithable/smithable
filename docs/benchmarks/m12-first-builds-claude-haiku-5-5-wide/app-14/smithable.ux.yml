@@ -1,0 +1,9 @@
+smithableUx: 0.1
+theme:
+  preset: editorial
+  brand:
+    font: Fraunces
+pages:
+  guests:
+    table:
+      columns: [name, status, meal, side, table]

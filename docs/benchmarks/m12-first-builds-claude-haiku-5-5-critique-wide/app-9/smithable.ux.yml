@@ -1,0 +1,9 @@
+smithableUx: 0.1
+pages:
+  artists:
+    icon: user
+  albums:
+    table:
+      columns: [title, artist, year, condition, paid]
+      sort: title
+    icon: list

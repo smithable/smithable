@@ -1,0 +1,91 @@
+smithableContent: 0.1
+language: sv
+models:
+  Customer:
+    label: Kund
+    pluralLabel: Kunder
+    fields:
+      name:
+        label: Namn
+      email:
+        label: E-post
+      phone:
+        label: Telefon
+      address:
+        label: Adress
+      quotes:
+        label: Offerter
+      invoices:
+        label: Fakturor
+  Quote:
+    label: Offert
+    pluralLabel: Offerter
+    fields:
+      number:
+        label: Offertnummer
+      customer:
+        label: Kund
+      title:
+        label: Rubrik
+      description:
+        label: Beskrivning
+      amount:
+        label: Belopp
+      issuedOn:
+        label: Utfärdad
+      validUntil:
+        label: Giltig till
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          accepted: Accepterad
+          declined: Avböjd
+  Invoice:
+    label: Faktura
+    pluralLabel: Fakturor
+    fields:
+      number:
+        label: Fakturanummer
+      customer:
+        label: Kund
+      quote:
+        label: Offert
+      amount:
+        label: Belopp
+      issuedOn:
+        label: Fakturadatum
+      dueOn:
+        label: Förfallodatum
+      status:
+        label: Status
+        values:
+          draft: Utkast
+          sent: Skickad
+          paid: Betald
+          overdue: Förfallen
+actions:
+  sendQuote:
+    label: Skicka offert
+  acceptQuote:
+    label: Markera som accepterad
+  declineQuote:
+    label: Markera som avböjd
+  markSent:
+    label: Markera som skickad
+  markPaid:
+    label: Markera som betald
+pages:
+  quotes:
+    title: Offerter
+  customers:
+    title: Kunder
+  invoices:
+    title: Fakturor
+  team:
+    title: Team
+logo:
+  src: images/logo.webp
+  alt: A single wave line
+  generated: true

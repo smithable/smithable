@@ -1,0 +1,8 @@
+smithableUx: 0.1
+pages:
+  check-ins:
+    table:
+      sort: -date
+  habits:
+    table:
+      columns: [name, frequency, currentStreak, longestStreak, lastCheckIn, active]

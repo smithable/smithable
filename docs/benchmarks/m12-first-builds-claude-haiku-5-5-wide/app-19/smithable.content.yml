@@ -1,0 +1,42 @@
+smithableContent: 0.1
+language: sv
+models:
+  Item:
+    label: Sak
+    pluralLabel: Saker
+    fields:
+      title:
+        label: Titel
+      photos:
+        label: Bilder
+      description:
+        label: Beskrivning
+      price:
+        label: Pris
+      condition:
+        label: Skick
+        values:
+          likeNew: Som ny
+          good: Bra
+          worn: Sliten
+      available:
+        label: Till salu
+pages:
+  catalog:
+    title: Loppis
+  myItems:
+    title: Mina saker
+  home:
+    title: Loppis
+    subtitle: Sälj sakerna du inte längre behöver, och hitta något fint i närheten.
+    hero:
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+  team:
+    title: Medlemmar
+logo:
+  src: images/logo.webp
+  alt: Three nested arcs
+  generated: true

@@ -1,0 +1,11 @@
+{
+  "description": "Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten.",
+  "starter": "kiosk",
+  "wordStarter": "records",
+  "questions": [
+    "Müssen Kunden sich anmelden, um vorzubestellen, oder darf jeder ohne Konto bestellen?",
+    "Wie legst du die Abholzeiten fest?",
+    "Was soll ein Produkt enthalten?"
+  ],
+  "lang": "de"
+}

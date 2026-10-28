@@ -1,0 +1,47 @@
+smithable: 0.1
+app:
+  name: Project Memory
+  description: Tasks and notes, grouped by project, that my AI assistant keeps for me.
+models:
+  Project:
+    fields:
+      name: string!
+      description: text
+      tasks: Task[]
+      notes: Note[]
+  Task:
+    fields:
+      title: string!
+      project: Project!
+      status: todo | doing | done
+      dueDate: date
+      details: text
+  Note:
+    fields:
+      title: string!
+      project: Project!
+      body: text
+      attachment: file
+pages:
+  projects:
+    crud: Project
+  tasks:
+    crud: Task
+    actions: [complete, reopen]
+  notes:
+    crud: Note
+actions:
+  complete:
+    on: Task
+    when:
+      status: [todo, doing]
+    set:
+      status: done
+    intent: Mark a task as done.
+  reopen:
+    on: Task
+    when:
+      status: done
+    set:
+      status: todo
+    intent: Open a finished task again.

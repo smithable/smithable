@@ -1,0 +1,10 @@
+{
+  "description": "Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet.",
+  "starter": "barbers",
+  "wordStarter": "records",
+  "questions": [
+    "Ska kunderna kunna boka utan att logga in, eller behöver de skapa ett konto?",
+    "Hur många frisörer arbetar i salongen, och ska kunden välja frisör själv?"
+  ],
+  "lang": "sv"
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+  "starter": "invoicing",
+  "wordStarter": "booking",
+  "questions": [
+    "How do the three of you use the app?",
+    "Do the households see their invoices themselves?"
+  ],
+  "dropped": "addField Invoice.total"
+}

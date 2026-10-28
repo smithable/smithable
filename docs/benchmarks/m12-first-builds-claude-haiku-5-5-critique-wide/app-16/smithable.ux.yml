@@ -1,0 +1,4 @@
+smithableUx: 0.1
+tones:
+  Fee.status:
+    paid: success

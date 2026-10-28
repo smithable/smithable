@@ -1,0 +1,79 @@
+smithable: 0.1
+app:
+  name: Status Board
+  description: "A live board of our IT systems: what is down, what is being fixed, and when it is back."
+models:
+  Service:
+    fields:
+      name: string! unique
+      status: operational | degraded | down
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      service: Service!
+      detectedAt: datetime!
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      at: datetime!
+      status: investigating | identified | monitoring | resolved
+      message: text!
+pages:
+  services:
+    crud: Service
+  incidents:
+    crud: Incident
+    filters: [status]
+    actions: [identified, monitoring, resolve]
+  overview:
+    dashboard:
+      openIncidents:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+  team:
+    users: manage
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is out. We are watching before we close this.
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so. The service's state stays what the team sets.

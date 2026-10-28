@@ -1,0 +1,6 @@
+smithableUx: 0.1
+tones:
+  Album.condition:
+    mint: success
+    poor: danger
+    fair: warning

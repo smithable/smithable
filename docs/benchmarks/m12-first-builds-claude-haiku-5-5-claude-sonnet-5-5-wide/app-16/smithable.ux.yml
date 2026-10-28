@@ -1,0 +1,11 @@
+smithableUx: 0.1
+pages:
+  waiting-list:
+    table:
+      sort: appliedOn
+tones:
+  Fee.status:
+    paid: success
+    unpaid: warning
+theme:
+  preset: woodland

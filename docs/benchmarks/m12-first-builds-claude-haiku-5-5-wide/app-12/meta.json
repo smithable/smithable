@@ -1,0 +1,9 @@
+{
+  "description": "Service status for our municipality's online services, for residents to check outages.",
+  "starter": "status",
+  "wordStarter": "barbers",
+  "questions": [
+    "Besides live outages, should the page also show planned maintenance windows?",
+    "Who posts status updates?"
+  ]
+}

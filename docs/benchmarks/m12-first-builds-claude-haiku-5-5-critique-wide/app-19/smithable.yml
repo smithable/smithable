@@ -1,0 +1,37 @@
+smithable: 0.1
+app:
+  name: Loppisen
+  description: Grannar lägger upp saker de inte längre behöver, med bilder och pris, och andra hittar dem här.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures!
+      description: text
+      price: money!
+      category: furniture | bikes | electronics | sports | kids | other
+      condition: likeNew | good | worn
+      place: string
+      available: bool = true
+pages:
+  home:
+    route: /welcome
+    landing:
+      hero:
+      footer:
+  catalog:
+    route: /
+    crud: Item
+    search: [title, description, place]
+    filters: [category, price, condition, available]
+    sortable: [price, createdAt]
+    contact: owner
+  mina-saker:
+    crud: Item
+    mine: true
+  privacy:
+    route: /privacy
+    legal: privacy
+navigation: [catalog, mina-saker]

@@ -1,0 +1,9 @@
+{
+  "description": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+  "starter": "marketplace",
+  "wordStarter": "booking",
+  "questions": [
+    "Can people who aren't signed in see what is on the shelf?",
+    "When someone claims an item, should the app keep a record of who claimed it and when?"
+  ]
+}

@@ -1,0 +1,35 @@
+smithable: 0.1
+app:
+  name: Wedding Guest List and Seating
+  description: Keeps the wedding guest list, who has answered the invitation, their meal choices, and where each guest sits.
+models:
+  Table:
+    fields:
+      name: string!
+      capacity:
+        type: int!
+        min: 1
+        max: 30
+        default: 8
+      notes: text
+      guests: Guest[]
+  Guest:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      side: bride | groom | both
+      rsvp: pending | yes | no
+      plusOne: bool
+      meal: beef | fish | vegetarian | vegan
+      dietary: text
+      table: Table
+pages:
+  team:
+    users: manage
+  guests:
+    crud: Guest
+    search: [name, email]
+    filters: [rsvp, side, meal, table]
+  tables:
+    crud: Table

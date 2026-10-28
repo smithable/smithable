@@ -1,0 +1,5 @@
+smithableUx: 0.1
+tones:
+  Quote.status:
+    accepted: success
+    declined: danger

@@ -1,0 +1,9 @@
+{
+  "description": "Service status for our municipality's online services, for residents to check outages.",
+  "starter": "status",
+  "wordStarter": "barbers",
+  "questions": [
+    "Who may post incidents and maintenance notices?",
+    "What may visitors see without signing in?"
+  ]
+}

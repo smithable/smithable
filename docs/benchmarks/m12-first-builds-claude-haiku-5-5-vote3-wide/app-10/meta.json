@@ -1,0 +1,10 @@
+{
+  "description": "Our local museum's collection online, so visitors can browse the objects and their stories.",
+  "starter": "records",
+  "wordStarter": "marketplace",
+  "questions": [
+    "Who adds and edits the objects and their stories?",
+    "What may visitors see without signing in?",
+    "Are the stories separate entries, or written on each object?"
+  ]
+}

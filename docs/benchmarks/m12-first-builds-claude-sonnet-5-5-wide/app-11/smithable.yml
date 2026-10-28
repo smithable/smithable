@@ -1,0 +1,81 @@
+smithable: 0.1
+app:
+  name: IT Status Board
+  description: An internal board showing which IT systems are down and when they are expected back.
+models:
+  Component:
+    fields:
+      name: string!
+      status: operational | degraded | down | maintenance
+      description: text
+      incidents: Incident[]
+  Incident:
+    fields:
+      title: string!
+      status: investigating | identified | monitoring | resolved
+      component: Component!
+      detectedAt: datetime!
+      expectedBackAt: datetime
+      resolvedAt: datetime
+      summary: markdown
+      updates: IncidentUpdate[]
+  IncidentUpdate:
+    fields:
+      incident: Incident!
+      message: text!
+pages:
+  overview:
+    dashboard:
+      systemsDown:
+        count: Component
+        where:
+          status: down
+      openIncidents:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      latest:
+        list: Incident
+        limit: 5
+  components:
+    crud: Component
+    filters: [status]
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+    filters: [status, component]
+    search: [title]
+  team:
+    users: manage
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        message: The cause is found and a fix is being worked on.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        message: A fix is out. We are watching before we close this.
+    intent: A fix is out; the incident is watched before it is closed.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so.

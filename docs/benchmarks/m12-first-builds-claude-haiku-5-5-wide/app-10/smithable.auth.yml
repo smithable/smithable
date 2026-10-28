@@ -1,0 +1,17 @@
+smithableAuth: 0.1
+signIn:
+  providers: [email]
+  selfSignUp: false
+defaultAccess: shared
+roles:
+  admin: all
+  member:
+    description: Looks at the collection.
+    pages: all
+assistant:
+  for: signed-in
+public:
+  pages: [home, collection]
+  read: [Artifact]
+defaultRole: member
+admins: [johan@smithable.ai]

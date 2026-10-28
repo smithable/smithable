@@ -1,0 +1,26 @@
+smithable: 0.1
+app:
+  name: Loppisen
+  description: Här lägger folk upp begagnade saker de vill sälja, med bilder och pris.
+  currency: SEK
+  timezone: Europe/Stockholm
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures!
+      price: money!
+      description: text
+      condition: likeNew | good | worn
+      available: bool = true
+pages:
+  varor:
+    route: /
+    crud: Item
+    search: [title, description]
+    filters: [condition, price, available]
+    sortable: [price, createdAt]
+  mina-varor:
+    crud: Item
+    mine: true
+navigation: [varor, mina-varor]

@@ -1,0 +1,10 @@
+{
+  "description": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+  "starter": "invoicing",
+  "wordStarter": "records",
+  "questions": [
+    "Ska det gå att se något utan att logga in, till exempel en offert som kunden kan öppna via en länk?",
+    "Ska en godkänd offert kunna omvandlas till en faktura med ett klick?"
+  ],
+  "lang": "sv"
+}

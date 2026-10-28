@@ -1,0 +1,8 @@
+{
+  "description": "My vinyl record collection: albums, artists, condition and what I paid.",
+  "starter": "records",
+  "wordStarter": "crm",
+  "questions": [
+    "Should visitors who aren't signed in be able to see your collection?"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Our allotment society: who has which plot, the waiting list and the yearly fee.",
+  "starter": "records",
+  "wordStarter": "booking",
+  "questions": [
+    "Who will use this app?",
+    "What may visitors see without signing in?",
+    "How should the yearly fee be kept?"
+  ]
+}

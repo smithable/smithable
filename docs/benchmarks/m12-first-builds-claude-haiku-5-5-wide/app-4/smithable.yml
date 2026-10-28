@@ -1,0 +1,36 @@
+smithable: 0.1
+app:
+  name: Piano Lessons
+  description: A piano teacher's record of pupils, their weekly lesson times and the pieces each one practises.
+models:
+  Pupil:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      notes: text
+      lessons: Lesson[]
+      pieces: Piece[]
+  Lesson:
+    fields:
+      pupil: Pupil!
+      day: mon | tue | wed | thu | fri | sat | sun
+      time: string!
+      minutes: int! = 30
+    namedBy: [pupil, day, time]
+  Piece:
+    fields:
+      title: string!
+      composer: string
+      status: toLearn | practising | learned
+      pupil: Pupil!
+      notes: text
+pages:
+  pupils:
+    crud: Pupil
+  lessons:
+    crud: Lesson
+    filters: [day, pupil]
+  pieces:
+    crud: Piece
+    filters: [status, pupil]

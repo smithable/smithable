@@ -1,0 +1,60 @@
+smithable: 0.1
+app:
+  name: Riverside Allotment Society
+  description: Keeps track of who holds which plot, the waiting list and the yearly fee.
+  currency: GBP
+  timezone: Europe/London
+models:
+  Plot:
+    fields:
+      number: string! unique
+      size: small | medium | large
+      notes: text
+      member: Member
+  Member:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      joinedOn: date! = TODAY()
+  WaitingListEntry:
+    fields:
+      name: string!
+      email: email!
+      phone: phone
+      requestedOn: date! = TODAY()
+      size: any | small | medium | large
+      status: waiting | offered | allocated | withdrawn
+  Fee:
+    fields:
+      member: Member!
+      year: int!
+      amount: money!
+      status: due | paid
+    unique: [{ fields: [member, year], scope: app }]
+actions:
+  markPaid:
+    on: Fee
+    when:
+      status: due
+    set:
+      status: paid
+    intent: Mark a yearly fee as paid.
+pages:
+  plots:
+    crud: Plot
+    search: [number, notes]
+    filters: [size]
+  members:
+    crud: Member
+    search: [name, email]
+  waiting-list:
+    crud: WaitingListEntry
+    filters: [status, size]
+    defaultFilter:
+      status: waiting
+  fees:
+    crud: Fee
+    filters: [status, year]
+  team:
+    users: manage

@@ -1,0 +1,27 @@
+smithable: 0.1
+app:
+  name: Vinyl Collection
+  description: A personal catalogue of my vinyl records, with artists, condition and what I paid.
+models:
+  Artist:
+    fields:
+      name: string!
+      notes: text
+      albums: Album[]
+  Album:
+    fields:
+      title: string!
+      artist: Artist!
+      year: int
+      condition: mint | nearMint | veryGood | good | fair | poor
+      paid: money
+      acquiredOn: date
+      notes: text
+pages:
+  artists:
+    crud: Artist
+  albums:
+    crud: Album
+    search: [title]
+    filters: [condition, artist]
+navigation: [albums, artists]
