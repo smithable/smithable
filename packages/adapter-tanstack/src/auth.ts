@@ -427,7 +427,7 @@ const signInOptions = createServerFn().handler(() => {
   return { providers, missing: PROVIDERS.filter((p) => !providers.includes(p)), demo: demoSignIn${codes} };
 });
 `;
-  return `${HEADER}import { createFileRoute, useRouter } from "@tanstack/react-router";
+  return `${HEADER}import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
@@ -489,7 +489,13 @@ export const Route = createFileRoute("/sign-in")({
     invite: text(s.invite, 100),`
         : ""
     }
-  }),${
+  }),
+  // Someone signed in whom a page sent here goes back to it: a page that did so while the server
+  // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
+  // stays, to sign in as someone else.
+  beforeLoad: ({ context, search }) => {
+    if (context.viewer && search.redirect${invitations ? " && !search.invite" : ""}) throw redirect({ href: search.redirect });
+  },${
     invitations
       ? `
   loaderDeps: ({ search }) => ({ invite: search.invite }),
@@ -501,9 +507,12 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
-  const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes, kept" : ""} } = Route.useLoaderData();
+  const options = Route.useLoaderData();
+  const { providers, missing, demo${invitations ? ", invitation" : ""}${email ? ", codes, kept" : ""} } = options ?? ({} as NonNullable<typeof options>);
   const { redirect = ${JSON.stringify(start)} } = Route.useSearch();
   const router = useRouter();
+  // No options while the server restarts (a regeneration): nothing, rather than an error page.
+  if (!options) return null;
   return (
     <SignIn
       appName={app.name}
