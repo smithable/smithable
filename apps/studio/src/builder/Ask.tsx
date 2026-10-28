@@ -257,13 +257,18 @@ export function Ask({
   const presentedOnce = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the parts are there
   useEffect(() => {
-    if (!presentFirst || presentedOnce.current || !ready || making) return;
+    if (!presentFirst || presentedOnce.current || making) return;
+    // The parts come once the spec is read in the tab; an app read with none to present lets
+    // the guide come at once.
+    if (!parts.length) {
+      if (!ready?.sections.length) return;
+      presentedOnce.current = true;
+      return void onPresented?.();
+    }
     presentedOnce.current = true;
-    // An app with nothing to present: the guide comes at once.
-    if (!parts.length) return void onPresented?.();
     setSaidParts(1);
     setPresenting(true);
-  }, [presentFirst, parts.length, making, ready]);
+  }, [presentFirst, parts.length, making, ready?.sections.length]);
   const nextPart = () => {
     if (partsSaid < parts.length) setSaidParts(partsSaid + 1);
     else {
