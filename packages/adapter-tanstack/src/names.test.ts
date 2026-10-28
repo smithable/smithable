@@ -104,7 +104,8 @@ test("the picker's choices are named by their parts, with the page's subtitle un
 
 test("a mail and the record's page say the name", () => {
   const outgoing = file("src/generated/outgoing.server.ts");
-  expect(outgoing).toContain("subject: `Booking: ${bookingNamed(tx, r.id as number)}`");
+  expect(outgoing).toContain("const title = String(bookingNamed(tx, r.id as number));");
+  expect(outgoing).toContain("subject: `Booking: ${title}`,");
   expect(outgoing).toContain("function bookingNamed(tx: Tx, id: number | null): string {");
   expect(file("src/routes/sessions/$id.tsx")).toContain(
     "sessionName(row as Record<string, unknown>)",

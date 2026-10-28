@@ -654,10 +654,19 @@ async function sessionsListFlow(base) {
   }
 }
 
-/** A mail's text as written: soft line breaks joined and =XX bytes decoded (UTF-8). */
+/**
+ * A mail's text as written: a header's encoded words (`=?UTF-8?Q?…?=`, as a subject with a character
+ * outside ASCII is written, in one or more words) opened, the body's soft line breaks joined and its =XX
+ * bytes decoded (UTF-8).
+ */
 function quotedPrintable(raw) {
   return Buffer.from(
     raw
+      .replace(/=\?UTF-8\?([QB])\?([^?]*)\?=(\s+(?==\?UTF-8\?))?/gi, (_, encoding, text) =>
+        encoding.toUpperCase() === "B"
+          ? Buffer.from(text, "base64").toString("latin1")
+          : text.replace(/_/g, " "),
+      )
       .replace(/=\r?\n/g, "")
       .replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16))),
     "latin1",
@@ -687,7 +696,8 @@ async function outgoingFlow(dir, base) {
     const made = await next(count, "the booking");
     for (const part of [
       /^To: dev-member@/m,
-      /^Subject: Your booking$/m,
+      // The subject names the session through a placeholder (outgoing-templates.md §3).
+      /^Subject: Your booking: \S.* · /m,
       /Thank you for booking/,
       // A session is named by its class and its start (record-names.md).
       /Session: \S.* · /,
@@ -727,6 +737,21 @@ async function outgoingFlow(dir, base) {
     const moved = await next(count, "the move");
     if (!/^To: dev-member@/m.test(moved) || !/^Subject: Your class has a new time$/m.test(moved))
       throw new Error(`the move's mail: ${moved.slice(0, 600)}`);
+    // The text's placeholders: who moved it, the class, the time before and after; the listed
+    // fields (show) with what the time was (previous), and not the capacity.
+    for (const part of [
+      /Dev admin moved \S.* a class you booked, from \S.+ to \S.+\. Your mat/,
+      /^Starts at: .+ \(was .+\)$/m,
+      /^Class type: /m,
+    ])
+      if (!part.test(moved))
+        throw new Error(`the move's mail lacks ${part}: ${moved.slice(0, 900)}`);
+    // The time before and after differ: the row before the change is the one read.
+    const times = /from (\S.+?) to (\S.+?)\. Your mat/.exec(moved);
+    if (!times || times[1] === times[2])
+      throw new Error(`the move's mail says the same time twice: ${times?.[0]}`);
+    if (/^Capacity: /m.test(moved))
+      throw new Error(`the move's mail lists a field show leaves out: ${moved.slice(0, 900)}`);
     await open(page, `${base}/my-bookings/${id}`);
     count = mails().length;
     const field = page.getByLabel(/^Session/);
@@ -1631,6 +1656,10 @@ async function callFlow(dir, base, receiver) {
         "status=resolved",
         "--to",
         "statusFeed",
+        "--show",
+        "title,status",
+        "--previous",
+        "true",
       ),
     );
     added = true;
@@ -1669,7 +1698,12 @@ async function callFlow(dir, base, receiver) {
       sent.happened !== "changed" ||
       sent.record?.id !== id ||
       sent.record?.title !== title ||
-      sent.record?.status !== "resolved"
+      sent.record?.status !== "resolved" ||
+      // show: the record carries the listed fields and its id; previous: what the changed ones were.
+      Object.keys(sent.record).join() !== "id,title,status" ||
+      typeof sent.before?.status !== "string" ||
+      sent.before.status === "resolved" ||
+      "title" in sent.before
     )
       throw new Error(`the call: ${call.body.slice(0, 300)}`);
     for (

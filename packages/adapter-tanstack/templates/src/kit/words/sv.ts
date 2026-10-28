@@ -343,6 +343,7 @@ export const w = {
   useAnotherAddress: "Använd en annan adress",
   usingAKey: "Så används en nyckel",
   visitor: "besökare",
+  was: "var",
   week: "Vecka",
   what: "Vad",
   whatItIsFor: "Vad den är till för",

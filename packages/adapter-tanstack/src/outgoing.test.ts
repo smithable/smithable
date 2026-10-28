@@ -1,6 +1,7 @@
 import {
   type AuthIR,
   emptyContent,
+  fillText,
   type SpecIR,
   validateAuth,
   validateSpec,
@@ -20,7 +21,47 @@ const kit = (await import(path)) as {
     fields?: string[],
   ): boolean;
   pauseAfter(tries: number): number;
+  fillText(
+    text: string,
+    values: Record<string, string | undefined> | ((path: string) => string | undefined),
+    oneLine?: boolean,
+  ): string;
+  picked(row: Record<string, unknown>, show?: string[] | "none"): Record<string, unknown>;
+  changedBefore(
+    before: Record<string, unknown>,
+    after: Record<string, unknown>,
+    show?: string[] | "none",
+  ): Record<string, unknown>;
 };
+
+test("the kit fills placeholders as Smithable does, and picks what a call carries", () => {
+  const { fillText: kitFill, picked, changedBefore } = kit;
+  const cases: [string, Record<string, string | undefined>][] = [
+    ["Your booking #{number} on {date}", { number: "12", date: "Mon" }],
+    ["{missing} stays {  spaced }", { spaced: "x" }],
+    ["no braces", {}],
+    ["{a}", { a: "two\nlines" }],
+  ];
+  for (const [text, values] of cases) {
+    expect(kitFill(text, values)).toBe(fillText(text, values));
+    expect(kitFill(text, values, true)).toBe(fillText(text, values, true));
+  }
+  expect(kitFill("{a}", { a: "two\nlines" }, true)).toBe("two lines");
+  expect(picked({ id: 1, status: "x", note: "n" }, ["status"])).toEqual({ id: 1, status: "x" });
+  expect(picked({ id: 1, status: "x" }, "none")).toEqual({ id: 1 });
+  expect(picked({ id: 1, status: "x" })).toEqual({ id: 1, status: "x" });
+  // What the listed fields were: those that changed, never the stamps.
+  expect(
+    changedBefore(
+      { id: 1, status: "a", note: "n", updatedAt: "t1" },
+      { id: 1, status: "b", note: "n", updatedAt: "t2" },
+    ),
+  ).toEqual({ status: "a" });
+  expect(changedBefore({ status: "a", note: "m" }, { status: "b", note: "n" }, ["note"])).toEqual({
+    note: "m",
+  });
+  expect(changedBefore({ status: "a" }, { status: "b" }, "none")).toEqual({});
+});
 
 test("an entry counts when the record comes to fit, not on every edit of one that fits", () => {
   const { counts, pauseAfter } = kit;
@@ -183,8 +224,8 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
   );
   expect(module).toContain("people(tx, eq(schema.user.id, String(r.ownerId)))");
   // The record as its page shows it, without the document, and a link to it.
-  expect(module).toContain('["Customer", String(one(tx, schema.customers');
-  expect(module).not.toContain('"Receipt"');
+  expect(module).toContain('"customer": String(one(tx, schema.customers');
+  expect(module).not.toContain('"receipt"');
   expect(module).toContain("link: `/orders/${r.id}`");
   const data = file("src/generated/order.server.ts");
   expect(data).toContain('outgoing(tx, viewer, "Order", "created", made);');
@@ -197,6 +238,67 @@ test("the generated app queues outgoing mail in the change's transaction", () =>
     'export const outgoingMail = sqliteTable(\n  "outgoing_mail"',
   );
   expect(files.some((f) => f.path === "src/kit/outgoing.server.ts")).toBe(true);
+});
+
+test("an entry's show, previous and placeholders reach the generated module", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Shop }
+models:
+  Customer:
+    fields:
+      name: string!
+      email: email
+      orders: Order[]
+  Order:
+    fields:
+      customer: Customer!
+      status: placed | shipped
+      note: text
+outgoing:
+  orderShipped:
+    when: Order changed
+    where: { status: shipped }
+    show: [status, note]
+    previous: true
+    to: mail
+    recipient: customer.email
+  orderFeed:
+    when: Order changed
+    show: [status]
+    previous: true
+    to: feed
+pages:
+  orders: { crud: Order }
+  customers: { crud: Customer }
+`,
+  }).ir as SpecIR;
+  const content = emptyContent();
+  content.outgoing = {
+    orderShipped: {
+      subject: "Order {title} shipped to {customer.name}",
+      text: "Status {status}, was {before.status}. {customer.email} {link} {by}",
+    },
+  };
+  const files = generateApp(spec, { smithableVersion: "0.0.0", auth, content });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  // The record's values by name, with the labels beside, so an entry can list some of them.
+  expect(module).toContain(
+    'labels: [["customer", "Customer"], ["status", "Status"], ["note", "Note"]],',
+  );
+  expect(module).toContain('show: ["status","note"],\n    previous: true,\n    before: true,');
+  // A placeholder one reference away is read with the record, formatted as its page shows it.
+  expect(module).toContain(
+    'more: (tx, r) => ({ "customer.name": formatValue({ name: "name", label: "Name", kind: "string", required: false }, one(tx, schema.customers, schema.customers.id, schema.customers.name, r.customerId), app), "customer.email": formatValue(',
+  );
+  expect(module).toContain(
+    "fields: shownFields(labels, values, prior?.values, entry.show, entry.previous)",
+  );
+  expect(module).toContain("subject: entry.subject ? fill(entry.subject, true) : rest.subject");
+  // A call carries the listed fields and what they were.
+  expect(module).toContain("record: picked(sent, entry.show)");
+  expect(module).toContain("before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show)");
 });
 
 test("an app whose only mail goes to a list's addresses still imports what the query needs", () => {
