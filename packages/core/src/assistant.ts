@@ -235,7 +235,7 @@ export function assistantOffer(
       {
         name: "find",
         description:
-          "Records of one kind the caller may read, newest first, as {columns, rows, total}. Ask only for the fields needed; id and title always come.",
+          "Records of one kind the caller may read, last added first (sort by a date for the newest by it), as {columns, rows, total}. Ask only for the fields needed; id and title always come.",
         inputSchema: {
           type: "object",
           required: ["kind"],

@@ -1,0 +1,15 @@
+# Sample users: people of the sample data who use the app by themselves in Studio's preview
+# (docs/design/sample-users.md §5). Each has a role, a persona in a sentence, and a pace in minutes
+# between moves. They act only in a development or demo build, never in a published app.
+- name: Maja Lindqvist
+  role: member
+  persona: A regular who books the Tuesday evening yoga every week and sometimes cancels the day before.
+  pace: 1
+- name: Tomas Berg
+  role: member
+  persona: New to the studio; reads the schedule carefully and books a first class, asking a question through the contact form before.
+  pace: 2
+- name: Reception
+  role: admin
+  persona: The receptionist, who adds next week's sessions, cancels a class when the teacher is ill and reads the messages.
+  pace: 3

@@ -2,9 +2,9 @@
 
 *Soft to change. Hard as steel.*
 
-Smithable is an app builder for people who have never written code and for developers who want to move faster. You describe a web application in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification, `smithable.yml`, and generates an ordinary full-stack web application from it.
+Smithable is the app builder that doesn't charge you for its own mistakes. It is for people who have never written code and for developers who want to move faster. You describe a web application in plain language or through a visual editor. Smithable turns it into a compact, technology-neutral specification, `smithable.yml`, and generates an ordinary full-stack web application from it.
 
-Routine changes are made by deterministic generators, not by an AI rewriting code: adding a phone number to customers is one operation, in a second or two, with no AI model and no tokens. The generated app is a normal TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. It has no dependency on Smithable at build time or run time, and a developer can take it over at any time.
+Routine changes are generated, not written by an AI: adding a phone number to customers takes a second or two, uses no AI model and costs nothing. A change is checked before it applies, so it can't break what already works, and a change that fails is rolled back, database included. The generated app is a normal TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. It has no dependency on Smithable at build time or run time, and a developer can take it over at any time.
 
 - **[Getting started](start.md)**: in the browser [on smithable.ai](start-hosted.md), with nothing to install, or [on your own machine](start-local.md) with the command line and Studio, the visual editor.
 - **[Starters](starters.md)**: the ten apps to begin from, with pictures: a CRM, a booking site, invoicing, a marketplace, records, a status page, tasks and notes an AI assistant keeps, a support desk fed by mail, a food truck people order ahead from, and a barbershop booked by its barbers' time.
