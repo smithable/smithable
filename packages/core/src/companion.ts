@@ -12,10 +12,12 @@ import type { YamlEditor } from "./edit.js";
 import type { Condition, SpecIR } from "./ir.js";
 import type { AnyOperation, Editors, Effect, Note, Refusal } from "./operation.js";
 import { pageModel } from "./patterns.js";
+import { PEOPLE_PATH, validatePeople } from "./people.js";
 import { renameReferences } from "./rename.js";
 import { authOperations } from "./sections/auth-operations.js";
 import { contentOperations } from "./sections/content-operations.js";
 import { contextOperations } from "./sections/context-operations.js";
+import { peopleOperations } from "./sections/people-operations.js";
 import { uxOperations } from "./sections/ux-operations.js";
 import { placeholdersOf } from "./template.js";
 import { validateUx } from "./ux.js";
@@ -408,5 +410,24 @@ const context: Companion = {
   operations: contextOperations,
 };
 
-/** In the order their operations are listed. */
-export const COMPANIONS: readonly Companion[] = [ux, content, auth, context];
+/**
+ * The sample users (docs/design/sample-users.md §5): a list, kept with the samples, made when
+ * the first person is added. Its roles are the auth file's as it is after the operation, so a
+ * role a sample user has cannot go.
+ */
+const people: Companion = {
+  key: "people",
+  file: PEOPLE_PATH,
+  empty: "",
+  check: (text, _ir, files) =>
+    validatePeople(
+      { path: PEOPLE_PATH, text },
+      files?.auth
+        ? (validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth ?? { roles: [] })
+        : { roles: [] },
+    ).diagnostics,
+  operations: peopleOperations,
+};
+
+/** In the order their operations are listed, and checked: people after auth, whose roles it reads as the operation leaves them. */
+export const COMPANIONS: readonly Companion[] = [ux, content, auth, context, people];

@@ -45,6 +45,8 @@ export interface ProjectFiles {
   ux?: string;
   /** smithable.context.yml, when the project has one. */
   context?: string;
+  /** samples/people.yml, the sample users, when the project has one. */
+  people?: string;
   /** The project's plugins, for the sections of smithable.yml they handle. */
   plugins?: SpecPlugin[];
   /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */
@@ -276,7 +278,9 @@ export function applyOperation(
   for (const c of COMPANIONS) {
     const editor = editors[c.key];
     if (!editor || (files[c.key] === undefined && editor.text === c.empty)) continue;
-    const problems = c.check(editor.text, after.ir, known);
+    // A later companion sees the earlier ones as the operation leaves them: the sample users'
+    // roles are the auth file's now.
+    const problems = c.check(editor.text, after.ir, { ...known, ...written });
     if (hasErrors(problems)) return fail(`${name} would make ${c.file} invalid.`, problems);
     written[c.key] = editor.text;
   }

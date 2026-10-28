@@ -9,6 +9,7 @@ import {
   parseDocument,
   stringify,
   type YAMLMap,
+  type YAMLSeq,
 } from "yaml";
 
 /** A value an operation writes: a scalar, a flow list, or a block mapping. */
@@ -204,6 +205,80 @@ export class YamlEditor {
     this.splice(at, at, `${lead}${indent}${scalar(key)}:${render(value, indent)}\n`);
   }
 
+  /**
+   * Adds an item at the end of the list at `path` (the whole document when the path is empty),
+   * in block style: a mapping as "- key: value" lines. A list written [ … ] is rewritten as a
+   * block list, and an empty document becomes one.
+   */
+  appendItem(path: Path, value: YamlValue): void {
+    const list = path.length ? this.doc.getIn(path, true) : this.doc.contents;
+    const end = this.source.length;
+    const lead = end > 0 && !this.source.endsWith("\n") ? "\n" : "";
+    if (list == null) {
+      // An empty document, or one of comments only: the item comes after what is there.
+      if (path.length) throw new EditError(`Nothing at ${path.join(".")}.`);
+      this.splice(end, end, `${lead}${listItem(value, "")}`);
+      return;
+    }
+    if (!isSeq(list)) throw new EditError(`${path.join(".") || "The document"} is not a list.`);
+    const seq = list as YAMLSeq.Parsed;
+    const last = seq.items[seq.items.length - 1] as ParsedNode | undefined;
+    if (seq.flow || !last) {
+      // [a, b] becomes a block list with the item, in the list's own place: the text around it stays.
+      const items = [...(seq.toJSON() as YamlValue[]), value];
+      // Under a key, the items go one step in from it; a document's list starts at the margin.
+      const indent = path.length ? `${this.indentAt(this.pair(path).key.range[0])}  ` : "";
+      const text = items.map((item) => listItem(item, indent)).join("");
+      if (path.length === 0) this.splice(seq.range[0], seq.range[1], text.trimEnd());
+      else {
+        const colon = this.source.indexOf(":", this.pair(path).key.range[1]);
+        // From right after "key:" when only spaces separate it from the list; else from the list.
+        const from =
+          this.source.slice(colon + 1, seq.range[0]).trim() === "" ? colon + 1 : seq.range[0];
+        this.splice(from, seq.range[1], `\n${text.trimEnd()}`);
+      }
+      return;
+    }
+    const at = Math.min(this.lineEnd(this.itemEnd(last) - 1) + 1, end);
+    this.splice(at, at, `${at === end ? lead : ""}${listItem(value, this.indentAt(seq.range[0]))}`);
+  }
+
+  /**
+   * Removes item `index` of the list at `path` (the whole document when the path is empty): a block
+   * item with its lines, from its dash; comment lines above it stay. A [ … ] list loses the item.
+   */
+  removeItem(path: Path, index: number): void {
+    const list = path.length ? this.doc.getIn(path, true) : this.doc.contents;
+    if (!isSeq(list)) throw new EditError(`${path.join(".") || "The document"} is not a list.`);
+    const seq = list as YAMLSeq.Parsed;
+    const item = seq.items[index] as ParsedNode | undefined;
+    if (!item) throw new EditError(`${path.join(".") || "The document"} has no item ${index + 1}.`);
+    if (seq.flow) {
+      const items = (seq.toJSON() as YamlValue[]).filter((_, i) => i !== index);
+      this.splice(seq.range[0], seq.range[1], flow(items));
+      return;
+    }
+    // The item's dash may be on its own line ("-" then the mapping below it): the lines go from it.
+    const dash = this.source.lastIndexOf("-", item.range[0] - 1);
+    const start = this.lineStart(
+      dash >= 0 && this.source.slice(this.lineStart(dash), dash).trim() === ""
+        ? dash
+        : item.range[0],
+    );
+    this.splice(start, Math.min(this.lineEnd(this.itemEnd(item) - 1) + 1, this.source.length), "");
+  }
+
+  /** Where a node's text ends: a block collection's range runs on over the comments after it, its last scalar's does not. */
+  private itemEnd(node: ParsedNode): number {
+    if (isMap(node) && !node.flow && node.items.length) {
+      const last = node.items[node.items.length - 1] as Pair<ParsedNode, ParsedNode | null>;
+      return this.itemEnd(last.value ?? last.key);
+    }
+    if (isSeq(node) && !node.flow && node.items.length)
+      return this.itemEnd(node.items[node.items.length - 1] as ParsedNode);
+    return node.range[1];
+  }
+
   private pair(path: Path): Pair<ParsedNode, ParsedNode | null> {
     const key = path[path.length - 1];
     const found = this.parentMap(path).items.find((p) => isScalar(p.key) && p.key.value === key);
@@ -259,6 +334,14 @@ function flow(value: YamlValue): string {
   return typeof value === "string" && /[,[\]{}]/.test(value) && !/^["']/.test(scalar(value))
     ? JSON.stringify(value)
     : scalar(value);
+}
+
+/** A block list's item with its line break: "- scalar", or a mapping as "- key: value" lines. */
+function listItem(value: YamlValue, indent: string): string {
+  if (!isBlock(value)) return `${indent}-${render(value, indent)}\n`;
+  const inner = `${indent}  `;
+  const lines = Object.entries(value).map(([k, v]) => `${scalar(k)}:${render(v, inner)}`);
+  return `${indent}- ${lines.join(`\n${inner}`)}\n`;
 }
 
 /** Text after "key:" for a value: " scalar", " [a, b]", or a newline and an indented block. */
