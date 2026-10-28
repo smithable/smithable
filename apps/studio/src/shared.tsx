@@ -255,10 +255,14 @@ export function Preview({
     setActive(-1);
     setOpened((n) => n + 1);
   };
-  // biome-ignore lint/correctness/useExhaustiveDependencies: opened when asked again (key), not when open is remade
+  // Once each: a preview made again later (another layout) does not follow anyone again.
+  const went = useRef(go?.key);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: asked for by go; open is the same each time in what it does
   useEffect(() => {
-    if (go) open(go.path);
-  }, [go?.key]);
+    if (!go || go.key === went.current) return;
+    went.current = go.key;
+    open(go.path);
+  }, [go]);
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
   return (

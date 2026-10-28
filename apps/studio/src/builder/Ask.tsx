@@ -45,7 +45,10 @@ export function Ask({
   waiting = [],
   trace,
   ready,
+  peopleRunning = false,
 }: {
+  /** Whether the sample users are running: a bare "stop" is then said to them. */
+  peopleRunning?: boolean;
   /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
   guide?: GuideLine;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
@@ -158,7 +161,7 @@ export function Ask({
   const propose = async (text: string) => {
     // The sample users are the preview's, not the spec's: "let them run" and "stop" are said
     // to Smith and done at once, with no change to confirm (sample-users.md §5).
-    const command = peopleCommand(text);
+    const command = peopleCommand(text, peopleRunning);
     if (command) {
       setBusy(true);
       try {
@@ -631,8 +634,11 @@ export interface Ready {
   onJump: (concept: string) => void;
 }
 
-/** What a line says to the sample users, when it is that: let them run, or stop them. */
-export function peopleCommand(text: string): "run" | "pause" | undefined {
+/**
+ * What a line says to the sample users, when it is that: let them run, or stop them. A bare
+ * "stop" is theirs only while they run; otherwise it is said to Smith.
+ */
+export function peopleCommand(text: string, running = false): "run" | "pause" | undefined {
   const said = text
     .toLowerCase()
     .replace(/^(please|ok|okay|now)[, ]+/, "")
@@ -645,7 +651,8 @@ export function peopleCommand(text: string): "run" | "pause" | undefined {
     ).test(said)
   )
     return "run";
-  if (new RegExp(`^(stop|pause)( ${who})?$`).test(said)) return "pause";
+  if (new RegExp(`^(stop|pause) ${who}$`).test(said)) return "pause";
+  if (running && /^(stop|pause)$/.test(said)) return "pause";
   return undefined;
 }
 

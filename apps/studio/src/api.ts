@@ -220,6 +220,8 @@ export interface KeptMail {
 
 /** A sample user's move as the People panel shows it (sample-users.md §6). */
 export interface FeedLine {
+  /** Its place in the feed, counted from the first. */
+  n: number;
   at: string;
   id: string;
   who: string;

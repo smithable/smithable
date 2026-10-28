@@ -26,8 +26,10 @@ test("Smith lets the sample users run and stops them; other lines are requests",
   expect(peopleCommand("Let them run")).toBe("run");
   expect(peopleCommand("please let the sample users run!")).toBe("run");
   expect(peopleCommand("start the people")).toBe("run");
-  expect(peopleCommand("stop")).toBe("pause");
-  expect(peopleCommand("Pause them.")).toBe("pause");
+  expect(peopleCommand("stop")).toBeUndefined();
+  expect(peopleCommand("stop", true)).toBe("pause");
+  expect(peopleCommand("stop them")).toBe("pause");
+  expect(peopleCommand("Pause the sample users.")).toBe("pause");
   expect(peopleCommand("stop showing prices")).toBeUndefined();
   expect(peopleCommand("let customers book")).toBeUndefined();
 });

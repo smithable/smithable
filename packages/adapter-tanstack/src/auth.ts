@@ -453,10 +453,13 @@ const devPasswords = new Map<string, string>();
 
 ${
   people
-    ? `/** Development, or a demo: signs in as a user with the role, or as a sample user (Studio's Follow), without a provider. */
+    ? `/**
+ * Development, or a demo: signs in as a user with the role, without a provider; in development
+ * also as a sample user (Studio's Follow), never in a demo, where anyone could follow anyone.
+ */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((who: unknown) => {
-    const person = SAMPLE_PEOPLE.find((p) => p.id === who);
+    const person = import.meta.env.DEV ? SAMPLE_PEOPLE.find((p) => p.id === who) : undefined;
     if (person) return person;
     const known = oneOf(who, ROLES);
     if (!known) throw new Error("No such role.");
@@ -501,7 +504,8 @@ const devSignIn = createServerFn({ method: "POST" })
     await signIn().catch(async () => {${
       people
         ? `
-      const id = made()?.id as string;
+      const id = made()?.id;
+      if (!id) throw new Error("No such user.");
       const hash = await context.password.hash(password);
       // A sample user is seeded without a password: the first Follow gives them one.
       if (!(await context.internalAdapter.findAccounts(id)).some((a) => a.providerId === "credential"))
@@ -553,15 +557,17 @@ function SignInPage() {
   const router = useRouter();${
     people
       ? `
-  // Studio's Follow (sample-users.md §6): the preview opened as one sample user signs in as them.
-  const following = useRef(false);
+  // Studio's Follow (sample-users.md §6): the preview opened as one sample user signs in as them,
+  // in development only; one that cannot be followed leaves the page as it is.
+  const following = useRef<string>(undefined);
   useEffect(() => {
-    if (!as || following.current || !(import.meta.env.DEV || options?.demo)) return;
-    following.current = true;
-    void devSignIn({ data: as })
+    if (!as || following.current === as || !import.meta.env.DEV) return;
+    following.current = as;
+    devSignIn({ data: as })
       .then(() => router.invalidate())
-      .then(() => router.navigate({ href: redirect }));
-  }, [as, options?.demo, redirect, router]);`
+      .then(() => router.navigate({ href: redirect }))
+      .catch(() => {});
+  }, [as, redirect, router]);`
       : ""
   }
   // No options while the server restarts (a regeneration): nothing, rather than an error page.

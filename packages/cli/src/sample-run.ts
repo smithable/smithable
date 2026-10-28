@@ -17,6 +17,8 @@ export interface SamplePerson {
 }
 
 export interface FeedLine {
+  /** Its place in the feed, counted from the first. */
+  n: number;
   at: string;
   /** The person's door id. */
   id: string;
@@ -91,6 +93,7 @@ export function sampleRunner(options: {
   let summary = "";
   let seed = options.seed ?? now() % 1_000_000;
   let turns = 0;
+  let lines = 0;
   let touched = now();
   let hour: number[] = [];
   const next = new Map<string, number>();
@@ -98,6 +101,8 @@ export function sampleRunner(options: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** The turn under way: moves are serialized among themselves. */
   let chain: Promise<void> = Promise.resolve();
+  /** Counted up by every start and stop: a turn begun before one makes no move after it. */
+  let era = 0;
 
   const changed = () => options.changed(snapshot());
   const snapshot = (): PeopleState => ({
@@ -105,8 +110,14 @@ export function sampleRunner(options: {
     people: state.people.map((p) => ({ ...p })),
     feed: [...state.feed],
   });
-  const line = (person: SamplePerson, entry: Omit<FeedLine, "at" | "id" | "who">) => {
-    const full = { at: new Date(now()).toISOString(), id: person.id, who: person.name, ...entry };
+  const line = (person: SamplePerson, entry: Omit<FeedLine, "n" | "at" | "id" | "who">) => {
+    const full = {
+      n: lines++,
+      at: new Date(now()).toISOString(),
+      id: person.id,
+      who: person.name,
+      ...entry,
+    };
     state.feed = [...state.feed, full].slice(-FEED_MAX);
     const shown = state.people.find((p) => p.id === person.id);
     if (shown) shown.last = entry.message ? `${entry.text}: ${entry.message}` : entry.text;
@@ -134,7 +145,7 @@ export function sampleRunner(options: {
   }
 
   /** One turn of one person: the moves open now, one picked, performed; the answer in the feed. */
-  async function turn(person: SamplePerson): Promise<void> {
+  async function turn(person: SamplePerson, begun: number): Promise<void> {
     const n = turns++;
     const turnSeed = seed + n;
     const listed = await options
@@ -167,6 +178,8 @@ export function sampleRunner(options: {
         provider: providers[0],
       });
       spend(choice.usage);
+      // A model's answer counts as a move, whether or not one is made: it costs the same.
+      hour.push(now());
       if ("miss" in choice) {
         line(person, { text: "Missed a turn", outcome: "miss", message: choice.miss });
         return;
@@ -180,6 +193,8 @@ export function sampleRunner(options: {
       }
       ({ move: id, values } = step);
     }
+    // Paused (or started again) while the model thought: no move after all.
+    if (begun !== era) return;
     const move = moves.find((m) => m.id === id) as OpenMove;
     const rnd = seeded(turnSeed);
     const one = (ids: number[]) => ids[Math.floor(rnd() * ids.length)];
@@ -204,7 +219,7 @@ export function sampleRunner(options: {
       .door("act", { user: person.id, move: move.id, values: filled, ...target })
       .catch(() => undefined);
     state.moves++;
-    hour.push(now());
+    if (!providers[0]) hour.push(now());
     const text = moveWords(move);
     if (answer?.ok) {
       line(person, { text, outcome: "done", ...(why ? { why } : {}) });
@@ -224,7 +239,18 @@ export function sampleRunner(options: {
 
   /** Serialized: a turn starts when the one before it ended. */
   const queued = (person: SamplePerson) => {
-    chain = chain.then(() => turn(person)).finally(changed);
+    const begun = era;
+    chain = chain
+      .then(() => turn(person, begun))
+      // A turn that broke (an answer that was not JSON) is a finding; the next turn goes on.
+      .catch((error: unknown) =>
+        line(person, {
+          text: "Broke a turn",
+          outcome: "finding",
+          message: (error as Error)?.message ?? String(error),
+        }),
+      )
+      .finally(changed);
     return chain;
   };
 
@@ -248,7 +274,9 @@ export function sampleRunner(options: {
         if (why) return stop(why);
         const person = state.people.find((p) => p.id === due[0]);
         if (!person) return;
+        const begun = era;
         await queued(person);
+        if (begun !== era) return;
         next.set(person.id, now() + (state.fast ? FAST_GAP : person.pace * 60_000));
         schedule();
       },
@@ -258,6 +286,7 @@ export function sampleRunner(options: {
 
   function stop(why?: string) {
     clearTimeout(timer);
+    era++;
     state.running = false;
     if (why) state.stopped = why;
     else delete state.stopped;
@@ -280,6 +309,7 @@ export function sampleRunner(options: {
       delete state.stopped;
       if (!load()) return stop("No sample users: add some to samples/people.yml.");
       if (!state.running) seed = options.seed ?? now() % 1_000_000;
+      era++;
       state.running = true;
       state.fast = fast;
       next.clear();

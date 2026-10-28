@@ -1138,6 +1138,7 @@ export function App() {
                         <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
                           <div data-guide="change" className="flex h-full min-h-0 flex-col">
                             <Ask
+                              peopleRunning={people?.running}
                               guide={guiding ? guideLine : undefined}
                               presentFirst={Boolean(firstVisit)}
                               assumptions={assumptions}

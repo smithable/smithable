@@ -207,3 +207,38 @@ test("the model's choice is used, and its miss forfeits the turn", async () => {
   expect(acts).toHaveLength(1);
   expect(runner.state().feed[1]).toMatchObject({ outcome: "miss" });
 });
+
+test("a pause while a turn reads the moves makes no move; a turn that breaks is a finding and the next goes on", async () => {
+  let release: () => void = () => {};
+  const acts: unknown[] = [];
+  let broken = true;
+  const door = async (path: string, body?: unknown) => {
+    if (path.startsWith("moves?")) {
+      if (broken) {
+        broken = false;
+        return new Response("not json", { status: 200 });
+      }
+      await new Promise<void>((r) => {
+        release = r;
+      });
+      return Response.json({ now: "2026-10-29T10:00:00.000Z", moves: MOVES });
+    }
+    acts.push(body);
+    return Response.json({ ok: true });
+  };
+  const runner = sampleRunner({
+    door,
+    load: () => ({ people: PEOPLE, summary: "" }),
+    providers: () => [],
+    changed: () => {},
+    seed: 2,
+  });
+  await runner.step();
+  expect(runner.state().feed[0]).toMatchObject({ outcome: "finding", text: "Broke a turn" });
+  const pending = runner.step();
+  await new Promise((r) => setTimeout(r, 10));
+  runner.pause();
+  release();
+  await pending;
+  expect(acts).toHaveLength(0);
+});

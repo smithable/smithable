@@ -537,11 +537,12 @@ export async function studio(
         content,
         people: listed = [],
       } = loadSpec(dir, { out: () => {}, err: () => {} });
-      const ids = new Map(samplePeople(listed).map((u) => [u.name, u.id]));
+      // The app's ids for them, in the file's order (a visitor has none: the door knows it as such).
+      const ids = samplePeople(listed).map((u) => u.id);
       return {
         people: listed.map((p) => ({
           ...p,
-          id: p.role === "visitor" ? "visitor" : (ids.get(p.name) ?? ""),
+          id: p.role === "visitor" ? "visitor" : (ids.shift() as string),
         })),
         summary: ir
           ? summarize(ir, auth, content)
@@ -951,6 +952,17 @@ export async function studio(
         req.on("close", () => clients.delete(res));
         return;
       }
+      // The sample users act in the preview, not on the spec: they may be paused at any time.
+      if (req.method === "POST" && url.pathname === "/api/people") {
+        const { do: what } = await body();
+        if (what === "run") people.start();
+        else if (what === "fast") people.start(true);
+        else if (what === "pause") people.pause();
+        else if (what === "step") await people.step();
+        else if (what === "clear") people.clear();
+        else return json({ ok: false, output: "Run, fast, pause, step or clear." }, 400);
+        return json(people.state());
+      }
       // While a described app is being made, the project here is not the person's yet:
       // nothing else changes it (what they type waits on the page until it is in place).
       if (
@@ -970,16 +982,6 @@ export async function studio(
           { ok: false, output: "Your app is being made. This can be done once it is in place." },
           409,
         );
-      if (req.method === "POST" && url.pathname === "/api/people") {
-        const { do: what } = await body();
-        if (what === "run") people.start();
-        else if (what === "fast") people.start(true);
-        else if (what === "pause") people.pause();
-        else if (what === "step") await people.step();
-        else if (what === "clear") people.clear();
-        else return json({ ok: false, output: "Run, fast, pause, step or clear." }, 400);
-        return json(people.state());
-      }
       if (req.method === "POST" && url.pathname === "/api/op") {
         const { name, args, confirm, file } = await body();
         // The editor's text that only formats the file (studio-v3.md §7): no change, silently.

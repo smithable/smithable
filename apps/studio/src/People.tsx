@@ -111,7 +111,7 @@ export function PeoplePanel({
             <ol aria-label="What they did" className="space-y-1">
               {feed.map((l) => (
                 <li
-                  key={`${l.at}-${l.id}`}
+                  key={l.n}
                   data-outcome={l.outcome}
                   className={cx(
                     "rounded px-2 py-1",
