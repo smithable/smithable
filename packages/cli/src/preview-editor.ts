@@ -273,6 +273,31 @@ if (typeof window !== "undefined" && window.parent !== window) {
       location.reload();
     }
   });
+  // A sideways swipe over the page where nothing under the finger scrolls sideways itself: on a
+  // phone, Studio's row goes on to the next window (A 174). Vertical panning stays the page's.
+  let touch = null;
+  const sideways = (element) => {
+    for (let e = element; e && e !== document.documentElement; e = e.parentElement) {
+      if (e instanceof HTMLInputElement && e.type === "range") return true;
+      if (e.scrollWidth > e.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(e).overflowX)) return true;
+    }
+    return false;
+  };
+  document.addEventListener("touchstart", (event) => {
+    const t = event.touches[0];
+    // A second finger (a pinch) is no swipe: what the first began is dropped.
+    touch = t && event.touches.length === 1 && !sideways(event.target) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  }, { passive: true });
+  document.addEventListener("touchend", (event) => {
+    const t = event.changedTouches[0];
+    if (!touch || !t) return;
+    const dx = t.clientX - touch.x;
+    const dy = t.clientY - touch.y;
+    const ms = Math.max(1, Date.now() - touch.at);
+    touch = null;
+    if (Math.abs(dx) > Math.abs(dy) * 1.5 && (Math.abs(dx) > innerWidth / 3 || (Math.abs(dx) > 40 && Math.abs(dx) / ms > 0.5)))
+      post({ type: "swipe", direction: dx < 0 ? 1 : -1 });
+  }, { passive: true });
   // The place on a page survives Studio loading it again after a change (studio-v2 §2): its
   // scroll, kept with its address, is put back once the page is hydrated and long enough.
   const PLACE = "smithable:place";

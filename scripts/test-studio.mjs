@@ -353,6 +353,9 @@ try {
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.goto(base);
+        // A new project: Smith presents it first (smith-first.md §2), then the guide.
+        await fresh.locator('[data-part="app"]').waitFor({ timeout: 30000 * P });
+        await fresh.locator('[data-part="app"]').getByRole("button", { name: "Skip" }).click();
         // Smith's line for the stop, in his thread (smith-first.md §7).
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
@@ -1198,13 +1201,16 @@ try {
         "https://docs.smithable.ai/self-host.html"
       )
         throw new Error("How do I publish? does not lead to the self-hosting page");
+      // What does this app do?: Smith presents it, part by part (smith-first.md §3); a part's
+      // Show me opens its place in Behavior.
       await prompts.getByRole("button", { name: "What does this app do?" }).click();
-      const short = page.getByRole("region", { name: "What the app does, in short" });
-      await short.getByRole("button", { name: "Customers", exact: true }).click();
+      const app = page.locator('[data-part="app"]');
+      await app.waitFor();
+      await app.getByRole("button", { name: "Skip" }).click();
+      await page.locator('[data-part="end"]').waitFor();
+      await page.locator('[data-part="pages"]').getByRole("button", { name: "Show me" }).click();
       await page
-        .getByRole("region", { name: "What the app does" })
-        .locator("details[open]", { has: page.locator('summary:text-is("Customer")') })
-        .first()
+        .getByRole("tab", { name: "Behavior", selected: true })
         .waitFor({ timeout: 10000 * P });
       await prompts.getByRole("button", { name: "Help me add…" }).click();
       if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")
@@ -1229,8 +1235,16 @@ try {
         null,
         { timeout: 5000 * P },
       );
-      if (await page.getByRole("tab", { name: "Behavior" }).count())
-        throw new Error("No code shows beside the preview");
+      // The other windows wait beside it in the row the finger moves (A 173), out of view.
+      const beside = await page.evaluate(() =>
+        [...document.querySelectorAll('[role="tab"]')]
+          .filter((t) => t.textContent?.trim() === "Behavior")
+          .some((t) => {
+            const r = t.getBoundingClientRect();
+            return r.width > 0 && r.right > 0 && r.left < window.innerWidth;
+          }),
+      );
+      if (beside) throw new Error("No code shows beside the preview");
       // Every part is in a phone's header from the start: No code and Code are one window, Code
       // its sub-tab (A 161, smith-first.md §6).
       await pick("No code");
@@ -1245,6 +1259,44 @@ try {
       );
       await pick("Smith");
       await page.getByLabel("Describe a change").waitFor();
+      // A swipe anywhere in a window moves the row (A 173–174): Smith's thread to the preview,
+      // and back from the preview's toolbar; a finger, not a mouse.
+      const swipe = async (selector, by) =>
+        page.evaluate(
+          ({ selector, by }) => {
+            const element = document.querySelector(selector);
+            const box = element.getBoundingClientRect();
+            const y = box.top + box.height / 2;
+            const x = box.left + box.width / 2;
+            const at = (type, dx) =>
+              element.dispatchEvent(
+                new PointerEvent(type, {
+                  bubbles: true,
+                  pointerType: "touch",
+                  isPrimary: true,
+                  clientX: x + dx,
+                  clientY: y,
+                }),
+              );
+            at("pointerdown", 0);
+            for (let i = 1; i <= 10; i++) at("pointermove", (by * i) / 10);
+            at("pointerup", by);
+          },
+          { selector, by },
+        );
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
+      // Smith's window has Smith and Changes: a swipe in it goes to Changes first, then on.
+      await swipe('[data-guide="change"]', -400);
+      await page.getByRole("tab", { name: "Changes", exact: true, selected: true }).waitFor();
+      await swipe('[data-guide="changes"]', -400);
+      await page
+        .getByRole("radio", { name: "Preview", exact: true, checked: true })
+        .waitFor({ state: "attached" });
+      await swipe('[aria-label="Preview address"]', 400);
+      await page
+        .getByRole("radio", { name: "Smith", exact: true, checked: true })
+        .waitFor({ state: "attached" });
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
       // Changes is under Smith on a phone: its tab beside his.
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();
