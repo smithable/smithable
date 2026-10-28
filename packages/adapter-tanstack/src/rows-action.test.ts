@@ -9,8 +9,8 @@ import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
 // A custom action on the rows picked (A 171): its one list input is typed as the ids of the
-// records, and its server function checks that the person may read every one of them.
-test("a custom action's list input is an array of ids, each checked for reading", () => {
+// records, and its run checks in one read that the person may read every one of them.
+test("a custom action's list input is an array of ids, all checked for reading in one read", () => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Customer:\n    fields: { name: string!, segment: smb | enterprise }\nactions:\n  tag:\n    custom: true\n    input: { customers: 'Customer[]', segment: 'smb | enterprise' }\n    intent: Put the chosen customers in a segment.\npages:\n  customers: { crud: Customer, actions: [tag] }\n",
@@ -28,7 +28,10 @@ test("a custom action's list input is an array of ids, each checked for reading"
     "customers: z.array(z.number().int()).min(1).max(1000)",
   );
   expect(of("src/generated/actions/tag.server.ts")).toContain(
-    "if (!data.customers.every((id) => customerData.canRead(viewer, id))) throw new AccessDenied(true);",
+    "if (!customerData.canReadAll(viewer, data.customers)) throw new AccessDenied(true);",
+  );
+  expect(of("src/generated/customer.server.ts")).toContain(
+    "canReadAll(viewer: Viewer | null, ids: number[]): boolean {",
   );
 });
 
