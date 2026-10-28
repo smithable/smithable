@@ -1,8 +1,8 @@
 /**
  * The fields whose words a question may read two ways (docs/design/ask-words.md §3, the rule-only
  * pre-pass): a choice whose values are everyday words ("down" is a status and a word people use
- * for "not working"), a choice whose values shade into each other, a kind with more than one date
- * (which is "newest"?) or more than one amount (which is "the total"?). The ones without a
+ * for "not working"), a kind with more than one date (which is "newest"?) or more than one amount
+ * (which is "the total"?). The ones without a
  * `description` are at risk; with one, the assistant has the app's words. No model: the spec alone.
  */
 import type { FieldIR, ModelIR, SpecIR } from "./ir.js";
@@ -17,8 +17,8 @@ export interface AtRisk {
 }
 
 /**
- * Choice values that are also words people use loosely in a question. Lower case, as values are
- * compared; a value matches as a whole word or as the start of one ("down", "downtime").
+ * Choice values that are also words people use loosely in a question. A value is split into its
+ * words (onHold: on, hold) and matches on a whole word only: "online" is not "on".
  */
 export const EVERYDAY_WORDS = [
   "active",
@@ -64,7 +64,8 @@ export const EVERYDAY_WORDS = [
 ] as const;
 
 const DATES = ["date", "datetime"];
-const AMOUNTS = ["money", "int", "decimal"];
+// Counts (int) are left out: quantities and sort orders are rarely "the total".
+const AMOUNTS = ["money", "decimal"];
 
 const words = (value: string): string[] =>
   value
@@ -109,7 +110,7 @@ export function wordsAtRisk(ir: SpecIR): AtRisk[] {
           ),
         );
     const amounts = model.fields.filter(
-      (f) => f.type.kind === "scalar" && AMOUNTS.includes(f.type.name),
+      (f) => !f.formula && f.type.kind === "scalar" && AMOUNTS.includes(f.type.name),
     );
     if (amounts.length > 1)
       for (const field of amounts)

@@ -1110,6 +1110,8 @@ function meaningPath(
 ): { path: ReturnType<typeof fieldPath>; field?: { model: string; name: string } } {
   if (concept === "app") return { path: ["app"] };
   if (ir.models.some((m) => m.name === concept)) return { path: ["models", concept] };
+  if (ir.actions.some((a) => a.name === concept)) return { path: ["actions", concept] };
+  if (ir.pages.some((p) => p.id === concept)) return { path: ["pages", concept] };
   const dot = concept.indexOf(".");
   if (dot > 0) {
     const m = concept.slice(0, dot);
@@ -1120,8 +1122,6 @@ function meaningPath(
       throw new OperationError(`${m} has no field named "${f}".`);
     return { path: fieldPath(m, f, ir), field: { model: m, name: f } };
   }
-  if (ir.actions.some((a) => a.name === concept)) return { path: ["actions", concept] };
-  if (ir.pages.some((p) => p.id === concept)) return { path: ["pages", concept] };
   throw new OperationError(
     `There is no "${concept}" to explain: say app, a model, a field as Model.field, an action or a page.`,
   );
@@ -1152,16 +1152,17 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
   },
   positional: ["concept", "description"],
   describe: ({ concept, description, intent }) =>
-    description === "" && intent === undefined
-      ? `Removed the explanation of ${concept}`
-      : `Explained what ${concept} means to the assistant`,
+    [description, intent].some((t) => t !== undefined && t.trim())
+      ? `Explained what ${concept} means to the assistant`
+      : `Removed the explanation of ${concept}`,
   destructive: () => false,
   apply({ spec }, { concept, description, intent }, ir) {
     if (description === undefined && intent === undefined)
       throw new OperationError("Say a --description, an --intent, or both.");
     const { path, field } = meaningPath(ir, concept);
     if (field) {
-      // A field written as shorthand gets the long form, its type as its own key.
+      // A field written as shorthand gets the long form, its type as its own key, and is back
+      // to the shorthand when the last extra key goes (as setUnique and the field rules do).
       const current = spec.get(path);
       const long: Record<string, YamlValue> =
         typeof current === "object" && current !== null

@@ -50,7 +50,6 @@ test("the fields at risk: loose words, several dates, several amounts; the unexp
     "Post.createdOn",
     "Order.subtotal",
     "Order.total",
-    "Order.items",
     "Post.status (explained)",
   ]);
   expect(risks[0]?.why).toBe(
@@ -62,4 +61,6 @@ test("the fields at risk: loose words, several dates, several amounts; the unexp
   // An explained field is still named, so the pass asks about it, but it is not at risk.
   expect(risks.find((r) => r.field === "status" && r.model === "Post")?.explained).toBe(true);
   expect(risks.some((r) => r.model === "Component" && r.field === "kind")).toBe(false);
+  // A count is not an amount.
+  expect(risks.some((r) => r.field === "items")).toBe(false);
 });
