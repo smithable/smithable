@@ -76,9 +76,19 @@ const sh = (command, cmdArgs, cwd, env) => {
   };
 };
 
+/** A page's main content comes after the network is idle: wait for a link or heading in it. */
+const settled = async (page) => {
+  await page.waitForLoadState("networkidle");
+  await page
+    .locator("main a, main h1, main button")
+    .first()
+    .waitFor({ timeout: 10000 })
+    .catch(() => {});
+};
+
 const open = async (page, url) => {
   await page.goto(url);
-  await page.waitForLoadState("networkidle");
+  await settled(page);
 };
 
 /** The menu link whose name fits, clicked; false when there is none. */
@@ -87,7 +97,7 @@ async function go(page, base, name) {
   const link = page.getByRole("navigation").getByRole("link", { name }).first();
   if (!(await link.count())) return false;
   await link.click();
-  await page.waitForLoadState("networkidle");
+  await settled(page);
   return true;
 }
 
@@ -147,22 +157,33 @@ async function fillAndSave(page, values) {
 async function openAddForm(page, base, kind) {
   if (!(await go(page, base, kind))) return false;
   const add = page
+    .locator("main")
     .getByRole("link", { name: /^(add|new|create)/i })
-    .or(page.getByRole("button", { name: /^(add|new|create)/i }));
+    .or(page.locator("main").getByRole("button", { name: /^(add|new|create)/i }));
+  await add
+    .first()
+    .waitFor({ timeout: 10000 })
+    .catch(() => {});
   if (!(await add.count())) return false;
   await add.first().click();
-  await page.waitForLoadState("networkidle");
-  return (await page.getByRole("button", { name: /^(save|create|add)/i }).count()) > 0;
+  await settled(page);
+  const save = page.getByRole("button", { name: /^(save|create|add)/i }).first();
+  await save.waitFor({ timeout: 10000 }).catch(() => {});
+  return (await save.count()) > 0;
 }
 
-/** The record page of the record with this name, found from the list. */
+/** The record page of the record with this name, from the list: a row's title is a link or a button. */
 async function openRecord(page, base, kind, name) {
   if (!(await go(page, base, kind))) return false;
-  const link = page.getByRole("link", { name }).first();
-  if (!(await link.count())) return false;
-  await link.click();
-  await page.waitForLoadState("networkidle");
-  return true;
+  const main = page.locator("main");
+  const title = main.getByRole("link", { name }).or(main.getByRole("button", { name })).first();
+  await title.waitFor({ timeout: 10000 }).catch(() => {});
+  if (!(await title.count())) return false;
+  const before = page.url();
+  await title.click();
+  await page.waitForURL((u) => u.toString() !== before, { timeout: 10000 }).catch(() => {});
+  await settled(page);
+  return page.url() !== before;
 }
 
 /**
@@ -198,8 +219,10 @@ async function signIn(page, base, role) {
     const button = page.getByRole("button", { name: `Sign in as ${role}` });
     if (!(await button.count())) return false;
     await button.click();
+    // The dev sign-in's first try after a restart fails on the password and sets it anew: wait.
     try {
-      await page.getByText(`Dev ${role}`, { exact: true }).waitFor({ timeout: 5000 });
+      await page.waitForURL((u) => !u.pathname.startsWith("/sign-in"), { timeout: 10000 });
+      await settled(page);
       return true;
     } catch {}
   }
