@@ -104,8 +104,24 @@ async function fillAndSave(page, values) {
   if (!(await save.count())) return false;
   const before = page.url();
   await save.click();
+  // A form that asks before a change it tells people about ("Save the change?") is confirmed.
+  const dialog = page.getByRole("dialog");
+  if (
+    await dialog
+      .count()
+      .then((n) => n > 0)
+      .catch(() => false)
+  ) {
+    const confirm = dialog.getByRole("button", { name: /^(save|yes|confirm)/i }).first();
+    if (await confirm.count()) await confirm.click();
+  }
   await page.waitForLoadState("networkidle");
-  return page.url() !== before || (await page.getByText(/saved/i).count()) > 0;
+  await page.waitForTimeout(300);
+  return (
+    page.url() !== before ||
+    (await page.getByText(/saved/i).count()) > 0 ||
+    (await page.getByRole("dialog").count()) === 0
+  );
 }
 
 /** Opens the list page of a kind and presses its add button; true when a form is shown. */
@@ -130,15 +146,19 @@ async function openRecord(page, base, kind, name) {
   return true;
 }
 
-/** Opens a record's edit form; false when the page offers none. */
+/**
+ * A record's edit form: the record page is the form itself in a Smithable app; a builder that
+ * puts it behind an "Edit" link gets the click. False when no form is to be had.
+ */
 async function openEdit(page) {
   const edit = page
     .getByRole("link", { name: /^edit/i })
     .or(page.getByRole("button", { name: /^edit/i }));
-  if (!(await edit.count())) return false;
-  await edit.first().click();
-  await page.waitForLoadState("networkidle");
-  return true;
+  if (await edit.count()) {
+    await edit.first().click();
+    await page.waitForLoadState("networkidle");
+  }
+  return (await page.getByRole("button", { name: /^(save|create|add)/i }).count()) > 0;
 }
 
 const seen = async (page, text) => (await page.getByText(text, { exact: false }).count()) > 0;
