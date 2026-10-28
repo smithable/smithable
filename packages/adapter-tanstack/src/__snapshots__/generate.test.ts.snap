@@ -9190,9 +9190,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
     invite: text(s.invite, 100),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
@@ -10160,7 +10161,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/index.tsx": "505b868e generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "8155bca8 generated",
+  "src/routes/sign-in.tsx": "d8b0b3f4 generated",
   "src/routes/team/activity.tsx": "ada4147b generated",
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "ca04f376 kit",
@@ -15394,9 +15395,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
@@ -16290,7 +16292,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/services/$id.tsx": "9f29cc8a generated",
   "src/routes/services/index.tsx": "930745df generated",
   "src/routes/services/new.tsx": "b24c44de generated",
-  "src/routes/sign-in.tsx": "ac451391 generated",
+  "src/routes/sign-in.tsx": "5034708d generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "27fcb010 generated",
   "src/routes/time-off/index.tsx": "2cac7bcc generated",
@@ -27934,9 +27936,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
@@ -28734,7 +28737,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sessions/$id.tsx": "b79fc3e3 generated",
   "src/routes/sessions/index.tsx": "5ba7e89f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
-  "src/routes/sign-in.tsx": "ac451391 generated",
+  "src/routes/sign-in.tsx": "5034708d generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "ea364037 kit",
@@ -34202,9 +34205,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
     invite: text(s.invite, 100),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
@@ -35138,7 +35142,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/new.tsx": "ffa48b2d generated",
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "180eb9b5 generated",
+  "src/routes/sign-in.tsx": "79e6b09f generated",
   "src/routes/team/activity.tsx": "8f471a14 generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "f6e5f5dd generated",
@@ -42683,9 +42687,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
@@ -43486,7 +43491,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/overview/index.tsx": "0f36177f generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "64f20402 generated",
-  "src/routes/sign-in.tsx": "a85c2413 generated",
+  "src/routes/sign-in.tsx": "5195d6a7 generated",
   "src/routes/sitemap[.]xml.ts": "f0ce9eb0 generated",
   "src/routes/welcome/index.tsx": "de260b5f generated",
   "src/start.ts": "ca04f376 kit",
@@ -50044,9 +50049,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
     invite: text(s.invite, 100),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
@@ -51328,7 +51334,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/orders/index.tsx": "576b775a generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
-  "src/routes/sign-in.tsx": "de79a218 generated",
+  "src/routes/sign-in.tsx": "1fdf1224 generated",
   "src/routes/sitemap[.]xml.ts": "7259ffa4 generated",
   "src/routes/stops/$id.tsx": "893f7544 generated",
   "src/routes/stops/index.tsx": "b9c7a2c9 generated",
@@ -55403,9 +55409,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
@@ -56107,7 +56114,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/$id.tsx": "9841a3f1 generated",
   "src/routes/saved/index.tsx": "5a3f02fe generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
-  "src/routes/sign-in.tsx": "ac451391 generated",
+  "src/routes/sign-in.tsx": "5034708d generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "caf242f0 generated",
   "src/start.ts": "ca04f376 kit",
@@ -59022,9 +59029,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
   // restarted (a regeneration in the preview) comes back by itself. Opened by hand, the page
@@ -59585,7 +59593,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/index.tsx": "65ad657b generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
-  "src/routes/sign-in.tsx": "ac451391 generated",
+  "src/routes/sign-in.tsx": "5034708d generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "ea364037 kit",
@@ -69799,9 +69807,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
     invite: text(s.invite, 100),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
@@ -71108,7 +71117,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "12695563 generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
-  "src/routes/sign-in.tsx": "de79a218 generated",
+  "src/routes/sign-in.tsx": "1fdf1224 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "c5f9047a generated",
   "src/routes/team/index.tsx": "f53943cc generated",
@@ -77223,9 +77232,10 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
-  // Only paths within the app, so the page cannot send anyone elsewhere.
+  // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
+  // which a browser reads as "//host".
   validateSearch: (s: Search) => optional({
-    redirect: shaped(s.redirect, /^\\/(?!\\/)/),
+    redirect: shaped(s.redirect, /^\\/(?![\\/\\\\])/),
     invite: text(s.invite, 100),
   }),
   // Someone signed in whom a page sent here goes back to it: a page that did so while the server
@@ -78120,7 +78130,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/incoming/support.ts": "fca905e5 generated",
   "src/routes/index.tsx": "6a89e0fa generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
-  "src/routes/sign-in.tsx": "ef428a79 generated",
+  "src/routes/sign-in.tsx": "84eb7dd3 generated",
   "src/routes/team/activity.tsx": "7ddaee84 generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "ca04f376 kit",
