@@ -246,3 +246,28 @@ describe("YamlEditor moves an entry", () => {
     expect(e.text).toBe(spec);
   });
 });
+
+test("appendItem adds a block list item at the end, from an empty document or a flow list too", () => {
+  const list = new YamlEditor("- name: Maja\n  role: customer\n# a comment after\n");
+  list.appendItem([], { name: "Tomas", role: "visitor", pace: 5 });
+  expect(list.text).toBe(
+    "- name: Maja\n  role: customer\n- name: Tomas\n  role: visitor\n  pace: 5\n# a comment after\n",
+  );
+  const empty = new YamlEditor("");
+  empty.appendItem([], { name: "Maja", persona: "Books: a lot, often" });
+  expect(empty.text).toBe('- name: Maja\n  persona: "Books: a lot, often"\n');
+  const flow = new YamlEditor("tags: [a, b]\n");
+  flow.appendItem(["tags"], "c");
+  expect(flow.text).toBe("tags:\n  - a\n  - b\n  - c\n");
+  expect(() => new YamlEditor("name: x\n").appendItem([], "y")).toThrow("not a list");
+});
+
+test("removeItem takes a block list item with its lines, or an item of a flow list", () => {
+  const list = new YamlEditor("- name: Maja\n  role: customer\n- name: Tomas\n  role: visitor\n");
+  list.removeItem([], 0);
+  expect(list.text).toBe("- name: Tomas\n  role: visitor\n");
+  const flow = new YamlEditor("tags: [a, b, c]\n");
+  flow.removeItem(["tags"], 1);
+  expect(flow.text).toBe("tags: [a, c]\n");
+  expect(() => list.removeItem([], 4)).toThrow("has no item 5");
+});

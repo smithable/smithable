@@ -188,6 +188,7 @@ export {
   PACE_MAX,
   PACE_MIN,
   PEOPLE_MAX,
+  PEOPLE_PATH,
   type PersonIR,
   validatePeople,
 } from "./people.js";
@@ -226,6 +227,7 @@ export { partText, readNamePart } from "./sections/name-parts.js";
 export { type NameKind, nameProblem, RESERVED_WORDS } from "./sections/names.js";
 export { notSendable, outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
+export { personaFor, sampleRoles } from "./sections/people-operations.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
 export { cronText, timerText } from "./sections/timers.js";
 export type { SensitiveKind } from "./sensitive.js";

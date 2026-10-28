@@ -25,13 +25,15 @@ export const PACE_MIN = 0.25;
 export const PACE_MAX = 60;
 /** How many sample users may act in one project (sample-users.md §4). */
 export const PEOPLE_MAX = 5;
+/** The file, in the project. */
+export const PEOPLE_PATH = "samples/people.yml";
 
 const KEYS = { allowed: ["name", "role", "persona", "pace"] } as const;
 
 /** Reads samples/people.yml against the auth file's roles. */
 export function validatePeople(
   file: { path: string; text: string },
-  auth: AuthIR,
+  auth: Pick<AuthIR, "roles">,
 ): { people: PersonIR[]; diagnostics: Diagnostic[] } {
   const counter = new LineCounter();
   const doc = parseDocument(file.text, { lineCounter: counter, keepSourceTokens: true });
