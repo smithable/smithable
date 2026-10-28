@@ -12,6 +12,7 @@
 // keeps them in a file, source it first: `set -a; . ~/.config/smithable/<model>.env; set +a`) and
 // Playwright. Costs the model's tokens (cents a run): ask before running.
 //   node scripts/bench-ten-changes.mjs [--runs N] [--extra <file.md>] [--port P] [--keep]
+//   node scripts/bench-ten-changes.mjs --check-only <app dir>   (the checks on a kept app, no model)
 // --extra: more requests in the results sheet's table form ("| H1 | request | acceptance |"),
 // run after the ten with no check and no repair: a person judges them from the app and the
 // screenshots taken after each. Writes docs/benchmarks/ten-changes.md.
@@ -76,8 +77,24 @@ const sh = (command, cmdArgs, cwd, env) => {
   };
 };
 
-/** A page's main content comes after the network is idle: wait for a link or heading in it. */
-const settled = async (page) => {
+const mainText = (page) =>
+  page
+    .locator("main")
+    .innerText()
+    .catch(() => "");
+
+/**
+ * A page's content comes after the network is idle, and after a click in the app a little later
+ * than that (the app renders the next page some 150 ms after the click, with no request at all),
+ * so given the main text before the click, wait until it has changed; then for a link or heading.
+ */
+const settled = async (page, before) => {
+  if (before !== undefined)
+    await page
+      .waitForFunction((t) => document.querySelector("main")?.innerText !== t, before, {
+        timeout: 10000,
+      })
+      .catch(() => {});
   await page.waitForLoadState("networkidle");
   await page
     .locator("main a, main h1, main button")
@@ -96,8 +113,9 @@ async function go(page, base, name) {
   await open(page, base);
   const link = page.getByRole("navigation").getByRole("link", { name }).first();
   if (!(await link.count())) return false;
+  const before = await mainText(page);
   await link.click();
-  await settled(page);
+  await settled(page, before);
   return true;
 }
 
@@ -132,9 +150,26 @@ async function fillAndSave(page, values) {
       }
     } else await field.fill(value);
   }
+  // A required choice the request said nothing about gets its first option, as a person would.
+  await page
+    .locator("main select")
+    .evaluateAll((selects) => {
+      for (const select of selects) {
+        if (select.value) continue;
+        const label = select.labels?.[0]?.textContent ?? "";
+        if (!(select.required || label.includes("*"))) continue;
+        const option = [...select.options].find((o) => o.value);
+        if (!option) continue;
+        select.value = option.value;
+        select.dispatchEvent(new Event("input", { bubbles: true }));
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    })
+    .catch(() => {});
   const save = page.getByRole("button", { name: /^(save|create|add)/i }).first();
   if (!(await save.count())) return false;
   const before = page.url();
+  const textBefore = await mainText(page);
   await save.click();
   // A form that asks before a change it tells people about ("Save the change?") is confirmed.
   const dialog = page.getByRole("dialog");
@@ -147,6 +182,13 @@ async function fillAndSave(page, values) {
     const confirm = dialog.getByRole("button", { name: /^(save|yes|confirm)/i }).first();
     if (await confirm.count()) await confirm.click();
   }
+  await page
+    .waitForFunction(
+      ([u, t]) => location.href !== u || document.querySelector("main")?.innerText !== t,
+      [before, textBefore],
+      { timeout: 10000 },
+    )
+    .catch(() => {});
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(300);
   // Saved: the page moved on, or says so; a refused save stays on the form and says what is wrong.
@@ -165,8 +207,9 @@ async function openAddForm(page, base, kind) {
     .waitFor({ timeout: 10000 })
     .catch(() => {});
   if (!(await add.count())) return false;
+  const before = await mainText(page);
   await add.first().click();
-  await settled(page);
+  await settled(page, before);
   const save = page.getByRole("button", { name: /^(save|create|add)/i }).first();
   await save.waitFor({ timeout: 10000 }).catch(() => {});
   return (await save.count()) > 0;
@@ -180,9 +223,10 @@ async function openRecord(page, base, kind, name) {
   await title.waitFor({ timeout: 10000 }).catch(() => {});
   if (!(await title.count())) return false;
   const before = page.url();
+  const textBefore = await mainText(page);
   await title.click();
   await page.waitForURL((u) => u.toString() !== before, { timeout: 10000 }).catch(() => {});
-  await settled(page);
+  await settled(page, textBefore);
   return page.url() !== before;
 }
 
@@ -195,13 +239,43 @@ async function openEdit(page) {
     .getByRole("link", { name: /^edit/i })
     .or(page.getByRole("button", { name: /^edit/i }));
   if (await edit.count()) {
+    const before = await mainText(page);
     await edit.first().click();
-    await page.waitForLoadState("networkidle");
+    await settled(page, before);
   }
   return (await page.getByRole("button", { name: /^(save|create|add)/i }).count()) > 0;
 }
 
 const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Narrows the list on the current page to one value of a choice: a filter select labelled with
+ * the field's name, or a chip (a button or link) named after the value. False when there is none.
+ */
+async function narrowTo(page, field, value) {
+  const main = page.locator("main");
+  const before = await mainText(page);
+  const select = main.getByLabel(field).first();
+  const option = new RegExp(`^${literal(value)}$`, "i");
+  if ((await select.count()) && (await select.evaluate((e) => e.tagName)) === "SELECT") {
+    await select.selectOption({ label: option }).catch(() => select.selectOption(value));
+  } else {
+    const chip = main
+      .getByRole("button", { name: option })
+      .or(main.getByRole("link", { name: option }))
+      .first();
+    if (!(await chip.count())) return false;
+    await chip.click();
+  }
+  await page
+    .waitForFunction((t) => document.querySelector("main")?.innerText !== t, before, {
+      timeout: 5000,
+    })
+    .catch(() => {});
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(300);
+  return true;
+}
 
 const seen = async (page, text) => (await page.getByText(text, { exact: false }).count()) > 0;
 
@@ -274,13 +348,7 @@ const REQUESTS = [
       });
       if (!made) return false;
       if (!(await go(page, base, CUSTOMERS_PAGE))) return false;
-      const filter = page.getByLabel(/segment|market/i).first();
-      if (!(await filter.count())) return false;
-      await filter
-        .selectOption({ label: /government/i })
-        .catch(() => filter.selectOption("government"));
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(500);
+      if (!(await narrowTo(page, /segment|market/i, "government"))) return false;
       return (await seen(page, "Åland Museum")) && !(await seen(page, "Nordic Sails Ltd"));
     },
   },
@@ -397,7 +465,8 @@ const REQUESTS = [
       if (!(await page.getByLabel(/^market/i).count())) return false;
       if (await page.getByLabel(/^segment/i).count()) return false;
       if (!(await go(page, base, CUSTOMERS_PAGE))) return false;
-      if (!(await page.getByLabel(/market/i).count())) return false;
+      const list = await mainText(page);
+      if (!/market/i.test(list) || /segment/i.test(list)) return false;
       return (await seen(page, /enterprise/i)) && (await customersKept(page, base));
     },
   },
@@ -415,9 +484,10 @@ const REQUESTS = [
       };
       for (const kind of [CUSTOMERS_PAGE, ORDERS_PAGE]) {
         if (!(await go(page, base, kind))) return false;
-        const button = page
-          .getByRole("link", { name: /^add/i })
-          .or(page.getByRole("button"))
+        const main = page.locator("main");
+        const button = main
+          .getByRole("link", { name: /^(add|new|create)/i })
+          .or(main.getByRole("button"))
           .first();
         if (!(await button.count())) return false;
         const style = await button.evaluate((e) => {
@@ -708,6 +778,13 @@ async function oneRun(run) {
 }
 
 // ── Run ──────────────────────────────────────────────────────────────────────────────────────────
+
+if (option("check-only")) {
+  // The checks alone, against an app a run kept: for mending a check without a model.
+  const results = await checkAll(option("check-only"), REQUESTS.length - 1);
+  console.log(JSON.stringify(results));
+  process.exit(0);
+}
 
 const runs = [];
 for (let run = 1; run <= RUNS; run++) runs.push(await oneRun(run));
