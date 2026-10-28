@@ -368,7 +368,8 @@ export const QUESTIONS = {
 
   status: [
     {
-      q: "Is anything down right now?",
+      // Not "down": that is one of the starter's values, and none has it, so "No" was a fair reading.
+      q: "Is anything not working normally right now?",
       kind: "names",
       expect: (d) => d.Component.filter((c) => c.status !== "operational").map((c) => c.name),
     },
