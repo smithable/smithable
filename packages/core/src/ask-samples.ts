@@ -5,7 +5,8 @@
  * question pass and editable by hand; the host sends them through the development door and
  * compares what Ask asked with the shape, never the answer's words. Read like the sample files:
  * what names a kind, field, role or choice value no longer in the spec is a warning naming the
- * line, so a rename leaves nothing silently broken. Gone with the sample data, never published.
+ * line and the question is kept as written, so the host can say what it finds now ("'Is anything
+ * down?' finds nothing; its expectation still says down"). Gone with the sample data, never published.
  */
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import type { AuthIR } from "./auth.js";
@@ -56,11 +57,9 @@ export function validateAsk(
   for (const error of doc.errors) ctx.error(null, "yaml", error.message);
   const asks: AskIR[] = [];
   if (doc.errors.length) return { asks, diagnostics: ctx.diagnostics };
-  // The meaning texts' stale words are said with the file, whatever it holds (none yet included).
-  for (const d of staleMeaningWords(ir)) ctx.diagnostics.push({ ...d, file: file.path });
   if (doc.contents === null) return { asks, diagnostics: ctx.diagnostics };
   if (!isSeq(doc.contents)) {
-    ctx.error(doc.contents, "expected-list", `${ASK_PATH} must be a list of questions.`);
+    ctx.error(doc.contents, "expected-list", `${file.path} must be a list of questions.`);
     return { asks, diagnostics: ctx.diagnostics };
   }
   const roles = [...new Set(["visitor", ...(auth?.roles.map((r) => r.name) ?? [])])];
@@ -83,7 +82,7 @@ export function validateAsk(
         );
     const role = text("role");
     const question = text("question");
-    // A role the auth file no longer has: stale, said, and left out.
+    // A role the auth file no longer has: stale, said; the question stays as written.
     if (role && !roles.includes(role))
       ctx.warning(
         at("role")?.value,
@@ -94,7 +93,7 @@ export function validateAsk(
     const expects = at("expects")
       ? readExpectation(ctx, at("expects") as Entry, ir, what)
       : undefined;
-    if (role && roles.includes(role) && question && expects) asks.push({ role, question, expects });
+    if (role && question && expects) asks.push({ role, question, expects });
   });
   return { asks, diagnostics: ctx.diagnostics };
 }
@@ -124,6 +123,7 @@ function readExpectation(
       `${what}'s answer must be one of ${ASK_ANSWERS.join(", ")}.`,
     );
   if (!kind || !answer || !(ASK_ANSWERS as readonly string[]).includes(answer)) return undefined;
+  const expectation: AskExpectation = { kind, answer: answer as AskAnswer };
   const model = ir.models.find((m) => m.name === kind);
   if (!model) {
     const names = ir.models.map((m) => m.name);
@@ -133,21 +133,35 @@ function readExpectation(
       `There is no kind "${kind}" for ${what}.`,
       didYouMean(kind, names) ?? `The kinds: ${names.join(", ")}.`,
     );
-    return undefined;
+    // Kept as written, unchecked further: the host says what the question finds now.
+    const measure = at("measure")
+      ? readString(ctx, (at("measure") as Entry).value, `${what}'s measure`)
+      : undefined;
+    const where = at("where")?.value?.toJSON();
+    return {
+      ...expectation,
+      ...(measure ? { measure } : {}),
+      ...(where && typeof where === "object" ? { where: where as Record<string, unknown> } : {}),
+    };
   }
-  const expectation: AskExpectation = { kind, answer: answer as AskAnswer };
   const measureEntry = at("measure");
   if (measureEntry) {
     const measure = readString(ctx, measureEntry.value, `${what}'s measure`);
-    if (measure && !fieldOf(model, measure))
+    const measured = measure ? fieldOf(model, measure) : undefined;
+    const hint = `The number fields: ${numbers(model).join(", ") || "none"}.`;
+    if (measure && !measured)
       ctx.warning(
         measureEntry.value,
         "unknown-field",
         `${model.name} has no field "${measure}" to measure (${what}).`,
-        didYouMean(
-          measure,
-          model.fields.map((f) => f.name),
-        ),
+        didYouMean(measure, numbers(model)) ?? hint,
+      );
+    else if (measured && !isNumber(measured))
+      ctx.warning(
+        measureEntry.value,
+        "not-a-number",
+        `${model.name}.${measure} is not a number field to measure (${what}).`,
+        hint,
       );
     if (measure) expectation.measure = measure;
   }
@@ -157,6 +171,9 @@ function readExpectation(
     if (conditions) {
       const where: Record<string, unknown> = {};
       for (const condition of conditions) {
+        const value = condition.value?.toJSON();
+        // Kept as written, whatever the check says: the host shows what it finds now.
+        where[condition.key] = value;
         const field = fieldOf(model, condition.key);
         if (!field) {
           ctx.warning(
@@ -170,7 +187,6 @@ function readExpectation(
           );
           continue;
         }
-        const value = condition.value?.toJSON();
         const values = valuesOf(field);
         if (values) {
           // A choice's value, or several: each must still be one of the field's.
@@ -178,8 +194,15 @@ function readExpectation(
             ? value.map(String)
             : typeof value === "string"
               ? [value]
-              : [];
-          for (const v of named)
+              : undefined;
+          if (!named)
+            ctx.warning(
+              condition.value,
+              "unknown-value",
+              `${model.name}.${field.name} takes one of its values, or a list of them (${what}).`,
+              `The values: ${values.join(", ")}.`,
+            );
+          for (const v of named ?? [])
             if (!values.includes(v))
               ctx.warning(
                 condition.value,
@@ -188,7 +211,6 @@ function readExpectation(
                 didYouMean(v, values) ?? `The values: ${values.join(", ")}.`,
               );
         }
-        where[condition.key] = value;
       }
       expectation.where = where;
     }
@@ -197,39 +219,7 @@ function readExpectation(
 }
 
 const fieldOf = (model: ModelIR, name: string) => model.fields.find((f) => f.name === name);
-
-/**
- * A choice field's meaning text (its description or intent) that names, in quotes, a word that
- * is not one of its values: "down" after it became "outage". Positions are the field's in the
- * spec as far as the text knows them: the message names the field.
- */
-export function staleMeaningWords(ir: SpecIR): Diagnostic[] {
-  const out: Diagnostic[] = [];
-  for (const model of ir.models)
-    for (const field of model.fields) {
-      const values = valuesOf(field);
-      if (!values) continue;
-      for (const text of [field.description, field.intent]) {
-        if (!text) continue;
-        for (const word of quoted(text))
-          if (!values.includes(word) && !values.some((v) => v.toLowerCase() === word.toLowerCase()))
-            out.push({
-              severity: "warning",
-              code: "stale-meaning-word",
-              message: `The meaning of ${model.name}.${field.name} names "${word}", which is not one of its values (${values.join(", ")}).`,
-              hint: "Change the text with setMeaning, or add the value.",
-              file: "smithable.yml",
-              line: 0,
-              column: 0,
-            });
-      }
-    }
-  return out;
-}
-
-/** The words a text quotes: 'x', "x", *x* or `x`, single words only (a quoted sentence is not a value). */
-function quoted(text: string): string[] {
-  const words: string[] = [];
-  for (const m of text.matchAll(/(['"*`])([\p{L}\p{N}_-]+)\1/gu)) words.push(m[2] as string);
-  return words;
-}
+const NUMBERS: readonly string[] = ["int", "decimal", "money"];
+const isNumber = (field: FieldIR) =>
+  field.type.kind === "scalar" && NUMBERS.includes(field.type.name);
+const numbers = (model: ModelIR) => model.fields.filter(isNumber).map((f) => f.name);

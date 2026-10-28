@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { staleMeaningWords, validateAsk } from "./ask-samples.js";
+import { validateAsk } from "./ask-samples.js";
 import { type AuthIR, validateAuth } from "./auth.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
@@ -87,16 +87,27 @@ test("what names a kind, field, value or role no longer in the spec is a warning
     ["warning", "unknown-role", 10],
   ]);
   expect(read.diagnostics[0]?.hint).toContain("The values: operational, degraded, outage.");
-  // A stale value or measure keeps the question, said; a kind or a role that is gone drops it.
-  expect(read.asks.map((a) => a.question)).toEqual([
-    "Is anything down?",
-    "What is the average latency?",
-  ]);
+  // Every question is kept as written: the host says what each finds now.
+  expect(read.asks).toHaveLength(4);
+  expect(read.asks[0]?.expects.where).toEqual({ status: "down" });
+  expect(
+    ask(
+      "- role: admin\n  question: Average name?\n  expects: { kind: Component, measure: name, answer: number }\n",
+    ).diagnostics.map((d) => d.code),
+  ).toEqual(["not-a-number"]);
+  expect(
+    ask(
+      "- role: admin\n  question: Which?\n  expects: { kind: Component, where: { status: 1, size: big }, answer: names }\n",
+    ).diagnostics.map((d) => d.code),
+  ).toEqual(["unknown-value", "unknown-field"]);
 });
 
 test("the file's shape: a list of mappings, each with the three keys, the answer one of three", () => {
   expect(codes("role: operator\n")).toEqual(["error:expected-list"]);
   expect(codes("- role: operator\n  question: Hi\n")).toEqual(["error:missing-key"]);
+  expect(
+    codes("- role: ''\n  question: Hi\n  expects: { kind: Component, answer: count }\n"),
+  ).toEqual(["error:expected-text"]);
   expect(
     codes("- role: operator\n  question: Hi\n  expects: { kind: Component, answer: words }\n"),
   ).toEqual(["error:unknown-answer"]);
@@ -104,31 +115,4 @@ test("the file's shape: a list of mappings, each with the three keys, the answer
     "error:missing-key",
   ]);
   expect(ask("# none yet\n").asks).toEqual([]);
-});
-
-test("a meaning text that quotes a word the choice no longer has is a warning", () => {
-  const described = validateSpec({
-    path: "smithable.yml",
-    text: `smithable: 0.1
-app: { name: Status }
-models:
-  Component:
-    fields:
-      name: string!
-      status:
-        type: operational | degraded | outage
-        description: In a question, "down" means any status but 'operational'.
-pages:
-  components: { crud: Component }
-`,
-  }).ir as SpecIR;
-  const stale = staleMeaningWords(described);
-  expect(stale.map((d) => d.message)).toEqual([
-    'The meaning of Component.status names "down", which is not one of its values (operational, degraded, outage).',
-  ]);
-  expect(
-    validateAsk({ path: "samples/ask.yml", text: "" }, described, auth).diagnostics.map(
-      (d) => d.code,
-    ),
-  ).toEqual(["stale-meaning-word"]);
 });

@@ -25,7 +25,6 @@ export {
   type AskAnswer,
   type AskExpectation,
   type AskIR,
-  staleMeaningWords,
   validateAsk,
 } from "./ask-samples.js";
 export type {
