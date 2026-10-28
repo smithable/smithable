@@ -51,7 +51,7 @@ smithable new my-crm                            # a CRM from the starter, with s
 smithable new torget --starter marketplace      # or booking, invoicing, records, status, api
 smithable new dogs --describe "a site to show my dogs"   # up to three questions, then a draft (needs a model, docs/ai.md)
 smithable new cafe --from https://example.com            # a page as the description; --with-pictures takes its pictures
-cd my-crm && smithable studio                   # the editor (No code and Code modes) in the browser
+cd my-crm && smithable studio                   # the editor, with Smith, in the browser
 ```
 
 From inside a project, the everyday commands:
@@ -78,7 +78,7 @@ The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smith
 | `packages/ai` | Model providers, the AI policy, requests to operations |
 | `packages/cli` | The `smithable` command, the Studio server, the MCP server, deploy and backup targets |
 | `packages/create-smithable` | `npm create smithable`, which starts an app with `smithable new` (on npm, like the other packages) |
-| `apps/studio` | The editor, No code and Code modes (Builder and Studio in the code), one web app served by `smithable studio` |
+| `apps/studio` | The editor: Smith, the preview, and the No code and Code views (called Builder and Studio in the source), one web app served by `smithable studio` |
 | `examples/` | The starters: a CRM, a booking site, an invoicing app, a marketplace (Torget), records (things and what we know about them), and a status page |
 | `docs/` | The pages of [docs.smithable.ai](https://docs.smithable.ai) (`docs/site/`), [vision](docs/VISION.md), [architecture](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), the [spec reference](docs/spec/v0.1.md), [AI setup](docs/ai.md), [how things were built and measured](docs/as-built.md), benchmarks and research |
 
