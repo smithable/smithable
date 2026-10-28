@@ -41,6 +41,8 @@ export function validatePeople(
   for (const error of doc.errors) ctx.error(null, "yaml", error.message);
   const people: PersonIR[] = [];
   if (doc.errors.length) return { people, diagnostics: ctx.diagnostics };
+  // An empty file, or one of comments only: no people yet (removing the last one leaves it so).
+  if (doc.contents === null) return { people, diagnostics: ctx.diagnostics };
   if (!isSeq(doc.contents)) {
     ctx.error(doc.contents, "expected-list", "samples/people.yml must be a list of people.");
     return { people, diagnostics: ctx.diagnostics };

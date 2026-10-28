@@ -429,5 +429,5 @@ const people: Companion = {
   operations: peopleOperations,
 };
 
-/** In the order their operations are listed. */
+/** In the order their operations are listed, and checked: people after auth, whose roles it reads as the operation leaves them. */
 export const COMPANIONS: readonly Companion[] = [ux, content, auth, context, people];

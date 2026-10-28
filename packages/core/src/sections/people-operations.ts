@@ -80,7 +80,9 @@ const addSampleUser: Operation<{ name: string; role: string; persona?: string; p
     const people = editors.people;
     if (!people) throw new OperationError("This project cannot have sample users.");
     const have = listed(people);
-    if (have.some((p) => p.name === name))
+    const same = (other: unknown) =>
+      typeof other === "string" && other.toLowerCase() === name.toLowerCase();
+    if (have.some((p) => same(p.name)))
       throw new OperationError(`There is already a sample user called "${name}".`);
     if (have.length >= PEOPLE_MAX)
       throw new OperationError(
@@ -111,7 +113,7 @@ const removeSampleUser: Operation<{ name: string }> = {
   apply(editors, { name }) {
     const people = editors.people;
     const have = people ? listed(people) : [];
-    const at = have.findIndex((p) => p.name === name);
+    const at = have.findIndex((p) => typeof p.name === "string" && p.name.toLowerCase() === name.toLowerCase());
     if (!people || at < 0) {
       const names = have.map((p) => p.name).filter((n): n is string => typeof n === "string");
       throw new OperationError(

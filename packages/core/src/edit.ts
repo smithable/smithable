@@ -212,34 +212,40 @@ export class YamlEditor {
    */
   appendItem(path: Path, value: YamlValue): void {
     const list = path.length ? this.doc.getIn(path, true) : this.doc.contents;
+    const end = this.source.length;
+    const lead = end > 0 && !this.source.endsWith("\n") ? "\n" : "";
     if (list == null) {
+      // An empty document, or one of comments only: the item comes after what is there.
       if (path.length) throw new EditError(`Nothing at ${path.join(".")}.`);
-      this.splice(0, this.source.length, listItem(value, ""));
+      this.splice(end, end, `${lead}${listItem(value, "")}`);
       return;
     }
     if (!isSeq(list)) throw new EditError(`${path.join(".") || "The document"} is not a list.`);
     const seq = list as YAMLSeq.Parsed;
-    if (seq.flow) {
+    const last = seq.items[seq.items.length - 1] as ParsedNode | undefined;
+    if (seq.flow || !last) {
+      // [a, b] becomes a block list with the item, in the list's own place: the text around it stays.
       const items = [...(seq.toJSON() as YamlValue[]), value];
       // Under a key, the items go one step in from it; a document's list starts at the margin.
       const indent = path.length ? `${this.indentAt(this.pair(path).key.range[0])}  ` : "";
       const text = items.map((item) => listItem(item, indent)).join("");
-      if (path.length === 0) this.splice(0, this.source.length, text);
-      else
-        this.splice(
-          this.source.indexOf(":", this.pair(path).key.range[1]) + 1,
-          seq.range[1],
-          `\n${text.trimEnd()}`,
-        );
+      if (path.length === 0) this.splice(seq.range[0], seq.range[1], text.trimEnd());
+      else {
+        const colon = this.source.indexOf(":", this.pair(path).key.range[1]);
+        // From right after "key:" when only spaces separate it from the list; else from the list.
+        const from = this.source.slice(colon + 1, seq.range[0]).trim() === "" ? colon + 1 : seq.range[0];
+        this.splice(from, seq.range[1], `\n${text.trimEnd()}`);
+      }
       return;
     }
-    const last = seq.items[seq.items.length - 1] as ParsedNode;
-    const at = Math.min(this.lineEnd(this.itemEnd(last) - 1) + 1, this.source.length);
-    const lead = at === this.source.length && !this.source.endsWith("\n") ? "\n" : "";
-    this.splice(at, at, `${lead}${listItem(value, this.indentAt(seq.range[0]))}`);
+    const at = Math.min(this.lineEnd(this.itemEnd(last) - 1) + 1, end);
+    this.splice(at, at, `${at === end ? lead : ""}${listItem(value, this.indentAt(seq.range[0]))}`);
   }
 
-  /** Removes item `index` of the block list at `path` (the whole document when the path is empty), with its lines. */
+  /**
+   * Removes item `index` of the list at `path` (the whole document when the path is empty): a block
+   * item with its lines, from its dash; comment lines above it stay. A [ … ] list loses the item.
+   */
   removeItem(path: Path, index: number): void {
     const list = path.length ? this.doc.getIn(path, true) : this.doc.contents;
     if (!isSeq(list)) throw new EditError(`${path.join(".") || "The document"} is not a list.`);
@@ -251,14 +257,23 @@ export class YamlEditor {
       this.splice(seq.range[0], seq.range[1], flow(items));
       return;
     }
-    const start = this.lineStart(item.range[0]);
+    // The item's dash may be on its own line ("-" then the mapping below it): the lines go from it.
+    const dash = this.source.lastIndexOf("-", item.range[0] - 1);
+    const start = this.lineStart(
+      dash >= 0 && this.source.slice(this.lineStart(dash), dash).trim() === "" ? dash : item.range[0],
+    );
     this.splice(start, Math.min(this.lineEnd(this.itemEnd(item) - 1) + 1, this.source.length), "");
   }
 
-  /** Where a list item's text ends: a block mapping's range runs on over comments, its last value's does not. */
-  private itemEnd(item: ParsedNode): number {
-    const last = isMap(item) && !item.flow ? item.items.at(-1) : undefined;
-    return last ? ((last.value ?? last.key) as ParsedNode).range[1] : item.range[1];
+  /** Where a node's text ends: a block collection's range runs on over the comments after it, its last scalar's does not. */
+  private itemEnd(node: ParsedNode): number {
+    if (isMap(node) && !node.flow && node.items.length) {
+      const last = node.items[node.items.length - 1] as Pair<ParsedNode, ParsedNode | null>;
+      return this.itemEnd(last.value ?? last.key);
+    }
+    if (isSeq(node) && !node.flow && node.items.length)
+      return this.itemEnd(node.items[node.items.length - 1] as ParsedNode);
+    return node.range[1];
   }
 
   private pair(path: Path): Pair<ParsedNode, ParsedNode | null> {

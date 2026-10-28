@@ -41,10 +41,11 @@ test("addSampleUser refuses an unknown role, a name taken and a sixth person", (
   }
   expect(applyOperation(current, "addSampleUser", { name: "A", role: "admin" })).toMatchObject({
     ok: false,
-    message: 'addSampleUser: There is already a sample user called "A".'.replace(
-      "addSampleUser: ",
-      "",
-    ),
+    message: 'There is already a sample user called "A".',
+  });
+  expect(applyOperation(current, "addSampleUser", { name: "a", role: "admin" })).toMatchObject({
+    ok: false,
+    message: 'There is already a sample user called "a".',
   });
   expect(applyOperation(current, "addSampleUser", { name: "F", role: "admin" })).toMatchObject({
     ok: false,
@@ -79,6 +80,18 @@ test("removeSampleUser takes the person's lines and keeps the others' comments; 
     ok: false,
     message: expect.stringContaining("There are none."),
   });
+});
+
+test("removing the last sample user leaves the file's comments, and a person can be added again after them", () => {
+  const people = "# The club's people\n- name: Maja\n  role: customer\n  persona: Books a lot.\n";
+  const removed = applyOperation({ ...files, people }, "removeSampleUser", { name: "maja" });
+  if (!removed.ok) throw new Error(removed.message);
+  expect(removed.files.people).toBe("# The club's people\n");
+  const again = applyOperation(removed.files, "addSampleUser", { name: "Tomas", role: "admin" });
+  if (!again.ok) throw new Error(again.message);
+  expect(again.files.people).toBe(
+    "# The club's people\n- name: Tomas\n  role: admin\n  persona: Runs the club.\n",
+  );
 });
 
 test("a role a sample user has cannot be removed", () => {
