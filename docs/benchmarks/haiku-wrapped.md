@@ -61,8 +61,10 @@ Reports: [run 1](bench-ask-haiku-wrapped.md), [run 2](bench-ask-haiku-wrapped-2.
 - **Sonnet's lead, if any, is in what it states as fact**: one confidently wrong answer in every run, where the
   Haiku setups have one to five; counts this small overlap between runs.
 - **The same four changes on the marketplace starter are wrong for every setup in every run** (the dinghy's price,
-  the tent, the balance bike, the roof box's place): that points at the bench or the starter's tools, not at a
-  model, and is about 3 % of each score. Worth a look of its own.
+  the tent, the balance bike, the roof box's place). The questions were stale, not the models: the starter's real
+  photographs had replaced three of those items, and a new item needs its photos, which the tools cannot add, so
+  every model rightly said it could not find them or post the tent. About 3 % of each score, the same for every
+  setup; the questions are on today's items since #873.
 
 ## The answer
 
