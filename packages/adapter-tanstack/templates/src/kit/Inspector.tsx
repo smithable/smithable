@@ -136,7 +136,7 @@ export function Shown({
           <Proposal key={`${i}-${step.tool}`} step={step} confirm={confirm} />
         ) : (
           <div key={`${i}-${step.tool}`} className="space-y-1">
-            <Result step={step} />
+            <Result step={step} timeZone={answer.timeZone} />
             {step.asked && (
               <p className="text-xs text-muted-foreground" data-asked>
                 {step.asked}
@@ -284,7 +284,7 @@ function Proposal({
 }
 
 /** What one call gave: a number, a table, a record, a description, or a proposed change. */
-function Result({ step }: { step: Step }) {
+function Result({ step, timeZone }: { step: Step; timeZone?: string }) {
   if (step.proposed)
     return (
       <div className="rounded-md border border-dashed border-border p-3 text-sm">
@@ -301,7 +301,7 @@ function Result({ step }: { step: Step }) {
     return (
       <Table
         head={r.columns as string[]}
-        rows={(r.rows as unknown[][]).map((row) => row.map(cell))}
+        rows={(r.rows as unknown[][]).map((row) => row.map((value) => cell(value, timeZone)))}
         note={typeof r.total === "number" ? w.inAll(r.total) : undefined}
         link={step.path && r.columns[0] === "id" ? (row) => `${step.path}/${row[0]}` : undefined}
       />
@@ -331,12 +331,17 @@ function Result({ step }: { step: Step }) {
       {Object.entries(r).map(([k, v]) => (
         <div key={k} className="contents">
           <dt className="text-muted-foreground">{k}</dt>
-          <dd>{cell(v)}</dd>
+          <dd>{cell(v, timeZone)}</dd>
         </div>
       ))}
     </dl>
   );
 }
+
+/** How long a cell's text is shown; a link, half of it. A long text (a message, a summary) is cut, whole on hover. */
+const SHORT = 120;
+const short = (text: string, most: number) =>
+  text.length > most ? `${text.slice(0, most).replace(/\s+\S*$/, "")}…` : text;
 
 /** Rows of cells; with `link`, a row's title (its second cell) opens its record. */
 function Table({
@@ -366,13 +371,17 @@ function Table({
           {rows.map((row, i) => (
             <tr key={`${i}-${row[0]}`} className="border-t border-border">
               {row.map((c, j) => (
-                <td key={`${j}-${head[j]}`} className="px-2 py-1">
+                <td
+                  key={`${j}-${head[j]}`}
+                  className="px-2 py-1"
+                  title={c.length > SHORT ? c : undefined}
+                >
                   {j === 1 && link ? (
                     <AppLink href={link(row)} className="underline">
-                      {c}
+                      {short(c, SHORT / 2)}
                     </AppLink>
                   ) : (
-                    c
+                    short(c, SHORT)
                   )}
                 </td>
               ))}
@@ -385,9 +394,19 @@ function Table({
   );
 }
 
-/** A value as text: a reference by its title, nothing as a dash. */
-function cell(value: unknown): string {
+/** A value as text: a reference by its title, a date and time as the app's pages show one, nothing as a dash. */
+function cell(value: unknown, timeZone?: string): string {
   if (value === null || value === undefined || value === "") return "–";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/.test(value))
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone,
+    }).format(new Date(value));
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
+      new Date(`${value}T00:00:00Z`),
+    );
   if (typeof value === "object" && "title" in (value as object))
     return String((value as { title: unknown }).title);
   return typeof value === "object" ? JSON.stringify(value) : String(value);
