@@ -140,6 +140,17 @@ export {
 } from "./ir.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
+export {
+  type Actor,
+  type Move,
+  movesFor,
+  type Slot,
+  type SlotKind,
+  type Step as MoveStep,
+  seeded,
+  valueFor,
+  walk,
+} from "./moves.js";
 export { writeNamedBy } from "./named-by.js";
 export {
   camel,
@@ -171,6 +182,14 @@ export {
   partSections,
   patternInfo,
 } from "./patterns.js";
+export {
+  PACE_DEFAULT,
+  PACE_MAX,
+  PACE_MIN,
+  PEOPLE_MAX,
+  type PersonIR,
+  validatePeople,
+} from "./people.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export {
@@ -183,6 +202,7 @@ export {
 } from "./records.js";
 export {
   fitSamples,
+  PEOPLE_FILE,
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,

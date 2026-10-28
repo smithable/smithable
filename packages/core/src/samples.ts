@@ -34,6 +34,9 @@ export interface SamplePicture {
 export type SampleRecordValue = string | number | boolean | null | SamplePicture | SamplePicture[];
 export type SamplesIR = Record<string, Record<string, SampleRecordValue>[]>;
 
+/** The one file in samples/ that is not a model's records: the sample users, which people.ts reads. */
+export const PEOPLE_FILE = "people";
+
 /**
  * The field that names a record: the one the model's `namedBy` says; else, by the fields' types
  * and order (docs/design/inference.md), its first short text, else its first long text (a
@@ -73,6 +76,8 @@ export function validateSamples(
     const ctx = new ParseContext(file.path, counter);
     for (const error of doc.errors) ctx.error(null, "yaml", error.message);
     const name = file.path.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "");
+    // samples/people.yml is the sample users, read by validatePeople, not records of a model.
+    if (name === PEOPLE_FILE) continue;
     const model = ir.models.find((m) => m.name === name);
     // A file or field that names what is no longer there (renamed, removed) is stale data: said,
     // and left out, so it never blocks a change to the spec.
@@ -276,6 +281,7 @@ export function fitSamples(
 ): { path: string; text: string }[] {
   let kept = files.flatMap((file) => {
     const name = file.path.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "");
+    if (name === PEOPLE_FILE) return [];
     const model = ir.models.find((m) => m.name === name);
     const doc = parseDocument(file.text);
     if (!model || doc.errors.length || !isSeq(doc.contents)) return [];
