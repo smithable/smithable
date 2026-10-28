@@ -175,11 +175,23 @@ async function screenshot(page) {
  * Waits until React has hydrated the page, so typing and clicking reach their handlers: the root
  * sets body[data-hydrated] in its first client effect. Typed before that, text shows in a box
  * but nothing reacts (a search that never filters), which load made a flake.
+ * The root's effect runs before a page in a chunk of its own has hydrated, though: a field filled
+ * then keeps its text on screen while the form's state keeps the old value, and the save sends
+ * that (A 176: a session moved without asking, 6 of 8 times). So it also waits until every form
+ * field is React's; a click before then is replayed by React, a typed value is not.
  */
 async function hydrated(page) {
   await page
     .locator('body[data-hydrated="true"]')
     .waitFor({ state: "attached", timeout: 60_000 * P });
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll("form input, form select, form textarea")].every((e) =>
+        Object.keys(e).some((k) => k.startsWith("__reactProps")),
+      ),
+    null,
+    { timeout: 60_000 * P },
+  );
 }
 
 /** Opens a page and waits until it is interactive: the dev server loads code on demand. */
