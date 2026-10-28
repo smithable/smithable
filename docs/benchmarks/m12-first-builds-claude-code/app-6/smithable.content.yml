@@ -2,21 +2,18 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Union work, posted first at the hall
-      subtitle: Browse the open positions our signatory employers have sent us, and apply as a member in a few minutes.
+      title: Good jobs for our members
+      subtitle: Browse the openings the union has gathered from fair employers, and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    openJobs:
-      title: Open right now
     features:
-      title: How the board works
-      items: [{ title: Every job in one place, text: Positions from union employers are posted here as soon as the hall receives them. }, { title: Apply from your phone, text: "Sign in, add your member number and résumé, and send your application right away." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or filled, without calling the hall." }]
+      title: How it works
+      items: [{ title: Vetted openings, text: "Every job is posted by union staff, with employers who respect our agreements." }, { title: Apply online, text: "Sign in, add a short note and your resume, and send your application straight to the union." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or settled, all in one place." }]
     faq:
-      title: Questions from members
-      items: [{ question: Who can apply?, answer: Members of the local. Sign in with your email address and include your member number when you apply. }, { question: Do I need a résumé?, answer: "It helps, but it is optional. A short note about your experience and certifications is often enough." }, { question: Who sees my application?, answer: Only you and the hall staff who handle job postings. Applications are never shown to the public. }, { question: How do I know if I got the job?, answer: "The status of your application changes on your Applications page, and the hall will contact you." }]
+      items: [{ question: Who can apply?, answer: Anyone who signs in can apply; most jobs are meant for members of our local. }, { question: Do I need a resume?, answer: "It helps, but a short message about your experience is enough to get started." }, { question: Who sees my application?, answer: Only you and union staff. Your details are never shown on the public job board. }, { question: How do I hear back?, answer: "Union staff update the status of your application, which you can check any time after signing in." }]
 logo:
   src: images/logo.webp
   alt: A map pin

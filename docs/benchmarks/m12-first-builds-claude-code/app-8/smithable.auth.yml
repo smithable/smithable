@@ -3,16 +3,16 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin: all
+  admin:
+    description: Organizers. Manage the program, talks and speakers.
   member:
     description: An attendee who registers for talks.
-    pages: [schedule, my-registrations]
+    pages: [my-registrations, program, speakers]
     create: [Registration]
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, privacy]
+  pages: [home, program, speakers, privacy]
   read: [Talk, Speaker]
-  create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

@@ -3,7 +3,7 @@ pages:
   home:
     hero:
       title: API status
-      subtitle: Is the API working? See the state of every service, what we are fixing and what we have planned.
+      subtitle: Live status of our API, open incidents and upcoming maintenance.
       button: Incident history
       image:
         src: images/hero.webp
@@ -12,12 +12,12 @@ pages:
     services:
       title: Services
     open:
-      title: Ongoing incidents
+      title: Current incidents
     recent:
       title: Recently resolved
     planned:
       title: Planned maintenance
 logo:
   src: images/logo.webp
-  alt: A pulse line in a circle
+  alt: A plug
   generated: true
