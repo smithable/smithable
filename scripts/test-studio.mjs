@@ -1235,8 +1235,16 @@ try {
         null,
         { timeout: 5000 * P },
       );
-      if (await page.getByRole("tab", { name: "Behavior" }).count())
-        throw new Error("No code shows beside the preview");
+      // The other windows wait beside it in the row the finger moves (A 173), out of view.
+      const beside = await page.evaluate(() =>
+        [...document.querySelectorAll('[role="tab"]')]
+          .filter((t) => t.textContent?.trim() === "Behavior")
+          .some((t) => {
+            const r = t.getBoundingClientRect();
+            return r.width > 0 && r.right > 0 && r.left < window.innerWidth;
+          }),
+      );
+      if (beside) throw new Error("No code shows beside the preview");
       // Every part is in a phone's header from the start: No code and Code are one window, Code
       // its sub-tab (A 161, smith-first.md §6).
       await pick("No code");
