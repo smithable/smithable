@@ -110,6 +110,16 @@ async function fillAndSave(page, values) {
       );
       if (!found) return false;
       await field.selectOption(found.value);
+    } else if ((await field.getAttribute("role")) === "combobox") {
+      // A reference: type the title, then take the option that names it.
+      await field.fill(value);
+      const option = page.getByRole("option", { name: new RegExp(literal(value), "i") }).first();
+      try {
+        await option.waitFor({ timeout: 3000 });
+        await option.click();
+      } catch {
+        await field.press("Enter");
+      }
     } else await field.fill(value);
   }
   const save = page.getByRole("button", { name: /^(save|create|add)/i }).first();
@@ -169,6 +179,8 @@ async function openEdit(page) {
   }
   return (await page.getByRole("button", { name: /^(save|create|add)/i }).count()) > 0;
 }
+
+const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const seen = async (page, text) => (await page.getByText(text, { exact: false }).count()) > 0;
 
