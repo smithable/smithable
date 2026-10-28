@@ -254,7 +254,11 @@ export function OutgoingTemplate({
       )}
       {o.to === "mail" && (
         <div className="space-y-1" data-preview>
-          <p className="font-medium">Preview, from the first sample {model.name.toLowerCase()}</p>
+          <p className="font-medium">
+            {Object.keys(sample).length
+              ? `Preview, from the first sample ${model.name.toLowerCase()}`
+              : `Preview: no sample ${model.name.toLowerCase()} yet (samples/${model.name}.yml), so its values are left out`}
+          </p>
           <div className="space-y-2 rounded-md border border-line bg-panel p-2 whitespace-pre-wrap">
             <p className="font-semibold">
               {/* A subject is one line: a value's newlines become spaces. */}
