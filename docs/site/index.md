@@ -12,6 +12,7 @@ Routine changes are generated, not written by an AI: adding a phone number to cu
 - **[Questions and answers](why.md#questions-and-answers)**, at the end of Why Smithable: how it compares, what it can build today, hosting, data, contributing.
 - **How-tos:**
   - [Change an app without writing code](change.md): four changes and an undo through operations on the status starter.
+  - [Ask your app a question](ask.md): the line under each answer that says what was looked up, and a word Ask could read two ways, explained, on the status starter.
   - [Buttons that change a record](actions.md): standard actions, from setting a field to copying a record with its lines.
   - [Let other programs use your app](api.md): keys, the API's calls and its refusals, on the status starter.
   - [An app for programs and assistants](assistants.md): the api starter, a key for an AI assistant, and Claude Code connected to it.
