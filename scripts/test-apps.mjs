@@ -1443,6 +1443,16 @@ async function mailThreadFlow(dir, base) {
       .exec(raw.split("\n\n")[0] ?? "")?.[1]
       ?.replace(/\s+/g, " ")
       .trim() ?? "";
+  /** The outbox's count once nothing more has come for a moment. */
+  const settled = async () => {
+    let count = mails().length;
+    for (let i = 0; i < 20 * P; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (mails().length === count) return count;
+      count = mails().length;
+    }
+    return count;
+  };
   const sentSince = async (before, count) => {
     for (let i = 0; i < 100 * P && mails().length < before + count; i++)
       await new Promise((r) => setTimeout(r, 100));
@@ -1564,8 +1574,9 @@ async function mailThreadFlow(dir, base) {
     if ((await tagged.json()).thread !== id) throw new Error("the tag did not find the message");
     // Its notice to the admin out first, so the next count starts after it.
     await sentSince(before + 1, 1);
-    // An automatic answer joins and tells nobody.
-    before = mails().length;
+    // An automatic answer joins and tells nobody. Counted once the outbox is still: every admin
+    // is told of the reply before it, a sample user who is an admin too (sample-users.md §5).
+    before = await settled();
     const away = await post({
       from: "ada@example.org",
       subject: "Out of office",
