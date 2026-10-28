@@ -14,6 +14,7 @@ export {
   renameModelInSnapshot,
   renameModelSql,
 } from "./migrations.js";
+export { type SampleUser, samplePeople } from "./dev-door.js";
 export { dataKey, tableNames, titleField } from "./shared.js";
 export { STACK_PROFILE } from "./stack.js";
 export { themeCss } from "./themes.js";
