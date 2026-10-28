@@ -284,7 +284,9 @@ test("an action checks that the viewer may read every record its input names", (
     ...options,
     auth: authOf(auth[1] as string),
   });
-  const action = files.find((f) => f.path === "src/generated/actions/merge-customers.ts")?.content;
+  const action = files.find(
+    (f) => f.path === "src/generated/actions/merge-customers.server.ts",
+  )?.content;
   expect(action).toContain("customerData.canRead(viewer, data.keep)");
   expect(action).toContain("customerData.canRead(viewer, data.duplicate)");
   expect(action).toContain("return run(data, viewer);");

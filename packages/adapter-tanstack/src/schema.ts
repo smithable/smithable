@@ -19,6 +19,7 @@ import {
   uniqueScope,
 } from "@smithable/core";
 import { authTables, hasInvitations, hasSignIn } from "./auth.js";
+import { samplePeople } from "./dev-door.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
 import { calendarStart } from "./pages/calendar.js";
@@ -478,7 +479,11 @@ function seedRows(model: ModelIR, options: Pick<GenerateOptions, "samples">) {
   );
 }
 
-export function seedModule(ir: SpecIR, options: Pick<GenerateOptions, "samples"> = {}): string {
+export function seedModule(
+  ir: SpecIR,
+  options: Pick<GenerateOptions, "samples" | "people"> &
+    Partial<Pick<GenerateOptions, "auth">> = {},
+): string {
   // A record that must refer to a user cannot be invented, nor can records that need it; nor
   // a person's place (a model with a capacity): every place stays free. Nor bookings of someone's
   // time or their time away (appointments.md): every free time stays free.
@@ -559,12 +564,26 @@ ${rows.join("\n")}
     .run();
 }`;
   });
+  // The sample users (samples/people.yml), in an app where people sign in: users of the
+  // development database who sign in nowhere; the development door acts as them.
+  const people = options.auth && hasSignIn(options.auth) ? samplePeople(options.people) : [];
+  if (people.length)
+    blocks.unshift(`// Only where the door that acts as them is (src/generated/people.ts): a seeded production
+// database holds no user nobody controls.
+if (process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1") {
+  db.insert(schema.user)
+    .values([
+${people.map((u) => `      { id: ${JSON.stringify(u.id)}, name: ${JSON.stringify(u.name)}, email: ${JSON.stringify(u.email)}, emailVerified: true, role: ${JSON.stringify(u.role)} },`).join("\n")}
+    ])
+    .onConflictDoNothing()
+    .run();
+}`);
   // Only when a sample row has a picture: samples may leave every picture out.
   const pictures = blocks.some((b) => b.includes("samplePicture("));
   // A model that needs a person who signs in gets no sample rows; with no rows at all, the seed
   // has nothing to import.
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
-${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? `import { ${blocks.some((b) => b.includes(": Picture")) ? "type Picture, " : ""}samplePicture } from "#/kit/uploads";\n` : ""}${
+${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length || people.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? `import { ${blocks.some((b) => b.includes(": Picture")) ? "type Picture, " : ""}samplePicture } from "#/kit/uploads";\n` : ""}${
   // The calendar's helper, only when a sample is moved with it (a skipped model moves none).
   blocks.some((b) => b.includes("aroundToday("))
     ? `import { app } from "#/generated/app";

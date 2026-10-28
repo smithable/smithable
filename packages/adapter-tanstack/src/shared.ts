@@ -9,6 +9,7 @@ import {
   kebab,
   type ModelIR,
   type PageIR,
+  type PersonIR,
   pageModel,
   pascal,
   plural,
@@ -76,6 +77,8 @@ export interface GenerateOptions {
   analytics?: AnalyticsSetting;
   /** The project's sample records (samples/<Model>.yml), seeded instead of generated ones. */
   samples?: SamplesIR;
+  /** The project's sample users (samples/people.yml): development users the door acts as. */
+  people?: PersonIR[];
 }
 
 export const HEADER =

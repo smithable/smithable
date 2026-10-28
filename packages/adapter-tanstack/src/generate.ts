@@ -36,6 +36,7 @@ import {
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
+import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
@@ -692,8 +693,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       const users =
         ir.models.some((m) => userFields(m).length) ||
         ir.actions.some((a) => userFields(a.input).length);
+      const people = samplePeople(options.people);
       return [
         generated("src/lib/auth.ts", authModule(auth, ir)),
+        // The sample users the development door acts as (docs/design/sample-users.md §5).
+        ...(people.length ? [generated("src/generated/people.ts", peopleModule(people))] : []),
         generated("src/generated/roles.ts", rolesModule(auth)),
         generated(
           "src/routes/sign-in.tsx",
@@ -708,7 +712,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Invitations and user management, for the users page (see users.ts).
         ...(hasInvitations(ir, auth)
           ? [
-              generated("src/generated/users.server.ts", usersServerModule(ir, auth, t)),
+              generated(
+                "src/generated/users.server.ts",
+                usersServerModule(ir, auth, t, people.length > 0),
+              ),
               generated("src/generated/users.test.ts", usersTestSource(ir, auth)),
             ]
           : []),
@@ -933,14 +940,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 `src/generated/actions/${kebab(action.name)}.input.ts`,
                 actionInputModule(action),
               ),
-              ...(action.rows
-                ? [
-                    generated(
-                      `src/generated/actions/${kebab(action.name)}.server.ts`,
-                      customActionServer(action, ir, t),
-                    ),
-                  ]
-                : []),
+              generated(
+                `src/generated/actions/${kebab(action.name)}.server.ts`,
+                customActionServer(action, ir, t),
+              ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]
           : [
@@ -965,6 +968,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ? [custom(`src/custom/incoming/${kebab(incoming.name)}.ts`, incomingStub(incoming))]
           : []),
       ]),
+  },
+  {
+    key: "door",
+    // The development door the host makes sample users act through (docs/design/sample-users.md §4).
+    files: ({ ir, t, auth, options }) => [
+      generated(
+        "src/generated/dev-door.server.ts",
+        doorModule(ir, auth, t, hasSignIn(auth) ? samplePeople(options.people) : []),
+      ),
+      ...Object.entries(
+        doorRoutes(ir, auth, hasSignIn(auth) ? samplePeople(options.people) : []),
+      ).map(([path, source]) => generated(path, source)),
+    ],
   },
   {
     key: "timers",

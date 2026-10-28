@@ -29,6 +29,8 @@ export interface UserRow {
   name: string;
   email: string;
   role: string;
+  /** One of the sample users the development door acts as (development and demo builds). */
+  sample?: boolean;
 }
 
 export interface InvitationRow {
@@ -215,6 +217,9 @@ export function Users({
       </Button>
     </div>
   );
+  // A sample user is a person of the sample data the development door acts as, not someone who signs in.
+  const status = (u: UserRow) =>
+    u.sample ? <Badge>{w.sampleUser}</Badge> : <Badge variant="success">{w.active}</Badge>;
   const you = (u: UserRow) =>
     u.id === viewerId && <span className="text-muted-foreground"> {w.you}</span>;
 
@@ -283,7 +288,7 @@ export function Users({
                   </p>
                   <p className="truncate text-sm text-muted-foreground">{u.email}</p>
                 </div>
-                <Badge variant="success">{w.active}</Badge>
+                {status(u)}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {roleControl(u)}
@@ -326,9 +331,7 @@ export function Users({
                   </TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{roleControl(u)}</TableCell>
-                  <TableCell>
-                    <Badge variant="success">{w.active}</Badge>
-                  </TableCell>
+                  <TableCell>{status(u)}</TableCell>
                   <TableCell className="text-right">{removeButton(u)}</TableCell>
                 </TableRow>
               ))}

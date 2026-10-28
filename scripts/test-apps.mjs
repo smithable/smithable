@@ -25,7 +25,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import fc from "fast-check";
 import { chromium } from "playwright";
-import { validateSpec } from "../packages/core/dist/index.js";
+import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
 
@@ -33,6 +33,8 @@ import { checkPorts } from "./ports.mjs";
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
 // not read as a failure.
 const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
+/** The development door's secret in this run, as the host would give it (sample-users.md §4). */
+const DOOR_SECRET = `door-${process.pid}-${Date.now()}`;
 
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
@@ -449,6 +451,93 @@ async function openClass(page, panel) {
     }
   }
   throw new Error("no class open for booking this week or next");
+}
+
+/**
+ * The development door (docs/design/sample-users.md §4) on the booking starter: shut without the
+ * secret, refused to anyone but a sample user; then twenty moves of the starter's sample users,
+ * drawn by core's walk without a model, the clock a week on halfway. The app may refuse a move
+ * (the session is full): never fail one. A seed replays a failure: DOOR_SEED=<n>.
+ */
+async function devDoorFlow(dir, base) {
+  const seed = Number(process.env.DOOR_SEED) || 7;
+  const door = { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
+  const call = (side, body) =>
+    fetch(`${base}/_dev/${side}`, { method: "POST", headers: door, body: JSON.stringify(body) });
+  try {
+    const shut = (await fetch(`${base}/_dev/moves?user=visitor`)).status;
+    const stranger = (await fetch(`${base}/_dev/moves?user=dev-admin`, { headers: door })).status;
+    if (shut !== 404 || stranger !== 403)
+      throw new Error(`without the secret: ${shut}; someone not a sample user: ${stranger}`);
+    // Ask as a sample user (ask-words.md §3.2); a role a sample user has is asked as that person.
+    const asked = await call("ask", {
+      user: "sample-maja-lindqvist",
+      question: "How many sessions are there?",
+    });
+    const answer = await asked.json();
+    if (!asked.ok || !answer.steps?.some((s) => s.tool === "measure"))
+      throw new Error(
+        `Ask as a sample user: ${asked.status} ${JSON.stringify(answer).slice(0, 200)}`,
+      );
+    const byRole = (
+      await call("ask", { user: "role:admin", question: "How many sessions are there?" })
+    ).status;
+    if (byRole !== 403) throw new Error(`Ask as a role a sample user has: ${byRole}`);
+    const people = ["sample-maja-lindqvist", "sample-tomas-berg", "sample-reception"];
+    const pick = seeded(seed);
+    const one = (ids) => ids[Math.floor(pick() * ids.length)];
+    let done = 0;
+    let refused = 0;
+    let week = "";
+    for (let i = 0; i < 20; i++) {
+      if (i === 10) {
+        const moved = await call("clock", { offset: 7 * 86_400_000 });
+        week = (await moved.json()).now;
+        if (!moved.ok) throw new Error(`the clock: ${moved.status}`);
+      }
+      const user = people[i % people.length];
+      const listed = await fetch(`${base}/_dev/moves?user=${user}`, { headers: door });
+      if (!listed.ok) throw new Error(`${user}'s moves: ${listed.status} ${await listed.text()}`);
+      const { now, moves } = await listed.json();
+      // The moves that change something: opening a page is the rest of this check's.
+      const [step] = walk(
+        moves.filter((m) => m.kind !== "open"),
+        seed + i,
+        1,
+        new Date(now),
+      );
+      if (!step) continue;
+      const move = moves.find((m) => m.id === step.move);
+      const values = { ...step.values };
+      // A reference: one of the records the user may choose.
+      for (const [field, ids] of Object.entries(move.candidates ?? {}))
+        if (field in values || move.slots.find((s) => s.field === field)?.required)
+          values[field] = one(ids);
+      const target = move.records
+        ? move.rows
+          ? { records: [one(move.records)] }
+          : { record: one(move.records) }
+        : {};
+      const answer = await call("act", { user, move: move.id, values, ...target });
+      if (answer.status >= 500)
+        throw new Error(
+          `move ${i + 1}, ${move.id} as ${user}: ${answer.status} ${await answer.text()}`,
+        );
+      if (answer.ok) done++;
+      else refused++;
+    }
+    const [{ n }] = query(dir, "select count(*) as n from audit_log where who like 'sample-%'");
+    if (!done || !n)
+      throw new Error(`${done} moves went through, ${n} lines in Activity by a sample user`);
+    console.log(
+      `  ✓ the development door: shut without the secret, refused to anyone else; Ask as a sample user; twenty changes by the sample users, the clock a week on (${week.slice(0, 10)}): ${done} done, ${refused} refused by the app, ${n} in Activity (seed ${seed})`,
+    );
+  } catch (error) {
+    console.log(`  ✗ the development door: ${error.message} (DOOR_SEED=${seed})`);
+    failures.push("development door");
+  } finally {
+    await call("clock", { offset: 0 }).catch(() => {});
+  }
 }
 
 async function bookingFlow(dir, base) {
@@ -1354,6 +1443,16 @@ async function mailThreadFlow(dir, base) {
       .exec(raw.split("\n\n")[0] ?? "")?.[1]
       ?.replace(/\s+/g, " ")
       .trim() ?? "";
+  /** The outbox's count once nothing more has come for a moment. */
+  const settled = async () => {
+    let count = mails().length;
+    for (let i = 0; i < 20 * P; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (mails().length === count) return count;
+      count = mails().length;
+    }
+    return count;
+  };
   const sentSince = async (before, count) => {
     for (let i = 0; i < 100 * P && mails().length < before + count; i++)
       await new Promise((r) => setTimeout(r, 100));
@@ -1475,8 +1574,9 @@ async function mailThreadFlow(dir, base) {
     if ((await tagged.json()).thread !== id) throw new Error("the tag did not find the message");
     // Its notice to the admin out first, so the next count starts after it.
     await sentSince(before + 1, 1);
-    // An automatic answer joins and tells nobody.
-    before = mails().length;
+    // An automatic answer joins and tells nobody. Counted once the outbox is still: every admin
+    // is told of the reply before it, a sample user who is an admin too (sample-users.md §5).
+    before = await settled();
     const away = await post({
       from: "ada@example.org",
       subject: "Out of office",
@@ -6159,7 +6259,8 @@ for (const [index, example] of examples.entries()) {
         () => demoVisitorsFlow(dir, port + 400),
       );
 
-    let stop = await serve(dir, port, "production");
+    // A door secret as a host would give one: a production build still has no door (A 180).
+    let stop = await serve(dir, port, "production", { DEV_DOOR_SECRET: DOOR_SECRET });
     try {
       const base = `http://localhost:${port}`;
       const { ir } = validateSpec({
@@ -6247,6 +6348,26 @@ for (const [index, example] of examples.entries()) {
         `  ${absent ? "✓" : "✗"} the production build has no development sign-in or setup notes`,
       );
       if (!absent) failures.push(`${example} development sign-in in production`);
+      {
+        // The development door (sample-users.md §4): every /_dev/ path a 404, the secret given.
+        const door = { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
+        const statuses = [
+          (await fetch(`${base}/_dev/moves?user=visitor`, { headers: door })).status,
+          ...(await Promise.all(
+            ["act", "clock", "ask"].map(
+              async (side) =>
+                (
+                  await fetch(`${base}/_dev/${side}`, { method: "POST", headers: door, body: "{}" })
+                ).status,
+            ),
+          )),
+        ];
+        const shut = statuses.every((status) => status === 404);
+        console.log(
+          `  ${shut ? "✓" : "✗"} the production build has no development door: every /_dev/ path is a 404 (${statuses.join(", ")})`,
+        );
+        if (!shut) failures.push(`${example} development door in production`);
+      }
       if (devSignIn.status !== 404)
         await asyncStep(
           "sign-in's own limit counts per address, and a made-up X-Forwarded-For is no new address",
@@ -7277,7 +7398,10 @@ test("the session cookie's name and attributes", async () => {
         },
       );
     const receiver = example === "status" ? await callReceiver() : undefined;
-    stop = await serve(dir, port + 100, "dev", receiver?.env);
+    stop = await serve(dir, port + 100, "dev", {
+      ...receiver?.env,
+      DEV_DOOR_SECRET: DOOR_SECRET,
+    });
     try {
       const base = `http://localhost:${port + 100}`;
       await asyncStep(
@@ -7320,6 +7444,8 @@ test("the session cookie's name and attributes", async () => {
         await incomingMailFlow(dir, base);
         await mailThreadFlow(dir, base);
         await languagesFlow(dir, base);
+        // Last: the walk changes the records the flows above rely on.
+        await devDoorFlow(dir, base);
       }
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);

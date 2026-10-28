@@ -151,6 +151,7 @@ ${SCHEMA_IMPORT}
 import type { Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { log } from "#/kit/log.server";
+import { now as clockNow } from "#/kit/now";
 ${lines.join("\n")}
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -241,7 +242,7 @@ const CLOCK_TIMERS: Record<string, ClockTimer> = {${clock.map((x) => `\n  ${JSON
 const LAST = { timer: "", record: 0, due: "tick" };
 
 /** One tick: every timer, what has come due since the last. */
-export async function tick(now = new Date()): Promise<void> {
+export async function tick(now = clockNow()): Promise<void> {
   const last = db.select({ ranAt: runs.ranAt }).from(runs).where(at(LAST)).get()?.ranAt.getTime() ?? now.getTime();
   for (const [name, timer] of Object.entries(RECORD_TIMERS)) {
     try {
@@ -277,7 +278,7 @@ export async function tick(now = new Date()): Promise<void> {
  * Runs one timer as if its time had come (\`smithable timers run\`): a record timer for what fell
  * due in the day before \`now\`, a clock timer once, keyed by \`now\`'s minute.
  */
-export async function runTimer(name: string, now = new Date()): Promise<void> {
+export async function runTimer(name: string, now = clockNow()): Promise<void> {
   const record = RECORD_TIMERS[name];
   if (record) {
     await record(now, now.getTime() - DAY, now.getTime() - DAY);

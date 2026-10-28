@@ -918,7 +918,7 @@ export function dataModule(
     ? `
       if (!(!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role)))) {
         const closesAt = ${deadlineOf("closes", `values.${capacity.per}Id`)};
-        if (closesAt && Date.now() > closesAt.getTime()) throw new Conflict("closed");
+        if (closesAt && now().getTime() > closesAt.getTime()) throw new Conflict("closed");
       }`
     : "";
   /** Whether a row is counted by the capacity's `where`, as code over a row object. */
@@ -968,7 +968,7 @@ export function dataModule(
               ? `
           if (was && !will && !moving && !(!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role)))) {
             const cancelUntilAt = ${deadlineOf("cancelUntil", "perId")};
-            if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+            if (cancelUntilAt && now().getTime() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
           }`
               : ""
           }
@@ -1605,7 +1605,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2379,7 +2379,7 @@ ${dropPictures(
         if (!(!!viewer && (!!viewer.system || ${n.access}.delete.roles.includes(viewer.role)))) {
           const perId = tx.select({ p: ${n.table}.${capacity.per}Id }).from(${n.table}).where(eq(${n.table}.id, id)).get()?.p;
           const cancelUntilAt = perId == null ? undefined : ${deadlineOf("cancelUntil", "perId")};
-          if (cancelUntilAt && Date.now() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+          if (cancelUntilAt && now().getTime() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
         }`
               : ""
           }

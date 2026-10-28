@@ -15,6 +15,7 @@ export const w = {
   actAs: "Agera som",
   actions: "Åtgärder",
   active: "Aktiv",
+  sampleUser: "Exempelanvändare",
   activeFilters: "Aktiva filter",
   activity: "Aktivitet",
   activityLead:
