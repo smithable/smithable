@@ -7,7 +7,7 @@ Smithable is for two kinds of people: those who have never written code and want
 Adding a field, a page, a role or a rule is an operation, not a conversation with a model. Each one is protected in the same ways:
 
 - **Validated.** The change is checked against the whole spec before anything is written. If it does not fit, nothing is applied, and the error says why.
-- **Regenerated the same way.** Generation is deterministic: the same spec always gives byte-identical code, so nothing drifts or is left half-updated.
+- **Regenerated the same way.** The same spec always gives exactly the same code, so nothing drifts or is left half-updated.
 - **Migrated with the records kept.** The database is migrated so existing records survive. A change that would lose data, such as removing a field, says what it loses and asks first.
 - **Tested.** The app's generated tests run before the change is committed as a checkpoint.
 - **Reversible, within limits.** `smithable undo` takes the last change back, the development database included, and can be run again to go further back. That undo is for building. A live app's records come back from its backups (`smithable restore`), not from undo.
