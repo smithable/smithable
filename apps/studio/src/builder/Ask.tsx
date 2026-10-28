@@ -45,7 +45,10 @@ export function Ask({
   waiting = [],
   trace,
   ready,
+  peopleRunning = false,
 }: {
+  /** Whether the sample users are running: a bare "stop" is then said to them. */
+  peopleRunning?: boolean;
   /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
   guide?: GuideLine;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
@@ -156,6 +159,28 @@ export function Ask({
     return () => window.removeEventListener(ASK_SMITH, take);
   }, [making]);
   const propose = async (text: string) => {
+    // The sample users are the preview's, not the spec's: "let them run" and "stop" are said
+    // to Smith and done at once, with no change to confirm (sample-users.md §5).
+    const command = peopleCommand(text, peopleRunning);
+    if (command) {
+      setBusy(true);
+      try {
+        const state = await api.peopleDo(command);
+        const reply =
+          state.stopped ??
+          (command === "pause"
+            ? 'They stopped. Say "let them run" when you want them back.'
+            : "They are using the app now, each at their own pace: open Sample users to watch what they do, or say stop.");
+        if (trace) say(text, reply);
+        else setOutput(reply);
+        setRequest("");
+      } catch (error) {
+        setOutput((error as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     setBusy(true);
     setOutput("");
     setLocal(undefined);
@@ -607,6 +632,28 @@ export interface Ready {
   apply: (op: string, args: Record<string, unknown>) => void;
   /** Opens the part of the app a sentence is about (No code's Behavior). */
   onJump: (concept: string) => void;
+}
+
+/**
+ * What a line says to the sample users, when it is that: let them run, or stop them. A bare
+ * "stop" is theirs only while they run; otherwise it is said to Smith.
+ */
+export function peopleCommand(text: string, running = false): "run" | "pause" | undefined {
+  const said = text
+    .toLowerCase()
+    .replace(/^(please|ok|okay|now)[, ]+/, "")
+    .replace(/[\s.!]+$/, "")
+    .replace(/,? please$/, "");
+  const who = "(them|the sample users|the people|sample users|people)";
+  if (
+    new RegExp(
+      `^(let ${who} (run|go|loose)|(start|run) ${who}|show (me )?${who} (using|in use)( it| the app)?)$`,
+    ).test(said)
+  )
+    return "run";
+  if (new RegExp(`^(stop|pause) ${who}$`).test(said)) return "pause";
+  if (running && /^(stop|pause)$/.test(said)) return "pause";
+  return undefined;
 }
 
 /**

@@ -28,6 +28,7 @@ export function Preview({
   onHide,
   highlight,
   pages = [],
+  go,
 }: {
   url: string;
   version: number;
@@ -45,6 +46,8 @@ export function Preview({
   highlight?: { key: string; concepts: string[] };
   /** The app's pages, each its address and its title: offered under the address as it is typed. */
   pages?: [string, string][];
+  /** A page to open, as the address bar would (Follow's sign-in); `key` makes it again. */
+  go?: { path: string; key: number };
 }) {
   // The preview's records are samples, and a published app starts empty: said until dismissed.
   const [samples, setSamples] = useState(() => {
@@ -252,6 +255,14 @@ export function Preview({
     setActive(-1);
     setOpened((n) => n + 1);
   };
+  // Once each: a preview made again later (another layout) does not follow anyone again.
+  const went = useRef(go?.key);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: asked for by go; open is the same each time in what it does
+  useEffect(() => {
+    if (!go || go.key === went.current) return;
+    went.current = go.key;
+    open(go.path);
+  }, [go]);
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
   return (

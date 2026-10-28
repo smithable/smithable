@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { followUp } from "./Ask";
+import { followUp, peopleCommand } from "./Ask";
 
 test("words that lean on the last request go with it; anything else stands alone", () => {
   const asked = { text: "Add a date to orders", at: Date.now(), question: false };
@@ -20,4 +20,16 @@ test("words that lean on the last request go with it; anything else stands alone
   );
   expect(followUp("orders please", { ...asked, at: Date.now() - 120_000 })).toBe("orders please");
   expect(followUp("yes", undefined)).toBe("yes");
+});
+
+test("Smith lets the sample users run and stops them; other lines are requests", () => {
+  expect(peopleCommand("Let them run")).toBe("run");
+  expect(peopleCommand("please let the sample users run!")).toBe("run");
+  expect(peopleCommand("start the people")).toBe("run");
+  expect(peopleCommand("stop")).toBeUndefined();
+  expect(peopleCommand("stop", true)).toBe("pause");
+  expect(peopleCommand("stop them")).toBe("pause");
+  expect(peopleCommand("Pause the sample users.")).toBe("pause");
+  expect(peopleCommand("stop showing prices")).toBeUndefined();
+  expect(peopleCommand("let customers book")).toBeUndefined();
 });

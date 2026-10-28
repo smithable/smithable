@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -12,6 +12,7 @@ import {
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { samplePeople } from "@smithable/adapter-tanstack";
 import { type Assumption, describedWith, type Proposal } from "@smithable/ai";
 import {
   BUILT_IN_THEMES,
@@ -25,8 +26,8 @@ import {
   validateContent,
   validateSpec,
 } from "@smithable/core";
-import { describeChange } from "@smithable/index";
-import { applyProposal, proposalOutcome, proposeFor, usageLine } from "./ask.js";
+import { describeChange, summarize } from "@smithable/index";
+import { applyProposal, proposalOutcome, proposeFor, providersFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
 import { git, ownRepository, trailer } from "./git.js";
@@ -55,6 +56,7 @@ import {
   traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
+import { sampleRunner } from "./sample-run.js";
 import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
@@ -435,6 +437,10 @@ export async function studio(
     : {};
   const { SMITHABLE_STUDIO_TOKEN: _studioToken, ...previewEnv } = process.env;
   if (previewToken) previewEnv[PREVIEW_TOKEN_DIGEST] = tokenDigest(previewToken);
+  // The development door's secret (sample-users.md §4), new each start: the sample users act
+  // through it, and nobody without it can, a hosted preview's visitors included.
+  const doorSecret = randomBytes(24).toString("hex");
+  previewEnv.DEV_DOOR_SECRET = doorSecret;
   const logs: string[] = [];
   const clients = new Set<ServerResponse>();
   const send = (event: string, data: unknown) => {
@@ -511,6 +517,43 @@ export async function studio(
     }
   };
   const changed = (data: unknown) => void settled().then(() => send("changed", data));
+  // The sample users (sample-users.md §4–§6), acting in the preview through its door.
+  const people = sampleRunner({
+    door: (path, body) =>
+      fetch(`http://127.0.0.1:${previewPort}/_dev/${path}`, {
+        method: body === undefined ? "GET" : "POST",
+        headers: {
+          ...previewHeaders,
+          "x-dev-door": doorSecret,
+          "Content-Type": "application/json",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: AbortSignal.timeout(30_000),
+      }),
+    load: () => {
+      const {
+        ir,
+        auth,
+        content,
+        people: listed = [],
+      } = loadSpec(dir, { out: () => {}, err: () => {} });
+      // The app's ids for them, in the file's order (a visitor has none: the door knows it as such).
+      const ids = samplePeople(listed).map((u) => u.id);
+      return {
+        people: listed.map((p) => ({
+          ...p,
+          id: p.role === "visitor" ? "visitor" : (ids.shift() as string),
+        })),
+        summary: ir
+          ? summarize(ir, auth, content)
+              .map((s) => `${s.title}: ${s.sentences.join(" ")}`)
+              .join("\n")
+          : "",
+      };
+    },
+    providers: () => providersFor(),
+    changed: (state) => send("people", state),
+  });
   // The preview runs with the editor (select, drag columns) through a wrapper config in data/,
   // which Git ignores: the app's own config and builds stay as they are.
   const config = join("data", ".smithable", "preview.vite.config.mjs");
@@ -843,6 +886,8 @@ export async function studio(
         url.pathname,
       );
       if (refused) return json({ ok: false, output: refused.message }, refused.status);
+      // Someone is using Studio: running sample users keep going.
+      if (req.method === "POST") people.touch();
       // MCP over HTTP: an agent's changes show up in Studio right away.
       if (url.pathname === "/mcp") {
         const transport = new StreamableHTTPServerTransport({
@@ -865,6 +910,8 @@ export async function studio(
       if (url.pathname === "/api/logs") return json(logs);
       // What the preview kept instead of sending: invitations, sign-in codes, notifications.
       if (url.pathname === "/api/outbox") return json(readOutbox(dir));
+      // The sample users, what they did and whether they run (Studio's People panel).
+      if (url.pathname === "/api/people" && req.method === "GET") return json(people.state());
       // A picture of the project's (the Look tab shows its logo); an SVG may not run anything.
       const image =
         /^\/api\/images\/((?:[\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg))$/.exec(
@@ -904,6 +951,17 @@ export async function studio(
         clients.add(res);
         req.on("close", () => clients.delete(res));
         return;
+      }
+      // The sample users act in the preview, not on the spec: they may be paused at any time.
+      if (req.method === "POST" && url.pathname === "/api/people") {
+        const { do: what } = await body();
+        if (what === "run") people.start();
+        else if (what === "fast") people.start(true);
+        else if (what === "pause") people.pause();
+        else if (what === "step") await people.step();
+        else if (what === "clear") people.clear();
+        else return json({ ok: false, output: "Run, fast, pause, step or clear." }, 400);
+        return json(people.state());
       }
       // While a described app is being made, the project here is not the person's yet:
       // nothing else changes it (what they type waits on the page until it is in place).

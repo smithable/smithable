@@ -4,35 +4,10 @@
 import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
+import { type InUse, inUseFacts } from "./refusal";
 import { w } from "./words";
 
-/** What the server says when a delete is refused because other records point to the record. */
-export interface InUse {
-  id: number;
-  title: string;
-  /** The record's model, and its label. */
-  model: string;
-  label: string;
-  /** What would go with it to the trash, by model; `count` is null for what belongs to those. */
-  with: { model: string; label: string; plural: string; depth: number; count: number | null }[];
-  /** What would show no record afterwards, by model. */
-  loose: { model: string; label: string; plural: string; count: number }[];
-  /** Whether they can all go to the trash together: the record's model and theirs have one. */
-  together: boolean;
-  /** The models without a trash, when they cannot. */
-  missing: string[];
-}
-
-/** The facts behind a refused delete ("in-use:{…}" from the server); nothing for any other error. */
-export function inUseFacts(error: unknown): InUse | undefined {
-  const message = error instanceof Error ? error.message : "";
-  if (!message.startsWith("in-use:{")) return undefined;
-  try {
-    return JSON.parse(message.slice("in-use:".length)) as InUse;
-  } catch {
-    return undefined;
-  }
-}
+export { type InUse, inUseFacts };
 
 /** "3 orders and 12 order lines", with "what belongs to them" when deeper records go too. */
 function listOf(facts: InUse): string {

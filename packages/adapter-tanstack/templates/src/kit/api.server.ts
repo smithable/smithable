@@ -7,8 +7,7 @@ import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
 import { address, count, TooMany, writeAllowed } from "./limit";
-import { BadInput, Gone, NotFound } from "./refusal";
-import { inUseFacts } from "./Together";
+import { BadInput, conflict, Gone, inUseFacts, NotFound } from "./refusal";
 import { traceWho } from "./trace.server";
 
 export { BadInput, Gone, NotFound };
@@ -27,47 +26,6 @@ export function problem(
     status,
     headers: { "content-type": "application/problem+json" },
   });
-}
-
-/** "3 orders and 12 order lines", and "what belongs to them" for the deeper records. */
-function listed(items: string[]): string {
-  return items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
-}
-
-/** What a refused change says, as the form says it ("taken:email" → that address is taken). */
-function conflict(code: string): string {
-  const taken = /^taken:(\w+)$/.exec(code)?.[1];
-  if (taken) return `That ${taken} is already taken.`;
-  // A record others point to (docs/design/delete-together.md): what, and the way out.
-  const facts = inUseFacts(new Error(code));
-  if (facts) {
-    const count = (e: { count: number | null; label: string; plural: string }) =>
-      `${e.count} ${(e.count === 1 ? e.label : e.plural).toLowerCase()}`;
-    const named = facts.with.filter((e) => e.count !== null).map(count);
-    const list = listed(
-      facts.with.some((e) => e.count === null) ? [...named, "what belongs to them"] : named,
-    );
-    const loose = facts.loose.length
-      ? ` ${listed(facts.loose.map(count))} will show no ${facts.label.toLowerCase()}.`
-      : "";
-    return facts.together
-      ? `"${facts.title}" is used by ${list}. Pass together=true to move them to the trash with it; they are restored together.${loose}`
-      : `"${facts.title}" is used by ${list}, so it cannot be deleted. Turn the trash on for ${listed(facts.missing.map((m) => m.toLowerCase()))} to delete them together.`;
-  }
-  const root = /^restore-root-first:([^:]+):(.*)$/.exec(code);
-  if (root)
-    return `Restore the ${root[1]?.toLowerCase()} "${root[2]}" first: this record went to the trash with it.`;
-  const noRight = /^no-right:(.+)$/.exec(code)?.[1];
-  if (noRight)
-    return `Some ${noRight.toLowerCase()} records are not this key's to delete, so nothing was moved.`;
-  if (code.startsWith("in-use"))
-    return "It is still used by other records, so it cannot be deleted.";
-  if (code === "full") return "No places left.";
-  if (code === "closed") return "Booking has closed.";
-  if (code === "cancel-closed") return "Cancelling has closed.";
-  const booked = /^booked:(\d+)$/.exec(code)?.[1];
-  if (booked) return `${booked} are already taken.`;
-  return code;
 }
 
 /**

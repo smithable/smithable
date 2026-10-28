@@ -347,6 +347,20 @@ try {
     if (await note.count()) throw new Error("the samples notice came back");
   });
   await step(
+    "the sample users' panel opens beside the preview and says when there are none",
+    async () => {
+      await page.locator("header").getByRole("button", { name: "Sample users" }).click();
+      const panel = page.getByRole("dialog", { name: "Sample users" });
+      await panel.getByText("No sample users yet").waitFor();
+      await panel.getByRole("button", { name: "Let them run" }).click();
+      await panel.getByRole("status").filter({ hasText: "No sample users" }).waitFor();
+      // Not modal: the preview's address bar takes a click with the panel open.
+      await page.getByRole("combobox", { name: "Preview address" }).click({ timeout: 5000 });
+      await panel.getByRole("button", { name: "Close" }).click();
+      await panel.waitFor({ state: "detached" });
+    },
+  );
+  await step(
     "the guide is Smith's: each stop a line in his thread with its place lit, once; Guide says it again; Code's tour with Code open; a reload shows nothing",
     async () => {
       // On a page of its own: every other step runs with ?guide=off.
