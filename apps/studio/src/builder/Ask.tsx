@@ -547,6 +547,8 @@ function useMinutesLeft(until: string | undefined): number | undefined {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!until) return;
+    // Counted from now, not from when the panel opened: the beta file may come later.
+    setNow(Date.now());
     const tick = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(tick);
   }, [until]);
