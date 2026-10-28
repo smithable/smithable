@@ -117,11 +117,8 @@ async function fillAndSave(page, values) {
   }
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(300);
-  return (
-    page.url() !== before ||
-    (await page.getByText(/saved/i).count()) > 0 ||
-    (await page.getByRole("dialog").count()) === 0
-  );
+  // Saved: the page moved on, or says so; a refused save stays on the form and says what is wrong.
+  return page.url() !== before || (await page.getByText(/saved/i).count()) > 0;
 }
 
 /** Opens the list page of a kind and presses its add button; true when a form is shown. */
