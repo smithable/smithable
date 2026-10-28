@@ -39,7 +39,12 @@ const of = (path: string) => out.find((f) => f.path === path)?.content ?? "";
 
 test("sample users are seeded as development users with plain addresses, and listed for the door", () => {
   expect(people?.length).toBe(2);
-  expect(of("src/db/seed.ts")).toContain(
+  const seed = of("src/db/seed.ts");
+  // Only where the door is: a production database holds no user nobody controls.
+  expect(seed).toContain(
+    'if (process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1") {',
+  );
+  expect(seed).toContain(
     '{ id: "sample-asa-oberg", name: "Åsa Öberg", email: "asa-oberg@sample.example", emailVerified: true, role: "member" },',
   );
   const listed = of("src/generated/people.ts");

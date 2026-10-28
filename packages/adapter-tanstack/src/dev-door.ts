@@ -28,9 +28,14 @@ export interface SampleUser {
  * made from the name in plain letters: `sample-maja-lindqvist`, `maja-lindqvist@sample.example`.
  */
 export function samplePeople(people: readonly PersonIR[] = []): SampleUser[] {
+  const taken = new Set<string>();
   return people.flatMap((p) => {
     if (p.role === "visitor") return [];
-    const slug = kebab(p.name.normalize("NFKD").replace(/[̀-ͯ]/g, "")) || "person";
+    const plain = kebab(p.name.normalize("NFKD").replace(/\p{M}/gu, "")) || "person";
+    // Two names with one spelling in plain letters (Åsa and Asa) get one each.
+    let slug = plain;
+    for (let n = 2; taken.has(slug); n++) slug = `${plain}-${n}`;
+    taken.add(slug);
     return [{ id: `sample-${slug}`, name: p.name, email: `${slug}@sample.example`, role: p.role }];
   });
 }

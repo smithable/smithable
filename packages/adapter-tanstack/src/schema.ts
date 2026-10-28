@@ -568,12 +568,16 @@ ${rows.join("\n")}
   // development database who sign in nowhere; the development door acts as them.
   const people = options.auth && hasSignIn(options.auth) ? samplePeople(options.people) : [];
   if (people.length)
-    blocks.unshift(`db.insert(schema.user)
-  .values([
-${people.map((u) => `    { id: ${JSON.stringify(u.id)}, name: ${JSON.stringify(u.name)}, email: ${JSON.stringify(u.email)}, emailVerified: true, role: ${JSON.stringify(u.role)} },`).join("\n")}
-  ])
-  .onConflictDoNothing()
-  .run();`);
+    blocks.unshift(`// Only where the door that acts as them is (src/generated/people.ts): a seeded production
+// database holds no user nobody controls.
+if (process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1") {
+  db.insert(schema.user)
+    .values([
+${people.map((u) => `      { id: ${JSON.stringify(u.id)}, name: ${JSON.stringify(u.name)}, email: ${JSON.stringify(u.email)}, emailVerified: true, role: ${JSON.stringify(u.role)} },`).join("\n")}
+    ])
+    .onConflictDoNothing()
+    .run();
+}`);
   // Only when a sample row has a picture: samples may leave every picture out.
   const pictures = blocks.some((b) => b.includes("samplePicture("));
   // A model that needs a person who signs in gets no sample rows; with no rows at all, the seed
