@@ -286,6 +286,17 @@ async function customersKept(page, base) {
   return true;
 }
 
+/**
+ * Customer 2's order with this number exists: made through the form, or already there from an
+ * earlier pass of the checks (they run again after every later request, and a number is unique).
+ */
+async function orderMade(page, base, number, total) {
+  if (!(await go(page, base, ORDERS_PAGE))) return false;
+  if (await seen(page, number)) return true;
+  if (!(await openAddForm(page, base, ORDERS_PAGE))) return false;
+  return fillAndSave(page, { Number: number, Customer: "Harbour Freight AB", Total: total });
+}
+
 /** Signs in with the development sign-in as a role. */
 async function signIn(page, base, role) {
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -359,13 +370,7 @@ const REQUESTS = [
     accept:
       '"Orders" is in the menu; an order "1001" for customer 2 with total 1200 can be added, picking the customer from a list; it is listed with the customer\'s name.',
     check: async ({ page, base }) => {
-      if (!(await openAddForm(page, base, ORDERS_PAGE))) return false;
-      const made = await fillAndSave(page, {
-        Number: "1001",
-        Customer: "Harbour Freight AB",
-        Total: "1200",
-      });
-      if (!made) return false;
+      if (!(await orderMade(page, base, "1001", "1200"))) return false;
       if (!(await go(page, base, ORDERS_PAGE))) return false;
       return (await seen(page, "1001")) && (await seen(page, "Harbour Freight AB"));
     },
@@ -409,13 +414,7 @@ const REQUESTS = [
       await page.waitForTimeout(800);
       if (!(await seen(page, /shipped/i))) return false;
       // A draft order has no button.
-      if (!(await openAddForm(page, base, ORDERS_PAGE))) return false;
-      const made = await fillAndSave(page, {
-        Number: "1002",
-        Customer: "Harbour Freight AB",
-        Total: "300",
-      });
-      if (!made) return false;
+      if (!(await orderMade(page, base, "1002", "300"))) return false;
       if (!(await openRecord(page, base, ORDERS_PAGE, "1002"))) return false;
       return (await page.getByRole("button", { name: /mark shipped/i }).count()) === 0;
     },
