@@ -1103,7 +1103,106 @@ const setNamedBy: Operation<{ model: string; parts?: string[]; field?: string; n
   },
 };
 
+/** Where a concept's semantic text sits in the spec, and the model and field when it is a field's. */
+function meaningPath(
+  ir: SpecIR,
+  concept: string,
+): { path: ReturnType<typeof fieldPath>; field?: { model: string; name: string } } {
+  if (concept === "app") return { path: ["app"] };
+  if (ir.models.some((m) => m.name === concept)) return { path: ["models", concept] };
+  const dot = concept.indexOf(".");
+  if (dot > 0) {
+    const m = concept.slice(0, dot);
+    const f = concept.slice(dot + 1);
+    const found = ir.models.find((x) => x.name === m);
+    if (!found) throw new OperationError(`There is no model named "${m}".`);
+    if (!found.fields.some((x) => x.name === f))
+      throw new OperationError(`${m} has no field named "${f}".`);
+    return { path: fieldPath(m, f, ir), field: { model: m, name: f } };
+  }
+  if (ir.actions.some((a) => a.name === concept)) return { path: ["actions", concept] };
+  if (ir.pages.some((p) => p.id === concept)) return { path: ["pages", concept] };
+  throw new OperationError(
+    `There is no "${concept}" to explain: say app, a model, a field as Model.field, an action or a page.`,
+  );
+}
+
+/** Meaning text for the assistant and developers (docs/design/ask-words.md §2): set, or removed when empty. */
+const setMeaning: Operation<{ concept: string; description?: string; intent?: string }> = {
+  name: "setMeaning",
+  summary:
+    "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action or a page gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",
+  schema: {
+    type: "object",
+    required: ["concept"],
+    additionalProperties: false,
+    properties: {
+      concept: {
+        type: "string",
+        minLength: 1,
+        description: "app, a model, Model.field, an action or a page.",
+      },
+      description: {
+        type: "string",
+        description:
+          'What it is, e.g. "In a question, down means any status but operational". Empty removes it.',
+      },
+      intent: { type: "string", description: "The outcome it should achieve. Empty removes it." },
+    },
+  },
+  positional: ["concept", "description"],
+  describe: ({ concept, description, intent }) =>
+    description === "" && intent === undefined
+      ? `Removed the explanation of ${concept}`
+      : `Explained what ${concept} means to the assistant`,
+  destructive: () => false,
+  apply({ spec }, { concept, description, intent }, ir) {
+    if (description === undefined && intent === undefined)
+      throw new OperationError("Say a --description, an --intent, or both.");
+    const { path, field } = meaningPath(ir, concept);
+    if (field) {
+      // A field written as shorthand gets the long form, its type as its own key.
+      const current = spec.get(path);
+      const long: Record<string, YamlValue> =
+        typeof current === "object" && current !== null
+          ? { ...(current as Record<string, YamlValue>) }
+          : longForm(String(current));
+      for (const [key, value] of [
+        ["description", description],
+        ["intent", intent],
+      ] as const) {
+        if (value === undefined) continue;
+        if (value.trim()) long[key] = value.trim();
+        else delete long[key];
+      }
+      const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+      spec.set(
+        path,
+        keys.length
+          ? long
+          : long.default === undefined
+            ? String(long.type)
+            : `${String(long.type)} = ${String(long.default)}`,
+      );
+      return [];
+    }
+    for (const [key, value] of [
+      ["description", description],
+      ["intent", intent],
+    ] as const) {
+      if (value === undefined) continue;
+      const at = [...path, key];
+      if (!value.trim()) {
+        if (spec.has(at)) spec.remove(at);
+      } else if (spec.has(at)) spec.set(at, value.trim());
+      else spec.add(path, key, value.trim());
+    }
+    return [];
+  },
+};
+
 export const modelOperations: AnyOperation[] = [
+  setMeaning,
   setNamedBy,
   setThread,
   setUnique,

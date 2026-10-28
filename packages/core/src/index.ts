@@ -27,6 +27,7 @@ export type {
   FieldFilter,
 } from "./assistant.js";
 export { asksWith, assistantOffer, refersToUser } from "./assistant.js";
+export { type AtRisk, EVERYDAY_WORDS, everyday, wordsAtRisk } from "./at-risk.js";
 export type {
   ApiIR,
   ApiOffers,
