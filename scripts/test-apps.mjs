@@ -461,7 +461,7 @@ async function openClass(page, panel) {
  */
 async function devDoorFlow(dir, base) {
   const seed = Number(process.env.DOOR_SEED) || 7;
-  const door = { "x-smithable-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
+  const door = { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
   const call = (side, body) =>
     fetch(`${base}/_dev/${side}`, { method: "POST", headers: door, body: JSON.stringify(body) });
   try {
@@ -6249,7 +6249,7 @@ for (const [index, example] of examples.entries()) {
       );
 
     // A door secret as a host would give one: a production build still has no door (A 180).
-    let stop = await serve(dir, port, "production", { SMITHABLE_DEV_DOOR: DOOR_SECRET });
+    let stop = await serve(dir, port, "production", { DEV_DOOR_SECRET: DOOR_SECRET });
     try {
       const base = `http://localhost:${port}`;
       const { ir } = validateSpec({
@@ -6339,7 +6339,7 @@ for (const [index, example] of examples.entries()) {
       if (!absent) failures.push(`${example} development sign-in in production`);
       {
         // The development door (sample-users.md §4): every /_dev/ path a 404, the secret given.
-        const door = { "x-smithable-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
+        const door = { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" };
         const statuses = [
           (await fetch(`${base}/_dev/moves?user=visitor`, { headers: door })).status,
           ...(await Promise.all(
@@ -7389,7 +7389,7 @@ test("the session cookie's name and attributes", async () => {
     const receiver = example === "status" ? await callReceiver() : undefined;
     stop = await serve(dir, port + 100, "dev", {
       ...receiver?.env,
-      SMITHABLE_DEV_DOOR: DOOR_SECRET,
+      DEV_DOOR_SECRET: DOOR_SECRET,
     });
     try {
       const base = `http://localhost:${port + 100}`;

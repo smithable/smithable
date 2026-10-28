@@ -39,8 +39,8 @@ export type OpenMove = DoorMove & { records?: number[]; candidates?: Record<stri
 /** A 404 unless the door is open: a development build (a demo too, unless `devOnly`) and the secret. */
 export function doorShut(request: Request, devOnly = false): Response | undefined {
   const open = import.meta.env.DEV || (!devOnly && process.env.DEMO_SIGN_IN === "1");
-  const secret = Buffer.from(process.env.SMITHABLE_DEV_DOOR ?? "");
-  const given = Buffer.from(request.headers.get("x-smithable-dev-door") ?? "");
+  const secret = Buffer.from(process.env.DEV_DOOR_SECRET ?? "");
+  const given = Buffer.from(request.headers.get("x-dev-door") ?? "");
   if (open && secret.length && given.length === secret.length && timingSafeEqual(given, secret))
     return undefined;
   return new Response("Not found", { status: 404 });

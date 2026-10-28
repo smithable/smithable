@@ -58,7 +58,7 @@ test("the door's routes are at /_dev/, shut without the secret, the clock in dev
   expect(of("src/routes/[_dev]/moves.ts")).toContain('createFileRoute("/_dev/moves")');
   expect(of("src/routes/[_dev]/act.ts")).toContain('createFileRoute("/_dev/act")');
   expect(of("src/routes/[_dev]/clock.ts")).toContain("doorShut(request, true)");
-  expect(of("src/kit/dev-door.server.ts")).toContain("process.env.SMITHABLE_DEV_DOOR");
+  expect(of("src/kit/dev-door.server.ts")).toContain("process.env.DEV_DOOR_SECRET");
   // Ask's side only where the app has Ask.
   expect(of("src/routes/[_dev]/ask.ts")).toBe("");
 });
