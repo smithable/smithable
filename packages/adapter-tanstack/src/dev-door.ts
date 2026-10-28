@@ -4,7 +4,6 @@ import {
   type ActionIR,
   type Actor,
   type AuthIR,
-  humanize,
   kebab,
   type Move,
   movesFor,
@@ -193,8 +192,8 @@ export function doorModule(
     return `import { ${ruled ? `${mn.access}, ` : ""}${mn.data} } from "${mn.module}.server";${write ? `\nimport { ${[...(moves.some((m) => m.kind === "add" && m.model === model.name) ? [mn.schema] : []), ...(moves.some((m) => m.kind === "change" && m.model === model.name) ? [mn.settable] : [])].join(", ")} } from "${mn.module}.schema";` : ""}`;
   });
 
-  // A unique value taken, in the words a form says it: each written model's label and its unique
-  // fields' labels by the column the database names (a reference is stored in <field>_id).
+  // A unique value taken, in the words a form says it: each written model's unique fields by the
+  // column the database names (a reference is stored in <field>_id); the labels are its UI's.
   const taken = Object.fromEntries(
     used.flatMap(({ model }) => {
       if (!moves.some((m) => (m.kind === "add" || m.kind === "change") && m.model === model.name))
@@ -204,15 +203,12 @@ export function doorModule(
       return [
         [
           model.name,
-          {
-            label: t.modelLabel(model),
-            fields: Object.fromEntries(
-              fields.map((f) => [
-                columnOf(model.name, f.name, f.type.kind === "relation").column,
-                t.field(model, f).label ?? humanize(f.name),
-              ]),
-            ),
-          },
+          Object.fromEntries(
+            fields.map((f) => [
+              columnOf(model.name, f.name, f.type.kind === "relation").column,
+              dataKey(f),
+            ]),
+          ),
         ],
       ];
     }),
@@ -228,18 +224,31 @@ import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from 
 import { BadInput, NotFound } from "#/kit/refusal";
 ${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}import { pageAccess } from "./pages";
 ${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
-${actionImports.join("\n")}
+${Object.keys(taken)
+  .map((model) => {
+    const mn = names(modelNamed(ir, model), t);
+    return `import { ${mn.ui} } from "${mn.module}";\n`;
+  })
+  .join("")}${actionImports.join("\n")}
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = ${literal(byActor)};
 ${
   words
     ? `
-/** Each written model's label, and its unique fields' labels by column: a value taken, in words. */
-const TAKEN: Record<string, { label: string; fields: Record<string, string> }> = ${literal(taken)};
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+${Object.entries(taken)
+  .map(
+    ([model, fields]) =>
+      `  ${JSON.stringify(model)}: { ui: ${names(modelNamed(ir, model), t).ui}, fields: ${literal(fields)} },`,
+  )
+  .join("\n")}
+};
 `
     : ""
 }
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;${
@@ -334,9 +343,10 @@ ${writes ? '  if (move.kind !== "open") writeAllowed(viewer, headers);\n' : ""}$
   } catch (error) {
     // A unique value taken, as the form says it ("Another booking already has this session.").
     const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
-    const words = move.model ? TAKEN[move.model] : undefined;
-    const field = column && words?.fields[column];
-    throw field && words ? new Conflict(w.alreadyHas(words.label, field)) : error;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
   }`
     : "  return act(viewer, move, { ...body, values: body.values ?? {} });"
 }

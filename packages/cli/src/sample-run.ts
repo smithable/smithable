@@ -57,7 +57,9 @@ const FAST_GAP = 250;
 /** A move in the feed's words, with the app's labels: "Added a booking", "Ran Cancel on a booking". */
 export function moveWords(move: OpenMove, labels: Record<string, string> = {}): string {
   const one = (model: string) => {
-    const label = (labels[model] ?? model).toLowerCase();
+    const given = labels[model] ?? model;
+    // "booking", but "API key" as it is.
+    const label = /^[A-Z][a-z]/.test(given) ? given[0]?.toLowerCase() + given.slice(1) : given;
     return `${/^[aeiou]/.test(label) ? "an" : "a"} ${label}`;
   };
   switch (move.kind) {

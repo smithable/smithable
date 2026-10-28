@@ -85,8 +85,7 @@ export function readBeta(
     return undefined;
   }
 }
-// Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
-// repository it is apps/studio's own build.
+
 /** The files the sample users' runner reads: the people, and the spec they act in. */
 const PEOPLE_FILES = [
   "samples/people.yml",
@@ -95,6 +94,8 @@ const PEOPLE_FILES = [
   "smithable.content.yml",
 ];
 
+// Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
+// repository it is apps/studio's own build.
 const PACKAGED = new URL("../studio/", import.meta.url).pathname;
 const STUDIO = existsSync(join(PACKAGED, "index.html"))
   ? PACKAGED
