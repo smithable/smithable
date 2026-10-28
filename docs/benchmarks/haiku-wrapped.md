@@ -68,7 +68,7 @@ Reports: [run 1](bench-ask-haiku-wrapped.md), [run 2](bench-ask-haiku-wrapped-2.
 - **The status starter's "Is anything down right now?"** counts every component that is not operational, but
   "down" is one of the starter's values and no component has it, so "No" was a fair literal reading, and most of
   the Haiku setups' wrong answers to it are counted as stated as fact. The question asks "not working normally"
-  since #876; the counts above stay as they were run.
+  since #877; the counts above stay as they were run.
 
 ## The answer
 

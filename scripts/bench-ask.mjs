@@ -645,6 +645,18 @@ const keep = (row) => {
   appendFileSync(log, `${JSON.stringify(row)}\n`);
 };
 const today = new Date().toISOString().slice(0, 10);
+// The time now as the app tells its model (the kit's nowLine, #876): the wall time in the app's
+// time zone, so a time the model gives for "now" is not a date's midnight.
+const nowLine = (timeZone) => {
+  const wall = new Intl.DateTimeFormat("sv-SE", {
+    timeZone,
+    dateStyle: "short",
+    timeStyle: "short",
+  })
+    .format(new Date())
+    .replace(" ", "T");
+  return `It is now ${wall}${timeZone ? ` in the app's time zone (${timeZone})` : ""}. Give a date-time as such a wall time ("2026-10-27T14:05"); for something that happens now, this one.`;
+};
 if (rescore) {
   for (const r of results_) {
     const question = r.type ? undefined : QUESTIONS[r.starter][r.n - 1];
@@ -738,7 +750,7 @@ for (const starter of rescore ? [] : starters) {
       readFileSync(join(dir, "src/kit/assistant.server.ts"), "utf8"),
     )?.[1];
   if (voice && !voiceLine) throw new Error(`No line for the voice ${voice} in the app's kit.`);
-  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Today is ${today}. Answer briefly, in plain text.${voiceLine ? ` ${voiceLine}` : ""}${instructions ? `\n\n${instructions}` : ""}`;
+  const system = `You are the assistant in the app "${ir.app.name}". Answer the person's question or make the change they ask for, using the tools. Answer briefly, in plain text.${voiceLine ? ` ${voiceLine}` : ""}${instructions ? `\n\n${instructions}` : ""}\n${nowLine(ir.app.timezone)}`;
   // The app's answer check, when its kit has one: grounded.ts bundled by the app's own esbuild
   // (Vite's, since the app does not depend on it directly; grounded.ts imports ./words without an
   // extension), with the kinds of record named as the app names them.
