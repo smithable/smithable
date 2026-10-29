@@ -480,6 +480,11 @@ const removeOutgoing: Operation<{ outgoing: string }> = {
   apply({ spec }, { outgoing }, ir) {
     if (!ir.outgoing.some((o) => o.name === outgoing))
       throw new OperationError(`There is nothing named "${outgoing}" under outgoing.`);
+    const fires = ir.actions.find((a) => a.custom && a.triggers?.includes(outgoing));
+    if (fires)
+      throw new OperationError(
+        `The action "${fires.name}" may fire ${outgoing} (its triggers); change the action first.`,
+      );
     spec.removeAndPrune(["outgoing", outgoing], 0);
     return [];
   },
@@ -587,6 +592,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         continue;
       }
       const where = `outgoing "${key}"`;
+      ctx.define("outgoing", key);
       const known = checkKeys(ctx, mapEntries(ctx, value, where) ?? [], where, {
         allowed: ["when", "where", "fields", "show", "previous", "to", "recipient"],
       });

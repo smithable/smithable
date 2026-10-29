@@ -23,6 +23,7 @@ import {
   type ActionIR,
   type ActionValueIR,
   type Condition,
+  type CustomActionIR,
   type FieldIR,
   type MergeKeep,
   type MergeRule,
@@ -147,6 +148,30 @@ export const actionsSection: SpecSection<"actions"> = {
           description:
             "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked.",
         },
+        touches: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            reads: {
+              type: "array",
+              items: { type: "string" },
+              description: "The models the code reads, e.g. [Invoice, Payment].",
+            },
+            writes: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "The models, or fields of them, the code writes, e.g. [Payment, Invoice.status].",
+            },
+          },
+          description:
+            "A custom action's contract: what the code reads and writes; it gets data functions for those alone.",
+        },
+        triggers: {
+          type: "array",
+          items: { type: "string" },
+          description: "A custom action's contract: the outgoing entries the code may fire.",
+        },
         split: {
           type: "string",
           description:
@@ -169,6 +194,28 @@ export const actionsSection: SpecSection<"actions"> = {
     },
   },
   follow(spec, effect, ir) {
+    // A custom action's contract: a written field follows its rename; its removal is refused.
+    if (effect.kind === "rename-field" || effect.kind === "remove-field") {
+      const field = effect.kind === "rename-field" ? effect.from : effect.field;
+      for (const action of ir.actions) {
+        if (!action.custom || !action.touches) continue;
+        const written = action.touches.writes.some(
+          (w) => w.model === effect.model && w.fields?.includes(field),
+        );
+        if (!written) continue;
+        if (effect.kind === "remove-field")
+          return {
+            refusal: `The action "${action.name}" writes ${effect.model}.${field} (its touches); change the action first.`,
+          };
+        const at = ["actions", action.name, "touches", "writes"];
+        spec.set(
+          at,
+          (Array.isArray(spec.get(at)) ? (spec.get(at) as string[]) : []).map((w) =>
+            w === `${effect.model}.${effect.from}` ? `${effect.model}.${effect.to}` : w,
+          ),
+        );
+      }
+    }
     const standard = ir.actions.filter((a): a is StandardActionIR => !a.custom);
     // The values an action writes to records of a model: its own `set`, or what it adds.
     const writes = (action: StandardActionIR, model: string) => [
@@ -352,6 +399,8 @@ function readAction(
       "merge",
       "keep",
       "fields",
+      "touches",
+      "triggers",
       "split",
       "move",
       ...TEXT_KEYS,
@@ -377,7 +426,7 @@ function readAction(
     const other = [
       custom,
       ...standard,
-      ...["input", "output", "split", "move"].map((k) => byKey.get(k)),
+      ...["input", "output", "split", "move", "touches", "triggers"].map((k) => byKey.get(k)),
     ].find((e) => e !== undefined);
     if (other) {
       ctx.error(
@@ -427,6 +476,15 @@ function readAction(
     );
     return undefined;
   }
+  for (const key of ["touches", "triggers"]) {
+    const entry = byKey.get(key);
+    if (entry && !custom)
+      ctx.error(
+        entry.keyNode,
+        "invalid-action",
+        `"${key}" of ${where} is a custom action's contract: it goes with "custom: true".`,
+      );
+  }
   if (standard.length) return readStandardAction(ctx, where, keyNode, byKey, models, common);
   if (!custom || readBoolean(ctx, custom.value, `"custom"`) !== true) {
     ctx.error(
@@ -449,7 +507,133 @@ function readAction(
     ...(list && list.type.kind === "relation"
       ? { rows: { field: list.name, model: list.type.model } }
       : {}),
+    ...readContract(ctx, where, name, byKey, models),
   };
+}
+
+/**
+ * A custom action's contract (docs/design/intents.md §6): `touches`, the models the code reads and
+ * the models or fields (Model.field) it writes, and `triggers`, the outgoing entries it may fire.
+ * A fence the generated data functions keep, and the words Studio shows. Users may be read and
+ * written as a whole; a field named with its model is a stored one.
+ */
+function readContract(
+  ctx: ParseContext,
+  where: string,
+  actionName: string,
+  byKey: Map<string, Entry>,
+  models: ModelIR[],
+): { touches?: CustomActionIR["touches"]; triggers?: string[] } {
+  const out: { touches?: CustomActionIR["touches"]; triggers?: string[] } = {};
+  const touches = byKey.get("touches");
+  if (touches) {
+    const label = `"touches" of ${where}`;
+    const reads: string[] = [];
+    // What is written, per model: every field (undefined) or the fields named.
+    const writes = new Map<string, Set<string> | undefined>();
+    for (const part of checkKeys(ctx, mapEntries(ctx, touches.value, label) ?? [], label, {
+      allowed: ["reads", "writes"],
+    })) {
+      for (const { name, at } of readNameList(ctx, part.value, `"${part.key}" of ${label}`)) {
+        const [modelName = "", field, more] = name.split(".");
+        const model = models.find((m) => m.name === modelName);
+        if (!model && modelName !== "User") {
+          ctx.error(
+            at,
+            "unknown-model",
+            `${label}: there is no model named "${modelName}".`,
+            didYouMean(
+              modelName,
+              models.map((m) => m.name),
+            ),
+          );
+          continue;
+        }
+        if (model) ctx.reference("model", modelName, at);
+        if (more !== undefined) {
+          ctx.error(at, "invalid-action", `${label}: "${name}" is a model or Model.field.`);
+          continue;
+        }
+        if (part.key === "reads") {
+          if (field !== undefined)
+            ctx.error(
+              at,
+              "invalid-action",
+              `${label}: "reads" names models; a field is written, not read.`,
+            );
+          else if (reads.includes(modelName))
+            ctx.error(at, "invalid-action", `${label}: ${modelName} is named twice.`);
+          else reads.push(modelName);
+          continue;
+        }
+        if (field !== undefined) {
+          const f = model?.fields.find((x) => x.name === field);
+          if (!f) {
+            ctx.error(
+              at,
+              "unknown-field",
+              `${label}: ${modelName} has no field named "${field}".`,
+              didYouMean(
+                field,
+                (model?.fields ?? []).map((x) => x.name),
+              ),
+            );
+            continue;
+          }
+          if (f.formula) {
+            ctx.error(at, "invalid-action", `${label}: ${name} is computed, so nothing writes it.`);
+            continue;
+          }
+          if (f.type.kind === "relation" && f.type.many) {
+            ctx.error(
+              at,
+              "invalid-action",
+              `${label}: ${name} is a list, written through its records' reference.`,
+            );
+            continue;
+          }
+        }
+        const had = writes.get(modelName);
+        if (writes.has(modelName) && (field === undefined ? had === undefined : had?.has(field))) {
+          ctx.error(at, "invalid-action", `${label}: ${name} is named twice.`);
+          continue;
+        }
+        if (writes.has(modelName) && (field === undefined || had === undefined)) {
+          ctx.error(
+            at,
+            "invalid-action",
+            `${label}: ${modelName} is written whole, so ${field === undefined ? "its fields add" : `${name} adds`} nothing; name one or the other.`,
+          );
+          continue;
+        }
+        if (field === undefined) writes.set(modelName, undefined);
+        else if (had) had.add(field);
+        else writes.set(modelName, new Set([field]));
+      }
+    }
+    out.touches = {
+      reads,
+      writes: [...writes].map(([model, fields]) =>
+        fields ? { model, fields: [...fields] } : { model },
+      ),
+    };
+  }
+  const triggers = byKey.get("triggers");
+  if (triggers) {
+    const names: string[] = [];
+    for (const { name, at } of readNameList(ctx, triggers.value, `"triggers" of ${where}`)) {
+      if (names.includes(name)) {
+        ctx.error(at, "invalid-action", `"triggers" of ${where} names ${name} twice.`);
+        continue;
+      }
+      ctx.reference("outgoing", name, at);
+      // Checked once outgoing is parsed: the entry is one this action can set off (spec.ts).
+      ctx.mark(`trigger:${actionName}:${name}`, at);
+      names.push(name);
+    }
+    out.triggers = names;
+  }
+  return out;
 }
 
 const MERGE_KEEP: MergeKeep[] = ["chosen", "oldest", "newest"];

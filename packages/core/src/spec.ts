@@ -128,6 +128,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
     (parsed as Record<string, unknown>)[section.key] = section.parse(ctx, entry?.value, parsed);
   }
   unfilled(ctx, parsed);
+  triggersReachable(ctx, parsed);
   for (const role of options.roles ?? []) ctx.define("role", role);
   ctx.checkReferences(options.roles ? [] : ["role"]);
 
@@ -189,6 +190,46 @@ function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
 
 function firstLine(message: string): string {
   return message.split("\n")[0] ?? message;
+}
+
+/**
+ * A custom action's `triggers` (docs/design/intents.md §6) name the outgoing entries its work
+ * sets off, not a way to fire one: the entry on the action itself, or a record entry on a model
+ * its code writes (any model's, when it has no `touches`). An entry on a standard action or a
+ * timer is nobody's to set off from code.
+ */
+function triggersReachable(ctx: ParseContext, parsed: Partial<SpecIR>): void {
+  for (const action of parsed.actions ?? []) {
+    if (!action.custom || !action.triggers) continue;
+    for (const name of action.triggers) {
+      const entry = (parsed.outgoing ?? []).find((o) => o.name === name);
+      if (!entry) continue;
+      const at = ctx.at(`trigger:${action.name}:${name}`) ?? null;
+      const label = `"triggers" of action "${action.name}"`;
+      const when = entry.when;
+      if ("custom" in when) {
+        if (when.custom !== action.name)
+          ctx.error(
+            at,
+            "invalid-action",
+            `${label}: ${name} fires when ${when.custom} runs, not ${action.name}.`,
+          );
+      } else if ("event" in when) {
+        const writes = action.touches?.writes;
+        if (writes && !writes.some((w) => w.model === when.model))
+          ctx.error(
+            at,
+            "invalid-action",
+            `${label}: ${name} fires on ${when.model} ${when.event}, and ${action.name} does not write ${when.model} (its touches).`,
+          );
+      } else
+        ctx.error(
+          at,
+          "invalid-action",
+          `${label}: ${name} fires when ${"action" in when ? `the action ${when.action} runs` : `the timer ${when.timer} comes`}, which code does not set off.`,
+        );
+    }
+  }
 }
 
 /**

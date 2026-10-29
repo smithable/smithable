@@ -535,6 +535,14 @@ export interface CustomActionIR extends ActionBase {
   output?: FieldIR[];
   /** The one list of records among the inputs, when there is one: the action runs on the rows picked. */
   rows?: { field: string; model: string };
+  /**
+   * The code's contract (docs/design/intents.md §6): the models it reads, and the models, or
+   * fields of them, it writes. The generated server function hands the code data functions for
+   * those alone, a fence; Studio says it in words.
+   */
+  touches?: { reads: string[]; writes: { model: string; fields?: string[] }[] };
+  /** The outgoing entries the code may fire. */
+  triggers?: string[];
 }
 
 /** Changes one record of `on`, offered and allowed only when `when` fits it. */
