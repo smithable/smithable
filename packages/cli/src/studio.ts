@@ -929,13 +929,17 @@ export async function studio(
       }
       // The sample users act in the preview, not on the spec: they may be paused at any time.
       if (req.method === "POST" && url.pathname === "/api/people") {
-        const { do: what } = await body();
+        const { do: what, mode } = await body();
         if (what === "run") people.start();
         else if (what === "fast") people.start(true);
+        // Trying everything (sample-users.md §3a): the coverage walk, in the preview only.
+        else if (what === "everything") people.start(true, "everything");
         else if (what === "pause") people.pause();
-        else if (what === "step") await people.step();
+        else if (what === "step")
+          await people.step(mode === "everything" ? "everything" : "sensible");
         else if (what === "clear") people.clear();
-        else return json({ ok: false, output: "Run, fast, pause, step or clear." }, 400);
+        else
+          return json({ ok: false, output: "Run, fast, everything, pause, step or clear." }, 400);
         return json(people.state());
       }
       // While a described app is being made, the project here is not the person's yet:

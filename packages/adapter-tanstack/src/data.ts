@@ -33,7 +33,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
-import { mergesOf, unmergeCode } from "./merge.js";
+import { mergesOf, unmergeCode, unmergeImports } from "./merge.js";
 import { linesFunction, linesParts, nameColumns, nameFunction } from "./names.js";
 import {
   cancelMembers,
@@ -1390,7 +1390,7 @@ ${roots
 `
     : "";
   // A merged record's Restore puts back what the merge moved (docs/design/intents.md §3).
-  const unmerge = unmergeCode(ir, model, t);
+  const unmerge = unmergeCode(ir, model, auth, t);
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
   const named = signedIn
@@ -1415,8 +1415,8 @@ ${roots
         orderBy: (t) => [desc(t.deletedAt)],
         limit: ${TRASH_SHOWN},
       }),
-    )${allowed};${named}${groupShown}
-    ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""} }))`, "return ")}
+    )${allowed};${named}${groupShown}${unmerge ? "\n    // What each was merged into (intents.md §3).\n    const merged = mergedIntoTitles(viewer, rows as { id: number; deletedAt?: Date | null }[]);" : ""}
+    ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""}${unmerge ? ", mergedInto: merged.get(row.id) ?? null" : ""} }))`, "return ")}
   },
 
   /** A ${n.label.toLowerCase()} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
@@ -1455,7 +1455,7 @@ ${roots
     // A unique value a live record has taken since refuses it, as it refuses a new record.${unmerge ? "\n    let stayed = 0;" : ""}
     try {
       db.transaction((tx) => {
-        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, row.id, row.deletedAt);" : ""}
+        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, viewer, row.id, row.deletedAt);" : ""}
           const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });${
             together && group.length
@@ -1623,7 +1623,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   .join(
     "",
   )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}import { afterChange, afterDelete } from "./hooks";
-${occ ? occupiesImports() : ""}${[...others]
+${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
   .filter((m) => m !== model)

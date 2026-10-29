@@ -170,7 +170,9 @@ export function Ask({
           state.stopped ??
           (command === "pause"
             ? 'They stopped. Say "let them run" when you want them back.'
-            : "They are using the app now, each at their own pace: open Sample users to watch what they do, or say stop.");
+            : command === "everything"
+              ? "They are trying everything now: every move with the values the rules allow and forbid, one after another. Open Sample users for what they find, or say stop."
+              : "They are using the app now, each at their own pace: open Sample users to watch what they do, or say stop.");
         if (trace) say(text, reply);
         else setOutput(reply);
         setRequest("");
@@ -638,7 +640,10 @@ export interface Ready {
  * What a line says to the sample users, when it is that: let them run, or stop them. A bare
  * "stop" is theirs only while they run; otherwise it is said to Smith.
  */
-export function peopleCommand(text: string, running = false): "run" | "pause" | undefined {
+export function peopleCommand(
+  text: string,
+  running = false,
+): "run" | "everything" | "pause" | undefined {
   const said = text
     .toLowerCase()
     .replace(/^(please|ok|okay|now)[, ]+/, "")
@@ -651,6 +656,9 @@ export function peopleCommand(text: string, running = false): "run" | "pause" | 
     ).test(said)
   )
     return "run";
+  // Trying everything (sample-users.md §3a): every move's variants, for faults.
+  if (/^(try|test) everything$/.test(said) || new RegExp(`^let ${who} try everything$`).test(said))
+    return "everything";
   if (new RegExp(`^(stop|pause) ${who}$`).test(said)) return "pause";
   if (running && /^(stop|pause)$/.test(said)) return "pause";
   return undefined;
