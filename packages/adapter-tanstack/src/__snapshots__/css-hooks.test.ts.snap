@@ -129,6 +129,8 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="select-all"",
     "data-part="cell"",
     "data-field={field.name}",
+    "data-part="totals"",
+    "data-part="totals-line"",
     "data-part="export"",
   ],
   "src/kit/MoreOnScroll.tsx": [

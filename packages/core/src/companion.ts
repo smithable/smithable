@@ -287,6 +287,7 @@ const ux: Companion = {
       }
       for (const path of [
         ["pages", page.id, "table", "columns"],
+        ["pages", page.id, "table", "totals"],
         ["pages", page.id, "form", "fieldOrder"],
         ["pages", page.id, "filters", "shown"],
       ]) {

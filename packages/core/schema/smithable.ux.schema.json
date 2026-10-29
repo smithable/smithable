@@ -115,6 +115,13 @@
                 },
                 "description": "The fields shown as columns, in order."
               },
+              "totals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Number and amount fields summed in a last row, with the count, over every record the viewer may see that fits the filters."
+              },
               "below": {
                 "type": "object",
                 "description": "A field shown under another in its column, e.g. { email: phone }: the phone number under the email.",

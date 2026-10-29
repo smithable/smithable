@@ -1971,7 +1971,17 @@
                 },
                 "by": {
                   "type": "string",
-                  "description": "A date field: one bar per month."
+                  "description": "A date field (one bar per period), a choice field, or a reference's choice field like customer.segment (one bar per value)."
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "week",
+                    "month",
+                    "quarter",
+                    "year"
+                  ],
+                  "description": "For a date by: the span of each bar; month unless said."
                 },
                 "limit": {
                   "type": "integer",

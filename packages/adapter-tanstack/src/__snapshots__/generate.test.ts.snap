@@ -10078,7 +10078,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16226,7 +16226,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28650,7 +28650,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -37064,7 +37064,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/MergeDialog.tsx": "bdded4e7 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -37102,7 +37102,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -44494,7 +44494,7 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { invoiceData } from "#/generated/invoice.server";
-import { sum, byMonth, latest } from "#/kit/aggregate";
+import { sum, byPeriod, latest } from "#/kit/aggregate";
 import { app } from "#/generated/app";
 import { PageHeader } from "#/kit/AppShell";
 import { StatCard, formatNumber, BarChart } from "#/kit/Dashboard";
@@ -44508,7 +44508,7 @@ const getOverview = createServerFn().handler(async () => {
     outstanding: sum(invoices.filter((row) => row.status === "sent"), (row) => row.total),
     overdue: sum(invoices.filter((row) => row.status === "overdue"), (row) => row.total),
     paid: sum(invoices.filter((row) => row.status === "paid"), (row) => row.total),
-    invoiced: byMonth(invoices, (row) => row.issuedOn, (row) => Number(row.total) || 0),
+    invoiced: byPeriod(invoices, (row) => row.issuedOn, (row) => Number(row.total) || 0, "month", "UTC"),
     latest: latest(invoices, 5),
   };
 });
@@ -44532,7 +44532,7 @@ function OverviewPage() {
         <StatCard label="Overdue" value={formatNumber("money", data.overdue, app)} />
         <StatCard label="Paid" value={formatNumber("money", data.paid, app)} />
       </div>
-      <BarChart label="Invoiced" kind="money" app={app} bars={data.invoiced} />
+      <BarChart label="Invoiced" kind="money" app={app} bars={data.invoiced} period="month" />
       <section aria-labelledby="latest-title" className="space-y-3">
         <h2 id="latest-title" className="font-semibold">Latest</h2>
         <ModelTable
@@ -45414,14 +45414,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/Dashboard.tsx": "2b64ff8a kit",
+  "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -45432,7 +45432,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "34d3fc40 kit",
+  "src/kit/aggregate.ts": "bb7e4917 kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -45467,7 +45467,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -45494,7 +45494,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/$id.tsx": "dc083f5d generated",
   "src/routes/invoices/index.tsx": "89980771 generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
-  "src/routes/overview/index.tsx": "0f36177f generated",
+  "src/routes/overview/index.tsx": "5d1fd6ad generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
   "src/routes/settings/index.tsx": "64f20402 generated",
   "src/routes/sign-in.tsx": "3f9be402 generated",
@@ -53292,7 +53292,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "61bb9677 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -53333,7 +53333,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -58068,7 +58068,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -58109,7 +58109,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -61563,7 +61563,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -61599,7 +61599,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -71812,7 +71812,7 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { incidentData } from "#/generated/incident.server";
-import { byMonth, latest } from "#/kit/aggregate";
+import { byPeriod, latest } from "#/kit/aggregate";
 import { app } from "#/generated/app";
 import { PageHeader } from "#/kit/AppShell";
 import { StatCard, formatNumber, BarChart } from "#/kit/Dashboard";
@@ -71824,7 +71824,7 @@ const getOverview = createServerFn().handler(async () => {
   const incidents = await incidentData.list(viewer);
   return {
     open: incidents.filter((row) => ["investigating","identified","monitoring"].includes(row.status)).length,
-    perMonth: byMonth(incidents, (row) => row.detectedAt, () => 1),
+    perMonth: byPeriod(incidents, (row) => row.detectedAt, () => 1, "month", "Europe/Mariehamn"),
     latest: latest(incidents, 5),
   };
 });
@@ -71846,7 +71846,7 @@ function OverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Open" value={formatNumber("int", data.open, app)} />
       </div>
-      <BarChart label="Per month" kind="int" app={app} bars={data.perMonth} />
+      <BarChart label="Per month" kind="int" app={app} bars={data.perMonth} period="month" />
       <section aria-labelledby="latest-title" className="space-y-3">
         <h2 id="latest-title" className="font-semibold">Latest</h2>
         <ModelTable
@@ -73184,7 +73184,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Ask.tsx": "38bc886e kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/Dashboard.tsx": "2b64ff8a kit",
+  "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
@@ -73193,7 +73193,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -73203,7 +73203,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "4eb4cac1 kit",
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "34d3fc40 kit",
+  "src/kit/aggregate.ts": "bb7e4917 kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -73233,7 +73233,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -73269,7 +73269,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/maintenance/index.tsx": "f02390a2 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
   "src/routes/mcp.ts": "0d8813db generated",
-  "src/routes/overview/index.tsx": "12695563 generated",
+  "src/routes/overview/index.tsx": "35181282 generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
@@ -80218,7 +80218,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "6ba4c842 kit",
+  "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -80262,7 +80262,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "30eef7f6 kit",
+  "src/kit/words/en.ts": "1e14c1ba kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

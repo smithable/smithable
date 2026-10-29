@@ -659,8 +659,13 @@ export function listParts(
     // Cards load more as the reader scrolls; a page of the owner's own, which cannot call the
     // route's server function, and a table, are paged instead (docs/design/paging.md).
     const scrolling = cards && !within && !owned;
+    // A totals row (intents.md §5): the server's sums come with each page of the list.
+    // A page of the owner's own loads elsewhere: no totals there.
+    const own =
+      !within && !owned ? (ux.pages[page.id]?.totals ?? []).map((f) => keyOf(model, f)) : [];
+    const totalled = own.length > 0;
     return `function ${component}() {
-  const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""}${threadField ? ", threads" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
+  const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${totalled ? ", totals" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""}${threadField ? ", threads" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
 ${actions.length || offered.length || selecting || filtering?.mine || filtering?.unread || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
       scrolling
         ? `
@@ -834,7 +839,7 @@ ${merges
 `
     : ""
 }      <ModelTable
-        ui={${n.ui}}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
+        ui={${n.ui}}${totalled ? `\n        totals={totals && { count: totals.count, sums: Object.fromEntries(Object.entries(totals.sums).filter(([key]) => ${literal(own)}.includes(key))) }}` : ""}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}${
           within || capped || owned
             ? ""

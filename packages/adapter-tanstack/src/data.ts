@@ -684,6 +684,14 @@ export function dataModule(
   const hasListPage = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name,
   );
+  // The numbers its list pages total (docs/design/intents.md §5), each page's own or any of them.
+  const totals = [
+    ...new Set(
+      ir.pages
+        .filter((p) => p.pattern.kind === "crud" && p.pattern.model === model.name)
+        .flatMap((p) => ux.pages[p.id]?.totals ?? []),
+    ),
+  ].map((name) => keyOf(model, name));
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -2020,7 +2028,13 @@ ${
   async page(viewer: Viewer | null, where?: SQL, order?: SQL, page = 1, size = 50) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const condition = and(${self}.readable(viewer), where);
-    const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;
+    const total = db.select({ n: count() }).from(${n.table}).where(condition).get()?.n ?? 0;${
+      totals.length
+        ? `
+    // The list's totals row, over every record that fits, not only this page (intents.md §5).
+    const sums = db.select({ ${totals.map((k) => `${k}: sql<number>\`coalesce(sum(\${${n.table}.${k}}), 0)\``).join(", ")} }).from(${n.table}).where(condition).get() ?? { ${totals.map((k) => `${k}: 0`).join(", ")} };`
+        : ""
+    }
     const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
     const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
       where: condition,${withClause(listWith, "      ")}
@@ -2028,7 +2042,7 @@ ${
       limit: size,
       offset: (at - 1) * size,
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
-    ${asListed("rows", "return { rows: ", ", total, page: at, size }")}
+    ${asListed("rows", "return { rows: ", `, total, page: at, size${totals.length ? ", totals: { count: total, sums }" : ""} }`)}
   },
 `
     : ""

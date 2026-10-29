@@ -285,6 +285,9 @@ export const UX_SCHEMA: JsonSchema = {
             additionalProperties: false,
             properties: {
               columns: strings("The fields shown as columns, in order."),
+              totals: strings(
+                "Number and amount fields summed in a last row, with the count, over every record the viewer may see that fits the filters.",
+              ),
               below: {
                 type: "object",
                 description:
