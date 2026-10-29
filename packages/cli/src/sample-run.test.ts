@@ -322,7 +322,7 @@ test("everything: each variant is judged by what the app had to do with it", asy
   const coverage = runner.state().coverage;
   expect(coverage?.tried).toBeGreaterThan(5);
   expect(coverage?.of).toBeGreaterThanOrEqual(coverage?.tried ?? 0);
-  expect((coverage?.passes ?? 0) + (coverage?.findings ?? 0)).toBe(8);
+  expect((coverage?.passes ?? 0) + (coverage?.findings ?? 0)).toBe(coverage?.tried);
 });
 
 test("a replay performs the logged moves in order, with their values and records", async () => {

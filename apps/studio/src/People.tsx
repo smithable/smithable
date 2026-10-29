@@ -28,11 +28,13 @@ export function PeoplePanel({
     api.people().then(onState, () => {});
   }, [onState]);
   const act = (what: "run" | "fast" | "everything" | "pause" | "step" | "clear") =>
-    api.peopleDo(what).then(onState, () => {});
+    api.peopleDo(what, what === "step" ? mode : undefined).then(onState, () => {});
   // Sensible, or trying everything (sample-users.md §3a); the run's own mode while one is under way.
   const [chosen, setChosen] = useState<"sensible" | "everything">("sensible");
   const mode = state?.running ? state.mode : chosen;
-  const run = (next = mode) => act(next === "everything" ? "everything" : "run");
+  // Back to sensible from a fast run stays fast: no model is asked unless it was before.
+  const run = (next = mode) =>
+    act(next === "everything" ? "everything" : state?.running && state.fast ? "fast" : "run");
   const feed = [...(state?.feed ?? [])].reverse();
   const [failure, setFailure] = useState<string>();
   // Adding and removing are changes to samples/people.yml, through the operations like any other.

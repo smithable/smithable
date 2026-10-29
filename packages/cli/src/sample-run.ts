@@ -44,7 +44,7 @@ export interface FeedLine {
   /** done; refused (the app doing its job); finding (a fault: a crash, or a move it listed refused); miss (the model's). */
   outcome: "done" | "refused" | "finding" | "miss";
   message?: string;
-  /** The random walk's seed for this turn, to replay a finding. */
+  /** The turn's seed; with the run's log before it, a finding replays (§3a). */
   seed?: number;
   /** In a run that tries everything: the variant tried and what the app had to do with it. */
   variant?: { id: string; expect: "done" | "refused"; why: string };
@@ -197,13 +197,17 @@ export function sampleRunner(options: {
   };
   /** The variants tried and how they came out, from the log. */
   const coverage = (): Coverage => {
-    const tried = new Set(log.flatMap((e) => (e.variant ? [e.variant.id] : [])));
-    const judged = log.filter((e) => e.variant);
+    // By variant: one that came out as a finding in any try is a finding.
+    const found = new Map<string, boolean>();
+    for (const e of log)
+      if (e.variant)
+        found.set(e.variant.id, (found.get(e.variant.id) ?? false) || e.outcome === "finding");
+    const findings = [...found.values()].filter(Boolean).length;
     return {
-      tried: tried.size,
-      of: Math.max(known.size, tried.size),
-      passes: judged.filter((e) => e.outcome !== "finding").length,
-      findings: judged.filter((e) => e.outcome === "finding").length,
+      tried: found.size,
+      of: Math.max(known.size, found.size),
+      passes: found.size - findings,
+      findings,
     };
   };
   const line = (
@@ -291,12 +295,15 @@ export function sampleRunner(options: {
     let values: Record<string, FieldValue | null> = {};
     let why: string | undefined;
     let variant: FeedLine["variant"];
-    // A replay's turn is its own person's.
-    const replay = replaying[0]?.id === person.id ? replaying.shift() : undefined;
+    /** The model was asked this turn: its answer has counted against the hour already. */
+    let asked = false;
+    // A replay's turn is its own person's; the entry is taken once the move is made.
+    const replay = replaying[0]?.id === person.id ? replaying[0] : undefined;
     if (replay) {
       // A replay performs the logged move, not a new draw (§3a).
       ({ move: id, values = {}, variant } = replay);
       if (!listed.includes(id ?? "")) {
+        replaying.shift();
         line(
           person,
           {
@@ -335,6 +342,7 @@ export function sampleRunner(options: {
         spend(choice.usage);
         // A model's answer counts as a move, whether or not one is made: it costs the same.
         hour.push(now());
+        asked = true;
         if ("move" in choice) ({ move: id, values, why } = choice);
         else why = `Drawn from what they did: the model's answer did not fit (${choice.miss})`;
       }
@@ -354,6 +362,7 @@ export function sampleRunner(options: {
     }
     // Paused (or started again) while the model thought: no move after all.
     if (begun !== era) return;
+    if (replay) replaying.shift();
     const move = moves.find((m) => m.id === id) as OpenMove;
     const one = (ids: number[]) => ids[Math.floor(rnd() * ids.length)];
     const filled: Record<string, FieldValue | null> = { ...values };
@@ -364,8 +373,11 @@ export function sampleRunner(options: {
     for (const slot of !replay && "slots" in move ? move.slots : []) {
       const candidates = move.candidates?.[slot.field];
       if (slot.kind === "reference") {
-        if (candidates?.length && (slot.field in filled || slot.required))
-          filled[slot.field] = one(candidates) ?? null;
+        // A variant that leaves a reference empty on purpose keeps it so.
+        const wanted = variant
+          ? !(slot.field in values) && slot.required
+          : slot.field in filled || slot.required;
+        if (candidates?.length && wanted) filled[slot.field] = one(candidates) ?? null;
       } else if (!variant && slot.required && (filled[slot.field] ?? null) === null)
         filled[slot.field] = valueFor(slot, rnd, at);
     }
@@ -380,7 +392,7 @@ export function sampleRunner(options: {
       .door("act", { user: person.id, move: move.id, values: filled, ...target })
       .catch(() => undefined);
     state.moves++;
-    if (!providers[0]) hour.push(now());
+    if (!asked) hour.push(now());
     const text = moveWords(move, labels);
     const logged = {
       turn: n,
@@ -520,11 +532,15 @@ export function sampleRunner(options: {
     pause() {
       stop();
     },
-    /** One move now, by whoever is due next. */
-    async step() {
+    /** One move now, by whoever is due next (a replay's next person first), in the mode given. */
+    async step(mode?: RunMode) {
       touched = now();
+      if (mode && !state.running) state.mode = mode;
       if (!state.people.length && !load())
         return stop("No sample users yet: add one, or ask Smith to add some.");
+      // A logged person no longer among the sample users: their moves are passed over.
+      while (replaying[0] && !state.people.some((p) => p.id === replaying[0]?.id))
+        replaying.shift();
       const why = capped();
       if (why) return stop(why);
       const due = (state.people.find((p) => p.id === replaying[0]?.id) ??
@@ -550,6 +566,7 @@ export function sampleRunner(options: {
       state.cost = 0;
       log = [];
       known.clear();
+      replaying = [];
       for (const p of state.people) delete p.last;
       changed();
     },

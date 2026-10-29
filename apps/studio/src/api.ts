@@ -262,8 +262,10 @@ export const api = {
   outbox: () => call<KeptMail[]>("/api/outbox"),
   people: () => call<PeopleState>("/api/people"),
   /** Lets the sample users run (with the model, or `fast`: the random walk), pauses them, or one move. */
-  peopleDo: (what: "run" | "fast" | "everything" | "pause" | "step" | "clear") =>
-    call<PeopleState>("/api/people", { do: what }),
+  peopleDo: (
+    what: "run" | "fast" | "everything" | "pause" | "step" | "clear",
+    mode?: "sensible" | "everything",
+  ) => call<PeopleState>("/api/people", { do: what, ...(mode ? { mode } : {}) }),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
   /** `file`: a picture the change brings, written under its path in the project (base64). */
   operation: (

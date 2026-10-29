@@ -131,14 +131,16 @@ export async function preview(
   });
   clearInterval(keep);
   runner.pause();
-  const { moves, cost, currency, coverage, feed } = runner.state();
+  const { moves, cost, currency, coverage } = runner.state();
   io.out(`${moves} moves${cost > 0 ? `, ${cost.toFixed(3)} ${currency}` : ""}.\n`);
   // Trying everything: the report (§3a), each finding with its seed.
   if (coverage) {
     io.out(
       `Tried ${coverage.tried} of ${coverage.of} variants: ${coverage.passes} as the rules say, ${coverage.findings} ${coverage.findings === 1 ? "finding" : "findings"}.\n`,
     );
-    for (const line of feed.filter((l) => l.outcome === "finding")) io.out(`  ${feedText(line)}`);
+    // From the log, which keeps the whole run (the feed only its last lines).
+    for (const e of runner.log().filter((e) => e.outcome === "finding"))
+      io.out(`  turn ${e.turn}, ${e.id}: ${e.move ?? "no move"}: ${e.message ?? ""}\n`);
   }
   stopServer();
   await exited;

@@ -32,7 +32,7 @@ test("Smith lets the sample users run and stops them; other lines are requests",
   expect(peopleCommand("Pause the sample users.")).toBe("pause");
   expect(peopleCommand("stop showing prices")).toBeUndefined();
   expect(peopleCommand("let customers book")).toBeUndefined();
-  // The last word wins: trying everything, then letting them run, is sensible again.
+  // Trying everything; "let them run" after it is sensible again (the last word wins).
   expect(peopleCommand("Try everything.")).toBe("everything");
   expect(peopleCommand("let the sample users try everything")).toBe("everything");
   expect(peopleCommand("try everything on the orders page")).toBeUndefined();
