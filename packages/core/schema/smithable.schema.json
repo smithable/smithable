@@ -1164,7 +1164,7 @@
                   },
                   "timestamp": {
                     "type": "string",
-                    "description": "The header the call's time comes in (seconds since 1970); over five minutes off is refused."
+                    "description": "The header the call's time comes in (seconds since 1970, or milliseconds); over five minutes off is refused."
                   }
                 }
               }
