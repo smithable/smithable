@@ -20,14 +20,16 @@ const SPAN: Record<Period, number> = { week: 8, month: 6, quarter: 4, year: 3 };
 /** A day as "2026-10-29": a date as it is, a date and time in the app's time zone. */
 function dayOf(value: unknown, timeZone: string): string | undefined {
   if (value === null || value === undefined || value === "") return undefined;
-  if (value instanceof Date)
+  // A date and time, as a Date or as its text, is the day it is in the app's time zone.
+  const text = String(value);
+  if (value instanceof Date || text.includes("T"))
     return new Intl.DateTimeFormat("en-CA", {
       timeZone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).format(value);
-  return String(value).slice(0, 10);
+    }).format(value instanceof Date ? value : new Date(text));
+  return text.slice(0, 10);
 }
 
 /** The bar a day falls in: its week's Monday ("2026-10-26"), "2026-10", "2026-Q4" or "2026". */

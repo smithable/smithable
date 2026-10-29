@@ -122,18 +122,17 @@ export function dashboardParts(
         const options = field?.type.kind === "choice" ? field.type.values : [];
         const tn = names(target, t);
         view.add(tn.module, tn.ui);
-        const pick = `(row) => row.${choice.field}`;
         if (choice.reference) {
           // The referred records as the viewer may read them; a tile grouped by a field they may
           // not read is not shown.
-          route.add(`${tn.module}.server`, tn.data);
+          route.add(`${tn.module}.server`, tn.data).add("#/kit/access", "AccessDenied");
           const map = `${item.name}Of`;
           values.push(
-            `${item.name}: await ${tn.data}.list(viewer).then((referred) => { const ${map} = new Map(referred.map((r) => [r.id, r.${choice.field}])); return byValue(${filtered}, (row) => ${map}.get(row.${choice.reference}Id as number), ${amount}, ${literal(options)}); }, () => null)`,
+            `${item.name}: await ${tn.data}.list(viewer).then((referred) => { const ${map} = new Map(referred.map((r) => [r.id, r.${choice.field}])); return byValue(${filtered}, (row) => ${map}.get(row.${choice.reference}Id as number), ${amount}, ${literal(options)}); }, (error) => { if (error instanceof AccessDenied) return null; throw error; })`,
           );
         } else
           values.push(
-            `${item.name}: byValue(${filtered}, ${pick}, ${amount}, ${literal(options)})`,
+            `${item.name}: byValue(${filtered}, (row) => row.${choice.field}, ${amount}, ${literal(options)})`,
           );
         return {
           block: "chart",

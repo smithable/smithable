@@ -597,7 +597,7 @@ export function ModelTable<R extends Row>({
                   className="bg-muted/50 font-semibold hover:bg-muted/50"
                 >
                   {selection && <TableCell />}
-                  {columns.map((field, i) => (
+                  {columns.map((field) => (
                     <TableCell
                       key={field.name}
                       data-field={field.name}
@@ -605,7 +605,7 @@ export function ModelTable<R extends Row>({
                     >
                       {field.name in totals.sums
                         ? formatValue(field, totals.sums[field.name], app)
-                        : i === 0
+                        : field === columns.find((f) => !(f.name in totals.sums))
                           ? w.totalsRow(totals.count)
                           : null}
                     </TableCell>

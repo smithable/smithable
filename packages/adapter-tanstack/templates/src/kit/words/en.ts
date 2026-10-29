@@ -599,9 +599,9 @@ export const w = {
   orderClosed: (opens?: string) => (opens ? `Closed, opens ${opens}` : "Closed"),
   orderSoldOut: (label: string) => `Sold out: ${label}`,
   orderEmpty: "Nothing chosen yet.",
-  /** A list's totals row (intents.md §5): "Total of 12". */
   /** A chart's bar for a quarter: "Q3 2026". */
   quarterOf: (quarter: number, year: string) => `Q${quarter} ${year}`,
+  /** A list's totals row (intents.md §5): "Total of 12". */
   totalsRow: (count: number) => `Total of ${count}`,
   orderTotal: "Total",
   /** Merging two records (docs/design/intents.md §3). */
