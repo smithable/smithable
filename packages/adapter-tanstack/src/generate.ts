@@ -43,6 +43,7 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { named, nameModule } from "./names.js";
 import { outgoingModule } from "./outgoing.js";
+import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { hasInspector } from "./pages/data.js";
@@ -946,16 +947,27 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]
-          : [
-              generated(
-                `src/generated/actions/${kebab(action.name)}.ts`,
-                standardActionModule(action, ir, auth, t),
-              ),
-              generated(
-                `src/generated/actions/${kebab(action.name)}.server.ts`,
-                standardActionServer(action, ir, auth, t),
-              ),
-            ],
+          : action.merge
+            ? [
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.ts`,
+                  mergeActionModule(action, ir, auth, t),
+                ),
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.server.ts`,
+                  mergeActionServer(action, ir, auth, t),
+                ),
+              ]
+            : [
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.ts`,
+                  standardActionModule(action, ir, auth, t),
+                ),
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.server.ts`,
+                  standardActionServer(action, ir, auth, t),
+                ),
+              ],
       ),
   },
   {

@@ -829,7 +829,7 @@ function toolsModule(
   const { models, actions, rowsActions } = app
     ? {
         models: ir.models.map((model) => ({ model, n: names(model, t) })),
-        actions: ir.actions.filter((a): a is StandardActionIR => !a.custom),
+        actions: ir.actions.filter((a): a is StandardActionIR => !a.custom && !a.merge),
         rowsActions: ir.actions.filter(
           (a): a is CustomActionIR & { rows: { field: string; model: string } } =>
             Boolean(a.custom && a.rows),

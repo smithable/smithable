@@ -113,6 +113,10 @@ export function actionNames(action: ActionIR) {
     askUi: `${action.name}AskUi`,
     askOptions: `${action.name}AskOptions`,
     run: `run${type}`,
+    /** A merge (intents.md §3): which stays, and what merging two would do (the server's, the form's). */
+    keep: `${action.name}Keep`,
+    preview: `preview${type}`,
+    previewFn: `${action.name}Preview`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
   };

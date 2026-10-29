@@ -591,7 +591,16 @@ export function hasFavorites(model: ModelIR, ir: SpecIR, auth: AuthIR): boolean 
 /** The standard actions a page offers (docs/design/actions.md): on its records' pages. */
 export function standardActions(page: PageIR, ir: SpecIR): StandardActionIR[] {
   return (page.actions ?? []).flatMap((name) =>
-    ir.actions.filter((a): a is StandardActionIR => a.name === name && !a.custom),
+    ir.actions.filter((a): a is StandardActionIR => a.name === name && !a.custom && !a.merge),
+  );
+}
+
+/** The merges a page offers (docs/design/intents.md §3): two picked in its list, or "Merge into…". */
+export function mergeActions(page: PageIR, ir: SpecIR): StandardActionIR[] {
+  return (page.actions ?? []).flatMap((name) =>
+    ir.actions.filter(
+      (a): a is StandardActionIR => a.name === name && !a.custom && a.merge !== undefined,
+    ),
   );
 }
 

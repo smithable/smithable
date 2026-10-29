@@ -23,6 +23,7 @@ models:
       notes: text
       accountManager: User
       orders: Order[]                # every order that refers to this customer
+      followUps: FollowUp[]          # what to do next with them, and when
     ownedBy: accountManager          # the account manager owns the customer
 
   Order:
@@ -46,28 +47,41 @@ models:
             expected: 15
       placedAt: datetime = NOW()
 
+  FollowUp:
+    trash: true
+    fields:
+      customer: Customer!
+      dueOn: date! = TODAY()
+      done: bool
+      note: text
+
 actions:
   mergeCustomers:
+    merge: Customer                  # two customers become one: orders and follow-ups move to the kept one
+  scheduleFollowUps:
     custom: true
-    input: { keep: Customer!, duplicate: Customer! }
-    intent: Merge a duplicate customer record into the one we keep.
+    input: { customer: Customer!, count: int!, everyDays: int! }
+    output: { created: int! }
+    intent: Plan a series of follow-up notes for a customer, one every so many days.
     rules:
-      - All orders of the duplicate move to the kept customer.
-      - Empty fields on the kept customer are filled from the duplicate.
-      - The duplicate is deleted afterwards.
+      - The first note is due today; each next one everyDays later.
 
 pages:
   customers:
     intent: Find a customer quickly and keep their details current.
     crud: Customer
     search: [name, email]
-    actions: [mergeCustomers]
+    actions: [mergeCustomers, scheduleFollowUps]
   orders:
     crud: Order
     search: [number, customer]
     filters: [status]
+  followUps:
+    crud: FollowUp
+    search: [customer, note]
+    filters: [done]
   team:
     intent: Invite colleagues and manage who has access.
     users: manage
 
-navigation: [customers, orders, team]
+navigation: [customers, orders, followUps, team]
