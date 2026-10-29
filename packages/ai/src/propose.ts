@@ -3,15 +3,18 @@
 // sees it, and nothing is applied until the user confirms.
 import {
   type AnyOperation,
+  type AuthIR,
   applyOperation,
   type Effect,
   type OperationArgs,
   operationsFor,
+  PEOPLE_PATH,
   type ProjectFiles,
   type SpecIR,
   type SpecPlugin,
   validateAuth,
   validateContent,
+  validatePeople,
   validateSpec,
 } from "@smithable/core";
 import {
@@ -345,7 +348,7 @@ function refusalTier(files: ProjectFiles, ir: SpecIR, request: string) {
     files.auth === undefined
       ? undefined
       : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
-  return refusalOf(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
+  return refusalOf(ir, request, auth?.roles.map((r) => r.name) ?? [], auth, peopleOf(files, auth));
 }
 
 /** The operations a request's wording means without a model (ARCHITECTURE §9.2, tier 0). */
@@ -354,7 +357,19 @@ function phraseTier(files: ProjectFiles, ir: SpecIR, request: string) {
     files.auth === undefined
       ? undefined
       : validateAuth({ path: "smithable.auth.yml", text: files.auth }).auth;
-  return matchRequest(ir, request, auth?.roles.map((r) => r.name) ?? [], auth);
+  return matchRequest(
+    ir,
+    request,
+    auth?.roles.map((r) => r.name) ?? [],
+    auth,
+    peopleOf(files, auth),
+  );
+}
+
+/** The sample users' names, as samples/people.yml has them. */
+function peopleOf(files: ProjectFiles, auth: AuthIR | undefined): string[] {
+  if (files.people === undefined || !auth) return [];
+  return validatePeople({ path: PEOPLE_PATH, text: files.people }, auth).people.map((p) => p.name);
 }
 
 /** A question about the app the index answers without a model (tier 0). */

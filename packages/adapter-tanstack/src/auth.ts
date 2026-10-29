@@ -470,7 +470,9 @@ const devSignIn = createServerFn({ method: "POST" })
     const prefix = demoSignIn && !import.meta.env.DEV ? "demo" : "dev";
     // A sample user is seeded with their role; a role signs in as its own development user.
     const role = typeof who === "string" ? who : who.role;
-    const email = typeof who === "string" ? \`\${prefix}-\${role}@${devDomain(auth)}\` : who.email;`
+    const email = typeof who === "string" ? \`\${prefix}-\${role}@${devDomain(auth)}\` : who.email;
+    // One added since the seed is made a user here, under the id the door knows them by.
+    if (typeof who !== "string") db.insert(user).values({ ...who, emailVerified: true }).onConflictDoNothing().run();`
     : `/** Development, or a demo: signs in as a user with the role, without a provider. */
 const devSignIn = createServerFn({ method: "POST" })
   .validator((role: unknown) => {
