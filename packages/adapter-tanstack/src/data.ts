@@ -1431,7 +1431,7 @@ ${roots
   /** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number${unmerge ? "; stayed: number" : ""} } {
     const rows = db
-      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}`)})
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}${unmerge ? `deletedAt: ${n.table}.deletedAt, ` : ""}`)})
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
       .all()${allowed};${
@@ -1447,7 +1447,7 @@ ${roots
     // A unique value a live record has taken since refuses it, as it refuses a new record.${unmerge ? "\n    let stayed = 0;" : ""}
     try {
       db.transaction((tx) => {
-        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, row.id);" : ""}
+        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, row.id, row.deletedAt);" : ""}
           const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });${
             together && group.length

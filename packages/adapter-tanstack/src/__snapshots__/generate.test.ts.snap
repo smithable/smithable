@@ -29589,13 +29589,13 @@ const TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const
  * other's), ask (the person picks where the two differ), add (the sum), append (both texts); an
  * empty side always takes the other's value.
  */
-const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; kind: "number" | "text" | "other" }> = {
-  name: { rule: "ask", kind: "text" },
-  email: { rule: "ask", kind: "other" },
-  phone: { rule: "ask", kind: "other" },
-  segment: { rule: "ask", kind: "other" },
-  creditLimit: { rule: "ask", kind: "number" },
-  notes: { rule: "ask", kind: "text" },
+const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; unique: boolean; kind: "number" | "text" | "other" }> = {
+  name: { rule: "ask", unique: false, kind: "text" },
+  email: { rule: "ask", unique: true, kind: "other" },
+  phone: { rule: "ask", unique: false, kind: "other" },
+  segment: { rule: "ask", unique: false, kind: "other" },
+  creditLimit: { rule: "ask", unique: false, kind: "number" },
+  notes: { rule: "ask", unique: false, kind: "text" },
 };
 /** A reference the person decides, shown by its title: the row's field and the title's key. */
 const REFS: Record<string, [string, string]> = {  };
@@ -29613,9 +29613,17 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** What the person may pick for a field asked: either record's value, the sum or both texts. */
 export type Choice = "kept" | "other" | "sum" | "join";
 
+/**
+ * The fields the merge decides: all, but a unique one only when the other goes (while it stays,
+ * its unique values are its own and the kept record keeps its own).
+ */
+function decided(goes: boolean): string[] {
+  return Object.keys(RULES).filter((key) => goes || !RULES[key]?.unique);
+}
+
 /** The fields the person decides: asked by the spec, and different on the two (an empty one is not). */
-function asked(kept: Raw, other: Raw): string[] {
-  return Object.keys(RULES).filter((key) => {
+function asked(kept: Raw, other: Raw, goes: boolean): string[] {
+  return decided(goes).filter((key) => {
     const a = kept[key as keyof Raw];
     const b = other[key as keyof Raw];
     return RULES[key]?.rule === "ask" && !empty(a) && !empty(b) && !same(a, b);
@@ -29623,9 +29631,10 @@ function asked(kept: Raw, other: Raw): string[] {
 }
 
 /** The kept record's new values: each field by its rule, or as the person chose; only what changes. */
-function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>): Record<string, unknown> {
+function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: boolean): Record<string, unknown> {
   const values: Record<string, unknown> = {};
-  for (const [key, { rule, kind }] of Object.entries(RULES)) {
+  for (const key of decided(goes)) {
+    const { rule, kind } = RULES[key] as (typeof RULES)[string];
     const a = kept[key as keyof Raw];
     const b = other[key as keyof Raw];
     const pick: Choice = empty(a)
@@ -29720,14 +29729,16 @@ export async function previewMergeCustomers(viewer: Viewer | null, first: number
       keptTitle: String(kept.name ?? kept.id),
       otherTitle: String(other.name ?? other.id),
       // The fields the person decides, and those that take the other's value by the spec's rule.
-      asked: asked(raw.kept, raw.other).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+      asked: asked(raw.kept, raw.other, goes).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
       refs: Object.fromEntries(
         Object.entries(REFS).map(([key, [field, titleKey]]) => {
           const title = (row: Record<string, unknown>) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "");
           return [key, [title(kept as Record<string, unknown>), title(other as Record<string, unknown>)]];
         }),
       ) as Record<string, [string, string]>,
-      taken: Object.keys(valuesOf(raw.kept, raw.other, {})).filter((key) => !asked(raw.kept, raw.other).includes(key)),
+      taken: Object.entries(valuesOf(raw.kept, raw.other, {}, goes))
+        .filter(([key, value]) => !asked(raw.kept, raw.other, goes).includes(key) && same(value, raw.other[key as keyof Raw]))
+        .map(([key]) => key),
       moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
       // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
       goes: (!goes ? "stays" : "trash") as "trash" | "gone" | "stays",
@@ -29765,15 +29776,16 @@ export async function runMergeCustomers(viewer: Viewer | null, first: number, se
           tx.update(table).set({ deletedAt: when, deletedBy: personOf(viewer) } as never).where(eq(table.id, d.id)).run();
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
-      const values = valuesOf(raw.kept, raw.other, chosen);
+      const values = valuesOf(raw.kept, raw.other, chosen, goes);
       const changed = Object.keys(values);
       // The other goes to the trash, its unique values released as a trashed record's are.
       if (goes) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, raw.other.id)).run();
       // After the other has gone, so a unique value it gives the kept one is free (one it keeps
       // while it stays is refused as a taken value).
       if (changed.length) tx.update(schema.customers).set(values as Partial<Raw>).where(eq(schema.customers.id, raw.kept.id)).run();
-      // What moved, so Restore can put it back (by ids and field names, never values).
-      audit(tx, viewer, { action: "merged", model: "Customer", record: raw.other.id, title: other.name, details: { into: raw.kept.id, by: "mergeCustomers", moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
+      // What moved, so Restore can put it back: tied to this trashing, so a later delete and
+      // restore of the record does not replay it.
+      audit(tx, viewer, { action: goes ? "merged" : "merged, kept", model: "Customer", record: raw.other.id, title: other.name, details: { into: raw.kept.id, by: "mergeCustomers", trashedAt: goes ? when.getTime() : null, moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
       audit(tx, viewer, { action: "mergeCustomers", model: "Customer", record: raw.kept.id, fields: changed, details: { merged: raw.other.id } });
     });
   } catch (error) {
@@ -30768,10 +30780,11 @@ const MERGED_TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } a
  * Puts back what merging this customer away moved, as far as it is still as the merge left it;
  * returns how many things were changed since and stay as they are.
  */
-function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: number): number {
+function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: number, deletedAt: Date | null): number {
   const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
-  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown> } | undefined;
-  if (!merged) return 0;
+  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
+  // Only the merge that put it in the trash this time.
+  if (!merged || merged.trashedAt !== deletedAt?.getTime()) return 0;
   let stayed = 0;
   for (const m of merged.moved) {
     const table = MERGED_TABLES[m.model] as unknown as typeof schema.customers;
@@ -30784,6 +30797,8 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: nu
     stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
   }
   for (const d of merged.trashed) {
+    // Those of a model without a trash were deleted for good.
+    if (!(["Order", "FollowUp"] as string[]).includes(d.model)) continue;
     const table = MERGED_TABLES[d.model] as unknown as typeof schema.customers;
     tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
   }
@@ -31316,7 +31331,7 @@ export const customerData = {
   /** Takes the chosen customers out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number; stayed: number } {
     const rows = db
-      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .select({ id: schema.customers.id, deletedAt: schema.customers.deletedAt, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
       .where(and(inArray(schema.customers.id, ids), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))))
       .all().filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
@@ -31326,7 +31341,7 @@ export const customerData = {
       db.transaction((tx) => {
         for (const row of rows) {
           // What a merge moved goes back first, so a value it gave the kept record is free again.
-          stayed += unmerge(tx, row.id);
+          stayed += unmerge(tx, row.id, row.deletedAt);
           const back = tx.update(schema.customers).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.customers.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "Customer", record: row.id, title: back.name });
           // What went to the trash with it comes back with it.
@@ -36958,7 +36973,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "1b88484b generated",
-  "src/generated/actions/merge-customers.server.ts": "401c300c generated",
+  "src/generated/actions/merge-customers.server.ts": "ee4e7dc3 generated",
   "src/generated/actions/merge-customers.ts": "6bd732b1 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
@@ -36967,7 +36982,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "adc5479b generated",
+  "src/generated/customer.server.ts": "77f317f9 generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "1262e2f3 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
@@ -36999,7 +37014,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
-  "src/kit/MergeDialog.tsx": "1efee082 kit",
+  "src/kit/MergeDialog.tsx": "e3b6bc9f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",

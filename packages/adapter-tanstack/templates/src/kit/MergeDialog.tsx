@@ -68,6 +68,9 @@ export function MergeDialog({
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
   const other = sides.find((s) => s.id !== kept) ?? sides[1];
+  // The pages pass a new function on every render: the latest, without asking again for it.
+  const ask = useRef(preview);
+  ask.current = preview;
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
@@ -75,7 +78,7 @@ export function MergeDialog({
     let current = true;
     setFacts(undefined);
     setChoices({});
-    preview(kept, other.id).then(
+    ask.current(kept, other.id).then(
       (p) => current && setFacts(p),
       (error) =>
         current && setFailure(error instanceof Error ? error.message : w.somethingWentWrong),
@@ -83,7 +86,7 @@ export function MergeDialog({
     return () => {
       current = false;
     };
-  }, [kept, other.id, preview]);
+  }, [kept, other.id]);
   const field = (key: string) => ui.fields.find((f) => f.name === key || f.relation?.key === key);
   const shown = (key: string, side: 0 | 1) => {
     if (!facts) return "";
@@ -139,7 +142,8 @@ export function MergeDialog({
           <span className="font-medium">{w.mergeKeeps}</span>
           <select
             className="h-9 rounded-md border bg-background px-2"
-            value={kept}
+            // Oldest or newest: the one the server keeps, once it has said.
+            value={keep === "chosen" ? kept : Number(facts?.kept.id ?? kept)}
             // Oldest or newest: the spec says which stays, shown and not chosen.
             disabled={keep !== "chosen" || busy}
             onChange={(e) => setKept(Number(e.target.value))}
