@@ -19,6 +19,14 @@ export {
   translationPath,
 } from "./apply.js";
 export { namesFor } from "./arguments.js";
+export {
+  ASK_ANSWERS,
+  ASK_PATH,
+  type AskAnswer,
+  type AskExpectation,
+  type AskIR,
+  validateAsk,
+} from "./ask-samples.js";
 export type {
   AssistantCaller,
   AssistantKind,
@@ -203,6 +211,7 @@ export {
   readRecords,
 } from "./records.js";
 export {
+  ASK_FILE,
   fitSamples,
   PEOPLE_FILE,
   type SamplePicture,

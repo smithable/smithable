@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+  ASK_FILE,
+  type AskIR,
   type AuthIR,
   actionAccess,
   type ContentIR,
@@ -22,6 +24,7 @@ import {
   type UniqueScope,
   type UxIR,
   uniqueScope,
+  validateAsk,
   validateAuth,
   validateContent,
   validateContext,
@@ -58,6 +61,8 @@ export function loadSpec(
   samples?: SamplesIR;
   /** The project's sample users (samples/people.yml). */
   people?: PersonIR[];
+  /** The Ask check's questions, samples/ask.yml, when the project has them. */
+  asks?: AskIR[];
   plugins?: SpecPlugin[];
   path: string;
 } {
@@ -189,6 +194,18 @@ export function loadSpec(
       return failed(peopleFile, result.diagnostics);
     people = result.people;
   }
+  // The Ask check's questions (docs/design/ask-words.md §4): stale names are warnings, said here.
+  let asks: AskIR[] | undefined;
+  const askFile = sampleFiles.find(
+    (file) => file.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "") === ASK_FILE,
+  );
+  if (askFile) {
+    const result = validateAsk({ path: askFile, text: readFileSync(askFile, "utf8") }, ir, auth);
+    print(result.diagnostics);
+    if (result.diagnostics.some((d) => d.severity === "error"))
+      return failed(askFile, result.diagnostics);
+    asks = result.asks;
+  }
   const contextPath = join(dirname(path), "smithable.context.yml");
   if (existsSync(contextPath)) {
     const problems = validateContext({
@@ -208,6 +225,7 @@ export function loadSpec(
     ...(themes.length ? { themes } : {}),
     ...(samples ? { samples } : {}),
     ...(people ? { people } : {}),
+    ...(asks ? { asks } : {}),
   };
 }
 
