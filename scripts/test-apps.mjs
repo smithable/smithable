@@ -6155,8 +6155,8 @@ async function browserFlow(dir, base) {
     // The starter's custom action: follow-ups planned for a customer, one a week.
     await page.getByRole("link", { name: "Schedule follow ups" }).click();
     await chooseRecord(page, "Customer *", "Skerry Software");
-    await page.getByRole("spinbutton", { name: "Count *" }).fill("3");
-    await page.getByRole("spinbutton", { name: "Every days *" }).fill("7");
+    await page.getByRole("textbox", { name: "Count *" }).fill("3");
+    await page.getByRole("textbox", { name: "Every days *" }).fill("7");
     await page.getByRole("button", { name: "Schedule follow ups" }).click();
     await page.waitForURL(`${base}/customers`);
     const planned = query(
