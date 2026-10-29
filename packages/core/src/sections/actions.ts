@@ -454,7 +454,7 @@ function readAction(
     ...(list && list.type.kind === "relation"
       ? { rows: { field: list.name, model: list.type.model } }
       : {}),
-    ...readContract(ctx, where, byKey, models),
+    ...readContract(ctx, where, name, byKey, models),
   };
 }
 
@@ -467,6 +467,7 @@ function readAction(
 function readContract(
   ctx: ParseContext,
   where: string,
+  actionName: string,
   byKey: Map<string, Entry>,
   models: ModelIR[],
 ): { touches?: CustomActionIR["touches"]; triggers?: string[] } {
@@ -573,6 +574,8 @@ function readContract(
         continue;
       }
       ctx.reference("outgoing", name, at);
+      // Checked once outgoing is parsed: the entry is one this action can set off (spec.ts).
+      ctx.mark(`trigger:${actionName}:${name}`, at);
       names.push(name);
     }
     out.triggers = names;

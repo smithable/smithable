@@ -99,6 +99,18 @@ test("a contract is checked: custom only, models and stored fields, entries that
   expect(errors("  x: { custom: true, triggers: [invoiceSent] }\n")).toEqual([
     expect.stringContaining('There is no outgoing named "invoiceSent".'),
   ]);
+  // A trigger is an entry the action's work sets off: without touches any record entry, with
+  // touches one on a model it writes.
+  expect(errors("  x: { custom: true, triggers: [paymentBooked] }\n")).toEqual([]);
+  expect(
+    errors(
+      "  x: { custom: true, touches: { writes: [Invoice.status] }, triggers: [paymentBooked] }\n",
+    ),
+  ).toEqual([
+    expect.stringContaining(
+      "paymentBooked fires on Payment created, and x does not write Payment (its touches).",
+    ),
+  ]);
 });
 
 test("addAction and setAction write the contract; renames follow it and removals are refused", () => {
@@ -126,14 +138,18 @@ test("addAction and setAction write the contract; renames follow it and removals
   refused("setAction", { action: "touch", reads: ["Invoice"] });
   const withIt = { ...files, ...added.files };
   // Each list replaces its own; "none" empties it (the code then reaches nothing of that kind).
-  const narrowed = applyOperation(withIt, "setAction", { action: "reconcile", writes: ["none"] });
+  // Emptying writes while a trigger still fires on Payment is refused by the trigger check.
+  const narrowed = applyOperation(withIt, "setAction", { action: "reconcile", reads: ["none"] });
   if (!narrowed.ok) throw new Error(narrowed.message);
   expect(narrowed.files.spec).toMatch(
-    /touches:\n {6}reads: \[Invoice, Payment\]\n {6}writes: \[\]\n {4}triggers/,
+    /touches:\n {6}reads: \[\]\n {6}writes: \[Payment, Invoice\.status\]\n {4}triggers/,
   );
+  expect(
+    applyOperation(withIt, "setAction", { action: "reconcile", writes: ["none"] }),
+  ).toMatchObject({ ok: false });
   const cleared = applyOperation(narrowed.files, "setAction", {
     action: "reconcile",
-    reads: ["none"],
+    writes: ["none"],
     triggers: ["none"],
   });
   expect(cleared.ok && cleared.files.spec).toMatch(
@@ -159,4 +175,39 @@ test("addAction and setAction write the contract; renames follow it and removals
     ok: false,
     message: expect.stringContaining('The action "reconcile" may fire paymentBooked'),
   });
+});
+
+test("a trigger on another action's entry, a standard action's or a timer's is refused; the action's own is fine", () => {
+  const text = `smithable: 0.1
+app: { name: Billing }
+models:
+  Invoice:
+    fields: { number: int!, status: sent | paid, issuedOn: date }
+actions:
+  reconcile: { custom: true, triggers: [reconciled, closed, remind] }
+  other: { custom: true, triggers: [reconciled] }
+  close: { on: Invoice, set: { status: paid } }
+  own: { custom: true, triggers: [owned] }
+timers:
+  reminder: { on: Invoice, every: day, at: "08:00", run: close }
+outgoing:
+  reconciled: { when: reconcile, to: mail, recipient: admin }
+  owned: { when: own, to: mail, recipient: admin }
+  closed: { when: close, to: mail, recipient: admin }
+  remind: { when: reminder, to: mail, recipient: admin }
+pages:
+  invoices: { crud: Invoice }
+`;
+  const messages = validateSpec({ path: "smithable.yml", text })
+    .diagnostics.filter((d) => d.severity === "error")
+    .map((d) => d.message);
+  expect(messages).toEqual([
+    expect.stringContaining(
+      "closed fires when the action close runs, which code does not set off.",
+    ),
+    expect.stringContaining(
+      "remind fires when the timer reminder comes, which code does not set off.",
+    ),
+    expect.stringContaining("reconciled fires when reconcile runs, not other."),
+  ]);
 });
