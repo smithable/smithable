@@ -90,7 +90,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.preview}, ${a.run} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" merge: its grant, with write and delete on ${n.pluralLabel.toLowerCase()}. */
+/** Who may run the "${action.name}" merge: its grant, with write on ${n.pluralLabel.toLowerCase()}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Which of the two stays: the person's choice, the oldest or the newest. */
@@ -282,10 +282,10 @@ async function pair(viewer: Viewer | null, first: number, second: number) {
   if (!one || !two) throw new AccessDenied(viewer !== null);
   const firstStays = ${a.keep} === "chosen" ? true : ${a.keep} === "oldest" ? one.id < two.id : one.id > two.id;
   const [kept, other] = firstStays ? [one, two] : [two, one];
-  // Write on the one that stays, delete on the one that goes (a merge into a junk record is a delete).
+  // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
+  // else it stays, emptied of what moved.
   if (!allows(${n.access}.write, viewer${owner(model, "kept")})) throw new AccessDenied(true);
-  if (!allows(${n.access}.delete, viewer${owner(model, "other")})) throw new AccessDenied(true);
-  return { kept, other };
+  return { kept, other, goes: allows(${n.access}.delete, viewer${owner(model, "other")}) };
 }
 
 /** What the merge does, worked out on the records as they are: refused here when it cannot be done. */
@@ -310,7 +310,7 @@ function rawOf(tx: Tx, keptId: number, otherId: number) {
  * the other, and how many records of each kind move; or why it cannot be done.
  */
 export async function ${a.preview}(viewer: Viewer | null, first: number, second: number) {
-  const { kept, other } = await pair(viewer, first, second);
+  const { kept, other, goes } = await pair(viewer, first, second);
   const raw = rawOf(db, kept.id, other.id);
   try {
     const plan = planOf(db, viewer, raw.kept, raw.other);
@@ -327,12 +327,13 @@ export async function ${a.preview}(viewer: Viewer | null, first: number, second:
       asked: asked(raw.kept, raw.other).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
       taken: Object.keys(valuesOf(raw.kept, raw.other, {})).filter((key) => !asked(raw.kept, raw.other).includes(key)),
       moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
-      trash: ${model.trash ? "true" : "false"},
+      // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
+      goes: (!goes ? "stays" : ${model.trash ? '"trash"' : '"gone"'}) as "trash" | "gone" | "stays",
       refused: null as string | null,
     };
   } catch (error) {
     if (!(error instanceof Conflict)) throw error;
-    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.${title} ?? kept.id), otherTitle: String(other.${title} ?? other.id), asked: [], taken: [], moves: [], trash: ${model.trash ? "true" : "false"}, refused: error.message };
+    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.${title} ?? kept.id), otherTitle: String(other.${title} ?? other.id), asked: [], taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
   }
 }
 
@@ -342,7 +343,7 @@ export async function ${a.preview}(viewer: Viewer | null, first: number, second:
  * not changed: no rules of a change, no "changed" events, nothing told.
  */
 export async function ${a.run}(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice> = {}) {
-  const { kept, other } = await pair(viewer, first, second);
+  const { kept, other, goes } = await pair(viewer, first, second);
   const when = new Date();
   try {
     db.transaction((tx) => {
@@ -367,11 +368,12 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
       ${
         model.trash
           ? `// The other goes to the trash, its unique values released as a trashed record's are.
-      tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, raw.other.id)).run();`
+      if (goes) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, raw.other.id)).run();`
           : `// No trash for ${n.pluralLabel.toLowerCase()}: the other is deleted for good.
-      tx.delete(${n.table}).where(eq(${n.table}.id, raw.other.id)).run();`
+      if (goes) tx.delete(${n.table}).where(eq(${n.table}.id, raw.other.id)).run();`
       }
-      // After the other has gone, so a unique value it gives the kept one is free.
+      // After the other has gone, so a unique value it gives the kept one is free (one it keeps
+      // while it stays is refused as a taken value).
       if (changed.length) tx.update(${n.table}).set(values as Partial<Raw>).where(eq(${n.table}.id, raw.kept.id)).run();
       // What moved, so Restore can put it back (by ids and field names, never values).
       audit(tx, viewer, { action: "merged", model: ${JSON.stringify(model.name)}, record: raw.other.id, title: other.${title}, details: { into: raw.kept.id, by: ${JSON.stringify(action.name)}, moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
@@ -380,7 +382,7 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
   } catch (error) {
     throw refusal(error);
   }
-  return { kept: kept.id, other: other.id };
+  return { kept: kept.id, other: other.id, stays: !goes };
 }
 `;
   void keyOf;
@@ -392,7 +394,7 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
  * Empty for a model no merge is on.
  */
 export function unmergeCode(ir: SpecIR, model: ModelIR, t: Texts): string {
-  if (!mergesOf(ir, model.name).length) return "";
+  if (!model.trash || !mergesOf(ir, model.name).length) return "";
   const n = names(model, t);
   const tables = [...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values()];
   return `

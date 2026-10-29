@@ -423,31 +423,18 @@ function explainAction(
   if (action.merge) {
     const merges = inSpec(
       at,
-      `${humanize(action.name)} merges two ${what}: the roles whose actions grant names it run it, with write and delete on ${what}.`,
+      `${humanize(action.name)} merges two ${what}: the roles whose actions grant names it run it, with write on ${what}; the other goes to the trash where they may delete it, else it stays.`,
     );
     const named = whyGranted(role, "actions", action.name, label);
     if (!named) return denied(merges, notGranted(role, "actions", action.name));
-    const { write, delete: remove } = modelAccess(model, auth);
-    for (const [verb, rule] of [
-      ["write", write],
-      ["delete", remove],
-    ] as const) {
-      if (rule.roles.includes(role.name) || rule.owner) continue;
-      return denied(merges, named, notGranted(role, verb, model.name));
-    }
-    const writes = write.roles.includes(role.name);
-    const deletes = remove.roles.includes(role.name);
-    if (writes && deletes)
-      return allowed(
-        merges,
-        named,
-        whyGranted(role, "write", model.name, what) as AccessReason,
-        whyGranted(role, "delete", model.name, what) as AccessReason,
-      );
-    // Their own only: it merges the records the role owns (the other is deleted, the kept changed).
+    const write = modelAccess(model, auth).write;
+    if (write.roles.includes(role.name))
+      return allowed(merges, named, whyGranted(role, "write", model.name, what) as AccessReason);
+    if (!write.owner) return denied(merges, named, notGranted(role, "write", model.name));
+    // Their own only: the kept record is changed.
     const own = inAuth(
       "defaultAccess",
-      `Everyone who signs in changes and deletes their own ${what}, so ${role.name} merges ${what} they own only, where the grants do not say more.`,
+      `Everyone who signs in changes their own ${what}, so ${role.name} merges into ${what} they own only, where the grants do not say more.`,
     );
     if (scenario.record === "own") return allowed(merges, named, own, whose(model, "own"));
     if (scenario.record === undefined) return conditional(merges, named, own);

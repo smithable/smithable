@@ -33,6 +33,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
+import { unmergeCode } from "./merge.js";
 import { linesFunction, linesParts, nameColumns, nameFunction } from "./names.js";
 import {
   cancelMembers,
@@ -1374,6 +1375,8 @@ ${roots
 }
 `
     : "";
+  // A merged record's Restore puts back what the merge moved (docs/design/intents.md §3).
+  const unmerge = unmergeCode(ir, model, t);
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
   const named = signedIn
@@ -1420,7 +1423,7 @@ ${roots
   },
 
   /** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash, those the viewer may delete. */
-  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number${unmerge ? "; stayed: number" : ""} } {
     const rows = db
       .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}`)})
       .from(${n.table})
@@ -1435,10 +1438,10 @@ ${roots
     }`
           : ""
       }
-    // A unique value a live record has taken since refuses it, as it refuses a new record.
+    // A unique value a live record has taken since refuses it, as it refuses a new record.${unmerge ? "\n    let stayed = 0;" : ""}
     try {
       db.transaction((tx) => {
-        for (const row of rows) {
+        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, row.id);" : ""}
           const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });${
             together && group.length
@@ -1452,7 +1455,7 @@ ${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.n
     } catch (error) {
       throw refusal(error);
     }
-    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length${unmerge ? ", stayed" : ""} };
   },
 
   /** Removes the chosen ${n.pluralLabel.toLowerCase()} in the trash for good, with their pictures and documents. */
@@ -1617,7 +1620,7 @@ ${occ ? occupiesImports() : ""}${[...others]
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-${usedBy}${rootInTrash}${occ ? occupiesHelpers(model, ir, occ) : ""}
+${usedBy}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**
