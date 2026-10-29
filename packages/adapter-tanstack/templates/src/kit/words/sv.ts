@@ -602,7 +602,8 @@ export const w = {
   splitDone: (from: string) => `Delad från ${from}.`,
   splitStayed: (n: number) =>
     `${n} ${n === 1 ? "post har" : "poster har"} flyttats någon annanstans sedan och blir kvar där.`,
+  mergedIntoTitle: (title: string) => `ihopslagen med ”${title}”`,
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
-    `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen och blir som de är.`,
+    `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,
 } satisfies Words;

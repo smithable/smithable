@@ -41,6 +41,7 @@ test("the CRM in plain language, with labels from the content file", () => {
     "Each customer lists its follow ups.",
     "The account manager owns the customer.",
     "Deleted customers stay in the trash for thirty days, where they can be restored.",
+    "Customers can be merged.",
   ]);
   expect(sections[1]?.sentences).toEqual([
     "- Customers (lists customers; search by name or email; “Merge customers”; “Schedule follow ups”)",
