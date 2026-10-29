@@ -149,11 +149,11 @@ export type ${a.inputType} = z.infer<typeof ${a.input}>;
  * where the code reads it; the value is built in its server module. Undefined without touches.
  */
 export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
-  if (!action.custom || !action.touches) return undefined;
+  // Triggers alone are a fence too, of fire only.
+  if (!action.custom || (!action.touches && !action.triggers?.length)) return undefined;
   const a = actionNames(action);
-  const reads = action.touches.reads.filter(
-    (m) => !action.touches?.writes.some((w) => w.model === m),
-  );
+  const touches = action.touches ?? { reads: [], writes: [] };
+  const reads = touches.reads.filter((m) => !touches.writes.some((w) => w.model === m));
   const entries: { key: string; type: string; value: string; module?: string; data?: string }[] =
     [];
   for (const name of reads) {
@@ -176,7 +176,8 @@ export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
       data: n.data,
     });
   }
-  for (const write of action.touches.writes) {
+  // People are not written through a data function: who signs in is the users page's.
+  for (const write of touches.writes.filter((w) => w.model !== USER_MODEL)) {
     const n = names(modelNamed(ir, write.model), t);
     const model = modelNamed(ir, write.model);
     const keys = write.fields?.map((f) =>
@@ -789,10 +790,10 @@ export function actionStub(action: ActionIR): string {
 // to the action's input or output shows up here as a type error.
 // \`viewer\` is the signed-in user (null for a visitor). The records the input refers to are ones
 // they may read; the data functions in src/generated/*.server.ts check access for them.
-import type { ${a.inputType}, ${a.outputType}${action.custom && action.touches ? `, ${a.touches}` : ""} } from "${a.module}";
+import type { ${a.inputType}, ${a.outputType}${action.custom && (action.touches || action.triggers?.length) ? `, ${a.touches}` : ""} } from "${a.module}";
 import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && action.touches ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && (action.touches || action.triggers?.length) ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
   throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
 }
 `;
