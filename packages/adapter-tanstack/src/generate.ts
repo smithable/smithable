@@ -41,6 +41,7 @@ import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formula
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
+import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
 import { outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
@@ -821,6 +822,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => selects(ir, auth) || ir.models.some((m) => m.trash),
       },
       {
+        // Merging two records (docs/design/intents.md §3): the button and its form.
+        files: ["src/kit/MergeDialog.tsx"],
+        used: ({ ir }) => ir.actions.some((a) => !a.custom && a.merge),
+      },
+      {
         // The trash (docs/design/trash.md): its page, the notice's Undo, a trashed record's banner.
         files: ["src/kit/Trash.tsx"],
         used: ({ ir }) => ir.models.some((m) => m.trash),
@@ -946,16 +952,27 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]
-          : [
-              generated(
-                `src/generated/actions/${kebab(action.name)}.ts`,
-                standardActionModule(action, ir, auth, t),
-              ),
-              generated(
-                `src/generated/actions/${kebab(action.name)}.server.ts`,
-                standardActionServer(action, ir, auth, t),
-              ),
-            ],
+          : action.merge
+            ? [
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.ts`,
+                  mergeActionModule(action, ir, auth, t),
+                ),
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.server.ts`,
+                  mergeActionServer(action, ir, auth, t),
+                ),
+              ]
+            : [
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.ts`,
+                  standardActionModule(action, ir, auth, t),
+                ),
+                generated(
+                  `src/generated/actions/${kebab(action.name)}.server.ts`,
+                  standardActionServer(action, ir, auth, t),
+                ),
+              ],
       ),
   },
   {

@@ -24,9 +24,17 @@ function spec(text: string): SpecIR {
   return result.ir;
 }
 
+// The CRM with a custom merge of its own (the starter's is a merge: Customer since intents.md §3),
+// whose rule has an id.
 const withRuleId = crm.replace(
-  "      - All orders of the duplicate move to the kept customer.",
-  "      - { id: move-orders, rule: All orders of the duplicate move to the kept customer. }",
+  /^ {2}mergeCustomers:\n {4}merge: Customer.*\n/m,
+  `  mergeCustomers:
+    custom: true
+    input: { keep: Customer!, duplicate: Customer! }
+    intent: Merge a duplicate customer record into the one we keep.
+    rules:
+      - { id: move-orders, rule: All orders of the duplicate move to the kept customer. }
+`,
 );
 
 const generated = {

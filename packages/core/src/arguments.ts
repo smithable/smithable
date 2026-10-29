@@ -37,8 +37,9 @@ export function namesFor(
       const what = one(ref.what);
       if (what === "pages") return ir.pages.map((p): [string, string] => [p.id, humanize(p.id)]);
       if (what === "actions")
+        // Custom actions and merges are run only by the roles named (a merge: intents.md §3).
         return ir.actions
-          .filter((a) => a.custom)
+          .filter((a) => a.custom || a.merge)
           .map((a): [string, string] => [a.name, humanize(a.name)]);
       return ["read", "create", "write", "delete"].includes(what ?? "")
         ? ir.models.map((m): [string, string] => [m.name, humanize(m.name)])

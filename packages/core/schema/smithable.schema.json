@@ -831,6 +831,11 @@
                 ]
               }
             ]
+          },
+          {
+            "required": [
+              "merge"
+            ]
           }
         ],
         "additionalProperties": false,
@@ -906,6 +911,34 @@
               "type": "string"
             },
             "description": "Lists of the model whose records a copy takes along, e.g. [lines]."
+          },
+          "merge": {
+            "type": "string",
+            "description": "A merge: two records of this model become one; every reference to the other moves to the kept record, which keeps its values, and the other goes to the trash."
+          },
+          "keep": {
+            "enum": [
+              "chosen",
+              "oldest",
+              "newest"
+            ],
+            "description": "For a merge: which record stays; chosen (the person says) unless said."
+          },
+          "fields": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "enum": [
+                "keep",
+                "other",
+                "ask",
+                "add",
+                "append"
+              ]
+            },
+            "description": "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked."
           },
           "input": {
             "type": "object",

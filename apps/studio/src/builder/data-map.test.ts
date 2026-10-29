@@ -10,7 +10,7 @@ const auth = validateAuth({ path: "smithable.auth.yml", text: crmAuth }, ir).aut
 
 test("the CRM's map: its kinds of record and the people, references and ownership as arrows", () => {
   const { nodes, edges } = mapOf(ir, auth);
-  expect(nodes.map((n) => n.id)).toEqual(["Customer", "Order", "User"]);
+  expect(nodes.map((n) => n.id)).toEqual(["Customer", "Order", "FollowUp", "User"]);
   // An order refers to its customer; a list is the other side of that arrow, not one of its own.
   expect(edges).toContainEqual(
     expect.objectContaining({ source: "Order", target: "Customer", kind: "reference" }),

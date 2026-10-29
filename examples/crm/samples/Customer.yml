@@ -47,6 +47,11 @@
   segment: smb
   creditLimit: 12000
   notes: An outdoor shop in Kiruna with a busy winter season. Orders double from November to March. Deliveries go to the back door on the loading street; the front is a pedestrian zone.
+- name: Arctic Outdoor
+  email: buyer@arcticoutdoor.example
+  phone: +46 980 123 99
+  segment: smb
+  notes: Met their buyer at the Kiruna trade fair; she asked about express shipping. Probably the same shop as Arctic Outdoor Co, entered twice.
 - name: Turku Harbour Authority
   email: procurement@turkuharbour.example
   phone: +358 2 555 0140

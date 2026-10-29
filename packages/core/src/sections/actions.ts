@@ -24,6 +24,8 @@ import {
   type ActionValueIR,
   type Condition,
   type FieldIR,
+  type MergeKeep,
+  type MergeRule,
   type ModelIR,
   type SemanticText,
   type StandardActionIR,
@@ -80,6 +82,7 @@ export const actionsSection: SpecSection<"actions"> = {
           required: ["on"],
           anyOf: [{ required: ["set"] }, { required: ["add"] }, { required: ["copy"] }],
         },
+        { required: ["merge"] },
       ],
       additionalProperties: false,
       properties: {
@@ -123,6 +126,22 @@ export const actionsSection: SpecSection<"actions"> = {
           type: "array",
           items: { type: "string" },
           description: "Lists of the model whose records a copy takes along, e.g. [lines].",
+        },
+        merge: {
+          type: "string",
+          description:
+            "A merge: two records of this model become one; every reference to the other moves to the kept record, which keeps its values, and the other goes to the trash.",
+        },
+        keep: {
+          enum: ["chosen", "oldest", "newest"],
+          description: "For a merge: which record stays; chosen (the person says) unless said.",
+        },
+        fields: {
+          type: "object",
+          propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+          additionalProperties: { enum: ["keep", "other", "ask", "add", "append"] },
+          description:
+            "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked.",
         },
         input: { ...inputSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
@@ -300,6 +319,9 @@ function readAction(
       "add",
       "copy",
       "with",
+      "merge",
+      "keep",
+      "fields",
       ...TEXT_KEYS,
     ],
     later: ["confirm", "examples"],
@@ -317,6 +339,31 @@ function readAction(
   const standard = ["on", "when", "set", "add", "copy", "with"]
     .map((k) => byKey.get(k))
     .filter((e) => e !== undefined);
+  // A merge names its model and nothing else (docs/design/intents.md §3).
+  const merge = byKey.get("merge");
+  if (merge) {
+    const other = [custom, ...standard, byKey.get("input"), byKey.get("output")].find(
+      (e) => e !== undefined,
+    );
+    if (other) {
+      ctx.error(
+        other.keyNode,
+        "invalid-action",
+        `${capitalize(where)} merges two records: "merge" takes keep and fields and nothing else, no ${other.key}.`,
+      );
+      return undefined;
+    }
+    return readMergeAction(ctx, where, byKey, models, common);
+  }
+  for (const key of ["keep", "fields"]) {
+    const entry = byKey.get(key);
+    if (entry)
+      ctx.error(
+        entry.keyNode,
+        "invalid-action",
+        `"${key}" of ${where} goes with "merge: <Model>".`,
+      );
+  }
   if (custom && standard.length) {
     ctx.error(
       standard[0]?.keyNode ?? keyNode,
@@ -347,6 +394,134 @@ function readAction(
     ...(list && list.type.kind === "relation"
       ? { rows: { field: list.name, model: list.type.model } }
       : {}),
+  };
+}
+
+const MERGE_KEEP: MergeKeep[] = ["chosen", "oldest", "newest"];
+const MERGE_RULES: MergeRule[] = ["keep", "other", "ask", "add", "append"];
+
+/**
+ * A merge (docs/design/intents.md §3): `merge: <Model>`, with `keep` (chosen, the default; oldest;
+ * newest) and `fields`, a rule per field (keep, other, ask, add for numbers and amounts, append
+ * for texts); a field not named is asked when the two differ. Users cannot be merged: they are
+ * sign-in identities.
+ */
+function readMergeFields(
+  ctx: ParseContext,
+  entry: Entry | undefined,
+  model: ModelIR,
+  where: string,
+): Record<string, MergeRule> {
+  const rules: Record<string, MergeRule> = {};
+  if (!entry) return rules;
+  const label = `"fields" of ${where}`;
+  for (const { key, keyNode, value } of mapEntries(ctx, entry.value, label) ?? []) {
+    const field = model.fields.find((f) => f.name === key);
+    if (!field) {
+      ctx.error(
+        keyNode,
+        "unknown-field",
+        `${label}: ${model.name} has no field named "${key}".`,
+        didYouMean(
+          key,
+          model.fields.map((f) => f.name),
+        ),
+      );
+      continue;
+    }
+    const why = field.formula
+      ? "it is computed"
+      : field.type.kind === "relation" && field.type.many
+        ? "its records move with the merge"
+        : field.sequence || field.byApp
+          ? "the app gives it"
+          : undefined;
+    if (why) {
+      ctx.error(keyNode, "invalid-action", `${label}: ${key} takes no rule, ${why}.`);
+      continue;
+    }
+    const rule = readString(ctx, value, `"${key}" of ${label}`);
+    if (rule === undefined) continue;
+    if (!(MERGE_RULES as string[]).includes(rule)) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: ${key} is ${MERGE_RULES.slice(0, -1).join(", ")} or ${MERGE_RULES[MERGE_RULES.length - 1]}.`,
+      );
+      continue;
+    }
+    const scalar = field.type.kind === "scalar" ? field.type.name : undefined;
+    if (rule === "add" && !(scalar && ["int", "decimal", "money"].includes(scalar))) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: "add" is for a number or an amount, and ${key} is not one.`,
+      );
+      continue;
+    }
+    if (rule === "append" && !(scalar && ["text", "markdown", "string"].includes(scalar))) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: "append" is for a text, and ${key} is not one.`,
+      );
+      continue;
+    }
+    rules[key] = rule as MergeRule;
+  }
+  return rules;
+}
+function readMergeAction(
+  ctx: ParseContext,
+  where: string,
+  byKey: Map<string, Entry>,
+  models: ModelIR[],
+  common: Pick<StandardActionIR, "name" | keyof SemanticText>,
+): StandardActionIR | undefined {
+  const entry = byKey.get("merge") as Entry;
+  const name = readString(ctx, entry.value, `"merge" of ${where}`);
+  if (name === undefined) return undefined;
+  if (name === "User") {
+    ctx.error(entry.value, "invalid-action", "Users cannot be merged: they are who signs in.");
+    return undefined;
+  }
+  const model = models.find((m) => m.name === name);
+  if (!model) {
+    ctx.error(
+      entry.value,
+      "unknown-model",
+      `There is no model named "${name}".`,
+      didYouMean(
+        name,
+        models.map((m) => m.name),
+      ),
+    );
+    return undefined;
+  }
+  ctx.reference("model", name, entry.value);
+  const choice = <T extends string>(key: string, options: readonly T[], fallback: T): T => {
+    const one = byKey.get(key);
+    if (!one) return fallback;
+    const text = readString(ctx, one.value, `"${key}" of ${where}`);
+    if (text === undefined) return fallback;
+    if ((options as readonly string[]).includes(text)) return text as T;
+    ctx.error(
+      one.value,
+      "invalid-action",
+      `"${key}" of ${where} is ${options.slice(0, -1).join(", ")} or ${options[options.length - 1]}.`,
+    );
+    return fallback;
+  };
+  return {
+    ...common,
+    custom: false,
+    input: [],
+    on: name,
+    set: [],
+    merge: {
+      keep: choice("keep", MERGE_KEEP, "chosen"),
+      fields: readMergeFields(ctx, byKey.get("fields"), model, where),
+    },
   };
 }
 

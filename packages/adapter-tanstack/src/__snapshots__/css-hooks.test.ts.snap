@@ -92,6 +92,10 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/LegalPage.tsx": [
     "data-kit="legal"",
   ],
+  "src/kit/MergeDialog.tsx": [
+    "data-kit="merge-dialog"",
+    "data-kit="merge-button"",
+  ],
   "src/kit/ModelForm.tsx": [
     "data-kit="field"",
     "data-field={field.name}",

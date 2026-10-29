@@ -409,6 +409,45 @@ export function summarize(
       return [`${article(one(target))}${given.length ? ` (${given.join(", ")})` : ""}`];
     });
     const item = one(model);
+    // A merge (intents.md §3): "Merge two customers: the other's orders and follow ups move to the
+    // kept one, which keeps its values; the other goes to the trash."
+    if (action.merge) {
+      const pointing = [
+        ...new Set(
+          ir.models
+            .filter(
+              (m) =>
+                m.name !== model.name &&
+                m.fields.some(
+                  (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model.name,
+                ),
+            )
+            .map((m) => many(m)),
+        ),
+      ];
+      const stays =
+        action.merge.keep === "chosen" ? "the kept one" : `the ${action.merge.keep} of the two`;
+      const rule = {
+        keep: [] as string[],
+        other: [] as string[],
+        add: [] as string[],
+        append: [] as string[],
+      };
+      for (const [name, r] of Object.entries(action.merge.fields ?? {})) {
+        const f = field(name);
+        if (f && r !== "ask") rule[r].push(fieldLabel(model, f));
+      }
+      const rules = [
+        ...(rule.keep.length ? [`${list(rule.keep)} from the kept one`] : []),
+        ...(rule.other.length ? [`${list(rule.other)} from the other`] : []),
+        ...(rule.add.length ? [`${list(rule.add)} added up`] : []),
+        ...(rule.append.length ? [`${list(rule.append)} written one after the other`] : []),
+      ];
+      return [
+        `Merge two ${many(model)}: ${pointing.length ? `the other's ${list(pointing)} move to ${stays}` : `${stays} stays`}; where the two differ, the person chooses${rules.length ? `, except ${list(rules)}` : ""}; the other ${model.trash ? "goes to the trash" : "is deleted"}.`,
+        ...(action.intent ? [action.intent] : []),
+      ];
+    }
     // A copy: "Makes a copy of an invoice with status draft, asking for the number; its lines are copied too."
     if (action.copy) {
       const words = action.copy.map((v) => valueWords(model, v));

@@ -600,6 +600,44 @@ export const w = {
   orderSoldOut: (label: string) => `Sold out: ${label}`,
   orderEmpty: "Nothing chosen yet.",
   orderTotal: "Total",
+  /** Merging two records (docs/design/intents.md §3). */
+  mergeInto: "Merge into…",
+  mergeIntoWhich: (label: string) => `Which ${label.toLowerCase()} does this one merge into?`,
+  mergeChoose: "Choose one",
+  mergeKeeps: "Keep",
+  mergeDecide: "The two differ here: choose what stays",
+  mergeSum: "Both added up",
+  mergeJoin: "Both, one after the other",
+  mergeSame: "Choose two different records to merge.",
+  mergeBothHave: (label: string) =>
+    `Each of the two has its own ${label.toLowerCase()}, and there can be only one: keep one first.`,
+  mergeMayNotChange: (plural: string) =>
+    `Some ${plural.toLowerCase()} that refer to it are not yours to change, so nothing was merged.`,
+  /** "Arctic Outdoor Co keeps its values; 3 orders move to it, and Arctic Outdoor goes to the trash." */
+  mergeSentence: (
+    kept: string,
+    moves: string[],
+    other: string,
+    goes: "trash" | "gone" | "stays",
+    taken: string[],
+  ) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+    const values = taken.length
+      ? `${kept} keeps its values and takes ${list(taken.map((t) => t.toLowerCase()))} from ${other}`
+      : `${kept} keeps its values`;
+    const moved = moves.length ? `; ${list(moves)} move to it` : "";
+    const fate =
+      goes === "trash"
+        ? `${other} goes to the trash`
+        : goes === "gone"
+          ? `${other} is deleted for good`
+          : `${other} stays, since you may not delete it`;
+    return `${values}${moved}, and ${fate}.`;
+  },
+  mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
+  mergeStayed: (n: number) =>
+    `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge and stay as they are.`,
 };
 
 export type Words = typeof w;

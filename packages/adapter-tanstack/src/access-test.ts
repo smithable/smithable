@@ -373,6 +373,24 @@ ${tests.join("\n\n")}
         )
       : {};
     const values = JSON.stringify({ ...readable, ...fits });
+    // A merge (intents.md §3): two of the viewer's own records, merged by whoever its rule lets.
+    if (action.merge) {
+      const pairOf = (owner: string) =>
+        `    const one = insert${model.name}(${owner}, ${values});\n    const two = insert${model.name}(${owner}, ${values});\n`;
+      describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
+${roles
+  .map(
+    (
+      role,
+    ) => `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
+    const viewer = ${role === null ? "null" : `signedIn(${JSON.stringify(role)})`};
+${pairOf(role === null ? (signedIn ? "stranger.id" : "null") : "viewer.id")}    expect(await can(() => ${run}(viewer, one.id, two.id))).toBe(${role !== null && allowed.roles.includes(role)});
+  });`,
+  )
+  .join("\n\n")}
+});`);
+      continue;
+    }
     // What the action asks for, as a test gives it: a value each field accepts.
     const askedValues = askedKeys(action, ir).map((x) => {
       const target = ir.models.find((m) => m.name === x.model) as ModelIR;
