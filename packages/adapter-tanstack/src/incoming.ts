@@ -104,6 +104,22 @@ function mailLinesOf(mail: IncomingMailIR, model: ModelIR): string[] {
   ];
 }
 
+/** A text as a template literal's own part: backticks, backslashes and ${ kept literal. */
+const literal = (s: string) => s.replace(/[\\`]/g, "\\$&").replace(/\$\{/g, "\\${");
+
+/**
+ * What the signature is of, as code over `raw` (the body) and `stamp` (the call's time):
+ * "{body}" is the body itself; "v0:{timestamp}:{body}" a template literal.
+ */
+function signedCode(text: string): string {
+  if (text === "{body}") return "raw";
+  const parts = text.split(/(\{\s*(?:body|timestamp)\s*\})/);
+  const code = parts
+    .map((p, i) => (i % 2 ? (p.includes("body") ? "${raw}" : "${stamp}") : literal(p)))
+    .join("");
+  return `\`${code}\``;
+}
+
 export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): string {
   const model = incoming.create ? modelNamed(ir, incoming.create) : undefined;
   const n = model ? names(model, t) : undefined;
@@ -147,11 +163,14 @@ export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): strin
     [...incoming.set, ...(incoming.reply?.set ?? []), ...(incoming.reply?.update ?? [])].some(
       (v) => "template" in v,
     );
+  // A setup check reads one value of the body; a template fills many.
+  const usesAt = usesFill || incoming.challenge !== undefined;
+  const stamp = incoming.signed?.timestamp;
   // A formula on the record reads fields of an empty one: only when one does.
   const readsRow = lines.some((l) => /\brow\b/.test(l));
   const usesF = [...lines, ...(reply?.code ? [reply.code] : [])].some((l) => l.includes("F."));
   return `${HEADER}// Incoming call "${incoming.name}" (smithable.yml incoming): another service calls this address
-// with its secret${incoming.signed ? " (a sha256 signature of the body)" : ""}; the secret is the setting ${incomingSecret(incoming)}.
+// with its secret${incoming.signed ? ` (a sha256 signature of the body${stamp ? " and the call's time" : ""})` : ""}; the secret is the setting ${incomingSecret(incoming)}.
 import { createHash, ${incoming.signed ? "createHmac, " : ""}timingSafeEqual } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { and, ${reply ? "desc, " : ""}eq, gt${reply ? ", inArray" : ""} } from "drizzle-orm";
@@ -176,14 +195,18 @@ const answer = (status: number, body: unknown) =>
 const digest = (s: string) => createHash("sha256").update(s).digest();
 const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 ${
-  usesFill
-    ? `/** A value of the call's JSON by its path ("check.name", "items.0.id"), as text; missing is "". */
+  usesAt
+    ? `/** A value of the call's ${incoming.body === "form" ? "body" : "JSON"} by its path ("check.name", "items.0.id"), as text; missing is "". */
 const at = (body: unknown, path: string): string => {
   let v: unknown = body;
   // The call's own keys only, never what objects inherit ("constructor", "__proto__").
   for (const part of path.split(".")) v = v !== null && typeof v === "object" && Object.hasOwn(v, part) ? (v as Record<string, unknown>)[part] : undefined;
   return v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
-};
+};`
+    : ""
+}${
+  usesFill
+    ? `
 const fill = (template: string, body: unknown) =>
   template.replace(/\\{([^{}]+)\\}/g, (_, path: string) => at(body, path.trim()));`
     : ""
@@ -257,18 +280,59 @@ export const Route = createFileRoute("/incoming/${incoming.name}")({
         const given = request.headers.get(${JSON.stringify(header)}) ?? "";
         ${
           incoming.signed
-            ? `const expected = \`sha256=\${createHmac("sha256", secret).update(raw).digest("hex")}\`;`
+            ? `${
+                stamp
+                  ? `const stamp = request.headers.get(${JSON.stringify(stamp.toLowerCase())}) ?? "";
+        // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
+        const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
+        if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
+        `
+                  : ""
+              }const expected = \`${literal(incoming.signed.prefix)}\${createHmac("sha256", secret).update(${signedCode(incoming.signed.text)}).digest("hex")}\`;`
             : `const expected = ${header === "authorization" ? "`Bearer ${secret}`" : "secret"};`
         }
         if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });
-        let body: unknown;
+${
+  incoming.body === "form"
+    ? `        let body: unknown;
+        if (/^application\\/json\\b/i.test(request.headers.get("content-type") ?? "")) {
+          // The service says JSON this time (a setup check, an event): read it as such.
+          try {
+            body = raw ? JSON.parse(raw) : {};
+          } catch {
+            return answer(400, { error: "The body is not JSON." });
+          }
+        } else {
+          // A form-encoded body (key=value&…), as a slash command comes; a value that is JSON (a chat tool's payload) is read as JSON.
+          // No prototype: a key named __proto__ is a key, nothing more.
+          const form: Record<string, unknown> = Object.create(null);
+          for (const [k, v] of new URLSearchParams(raw)) {
+            form[k] = v;
+            if (/^\\s*[[{]/.test(v))
+              try {
+                form[k] = JSON.parse(v);
+              } catch {
+                // Text as it came.
+              }
+          }
+          body = form;
+        }`
+    : `        let body: unknown;
         try {
           body = raw ? JSON.parse(raw) : {};
         } catch {
           return answer(400, { error: "The body is not JSON." });
-        }
+        }`
+}${
+  incoming.challenge
+    ? `
+        // The service's setup check: it sends a value and wants it back, nothing else.
+        const check = at(body, ${JSON.stringify(incoming.challenge)});
+        if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });`
+    : ""
+}
         // A call seen in the last day is answered as received and not acted on again.
-        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : '""'};
+        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : stamp ? "`sig:${given}`" : '""'};
         if (key) {
           const seen = db
             .select()

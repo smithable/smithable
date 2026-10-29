@@ -1,5 +1,5 @@
 import type { ParsedNode } from "yaml";
-import { isScalar } from "yaml";
+import { isMap, isScalar } from "yaml";
 import { followRenamed, lostValues } from "../condition.js";
 import { checkKeys, type Entry, mapEntries, type ParseContext, readString } from "../context.js";
 import type { YamlValue } from "../edit.js";
@@ -111,6 +111,78 @@ function readValues(
   return values;
 }
 
+const SIGNED_PARTS = ["body", "timestamp"];
+
+/**
+ * How a call is signed: `sha256` (an HMAC of the body, sent as "sha256=" and the hex), or a map
+ * for a service's own form: what is signed (`sha256: "v0:{timestamp}:{body}"`), the `prefix`
+ * before the hex, and the header the call's `timestamp` comes in, which is then checked.
+ */
+function readSigned(
+  ctx: ParseContext,
+  entry: Entry | undefined,
+  where: string,
+): IncomingIR["signed"] {
+  if (!entry) return undefined;
+  const node = entry.value;
+  if (isScalar(node)) {
+    if (node.value === "sha256") return { text: "{body}", prefix: "sha256=" };
+    ctx.error(node, "invalid-incoming", `"signed" of ${where} is sha256, or a map with sha256.`);
+    return undefined;
+  }
+  if (!isMap(node)) {
+    ctx.error(node, "invalid-incoming", `"signed" of ${where} is sha256, or a map with sha256.`);
+    return undefined;
+  }
+  const label = `"signed" of ${where}`;
+  const known = checkKeys(ctx, mapEntries(ctx, node, label) ?? [], label, {
+    allowed: ["sha256", "prefix", "timestamp"],
+  });
+  const byKey = new Map<string, Entry>(known.map((e) => [e.key, e]));
+  const text = (key: string) => {
+    const one = byKey.get(key);
+    return one ? readString(ctx, one.value, `"${key}" of ${label}`) : undefined;
+  };
+  const signedText = text("sha256") ?? "{body}";
+  const prefix = text("prefix") ?? "sha256=";
+  const timestamp = text("timestamp");
+  const parts = placeholders(signedText).map((p) => p.trim());
+  const bad = parts.find((p) => !SIGNED_PARTS.includes(p));
+  if (bad !== undefined)
+    ctx.error(
+      byKey.get("sha256")?.value ?? node,
+      "invalid-incoming",
+      `${label}: "{${bad}}" is not a part of the signed text; {body} and {timestamp} are.`,
+    );
+  else if (!parts.includes("body"))
+    ctx.error(
+      byKey.get("sha256")?.value ?? node,
+      "invalid-incoming",
+      `${label}: the signed text must take the call's {body}, like "v0:{timestamp}:{body}".`,
+    );
+  else if (parts.includes("timestamp") !== (timestamp !== undefined))
+    ctx.error(
+      byKey.get(timestamp !== undefined ? "timestamp" : "sha256")?.value ?? node,
+      "invalid-incoming",
+      timestamp !== undefined
+        ? `${label}: "timestamp" names the header the time comes in, so the signed text must take {timestamp}; else the time is not signed and anyone could set it.`
+        : `${label}: the signed text takes {timestamp}, so "timestamp" must name the header the time comes in.`,
+    );
+  if (timestamp !== undefined && !/^[A-Za-z][A-Za-z0-9-]*$/.test(timestamp))
+    ctx.error(
+      byKey.get("timestamp")?.value ?? node,
+      "invalid-incoming",
+      `"timestamp" of ${label} is a header's name, like X-Request-Timestamp.`,
+    );
+  if (/\s/.test(prefix))
+    ctx.error(
+      byKey.get("prefix")?.value ?? node,
+      "invalid-incoming",
+      `"prefix" of ${label} is what comes before the signature's hex, like "sha256=" or "v0=", without spaces.`,
+    );
+  return { text: signedText, prefix, ...(timestamp !== undefined ? { timestamp } : {}) };
+}
+
 function readIncoming(
   ctx: ParseContext,
   name: string,
@@ -120,7 +192,20 @@ function readIncoming(
 ): IncomingIR | undefined {
   const where = `incoming "${name}"`;
   const known = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["create", "set", "custom", "signed", "header", "id", "as", "mail", "fields", "reply"],
+    allowed: [
+      "create",
+      "set",
+      "custom",
+      "signed",
+      "header",
+      "id",
+      "as",
+      "mail",
+      "fields",
+      "reply",
+      "body",
+      "challenge",
+    ],
     later: ["run", "find"],
   });
   const byKey = new Map<string, Entry>(known.map((e) => [e.key, e]));
@@ -166,9 +251,7 @@ function readIncoming(
       "invalid-incoming",
       `A custom ${where} has no "set": its code decides.`,
     );
-  const signed = text("signed");
-  if (signed !== undefined && signed !== "sha256")
-    ctx.error(byKey.get("signed")?.value ?? keyNode, "invalid-incoming", `"signed" is sha256.`);
+  const signed = readSigned(ctx, byKey.get("signed"), where);
   const header = text("header");
   if (header !== undefined && !/^[A-Za-z][A-Za-z0-9-]*$/.test(header))
     ctx.error(
@@ -187,6 +270,21 @@ function readIncoming(
       `"id" of ${where} is one {path} in the call's JSON, like "{event.id}".`,
     );
   const as = text("as") ?? "admin";
+  // Chat tools send slash commands as forms and check a new address with a value to echo.
+  const bodyKind = text("body");
+  if (bodyKind !== undefined && bodyKind !== "form")
+    ctx.error(
+      byKey.get("body")?.value ?? keyNode,
+      "invalid-incoming",
+      `"body" of ${where} is form, or left out for JSON.`,
+    );
+  const challenge = text("challenge");
+  if (challenge !== undefined && !PATH.test(challenge.trim()))
+    ctx.error(
+      byKey.get("challenge")?.value ?? keyNode,
+      "invalid-incoming",
+      `"challenge" of ${where} is a path in the call's body, like "challenge".`,
+    );
   // A mail that becomes a record: which field each part of the mail goes to.
   const mailEntry = byKey.get("mail");
   const isMail =
@@ -195,6 +293,18 @@ function readIncoming(
     ctx.error(mailEntry.value, "invalid-incoming", `"mail" of ${where} is true or left out.`);
   let mail: IncomingIR["mail"];
   const fieldsEntry = byKey.get("fields");
+  if (isMail && bodyKind === "form")
+    ctx.error(
+      byKey.get("body")?.value ?? keyNode,
+      "invalid-incoming",
+      `A mail ${where} comes as JSON: no "body: form".`,
+    );
+  if (isMail && challenge !== undefined)
+    ctx.error(
+      byKey.get("challenge")?.value ?? keyNode,
+      "invalid-incoming",
+      `A mail ${where} has no setup check: no "challenge".`,
+    );
   if (isMail) {
     const model = models.find((m) => m.name === create);
     if (!model)
@@ -225,10 +335,12 @@ function readIncoming(
     ...(create !== undefined ? { create } : {}),
     set,
     custom,
-    ...(signed === "sha256" ? { signed: "sha256" as const } : {}),
+    ...(signed ? { signed } : {}),
     ...(header ? { header } : {}),
     ...(id ? { id } : {}),
     as,
+    ...(bodyKind === "form" ? { body: "form" as const } : {}),
+    ...(challenge ? { challenge: challenge.trim() } : {}),
     ...(mail ? { mail } : {}),
     ...(reply ? { reply } : {}),
   };
@@ -417,6 +529,12 @@ const addIncoming: Operation<{
   set?: string[];
   custom?: boolean;
   signed?: boolean;
+  signedText?: string;
+  signedPrefix?: string;
+  timestamp?: string;
+  header?: string;
+  form?: boolean;
+  challenge?: string;
   as?: string;
   mail?: boolean;
   fields?: string[];
@@ -447,6 +565,35 @@ const addIncoming: Operation<{
       signed: {
         type: "boolean",
         description: "A sha256 signature of the body, not the secret itself.",
+      },
+      signedText: {
+        type: "string",
+        description:
+          'What the service signs, when not the body alone: "v0:{timestamp}:{body}" (implies --signed).',
+      },
+      signedPrefix: {
+        type: "string",
+        description: 'What comes before the signature\'s hex: "sha256=" unless said; "v0=".',
+      },
+      timestamp: {
+        type: "string",
+        description:
+          "The header the call's time comes in, when the service signs it (with {timestamp} in --signed-text); a call over five minutes off is refused.",
+      },
+      header: {
+        type: "string",
+        description:
+          "The header the secret or signature comes in (Authorization or X-Signature-256 unless said).",
+      },
+      form: {
+        type: "boolean",
+        description:
+          "The call's body is form-encoded (key=value&…), as slash commands come, not JSON.",
+      },
+      challenge: {
+        type: "string",
+        description:
+          'A path in the body ("challenge"): a call with it is the service\'s setup check, answered with the value.',
       },
       as: refTo(
         { ref: "role", label: "Acts as" },
@@ -481,6 +628,12 @@ const addIncoming: Operation<{
       set,
       custom,
       signed,
+      signedText,
+      signedPrefix,
+      timestamp,
+      header,
+      form,
+      challenge,
       as,
       mail,
       fields,
@@ -504,7 +657,21 @@ const addIncoming: Operation<{
       throw new OperationError(
         "--reply is for a mail (--mail): what a reply to one of its records becomes.",
       );
+    if (mail && (form || challenge))
+      throw new OperationError(
+        "A mail comes as JSON and has no setup check: no --form or --challenge.",
+      );
     const values = setArgs(set);
+    const signing =
+      signedText !== undefined || signedPrefix !== undefined || timestamp !== undefined
+        ? {
+            ...(signedText !== undefined ? { sha256: signedText } : {}),
+            ...(signedPrefix !== undefined ? { prefix: signedPrefix } : {}),
+            ...(timestamp !== undefined ? { timestamp } : {}),
+          }
+        : signed
+          ? "sha256"
+          : undefined;
     const value: Record<string, YamlValue> = {
       ...(mail ? { mail: true } : {}),
       ...(create
@@ -512,7 +679,10 @@ const addIncoming: Operation<{
         : { custom: true }),
       ...(mail ? { fields: setArgs(fields) } : {}),
       ...(reply ? { reply: replyValue(reply, replyFields, replySet, replyThen) } : {}),
-      ...(signed ? { signed: "sha256" } : {}),
+      ...(signing !== undefined ? { signed: signing } : {}),
+      ...(header ? { header } : {}),
+      ...(form ? { body: "form" } : {}),
+      ...(challenge ? { challenge } : {}),
       ...(as && as !== "admin" ? { as } : {}),
     };
     if (spec.has(["incoming"])) spec.add(["incoming"], name, value);
@@ -602,7 +772,7 @@ export function incomingText(incoming: IncomingIR, one: (model: string) => strin
     : incoming.mail
       ? `a mail becomes ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}${incoming.mail.attachments ? ", its attachments with it" : ""}${incoming.reply ? `; a reply to one of them is added to it as ${/^[aeiou]/i.test(one(incoming.reply.create)) ? "an" : "a"} ${one(incoming.reply.create)}${incoming.reply.update.length ? ` and sets its ${incoming.reply.update.map((v) => v.field).join(" and ")}` : ""}` : ""}`
       : `adds ${/^[aeiou]/i.test(thing) ? "an" : "a"} ${thing}`;
-  return `When ${humanize(incoming.name).toLowerCase()} is called: ${what}, as ${incoming.as}${incoming.signed ? "; the call is signed" : ""}.`;
+  return `When ${humanize(incoming.name).toLowerCase()} is called: ${what}, as ${incoming.as}${incoming.signed ? `; the call is signed${incoming.signed.timestamp ? " with its time" : ""}` : ""}.`;
 }
 
 export const incomingOperations: AnyOperation[] = [addIncoming, setIncomingReply, removeIncoming];
@@ -726,10 +896,43 @@ export const incomingSection: SpecSection<"incoming"> = {
           description: "Hand the verified call to src/custom/incoming/<name>.ts.",
         },
         signed: {
-          const: "sha256",
-          description: "A sha256 signature of the body, made with the secret.",
+          description:
+            "A sha256 signature made with the secret instead of the secret itself: of the body (sha256), or in a service's own form.",
+          oneOf: [
+            { const: "sha256" },
+            {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                sha256: {
+                  type: "string",
+                  description:
+                    'What is signed: "{body}", or with the call\'s time "v0:{timestamp}:{body}".',
+                },
+                prefix: {
+                  type: "string",
+                  description: 'What comes before the hex: "sha256=" unless said; "v0=".',
+                },
+                timestamp: {
+                  type: "string",
+                  description:
+                    "The header the call's time comes in (seconds since 1970, or milliseconds); over five minutes off is refused.",
+                },
+              },
+            },
+          ],
         },
         header: { type: "string", description: "The header the secret or signature comes in." },
+        body: {
+          const: "form",
+          description:
+            "The body is form-encoded (key=value&…), not JSON; a value that is JSON is read as JSON.",
+        },
+        challenge: {
+          type: "string",
+          description:
+            'A path in the body ("challenge"): a call with it is the service\'s setup check, answered with the value.',
+        },
         id: {
           type: "string",
           description: 'The call\'s own id, e.g. "{event.id}": a repeat is not acted on.',

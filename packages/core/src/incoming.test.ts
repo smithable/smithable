@@ -9,7 +9,10 @@ const raw = import.meta.glob("../../../examples/status/smithable*.yml", {
   import: "default",
   eager: true,
 }) as Record<string, string>;
-const spec = raw["../../../examples/status/smithable.yml"] as string;
+// The example has an incoming entry of its own (the chat command); the tests add theirs to the spec without it.
+const spec = (raw["../../../examples/status/smithable.yml"] as string).split(
+  "\nincoming:",
+)[0] as string;
 const auth = raw["../../../examples/status/smithable.auth.yml"] as string;
 const withIncoming = (block: string) => `${spec}\nincoming:\n${block}`;
 const read = (block: string) => validateSpec({ path: "smithable.yml", text: withIncoming(block) });
@@ -39,7 +42,13 @@ test("an incoming call: a record per call with literals, formulas and {path} tex
       id: "{event.id}",
       as: "staff",
     },
-    { name: "paymentReceived", set: [], custom: true, signed: "sha256", as: "admin" },
+    {
+      name: "paymentReceived",
+      set: [],
+      custom: true,
+      signed: { text: "{body}", prefix: "sha256=" },
+      as: "admin",
+    },
   ]);
   const named = (m: string) => m.toLowerCase();
   expect(incomingText(ir?.incoming[0] as never, named)).toBe(
@@ -289,4 +298,86 @@ test("a choice value an entry sets follows its rename; one it loses is refused; 
     { ...ir, incoming: ir?.incoming.map((i) => ({ ...i, as: "intake" })) } as never,
   );
   expect(staffOnly.diagnostics.map((d) => d.code)).toContain("incoming-cannot-update");
+});
+
+test("a service's own signing: what is signed, the prefix, the header its time comes in; a form body; a setup check", () => {
+  const { ir, diagnostics } = read(`  chatCommand:
+    create: Incident
+    set: { title: "{text}", detectedAt: NOW() }
+    body: form
+    signed: { sha256: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: X-Request-Timestamp }
+    header: X-Signature
+    challenge: challenge
+    as: staff
+`);
+  expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(ir?.incoming[0]).toMatchObject({
+    name: "chatCommand",
+    signed: { text: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: "X-Request-Timestamp" },
+    header: "X-Signature",
+    body: "form",
+    challenge: "challenge",
+  });
+  expect(incomingText(ir?.incoming[0] as never, (m) => m.toLowerCase())).toBe(
+    "When chat command is called: adds an incident, as staff; the call is signed with its time.",
+  );
+  // The map's defaults are the plain form.
+  expect(read("  x: { custom: true, signed: { prefix: v0= } }\n").ir?.incoming[0]?.signed).toEqual({
+    text: "{body}",
+    prefix: "v0=",
+  });
+  // The signed text takes the body, and the time only with the header it comes in (and the other way round).
+  const bad = (signed: string) => codes(`  x: { custom: true, signed: ${signed} }\n`);
+  expect(bad('{ sha256: "v0:{timestamp}" , timestamp: X-T }')).toContain("invalid-incoming");
+  expect(bad('{ sha256: "{body}", timestamp: X-T }')).toContain("invalid-incoming");
+  expect(bad('{ sha256: "v0:{timestamp}:{body}" }')).toContain("invalid-incoming");
+  expect(bad('{ sha256: "{nonce}:{body}" }')).toContain("invalid-incoming");
+  expect(bad('{ sha256: "{body}", prefix: "v0 =" }')).toContain("invalid-incoming");
+  expect(bad("[sha256]")).toContain("invalid-incoming");
+  expect(codes("  x: { custom: true, body: xml }\n")).toContain("invalid-incoming");
+  expect(codes('  x: { custom: true, challenge: "a b" }\n')).toContain("invalid-incoming");
+  // A mail comes as JSON and has no setup check.
+  expect(
+    codes(
+      "  m: { mail: true, create: Incident, fields: { subject: title }, body: form, challenge: challenge }\n",
+    ).filter((c) => c === "invalid-incoming"),
+  ).toHaveLength(2);
+});
+
+test("addIncoming writes a service's own form: --signed-text, --signed-prefix, --timestamp, --header, --form, --challenge", () => {
+  const result = applyOperation({ spec, auth }, "addIncoming", {
+    name: "chatCommand",
+    create: "Incident",
+    set: ["title={text}", "detectedAt=NOW()"],
+    signedText: "v0:{timestamp}:{body}",
+    signedPrefix: "v0=",
+    timestamp: "X-Request-Timestamp",
+    header: "X-Signature",
+    form: true,
+    challenge: "challenge",
+    as: "staff",
+  });
+  if (!result.ok) throw new Error(result.message);
+  expect(result.files.spec).toMatch(
+    /chatCommand:\n {4}create: Incident\n {4}set:\n {6}title: "\{text\}"\n {6}detectedAt: NOW\(\)\n {4}signed:\n {6}sha256: "?v0:\{timestamp\}:\{body\}"?\n {6}prefix: v0=\n {6}timestamp: X-Request-Timestamp\n {4}header: X-Signature\n {4}body: form\n {4}challenge: challenge\n {4}as: staff/,
+  );
+  expect(
+    validateSpec({ path: "smithable.yml", text: result.files.spec }).ir?.incoming.at(-1)?.signed,
+  ).toEqual({ text: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: "X-Request-Timestamp" });
+  // A mail takes neither.
+  const refused = applyOperation({ spec, auth }, "addIncoming", {
+    name: "m",
+    mail: true,
+    create: "Incident",
+    fields: ["subject=title"],
+    form: true,
+  });
+  expect(refused.ok).toBe(false);
+  // The time's header and {timestamp} go together, also from the command line.
+  const half = applyOperation({ spec, auth }, "addIncoming", {
+    name: "y",
+    custom: true,
+    signedText: "v0:{timestamp}:{body}",
+  });
+  expect(half.ok).toBe(false);
 });

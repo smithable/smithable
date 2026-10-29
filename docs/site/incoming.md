@@ -69,8 +69,15 @@ From the command line: `smithable op addIncoming monitorDown --create Incident -
 
 ## 3. The secret, repeats and answers
 
-- **The secret** is a setting, `INCOMING_<NAME>_SECRET`, for example `INCOMING_SUPPORT_SECRET` (the name in capitals: `monitorDown` reads `INCOMING_MONITORDOWN_SECRET`); without it every call is refused with `401`. The caller sends it as `Authorization: Bearer <secret>`. With `signed: sha256`, it sends a signature of the body in `X-Signature-256` instead. Without the setting, the address refuses every call.
+- **The secret** is a setting, `INCOMING_<NAME>_SECRET`, for example `INCOMING_SUPPORT_SECRET` (the name in capitals: `monitorDown` reads `INCOMING_MONITORDOWN_SECRET`); without it every call is refused with `401`. The caller sends it as `Authorization: Bearer <secret>`. With `signed: sha256`, it sends a signature of the body in `X-Signature-256` instead; a service's own form of that signature is said in the entry (§4). Without the setting, the address refuses every call.
 - **Repeats:** services try again when they don't hear back. A call carrying an id the app saw in the last day, in the `Idempotency-Key` header or in the value `id` names, is answered as received and not acted on again.
 - **Answers:** `201` with the new record's id; `200` for a repeat or a custom call; `401` for a wrong secret or signature; `422` when the record is refused, for example a required field left empty.
+
+## 4. Chat and ticket services
+
+A slash command in a chat tool, or a ticket system's webhook, is a call like any other, with three small differences the entry can say: the call may come form-encoded (`body: form`), the signature may be of the call's time and body in the service's own form (`signed: { sha256: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: X-Slack-Request-Timestamp }`, the time checked to five minutes), and the service may check the address first with a value it wants back (`challenge: challenge`). Step by step, for each service:
+
+- [Slack](integrations/slack.md): a slash command that opens a record, and events.
+- [Jira](integrations/jira.md): an issue that becomes a record, with a webhook or an automation rule.
 
 The full rules are in the [spec reference](../spec/v0.1.md#incoming).

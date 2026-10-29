@@ -91,3 +91,15 @@ pages:
 
 navigation:
   main: [overview, incidents, updates, maintenance, components, team]
+
+incoming:
+  # A chat tool's slash command ("/incident Payments are slow") opens an incident: the command's
+  # text comes as a form, signed with its time; the tool checks the address first with a challenge.
+  chatCommand:
+    create: Incident
+    set: { title: "{text}", status: investigating, detectedAt: NOW() }
+    body: form
+    signed: { sha256: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: X-Slack-Request-Timestamp }
+    header: X-Slack-Signature
+    challenge: challenge
+    as: staff

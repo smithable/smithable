@@ -131,6 +131,24 @@ const PAGES = [
     group: "Connect",
   },
   {
+    src: "docs/site/integrations/slack.md",
+    out: "integrations/slack.html",
+    description:
+      "Slack and a Smithable app: a slash command that opens a record, signed with Slack's signing secret, and events with the setup check Slack makes.",
+    nav: "Slack",
+    group: "Connect",
+    hidden: true,
+  },
+  {
+    src: "docs/site/integrations/jira.md",
+    out: "integrations/jira.html",
+    description:
+      "Jira and a Smithable app: an issue that becomes a record through a webhook with a secret, or an automation rule's web request.",
+    nav: "Jira",
+    group: "Connect",
+    hidden: true,
+  },
+  {
     src: "docs/site/appointments.md",
     out: "appointments.html",
     description:
@@ -492,6 +510,8 @@ for (const page of PAGES) {
       },
     },
   });
+  // A page may live in a folder of the site (integrations/slack.html).
+  mkdirSync(dirname(join(out, page.out)), { recursive: true });
   writeFileSync(join(out, page.out), html(page, marked.parse(page.markdown)));
 }
 // The search index (search.json): every page cut at its headings, each part's words as plain

@@ -557,10 +557,19 @@ export interface IncomingIR {
   set: IncomingValueIR[];
   /** The call is handed to src/custom/incoming/<name>.ts after it is verified. */
   custom: boolean;
-  /** "sha256": a signature of the body made with the secret; else the secret itself is sent. */
-  signed?: "sha256";
+  /**
+   * A signature instead of the secret itself: an HMAC-SHA256 made with the secret of `text`
+   * ("{body}" as a rule; "v0:{timestamp}:{body}" when the service signs the call's time too),
+   * sent as `prefix` and the hex ("sha256=" unless said). `timestamp` names the header the
+   * time comes in; a call more than five minutes off is refused (backlog Fable 77).
+   */
+  signed?: { text: string; prefix: string; timestamp?: string };
   /** The header the secret or the signature comes in. */
   header?: string;
+  /** The call's body is form-encoded (key=value&…), not JSON; a value that is JSON is read as JSON. */
+  body?: "form";
+  /** A path in the call's body ("challenge"): a call that has it is a setup check, answered with the value and nothing else. */
+  challenge?: string;
   /** A template of the call's own id ("{event.id}"): a call seen in the last day is not acted on again. */
   id?: string;
   /** The role the call acts as (its record goes through that role's create rule). */
