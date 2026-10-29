@@ -38,4 +38,8 @@ On smithable.ai:
 - **Mail** is sent for you; there's nothing to set up.
 - **Calls out** take their address and secret from the project's **Connections** page.
 - **The API** takes keys made in the app itself, on its users page.
-- **Calls in**, other than mail, can't be set up there yet. An incoming address checks a secret, and smithable.ai has no place to set that secret yet. Until it does, the address refuses every call with `401`. A service such as Zapier or Make can add records through [the API with a key](integrations/api-key.md) instead.
+- **Calls in** take their secret from the **Calls in** card on the project's page. Once the app is published, the card lists each incoming entry with its address, live and staging, to give the service. Then either:
+  - **Make a secret**: it makes a long random secret and shows it once. Copy it into the service before you leave the page. If it's lost, **Make a new secret** replaces it, and the service needs the new one.
+  - **Or use the service's own**: paste a secret the service made, such as Slack's signing secret, then **Use this secret**.
+
+  One secret serves both the live and the staging app. They get it as the setting `INCOMING_<NAME>_SECRET` and restart to use it. An entry without a secret refuses every call with `401`.

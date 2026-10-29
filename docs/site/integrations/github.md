@@ -53,10 +53,10 @@ The report is made as `staff` (the entry's `as`), so it goes through that role's
 
 ## 3. The secret
 
-Make a long random secret, for example with `openssl rand -hex 32`. The app reads it from the setting `INCOMING_NEWISSUE_SECRET`, which is the entry's name in capitals:
+The app reads the secret from the setting `INCOMING_NEWISSUE_SECRET`, which is the entry's name in capitals:
 
-- **On your own server:** an environment variable where the app runs, then restart the app.
-- **On smithable.ai:** there's no place to set it yet (see [Integrations](../integrations.md#on-smithableai-and-on-your-own-server)).
+- **On your own server:** make a long random secret, for example with `openssl rand -hex 32`. Set it as an environment variable where the app runs, then restart the app.
+- **On smithable.ai:** publish the app, then open the **Calls in** card on the project's page. It shows the entry's address, live and staging. **Make a secret** makes one and shows it once: paste it into the service there and then. The app gets it as `INCOMING_NEWISSUE_SECRET` and restarts to use it ([more](../integrations.md#on-smithableai-and-on-your-own-server)).
 
 Without the setting, the address refuses every call with `401`.
 

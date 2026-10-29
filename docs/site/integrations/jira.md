@@ -27,7 +27,7 @@ From the command line: `smithable op addIncoming issueCreated --create Incident 
 ## 2. A webhook on Jira's side
 
 1. In Jira, **Settings → System → WebHooks → Create a WebHook** (a Jira administrator's page).
-2. **URL**: `https://<your app>/incoming/issueCreated`. **Secret**: a long random value you make up; the same value is the app's setting `INCOMING_ISSUECREATED_SECRET` (the entry's name in capitals), set in the app's environment when you host it yourself. On smithable.ai there is not yet a place to set a call's secret; it is coming to the app's Connections page.
+2. **URL**: `https://<your app>/incoming/issueCreated`. **Secret**: the same value as the app's setting `INCOMING_ISSUECREATED_SECRET` (the entry's name in capitals). When you host the app yourself, make a long random value and set it in the app's environment. On smithable.ai, publish the app, then press **Make a secret** in the **Calls in** card on the project's page and paste the secret it shows once into Jira; the app restarts to use it ([more](../integrations.md#on-smithableai-and-on-your-own-server)).
 3. **Events**: Issue → created (and updated, if a change should make a record too). A **JQL filter** such as `project = PAY` limits it to one project.
 4. Save, then create an issue in that project: the incident appears in the app with the issue's summary as its title.
 

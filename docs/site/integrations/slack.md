@@ -28,7 +28,7 @@ From the command line: `smithable op addIncoming chatCommand --create Incident -
 ## 2. On Slack's side
 
 1. At [api.slack.com/apps](https://api.slack.com/apps), create an app (from scratch) in your workspace.
-2. Under **Basic Information**, copy the **Signing Secret**. In your app it is the setting `INCOMING_CHATCOMMAND_SECRET` (the entry's name in capitals), set in the app's environment when you host it yourself. On smithable.ai there is not yet a place to set a call's secret; it is coming to the app's Connections page.
+2. Under **Basic Information**, copy the **Signing Secret**. In your app it is the setting `INCOMING_CHATCOMMAND_SECRET` (the entry's name in capitals), set in the app's environment when you host it yourself. On smithable.ai, publish the app, then paste it into the **Calls in** card on the project's page under **Or use the service's own**, and press **Use this secret**; the app restarts to use it ([more](../integrations.md#on-smithableai-and-on-your-own-server)).
 3. Under **Slash Commands**, create the command (`/incident`) with the **Request URL** `https://<your app>/incoming/chatCommand`.
 4. Install the app to the workspace. Type `/incident Payments are slow` in any channel: the incident appears in the app, titled "Payments are slow".
 
