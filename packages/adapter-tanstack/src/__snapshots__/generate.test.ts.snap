@@ -29696,9 +29696,8 @@ async function pair(viewer: Viewer | null, first: number, second: number, _stric
   const one = await customerData.get(viewer, first);
   const two = await customerData.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
-  const firstStays = true;
-  // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-  const [kept, other] = firstStays ? [one, two] : [two, one];
+  // The first named stays: the person picked it.
+  const [kept, other] = [one, two];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
   if (!allows(customerAccess.write, viewer, kept.accountManagerId)) throw new AccessDenied(true);
@@ -31826,6 +31825,7 @@ const MOVES: Record<string, DoorMove[]> = {
       kind: "merge",
       action: "mergeCustomers",
       model: "Customer",
+      into: "chosen",
       choices: ["name", "email", "phone", "segment", "creditLimit", "notes"],
     },
     {
@@ -32117,7 +32117,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   "delete:FollowUp": async (viewer, _move, body) => followUpData.remove(viewer, record(body)),
   "merge:mergeCustomers": async (viewer, _move, body) => {
     // The other: another record the person may change; the kept one first, as the merge's keep says.
-    const kept = record(body);
+    // The other: another record the person may change; the kept one first, as the person picked.
     const other = (await customerData.list(viewer)).find((row) => row.id !== kept && allows(customerAccess.write, viewer, row.accountManagerId as string | null))?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
     const [first, second] = [kept, other];
@@ -37075,7 +37075,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "5e2ca320 generated",
-  "src/generated/actions/merge-customers.server.ts": "b415cd68 generated",
+  "src/generated/actions/merge-customers.server.ts": "19c64f97 generated",
   "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
@@ -37086,7 +37086,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "00268b9c generated",
   "src/generated/customer.ts": "79b283e3 generated",
-  "src/generated/dev-door.server.ts": "5efb7b3c generated",
+  "src/generated/dev-door.server.ts": "e941c55d generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
   "src/generated/follow-up.server.ts": "60c21496 generated",

@@ -259,7 +259,8 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
                       ? {
                           type: "object",
                           required: ["other"],
-                          description: `A merge: the record in the path stays${action.merge?.keep === "chosen" ? "" : ` (it must be the ${action.merge?.keep} of the two)`}; other goes. choices: keep or other for each field the two differ in where the merge asks.`,
+                          description:
+                            "A merge: the record in the path stays; other goes. choices: keep or other for each field the two differ in where the merge asks.",
                           properties: {
                             other: { type: "integer" },
                             choices: {

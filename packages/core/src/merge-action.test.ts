@@ -48,13 +48,13 @@ pages:
   ]);
 });
 
-test("merge: <Model> is a standard action that sets nothing, with keep and a rule per field", () => {
+test("merge: <Model> is a standard action that sets nothing, with into and a rule per field", () => {
   const { ir, diagnostics } = read(`  mergeCustomers:
     merge: Customer
     intent: Two records of the same customer become one.
-  mergeNewest:
+  combineCustomers:
     merge: Customer
-    keep: newest
+    into: new
     fields: { email: ask, segment: keep, revenue: add, notes: append, name: other }
 `);
   expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
@@ -64,16 +64,16 @@ test("merge: <Model> is a standard action that sets nothing, with keep and a rul
     custom: false,
     on: "Customer",
     set: [],
-    merge: { keep: "chosen", fields: {} },
+    merge: { into: "chosen", fields: {} },
     intent: "Two records of the same customer become one.",
   });
   expect(second?.merge).toEqual({
-    keep: "newest",
+    into: "new",
     fields: { email: "ask", segment: "keep", revenue: "add", notes: "append", name: "other" },
   });
 });
 
-test("a merge names its model and nothing else; users cannot be merged; keep and the fields' rules are checked", () => {
+test("a merge names its model and nothing else; users cannot be merged; into and the fields' rules are checked", () => {
   expect(errors("  x: { merge: Custmer }\n")).toEqual([
     expect.stringContaining('There is no model named "Custmer"'),
   ]);
@@ -81,16 +81,19 @@ test("a merge names its model and nothing else; users cannot be merged; keep and
     expect.stringContaining("Users cannot be merged"),
   ]);
   expect(errors("  x: { merge: Customer, set: { segment: retail } }\n")).toEqual([
-    expect.stringContaining('"merge" takes keep and fields and nothing else, no set'),
+    expect.stringContaining('"merge" takes into and fields and nothing else, no set'),
   ]);
   expect(errors("  x: { merge: Customer, custom: true }\n")).toEqual([
     expect.stringContaining("nothing else, no custom"),
   ]);
-  expect(errors("  x: { merge: Customer, keep: first }\n")).toEqual([
-    expect.stringContaining('"keep" of action "x" is chosen, oldest or newest.'),
+  expect(errors("  x: { merge: Customer, keep: newest }\n")).toEqual([
+    expect.stringContaining('"keep" of action "x" was replaced by "into" (chosen or new)'),
   ]);
-  expect(errors("  x: { on: Customer, set: { segment: retail }, keep: newest }\n")).toEqual([
-    expect.stringContaining('"keep" of action "x" goes with "merge: <Model>".'),
+  expect(errors("  x: { merge: Customer, into: first }\n")).toEqual([
+    expect.stringContaining('"into" of action "x" is chosen or new.'),
+  ]);
+  expect(errors("  x: { on: Customer, set: { segment: retail }, into: new }\n")).toEqual([
+    expect.stringContaining('"into" of action "x" goes with "merge: <Model>".'),
   ]);
   // A field's rule: the field must exist and take one; add is for numbers, append for texts.
   expect(errors("  x: { merge: Customer, fields: { emial: ask } }\n")).toEqual([
@@ -129,14 +132,14 @@ test("addAction --merge writes the entry and offers it on the model's page; a mo
   const plain = applyOperation(files, "addAction", {
     action: "m",
     merge: "Customer",
-    keep: "chosen",
+    into: "chosen",
   });
   expect(plain.ok && plain.files.spec).toMatch(/\n {2}m:\n {4}merge: Customer\n/);
   const refused = (args: Record<string, unknown>) =>
     expect(applyOperation(files, "addAction", { action: "m", ...args })).toMatchObject({
       ok: false,
     });
-  refused({ keep: "newest" });
+  refused({ into: "new" });
   refused({ merge: "Customer", on: "Customer" });
   refused({ merge: "User" });
   refused({ merge: "Nobody" });

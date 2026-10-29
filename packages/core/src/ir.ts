@@ -592,11 +592,13 @@ export interface StandardActionIR extends ActionBase {
   /** Lists of the model whose records the copy takes along (§8). */
   with?: string[];
   /**
-   * A merge (docs/design/intents.md §3): two records of `on` become one; `set` is then empty.
-   * `keep` says which record stays (the person's choice, the oldest or the newest), `fields`
-   * what each field does; a field not named is asked when the two differ.
+   * A merge (docs/design/intents.md §3): two or more records of `on` become one; `set` is then
+   * empty. `into` says which: `chosen`, the one the person picks, which stays and takes the
+   * others' references while they go to the trash; or `new`, a new record made from the picked
+   * ones, which stay as they are. `fields` says what each field does; a field not named is asked
+   * when the records differ.
    */
-  merge?: { keep: MergeKeep; fields: Record<string, MergeRule> };
+  merge?: { into: MergeInto; fields: Record<string, MergeRule> };
   /**
    * A split (docs/design/intents.md §4): one record of `on` becomes two; `set` is then empty.
    * `move` is the list whose picked records go to the new record, `copy` the stored fields the new
@@ -606,11 +608,12 @@ export interface StandardActionIR extends ActionBase {
   split?: { move: string; copy: string[] };
 }
 
-export type MergeKeep = "chosen" | "oldest" | "newest";
+export type MergeInto = "chosen" | "new";
 /**
- * What a field does in a merge: the kept record's value (the other's when the kept is empty), the
- * other's, the person's pick when the two differ (the default), the sum (numbers and amounts), or
- * both texts joined. References between models are not fields here: they move.
+ * What a field does in a merge: the kept record's value (the first other's that is not empty when
+ * the kept is), the first other's that is not empty, the person's pick when the records differ (the
+ * default), the sum (numbers and amounts), or the texts joined. References between models are not
+ * fields here: they move. With `into: new` the first picked record stands where the kept one does.
  */
 export type MergeRule = "keep" | "other" | "ask" | "add" | "append";
 

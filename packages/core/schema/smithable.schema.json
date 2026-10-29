@@ -924,15 +924,14 @@
           },
           "merge": {
             "type": "string",
-            "description": "A merge: two records of this model become one; every reference to the other moves to the kept record, which keeps its values, and the other goes to the trash."
+            "description": "A merge: two or more records of this model become one; every reference to the others moves to the kept record, which keeps its values, and the others go to the trash."
           },
-          "keep": {
+          "into": {
             "enum": [
               "chosen",
-              "oldest",
-              "newest"
+              "new"
             ],
-            "description": "For a merge: which record stays; chosen (the person says) unless said."
+            "description": "For a merge: chosen (the default), the person picks the record that stays; or new, a new record made from the picked ones, which stay as they are."
           },
           "fields": {
             "type": "object",

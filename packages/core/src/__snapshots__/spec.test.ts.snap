@@ -1826,7 +1826,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       "input": [],
       "merge": {
         "fields": {},
-        "keep": "chosen",
+        "into": "chosen",
       },
       "name": "mergeCustomers",
       "on": "Customer",

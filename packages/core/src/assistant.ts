@@ -324,17 +324,24 @@ export function assistantOffer(
     });
   // A merge runs on the record that stays, a split on the record that is split
   // (docs/design/intents.md §3, §4).
-  const merges = actions.filter((a): a is StandardActionIR => !a.custom && a.merge !== undefined);
+  const merges = actions.filter(
+    (a): a is StandardActionIR => !a.custom && a.merge?.into === "chosen",
+  );
+  const combines = actions.filter(
+    (a): a is StandardActionIR => !a.custom && a.merge?.into === "new",
+  );
   const splits = actions.filter((a): a is StandardActionIR => !a.custom && a.split !== undefined);
+  // A rows action and a combine run on ids, not one record.
+  const byIds = onRows.length > 0 || combines.length > 0;
   if (actions.length || onRows.length || trashing.length)
     tools.push({
       name: "run",
-      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${onRows.length ? ` ${onRows.map((a) => a.name).join(", ")} run on the rows given as \`ids\` instead of one \`id\`.` : ""}${merges.length ? ` ${merges.map((a) => `${a.name}${a.merge?.keep === "chosen" ? "" : ` (\`id\` must be the ${a.merge?.keep})`}`).join(", ")} merge two records: \`id\` stays, \`other\` goes into it; \`choices\` says per field where the two differ which value stays ("keep" or "other"), as the person decides; one missing is asked back.` : ""}${splits.length ? ` ${splits.map((a) => a.name).join(", ")} split a record: \`move\` holds the ids of the list's records that go to the new record, some but not all.` : ""}${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
+      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${onRows.length ? ` ${onRows.map((a) => a.name).join(", ")} run on the rows given as \`ids\` instead of one \`id\`.` : ""}${merges.length ? ` ${merges.map((a) => a.name).join(", ")} merge two or more records: \`id\` stays, \`others\` go into it; \`choices\` says per field where the records differ which value stays ("keep" or the id of the record whose value is taken), as the person decides; one missing is asked back.` : ""}${combines.length ? ` ${combines.map((a) => a.name).join(", ")} combine two or more records, given as \`ids\` in order, into a new one, which they stay beside; \`choices\` says per differing field the id of the record whose value is taken; \`remove: true\` puts them in the trash when they are the same apart from the sums and nothing refers to them, only if the person asked.` : ""}${splits.length ? ` ${splits.map((a) => a.name).join(", ")} split a record: \`move\` holds the ids of the list's records that go to the new record, some but not all.` : ""}${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
       inputSchema: {
         type: "object",
         required: ["action"],
-        // A record's action takes id; a rows action takes ids.
-        ...(onRows.length
+        // A record's action takes id; a rows action and a combine take ids.
+        ...(byIds
           ? { anyOf: [{ required: ["id"] }, { required: ["ids"] }] }
           : { required: ["action", "id"] }),
         properties: {
@@ -347,14 +354,24 @@ export function assistantOffer(
             ],
           },
           id,
-          ...(onRows.length ? { ids: { type: "array", items: id, minItems: 1 } } : {}),
-          ...(merges.length
+          ...(byIds ? { ids: { type: "array", items: id, minItems: 1 } } : {}),
+          ...(merges.length ? { others: { type: "array", items: id, minItems: 1 } } : {}),
+          ...(merges.length || combines.length
             ? {
-                other: id,
                 choices: {
                   type: "object",
-                  additionalProperties: { enum: ["keep", "other"] },
-                  description: 'Per field, "keep" (the record that stays) or "other".',
+                  additionalProperties: { type: ["string", "integer"] },
+                  description:
+                    'Per field, "keep" (the record that stays; for a combine, the first picked) or the id of the record whose value is taken.',
+                },
+              }
+            : {}),
+          ...(combines.length
+            ? {
+                remove: {
+                  type: "boolean",
+                  description:
+                    "Combine: the picked records go to the trash when they are the same apart from the sums and nothing refers to them. Only after the person agreed.",
                 },
               }
             : {}),
@@ -420,7 +437,8 @@ export function assistantOffer(
                 const inputs = a.input.filter((f) => f.name !== a.rows?.field).map((f) => f.name);
                 return `${a.name} (${a.rows?.model ?? ""} rows, by ids${inputs.length ? `; input: ${inputs.join(", ")}` : ""})`;
               }
-              if (a.merge) return `${a.name} (${a.on}: two into one)`;
+              if (a.merge?.into === "new") return `${a.name} (${a.on}: two or more into a new one)`;
+              if (a.merge) return `${a.name} (${a.on}: two or more into one)`;
               if (a.split) return `${a.name} (${a.on}: one into two, moving ${a.split.move})`;
               const when = a.when ? `, when ${conditionText(a.when)}` : "";
               return `${a.name} (${a.on}${when})`;
@@ -473,7 +491,9 @@ function describeKind(model: ModelIR, actions: SpecIR["actions"], content: Conte
     if (a.merge) {
       const asked = mergeAsked(a, model);
       words.push(
-        `Two records become one: everything that points to the other moves to the one that stays, and the other goes to the trash.${asked.length ? ` Asked when the two differ: ${asked.join(", ")}.` : ""}`,
+        a.merge.into === "new"
+          ? `Two or more records become a new one, which takes their values; they stay as they were.${asked.length ? ` Asked when they differ: ${asked.join(", ")}.` : ""}`
+          : `Two or more records become one: everything that points to the others moves to the one that stays, and the others go to the trash.${asked.length ? ` Asked when they differ: ${asked.join(", ")}.` : ""}`,
       );
     } else if (a.split)
       words.push(`One record becomes two: the picked ${a.split.move} go to the new record.`);

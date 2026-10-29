@@ -12,6 +12,7 @@ import {
   type Condition,
   type FieldIR,
   type FieldValue,
+  type MergeInto,
   type ModelIR,
   mergeAsked,
   type SpecIR,
@@ -62,11 +63,19 @@ export type Move =
       slots: Slot[];
     }
   /**
-   * A merge of two records of `model`, open to the roles granted the action with write on the
-   * model: the app picks two records the user may write; `choices` are the fields it decides keep
-   * or other for where the two differ.
+   * A merge of two or more records of `model`, open to the roles granted the action with write on
+   * the model (`into: chosen`: the app picks records the user may write) or create on it (`into:
+   * new`: the app picks records the user may read); `choices` are the fields it decides for where
+   * the records differ.
    */
-  | { id: string; kind: "merge"; action: string; model: string; choices: string[] }
+  | {
+      id: string;
+      kind: "merge";
+      action: string;
+      model: string;
+      into: MergeInto;
+      choices: string[];
+    }
   /**
    * A split of a record of `model` with two or more in `list`, open to the roles granted the
    * action with create on the model: the app picks the record and some of the list's records the
@@ -190,6 +199,7 @@ export function movesFor(ir: SpecIR, auth: AuthIR, actor: Actor): Move[] {
           kind: "merge",
           action: action.name,
           model: action.on,
+          into: action.merge.into,
           choices: mergeAsked(action, model),
         });
         continue;

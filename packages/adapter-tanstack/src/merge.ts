@@ -101,7 +101,7 @@ import { ${a.preview}, ${a.run} } from "./${kebab(action.name)}.server";
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Which of the two stays: the person's choice, the oldest or the newest. */
-export const ${a.keep} = ${JSON.stringify(action.merge?.keep)};
+export const ${a.keep} = "chosen";
 
 /** The two records: the one the person keeps (or the first picked) and the other. */
 const pair = z.object({ keep: z.number().int(), other: z.number().int() });
@@ -138,7 +138,7 @@ export function mergeActionServer(
   const a = actionNames(action);
   const model = modelNamed(ir, action.on);
   const n = names(model, t);
-  const merge = action.merge ?? { keep: "chosen", fields: {} };
+  const merge = action.merge ?? { into: "chosen", fields: {} as Record<string, string> };
   const signedIn = hasSignIn(auth);
   const owner = (m: ModelIR, row: string) => (signedIn ? `, ${row}.${ownerKey(m)}` : "");
   const referrers = referrersOf(ir, model.name);
@@ -326,15 +326,14 @@ function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: b
 }
 
 /** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number, ${merge.keep === "chosen" ? "_strict" : "strict"} = false) {
+async function pair(viewer: Viewer | null, first: number, second: number, _strict = false) {
   check(${a.access}, viewer);
   if (first === second) throw new Conflict(w.mergeSame);
   const one = await ${n.data}.get(viewer, first);
   const two = await ${n.data}.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
-  const firstStays = ${merge.keep === "chosen" ? "true" : merge.keep === "oldest" ? "one.id < two.id" : "one.id > two.id"};
-  // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-${merge.keep === "chosen" ? "" : `  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(${JSON.stringify(merge.keep)}, String(two.${title} ?? two.id)));\n`}  const [kept, other] = firstStays ? [one, two] : [two, one];
+  // The first named stays: the person picked it.
+  const [kept, other] = [one, two];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
   if (!allows(${n.access}.write, viewer${owner(model, "kept")})) throw new AccessDenied(true);
