@@ -31,6 +31,13 @@ incoming:
     mail: true
     create: Request
     fields: { from: email, subject: title, body: body, attachments: attachments }
+  chatCommand:
+    create: Incident
+    set: { title: "{text}", detectedAt: NOW() }
+    body: form
+    signed: { sha256: "v0:{timestamp}:{body}", prefix: "v0=", timestamp: X-Request-Timestamp }
+    header: X-Signature
+    challenge: challenge
 `,
 }).ir as SpecIR;
 const auth = validateAuth(
@@ -64,6 +71,34 @@ test("a custom, signed call: an HMAC of the body, and a stub of the project's ow
   const stub = file("src/custom/incoming/payment-received.ts");
   expect(stub?.zone).toBe("custom");
   expect(stub?.content).toContain("export async function handle(body: unknown, caller: Viewer)");
+});
+
+test("a chat tool's command: a form body, a signature of the time and the body, the time checked, the setup check echoed", () => {
+  const route = file("src/routes/incoming/chatCommand.ts")?.content ?? "";
+  expect(route).toContain('request.headers.get("x-signature")');
+  expect(route).toContain('const stamp = request.headers.get("x-request-timestamp") ?? "";');
+  expect(route).toContain("Math.abs(Date.now() - sent) > 300_000");
+  expect(route).toContain(
+    'const expected = `v0=${createHmac("sha256", secret).update(`v0:${stamp}:${raw}`).digest("hex")}`;',
+  );
+  expect(route).toContain("for (const [k, v] of new URLSearchParams(raw)) {");
+  expect(route).toContain("const form: Record<string, unknown> = Object.create(null);");
+  expect(route).toContain("form[k] = JSON.parse(v);");
+  // The setup check comes as JSON even to a form address: the content type decides.
+  expect(route).toContain(
+    'if (/^application\\/json\\b/i.test(request.headers.get("content-type") ?? "")) {',
+  );
+  // Without an id of its own, a signed call's signature is its id: a replay within the window is a repeat.
+  expect(route).toContain('const key = request.headers.get("idempotency-key") ?? `sig:${given}`;');
+  expect(route).toContain('const check = at(body, "challenge");');
+  expect(route).toContain('"content-type": "text/plain"');
+  expect(route).toContain('title: fill("{text}", body),');
+  // The plain form is as before: the body alone, "sha256=" before the hex, no time.
+  const plain = file("src/routes/incoming/paymentReceived.ts")?.content ?? "";
+  expect(plain).not.toContain("const stamp");
+  expect(plain).toContain(
+    'const expected = `sha256=${createHmac("sha256", secret).update(raw).digest("hex")}`;',
+  );
 });
 
 test("a mail becomes a record: sender, subject and text to their fields, attachments saved as uploads", () => {

@@ -1145,12 +1145,42 @@
             "description": "Hand the verified call to src/custom/incoming/<name>.ts."
           },
           "signed": {
-            "const": "sha256",
-            "description": "A sha256 signature of the body, made with the secret."
+            "description": "A sha256 signature made with the secret instead of the secret itself: of the body (sha256), or in a service's own form.",
+            "oneOf": [
+              {
+                "const": "sha256"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "sha256": {
+                    "type": "string",
+                    "description": "What is signed: \"{body}\", or with the call's time \"v0:{timestamp}:{body}\"."
+                  },
+                  "prefix": {
+                    "type": "string",
+                    "description": "What comes before the hex: \"sha256=\" unless said; \"v0=\"."
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "description": "The header the call's time comes in (seconds since 1970, or milliseconds); over five minutes off is refused."
+                  }
+                }
+              }
+            ]
           },
           "header": {
             "type": "string",
             "description": "The header the secret or signature comes in."
+          },
+          "body": {
+            "const": "form",
+            "description": "The body is form-encoded (key=value&…), not JSON; a value that is JSON is read as JSON."
+          },
+          "challenge": {
+            "type": "string",
+            "description": "A path in the body (\"challenge\"): a call with it is the service's setup check, answered with the value."
           },
           "id": {
             "type": "string",

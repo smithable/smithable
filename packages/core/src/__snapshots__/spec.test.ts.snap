@@ -4114,7 +4114,41 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
     "timezone": "Europe/Mariehamn",
   },
   "extensions": {},
-  "incoming": [],
+  "incoming": [
+    {
+      "as": "staff",
+      "body": "form",
+      "challenge": "challenge",
+      "create": "Incident",
+      "custom": false,
+      "header": "X-Slack-Signature",
+      "name": "chatCommand",
+      "set": [
+        {
+          "field": "title",
+          "template": "{text}",
+        },
+        {
+          "field": "status",
+          "value": "investigating",
+        },
+        {
+          "field": "detectedAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
+        },
+      ],
+      "signed": {
+        "prefix": "v0=",
+        "text": "v0:{timestamp}:{body}",
+        "timestamp": "X-Slack-Request-Timestamp",
+      },
+    },
+  ],
   "models": [
     {
       "fields": [
