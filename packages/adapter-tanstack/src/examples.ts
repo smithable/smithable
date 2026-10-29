@@ -65,7 +65,10 @@ export function examplesTest(action: CustomActionIR, ir: SpecIR, auth: AuthIR): 
           return [
             `${dataKey(f)}: ${f.type.model === USER_MODEL ? "viewer.id" : `first(${JSON.stringify(f.type.model)})`}`,
           ];
-        return [`${dataKey(f)}: ${JSON.stringify(sample[f.name] ?? null)}`];
+        const value = sample[f.name] ?? null;
+        return [
+          `${dataKey(f)}: ${f.type.kind === "scalar" && f.type.name === "datetime" && value !== null ? `new Date(${JSON.stringify(value)})` : JSON.stringify(value)}`,
+        ];
       });
     const owner = signedIn && !model.ownedBy ? `, ${ownerKey(model)}: viewer.id` : "";
     const key = row.id === undefined ? `"#${i}"` : JSON.stringify(row.id);

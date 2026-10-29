@@ -128,11 +128,11 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   const line = db
     .select({ details: schema.auditLog.details })
     .from(schema.auditLog)
-    .where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "split")))
+    .where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "split"), sql\`json_extract(\${schema.auditLog.details}, '$.by') = \${${JSON.stringify(action.name)}}\`))
     .get();
   const split = line?.details as { from: number; by: string; moved: number[] } | undefined;
-  // This split's own line: another split of the model moves another list.
-  if (!split || split.by !== ${JSON.stringify(action.name)}) throw new Conflict(w.splitNotSplit);
+  // This split's own line (another split of the model moves another list).
+  if (!split) throw new Conflict(w.splitNotSplit);
   // The one it came from must still be there to take them back.
   if (!(await ${n.data}.get(viewer, split.from))) throw new Conflict(w.splitOriginalGone);
   // What is still on the new record and the viewer may change goes back; the rest stays, counted.
@@ -151,7 +151,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   return { original: split.from, stayed: split.moved.length - back.length };
 }
 `;
-  return `${HEADER}import { and, eq, inArray${child.trash ? ", isNull" : ""}${numbered ? ", max" : ""} } from "drizzle-orm";
+  return `${HEADER}import { and, eq, inArray${child.trash ? ", isNull" : ""}${numbered ? ", max" : ""}${model.trash ? ", sql" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
