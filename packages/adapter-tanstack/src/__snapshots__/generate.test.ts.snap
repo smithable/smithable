@@ -29582,7 +29582,7 @@ import { followUpAccess, followUpData } from "#/generated/follow-up.server";
 import { customerUi } from "#/generated/customer";
 import { orderUi } from "#/generated/order";
 import { followUpUi } from "#/generated/follow-up";
-import { mergeCustomersAccess, mergeCustomersKeep } from "./merge-customers";
+import { mergeCustomersAccess } from "./merge-customers";
 
 const TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const;
 /**
@@ -29667,15 +29667,14 @@ function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: b
 }
 
 /** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number, strict = false) {
+async function pair(viewer: Viewer | null, first: number, second: number, _strict = false) {
   check(mergeCustomersAccess, viewer);
   if (first === second) throw new Conflict(w.mergeSame);
   const one = await customerData.get(viewer, first);
   const two = await customerData.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
-  const firstStays = mergeCustomersKeep === "chosen" ? true : mergeCustomersKeep === "oldest" ? one.id < two.id : one.id > two.id;
+  const firstStays = true;
   // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(mergeCustomersKeep === "oldest" ? "oldest" : "newest", String(two.name ?? two.id)));
   const [kept, other] = firstStays ? [one, two] : [two, one];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
@@ -31683,7 +31682,6 @@ import { orderUi } from "#/generated/order";
 import { runScheduleFollowUps } from "./actions/schedule-follow-ups.server";
 import { scheduleFollowUpsInput } from "./actions/schedule-follow-ups.input";
 import { previewMergeCustomers, runMergeCustomers } from "./actions/merge-customers.server";
-import { mergeCustomersKeep } from "./actions/merge-customers";
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = {
@@ -32098,7 +32096,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
     const kept = record(body);
     const other = (await customerData.list(viewer)).find((row) => row.id !== kept && allows(customerAccess.write, viewer, row.accountManagerId as string | null))?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
-    const [first, second] = mergeCustomersKeep === "chosen" || (mergeCustomersKeep === "oldest") === kept < other ? [kept, other] : [other, kept];
+    const [first, second] = [kept, other];
     // Each field the two differ in: the kept one's.
     const facts = await previewMergeCustomers(viewer, first, second);
     return runMergeCustomers(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
@@ -37053,7 +37051,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "1b88484b generated",
-  "src/generated/actions/merge-customers.server.ts": "4f69fcdc generated",
+  "src/generated/actions/merge-customers.server.ts": "fc3fd69f generated",
   "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
@@ -37064,7 +37062,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "00268b9c generated",
   "src/generated/customer.ts": "79b283e3 generated",
-  "src/generated/dev-door.server.ts": "1b33cb49 generated",
+  "src/generated/dev-door.server.ts": "5efb7b3c generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
   "src/generated/follow-up.server.ts": "60c21496 generated",

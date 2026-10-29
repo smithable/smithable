@@ -179,12 +179,13 @@ export function doorModule(
     if (m.kind === "merge") {
       const a = actionNames(actionOf(m.action));
       const model = modelNamed(ir, m.model);
+      const keep = (actionOf(m.action) as StandardActionIR).merge?.keep ?? "chosen";
       return `  ${id}: async (viewer, _move, body) => {
     // The other: another record the person may change; the kept one first, as the merge's keep says.
     const kept = record(body);
     const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null))?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
-    const [first, second] = ${a.keep} === "chosen" || (${a.keep} === "oldest") === kept < other ? [kept, other] : [other, kept];
+    const [first, second] = ${keep === "chosen" ? "[kept, other]" : `kept ${keep === "oldest" ? "<" : ">"} other ? [kept, other] : [other, kept]`};
     // Each field the two differ in: the kept one's.
     const facts = await ${a.preview}(viewer, first, second);
     return ${a.run}(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
@@ -284,9 +285,7 @@ ${Object.keys(taken)
     const a = actionNames(actionOf(m.action));
     const file = `./actions/${kebab(m.action)}`;
     return m.kind === "merge"
-      ? [
-          `\nimport { ${a.preview}, ${a.run} } from "${file}.server";\nimport { ${a.keep} } from "${file}";`,
-        ]
+      ? [`\nimport { ${a.preview}, ${a.run} } from "${file}.server";`]
       : [`\nimport { ${a.run} } from "${file}.server";\nimport { ${a.access} } from "${file}";`];
   })
   .join("")}

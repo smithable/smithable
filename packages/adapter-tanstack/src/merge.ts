@@ -242,7 +242,7 @@ import { refusal } from "#/kit/log.server";
 import { w } from "#/kit/words";
 ${[n, ...readers].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
 ${[...new Set([model, ...tables])].map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
-import { ${a.access}, ${a.keep} } from "./${kebab(action.name)}";
+import { ${a.access} } from "./${kebab(action.name)}";
 
 ${tableOf}
 /**
@@ -318,16 +318,15 @@ function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: b
 }
 
 /** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number, strict = false) {
+async function pair(viewer: Viewer | null, first: number, second: number, ${merge.keep === "chosen" ? "_strict" : "strict"} = false) {
   check(${a.access}, viewer);
   if (first === second) throw new Conflict(w.mergeSame);
   const one = await ${n.data}.get(viewer, first);
   const two = await ${n.data}.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
-  const firstStays = ${a.keep} === "chosen" ? true : ${a.keep} === "oldest" ? one.id < two.id : one.id > two.id;
+  const firstStays = ${merge.keep === "chosen" ? "true" : merge.keep === "oldest" ? "one.id < two.id" : "one.id > two.id"};
   // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(${a.keep} === "oldest" ? "oldest" : "newest", String(two.${title} ?? two.id)));
-  const [kept, other] = firstStays ? [one, two] : [two, one];
+${merge.keep === "chosen" ? "" : `  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(${JSON.stringify(merge.keep)}, String(two.${title} ?? two.id)));\n`}  const [kept, other] = firstStays ? [one, two] : [two, one];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
   if (!allows(${n.access}.write, viewer${owner(model, "kept")})) throw new AccessDenied(true);
