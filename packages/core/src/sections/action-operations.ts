@@ -60,7 +60,7 @@ const addAction: Operation<{
   intent?: string;
   merge?: string;
   keep?: string;
-  fill?: string;
+  fields?: string[];
 }> = {
   name: "addAction",
   summary:
@@ -121,10 +121,11 @@ const addAction: Operation<{
         enum: ["chosen", "oldest", "newest"],
         description: "For a merge: which record stays; chosen (the person says) unless said.",
       },
-      fill: {
-        enum: ["empty", "none"],
+      fields: {
+        type: "array",
+        items: { type: "string" },
         description:
-          "For a merge: empty (the kept record's empty fields take the other's values) unless said, or none.",
+          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask revenue=add; a field not named is asked.",
       },
     },
   },
@@ -147,7 +148,7 @@ const addAction: Operation<{
       intent,
       merge,
       keep,
-      fill,
+      fields: rules = [],
     },
     ir,
   ) {
@@ -164,9 +165,9 @@ const addAction: Operation<{
       if (page?.actions) spec.set(["pages", page.id, "actions"], [...page.actions, action]);
       else if (page) spec.add(["pages", page.id], "actions", [action]);
     };
-    if (merge !== undefined || keep !== undefined || fill !== undefined) {
+    if (merge !== undefined || keep !== undefined || rules.length) {
       if (merge === undefined)
-        throw new OperationError('"--keep" and "--fill" go with --merge <Model>.');
+        throw new OperationError('"--keep" and "--fields" go with --merge <Model>.');
       if (
         on ||
         Object.keys(set).length ||
@@ -186,12 +187,20 @@ const addAction: Operation<{
         throw new OperationError("Users cannot be merged: they are who signs in.");
       if (keep !== undefined && !["chosen", "oldest", "newest"].includes(keep))
         throw new OperationError('"--keep" is chosen, oldest or newest.');
-      if (fill !== undefined && !["empty", "none"].includes(fill))
-        throw new OperationError('"--fill" is empty or none.');
+      const fieldRules: Record<string, string> = {};
+      for (const pair of rules) {
+        const at = pair.indexOf("=");
+        const [field, rule] = at > 0 ? [pair.slice(0, at), pair.slice(at + 1)] : [pair, ""];
+        if (!field || !["keep", "other", "ask", "add", "append"].includes(rule))
+          throw new OperationError(
+            `"${pair}" is not field=rule, with the rule keep, other, ask, add or append.`,
+          );
+        fieldRules[field] = rule;
+      }
       spec.add(["actions"], action, {
         merge,
         ...(keep !== undefined && keep !== "chosen" ? { keep } : {}),
-        ...(fill !== undefined && fill !== "empty" ? { fill } : {}),
+        ...(Object.keys(fieldRules).length ? { fields: fieldRules } : {}),
         ...text,
       });
       offerOn(merge);

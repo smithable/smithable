@@ -924,12 +924,21 @@
             ],
             "description": "For a merge: which record stays; chosen (the person says) unless said."
           },
-          "fill": {
-            "enum": [
-              "empty",
-              "none"
-            ],
-            "description": "For a merge: empty (the kept record's empty fields take the other's values) unless said, or none."
+          "fields": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "additionalProperties": {
+              "enum": [
+                "keep",
+                "other",
+                "ask",
+                "add",
+                "append"
+              ]
+            },
+            "description": "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked."
           },
           "input": {
             "type": "object",
