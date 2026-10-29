@@ -474,13 +474,39 @@ export function summarize(
       ...(action.intent ? [action.intent] : []),
     ];
   };
+  // A custom action's contract (intents.md §6): "Reads invoices and payments, writes payments and
+  // an invoice's status, may send paymentBooked."
+  const contractWords = (action: (typeof ir.actions)[number]): string[] => {
+    if (!action.custom || (!action.touches && !action.triggers?.length)) return [];
+    const reads = (action.touches?.reads ?? []).map((name) => {
+      const m = modelNamed(name);
+      return m ? many(m) : humanize(plural(name)).toLowerCase();
+    });
+    const writes = (action.touches?.writes ?? []).map((w) => {
+      const m = modelNamed(w.model);
+      if (!m) return w.model;
+      if (!w.fields?.length) return many(m);
+      const fields = w.fields.map((name) => {
+        const f = m.fields.find((x) => x.name === name);
+        return f ? fieldLabel(m, f) : name;
+      });
+      return `${article(one(m))}'s ${list(fields)}`;
+    });
+    const parts = [
+      ...(action.touches ? [reads.length ? `reads ${list(reads)}` : "reads nothing"] : []),
+      ...(action.touches ? [writes.length ? `writes ${list(writes)}` : "writes nothing"] : []),
+      ...(action.triggers?.length ? [`may send ${list(action.triggers)}`] : []),
+    ];
+    const text = parts.join(", ");
+    return [`${text.charAt(0).toUpperCase()}${text.slice(1)}.`];
+  };
   for (const action of ir.actions) {
     sections.push({
       concept: `action:${action.name}`,
       title: humanize(action.name),
       sentences: [
         ...(action.custom
-          ? [action.intent ?? action.description ?? "Custom code."]
+          ? [action.intent ?? action.description ?? "Custom code.", ...contractWords(action)]
           : standard(action)),
         ...(action.rules ?? []).map((r) => `Rule: ${r.text}`),
       ],

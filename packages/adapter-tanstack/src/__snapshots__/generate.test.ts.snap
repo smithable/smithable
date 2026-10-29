@@ -12978,10 +12978,24 @@ const ENTRIES: {
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
-  for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
+  for (const entry of ENTRIES)
+    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
+      queueEntry(tx, viewer, entry, model, what, record, before);
+}
+
+/**
+ * Queues one outgoing entry by its name for a record of its model, as custom code fires the
+ * entries its contract's triggers name (docs/design/intents.md §6).
+ */
+export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
+}
+
+/** What one entry asks for, for one record: a call queued, or a mail. */
+function queueEntry(tx: Tx, viewer: Viewer | null, entry: (typeof ENTRIES)[number], model: string, _what: string, record: Row, before?: Row): void {
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) continue;
+    if (!shown || !entry.to) return;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -12995,7 +13009,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
       entry.to(tx, record),
       entry.when === "created",
     );
-  }
 }
 "
 `;
@@ -16200,7 +16213,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "e9b5540a generated",
   "src/generated/hooks.ts": "199beb1e generated",
-  "src/generated/outgoing.server.ts": "fac1c733 generated",
+  "src/generated/outgoing.server.ts": "d7a8a813 generated",
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
@@ -22024,10 +22037,24 @@ const ENTRIES: {
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
-  for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
+  for (const entry of ENTRIES)
+    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
+      queueEntry(tx, viewer, entry, model, what, record, before);
+}
+
+/**
+ * Queues one outgoing entry by its name for a record of its model, as custom code fires the
+ * entries its contract's triggers name (docs/design/intents.md §6).
+ */
+export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
+}
+
+/** What one entry asks for, for one record: a call queued, or a mail. */
+function queueEntry(tx: Tx, viewer: Viewer | null, entry: (typeof ENTRIES)[number], model: string, _what: string, record: Row, before?: Row): void {
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) continue;
+    if (!shown || !entry.to) return;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -22041,7 +22068,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
       entry.to(tx, record),
       entry.when === "created",
     );
-  }
 }
 "
 `;
@@ -28613,7 +28639,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "e1a37127 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/outgoing.server.ts": "f981b018 generated",
+  "src/generated/outgoing.server.ts": "2c90a324 generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "ce740b8c generated",
@@ -29884,6 +29910,7 @@ export const scheduleFollowUpsAccess: Rule = { public: false, roles: ["admin"], 
 
 /** What the "scheduleFollowUps" action returns. */
 export type ScheduleFollowUpsOutput = { created: number };
+
 
 export const scheduleFollowUpsUi: ModelUi = {
   label: "Schedule follow ups",
@@ -36977,7 +37004,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "6bd732b1 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
-  "src/generated/actions/schedule-follow-ups.ts": "09f0f811 generated",
+  "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -42737,10 +42764,24 @@ const ENTRIES: {
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
-  for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
+  for (const entry of ENTRIES)
+    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
+      queueEntry(tx, viewer, entry, model, what, record, before);
+}
+
+/**
+ * Queues one outgoing entry by its name for a record of its model, as custom code fires the
+ * entries its contract's triggers name (docs/design/intents.md §6).
+ */
+export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
+}
+
+/** What one entry asks for, for one record: a call queued, or a mail. */
+function queueEntry(tx: Tx, viewer: Viewer | null, entry: (typeof ENTRIES)[number], model: string, _what: string, record: Row, before?: Row): void {
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) continue;
+    if (!shown || !entry.to) return;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -42754,7 +42795,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
       entry.to(tx, record),
       entry.when === "created",
     );
-  }
 }
 "
 `;
@@ -45351,7 +45391,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "2d2c76c1 generated",
   "src/generated/invoice.ts": "b569c412 generated",
-  "src/generated/outgoing.server.ts": "11bc8997 generated",
+  "src/generated/outgoing.server.ts": "bbb495bf generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "08ea7d3a generated",
@@ -49759,8 +49799,22 @@ const ENTRIES: {
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
-  for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
+  for (const entry of ENTRIES)
+    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
+      queueEntry(tx, viewer, entry, model, what, record, before);
+}
+
+/**
+ * Queues one outgoing entry by its name for a record of its model, as custom code fires the
+ * entries its contract's triggers name (docs/design/intents.md §6).
+ */
+export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
+}
+
+/** What one entry asks for, for one record: a call queued, or a mail. */
+function queueEntry(tx: Tx, viewer: Viewer | null, entry: (typeof ENTRIES)[number], model: string, what: string, record: Row, before?: Row): void {
     if (entry.target) {
       const sent = SENT[model]?.(record);
       if (sent)
@@ -49771,10 +49825,10 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
           target: entry.target,
           body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: picked(sent, entry.show), ...(entry.previous && before ? { before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show) } : {}) }),
         });
-      continue;
+      return;
     }
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) continue;
+    if (!shown || !entry.to) return;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -49788,7 +49842,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
       entry.to(tx, record),
       entry.when === "created",
     );
-  }
 }
 "
 `;
@@ -53221,7 +53274,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "3bdf1e53 generated",
   "src/generated/order.ts": "4fdb55f6 generated",
-  "src/generated/outgoing.server.ts": "14522d6c generated",
+  "src/generated/outgoing.server.ts": "cc7f65ca generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
@@ -76873,10 +76926,24 @@ const ENTRIES: {
  */
 export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {
   if (arriving.getStore()?.quiet) return;
-  for (const entry of ENTRIES) {
-    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
+  for (const entry of ENTRIES)
+    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
+      queueEntry(tx, viewer, entry, model, what, record, before);
+}
+
+/**
+ * Queues one outgoing entry by its name for a record of its model, as custom code fires the
+ * entries its contract's triggers name (docs/design/intents.md §6).
+ */
+export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
+}
+
+/** What one entry asks for, for one record: a call queued, or a mail. */
+function queueEntry(tx: Tx, viewer: Viewer | null, entry: (typeof ENTRIES)[number], model: string, _what: string, record: Row, before?: Row): void {
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) continue;
+    if (!shown || !entry.to) return;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -76890,7 +76957,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
       entry.to(tx, record),
       entry.when === "created",
     );
-  }
 }
 "
 `;
@@ -80145,7 +80211,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "00275f2b generated",
   "src/generated/message.ts": "f4cafefa generated",
-  "src/generated/outgoing.server.ts": "0dc0e782 generated",
+  "src/generated/outgoing.server.ts": "9a5f8676 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
