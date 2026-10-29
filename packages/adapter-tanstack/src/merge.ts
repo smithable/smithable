@@ -106,7 +106,8 @@ export const ${a.keep} = ${JSON.stringify(action.merge?.keep)};
 /** The two records: the one the person keeps (or the first picked) and the other. */
 const pair = z.object({ keep: z.number().int(), other: z.number().int() });
 /** And for each field asked, what the person picked. */
-const choices = z.record(z.string(), z.enum(["kept", "other", "sum", "join"])).default({});
+/** keep (the API's and Ask's word for the kept record's value) is kept. */
+const choices = z.record(z.string(), z.enum(["kept", "keep", "other", "sum", "join"])).default({});
 
 /** What merging the two would do, as the viewer may see it: the form's sentence. */
 export const ${a.previewFn} = createServerFn({ method: "POST" })
@@ -240,7 +241,7 @@ import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { w } from "#/kit/words";
 ${[n, ...readers].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
-${tables.map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
+${[...new Set([model, ...tables])].map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
 import { ${a.access}, ${a.keep} } from "./${kebab(action.name)}";
 
 ${tableOf}
@@ -317,13 +318,15 @@ function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: b
 }
 
 /** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number) {
+async function pair(viewer: Viewer | null, first: number, second: number, strict = false) {
   check(${a.access}, viewer);
   if (first === second) throw new Conflict(w.mergeSame);
   const one = await ${n.data}.get(viewer, first);
   const two = await ${n.data}.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
   const firstStays = ${a.keep} === "chosen" ? true : ${a.keep} === "oldest" ? one.id < two.id : one.id > two.id;
+  // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
+  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(String(two.${title} ?? two.id)));
   const [kept, other] = firstStays ? [one, two] : [two, one];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
@@ -393,8 +396,8 @@ export async function ${a.preview}(viewer: Viewer | null, first: number, second:
  * the values its fields' rules and the person's choices give, and the other goes to the trash. Moved records are moved,
  * not changed: no rules of a change, no "changed" events, nothing told.
  */
-export async function ${a.run}(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice> = {}) {
-  const { kept, other, goes } = await pair(viewer, first, second);
+export async function ${a.run}(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice | "keep"> = {}) {
+  const { kept, other, goes } = await pair(viewer, first, second, true);
   const when = new Date();
   try {
     db.transaction((tx) => {
@@ -414,7 +417,11 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
           tx.update(table).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} } as never).where(eq(table.id, d.id)).run();
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
-      const values = valuesOf(raw.kept, raw.other, chosen, goes);
+      // Each field the person decides must be decided: a program or Ask asks for the missing one.
+      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
+      const missing = asked(raw.kept, raw.other, goes).find((key) => !(key in picked));
+      if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(${n.ui}.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
+      const values = valuesOf(raw.kept, raw.other, picked, goes);
       const changed = Object.keys(values);
       ${
         model.trash

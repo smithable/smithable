@@ -22,7 +22,7 @@ export interface Slot {
 /** A move a sample user may make: open a page, add, change, delete, or run an action. */
 export interface DoorMove {
   id: string;
-  kind: "open" | "add" | "change" | "delete" | "run";
+  kind: "open" | "add" | "change" | "delete" | "run" | "merge" | "split";
   page?: string;
   route?: string;
   model?: string;
@@ -31,6 +31,10 @@ export interface DoorMove {
   /** For an action, when it fits a record (the app checks; shown for the host's reading). */
   when?: Record<string, unknown>;
   slots?: Slot[];
+  /** A merge: the fields the two may differ in that the person decides (intents.md §3). */
+  choices?: string[];
+  /** A split: the list whose records go to the new record (intents.md §4). */
+  list?: string;
 }
 
 /** A move as it is open now: with the records it may be made on and each reference's choices. */

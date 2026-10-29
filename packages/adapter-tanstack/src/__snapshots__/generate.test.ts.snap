@@ -10096,7 +10096,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16242,7 +16242,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28670,7 +28670,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -29579,6 +29579,7 @@ import { w } from "#/kit/words";
 import { customerAccess, customerData } from "#/generated/customer.server";
 import { orderAccess, orderData } from "#/generated/order.server";
 import { followUpAccess, followUpData } from "#/generated/follow-up.server";
+import { customerUi } from "#/generated/customer";
 import { orderUi } from "#/generated/order";
 import { followUpUi } from "#/generated/follow-up";
 import { mergeCustomersAccess, mergeCustomersKeep } from "./merge-customers";
@@ -29666,13 +29667,15 @@ function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: b
 }
 
 /** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number) {
+async function pair(viewer: Viewer | null, first: number, second: number, strict = false) {
   check(mergeCustomersAccess, viewer);
   if (first === second) throw new Conflict(w.mergeSame);
   const one = await customerData.get(viewer, first);
   const two = await customerData.get(viewer, second);
   if (!one || !two) throw new AccessDenied(viewer !== null);
   const firstStays = mergeCustomersKeep === "chosen" ? true : mergeCustomersKeep === "oldest" ? one.id < two.id : one.id > two.id;
+  // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
+  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(String(two.name ?? two.id)));
   const [kept, other] = firstStays ? [one, two] : [two, one];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
@@ -29755,8 +29758,8 @@ export async function previewMergeCustomers(viewer: Viewer | null, first: number
  * the values its fields' rules and the person's choices give, and the other goes to the trash. Moved records are moved,
  * not changed: no rules of a change, no "changed" events, nothing told.
  */
-export async function runMergeCustomers(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice> = {}) {
-  const { kept, other, goes } = await pair(viewer, first, second);
+export async function runMergeCustomers(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice | "keep"> = {}) {
+  const { kept, other, goes } = await pair(viewer, first, second, true);
   const when = new Date();
   try {
     db.transaction((tx) => {
@@ -29776,7 +29779,11 @@ export async function runMergeCustomers(viewer: Viewer | null, first: number, se
           tx.update(table).set({ deletedAt: when, deletedBy: personOf(viewer) } as never).where(eq(table.id, d.id)).run();
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
-      const values = valuesOf(raw.kept, raw.other, chosen, goes);
+      // Each field the person decides must be decided: a program or Ask asks for the missing one.
+      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
+      const missing = asked(raw.kept, raw.other, goes).find((key) => !(key in picked));
+      if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(customerUi.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
+      const values = valuesOf(raw.kept, raw.other, picked, goes);
       const changed = Object.keys(values);
       // The other goes to the trash, its unique values released as a trashed record's are.
       if (goes) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, raw.other.id)).run();
@@ -29815,7 +29822,8 @@ export const mergeCustomersKeep = "chosen";
 /** The two records: the one the person keeps (or the first picked) and the other. */
 const pair = z.object({ keep: z.number().int(), other: z.number().int() });
 /** And for each field asked, what the person picked. */
-const choices = z.record(z.string(), z.enum(["kept", "other", "sum", "join"])).default({});
+/** keep (the API's and Ask's word for the kept record's value) is kept. */
+const choices = z.record(z.string(), z.enum(["kept", "keep", "other", "sum", "join"])).default({});
 
 /** What merging the two would do, as the viewer may see it: the form's sentence. */
 export const mergeCustomersPreview = createServerFn({ method: "POST" })
@@ -31673,6 +31681,8 @@ import { customerUi } from "#/generated/customer";
 import { orderUi } from "#/generated/order";
 import { runScheduleFollowUps } from "./actions/schedule-follow-ups.server";
 import { scheduleFollowUpsInput } from "./actions/schedule-follow-ups.input";
+import { previewMergeCustomers, runMergeCustomers } from "./actions/merge-customers.server";
+import { mergeCustomersKeep } from "./actions/merge-customers";
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = {
@@ -31788,6 +31798,13 @@ const MOVES: Record<string, DoorMove[]> = {
       ],
     },
     { id: "delete:FollowUp", kind: "delete", model: "FollowUp" },
+    {
+      id: "merge:mergeCustomers",
+      kind: "merge",
+      action: "mergeCustomers",
+      model: "Customer",
+      choices: ["name", "email", "phone", "segment", "creditLimit", "notes"],
+    },
     {
       id: "run:scheduleFollowUps",
       kind: "run",
@@ -31981,6 +31998,10 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
   "delete:FollowUp": async (viewer, move) => ready({ ...move,
       records: (await followUpData.list(viewer)).filter((row) => allows(followUpAccess.delete, viewer, row.ownerId as string | null)).slice(0, 50).map((row) => row.id),
     }),
+  "merge:mergeCustomers": async (viewer, move) => {
+    const records = (await customerData.list(viewer)).filter((row) => allows(customerAccess.write, viewer, row.accountManagerId as string | null)).slice(0, 50).map((row) => row.id);
+    return records.length > 1 ? { ...move, records } : undefined;
+  },
   "run:scheduleFollowUps": async (viewer, move) => ready({ ...move,
       candidates: await choices(viewer, [["customer", "Customer", true]]),
     }),
@@ -32071,6 +32092,16 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   "add:FollowUp": async (viewer, move, body) => followUpData.create(viewer, followUpSchema.parse(stored(move.slots ?? [], body.values, { customer: "customerId", dueOn: "dueOn", done: "done", note: "note" }))),
   "change:FollowUp": async (viewer, move, body) => followUpData.update(viewer, record(body), followUpSettable.partial().parse(stored(move.slots ?? [], body.values, { customer: "customerId", dueOn: "dueOn", done: "done", note: "note" }))),
   "delete:FollowUp": async (viewer, _move, body) => followUpData.remove(viewer, record(body)),
+  "merge:mergeCustomers": async (viewer, _move, body) => {
+    // The other: another record the person may change; the kept one first, as the merge's keep says.
+    const kept = record(body);
+    const other = (await customerData.list(viewer)).find((row) => row.id !== kept && allows(customerAccess.write, viewer, row.accountManagerId as string | null))?.id;
+    if (other === undefined) throw new Conflict(w.mergeSame);
+    const [first, second] = mergeCustomersKeep === "chosen" || (mergeCustomersKeep === "oldest") === kept < other ? [kept, other] : [other, kept];
+    // Each field the two differ in: the kept one's.
+    const facts = await previewMergeCustomers(viewer, first, second);
+    return runMergeCustomers(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
+  },
   "run:scheduleFollowUps": async (viewer, move, body) => runScheduleFollowUps(viewer, scheduleFollowUpsInput.parse({ ...stored(move.slots ?? [], body.values) })),
 };
 
@@ -37021,8 +37052,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "1b88484b generated",
-  "src/generated/actions/merge-customers.server.ts": "ee4e7dc3 generated",
-  "src/generated/actions/merge-customers.ts": "6bd732b1 generated",
+  "src/generated/actions/merge-customers.server.ts": "b801b04c generated",
+  "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
   "src/generated/actions/schedule-follow-ups.ts": "09f0f811 generated",
@@ -37032,7 +37063,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "00268b9c generated",
   "src/generated/customer.ts": "79b283e3 generated",
-  "src/generated/dev-door.server.ts": "1262e2f3 generated",
+  "src/generated/dev-door.server.ts": "1b33cb49 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
   "src/generated/follow-up.server.ts": "60c21496 generated",
@@ -37062,7 +37093,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
-  "src/kit/MergeDialog.tsx": "bdded4e7 kit",
+  "src/kit/MergeDialog.tsx": "0cfba4f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -37082,7 +37113,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -37102,7 +37133,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -45442,7 +45473,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -45467,7 +45498,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -53309,7 +53340,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -53333,7 +53364,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -58086,7 +58117,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -58109,7 +58140,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -61579,7 +61610,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -61599,7 +61630,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -73212,7 +73243,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -73233,7 +73264,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -80237,7 +80268,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "167a7551 kit",
+  "src/kit/dev-door.server.ts": "7ad86c17 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -80262,7 +80293,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "1e14c1ba kit",
+  "src/kit/words/en.ts": "3802364e kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

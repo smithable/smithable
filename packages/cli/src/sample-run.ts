@@ -127,6 +127,10 @@ export function moveWords(move: OpenMove, labels: Record<string, string> = {}): 
       return `Deleted ${one(move.model)}`;
     case "run":
       return `Ran ${labels[move.action] ?? move.action}${move.model ? ` on ${one(move.model)}` : ""}`;
+    case "merge":
+      return `Merged ${one(move.model)} into another`;
+    case "split":
+      return `Split ${one(move.model)}`;
   }
 }
 

@@ -15,6 +15,7 @@ import { actionNames, askedFields } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import { columnOf } from "./migrations.js";
 import { dataKey, HEADER, literal, modelNamed, names, ownerKey, type Texts } from "./shared.js";
+import { splitList } from "./split.js";
 
 /** A sample user as the development database has them: who signs in nowhere, the door acts as. */
 export interface SampleUser {
@@ -94,6 +95,11 @@ export function doorModule(
   for (const m of moves) {
     if (m.kind === "add" || m.kind === "change" || m.kind === "delete") models.add(m.model);
     if (m.kind === "run" && m.model) models.add(m.model);
+    if (m.kind === "merge") models.add(m.model);
+    if (m.kind === "split") {
+      models.add(m.model);
+      models.add(splitList(ir, actionOf(m.action) as StandardActionIR).child.name);
+    }
     if ("slots" in m) for (const s of m.slots) if (s.model) models.add(s.model);
   }
   const used = [...models].map((name) => ({
@@ -118,6 +124,23 @@ export function doorModule(
     let body: string;
     if (m.kind === "open")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => (allows(pageAccess[${JSON.stringify(m.page)}], viewer) ? move : undefined),`;
+    // A merge: two records the person may change (the app picks the other when it acts).
+    if (m.kind === "merge")
+      return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
+    const records = (await ${n(m.model).data}.list(viewer)).filter((row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null)).slice(0, 50).map((row) => row.id);
+    return records.length > 1 ? { ...move, records } : undefined;
+  },`;
+    // A split: a record with two or more in its list (at least one goes, one stays).
+    if (m.kind === "split") {
+      const { child, backKey } = splitList(ir, actionOf(m.action) as StandardActionIR);
+      return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
+    if (!allows(${actionNames(actionOf(m.action)).access}, viewer)) return undefined;
+    const counts = new Map<number, number>();
+    for (const row of await ${n(child.name).data}.list(viewer)) counts.set(row.${backKey} as number, (counts.get(row.${backKey} as number) ?? 0) + 1);
+    const records = (await ${n(m.model).data}.list(viewer)).filter((row) => (counts.get(row.id) ?? 0) > 1).slice(0, 50).map((row) => row.id);
+    return records.length ? { ...move, records } : undefined;
+  },`;
+    }
     if (m.kind === "add") body = choices;
     else if (m.kind === "change") body = records(m.model, `${n(m.model).access}.write`) + choices;
     else if (m.kind === "delete") body = records(m.model, `${n(m.model).access}.delete`);
@@ -153,6 +176,29 @@ export function doorModule(
         `${n(m.model).data}.update(viewer, record(body), ${n(m.model).settable}.partial().parse(stored(move.slots ?? [], body.values, ${literal(keysOf(m.model))})))`,
       );
     if (m.kind === "delete") return arrow(`${n(m.model).data}.remove(viewer, record(body))`);
+    if (m.kind === "merge") {
+      const a = actionNames(actionOf(m.action));
+      const model = modelNamed(ir, m.model);
+      return `  ${id}: async (viewer, _move, body) => {
+    // The other: another record the person may change; the kept one first, as the merge's keep says.
+    const kept = record(body);
+    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null))?.id;
+    if (other === undefined) throw new Conflict(w.mergeSame);
+    const [first, second] = ${a.keep} === "chosen" || (${a.keep} === "oldest") === kept < other ? [kept, other] : [other, kept];
+    // Each field the two differ in: the kept one's.
+    const facts = await ${a.preview}(viewer, first, second);
+    return ${a.run}(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
+  },`;
+    }
+    if (m.kind === "split") {
+      const a = actionNames(actionOf(m.action));
+      const { child, backKey } = splitList(ir, actionOf(m.action) as StandardActionIR);
+      return `  ${id}: async (viewer, _move, body) => {
+    // About half of its list goes to the new record; at least one goes and one stays.
+    const on = (await ${n(child.name).data}.list(viewer)).filter((row) => row.${backKey} === record(body)).map((row) => row.id);
+    return ${a.run}(viewer, record(body), on.slice(0, Math.max(1, Math.floor(on.length / 2))));
+  },`;
+    }
     const action = actionOf(m.action);
     const a = actionNames(action);
     if (action.custom)
@@ -187,7 +233,9 @@ export function doorModule(
       (m) => (m.kind === "add" || m.kind === "change") && m.model === model.name,
     );
     const ruled = moves.some(
-      (m) => (m.kind === "change" || m.kind === "delete") && m.model === model.name,
+      (m) =>
+        (m.kind === "change" || m.kind === "delete" || m.kind === "merge") &&
+        m.model === model.name,
     );
     return `import { ${ruled ? `${mn.access}, ` : ""}${mn.data} } from "${mn.module}.server";${write ? `\nimport { ${[...(moves.some((m) => m.kind === "add" && m.model === model.name) ? [mn.schema] : []), ...(moves.some((m) => m.kind === "change" && m.model === model.name) ? [mn.settable] : [])].join(", ")} } from "${mn.module}.schema";` : ""}`;
   });
@@ -213,7 +261,8 @@ export function doorModule(
       ];
     }),
   );
-  const words = Object.keys(taken).length > 0;
+  const merging = moves.some((m) => m.kind === "merge");
+  const words = Object.keys(taken).length > 0 || merging;
 
   return `${HEADER}// The development door (docs/design/sample-users.md §4): the moves each role and a visitor may
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
@@ -229,7 +278,18 @@ ${Object.keys(taken)
     const mn = names(modelNamed(ir, model), t);
     return `import { ${mn.ui} } from "${mn.module}";\n`;
   })
-  .join("")}${actionImports.join("\n")}
+  .join("")}${actionImports.join("\n")}${moves
+  .flatMap((m) => {
+    if (m.kind !== "merge" && m.kind !== "split") return [];
+    const a = actionNames(actionOf(m.action));
+    const file = `./actions/${kebab(m.action)}`;
+    return m.kind === "merge"
+      ? [
+          `\nimport { ${a.preview}, ${a.run} } from "${file}.server";\nimport { ${a.keep} } from "${file}";`,
+        ]
+      : [`\nimport { ${a.run} } from "${file}.server";\nimport { ${a.access} } from "${file}";`];
+  })
+  .join("")}
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = ${literal(byActor)};

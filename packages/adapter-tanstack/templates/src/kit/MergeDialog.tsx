@@ -79,7 +79,12 @@ export function MergeDialog({
     setFacts(undefined);
     setChoices({});
     ask.current(kept, other.id).then(
-      (p) => current && setFacts(p),
+      (p) => {
+        if (!current) return;
+        setFacts(p);
+        // Each field asked starts as the kept one's: the server takes no merge with one undecided.
+        setChoices(Object.fromEntries(p.asked.map((a) => [a.key, "kept" as Choice])));
+      },
       (error) =>
         current && setFailure(error instanceof Error ? error.message : w.somethingWentWrong),
     );
