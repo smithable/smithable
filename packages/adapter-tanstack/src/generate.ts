@@ -67,6 +67,7 @@ import {
   userFields,
 } from "./shared.js";
 import { smokeTests } from "./smoke.js";
+import { splitActionModule, splitActionServer } from "./split.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
 import { themeCss } from "./themes.js";
@@ -827,6 +828,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir }) => ir.actions.some((a) => !a.custom && a.merge),
       },
       {
+        // Splitting a record (docs/design/intents.md §4): the button, its form and its undo.
+        files: ["src/kit/SplitDialog.tsx"],
+        used: ({ ir }) => ir.actions.some((a) => !a.custom && a.split),
+      },
+      {
         // The trash (docs/design/trash.md): its page, the notice's Undo, a trashed record's banner.
         files: ["src/kit/Trash.tsx"],
         used: ({ ir }) => ir.models.some((m) => m.trash),
@@ -952,27 +958,38 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
             ]
-          : action.merge
+          : action.split
             ? [
                 generated(
                   `src/generated/actions/${kebab(action.name)}.ts`,
-                  mergeActionModule(action, ir, auth, t),
+                  splitActionModule(action, ir, auth, t),
                 ),
                 generated(
                   `src/generated/actions/${kebab(action.name)}.server.ts`,
-                  mergeActionServer(action, ir, auth, t),
+                  splitActionServer(action, ir, auth, t),
                 ),
               ]
-            : [
-                generated(
-                  `src/generated/actions/${kebab(action.name)}.ts`,
-                  standardActionModule(action, ir, auth, t),
-                ),
-                generated(
-                  `src/generated/actions/${kebab(action.name)}.server.ts`,
-                  standardActionServer(action, ir, auth, t),
-                ),
-              ],
+            : action.merge
+              ? [
+                  generated(
+                    `src/generated/actions/${kebab(action.name)}.ts`,
+                    mergeActionModule(action, ir, auth, t),
+                  ),
+                  generated(
+                    `src/generated/actions/${kebab(action.name)}.server.ts`,
+                    mergeActionServer(action, ir, auth, t),
+                  ),
+                ]
+              : [
+                  generated(
+                    `src/generated/actions/${kebab(action.name)}.ts`,
+                    standardActionModule(action, ir, auth, t),
+                  ),
+                  generated(
+                    `src/generated/actions/${kebab(action.name)}.server.ts`,
+                    standardActionServer(action, ir, auth, t),
+                  ),
+                ],
       ),
   },
   {

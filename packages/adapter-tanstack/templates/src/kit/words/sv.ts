@@ -589,6 +589,15 @@ export const w = {
           : `${other} blir kvar, eftersom du inte får ta bort den`;
     return `${values}${moved}, och ${fate}.`;
   },
+  splitIt: "Dela…",
+  splitWhich: (plural: string) =>
+    `Vilka poster av typen ${plural.toLowerCase()} går till den nya posten?`,
+  splitPickOne: (label: string) => `Välj minst en post av typen ${label.toLowerCase()} att flytta.`,
+  splitLeaveOne: (label: string) => `Lämna minst en post av typen ${label.toLowerCase()} kvar.`,
+  splitNotSplit: "Den här posten kom inte till genom en delning.",
+  splitDone: (from: string) => `Delad från ${from}.`,
+  splitStayed: (n: number) =>
+    `${n} ${n === 1 ? "post har" : "poster har"} flyttats någon annanstans sedan och blir kvar där.`,
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen och blir som de är.`,

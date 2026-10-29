@@ -82,10 +82,10 @@ export const actionsSection: SpecSection<"actions"> = {
         {
           required: ["on"],
           anyOf: [{ required: ["set"] }, { required: ["add"] }, { required: ["copy"] }],
-          properties: { copy: { type: ["object", "null"] } },
         },
         { required: ["merge"] },
-        { required: ["split", "move"], properties: { copy: { type: "array" } } },
+        // A split's copy is a list, a copy's a map of values: the reader tells them apart.
+        { required: ["split", "move"] },
       ],
       additionalProperties: false,
       properties: {

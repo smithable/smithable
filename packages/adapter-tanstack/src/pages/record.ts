@@ -48,6 +48,7 @@ import {
   ownerKey,
   parentRefs,
   references,
+  splitActions,
   standardActions,
   type Texts,
   threadLists,
@@ -55,6 +56,7 @@ import {
   trashedLists,
   type Within,
 } from "../shared.js";
+import { splitList } from "../split.js";
 import { calendarStart } from "./calendar.js";
 
 /**
@@ -433,6 +435,19 @@ export function detailRoute(
     imports.set("#/kit/MergeDialog", ["MergeButton"]);
     imports.set(n.module, [...(imports.get(n.module) ?? []), n.options]);
   }
+  // A split: "Split…" with the records of its list, then the new record's page (intents.md §4).
+  const splits = within ? [] : splitActions(page, ir).slice(0, 1);
+  for (const action of splits)
+    imports.set(`#/generated/actions/${kebab(action.name)}`, [
+      action.name,
+      actionNames(action).access,
+      actionNames(action).undoFn,
+    ]);
+  if (splits.length) imports.set("#/kit/SplitDialog", ["SplitButton", "SplitNotice"]);
+  for (const action of splits) {
+    const cn = names(splitList(ir, action).child, t);
+    imports.set(cn.module, [...new Set([...(imports.get(cn.module) ?? []), cn.ui])]);
+  }
   const contact =
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
@@ -532,7 +547,8 @@ export function detailRoute(
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
-  const viewer = contact || favorite || offered.length > 0 || merges.length > 0;
+  const viewer =
+    contact || favorite || offered.length > 0 || merges.length > 0 || splits.length > 0;
   const buttons = [
     ...offered.map(
       (a) =>
@@ -557,6 +573,21 @@ export function detailRoute(
               />
             )}`,
     ),
+    ...splits.map((a) => {
+      const { list, child, titleKey } = splitList(ir, a);
+      return `{allows(${actionNames(a).access}, viewer) && (
+              <SplitButton
+                label=${attr(t.action(a))}${t.actionHelp(a) ? `\n                help=${attr(t.actionHelp(a) as string)}` : ""}
+                concept="action:${a.name}"
+                model=${attr(model.name)}
+                title={String(${heading})}
+                plural={${names(child, t).ui}.pluralLabel}
+                children={(row.${list.name} ?? []).map((item: { id: number } & Record<string, unknown>) => ({ id: item.id, title: String(item[${JSON.stringify(titleKey)}] ?? item.id) }))}
+                run={(picked) => ${a.name}({ data: { id: row.id, picked } })}
+                onDone={(id) => navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(id) } })}
+              />
+            )}`;
+    }),
     ...(favorite
       ? [`<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />`]
       : []),
@@ -576,7 +607,7 @@ ${
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length || merges.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
+${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length || merges.length || splits.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
@@ -665,7 +696,20 @@ function ${component}() {
           ? `
       <ReviewNotice notes={review} labels={${JSON.stringify(Object.fromEntries((model.review ?? []).map((f) => [f, t.field(model, model.fields.find((x) => x.name === f) as FieldIR).label ?? humanize(f)])))}} />`
           : ""
-      }${
+      }${splits
+        .map(
+          (a) => `
+      <SplitNotice
+        model=${attr(model.name)}
+        id={row.id}
+        onUndo={async () => {
+          const undone = await ${actionNames(a).undoFn}({ data: row.id });
+          await navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(undone.original) } });
+          return undone;
+        }}
+      />`,
+        )
+        .join("")}${
         trash
           ? `
       {trashed && (
