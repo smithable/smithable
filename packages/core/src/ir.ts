@@ -471,10 +471,20 @@ export interface DashboardItem {
   query?: string;
   /** Only records whose fields have these values (choice values or yes/no). */
   where?: Condition;
-  /** A date field: the chart has one bar per month. */
+  /**
+   * A date field: the chart has one bar per period; a choice field, or a reference's choice field
+   * one hop away ("customer.segment"): one bar per value (docs/design/intents.md §5).
+   */
   by?: string;
+  /** For a date `by`: the span of each bar; month unless said. */
+  period?: ChartPeriod;
+  /** For a choice `by`: the choice field, on this model or on the model `reference` points to. */
+  choice?: { model: string; field: string; reference?: string };
   limit?: number;
 }
+
+/** The span of a chart's bars: eight weeks (from Monday), six months, four quarters or three years. */
+export type ChartPeriod = "week" | "month" | "quarter" | "year";
 
 /**
  * A custom query: records of a model chosen or ordered by code in src/custom/queries/, e.g.

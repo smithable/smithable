@@ -19,6 +19,7 @@ import { readHours } from "./hours.js";
 import {
   type CalculatorExample,
   type CalculatorIR,
+  type ChartPeriod,
   type Condition,
   type DashboardItem,
   type FieldIR,
@@ -359,7 +360,16 @@ const dashboard: PagePattern<"dashboard"> = {
           type: "object",
           description: "Only records with these choice values or yes/no values.",
         },
-        by: { type: "string", description: "A date field: one bar per month." },
+        by: {
+          type: "string",
+          description:
+            "A date field (one bar per period), a choice field, or a reference's choice field like customer.segment (one bar per value).",
+        },
+        period: {
+          type: "string",
+          enum: ["week", "month", "quarter", "year"],
+          description: "For a date by: the span of each bar; month unless said.",
+        },
         limit: { type: "integer", minimum: 1, description: "A list: how many records it shows." },
       },
     },
@@ -401,19 +411,31 @@ const dashboard: PagePattern<"dashboard"> = {
     const f = fieldEffect(effect);
     if (!f) return undefined;
     for (const item of page.pattern.items) {
-      if (item.model !== f.model) continue;
+      // "by" may reach one reference away (customer.segment): the reference is this model's
+      // field, the choice the other model's.
+      const [byFirst, bySecond] = (item.by ?? "").split(".");
+      const own = item.model === f.model;
+      const away =
+        item.choice?.reference !== undefined &&
+        item.choice.model === f.model &&
+        item.choice.field === f.from;
       const uses =
-        item.field === f.from || item.by === f.from || (item.where && f.from in item.where);
+        (own &&
+          (item.field === f.from || byFirst === f.from || (item.where && f.from in item.where))) ||
+        away;
       if (!uses) continue;
       if (!f.to)
         return {
           refusal: `The "${item.name}" tile of the ${page.id} page uses ${f.model}.${f.from}; change or remove the tile first.`,
         };
       const tile = ["pages", page.id, "dashboard", item.name];
-      if (item.field === f.from && item.measure)
+      if (own && item.field === f.from && item.measure)
         spec.set([...tile, item.measure], `${f.model}.${f.to}`);
-      if (item.by === f.from) spec.set([...tile, "by"], f.to);
-      if (item.where && f.from in item.where) spec.renameKey([...tile, "where", f.from], f.to);
+      if (own && byFirst === f.from)
+        spec.set([...tile, "by"], bySecond === undefined ? f.to : `${f.to}.${bySecond}`);
+      if (away) spec.set([...tile, "by"], `${byFirst}.${f.to}`);
+      if (own && item.where && f.from in item.where)
+        spec.renameKey([...tile, "where", f.from], f.to);
     }
     return undefined;
   },
@@ -1610,7 +1632,7 @@ function readDashboard(
       continue;
     }
     const options = checkKeys(ctx, mapEntries(ctx, value, itemWhere) ?? [], itemWhere, {
-      allowed: ["count", "sum", "average", "list", "query", "where", "by", "limit"],
+      allowed: ["count", "sum", "average", "list", "query", "where", "by", "period", "limit"],
       content: ["label", "title"],
     });
     const measures = options.filter((o) =>
@@ -1702,21 +1724,66 @@ function readDashboard(
         if (condition) item.where = condition;
       } else if (key === "by") {
         const by = readString(ctx, option, `"by" in ${itemWhere}`);
-        const field = by === undefined ? undefined : fieldOf(by, option);
         if (item.kind === "list")
           ctx.error(optionKey, "invalid-key", `"by" makes a chart; a list has no bars.`);
-        else if (
-          field &&
-          !(field.type.kind === "scalar" && ["date", "datetime"].includes(field.type.name))
-        )
-          ctx.error(
-            option,
-            "invalid-dashboard",
-            `"by" needs a date field: the chart has a bar per month.`,
-          );
         else if (by !== undefined) {
-          item.by = by;
-          item.kind = "chart";
+          // A date (a bar per period), a choice (a bar per value), or a reference's choice one hop
+          // away (customer.segment); a reference itself has unbounded values.
+          const [first = "", second, third] = by.split(".");
+          const field = fieldOf(first, option);
+          const through =
+            field?.type.kind === "relation" && !field.type.many
+              ? parsed.models?.find((m) => m.name === (field.type as { model: string }).model)
+              : undefined;
+          const far =
+            second !== undefined ? through?.fields.find((f) => f.name === second) : undefined;
+          const isDate = (f: FieldIR) => f.type.kind === "scalar" && DATES.includes(f.type.name);
+          if (!field) {
+            // fieldOf said so, or the model is unknown (said at the measure).
+          } else if (third !== undefined || (second !== undefined && !through)) {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              `"by" goes one reference away at most, as in customer.segment.`,
+            );
+          } else if (second !== undefined && through && !far) {
+            ctx.error(
+              option,
+              "unknown-field",
+              `${through.name} has no field named "${second}".`,
+              didYouMean(
+                second,
+                through.fields.filter((f) => f.type.kind === "choice").map((f) => f.name),
+              ),
+            );
+          } else if (far && far.type.kind !== "choice") {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              `"by" a reference's field needs a choice, as in customer.segment: ${by} is not one.`,
+            );
+          } else if (second === undefined && field.type.kind === "relation") {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              `"by" needs a date or a choice: ${first} is a reference, whose values are unbounded; one of its choice fields works (${first}.<field>).`,
+            );
+          } else if (second === undefined && !isDate(field) && field.type.kind !== "choice") {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              `"by" needs a date field (a bar per period) or a choice (a bar per value): ${first} is neither.`,
+            );
+          } else {
+            item.by = by;
+            item.kind = "chart";
+            if (far || field.type.kind === "choice")
+              item.choice = {
+                model: through?.name ?? modelName,
+                field: second ?? first,
+                ...(second !== undefined ? { reference: first } : {}),
+              };
+          }
         }
       } else if (key === "limit") {
         const limit = readNumber(ctx, option, `"limit" in ${itemWhere}`);
@@ -1726,10 +1793,26 @@ function readDashboard(
         else if (limit !== undefined) item.limit = limit;
       }
     }
+    // The span of a date chart's bars, read once "by" is known.
+    const periodOption = options.find((o) => o.key === "period");
+    if (periodOption) {
+      const period = readString(ctx, periodOption.value, `"period" in ${itemWhere}`);
+      if (period !== undefined && !(PERIODS as readonly string[]).includes(period))
+        ctx.error(periodOption.value, "invalid-value", `"period" is week, month, quarter or year.`);
+      else if (!item.by || item.choice)
+        ctx.error(
+          periodOption.keyNode,
+          "invalid-key",
+          `"period" goes with "by" a date field: it is the span of each bar.`,
+        );
+      else if (period !== undefined) item.period = period as ChartPeriod;
+    }
     items.push(item);
   }
   return items;
 }
+
+const PERIODS: ChartPeriod[] = ["week", "month", "quarter", "year"];
 
 const DATES = ["date", "datetime"];
 const scalarKind = (f: FieldIR | undefined) =>
