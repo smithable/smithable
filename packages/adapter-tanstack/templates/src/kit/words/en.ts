@@ -613,6 +613,7 @@ export const w = {
   mergeSum: "Added up",
   mergeJoin: "All of them, one after the other",
   mergeSame: "Choose two different records to merge.",
+  mergeTooMany: (most: number) => `Choose at most ${most} records to merge at once.`,
   mergeBothHave: (label: string) =>
     `More than one of them has its own ${label.toLowerCase()}, and there can be only one: keep one first.`,
   mergeMayNotChange: (plural: string) =>

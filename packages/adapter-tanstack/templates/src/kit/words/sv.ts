@@ -566,6 +566,7 @@ export const w = {
   mergeSum: "Adderade",
   mergeJoin: "Alla, den ena efter den andra",
   mergeSame: "Välj två olika poster att slå ihop.",
+  mergeTooMany: (most: number) => `Välj högst ${most} poster att slå ihop på en gång.`,
   mergeBothHave: (label: string) =>
     `Fler än en av dem har en egen post av typen ${label.toLowerCase()}, och det får bara finnas en: behåll en först.`,
   mergeMayNotChange: (plural: string) =>

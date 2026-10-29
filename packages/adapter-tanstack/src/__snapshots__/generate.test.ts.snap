@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -29669,10 +29669,13 @@ function valuesOf(records: Raw[], chosen: Record<string, Choice>, free: boolean)
     const found = valuesAmong(records, key);
     const own = first[key as keyof Raw];
     const restFirst = valuesAmong(rest, key)[0];
-    const sum = () => found.reduce<number>((total, v) => total + Number(v), 0);
+    // A sum counts every record's value, the same ones too; texts are joined once each.
+    const all = records.map((r) => r[key as keyof Raw]).filter((v) => !empty(v));
+    const sum = () => all.reduce<number>((total, v) => total + Number(v), 0);
     const joined = () => found.map(String).join("\\n\\n");
     let value: unknown;
-    if (found.length <= 1) value = found[0] ?? own;
+    if (rule === "add" && kind === "number" && all.length > 1) value = sum();
+    else if (found.length <= 1) value = found[0] ?? own;
     else if (rule === "keep") value = empty(own) ? restFirst : own;
     else if (rule === "other") value = restFirst ?? own;
     else if (rule === "add" && kind === "number") value = sum();
@@ -29707,6 +29710,7 @@ async function picked(viewer: Viewer | null, ids: number[]) {
   check(mergeCustomersAccess, viewer);
   const unique = [...new Set(ids)];
   if (unique.length < 2) throw new Conflict(w.mergeSame);
+  if (unique.length > 50) throw new Conflict(w.mergeTooMany(50));
   const rows = [];
   for (const id of unique) {
     const row = await customerData.get(viewer, id);
@@ -29731,10 +29735,11 @@ function refsOf(rows: Record<string, unknown>[]): Record<string, string[]> {
   );
 }
 
-/** Which stay and which go: write on the kept one; each other goes to the trash where the viewer may delete it. */
+/** Which stay and which go: write on them all; each other goes to the trash where the viewer may delete it. */
 function rights(viewer: Viewer | null, rows: { id: number; accountManagerId: string | null }[]) {
-  const [kept, ...others] = rows as [(typeof rows)[number], ...typeof rows];
-  if (!allows(customerAccess.write, viewer, kept.accountManagerId)) throw new AccessDenied(true);
+  const others = rows.slice(1);
+  // A merge changes each of them: write on all.
+  if (!rows.every((row) => allows(customerAccess.write, viewer, row.accountManagerId))) throw new AccessDenied(true);
   // A record the viewer may not delete stays, emptied of what moved.
   return new Set(others.filter((other) => allows(customerAccess.delete, viewer, other.accountManagerId)).map((o) => o.id));
 }
@@ -29748,13 +29753,15 @@ function planOf(tx: Tx, viewer: Viewer | null, kept: Raw, others: Raw[], _goes: 
   };
   // Order.customer
   const rows0 = tx.select({ id: schema.orders.id, ref: schema.orders.customerId, owner: schema.orders.ownerId, deletedAt: schema.orders.deletedAt }).from(schema.orders).where(inArray(schema.orders.customerId, [kept.id, ...others.map((o) => o.id)])).all();
-  for (const row of rows0.filter((row) => row.ref !== kept.id)) {
+  for (const row of rows0) {
+    if (row.ref === kept.id) continue;
     if (!allows(orderAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(orderUi.pluralLabel));
     plan.moved.push({ model: "Order", key: "customerId", id: row.id, from: row.ref as number });
   }
   // FollowUp.customer
   const rows1 = tx.select({ id: schema.followUps.id, ref: schema.followUps.customerId, owner: schema.followUps.ownerId, deletedAt: schema.followUps.deletedAt }).from(schema.followUps).where(inArray(schema.followUps.customerId, [kept.id, ...others.map((o) => o.id)])).all();
-  for (const row of rows1.filter((row) => row.ref !== kept.id)) {
+  for (const row of rows1) {
+    if (row.ref === kept.id) continue;
     if (!allows(followUpAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(followUpUi.pluralLabel));
     plan.moved.push({ model: "FollowUp", key: "customerId", id: row.id, from: row.ref as number });
   }
@@ -29841,8 +29848,8 @@ export async function runMergeCustomers(viewer: Viewer | null, ids: number[], gi
         // It goes to the trash, its unique values released as a trashed record's are.
         if (goes.has(other.id)) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, other.id)).run();
         // What moved from it, so its Restore can put it back: tied to this trashing.
-        const mine = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id || ("id" in x && (x as { id: number }).id === other.id));
-        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: "Customer", record: other.id, title: other.name, details: { into: kept.id, by: "mergeCustomers", trashedAt: goes.has(other.id) ? when.getTime() : null, moved: mine(plan.moved), trashed: mine(plan.trashed), cleared: mine(plan.cleared), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
+        const from = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id);
+        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: "Customer", record: other.id, title: other.name, details: { into: kept.id, by: "mergeCustomers", trashedAt: goes.has(other.id) ? when.getTime() : null, moved: from(plan.moved), trashed: from(plan.trashed), cleared: plan.cleared.filter((c) => c.from === other.id || c.id === other.id), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
       }
       // After the others have gone, so a unique value one gives the kept record is free.
       if (changed.length) tx.update(schema.customers).set(values as Partial<Raw>).where(eq(schema.customers.id, kept.id)).run();
@@ -30853,7 +30860,7 @@ const MERGED_OWNERS: Record<keyof typeof MERGED_TABLES, string | null> = { "Orde
  */
 function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer: Viewer | null, id: number, deletedAt: Date | null): number {
   const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
-  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
+  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number; from?: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
   // Only the merge that put it in the trash this time.
   if (!merged || merged.trashedAt !== deletedAt?.getTime()) return 0;
   let stayed = 0;
@@ -30880,7 +30887,7 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     }
     const table = MERGED_TABLES[c.model] as unknown as typeof schema.customers;
     const column = table[c.key as keyof typeof table] as never;
-    stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
+    stayed += 1 - tx.update(table).set({ [c.key]: c.from ?? (c.id === id ? merged.into : id) } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
   }
   for (const d of merged.trashed) {
     // Those of a model without a trash were deleted for good.
@@ -30902,7 +30909,9 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     // Forgotten in the log since: the values are not there to put back.
     const keys = Object.keys(merged.after ?? {});
     const untouched = keys.filter((key) => JSON.stringify(now[key]) === JSON.stringify(merged.after[key]));
-    stayed += keys.length - untouched.length;
+    // Put back already, by the Restore of another record of the same merge: nothing to count.
+    const back = keys.filter((key) => !untouched.includes(key) && JSON.stringify(now[key]) === JSON.stringify(merged.before[key]));
+    stayed += keys.length - untouched.length - back.length;
     if (untouched.length) tx.update(schema.customers).set(Object.fromEntries(untouched.map((key) => [key, revived(kept[key as keyof typeof kept], merged.before[key])]))).where(eq(schema.customers.id, merged.into)).run();
   }
   return stayed;
@@ -37112,7 +37121,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "b4aa6998 generated",
-  "src/generated/actions/merge-customers.server.ts": "fb6bfd98 generated",
+  "src/generated/actions/merge-customers.server.ts": "672ac5eb generated",
   "src/generated/actions/merge-customers.ts": "68575f8a generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
@@ -37121,7 +37130,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "00268b9c generated",
+  "src/generated/customer.server.ts": "30d02290 generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "00baba7c generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
@@ -37193,7 +37202,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -45558,7 +45567,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -53424,7 +53433,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -58200,7 +58209,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -61690,7 +61699,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -73324,7 +73333,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -80353,7 +80362,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "5507e48b kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

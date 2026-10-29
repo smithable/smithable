@@ -1012,7 +1012,7 @@ function toolsModule(
       return `    case ${JSON.stringify(action.name)}: {
       if (!Array.isArray(args.ids) || args.ids.length < 2) throw new BadInput("Say which records: ids, two or more.");
       const ids: number[] = [];
-      for (const one of args.ids) ids.push((await found(KINDS.${model.name}, viewer, one, "change")).id as number);
+      for (const one of args.ids) ids.push((await found(KINDS.${model.name}, viewer, one)).id as number);
       const choices = numbered(args.choices);
       const made = await ${actionNames(action).run}(keyed(viewer), ids, choices as never, args.remove === true);
       return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any>);
@@ -1469,7 +1469,7 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     const kind = Object.hasOwn(KINDS, run.kind) ? KINDS[run.kind] : undefined;
     if (!kind) throw new NotFound(\`There is no kind "\${run.kind}".\`);
     // A combine names its records as ids: the first stands for them here, each is found at the run.
-    const row = (await found(kind, viewer, args.id ?? (Array.isArray(args.ids) ? args.ids[0] : undefined), "change")) as Record<string, any>;
+    const row = (args.id === undefined && Array.isArray(args.ids) ? await found(kind, viewer, args.ids[0]) : await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
     if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");
     // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.

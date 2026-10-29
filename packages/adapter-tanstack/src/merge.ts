@@ -206,39 +206,33 @@ export function mergeActionServer(
       );
     if (r.pairs.length)
       lines.push(
-        `  // The pairs the kept record has: one of the others' that is the same goes, not moves.`,
-        `  const pairs${i} = new Set(rows${i}.filter((row) => row.ref === kept.id && !(${gone})).map((row) => JSON.stringify([${r.pairs
-          .flat()
-          .map((k) => `row.${k}`)
-          .join(", ")}])));`,
+        `  // The pairs the kept record has, each unique pair apart: one of the others' that is the same goes, not moves.`,
+        `  const pairs${i} = [${r.pairs.map((pair) => `(row: (typeof rows${i})[number]) => JSON.stringify([${pair.map((k) => `row.${k}`).join(", ")}])`).join(", ")}].map((of) => ({ of, seen: new Set(rows${i}.filter((row) => row.ref === kept.id && !(${gone})).map(of)) }));`,
       );
-    lines.push(`  for (const row of rows${i}.filter((row) => row.ref !== kept.id)) {`);
+    lines.push(`  for (const row of rows${i}) {`);
     if (self)
       lines.push(
-        `    // A reference between the picked records is cleared, never one to itself; one on a record`,
-        `    // that stays is a change to it, which needs write on it.`,
-        `    if (row.id === kept.id || others.some((o) => o.id === row.id)) {`,
+        `    // A reference between the picked records is cleared, but the kept one's to itself; one on`,
+        `    // a record that stays is a change to it, which needs write on it.`,
+        `    if ((row.id === kept.id && row.ref !== kept.id) || others.some((o) => o.id === row.id)) {`,
         `      if (row.id !== kept.id && !goes.has(row.id) && !allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
         `      plan.cleared.push({ model: ${m}, key: ${ref}, id: row.id, from: row.ref as number });`,
         "      continue;",
         "    }",
       );
     lines.push(
+      "    if (row.ref === kept.id) continue;",
       `    if (!allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
     );
     if (r.pairs.length)
       lines.push(
-        `    const pair = JSON.stringify([${r.pairs
-          .flat()
-          .map((k) => `row.${k}`)
-          .join(", ")}]);`,
-        `    if (!(${gone}) && pairs${i}.has(pair)) {`,
+        `    if (!(${gone}) && pairs${i}.some((p) => p.seen.has(p.of(row)))) {`,
         `      // It goes to the trash with its record: one who may delete it.`,
         `      if (!allows(${rn.access}.delete, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
         `      plan.trashed.push({ model: ${m}, id: row.id, from: row.ref as number });`,
         "      continue;",
         "    }",
-        `    if (!(${gone})) pairs${i}.add(pair);`,
+        `    if (!(${gone})) for (const p of pairs${i}) p.seen.add(p.of(row));`,
       );
     lines.push(
       `    plan.moved.push({ model: ${m}, key: ${ref}, id: row.id, from: row.ref as number });`,
@@ -329,10 +323,13 @@ function valuesOf(records: Raw[], chosen: Record<string, Choice>, free: boolean)
     const found = valuesAmong(records, key);
     const own = first[key as keyof Raw];
     const restFirst = valuesAmong(rest, key)[0];
-    const sum = () => found.reduce<number>((total, v) => total + Number(v), 0);
+    // A sum counts every record's value, the same ones too; texts are joined once each.
+    const all = records.map((r) => r[key as keyof Raw]).filter((v) => !empty(v));
+    const sum = () => all.reduce<number>((total, v) => total + Number(v), 0);
     const joined = () => found.map(String).join("\\n\\n");
     let value: unknown;
-    if (found.length <= 1) value = found[0] ?? own;
+    if (rule === "add" && kind === "number" && all.length > 1) value = sum();
+    else if (found.length <= 1) value = found[0] ?? own;
     else if (rule === "keep") value = empty(own) ? restFirst : own;
     else if (rule === "other") value = restFirst ?? own;
     else if (rule === "add" && kind === "number") value = sum();
@@ -367,6 +364,7 @@ async function picked(viewer: Viewer | null, ids: number[]) {
   check(${a.access}, viewer);
   const unique = [...new Set(ids)];
   if (unique.length < 2) throw new Conflict(w.mergeSame);
+  if (unique.length > 50) throw new Conflict(w.mergeTooMany(50));
   const rows = [];
   for (const id of unique) {
     const row = await ${n.data}.get(viewer, id);
@@ -427,10 +425,11 @@ function chosenCode(
 ): string {
   const a = actionNames(action);
   return `
-/** Which stay and which go: write on the kept one; each other goes to the trash where the viewer may delete it. */
+/** Which stay and which go: write on them all; each other goes to the trash where the viewer may delete it. */
 function rights(viewer: Viewer | null, rows: { id: number${signedIn ? `; ${ownerKey(model)}: string | null` : ""} }[]) {
-  const [kept, ...others] = rows as [(typeof rows)[number], ...typeof rows];
-  if (!allows(${n.access}.write, viewer${owner(model, "kept")})) throw new AccessDenied(true);
+  const others = rows.slice(1);
+  // A merge changes each of them: write on all.
+  if (!rows.every((row) => allows(${n.access}.write, viewer${owner(model, "row")}))) throw new AccessDenied(true);
   // A record the viewer may not delete stays, emptied of what moved.
   return new Set(others.filter((other) => allows(${n.access}.delete, viewer${owner(model, "other")})).map((o) => o.id));
 }
@@ -529,8 +528,8 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         if (goes.has(other.id)) tx.delete(${n.table}).where(eq(${n.table}.id, other.id)).run();`
         }
         // What moved from it, so its Restore can put it back: tied to this trashing.
-        const mine = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id || ("id" in x && (x as { id: number }).id === other.id));
-        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: ${JSON.stringify(model.name)}, record: other.id, title: other.${title}, details: { into: kept.id, by: ${JSON.stringify(action.name)}, trashedAt: goes.has(other.id) ? when.getTime() : null, moved: mine(plan.moved), trashed: mine(plan.trashed), cleared: mine(plan.cleared), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
+        const from = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id);
+        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: ${JSON.stringify(model.name)}, record: other.id, title: other.${title}, details: { into: kept.id, by: ${JSON.stringify(action.name)}, trashedAt: goes.has(other.id) ? when.getTime() : null, moved: from(plan.moved), trashed: from(plan.trashed), cleared: plan.cleared.filter((c) => c.from === other.id || c.id === other.id), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
       }
       // After the others have gone, so a unique value one gives the kept record is free.
       if (changed.length) tx.update(${n.table}).set(values as Partial<Raw>).where(eq(${n.table}.id, kept.id)).run();
@@ -661,7 +660,7 @@ const MERGED_OWNERS: Record<keyof typeof MERGED_TABLES, string | null> = { ${tab
  */
 function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer: Viewer | null, id: number, deletedAt: Date | null): number {
   const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
-  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
+  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number; from?: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
   // Only the merge that put it in the trash this time.
   if (!merged || merged.trashedAt !== deletedAt?.getTime()) return 0;
   let stayed = 0;
@@ -688,7 +687,7 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     }
     const table = MERGED_TABLES[c.model] as unknown as typeof ${n.table};
     const column = table[c.key as keyof typeof table] as never;
-    stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
+    stayed += 1 - tx.update(table).set({ [c.key]: c.from ?? (c.id === id ? merged.into : id) } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
   }
   for (const d of merged.trashed) {
     // Those of a model without a trash were deleted for good.
@@ -710,7 +709,9 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     // Forgotten in the log since: the values are not there to put back.
     const keys = Object.keys(merged.after ?? {});
     const untouched = keys.filter((key) => JSON.stringify(now[key]) === JSON.stringify(merged.after[key]));
-    stayed += keys.length - untouched.length;
+    // Put back already, by the Restore of another record of the same merge: nothing to count.
+    const back = keys.filter((key) => !untouched.includes(key) && JSON.stringify(now[key]) === JSON.stringify(merged.before[key]));
+    stayed += keys.length - untouched.length - back.length;
     if (untouched.length) tx.update(${n.table}).set(Object.fromEntries(untouched.map((key) => [key, revived(kept[key as keyof typeof kept], merged.before[key])]))).where(eq(${n.table}.id, merged.into)).run();
   }
   return stayed;
