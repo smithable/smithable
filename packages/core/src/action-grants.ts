@@ -16,8 +16,8 @@ export function writeActionGrants(
 ): { text: string; written: string[] } {
   const spec = new YamlEditor(text);
   const written: string[] = [];
-  // Those a role runs only when named: custom actions, and merges (intents.md §3).
-  const custom = ir.actions.filter((a) => a.custom || a.merge).map((a) => a.name);
+  // Those a role runs only when named: custom actions, merges and splits (intents.md §3, §4).
+  const custom = ir.actions.filter((a) => a.custom || a.merge || a.split).map((a) => a.name);
   for (const role of auth.roles) {
     if (role.name === "admin" || role.grants === "all" || role.grants.actions !== "all") continue;
     const widens = ir.models.some(

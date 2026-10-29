@@ -119,7 +119,8 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
  * is run too by the roles whose `actions` grant names it, as a page is opened by the roles whose
  * `pages` grant names it (docs/design/actions.md, 2026-10-21); one
  * that adds a related record also needs the right to create one (§7), and a copy that of its
- * lists' records (§8). A merge needs the action's grant and write on its model.
+ * lists' records (§8). A merge needs the action's grant and write on its model; a split the
+ * grant and create on it.
  */
 export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] = []): Allowed {
   if (auth.signIn === "none") return { public: false, roles: [], owner: false };
@@ -135,6 +136,18 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
       public: false,
       roles: granted(auth, "actions", action.name).filter(
         (r) => write.owner || write.roles.includes(r),
+      ),
+      owner: false,
+    };
+  }
+  // A split (intents.md §4): the action's grant, with create on its model; write on the records
+  // that move is the generated server's check.
+  if (action.split) {
+    const create = modelAccess(model, auth).create;
+    return {
+      public: false,
+      roles: granted(auth, "actions", action.name).filter(
+        (r) => create.public || create.roles.includes(r),
       ),
       owner: false,
     };

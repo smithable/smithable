@@ -635,6 +635,18 @@ export const w = {
           : `${other} stays, since you may not delete it`;
     return `${values}${moved}, and ${fate}.`;
   },
+  /** Splitting a record (docs/design/intents.md §4). */
+  splitIt: "Split…",
+  splitWhich: (plural: string) => `Which ${plural.toLowerCase()} go to the new record?`,
+  splitPickOne: (label: string) => `Pick at least one ${label.toLowerCase()} to move.`,
+  splitLeaveOne: (label: string) => `Leave at least one ${label.toLowerCase()} where it is.`,
+  splitMayNotChange: (plural: string) =>
+    `Some of the ${plural.toLowerCase()} picked are not yours to change, so nothing was split.`,
+  splitOriginalGone: "The record this was split from is gone, so there is nothing to undo into.",
+  splitNotSplit: "This record was not made by a split.",
+  splitDone: (from: string) => `Split off from ${from}.`,
+  splitStayed: (n: number) =>
+    `${n} ${n === 1 ? "record was" : "records were"} moved elsewhere since and stay there.`,
   mergedIntoTitle: (title: string) => `merged into “${title}”`,
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
   mergeStayed: (n: number) =>
