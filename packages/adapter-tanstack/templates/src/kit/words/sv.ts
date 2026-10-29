@@ -594,6 +594,10 @@ export const w = {
     `Vilka poster av typen ${plural.toLowerCase()} går till den nya posten?`,
   splitPickOne: (label: string) => `Välj minst en post av typen ${label.toLowerCase()} att flytta.`,
   splitLeaveOne: (label: string) => `Lämna minst en post av typen ${label.toLowerCase()} kvar.`,
+  splitMayNotChange: (plural: string) =>
+    `Några av de valda posterna av typen ${plural.toLowerCase()} får du inte ändra, så inget delades.`,
+  splitOriginalGone:
+    "Posten den här delades från finns inte längre, så det finns inget att ångra till.",
   splitNotSplit: "Den här posten kom inte till genom en delning.",
   splitDone: (from: string) => `Delad från ${from}.`,
   splitStayed: (n: number) =>

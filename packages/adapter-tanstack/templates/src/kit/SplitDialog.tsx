@@ -137,8 +137,8 @@ export function SplitNotice({
 }: {
   model: string;
   id: number;
-  /** Undoes the split; what stayed elsewhere since, counted. */
-  onUndo: () => Promise<{ stayed: number }>;
+  /** Undoes the split (a model with a trash); what stayed elsewhere since, counted. */
+  onUndo?: () => Promise<{ stayed: number }>;
 }) {
   const [from, setFrom] = useState<string>();
   const [stayed, setStayed] = useState<number>();
@@ -173,21 +173,23 @@ export function SplitNotice({
     >
       <span className="flex-1">{w.splitDone(from)}</span>
       {failure && <span className="text-destructive">{failure}</span>}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={async () => {
-          try {
-            const result = await onUndo();
-            setFrom(undefined);
-            setStayed(result.stayed || undefined);
-          } catch (error) {
-            setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
-          }
-        }}
-      >
-        {w.undoIt}
-      </Button>
+      {onUndo && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            try {
+              const result = await onUndo();
+              setFrom(undefined);
+              setStayed(result.stayed || undefined);
+            } catch (error) {
+              setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+            }
+          }}
+        >
+          {w.undoIt}
+        </Button>
+      )}
     </div>
   );
 }

@@ -436,12 +436,16 @@ export function detailRoute(
     imports.set(n.module, [...(imports.get(n.module) ?? []), n.options]);
   }
   // A split: "Split…" with the records of its list, then the new record's page (intents.md §4).
-  const splits = within ? [] : splitActions(page, ir).slice(0, 1);
+  const splits = within
+    ? []
+    : splitActions(page, ir)
+        .filter((a) => a.on === model.name)
+        .slice(0, 1);
   for (const action of splits)
     imports.set(`#/generated/actions/${kebab(action.name)}`, [
       action.name,
       actionNames(action).access,
-      actionNames(action).undoFn,
+      ...(model.trash ? [actionNames(action).undoFn] : []),
     ]);
   if (splits.length) imports.set("#/kit/SplitDialog", ["SplitButton", "SplitNotice"]);
   for (const action of splits) {
@@ -701,12 +705,16 @@ function ${component}() {
           (a) => `
       <SplitNotice
         model=${attr(model.name)}
-        id={row.id}
+        id={row.id}${
+          model.trash
+            ? `
         onUndo={async () => {
           const undone = await ${actionNames(a).undoFn}({ data: row.id });
           await navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(undone.original) } });
           return undone;
-        }}
+        }}`
+            : ""
+        }
       />`,
         )
         .join("")}${
