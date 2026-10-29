@@ -311,19 +311,17 @@ async function detachFlow(dir, port) {
 }
 
 /** A test that names the rule it covers, as a developer (or AI) writes it. */
-const MERGE_CUSTOMERS_TEST = `import { eq } from "drizzle-orm";
+const SCHEDULE_FOLLOW_UPS_TEST = `import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { customers, orders } from "#/db/schema";
-import { mergeCustomers } from "./merge-customers";
+import { customers, followUps } from "#/db/schema";
+import { scheduleFollowUps } from "./schedule-follow-ups";
 
-test("rule mergeCustomers.move-orders: the duplicate's orders move to the kept customer", async () => {
-  const keep = db.insert(customers).values({ name: "Keep Ltd" }).returning().get();
-  const duplicate = db.insert(customers).values({ name: "Duplicate Ltd" }).returning().get();
-  db.insert(orders).values({ number: \`T-\${Date.now()}\`, customerId: duplicate.id, total: 100 }).run();
-  await mergeCustomers({ keep: keep.id, duplicate: duplicate.id }, null);
-  expect(db.select().from(orders).where(eq(orders.customerId, keep.id)).all()).toHaveLength(1);
-  expect(db.select().from(customers).where(eq(customers.id, duplicate.id)).all()).toHaveLength(0);
+test("rule scheduleFollowUps.first-today: the first follow-up is due today", async () => {
+  const customer = db.insert(customers).values({ name: "Rule Ltd" }).returning().get();
+  await scheduleFollowUps({ customer: customer.id, count: 2, everyDays: 3 }, null);
+  const due = db.select().from(followUps).where(eq(followUps.customerId, customer.id)).all().map((f) => f.dueOn).sort();
+  expect(due[0]).toBe(new Date().toISOString().slice(0, 10));
 });
 `;
 
@@ -5269,7 +5267,7 @@ async function askFlow(dir) {
           dir,
           { ...coder, SMITHABLE_CODER_LOCATION: "", SMITHABLE_AI_POLICY: "eu-only" },
           "code",
-          "action:mergeCustomers",
+          "action:scheduleFollowUps",
           "anything",
         );
         if (
@@ -5520,13 +5518,13 @@ function operationsFlow(dir) {
   step(
     "op renameField on a reference keeps every link, and flags custom code using the old name",
     () => {
-      const before = query(dir, "select id, customer_id from orders order by id");
-      expectOk(smithable(dir, "op", "renameField", "Order", "customer", "buyer"));
-      const after = query(dir, "select id, buyer_id as customer_id from orders order by id");
-      if (JSON.stringify(after) !== JSON.stringify(before))
+      const before = query(dir, "select id, customer_id from follow_ups order by id");
+      expectOk(smithable(dir, "op", "renameField", "FollowUp", "customer", "client"));
+      const after = query(dir, "select id, client_id as customer_id from follow_ups order by id");
+      if (JSON.stringify(after) !== JSON.stringify(before) || !before.length)
         throw new Error(JSON.stringify({ before, after }));
       const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
-      if (typecheck.status === 0 || !typecheck.stdout.includes("merge-customers.ts")) {
+      if (typecheck.status === 0 || !typecheck.stdout.includes("schedule-follow-ups.ts")) {
         throw new Error(`expected the custom code to be flagged:\n${typecheck.stdout}`);
       }
       expectOk(smithable(dir, "undo"));
@@ -5635,32 +5633,35 @@ function operationsFlow(dir) {
     () => {
       const specFile = join(dir, "smithable.yml");
       const spec = readFileSync(specFile, "utf8");
-      const custom = readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8");
-      writeFileSync(specFile, spec.replace("keep: Customer!", "primary: Customer!"));
+      const custom = readFileSync(join(dir, "src/custom/actions/schedule-follow-ups.ts"), "utf8");
+      writeFileSync(
+        specFile,
+        spec.replace("customer: Customer!, count", "client: Customer!, count"),
+      );
       run("node", [cli, "generate", dir], repo);
       const typecheck = spawnSync("pnpm", ["typecheck"], { cwd: dir, encoding: "utf8" });
       writeFileSync(specFile, spec);
       run("node", [cli, "generate", dir], repo);
       if (typecheck.status === 0) throw new Error("typecheck passed after the input changed");
-      if (!typecheck.stdout.includes("merge-customers.ts")) throw new Error(typecheck.stdout);
-      if (readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8") !== custom) {
+      if (!typecheck.stdout.includes("schedule-follow-ups.ts")) throw new Error(typecheck.stdout);
+      if (readFileSync(join(dir, "src/custom/actions/schedule-follow-ups.ts"), "utf8") !== custom) {
         throw new Error("the custom code was changed");
       }
       run("pnpm", ["typecheck"], dir);
     },
   );
   step("rule status: not implemented → implemented and tested → changed", () => {
-    const rule = "mergeCustomers.move-orders";
+    const rule = "scheduleFollowUps.first-today";
     const status = () => {
       const out = smithable(dir, "inspect").out;
       const line = out.split("\n").find((l) => l.trim().startsWith(rule));
       if (!line) throw new Error(`no ${rule} in:\n${out}`);
       return line.trim().slice(rule.length).trim();
     };
-    expectOk(smithable(dir, "op", "setRuleId", "action:mergeCustomers", "1", "move-orders"));
+    expectOk(smithable(dir, "op", "setRuleId", "action:scheduleFollowUps", "1", "first-today"));
     if (status() !== "Not implemented") throw new Error(status());
 
-    const custom = join(dir, "src/custom/actions/merge-customers.ts");
+    const custom = join(dir, "src/custom/actions/schedule-follow-ups.ts");
     writeFileSync(
       custom,
       readFileSync(custom, "utf8").replace(
@@ -5668,7 +5669,10 @@ function operationsFlow(dir) {
         `// implements rule ${rule}\nexport async`,
       ),
     );
-    writeFileSync(join(dir, "src/custom/actions/merge-customers.test.ts"), MERGE_CUSTOMERS_TEST);
+    writeFileSync(
+      join(dir, "src/custom/actions/schedule-follow-ups.test.ts"),
+      SCHEDULE_FOLLOW_UPS_TEST,
+    );
     if (!status().startsWith("Implemented and tested, but the tests have not run"))
       throw new Error(status());
     expectOk(smithable(dir, "test"));
@@ -5678,16 +5682,16 @@ function operationsFlow(dir) {
     writeFileSync(
       specFile,
       readFileSync(specFile, "utf8").replace(
-        "move to the kept customer",
-        "move to the customer we keep",
+        "each next one everyDays later",
+        "each next one so many days later",
       ),
     );
     if (!status().startsWith("Changed")) throw new Error(status());
   });
   step(
-    "inspect action:mergeCustomers gives its meaning, rules, files, symbols, routes and tests",
+    "inspect action:scheduleFollowUps gives its meaning, rules, files, symbols, routes and tests",
     () => {
-      const { code, out, stdout } = smithable(dir, "inspect", "action:mergeCustomers", "--json");
+      const { code, out, stdout } = smithable(dir, "inspect", "action:scheduleFollowUps", "--json");
       if (code !== 0) throw new Error(out);
       // Warnings go to stderr; the JSON is stdout.
       const info = JSON.parse(stdout);
@@ -5696,12 +5700,16 @@ function operationsFlow(dir) {
           (f) => f.role === role && f.path === path && (!symbol || f.symbols.includes(symbol)),
         );
       const ok =
-        info.intent.startsWith("Merge a duplicate customer") &&
-        info.rules.some((r) => r.id === "mergeCustomers.move-orders") &&
-        has("generated", "src/generated/actions/merge-customers.ts", "MergeCustomersInput") &&
-        has("implements", "src/custom/actions/merge-customers.ts", "mergeCustomers") &&
-        info.routes.includes("/customers/actions/merge-customers") &&
-        info.tests.some((t) => t.file === "src/custom/actions/merge-customers.test.ts");
+        info.intent.startsWith("Plan a series of follow-up notes") &&
+        info.rules.some((r) => r.id === "scheduleFollowUps.first-today") &&
+        has(
+          "generated",
+          "src/generated/actions/schedule-follow-ups.ts",
+          "ScheduleFollowUpsInput",
+        ) &&
+        has("implements", "src/custom/actions/schedule-follow-ups.ts", "scheduleFollowUps") &&
+        info.routes.includes("/customers/actions/schedule-follow-ups") &&
+        info.tests.some((t) => t.file === "src/custom/actions/schedule-follow-ups.test.ts");
       if (!ok) throw new Error(out);
     },
   );
@@ -6097,37 +6105,78 @@ async function browserFlow(dir, base) {
     await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 * P });
     console.log("  ✓ browser: orders are found by their customer's name");
 
+    // A merge (intents.md §3): the two Arctic Outdoors picked in the list, the one with the orders
+    // kept, the phone and notes decided field by field; the other goes to the trash, and Undo
+    // puts back what moved.
     await open(page, `${base}/customers`);
-    await page.getByRole("link", { name: "Merge customers" }).click();
-    // By keyboard: type part of the name, then Enter on the first match.
-    const keep = page.getByRole("combobox", { name: "Keep *" });
-    await keep.fill("nordic");
-    await keep.press("ArrowDown");
-    await keep.press("ArrowUp");
-    await keep.press("Enter");
-    if ((await keep.inputValue()) !== "Nordic Timber Oy")
-      throw new Error(`the keyboard chose "${await keep.inputValue()}"`);
-    await chooseRecord(page, "Duplicate *", "Skerry Software");
+    const rowOf = (name) =>
+      page.locator("tr").filter({ has: page.getByRole("cell", { name, exact: true }) });
+    await rowOf("Arctic Outdoor Co").getByRole("checkbox").check();
+    await rowOf("Arctic Outdoor").getByRole("checkbox").check();
     await page.getByRole("button", { name: "Merge customers" }).click();
-    await page.waitForURL(`${base}/customers`);
-    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).waitFor();
-    // The list refreshes after the action; the duplicate must disappear from it.
+    const merging = page.getByRole("dialog", { name: "Merge customers" });
+    await merging
+      .getByRole("combobox", { name: "Keep" })
+      .selectOption({ label: "Arctic Outdoor Co" });
+    await merging.getByText("1 order and 1 follow up move to it").waitFor({ timeout: 10000 * P });
+    await merging
+      .getByRole("group", { name: "Notes" })
+      .getByRole("radio", { name: "Both, one after the other" })
+      .check();
+    await merging.getByRole("button", { name: "Merge customers" }).click();
     await page
-      .getByRole("cell", { name: "Skerry Software", exact: true })
-      .waitFor({ state: "detached", timeout: 10000 * P })
-      .catch(() => {
-        throw new Error("the duplicate is still there");
-      });
-    await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
-    await page.getByRole("cell", { name: "ORD-2001", exact: true }).waitFor({ timeout: 5000 * P });
-    console.log("  ✓ browser: the custom action merges customers and moves their orders");
+      .getByRole("cell", { name: "Arctic Outdoor", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 * P });
+    await page.getByText("“Arctic Outdoor” is in the trash.").waitFor({ timeout: 5000 * P });
+    const notes = query(dir, "select notes from customers where name = 'Arctic Outdoor Co'")[0]
+      ?.notes;
+    const mergedOrder = query(
+      dir,
+      "select count(*) n from orders o join customers c on c.id = o.customer_id where c.name = 'Arctic Outdoor Co' and o.number = 'ORD-1018'",
+    )[0]?.n;
+    if (!notes?.includes("Kiruna trade fair") || mergedOrder !== 1)
+      throw new Error(`after the merge: ${JSON.stringify({ notes, mergedOrder })}`);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await page
+      .getByRole("cell", { name: "Arctic Outdoor", exact: true })
+      .waitFor({ timeout: 10000 * P });
+    const back = query(
+      dir,
+      "select count(*) n from orders o join customers c on c.id = o.customer_id where c.name = 'Arctic Outdoor' and o.number = 'ORD-1018'",
+    )[0]?.n;
+    const keptNotes = query(dir, "select notes from customers where name = 'Arctic Outdoor Co'")[0]
+      ?.notes;
+    if (back !== 1 || keptNotes?.includes("Kiruna trade fair"))
+      throw new Error(`after Undo: ${JSON.stringify({ back, keptNotes })}`);
+    console.log(
+      "  ✓ browser: two customers merge, field by field; the order moves; Undo puts it all back",
+    );
+
+    // The starter's custom action: follow-ups planned for a customer, one a week.
+    await page.getByRole("link", { name: "Schedule follow ups" }).click();
+    await chooseRecord(page, "Customer *", "Skerry Software");
+    await page.getByRole("textbox", { name: "Count *" }).fill("3");
+    await page.getByRole("textbox", { name: "Every days *" }).fill("7");
+    await page.getByRole("button", { name: "Schedule follow ups" }).click();
+    await page.waitForURL(`${base}/customers`);
+    const planned = query(
+      dir,
+      "select count(*) n from follow_ups f join customers c on c.id = f.customer_id where c.name = 'Skerry Software'",
+    )[0]?.n;
+    if (planned !== 3) throw new Error(`${planned} follow-ups planned`);
+    console.log("  ✓ browser: the custom action plans a customer's follow-ups");
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await page.waitForURL(/\/sign-in/);
     await signInAs(page, base, "sales");
     await open(page, `${base}/customers`);
-    if (await page.getByRole("link", { name: "Merge customers" }).count())
+    await rowOf("Arctic Outdoor Co").getByRole("checkbox").check();
+    await rowOf("Arctic Outdoor").getByRole("checkbox").check();
+    await page.getByText("2 selected").waitFor();
+    if (await page.getByRole("button", { name: "Merge customers" }).count())
       throw new Error("sales can merge customers");
+    if (await page.getByRole("link", { name: "Schedule follow ups" }).count())
+      throw new Error("sales can schedule follow-ups");
     await page.getByRole("cell", { name: "Nordic Timber Oy", exact: true }).click();
     await page.getByRole("button", { name: "Save changes" }).waitFor();
     if (await page.getByRole("button", { name: /^(Delete|Move to trash)$/ }).count())
@@ -6159,7 +6208,7 @@ for (const [index, example] of examples.entries()) {
     );
     if (example === "crm") {
       step("the starter comes with its custom action implemented", () => {
-        const code = readFileSync(join(dir, "src/custom/actions/merge-customers.ts"), "utf8");
+        const code = readFileSync(join(dir, "src/custom/actions/schedule-follow-ups.ts"), "utf8");
         if (code.includes("not implemented yet"))
           throw new Error("the stub, not the starter's code");
       });

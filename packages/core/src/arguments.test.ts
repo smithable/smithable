@@ -17,8 +17,8 @@ test("a grant's names follow what is granted: pages, models, or custom actions",
   const names = (what: string) =>
     values(namesFor({ ref: "grantNames", what: "what" }, { what }, ir, ["admin", "sales"]));
   expect(names("pages")).toContain("orders");
-  expect(names("write")).toEqual(["Customer", "Order"]);
-  expect(names("actions")).toEqual(["mergeCustomers"]);
+  expect(names("write")).toEqual(["Customer", "Order", "FollowUp"]);
+  expect(names("actions")).toEqual(["mergeCustomers", "scheduleFollowUps"]);
   expect(names("all")).toEqual([]);
   expect(values(namesFor({ ref: "role" }, {}, ir, ["admin", "sales"]))).toEqual(["admin", "sales"]);
 });

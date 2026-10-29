@@ -299,6 +299,14 @@ function readTimer(
       return undefined;
     }
     ctx.reference("action", action.name, at("run"));
+    if (!action.custom && action.merge) {
+      ctx.error(
+        at("run"),
+        "invalid-timer",
+        `${capitalize(where)} runs "${run}", a merge: a person picks the two records and which stays, so no timer runs it.`,
+      );
+      return undefined;
+    }
     // A timer runs as the app, for nobody in particular: a condition on the person signed in
     // (ME(), not ME()) would hold for everyone or no one.
     if (

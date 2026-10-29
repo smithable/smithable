@@ -26,6 +26,7 @@ test("an annotated argument offers the names in the spec, following the argument
   expect(choicesFor(ref("removeField", "model"), {}, spec).map(([v]) => v)).toEqual([
     "Customer",
     "Order",
+    "FollowUp",
   ]);
   expect(
     choicesFor(ref("removeField", "field"), { model: "Order" }, spec).map(([v]) => v),

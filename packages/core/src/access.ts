@@ -119,13 +119,26 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
  * is run too by the roles whose `actions` grant names it, as a page is opened by the roles whose
  * `pages` grant names it (docs/design/actions.md, 2026-10-21); one
  * that adds a related record also needs the right to create one (§7), and a copy that of its
- * lists' records (§8).
+ * lists' records (§8). A merge needs the action's grant and write on its model.
  */
 export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] = []): Allowed {
   if (auth.signIn === "none") return { public: false, roles: [], owner: false };
   const model = action.custom ? undefined : models.find((m) => m.name === action.on);
   if (!model || action.custom)
     return { public: false, roles: granted(auth, "actions", action.name), owner: false };
+  // A merge (docs/design/intents.md §3): the action's grant, with write on its model, which the
+  // generated server checks on the records themselves; delete on the other decides whether it
+  // goes to the trash or stays.
+  if (action.merge) {
+    const write = modelAccess(model, auth).write;
+    return {
+      public: false,
+      roles: granted(auth, "actions", action.name).filter(
+        (r) => write.owner || write.roles.includes(r),
+      ),
+      owner: false,
+    };
+  }
   const write = modelAccess(model, auth).write;
   const named = granted(auth, "actions", action.name);
   let roles = auth.roles

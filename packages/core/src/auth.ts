@@ -102,7 +102,8 @@ export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
     api.models === "all"
       ? known.filter((m) => !api.except.includes(m))
       : api.models.filter((m) => known.includes(m));
-  const standard = ir.actions.filter((a) => !a.custom && models.includes(a.on));
+  // A merge is offered in the app only (docs/design/intents.md §3).
+  const standard = ir.actions.filter((a) => !a.custom && !a.merge && models.includes(a.on));
   const actions =
     api.actions === "all"
       ? standard.map((a) => a.name)

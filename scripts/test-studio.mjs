@@ -622,8 +622,13 @@ try {
       .waitFor();
     await page.getByRole("button", { name: /^Advanced: every grant/ }).click();
     const grid = page.getByRole("region", { name: "Who can" });
-    // Sales may add every kind of record (create: all): taking customers away leaves orders.
+    // Sales may add every kind of record (create: all): taking customers away leaves the others,
+    // and taking follow-ups away leaves orders.
     await grid.getByRole("checkbox", { name: "sales may add customers", exact: true }).click();
+    await status
+      .getByText("sales may add orders, follow ups", { exact: true })
+      .waitFor({ timeout: 60000 * P });
+    await grid.getByRole("checkbox", { name: "sales may add follow ups", exact: true }).click();
     await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 * P });
     await sub("Behavior");
   });
@@ -740,11 +745,11 @@ try {
       await page.locator("label", { hasText: /^Map$/ }).click();
       await sub("What happens");
       const map = page.getByRole("region", { name: "What happens" });
-      const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
-      await merge.getByText("custom code", { exact: true }).waitFor({ timeout: 30000 * P });
-      await merge.getByText(/^Merge a duplicate customer/).waitFor({ timeout: 10000 * P });
+      const custom = map.locator('[data-behaviour-box="action:scheduleFollowUps"]');
+      await custom.getByText("custom code", { exact: true }).waitFor({ timeout: 30000 * P });
+      await custom.getByText(/^Plan a series of follow-up notes/).waitFor({ timeout: 10000 * P });
       await map.locator(".react-flow__controls-fitview").click();
-      await merge.getByRole("button", { name: "mergeCustomers" }).click();
+      await custom.getByRole("button", { name: "scheduleFollowUps" }).click();
       await page
         .getByRole("tab", { name: "Behavior", selected: true })
         .waitFor({ timeout: 10000 * P });

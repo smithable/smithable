@@ -58,10 +58,13 @@ const addAction: Operation<{
   input?: Record<string, string>;
   output?: Record<string, string>;
   intent?: string;
+  merge?: string;
+  keep?: string;
+  fields?: string[];
 }> = {
   name: "addAction",
   summary:
-    "Add an action: standard with --on and --set (it sets fields of a record), else custom (its behavior is code in src/custom/actions/).",
+    "Add an action: standard with --on and --set (it sets fields of a record), a merge with --merge Model (two records become one), else custom (its behavior is code in src/custom/actions/).",
   schema: {
     type: "object",
     required: ["action"],
@@ -107,10 +110,28 @@ const addAction: Operation<{
       ),
       output: fields("A custom action: the values it returns, if any."),
       intent: { type: "string", description: "What it is for, in a sentence." },
+      merge: refTo(
+        { ref: "model", label: "Merges two records of" },
+        {
+          description:
+            "A merge: two records of this model become one; the other's references move to the kept record, and the other goes to the trash.",
+        },
+      ),
+      keep: {
+        enum: ["chosen", "oldest", "newest"],
+        description: "For a merge: which record stays; chosen (the person says) unless said.",
+      },
+      fields: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask revenue=add; a field not named is asked.",
+      },
     },
   },
   positional: ["action", "...input"],
-  describe: ({ action, on }) => `Add the ${on ? "standard" : "custom"} action ${action}`,
+  describe: ({ action, on, merge }) =>
+    `Add the ${merge ? "merge" : on ? "standard" : "custom"} action ${action}`,
   destructive: () => false,
   apply(
     { spec },
@@ -125,6 +146,9 @@ const addAction: Operation<{
       input = {},
       output = {},
       intent,
+      merge,
+      keep,
+      fields: rules = [],
     },
     ir,
   ) {
@@ -134,6 +158,54 @@ const addAction: Operation<{
     const text = {
       ...(intent?.trim() ? { intent: intent.trim() } : {}),
     };
+    // One operation gives a working button: on the model's crud page, when there is just one.
+    const offerOn = (model: string) => {
+      const pages = ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === model);
+      const page = pages.length === 1 ? pages[0] : undefined;
+      if (page?.actions) spec.set(["pages", page.id, "actions"], [...page.actions, action]);
+      else if (page) spec.add(["pages", page.id], "actions", [action]);
+    };
+    if (merge !== undefined || keep !== undefined || rules.length) {
+      if (merge === undefined)
+        throw new OperationError('"--keep" and "--fields" go with --merge <Model>.');
+      if (
+        on ||
+        Object.keys(set).length ||
+        Object.keys(when).length ||
+        Object.keys(add).length ||
+        copy ||
+        lists.length ||
+        Object.keys(input).length ||
+        Object.keys(output).length
+      )
+        throw new OperationError(
+          "A merge names its model and nothing else: no --on, --set, --when, --add, --copy, --with, input or output.",
+        );
+      if (!ir.models.some((m) => m.name === merge))
+        throw new OperationError(`There is no model named "${merge}".`);
+      if (merge === "User")
+        throw new OperationError("Users cannot be merged: they are who signs in.");
+      if (keep !== undefined && !["chosen", "oldest", "newest"].includes(keep))
+        throw new OperationError('"--keep" is chosen, oldest or newest.');
+      const fieldRules: Record<string, string> = {};
+      for (const pair of rules) {
+        const at = pair.indexOf("=");
+        const [field, rule] = at > 0 ? [pair.slice(0, at), pair.slice(at + 1)] : [pair, ""];
+        if (!field || !["keep", "other", "ask", "add", "append"].includes(rule))
+          throw new OperationError(
+            `"${pair}" is not field=rule, with the rule keep, other, ask, add or append.`,
+          );
+        fieldRules[field] = rule;
+      }
+      spec.add(["actions"], action, {
+        merge,
+        ...(keep !== undefined && keep !== "chosen" ? { keep } : {}),
+        ...(Object.keys(fieldRules).length ? { fields: fieldRules } : {}),
+        ...text,
+      });
+      offerOn(merge);
+      return [];
+    }
     if (!on) {
       if (
         Object.keys(set).length ||
@@ -198,11 +270,7 @@ const addAction: Operation<{
       ...(lists.length ? { with: lists } : {}),
       ...text,
     });
-    // One operation gives a working button: on the model's crud page, when there is just one.
-    const pages = ir.pages.filter((p) => p.pattern.kind === "crud" && p.pattern.model === on);
-    const page = pages.length === 1 ? pages[0] : undefined;
-    if (page?.actions) spec.set(["pages", page.id, "actions"], [...page.actions, action]);
-    else if (page) spec.add(["pages", page.id], "actions", [action]);
+    offerOn(on);
     return [];
   },
 };

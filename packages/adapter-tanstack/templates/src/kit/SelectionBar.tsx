@@ -1,6 +1,6 @@
 // Smithable app kit: what to do with the chosen records (docs/design/actions.md §9): each action
 // that fits at least one of them, with how many it applies to, and Delete. One run, all or none.
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -33,6 +33,7 @@ export function SelectionBar({
   onDone,
   onExport,
   trash,
+  extra,
 }: {
   count: number;
   /** The records' name, one and several, e.g. ["incident", "incidents"]. */
@@ -51,6 +52,8 @@ export function SelectionBar({
   onExport?: () => void;
   /** Deleting moves the records to the trash (docs/design/trash.md), where they can be restored. */
   trash?: boolean;
+  /** More buttons for the chosen records, e.g. Merge when two are picked (intents.md §3). */
+  extra?: ReactNode;
 }) {
   const noun: [string, string] = [tx(nouns[0]), tx(nouns[1])];
   const [message, setMessage] = useState<string>();
@@ -117,6 +120,7 @@ export function SelectionBar({
                   }}
                 />
               ))}
+            {extra}
             {onDelete && deletable > 0 && (
               <Button
                 type="button"
