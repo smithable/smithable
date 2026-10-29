@@ -545,6 +545,13 @@ export interface StandardActionIR extends ActionBase {
    * what each field does; a field not named is asked when the two differ.
    */
   merge?: { keep: MergeKeep; fields: Record<string, MergeRule> };
+  /**
+   * A split (docs/design/intents.md §4): one record of `on` becomes two; `set` is then empty.
+   * `move` is the list whose picked records go to the new record, `copy` the stored fields the new
+   * record takes from the old: as written, or every stored field but the unique, the sequences, the
+   * app's, the pictures, the documents and the lists.
+   */
+  split?: { move: string; copy: string[] };
 }
 
 export type MergeKeep = "chosen" | "oldest" | "newest";
