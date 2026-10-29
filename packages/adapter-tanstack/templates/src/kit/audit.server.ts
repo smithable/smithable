@@ -126,6 +126,8 @@ export function forgetInLog(viewer: Viewer | null, target: Forgotten): number {
               and(
                 eq(auditLog.model, target.model),
                 sql`${auditLog.action} in ('merged', 'merged, kept')`,
+                // Only lines that still hold values: one forgotten before is not counted again.
+                sql`(json_type(${auditLog.details}, '$.before') is not null or json_type(${auditLog.details}, '$.after') is not null)`,
                 sql`(${auditLog.recordId} = ${target.record} or json_extract(${auditLog.details}, '$.into') = ${target.record})`,
               ),
             )

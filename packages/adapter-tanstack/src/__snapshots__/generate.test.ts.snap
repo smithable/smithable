@@ -10093,7 +10093,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/dev-door.server.ts": "167a7551 kit",
@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16238,7 +16238,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28665,7 +28665,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -30811,6 +30811,10 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     stayed += 1 - tx.update(table).set({ [m.key]: id } as never).where(and(eq(table.id, m.id), eq(column, merged.into))).run().changes;
   }
   for (const c of merged.cleared) {
+    if (!mayChange(c.model, c.id)) {
+      stayed++;
+      continue;
+    }
     const table = MERGED_TABLES[c.model] as unknown as typeof schema.customers;
     const column = table[c.key as keyof typeof table] as never;
     stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
@@ -30818,12 +30822,18 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
   for (const d of merged.trashed) {
     // Those of a model without a trash were deleted for good.
     if (!(["Order", "FollowUp"] as string[]).includes(d.model)) continue;
+    if (!mayChange(d.model, d.id)) {
+      stayed++;
+      continue;
+    }
     const table = MERGED_TABLES[d.model] as unknown as typeof schema.customers;
     tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
   }
   // A value the merge gave the kept one, still as it left it, goes back to what it was.
   const kept = tx.select().from(schema.customers).where(eq(schema.customers.id, merged.into)).get();
-  if (kept) {
+  // Only by one who may change the kept record.
+  if (kept && !allows(customerAccess.write, viewer, kept.accountManagerId)) stayed += Object.keys(merged.after ?? {}).length;
+  else if (kept) {
     // Dates were written as text in the line: compared as the line has them.
     const now = JSON.parse(JSON.stringify(kept)) as Record<string, unknown>;
     // Forgotten in the log since: the values are not there to put back.
@@ -30836,15 +30846,16 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
 }
 
 /** The records the trashed ones were merged into, by title (the trash list's "merged into"). */
-function mergedIntoTitles(rows: { id: number; deletedAt?: Date | null }[]): Map<number, string> {
+function mergedIntoTitles(viewer: Viewer | null, rows: { id: number; deletedAt?: Date | null }[]): Map<number, string> {
   const titles = new Map<number, string>();
   if (!rows.length) return titles;
-  const lines = db.select({ recordId: schema.auditLog.recordId, details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.action, "merged"), inArray(schema.auditLog.recordId, rows.map((r) => r.id)))).all();
+  const lines = db.select({ recordId: schema.auditLog.recordId, details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.action, "merged"), inArray(schema.auditLog.recordId, rows.map((r) => r.id)))).orderBy(schema.auditLog.id).all();
   for (const row of rows) {
     // The merge that put it in the trash this time.
     const line = lines.filter((l) => l.recordId === row.id && (l.details as { trashedAt?: number } | null)?.trashedAt === row.deletedAt?.getTime()).pop();
     const into = (line?.details as { into?: number } | undefined)?.into;
-    const kept = into === undefined ? undefined : db.select().from(schema.customers).where(eq(schema.customers.id, into)).get();
+    // Named only to one who may read it.
+    const kept = into === undefined ? undefined : db.select().from(schema.customers).where(and(eq(schema.customers.id, into), customerData.readable(viewer))).get();
     if (kept) titles.set(row.id, String(kept.name ?? kept.id));
   }
   return titles;
@@ -31339,7 +31350,7 @@ export const customerData = {
     for (const r of db.select({ tag: schema.followUps.deletedWith, n: count() }).from(schema.followUps).where(inArray(schema.followUps.deletedWith, tags)).groupBy(schema.followUps.deletedWith).all())
       withCount.set(r.tag as string, (withCount.get(r.tag as string) ?? 0) + r.n);
     // What each was merged into (intents.md §3).
-    const merged = mergedIntoTitles(rows as { id: number; deletedAt?: Date | null }[]);
+    const merged = mergedIntoTitles(viewer, rows as { id: number; deletedAt?: Date | null }[]);
     return rows.map((row) => ({ ...row, deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null, withCount: withCount.get(\`Customer:\${row.id}\`) ?? 0, mergedInto: merged.get(row.id) ?? null }));
   },
 
@@ -37019,7 +37030,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "f47a7dc1 generated",
+  "src/generated/customer.server.ts": "00268b9c generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "1262e2f3 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
@@ -37068,7 +37079,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/dev-door.server.ts": "167a7551 kit",
@@ -37091,7 +37102,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -45426,7 +45437,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -45456,7 +45467,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -53294,7 +53305,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -53322,7 +53333,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -58072,7 +58083,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/dev-door.server.ts": "167a7551 kit",
@@ -58098,7 +58109,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -61565,7 +61576,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/dev-door.server.ts": "167a7551 kit",
@@ -61588,7 +61599,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -73198,7 +73209,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
   "src/kit/dev-door.server.ts": "167a7551 kit",
@@ -73222,7 +73233,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -80222,7 +80233,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
   "src/kit/assistant.server.ts": "77ffcea6 kit",
-  "src/kit/audit.server.ts": "cd71079d kit",
+  "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -80251,7 +80262,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "43402de7 kit",
+  "src/kit/words/en.ts": "59cbff1b kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

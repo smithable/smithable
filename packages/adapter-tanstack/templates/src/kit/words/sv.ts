@@ -592,5 +592,5 @@ export const w = {
   mergedIntoTitle: (title: string) => `ihopslagen med ”${title}”`,
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
-    `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen och blir som de är.`,
+    `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,
 } satisfies Words;

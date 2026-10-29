@@ -488,6 +488,10 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     stayed += 1 - tx.update(table).set({ [m.key]: id } as never).where(and(eq(table.id, m.id), eq(column, merged.into))).run().changes;
   }
   for (const c of merged.cleared) {
+    if (!mayChange(c.model, c.id)) {
+      stayed++;
+      continue;
+    }
     const table = MERGED_TABLES[c.model] as unknown as typeof ${n.table};
     const column = table[c.key as keyof typeof table] as never;
     stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
@@ -495,12 +499,18 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
   for (const d of merged.trashed) {
     // Those of a model without a trash were deleted for good.
     if (!(${literal(tables.filter((m) => m.trash).map((m) => m.name))} as string[]).includes(d.model)) continue;
+    if (!mayChange(d.model, d.id)) {
+      stayed++;
+      continue;
+    }
     const table = MERGED_TABLES[d.model] as unknown as typeof ${n.table};
     tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
   }
   // A value the merge gave the kept one, still as it left it, goes back to what it was.
   const kept = tx.select().from(${n.table}).where(eq(${n.table}.id, merged.into)).get();
-  if (kept) {
+  // Only by one who may change the kept record.
+  if (kept && !allows(${n.access}.write, viewer${signedIn ? `, kept.${ownerKey(model)}` : ""})) stayed += Object.keys(merged.after ?? {}).length;
+  else if (kept) {
     // Dates were written as text in the line: compared as the line has them.
     const now = JSON.parse(JSON.stringify(kept)) as Record<string, unknown>;
     // Forgotten in the log since: the values are not there to put back.
@@ -513,15 +523,16 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
 }
 
 /** The records the trashed ones were merged into, by title (the trash list's "merged into"). */
-function mergedIntoTitles(rows: { id: number; deletedAt?: Date | null }[]): Map<number, string> {
+function mergedIntoTitles(viewer: Viewer | null, rows: { id: number; deletedAt?: Date | null }[]): Map<number, string> {
   const titles = new Map<number, string>();
   if (!rows.length) return titles;
-  const lines = db.select({ recordId: schema.auditLog.recordId, details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.action, "merged"), inArray(schema.auditLog.recordId, rows.map((r) => r.id)))).all();
+  const lines = db.select({ recordId: schema.auditLog.recordId, details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.action, "merged"), inArray(schema.auditLog.recordId, rows.map((r) => r.id)))).orderBy(schema.auditLog.id).all();
   for (const row of rows) {
     // The merge that put it in the trash this time.
     const line = lines.filter((l) => l.recordId === row.id && (l.details as { trashedAt?: number } | null)?.trashedAt === row.deletedAt?.getTime()).pop();
     const into = (line?.details as { into?: number } | undefined)?.into;
-    const kept = into === undefined ? undefined : db.select().from(${n.table}).where(eq(${n.table}.id, into)).get();
+    // Named only to one who may read it.
+    const kept = into === undefined ? undefined : db.select().from(${n.table}).where(and(eq(${n.table}.id, into), ${n.data}.readable(viewer))).get();
     if (kept) titles.set(row.id, String(kept.${titleField(model)} ?? kept.id));
   }
   return titles;

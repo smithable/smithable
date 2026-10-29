@@ -1407,7 +1407,7 @@ ${roots
         orderBy: (t) => [desc(t.deletedAt)],
         limit: ${TRASH_SHOWN},
       }),
-    )${allowed};${named}${groupShown}${unmerge ? "\n    // What each was merged into (intents.md §3).\n    const merged = mergedIntoTitles(rows as { id: number; deletedAt?: Date | null }[]);" : ""}
+    )${allowed};${named}${groupShown}${unmerge ? "\n    // What each was merged into (intents.md §3).\n    const merged = mergedIntoTitles(viewer, rows as { id: number; deletedAt?: Date | null }[]);" : ""}
     ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""}${unmerge ? ", mergedInto: merged.get(row.id) ?? null" : ""} }))`, "return ")}
   },
 
