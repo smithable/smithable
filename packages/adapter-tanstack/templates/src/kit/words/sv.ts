@@ -555,6 +555,8 @@ export const w = {
   orderClosed: (opens?: string) => (opens ? `Stängt, öppnar ${opens}` : "Stängt"),
   orderSoldOut: (label: string) => `Slutsåld: ${label}`,
   orderEmpty: "Inget valt ännu.",
+  quarterOf: (quarter: number, year: string) => `K${quarter} ${year}`,
+  totalsRow: (count: number) => `Summa av ${count}`,
   orderTotal: "Totalt",
   mergeInto: "Slå ihop med…",
   mergeIntoWhich: (_label: string) => "Vilken post ska den här slås ihop med?",

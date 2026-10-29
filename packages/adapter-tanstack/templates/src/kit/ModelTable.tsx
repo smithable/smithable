@@ -67,6 +67,11 @@ interface ModelTableProps<R extends Row> {
   paging?: { page: number; size: number; total: number; to: (page: number) => void };
   /** More of a longer list as the reader scrolls (cards): how many in all, and loading the next. */
   more?: { total: number; load: () => Promise<void> };
+  /**
+   * A last row (docs/design/intents.md §5): how many records fit the filters and the search, and
+   * the sum of each named number over all of them, worked out by the server.
+   */
+  totals?: { count: number; sums: Record<string, number> };
   /** The whole list as it is filtered, for "Export CSV" (the selection bar exports chosen rows). */
   exportRows?: () => Promise<R[]>;
   /**
@@ -183,6 +188,7 @@ export function ModelTable<R extends Row>({
   selection,
   paging,
   more,
+  totals,
   exportRows,
   sorting,
 }: ModelTableProps<R>) {
@@ -585,9 +591,47 @@ export function ModelTable<R extends Row>({
                   )}
                 </TableRow>
               ))}
+              {totals && (
+                <TableRow
+                  data-part="totals"
+                  className="bg-muted/50 font-semibold hover:bg-muted/50"
+                >
+                  {selection && <TableCell />}
+                  {columns.map((field, i) => (
+                    <TableCell
+                      key={field.name}
+                      data-field={field.name}
+                      className={cn(numeric(field.kind) && "text-right tabular-nums")}
+                    >
+                      {field.name in totals.sums
+                        ? formatValue(field, totals.sums[field.name], app)
+                        : i === 0
+                          ? w.totalsRow(totals.count)
+                          : null}
+                    </TableCell>
+                  ))}
+                  {thread && <TableCell />}
+                  {saved && <TableCell />}
+                  {rowActions && <TableCell className="sticky right-0 bg-muted/50" />}
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </Card>
+      )}
+      {totals && (
+        // Cards, and the phone's list, have no last row: the totals as a line under them.
+        <p
+          data-part="totals-line"
+          className={cn("text-sm font-semibold", view !== "cards" && "md:hidden")}
+        >
+          {[
+            w.totalsRow(totals.count),
+            ...columns
+              .filter((f) => f.name in totals.sums)
+              .map((f) => `${f.label}: ${formatValue(f, totals.sums[f.name], app)}`),
+          ].join(" · ")}
+        </p>
       )}
       {paging && <Pager {...paging} />}
       {more && <MoreOnScroll shown={rows.length} total={more.total} onMore={more.load} />}
