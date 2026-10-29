@@ -457,8 +457,10 @@ export function summarize(
         if (f && r !== "ask") rule[r].push(fieldLabel(model, f));
       }
       const rules = [
-        ...(rule.keep.length ? [`${list(rule.keep)} from the kept one`] : []),
-        ...(rule.other.length ? [`${list(rule.other)} from the other`] : []),
+        ...(rule.keep.length
+          ? [`${list(rule.keep)} from ${action.merge.into === "new" ? "the first picked" : stays}`]
+          : []),
+        ...(rule.other.length ? [`${list(rule.other)} from the others`] : []),
         ...(rule.add.length ? [`${list(rule.add)} added up`] : []),
         ...(rule.append.length ? [`${list(rule.append)} written one after the other`] : []),
       ];
