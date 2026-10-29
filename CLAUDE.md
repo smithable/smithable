@@ -54,4 +54,4 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
 
 ## Git
 
-- Every commit ends with two trailers in its last paragraph: `Signed-off-by: Johan Ekenlycka <johan@smithable.ai>` (the Developer Certificate of Origin, CONTRIBUTING.md) and `Co-Authored-By: Claude <model> <noreply@anthropic.com>`. Commits made by scripts carry them too. GitHub's merge commits and bots' commits are the only exceptions (Johan, 2026-10-13).
+- Every commit ends with two trailers in its last paragraph: `Signed-off-by: Johan Ekenlycka <johan@smithable.ai>` (the Developer Certificate of Origin, .github/CONTRIBUTING.md) and `Co-Authored-By: Claude <model> <noreply@anthropic.com>`. Commits made by scripts carry them too. GitHub's merge commits and bots' commits are the only exceptions (Johan, 2026-10-13).

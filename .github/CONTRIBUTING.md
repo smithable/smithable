@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for looking. Smithable is small and opinionated, so please read [docs/VISION.md](docs/VISION.md) (why), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (the decisions) and the rules in [CLAUDE.md](CLAUDE.md) before a change; they explain most of the answers a reviewer would otherwise give.
+Thank you for looking. Smithable is small and opinionated, so please read [docs/VISION.md](../docs/VISION.md) (why), [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) (the decisions) and the rules in [CLAUDE.md](../CLAUDE.md) before a change; they explain most of the answers a reviewer would otherwise give.
 
 ## Before you start
 
@@ -39,11 +39,11 @@ Smithable has three contracts. Each has its own version, and they are kept separ
 - **The engine** (operations, CLI flags and the MCP tools) follows the packages' semver. An operation, an argument or a CLI flag that goes away is still accepted for one minor release, with a message that names its replacement.
 - **A generated app's API** (`/api/v1`) moves to `v2` only when the generator changes the API's shape incompatibly.
 
-During 0.x, every breaking change gets a line under **Breaking** in [CHANGELOG.md](CHANGELOG.md) that names which contract it hits. Nothing breaks a generated app that is not upgraded: an app is its owner's, and `smithable upgrade` is the only way forward. It is checked like any change, and it can be undone. Hosted apps are offered engine upgrades, never forced to take them ([ARCHITECTURE §14.3](docs/ARCHITECTURE.md)).
+During 0.x, every breaking change gets a line under **Breaking** in [CHANGELOG.md](../CHANGELOG.md) that names which contract it hits. Nothing breaks a generated app that is not upgraded: an app is its owner's, and `smithable upgrade` is the only way forward. It is checked like any change, and it can be undone. Hosted apps are offered engine upgrades, never forced to take them ([ARCHITECTURE §14.3](../docs/ARCHITECTURE.md)).
 
 ## Sign-off
 
-Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/). Add `Signed-off-by: Your Name <you@example.com>` to each commit (`git commit -s`) to say that you wrote the change or have the right to submit it under the repository's licences: Apache-2.0 for Smithable, 0BSD for the app kit and templates ([NOTICE](NOTICE)).
+Contributions are accepted under the [Developer Certificate of Origin](https://developercertificate.org/). Add `Signed-off-by: Your Name <you@example.com>` to each commit (`git commit -s`) to say that you wrote the change or have the right to submit it under the repository's licences: Apache-2.0 for Smithable, 0BSD for the app kit and templates ([NOTICE](../NOTICE)).
 
 ## Conduct
 

@@ -14,7 +14,7 @@ Fixed vulnerabilities are published as [GitHub security advisories](https://gith
 
 ## How Smithable keeps generated apps safe
 
-Every generated app checks access in its data functions (never only in the UI), validates every write with a schema derived from the spec, sends security headers and a Content Security Policy with a per-request nonce, runs on a distroless image with pinned dependencies, and carries generated tests for its access rules. `smithable security --level normal|release` runs a dependency audit, a secrets scan, static analysis, a container scan and a dynamic scan against the running image; findings are reported and never suppressed. The details are in [docs/ARCHITECTURE.md §12](docs/ARCHITECTURE.md#12-verification-security-deployment).
+Every generated app checks access in its data functions (never only in the UI), validates every write with a schema derived from the spec, sends security headers and a Content Security Policy with a per-request nonce, runs on a distroless image with pinned dependencies, and carries generated tests for its access rules. `smithable security --level normal|release` runs a dependency audit, a secrets scan, static analysis, a container scan and a dynamic scan against the running image; findings are reported and never suppressed. The details are in [docs/ARCHITECTURE.md §12](../docs/ARCHITECTURE.md#12-verification-security-deployment).
 
 ## Supported versions
 

@@ -1,5 +1,7 @@
 # Threat model
 
+Written for Anthropic's OSS Scanner, which audits open-source projects with a large user base. The image it builds Smithable with lived in `.oss-scanner/` and is in this repository's history (commit 3d0996c4, removed 2026-10-29); when Smithable has that user base, bring it back and point `projects/smithable` in github.com/anthropics/oss-scanner at it. The threat model itself stands on its own and is kept current here.
+
 Smithable is a local-first app builder: a short spec (`smithable.yml` and its companions) is compiled into an ordinary TanStack + Drizzle + SQLite application. People change the spec through operations, from the command line, Studio (a local web app) or an AI model that only proposes; the model's proposal goes through the same operation layer and validator as a typed change. The generated app depends on no Smithable package: what runs in the world is the generated code plus the small app kit copied into it (`src/kit/`). The hosted service (smithable.ai) is a separate, private repository and is out of scope here; its guards around this engine are described at docs.smithable.ai.
 
 ## Where untrusted input enters
@@ -22,7 +24,7 @@ Trusted: the person at the keyboard and their machine. The CLI, the daemon and S
 
 - Engine: `pnpm test` (Vitest, `src/**/*.test.ts`). The CLI is `node packages/cli/dist/bin.js`; `smithable validate`, `smithable op <operation> …`, `smithable generate` on any project. `examples/` holds the starters' specs; generation is deterministic (the same spec gives byte-identical output).
 - A generated app with its packages installed is at `/app` (the CRM starter): `pnpm dev` serves it on port 3000 with sample data and a sign-in by email code printed to the console; `pnpm test` runs its own tests. `smithable.auth.yml` there shows the roles and access rules to test against.
-- `docs/ARCHITECTURE.md` §12 describes verification and security; `docs/spec/v0.1.md` the spec; `SECURITY.md` how we handle reports.
+- `docs/ARCHITECTURE.md` §12 describes verification and security; `docs/spec/v0.1.md` the spec; `.github/SECURITY.md` how we handle reports.
 
 ## How we rate severity
 
