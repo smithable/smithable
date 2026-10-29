@@ -1,13 +1,36 @@
 smithableContent: 0.1
+models:
+  Instructor:
+    label: Teacher
+    pluralLabel: Teachers
+  Session:
+    fields:
+      instructor:
+        label: Teacher
 pages:
+  instructors:
+    title: Teachers
   home:
     faq:
-      items: [{ question: Do I need experience to join a class?, answer: "No. Each class shows its level, and the beginner and all-levels classes are good places to start." }, { question: How do I book a place?, answer: "Pick a class in the schedule, sign in with your email address and press Book. You can see how many places are left." }, { question: Can I cancel a booking?, answer: "Yes, from My bookings, up to two hours before the class starts." }, { question: What should I bring?, answer: Comfortable clothes and some water. Mats and props are available at the studio. }]
+      items: [{ question: Do I need experience to join a class?, answer: "No. Each class shows its level, and the beginner classes are made for your very first time on the mat." }, { question: How do I book a place?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, and the class shows how many places are left." }, { question: Can I cancel a booking?, answer: "Yes, from My bookings, any time before the class starts. Your place then goes to someone else." }, { question: What should I bring?, answer: Comfortable clothes and a bottle of water. Mats and props are ready for you at the studio. }]
+      title: Good to know
     hero:
+      title: Find your breath, find your class
+      subtitle: Yoga for every body, led by teachers who care. See the week's classes and book your place online in a minute.
+      button: See the schedule
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
         generated: true
+    classes:
+      title: Our classes
+    teachers:
+      title: Meet the teachers
+    callToAction:
+      title: Ready to roll out your mat?
+      button: Book a class
+    contact:
+      title: Questions? Write to us
 logo:
   src: images/logo.webp
   alt: A lotus over a ripple

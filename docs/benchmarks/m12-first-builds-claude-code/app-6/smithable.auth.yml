@@ -5,15 +5,15 @@ defaultAccess: private
 roles:
   admin: all
   staff:
-    description: Union staff who post jobs and handle applications.
+    description: Union staff who post jobs and review applications.
     pages: all
     create: [Job]
     read: all
-    write: [Job, Application]
+    write: all
     delete: [Job]
   member:
     description: Union members who browse jobs and apply.
-    pages: all
+    pages: [jobs, applications]
     create: [Application]
     read: [Job]
 assistant:

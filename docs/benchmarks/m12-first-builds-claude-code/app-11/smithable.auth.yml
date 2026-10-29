@@ -13,7 +13,7 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home]
+  pages: [home, privacy]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 defaultRole: staff
 api:

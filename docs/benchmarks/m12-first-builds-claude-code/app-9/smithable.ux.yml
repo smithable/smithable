@@ -1,8 +1,6 @@
 smithableUx: 0.1
 tones:
-  SupportCase.status:
-    inProgress: warning
-    closed: success
+  Ticket.status:
+    open: warning
     reopened: danger
-theme:
-  preset: quiet-workspace
+    closed: success

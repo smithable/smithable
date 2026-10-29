@@ -2,22 +2,10 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: One club, every match
-      subtitle: Follow our teams, meet the players and catch every fixture and final score.
-      button: Fixtures & results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    fixtures:
-      title: Upcoming fixtures
-    results:
-      title: Latest results
-    squads:
-      title: Our teams
-    faq:
-      title: Questions from supporters
-      items: [{ question: Where are home matches played?, answer: Each fixture lists its ground; home matches are played at the club's own pitch unless stated otherwise. }, { question: How quickly are results posted?, answer: The score goes up as soon as the match is over and the result has been entered by the club. }, { question: What happens when a match is postponed?, answer: It stays in the fixture list marked as postponed until a new date is set. }, { question: Can I join one of the teams?, answer: Get in touch with the coach listed on the team's page to ask about trials and training times. }]
 logo:
   src: images/logo.webp
   alt: A football

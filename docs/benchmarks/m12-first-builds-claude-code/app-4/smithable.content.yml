@@ -2,12 +2,12 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Borrow instead of buying, text: Need a drill for one afternoon? Find one a few doors away instead of buying one. }, { title: Share what sits in your shed, text: Post the tools you rarely use so your neighbors can put them to work. }, { title: Ask the owner directly, text: Send the owner a message from the tool's page and agree on when to pick it up. }, { title: Save your favorites, text: Heart the tools you will need again and find them in one place. }]
+      items: [{ title: Borrow instead of buying, text: That drill you need once a year is probably sitting in a garage down the street. }, { title: Share what you own, text: "List your ladder, mower or sander with a photo and let neighbors ask to borrow it." }, { title: Ask the owner directly, text: Send a message from the tool's page to agree on when to pick it up. }, { title: Keep track of loans, text: "Note who has your tool and when it should come back, then mark it returned." }]
     faq:
-      items: [{ question: Does it cost anything?, answer: No. Neighbors lend their tools for free; anything else is between you and the owner. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message. You agree on pick-up and return together." }, { question: Who sees my contact details?, answer: Nobody browsing the catalog. The owner only hears from you when you write to them. }, { question: Why does my tool not show yet?, answer: "Photos are checked before a tool is listed, so it shows up as soon as they are approved." }]
+      items: [{ question: Does it cost anything?, answer: "No. Lending happens between neighbors, on terms you agree together." }, { question: Who sees my contact details?, answer: Nobody browsing the library. Owners only hear from neighbors who message them. }, { question: Why does my tool not show yet?, answer: "Photos are checked before a listing appears, which usually takes a short while." }]
     hero:
-      title: Your neighborhood's toolshed
-      subtitle: Borrow the tools you need from people nearby, and lend out the ones gathering dust.
+      title: Your neighborhood's shared toolshed
+      subtitle: Browse the tools your neighbors are happy to lend, and share your own.
       button: Browse tools
       secondButton: Lend a tool
       image:

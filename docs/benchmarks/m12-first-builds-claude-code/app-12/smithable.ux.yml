@@ -1,4 +1,8 @@
 smithableUx: 0.1
+pages:
+  incidents:
+    table:
+      sort: -detectedAt
 tones:
   Component.status:
     operational: success
@@ -10,4 +14,4 @@ tones:
     monitoring: warning
     resolved: success
 theme:
-  preset: minimal
+  preset: modern

@@ -6,5 +6,10 @@ pages:
   speakers:
     table:
       view: cards
+    record:
+      subtitle: company
+      detail: [title]
 theme:
   preset: modern
+  brand:
+    primary: "#4f46e5"
