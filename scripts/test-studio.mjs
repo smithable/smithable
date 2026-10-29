@@ -622,8 +622,13 @@ try {
       .waitFor();
     await page.getByRole("button", { name: /^Advanced: every grant/ }).click();
     const grid = page.getByRole("region", { name: "Who can" });
-    // Sales may add every kind of record (create: all): taking customers away leaves orders.
+    // Sales may add every kind of record (create: all): taking customers away leaves the others,
+    // and taking follow-ups away leaves orders.
     await grid.getByRole("checkbox", { name: "sales may add customers", exact: true }).click();
+    await status
+      .getByText("sales may add orders, follow ups", { exact: true })
+      .waitFor({ timeout: 60000 * P });
+    await grid.getByRole("checkbox", { name: "sales may add follow ups", exact: true }).click();
     await status.getByText("sales may add orders", { exact: true }).waitFor({ timeout: 60000 * P });
     await sub("Behavior");
   });
