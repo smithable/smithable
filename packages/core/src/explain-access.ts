@@ -440,6 +440,25 @@ function explainAction(
     if (scenario.record === undefined) return conditional(merges, named, own);
     return denied(merges, named, own, whose(model, scenario.record));
   }
+  if (action.split) {
+    const create = modelAccess(model, auth).create;
+    const splits = inSpec(
+      at,
+      `${humanize(action.name)} splits a ${record(model.name)}: the roles whose actions grant names it run it, with the right to add ${what}; the records that move need write.`,
+    );
+    const named = whyGranted(role, "actions", action.name, label);
+    if (!named) return denied(splits, notGranted(role, "actions", action.name));
+    if (create.public)
+      return allowed(
+        splits,
+        named,
+        inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
+      );
+    const why = whyGranted(role, "create", model.name, what);
+    return why
+      ? allowed(splits, named, why as AccessReason)
+      : denied(splits, named, notGranted(role, "create", model.name));
+  }
   if (action.copy) {
     const create = modelAccess(model, auth).create;
     const copies = inSpec(

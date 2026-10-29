@@ -75,7 +75,8 @@ export const actionsSection: SpecSection<"actions"> = {
     propertyNames: { pattern: FIELD_NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
-      description: "Custom (custom: true, with input and output) or standard (on, when, set).",
+      description:
+        "Custom (custom: true, with input and output), standard (on, when, set), a merge (merge) or a split (split, move).",
       oneOf: [
         { required: ["custom"] },
         {
@@ -83,6 +84,7 @@ export const actionsSection: SpecSection<"actions"> = {
           anyOf: [{ required: ["set"] }, { required: ["add"] }, { required: ["copy"] }],
         },
         { required: ["merge"] },
+        { required: ["split"] },
       ],
       additionalProperties: false,
       properties: {
@@ -116,11 +118,12 @@ export const actionsSection: SpecSection<"actions"> = {
             "Related records to create with the change, one per model that refers to this one, e.g. { IncidentUpdate: { status: resolved, at: NOW() } }.",
         },
         copy: {
-          type: ["object", "null"],
+          type: ["object", "null", "array"],
           propertyNames: { pattern: FIELD_NAME_PATTERN.source },
           additionalProperties: { type: ["string", "number", "boolean", "null"] },
+          items: { type: "string" },
           description:
-            "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is.",
+            "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is. For a split: the fields the new record takes, e.g. [customer, deliverTo].",
         },
         with: {
           type: "array",
@@ -142,6 +145,16 @@ export const actionsSection: SpecSection<"actions"> = {
           additionalProperties: { enum: ["keep", "other", "ask", "add", "append"] },
           description:
             "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked.",
+        },
+        split: {
+          type: "string",
+          description:
+            "A split: one record of this model becomes two; the picked records of the list in move go to a new record, which takes the fields in copy.",
+        },
+        move: {
+          type: "string",
+          description:
+            "For a split: the list whose picked records go to the new record, e.g. lines.",
         },
         input: { ...inputSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
@@ -211,6 +224,11 @@ export const actionsSection: SpecSection<"actions"> = {
           effect.kind === "remove-field" &&
           (wanted !== undefined ||
             (action.on === effect.model && (action.with ?? []).includes(effect.field)) ||
+            (action.on === effect.model && action.merge?.fields[effect.field] !== undefined) ||
+            (action.on === effect.model &&
+              action.split !== undefined &&
+              (action.split.move === effect.field ||
+                (spec.has([...at, "copy"]) && action.split.copy.includes(effect.field)))) ||
             written.length > 0 ||
             (action.add ?? []).some(
               (a) => a.model === effect.model && a.reference === effect.field,
@@ -246,6 +264,17 @@ export const actionsSection: SpecSection<"actions"> = {
           );
           if (next !== v.text) spec.set([...path, ...at], next);
         }
+      // A merge's rule per field; a split's list and the fields its new record takes.
+      if (action.on === effect.model && action.merge && effect.from in action.merge.fields)
+        spec.renameKey([...path, "fields", effect.from], effect.to);
+      if (action.on === effect.model && action.split) {
+        if (action.split.move === effect.from) spec.set([...path, "move"], effect.to);
+        if (spec.has([...path, "copy"]) && action.split.copy.includes(effect.from))
+          spec.set(
+            [...path, "copy"],
+            action.split.copy.map((f) => (f === effect.from ? effect.to : f)),
+          );
+      }
       // A renamed list a copy takes along.
       if (action.on === effect.model && action.with?.includes(effect.from))
         spec.set(
@@ -322,6 +351,8 @@ function readAction(
       "merge",
       "keep",
       "fields",
+      "split",
+      "move",
       ...TEXT_KEYS,
     ],
     later: ["confirm", "examples"],
@@ -342,9 +373,11 @@ function readAction(
   // A merge names its model and nothing else (docs/design/intents.md §3).
   const merge = byKey.get("merge");
   if (merge) {
-    const other = [custom, ...standard, byKey.get("input"), byKey.get("output")].find(
-      (e) => e !== undefined,
-    );
+    const other = [
+      custom,
+      ...standard,
+      ...["input", "output", "split", "move"].map((k) => byKey.get(k)),
+    ].find((e) => e !== undefined);
     if (other) {
       ctx.error(
         other.keyNode,
@@ -355,6 +388,27 @@ function readAction(
     }
     return readMergeAction(ctx, where, byKey, models, common);
   }
+  // A split names its model, its list and the fields the new record takes (intents.md §4).
+  const split = byKey.get("split");
+  if (split) {
+    const other = [
+      custom,
+      ...standard.filter((e) => e.key !== "copy"),
+      ...["input", "output", "keep", "fields"].map((k) => byKey.get(k)),
+    ].find((e) => e !== undefined);
+    if (other) {
+      ctx.error(
+        other.keyNode,
+        "invalid-action",
+        `${capitalize(where)} splits a record: "split" takes move and copy and nothing else, no ${other.key}.`,
+      );
+      return undefined;
+    }
+    return readSplitAction(ctx, where, byKey, models, common);
+  }
+  const move = byKey.get("move");
+  if (move)
+    ctx.error(move.keyNode, "invalid-action", `"move" of ${where} goes with "split: <Model>".`);
   for (const key of ["keep", "fields"]) {
     const entry = byKey.get(key);
     if (entry)
@@ -522,6 +576,138 @@ function readMergeAction(
       keep: choice("keep", MERGE_KEEP, "chosen"),
       fields: readMergeFields(ctx, byKey.get("fields"), model, where),
     },
+  };
+}
+
+/**
+ * A split (docs/design/intents.md §4): `split: <Model>` with `move`, the list whose picked records
+ * go to the new record, and `copy`, the stored fields the new record takes from the old; without
+ * `copy` it takes every stored field but the unique, the sequences, the app's, the pictures, the
+ * documents and the lists. The new record is made as any record is, so a required field it would
+ * not get refuses the split.
+ */
+function readSplitAction(
+  ctx: ParseContext,
+  where: string,
+  byKey: Map<string, Entry>,
+  models: ModelIR[],
+  common: Pick<StandardActionIR, "name" | keyof SemanticText>,
+): StandardActionIR | undefined {
+  const entry = byKey.get("split") as Entry;
+  const name = readString(ctx, entry.value, `"split" of ${where}`);
+  if (name === undefined) return undefined;
+  if (name === "User") {
+    ctx.error(entry.value, "invalid-action", "Users cannot be split: they are who signs in.");
+    return undefined;
+  }
+  const model = models.find((m) => m.name === name);
+  if (!model) {
+    ctx.error(
+      entry.value,
+      "unknown-model",
+      `There is no model named "${name}".`,
+      didYouMean(
+        name,
+        models.map((m) => m.name),
+      ),
+    );
+    return undefined;
+  }
+  ctx.reference("model", name, entry.value);
+  const isList = (f: FieldIR) => f.type.kind === "relation" && f.type.many;
+  const moveEntry = byKey.get("move");
+  if (!moveEntry) {
+    ctx.error(
+      entry.keyNode,
+      "missing-key",
+      `${capitalize(where)} needs "move": the list of ${name} whose picked records go to the new record.`,
+    );
+    return undefined;
+  }
+  const move = readString(ctx, moveEntry.value, `"move" of ${where}`);
+  if (move === undefined) return undefined;
+  if (!model.fields.some((f) => f.name === move && isList(f))) {
+    ctx.error(
+      moveEntry.value,
+      "invalid-action",
+      `"move" of ${where}: ${name} has no list named "${move}".`,
+      didYouMean(
+        move,
+        model.fields.filter(isList).map((f) => f.name),
+      ),
+    );
+    return undefined;
+  }
+  // Why a field is not copied: it is no stored value of its own, or the new record gets its own.
+  const uncopiable = (f: FieldIR) =>
+    f.formula
+      ? "it is computed"
+      : isList(f)
+        ? "it is a list"
+        : f.unique
+          ? "it is unique, so the new record gets its own"
+          : f.sequence || f.byApp
+            ? "the app gives it"
+            : storesPictures(f)
+              ? "it is a picture"
+              : storesFiles(f)
+                ? "it is a document"
+                : undefined;
+  const copyEntry = byKey.get("copy");
+  const copy: string[] = [];
+  if (!copyEntry) copy.push(...model.fields.filter((f) => !uncopiable(f)).map((f) => f.name));
+  else {
+    let ok = true;
+    for (const { name: key, at } of readNameList(ctx, copyEntry.value, `"copy" of ${where}`)) {
+      const field = model.fields.find((f) => f.name === key);
+      const why = field ? uncopiable(field) : undefined;
+      if (!field) {
+        ctx.error(
+          at,
+          "unknown-field",
+          `"copy" of ${where}: ${name} has no field named "${key}".`,
+          didYouMean(
+            key,
+            model.fields.filter((f) => !uncopiable(f)).map((f) => f.name),
+          ),
+        );
+        ok = false;
+      } else if (why) {
+        ctx.error(at, "invalid-action", `"copy" of ${where}: ${key} is not copied, ${why}.`);
+        ok = false;
+      } else copy.push(key);
+    }
+    if (!ok) return undefined;
+  }
+  const missing = model.fields.find(
+    (f) =>
+      f.required &&
+      !f.formula &&
+      !f.sequence &&
+      !f.byApp &&
+      f.default === undefined &&
+      !f.defaultFormula &&
+      !isList(f) &&
+      !copy.includes(f.name),
+  );
+  if (missing) {
+    const why = uncopiable(missing);
+    ctx.error(
+      (copyEntry ?? entry).value,
+      "invalid-action",
+      why
+        ? `${capitalize(where)}: a new ${name} needs ${missing.name}, and ${why}, so the split cannot give it.`
+        : `${capitalize(where)}: a new ${name} needs ${missing.name}, which the split does not give it; name it in "copy".`,
+    );
+    return undefined;
+  }
+  return {
+    ...common,
+    custom: false,
+    input: [],
+    on: name,
+    set: [],
+    split: { move, copy },
   };
 }
 

@@ -159,8 +159,10 @@ export function assistantOffer(
   const actions = ir.actions.filter(
     (a) =>
       !a.custom &&
-      // A merge takes two records and a person's choice of which stays: offered in the app only.
+      // A merge takes two records and a person's choice of which stays, a split a pick from a
+      // list: offered in the app only.
       !a.merge &&
+      !a.split &&
       changes &&
       caller !== "visitor" &&
       (scope === "app" || offered.actions.includes(a.name)) &&
@@ -440,7 +442,7 @@ function describeKind(model: ModelIR, actions: SpecIR["actions"], content: Conte
     });
   const rules = (model.rules ?? []).map((r) => `- ${r.text}`);
   const on = actions.flatMap((a) =>
-    !a.custom && !a.merge && a.on === model.name
+    !a.custom && !a.merge && !a.split && a.on === model.name
       ? [
           `- ${a.name}: ${[a.intent ?? a.description ?? humanize(a.name), ...(a.rules ?? []).map((r) => r.text)].join(" ")}${a.when ? ` Only when ${conditionText(a.when)}.` : ""}`,
         ]

@@ -299,11 +299,13 @@ function readTimer(
       return undefined;
     }
     ctx.reference("action", action.name, at("run"));
-    if (!action.custom && action.merge) {
+    if (!action.custom && (action.merge || action.split)) {
       ctx.error(
         at("run"),
         "invalid-timer",
-        `${capitalize(where)} runs "${run}", a merge: a person picks the two records and which stays, so no timer runs it.`,
+        action.merge
+          ? `${capitalize(where)} runs "${run}", a merge: a person picks the two records and which stays, so no timer runs it.`
+          : `${capitalize(where)} runs "${run}", a split: a person picks the records that go to the new one, so no timer runs it.`,
       );
       return undefined;
     }

@@ -803,7 +803,7 @@
       },
       "additionalProperties": {
         "type": "object",
-        "description": "Custom (custom: true, with input and output) or standard (on, when, set).",
+        "description": "Custom (custom: true, with input and output), standard (on, when, set), a merge (merge) or a split (split, move).",
         "oneOf": [
           {
             "required": [
@@ -835,6 +835,11 @@
           {
             "required": [
               "merge"
+            ]
+          },
+          {
+            "required": [
+              "split"
             ]
           }
         ],
@@ -890,7 +895,8 @@
           "copy": {
             "type": [
               "object",
-              "null"
+              "null",
+              "array"
             ],
             "propertyNames": {
               "pattern": "^[a-z][A-Za-z0-9]*$"
@@ -903,7 +909,10 @@
                 "null"
               ]
             },
-            "description": "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is."
+            "items": {
+              "type": "string"
+            },
+            "description": "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is. For a split: the fields the new record takes, e.g. [customer, deliverTo]."
           },
           "with": {
             "type": "array",
@@ -939,6 +948,14 @@
               ]
             },
             "description": "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked."
+          },
+          "split": {
+            "type": "string",
+            "description": "A split: one record of this model becomes two; the picked records of the list in move go to a new record, which takes the fields in copy."
+          },
+          "move": {
+            "type": "string",
+            "description": "For a split: the list whose picked records go to the new record, e.g. lines."
           },
           "input": {
             "type": "object",
