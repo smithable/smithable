@@ -806,6 +806,8 @@ ${own
       return `            case ${JSON.stringify(a.name)}: {
               const { other, choices } = (body ?? {}) as { other?: unknown; choices?: unknown };
               if (!Number.isInteger(other)) throw new BadInput("Say which record goes: other, its id.");
+              if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
+                throw new BadInput("choices: keep or other for each field the two differ in.");
               const merged = await ${actionNames(a).run}(viewer, id, other as number, (choices ?? {}) as never);
               return ${camelName}ToApi((await ${n.data}.get(viewer, merged.kept)) as Record<string, any>);
             }`;
@@ -961,8 +963,12 @@ function toolsModule(
       const row = await found(KINDS.${model.name}, viewer, args.id, "change");
       ${
         action.merge
-          ? `if (!Number.isInteger(args.other)) throw new BadInput("Say which ${model.name} goes: other, its id.");
-      const merged = await ${actionNames(action).run}(keyed(viewer), row.id, args.other as number, (args.choices ?? {}) as never);
+          ? `// The other by its id or its title, as the record itself.
+      const other = await found(KINDS.${model.name}, viewer, args.other, "merge");
+      const choices = args.choices;
+      if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
+        throw new BadInput("choices: keep or other for each field the two differ in.");
+      const merged = await ${actionNames(action).run}(keyed(viewer), row.id, other.id, (choices ?? {}) as never);
       return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any>);`
           : `if (!Array.isArray(args.move) || !args.move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
       return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any>);`

@@ -29619,6 +29619,8 @@ const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append";
   creditLimit: { rule: "ask", unique: false, kind: "number" },
   notes: { rule: "ask", unique: false, kind: "text" },
 };
+/** A field's name as Ask and the sample users say it, by its stored key where they differ (accountManager). */
+const KEYS: Record<string, string> = {  };
 /** A reference the person decides, shown by its title: the row's field and the title's key. */
 const REFS: Record<string, [string, string]> = {  };
 /** The models whose records move, as the form names them. */
@@ -29800,8 +29802,9 @@ export async function runMergeCustomers(viewer: Viewer | null, first: number, se
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
       // Each field the person decides must be decided: a program or Ask asks for the missing one.
-      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
-      const missing = asked(raw.kept, raw.other, goes).find((key) => !(key in picked));
+      // By stored key (a field's name works too); a value that is none of the choices is none.
+      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [KEYS[key] ?? key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
+      const missing = asked(raw.kept, raw.other, goes).find((key) => !["kept", "other", "sum", "join"].includes(picked[key] as string));
       if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(customerUi.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
       const values = valuesOf(raw.kept, raw.other, picked, goes);
       const changed = Object.keys(values);
@@ -37072,7 +37075,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
   "src/generated/access.test.ts": "5e2ca320 generated",
-  "src/generated/actions/merge-customers.server.ts": "fc3fd69f generated",
+  "src/generated/actions/merge-customers.server.ts": "b415cd68 generated",
   "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",

@@ -251,6 +251,14 @@ ${tableOf}
  * empty side always takes the other's value.
  */
 const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; unique: boolean; kind: "number" | "text" | "other" }> = ${literal(rules)};
+/** A field's name as Ask and the sample users say it, by its stored key where they differ (accountManager). */
+const KEYS: Record<string, string> = ${literal(
+    Object.fromEntries(
+      mergedFields(model)
+        .filter((f) => f.name !== dataKey(f))
+        .map((f) => [f.name, dataKey(f)]),
+    ),
+  )};
 /** A reference the person decides, shown by its title: the row's field and the title's key. */
 const REFS: Record<string, [string, string]> = ${literal(refs)};
 /** The models whose records move, as the form names them. */
@@ -417,8 +425,9 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
       // Each field the person decides must be decided: a program or Ask asks for the missing one.
-      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
-      const missing = asked(raw.kept, raw.other, goes).find((key) => !(key in picked));
+      // By stored key (a field's name works too); a value that is none of the choices is none.
+      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [KEYS[key] ?? key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
+      const missing = asked(raw.kept, raw.other, goes).find((key) => !["kept", "other", "sum", "join"].includes(picked[key] as string));
       if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(${n.ui}.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
       const values = valuesOf(raw.kept, raw.other, picked, goes);
       const changed = Object.keys(values);
