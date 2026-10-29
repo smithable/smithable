@@ -6119,8 +6119,10 @@ async function browserFlow(dir, base) {
       .getByRole("combobox", { name: "Keep" })
       .selectOption({ label: "Arctic Outdoor Co" });
     await merging.getByText("1 order and 1 follow up move to it").waitFor({ timeout: 10000 * P });
-    await merging.getByRole("group").getByText("Notes").waitFor();
-    await merging.getByRole("radio", { name: "Both, one after the other" }).check();
+    await merging
+      .getByRole("group", { name: "Notes" })
+      .getByRole("radio", { name: "Both, one after the other" })
+      .check();
     await merging.getByRole("button", { name: "Merge customers" }).click();
     await page
       .getByRole("cell", { name: "Arctic Outdoor", exact: true })

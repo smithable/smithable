@@ -37014,7 +37014,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
-  "src/kit/MergeDialog.tsx": "e3b6bc9f kit",
+  "src/kit/MergeDialog.tsx": "bdded4e7 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",

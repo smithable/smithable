@@ -173,13 +173,13 @@ export function MergeDialog({
                 </label>
               );
               return (
-                <div key={key} className="space-y-1 rounded-md border p-2">
-                  <p className="text-sm font-medium">{f ? tx(f.label) : key}</p>
+                <fieldset key={key} className="space-y-1 rounded-md border p-2">
+                  <legend className="text-sm font-medium">{f ? tx(f.label) : key}</legend>
                   {option("kept", shown(key, 0))}
                   {option("other", shown(key, 1))}
                   {kind === "number" && option("sum", w.mergeSum)}
                   {kind === "text" && option("join", w.mergeJoin)}
-                </div>
+                </fieldset>
               );
             })}
           </fieldset>
