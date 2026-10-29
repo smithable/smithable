@@ -24,8 +24,8 @@ import {
   type ActionValueIR,
   type Condition,
   type FieldIR,
-  type MergeFill,
   type MergeKeep,
+  type MergeRule,
   type ModelIR,
   type SemanticText,
   type StandardActionIR,
@@ -136,10 +136,12 @@ export const actionsSection: SpecSection<"actions"> = {
           enum: ["chosen", "oldest", "newest"],
           description: "For a merge: which record stays; chosen (the person says) unless said.",
         },
-        fill: {
-          enum: ["empty", "none"],
+        fields: {
+          type: "object",
+          propertyNames: { pattern: FIELD_NAME_PATTERN.source },
+          additionalProperties: { enum: ["keep", "other", "ask", "add", "append"] },
           description:
-            "For a merge: empty (the kept record's empty fields take the other's values) unless said, or none.",
+            "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked.",
         },
         input: { ...inputSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
@@ -319,7 +321,7 @@ function readAction(
       "with",
       "merge",
       "keep",
-      "fill",
+      "fields",
       ...TEXT_KEYS,
     ],
     later: ["confirm", "examples"],
@@ -347,13 +349,13 @@ function readAction(
       ctx.error(
         other.keyNode,
         "invalid-action",
-        `${capitalize(where)} merges two records: "merge" takes keep and fill and nothing else, no ${other.key}.`,
+        `${capitalize(where)} merges two records: "merge" takes keep and fields and nothing else, no ${other.key}.`,
       );
       return undefined;
     }
     return readMergeAction(ctx, where, byKey, models, common);
   }
-  for (const key of ["keep", "fill"]) {
+  for (const key of ["keep", "fields"]) {
     const entry = byKey.get(key);
     if (entry)
       ctx.error(
@@ -396,13 +398,79 @@ function readAction(
 }
 
 const MERGE_KEEP: MergeKeep[] = ["chosen", "oldest", "newest"];
-const MERGE_FILL: MergeFill[] = ["empty", "none"];
+const MERGE_RULES: MergeRule[] = ["keep", "other", "ask", "add", "append"];
 
 /**
  * A merge (docs/design/intents.md §3): `merge: <Model>`, with `keep` (chosen, the default; oldest;
- * newest) and `fill` (empty, the default: the kept record's empty fields take the other's values;
- * none). Users cannot be merged: they are sign-in identities.
+ * newest) and `fields`, a rule per field (keep, other, ask, add for numbers and amounts, append
+ * for texts); a field not named is asked when the two differ. Users cannot be merged: they are
+ * sign-in identities.
  */
+function readMergeFields(
+  ctx: ParseContext,
+  entry: Entry | undefined,
+  model: ModelIR,
+  where: string,
+): Record<string, MergeRule> {
+  const rules: Record<string, MergeRule> = {};
+  if (!entry) return rules;
+  const label = `"fields" of ${where}`;
+  for (const { key, keyNode, value } of mapEntries(ctx, entry.value, label) ?? []) {
+    const field = model.fields.find((f) => f.name === key);
+    if (!field) {
+      ctx.error(
+        keyNode,
+        "unknown-field",
+        `${label}: ${model.name} has no field named "${key}".`,
+        didYouMean(
+          key,
+          model.fields.map((f) => f.name),
+        ),
+      );
+      continue;
+    }
+    const why = field.formula
+      ? "it is computed"
+      : field.type.kind === "relation" && field.type.many
+        ? "its records move with the merge"
+        : field.sequence || field.byApp
+          ? "the app gives it"
+          : undefined;
+    if (why) {
+      ctx.error(keyNode, "invalid-action", `${label}: ${key} takes no rule, ${why}.`);
+      continue;
+    }
+    const rule = readString(ctx, value, `"${key}" of ${label}`);
+    if (rule === undefined) continue;
+    if (!(MERGE_RULES as string[]).includes(rule)) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: ${key} is ${MERGE_RULES.slice(0, -1).join(", ")} or ${MERGE_RULES[MERGE_RULES.length - 1]}.`,
+      );
+      continue;
+    }
+    const scalar = field.type.kind === "scalar" ? field.type.name : undefined;
+    if (rule === "add" && !(scalar && ["int", "decimal", "money"].includes(scalar))) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: "add" is for a number or an amount, and ${key} is not one.`,
+      );
+      continue;
+    }
+    if (rule === "append" && !(scalar && ["text", "markdown", "string"].includes(scalar))) {
+      ctx.error(
+        value,
+        "invalid-action",
+        `${label}: "append" is for a text, and ${key} is not one.`,
+      );
+      continue;
+    }
+    rules[key] = rule as MergeRule;
+  }
+  return rules;
+}
 function readMergeAction(
   ctx: ParseContext,
   where: string,
@@ -452,7 +520,7 @@ function readMergeAction(
     set: [],
     merge: {
       keep: choice("keep", MERGE_KEEP, "chosen"),
-      fill: choice("fill", MERGE_FILL, "empty"),
+      fields: readMergeFields(ctx, byKey.get("fields"), model, where),
     },
   };
 }

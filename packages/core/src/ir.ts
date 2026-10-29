@@ -531,14 +531,19 @@ export interface StandardActionIR extends ActionBase {
   with?: string[];
   /**
    * A merge (docs/design/intents.md §3): two records of `on` become one; `set` is then empty.
-   * `keep` says which record stays (the person's choice, the oldest or the newest), `fill`
-   * whether the kept record's empty fields take the other's values.
+   * `keep` says which record stays (the person's choice, the oldest or the newest), `fields`
+   * what each field does; a field not named is asked when the two differ.
    */
-  merge?: { keep: MergeKeep; fill: MergeFill };
+  merge?: { keep: MergeKeep; fields: Record<string, MergeRule> };
 }
 
 export type MergeKeep = "chosen" | "oldest" | "newest";
-export type MergeFill = "empty" | "none";
+/**
+ * What a field does in a merge: the kept record's value (the other's when the kept is empty), the
+ * other's, the person's pick when the two differ (the default), the sum (numbers and amounts), or
+ * both texts joined. References between models are not fields here: they move.
+ */
+export type MergeRule = "keep" | "other" | "ask" | "add" | "append";
 
 export type ActionValueIR =
   | { field: string; value: FieldValue }
