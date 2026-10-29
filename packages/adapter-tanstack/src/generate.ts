@@ -37,6 +37,7 @@ import {
 import { calculatorFiles } from "./calculators.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
 import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.js";
+import { examplesTest } from "./examples.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
@@ -957,6 +958,15 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 customActionServer(action, ir, t),
               ),
               custom(`src/custom/actions/${kebab(action.name)}.ts`, actionStub(action)),
+              // Its examples, as the test the app runs its code by (intents.md §6).
+              ...(action.examples?.length
+                ? [
+                    generated(
+                      `src/generated/actions/${kebab(action.name)}.test.ts`,
+                      examplesTest(action, ir, auth) as string,
+                    ),
+                  ]
+                : []),
             ]
           : action.split
             ? [

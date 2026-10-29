@@ -155,7 +155,12 @@ export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
   if (!action.custom || !action.touches) return undefined;
   const a = actionNames(action);
   const touches = action.touches ?? { reads: [], writes: [] };
-  const reads = touches.reads.filter((m) => !touches.writes.some((w) => w.model === m));
+  // A model written is reached through its write functions; users are only ever read here.
+  const reads = touches.reads.filter(
+    (m) => m === USER_MODEL || !touches.writes.some((w) => w.model === m),
+  );
+  if (touches.writes.some((w) => w.model === USER_MODEL) && !reads.includes(USER_MODEL))
+    reads.push(USER_MODEL);
   const entries: { key: string; type: string; value: string; module?: string; data?: string }[] =
     [];
   for (const name of reads) {

@@ -130,8 +130,9 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
     .from(schema.auditLog)
     .where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "split")))
     .get();
-  const split = line?.details as { from: number; moved: number[] } | undefined;
-  if (!split) throw new Conflict(w.splitNotSplit);
+  const split = line?.details as { from: number; by: string; moved: number[] } | undefined;
+  // This split's own line: another split of the model moves another list.
+  if (!split || split.by !== ${JSON.stringify(action.name)}) throw new Conflict(w.splitNotSplit);
   // The one it came from must still be there to take them back.
   if (!(await ${n.data}.get(viewer, split.from))) throw new Conflict(w.splitOriginalGone);
   // What is still on the new record and the viewer may change goes back; the rest stays, counted.

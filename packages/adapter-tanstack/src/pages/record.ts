@@ -704,6 +704,7 @@ function ${component}() {
         .map(
           (a) => `
       <SplitNotice
+        key={row.id}
         model=${attr(model.name)}
         id={row.id}${
           model.trash
