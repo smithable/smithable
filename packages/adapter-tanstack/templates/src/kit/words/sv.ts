@@ -562,23 +562,25 @@ export const w = {
   mergeIntoWhich: (_label: string) => "Vilken post ska den här slås ihop med?",
   mergeChoose: "Välj en",
   mergeKeeps: "Behåll",
-  mergeDecide: "De två skiljer sig här: välj vad som blir kvar",
-  mergeSum: "Båda adderade",
-  mergeJoin: "Båda, den ena efter den andra",
+  mergeDecide: "De skiljer sig här: välj vad som blir kvar",
+  mergeSum: "Adderade",
+  mergeJoin: "Alla, den ena efter den andra",
   mergeSame: "Välj två olika poster att slå ihop.",
   mergeBothHave: (label: string) =>
-    `Båda har en egen post av typen ${label.toLowerCase()}, och det får bara finnas en: behåll en först.`,
+    `Fler än en av dem har en egen post av typen ${label.toLowerCase()}, och det får bara finnas en: behåll en först.`,
   mergeMayNotChange: (plural: string) =>
     `Några poster av typen ${plural.toLowerCase()} som hänvisar till den får du inte ändra, så inget slogs ihop.`,
   mergeSentence: (
     kept: string,
     moves: string[],
-    other: string,
-    goes: "trash" | "gone" | "stays",
+    others: string[],
+    goes: "trash" | "gone" | "stays" | "some",
     taken: string[],
   ) => {
     const list = (items: string[]) =>
       items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`;
+    const other = list(others);
+    const one = others.length === 1;
     const values = taken.length
       ? `${kept} behåller sina värden och tar ${list(taken.map((t) => t.toLowerCase()))} från ${other}`
       : `${kept} behåller sina värden`;
@@ -588,8 +590,27 @@ export const w = {
         ? `${other} läggs i papperskorgen`
         : goes === "gone"
           ? `${other} tas bort för gott`
-          : `${other} blir kvar, eftersom du inte får ta bort den`;
+          : goes === "some"
+            ? `de av ${other} som du får ta bort läggs i papperskorgen, resten blir kvar`
+            : `${other} blir kvar, eftersom du inte får ta bort ${one ? "den" : "dem"}`;
     return `${values}${moved}, och ${fate}.`;
+  },
+  combineSentence: (from: string[], label: string, emptied: string[], removed: boolean) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`;
+    const made = `En ny post av typen ${label.toLowerCase()} görs av ${list(from)}, som ${removed ? "läggs i papperskorgen" : "blir kvar som de är"}.`;
+    return emptied.length
+      ? `${made} Dess ${list(emptied.map((e) => e.toLowerCase()))} lämnas tomt, eftersom det blir kvar hos dem.`
+      : made;
+  },
+  combineRemove:
+    "Lägg dem i papperskorgen: de är lika så när som på det som adderas, och inget hänvisar till dem",
+  combineNotRemovable:
+    "De kan läggas i papperskorgen bara när de är lika så när som på det som adderas, inget hänvisar till dem och du får ta bort dem.",
+  combined: (from: string[], label: string, removed: boolean) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`;
+    return `${list(from)} slogs samman till en ny post av typen ${label.toLowerCase()}; de ${removed ? "lades i papperskorgen" : "blev kvar som de var"}.`;
   },
   splitIt: "Dela…",
   splitWhich: (plural: string) =>
@@ -607,8 +628,7 @@ export const w = {
   mergedIntoTitle: (title: string) => `ihopslagen med ”${title}”`,
   mergeKeepIs: (which: "oldest" | "newest", title: string) =>
     `Vid den här sammanslagningen blir den ${which === "oldest" ? "äldsta" : "nyaste"} av de två kvar: ${title}.`,
-  mergeChoiceMissing: (field: string) =>
-    `${field} skiljer sig mellan de två: säg vilket som blir kvar, den behållnas eller den andras.`,
+  mergeChoiceMissing: (field: string) => `${field} skiljer sig mellan dem: säg vems som blir kvar.`,
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,

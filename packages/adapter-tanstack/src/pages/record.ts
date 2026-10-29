@@ -423,7 +423,10 @@ export function detailRoute(
       ...(askOptions(action, ir, t) ? [actionNames(action).askOptions] : []),
     ]);
   // A merge: "Merge into…" the record picked, which stays (intents.md §3).
-  const merges = within ? [] : mergeActions(page, ir);
+  const merges = within ? [] : mergeActions(page, ir).filter((a) => a.merge?.into !== "new");
+  // A combine's new record says, once, what it was made from (intents.md §3).
+  const combined =
+    !within && ir.actions.some((a) => !a.custom && a.merge?.into === "new" && a.on === model.name);
   for (const action of merges)
     imports.set(`#/generated/actions/${kebab(action.name)}`, [
       action.name,
@@ -431,8 +434,12 @@ export function detailRoute(
       actionNames(action).keep,
       actionNames(action).previewFn,
     ]);
+  if (merges.length || combined)
+    imports.set("#/kit/MergeDialog", [
+      ...(merges.length ? ["MergeButton"] : []),
+      ...(combined ? ["CombineNotice"] : []),
+    ]);
   if (merges.length) {
-    imports.set("#/kit/MergeDialog", ["MergeButton"]);
     imports.set(n.module, [...(imports.get(n.module) ?? []), n.options]);
   }
   // A split: "Split…" with the records of its list, then the new record's page (intents.md §4).
@@ -567,11 +574,12 @@ export function detailRoute(
                 concept="action:${a.name}"
                 ui={${n.ui}}
                 app={app}
-                keep={${actionNames(a).keep}}
+                model=${attr(model.name)}
+                mode={${actionNames(a).keep}}
                 into={{ record: { id: row.id, title: String(${heading}) }, loadOptions: ${n.options} as never }}
-                preview={(keep, other) => ${actionNames(a).previewFn}({ data: { keep, other } })}
-                run={(keep, other, choices) => ${a.name}({ data: { keep, other, choices } })}
-                onDone={async (merged) => {${model.trash ? `\n                  if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);` : ""}
+                preview={(ids) => ${actionNames(a).previewFn}({ data: { ids } })}
+                run={(ids, choices) => ${a.name}({ data: { ids, choices } })}
+                onDone={async (merged) => {${model.trash ? `\n                  const [other] = merged.others;\n                  if (merged.goes === "trash" && other) rememberTrashed(${JSON.stringify(model.name)}, other.id, other.title);` : ""}
                   await navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(merged.kept.id) } });
                 }}
               />
@@ -699,6 +707,11 @@ function ${component}() {
         model.review
           ? `
       <ReviewNotice notes={review} labels={${JSON.stringify(Object.fromEntries((model.review ?? []).map((f) => [f, t.field(model, model.fields.find((x) => x.name === f) as FieldIR).label ?? humanize(f)])))}} />`
+          : ""
+      }${
+        combined
+          ? `
+      <CombineNotice key={row.id} model=${attr(model.name)} id={row.id} label={${n.ui}.label} />`
           : ""
       }${splits
         .map(

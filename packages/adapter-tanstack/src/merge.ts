@@ -21,6 +21,7 @@ import {
   names,
   ownerKey,
   SCHEMA_IMPORT,
+  sequenceEntries,
   shownTitleKey,
   type Texts,
 } from "./shared.js";
@@ -89,6 +90,7 @@ export function mergeActionModule(
 ): string {
   const a = actionNames(action);
   const n = names(modelNamed(ir, action.on), t);
+  const into = action.merge?.into ?? "chosen";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
@@ -97,37 +99,40 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.preview}, ${a.run} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" merge: its grant, with write on ${n.pluralLabel.toLowerCase()}. */
+/** Who may run the "${action.name}" ${into === "new" ? "combine" : "merge"}: its grant, with ${into === "new" ? "the right to add" : "write on"} ${n.pluralLabel.toLowerCase()}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
-/** Which of the two stays: the person's choice, the oldest or the newest. */
-export const ${a.keep} = "chosen";
+/** Where the records go: into the one the person picks (chosen), or into a new one (new). */
+export const ${a.keep} = ${JSON.stringify(into)};
 
-/** The two records: the one the person keeps (or the first picked) and the other. */
-const pair = z.object({ keep: z.number().int(), other: z.number().int() });
-/** And for each field asked, what the person picked. */
-/** keep (the API's and Ask's word for the kept record's value) is kept. */
-const choices = z.record(z.string(), z.enum(["kept", "keep", "other", "sum", "join"])).default({});
+/** The records picked, in their order: the one that stays (or whose values come first) first. */
+const ids = z.array(z.number().int()).min(2).max(50);
+/** And for each field asked, what the person picked: a record's value by its id, the sum or the texts joined. */
+const choices = z
+  .record(z.string(), z.union([z.enum(["keep", "kept", "other", "sum", "join"]), z.number().int()]))
+  .default({});
 
-/** What merging the two would do, as the viewer may see it: the form's sentence. */
+/** What merging them would do, as the viewer may see it: the form's sentence. */
 export const ${a.previewFn} = createServerFn({ method: "POST" })
-  .validator(pair)
-  .handler(async ({ data }) => ${a.preview}(await currentViewer(), data.keep, data.other));
+  .validator(z.object({ ids }))
+  .handler(async ({ data }) => ${a.preview}(await currentViewer(), data.ids));
 
 export const ${action.name} = createServerFn({ method: "POST" })
-  .validator(pair.extend({ choices }))
+  .validator(z.object({ ids, choices${into === "new" ? ", remove: z.boolean().default(false)" : ""} }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
-    return ${a.run}(viewer, data.keep, data.other, data.choices);
+    return ${a.run}(viewer, data.ids, data.choices${into === "new" ? ", data.remove" : ""});
   });
 `;
 }
 
 /**
- * The merge on the server: the two records as the viewer may read them, which stays, what moves,
- * what is filled, all in one transaction; the other goes to the trash with a line that says what
- * moved, which its Restore reads.
+ * The merge on the server: the records picked, as the viewer may read them, in their order.
+ * Into the chosen one: every reference to the others moves to it and it takes the values its
+ * fields' rules and the person's choices give, in one transaction, and the others go to the trash
+ * with a line each that says what moved, which their Restore reads. Into a new one (a combine): a
+ * new record from the same rules, the picked staying as they are unless the person removes them.
  */
 export function mergeActionServer(
   action: StandardActionIR,
@@ -139,6 +144,7 @@ export function mergeActionServer(
   const model = modelNamed(ir, action.on);
   const n = names(model, t);
   const merge = action.merge ?? { into: "chosen", fields: {} as Record<string, string> };
+  const into = merge.into;
   const signedIn = hasSignIn(auth);
   const owner = (m: ModelIR, row: string) => (signedIn ? `, ${row}.${ownerKey(m)}` : "");
   const referrers = referrersOf(ir, model.name);
@@ -176,49 +182,66 @@ export function mergeActionServer(
   const others = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()].filter(
     (m) => m.name !== model.name,
   );
-  // The referring records, each reference on its own: those of the other record, the clash
-  // rules, and the write each needs.
+  // The referring records, each reference on its own: those of the others, the clash rules, and
+  // the rights each needs. A record in the trash moves with the rest but takes part in no clash.
   const step = (r: Referrer, i: number) => {
     const rn = names(r.model, t);
     const tb = rn.table;
-    const live = r.model.trash ? `, isNull(${tb}.deletedAt)` : "";
     const self = r.model.name === model.name;
     const ref = JSON.stringify(r.key);
+    const m = JSON.stringify(r.model.name);
+    const gone = r.model.trash ? "row.deletedAt != null" : "false";
+    const select = `{ id: ${tb}.id, ref: ${tb}.${r.key}${signedIn ? `, owner: ${tb}.${ownerKey(r.model)}` : ""}${r.model.trash ? `, deletedAt: ${tb}.deletedAt` : ""}${r.pairs
+      .flat()
+      .map((k) => `, ${k}: ${tb}.${k}`)
+      .join("")} }`;
     const lines = [
       `  // ${r.model.name}.${r.field.name}`,
-      `  const rows${i} = tx.select({ id: ${tb}.id${signedIn ? `, owner: ${tb}.${ownerKey(r.model)}` : ""}${r.pairs
-        .flat()
-        .map((k) => `, ${k}: ${tb}.${k}`)
-        .join(
-          "",
-        )} }).from(${tb}).where(eq(${tb}.${r.key}, other.id)).all()${self ? ".filter((row) => row.id !== other.id)" : ""};`,
+      `  const rows${i} = tx.select(${select}).from(${tb}).where(inArray(${tb}.${r.key}, [kept.id, ...others.map((o) => o.id)])).all();`,
     ];
-    if (self)
-      lines.push(
-        `  // A reference between the two is cleared, never one to itself.`,
-        `  for (const row of rows${i}.filter((row) => row.id === kept.id)) plan.cleared.push({ model: ${JSON.stringify(r.model.name)}, key: ${ref}, id: row.id });`,
-        `  if (other.${r.key} === kept.id) plan.cleared.push({ model: ${JSON.stringify(r.model.name)}, key: ${ref}, id: other.id });`,
-      );
-    const moving = self ? `rows${i}.filter((row) => row.id !== kept.id)` : `rows${i}`;
-    lines.push(
-      `  for (const row of ${moving}) {`,
-      `    if (!allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
-    );
     if (r.unique)
       lines.push(
-        `    // A unique reference both have: one of them has to go first.`,
-        `    if (tx.select({ id: ${tb}.id }).from(${tb}).where(and(eq(${tb}.${r.key}, kept.id)${live})).get()) throw new Conflict(w.mergeBothHave(${rn.ui}.label));`,
+        `  // A unique reference more than one of them holds: all but one have to let it go first.`,
+        `  if (new Set(rows${i}.filter((row) => !(${gone})).map((row) => row.ref)).size > 1) throw new Conflict(w.mergeBothHave(${rn.ui}.label));`,
       );
     if (r.pairs.length)
       lines.push(
-        `    // One the kept record already has, the same pair: it goes, not moves.`,
-        `    if (${r.pairs.map((keys) => `tx.select({ id: ${tb}.id }).from(${tb}).where(and(eq(${tb}.${r.key}, kept.id), ${keys.map((k) => `row.${k} == null ? isNull(${tb}.${k}) : eq(${tb}.${k}, row.${k})`).join(", ")}${live})).get()`).join(" || ")}) {`,
-        `      plan.trashed.push({ model: ${JSON.stringify(r.model.name)}, id: row.id });`,
+        `  // The pairs the kept record has: one of the others' that is the same goes, not moves.`,
+        `  const pairs${i} = new Set(rows${i}.filter((row) => row.ref === kept.id && !(${gone})).map((row) => JSON.stringify([${r.pairs
+          .flat()
+          .map((k) => `row.${k}`)
+          .join(", ")}])));`,
+      );
+    lines.push(`  for (const row of rows${i}.filter((row) => row.ref !== kept.id)) {`);
+    if (self)
+      lines.push(
+        `    // A reference between the picked records is cleared, never one to itself; one on a record`,
+        `    // that stays is a change to it, which needs write on it.`,
+        `    if (row.id === kept.id || others.some((o) => o.id === row.id)) {`,
+        `      if (row.id !== kept.id && !goes.has(row.id) && !allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
+        `      plan.cleared.push({ model: ${m}, key: ${ref}, id: row.id, from: row.ref as number });`,
         "      continue;",
         "    }",
       );
     lines.push(
-      `    plan.moved.push({ model: ${JSON.stringify(r.model.name)}, key: ${ref}, id: row.id });`,
+      `    if (!allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
+    );
+    if (r.pairs.length)
+      lines.push(
+        `    const pair = JSON.stringify([${r.pairs
+          .flat()
+          .map((k) => `row.${k}`)
+          .join(", ")}]);`,
+        `    if (!(${gone}) && pairs${i}.has(pair)) {`,
+        `      // It goes to the trash with its record: one who may delete it.`,
+        `      if (!allows(${rn.access}.delete, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
+        `      plan.trashed.push({ model: ${m}, id: row.id, from: row.ref as number });`,
+        "      continue;",
+        "    }",
+        `    if (!(${gone})) pairs${i}.add(pair);`,
+      );
+    lines.push(
+      `    plan.moved.push({ model: ${m}, key: ${ref}, id: row.id, from: row.ref as number });`,
       "  }",
     );
     return lines.join("\n");
@@ -226,29 +249,30 @@ export function mergeActionServer(
   // Writing the plan: each model's table by name, as the plan lists them.
   const tables = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()];
   const tableOf = `const TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;`;
-  const trashes = tables.filter((m) => m.trash).map((m) => JSON.stringify(m.name));
+  const trashes = tables.filter((m) => m.trash).map((m) => m.name);
   // Their words are their models' own (words-once.md): read from each model's ui.
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
-  const usesKept = referrers.some((r) => r.model.name === model.name || r.unique || r.pairs.length);
-  const live = referrers.some((r) => r.model.trash && (r.unique || r.pairs.length));
-  const pairNull = referrers.some((r) => r.pairs.length);
-  return `${HEADER}import { and, eq, inArray${live || pairNull ? ", isNull" : ""} } from "drizzle-orm";
+  const numbered = sequenceEntries(model, auth, n.table, "personOf(viewer)")
+    .map((e) => `, ${e}`)
+    .join("");
+  const combine = into === "new";
+  const plain = !combine && referrers.length > 0;
+  return `${HEADER}import { ${combine ? "" : "and, "}eq, inArray${numbered ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, ${signedIn ? "personOf, " : ""}type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-import { w } from "#/kit/words";
-${[n, ...readers].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
-${[...new Set([model, ...tables])].map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
+${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
+${[n, ...(combine ? [] : readers)].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
+${[...new Set([model, ...(combine ? [] : tables)])].map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
 import { ${a.access} } from "./${kebab(action.name)}";
 
-${tableOf}
-/**
- * What becomes of each field (docs/design/intents.md §3): keep (the kept record's), other (the
- * other's), ask (the person picks where the two differ), add (the sum), append (both texts); an
- * empty side always takes the other's value.
+${combine ? "" : tables.length ? `${tableOf}\n` : "const TABLES = {} as const;\n"}/**
+ * What becomes of each field (docs/design/intents.md §3): keep (the kept record's, the first
+ * other's that is not empty when it is), other (the first other's that is not empty), ask (the
+ * person picks where the records differ), add (the sum), append (the texts, a blank line between).
  */
 const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; unique: boolean; kind: "number" | "text" | "other" }> = ${literal(rules)};
 /** A field's name as Ask and the sample users say it, by its stored key where they differ (accountManager). */
@@ -261,9 +285,7 @@ const KEYS: Record<string, string> = ${literal(
   )};
 /** A reference the person decides, shown by its title: the row's field and the title's key. */
 const REFS: Record<string, [string, string]> = ${literal(refs)};
-/** The models whose records move, as the form names them. */
-const COUNTED = ${counted};
-
+${combine ? "" : `/** The models whose records move, as the form names them. */\nconst COUNTED = ${counted};\n`}
 /** The database or a transaction in it: what the plan reads with. */
 type Tx = Pick<typeof db, "select">;
 type Raw = typeof ${n.table}.$inferSelect;
@@ -272,146 +294,214 @@ type Raw = typeof ${n.table}.$inferSelect;
 const empty = (value: unknown) => value === null || value === undefined || value === "";
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** What the person may pick for a field asked: either record's value, the sum or both texts. */
-export type Choice = "kept" | "other" | "sum" | "join";
+/** What the person picked for a field asked: a record's value by its id, the sum or the texts joined. */
+export type Choice = number | "sum" | "join";
+
+/** The distinct values a field has among the records, in their order, empty ones left out. */
+function valuesAmong(records: Raw[], key: string): unknown[] {
+  const out: unknown[] = [];
+  for (const r of records) {
+    const v = r[key as keyof Raw];
+    if (!empty(v) && !out.some((o) => same(o, v))) out.push(v);
+  }
+  return out;
+}
 
 /**
- * The fields the merge decides: all, but a unique one only when the other goes (while it stays,
- * its unique values are its own and the kept record keeps its own).
+ * The fields the merge decides: all, but a unique one only when its value is free to take (the
+ * others all go, or a combine removes them); while it stays with a record, it is that record's.
  */
-function decided(goes: boolean): string[] {
-  return Object.keys(RULES).filter((key) => goes || !RULES[key]?.unique);
+function decided(free: boolean): string[] {
+  return Object.keys(RULES).filter((key) => free || !RULES[key]?.unique);
 }
 
-/** The fields the person decides: asked by the spec, and different on the two (an empty one is not). */
-function asked(kept: Raw, other: Raw, goes: boolean): string[] {
-  return decided(goes).filter((key) => {
-    const a = kept[key as keyof Raw];
-    const b = other[key as keyof Raw];
-    return RULES[key]?.rule === "ask" && !empty(a) && !empty(b) && !same(a, b);
-  });
+/** The fields the person decides: asked by the spec, and different among the records (an empty one is not). */
+function asked(records: Raw[], free: boolean): string[] {
+  return decided(free).filter((key) => RULES[key]?.rule === "ask" && valuesAmong(records, key).length > 1);
 }
 
-/** The kept record's new values: each field by its rule, or as the person chose; only what changes. */
-function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: boolean): Record<string, unknown> {
+/** The values the first record (the kept one) ends with: each field by its rule, or as the person chose. */
+function valuesOf(records: Raw[], chosen: Record<string, Choice>, free: boolean): Record<string, unknown> {
+  const [first, ...rest] = records as [Raw, ...Raw[]];
   const values: Record<string, unknown> = {};
-  for (const key of decided(goes)) {
+  for (const key of decided(free)) {
     const { rule, kind } = RULES[key] as (typeof RULES)[string];
-    const a = kept[key as keyof Raw];
-    const b = other[key as keyof Raw];
-    const pick: Choice = empty(a)
-      ? "other"
-      : empty(b)
-        ? "kept"
-        : rule === "ask"
-          ? (chosen[key] ?? "kept")
-          : rule === "other"
-            ? "other"
-            : rule === "add"
-              ? "sum"
-              : rule === "append"
-                ? "join"
-                : "kept";
-    const value =
-      pick === "other"
-        ? b
-        : pick === "sum" && kind === "number"
-          ? Number(a) + Number(b)
+    const found = valuesAmong(records, key);
+    const own = first[key as keyof Raw];
+    const restFirst = valuesAmong(rest, key)[0];
+    const sum = () => found.reduce<number>((total, v) => total + Number(v), 0);
+    const joined = () => found.map(String).join("\\n\\n");
+    let value: unknown;
+    if (found.length <= 1) value = found[0] ?? own;
+    else if (rule === "keep") value = empty(own) ? restFirst : own;
+    else if (rule === "other") value = restFirst ?? own;
+    else if (rule === "add" && kind === "number") value = sum();
+    else if (rule === "append" && kind === "text") value = joined();
+    else {
+      const pick = chosen[key];
+      value =
+        pick === "sum" && kind === "number"
+          ? sum()
           : pick === "join" && kind === "text"
-            ? \`\${String(a)}\n\n\${String(b)}\`
-            : a;
-    if (!same(value, a)) values[key] = value;
+            ? joined()
+            : (records.find((r) => r.id === pick) ?? first)[key as keyof Raw];
+    }
+    values[key] = value;
   }
   return values;
 }
 
-/** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number, _strict = false) {
+/** The choices as given: by stored key (a field's name works too), keep as the first record, other as the next. */
+function choicesOf(records: Raw[], given: Record<string, number | string>): Record<string, Choice> {
+  const out: Record<string, Choice> = {};
+  for (const [key, c] of Object.entries(given)) {
+    const choice: Choice | undefined =
+      c === "keep" || c === "kept" ? records[0]?.id : c === "other" ? records[1]?.id : c === "sum" || c === "join" ? c : typeof c === "number" && records.some((r) => r.id === c) ? c : undefined;
+    if (choice !== undefined) out[KEYS[key] ?? key] = choice;
+  }
+  return out;
+}
+
+/** The records picked, as the viewer may read them, in their order; each once, at least two. */
+async function picked(viewer: Viewer | null, ids: number[]) {
   check(${a.access}, viewer);
-  if (first === second) throw new Conflict(w.mergeSame);
-  const one = await ${n.data}.get(viewer, first);
-  const two = await ${n.data}.get(viewer, second);
-  if (!one || !two) throw new AccessDenied(viewer !== null);
-  // The first named stays: the person picked it.
-  const [kept, other] = [one, two];
-  // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
-  // else it stays, emptied of what moved.
+  const unique = [...new Set(ids)];
+  if (unique.length < 2) throw new Conflict(w.mergeSame);
+  const rows = [];
+  for (const id of unique) {
+    const row = await ${n.data}.get(viewer, id);
+    if (!row) throw new AccessDenied(viewer !== null);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** The stored rows of the records picked, in their order. */
+function rawOf(tx: Tx, ids: number[]): Raw[] {
+  return ids.map((id) => tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get() as Raw);
+}
+
+/** The words of a reference's value for each record: its title. */
+function refsOf(rows: Record<string, unknown>[]): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(REFS).map(([key, [field, titleKey]]) => [
+      key,
+      rows.map((row) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "")),
+    ]),
+  );
+}
+${
+  combine
+    ? combineCode(action, model, n, referrers, numbered, title, signedIn, owner, t)
+    : chosenCode(
+        action,
+        model,
+        n,
+        referrers,
+        step,
+        readers,
+        others,
+        trashes,
+        title,
+        signedIn,
+        owner,
+        plain,
+      )
+}`;
+}
+
+/** Into the chosen record: who may, the plan, the preview and the run. */
+function chosenCode(
+  action: StandardActionIR,
+  model: ModelIR,
+  n: ReturnType<typeof names>,
+  referrers: Referrer[],
+  step: (r: Referrer, i: number) => string,
+  readers: ReturnType<typeof names>[],
+  others: ModelIR[],
+  trashes: string[],
+  title: string,
+  signedIn: boolean,
+  owner: (m: ModelIR, row: string) => string,
+  plain: boolean,
+): string {
+  const a = actionNames(action);
+  return `
+/** Which stay and which go: write on the kept one; each other goes to the trash where the viewer may delete it. */
+function rights(viewer: Viewer | null, rows: { id: number${signedIn ? `; ${ownerKey(model)}: string | null` : ""} }[]) {
+  const [kept, ...others] = rows as [(typeof rows)[number], ...typeof rows];
   if (!allows(${n.access}.write, viewer${owner(model, "kept")})) throw new AccessDenied(true);
-  return { kept, other, goes: allows(${n.access}.delete, viewer${owner(model, "other")}) };
+  // A record the viewer may not delete stays, emptied of what moved.
+  return new Set(others.filter((other) => allows(${n.access}.delete, viewer${owner(model, "other")})).map((o) => o.id));
 }
 
 /** What the merge does, worked out on the records as they are: refused here when it cannot be done. */
-function planOf(${referrers.length ? "tx" : "_tx"}: Tx, ${referrers.length ? "viewer" : "_viewer"}: Viewer | null, ${usesKept ? "kept" : "_kept"}: Raw, ${referrers.length ? "other" : "_other"}: Raw) {
+function planOf(${plain ? "tx" : "_tx"}: Tx, ${plain ? "viewer" : "_viewer"}: Viewer | null, ${plain ? "kept" : "_kept"}: Raw, ${plain ? "others" : "_others"}: Raw[], ${plain && referrers.some((r) => r.model.name === model.name) ? "goes" : "_goes"}: Set<number>) {
   const plan = {
-    moved: [] as { model: keyof typeof TABLES; key: string; id: number }[],
-    trashed: [] as { model: keyof typeof TABLES; id: number }[],
-    cleared: [] as { model: keyof typeof TABLES; key: string; id: number }[],
+    moved: [] as { model: keyof typeof TABLES; key: string; id: number; from: number }[],
+    trashed: [] as { model: keyof typeof TABLES; id: number; from: number }[],
+    cleared: [] as { model: keyof typeof TABLES; key: string; id: number; from: number }[],
   };
 ${referrers.map(step).join("\n")}
   return plan;
 }
 
-/** The two stored rows, by the ids the viewer may read. */
-function rawOf(tx: Tx, keptId: number, otherId: number) {
-  const row = (id: number) => tx.select().from(${n.table}).where(eq(${n.table}.id, id)).get() as Raw;
-  return { kept: row(keptId), other: row(otherId) };
-}
-
 /**
- * What merging the two would do, as the viewer may see it: which stays, the values it takes from
- * the other, and how many records of each kind move; or why it cannot be done.
+ * What merging them would do, as the viewer may see it: which stays, the values it takes, how
+ * many records of each kind move, and where each other goes; or why it cannot be done.
  */
-export async function ${a.preview}(viewer: Viewer | null, first: number, second: number) {
-  const { kept, other, goes } = await pair(viewer, first, second);
-  const raw = rawOf(db, kept.id, other.id);
+export async function ${a.preview}(viewer: Viewer | null, ids: number[]) {
+  const rows = await picked(viewer, ids);
+  const goes = rights(viewer, rows);
+  const raw = rawOf(db, rows.map((r) => r.id));
+  const [kept, ...others] = raw as [Raw, ...Raw[]];
+  const free = others.every((o) => goes.has(o.id));
+  const titles = rows.map((r) => String(r.${title} ?? r.id));
+  const fate = (others.every((o) => goes.has(o.id)) ? ${model.trash ? '"trash"' : '"gone"'} : others.some((o) => goes.has(o.id)) ? "some" : "stays") as "trash" | "gone" | "stays" | "some";
   try {
-    const plan = planOf(db, viewer, raw.kept, raw.other);
-    const ids = (model: string) => plan.moved.filter((m) => m.model === model).map((m) => m.id);
+    const plan = planOf(db, viewer, kept, others, goes);
+    const moving = (model: string) => plan.moved.filter((m) => m.model === model).map((m) => m.id);
     // Only what the viewer may read is counted.
-    const readable = {${readers.map((x, i) => `\n      ${JSON.stringify(others[i]?.name)}: (moving: number[]) => moving.length ? db.select({ id: ${x.table}.id }).from(${x.table}).where(and(inArray(${x.table}.id, moving), ${x.data}.readable(viewer))).all().length : 0,`).join("")}
-    } as Record<string, (moving: number[]) => number>;
+    const readable = {${readers.map((x, i) => `\n      ${JSON.stringify(others[i]?.name)}: (ids: number[]) => ids.length ? db.select({ id: ${x.table}.id }).from(${x.table}).where(and(inArray(${x.table}.id, ids), ${x.data}.readable(viewer))).all().length : 0,`).join("")}
+    } as Record<string, (ids: number[]) => number>;
+    const values = valuesOf(raw, {}, free);
     return {
-      kept: raw.kept,
-      other: raw.other,
-      keptTitle: String(kept.${title} ?? kept.id),
-      otherTitle: String(other.${title} ?? other.id),
-      // The fields the person decides, and those that take the other's value by the spec's rule.
-      asked: asked(raw.kept, raw.other, goes).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
-      refs: Object.fromEntries(
-        Object.entries(REFS).map(([key, [field, titleKey]]) => {
-          const title = (row: Record<string, unknown>) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "");
-          return [key, [title(kept as Record<string, unknown>), title(other as Record<string, unknown>)]];
-        }),
-      ) as Record<string, [string, string]>,
-      taken: Object.entries(valuesOf(raw.kept, raw.other, {}, goes))
-        .filter(([key, value]) => !asked(raw.kept, raw.other, goes).includes(key) && same(value, raw.other[key as keyof Raw]))
-        .map(([key]) => key),
-      moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
-      // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
-      goes: (!goes ? "stays" : ${model.trash ? '"trash"' : '"gone"'}) as "trash" | "gone" | "stays",
+      records: raw,
+      titles,
+      asked: asked(raw, free).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+      refs: refsOf(rows as Record<string, unknown>[]),
+      // The fields that take another record's value by the spec's rule.
+      taken: Object.keys(values).filter((key) => !asked(raw, free).includes(key) && !same(values[key], kept[key as keyof Raw])),
+      moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(moving(c.model)) ?? 0 })).filter((c) => c.count > 0),
+      goes: fate,
+      emptied: [] as string[],
+      removable: false,
       refused: null as string | null,
     };
   } catch (error) {
     if (!(error instanceof Conflict)) throw error;
-    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.${title} ?? kept.id), otherTitle: String(other.${title} ?? other.id), asked: [], refs: {}, taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
+    return { records: raw, titles, asked: [], refs: {}, taken: [], moves: [], goes: fate, emptied: [] as string[], removable: false, refused: error.message };
   }
 }
 
 /**
- * Merges the two as the viewer: every reference to the other moves to the kept record, which keeps
- * the values its fields' rules and the person's choices give, and the other goes to the trash. Moved records are moved,
- * not changed: no rules of a change, no "changed" events, nothing told.
+ * Merges the records into the first as the viewer: every reference to the others moves to it,
+ * which takes the values its fields' rules and the person's choices give, and the others go to the
+ * trash. Moved records are moved, not changed: no rules of a change, no "changed" events, nothing told.
  */
-export async function ${a.run}(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice | "keep"> = {}) {
-  const { kept, other, goes } = await pair(viewer, first, second, true);
+export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Record<string, number | string> = {}) {
+  const rows = await picked(viewer, ids);
+  const goes = rights(viewer, rows);
   const when = new Date();
   try {
     db.transaction((tx) => {
-      const raw = rawOf(tx, kept.id, other.id);
-      const plan = planOf(tx, viewer, raw.kept, raw.other);
+      const raw = rawOf(tx, rows.map((r) => r.id));
+      const [kept, ...others] = raw as [Raw, ...Raw[]];
+      const free = others.every((o) => goes.has(o.id));
+      const plan = planOf(tx, viewer, kept, others, goes);
       for (const m of plan.moved) {
         const table = TABLES[m.model];
-        tx.update(table).set({ [m.key]: raw.kept.id }).where(eq(table.id, m.id)).run();
+        tx.update(table).set({ [m.key]: kept.id }).where(eq(table.id, m.id)).run();
       }
       for (const c of plan.cleared) {
         const table = TABLES[c.model];
@@ -419,36 +509,126 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
       }
       for (const d of plan.trashed) {
         const table = TABLES[d.model];
-        if ((${literal(trashes.map((s) => JSON.parse(s)))} as string[]).includes(d.model))
+        if ((${literal(trashes)} as string[]).includes(d.model))
           tx.update(table).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} } as never).where(eq(table.id, d.id)).run();
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
       // Each field the person decides must be decided: a program or Ask asks for the missing one.
-      // By stored key (a field's name works too); a value that is none of the choices is none.
-      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [KEYS[key] ?? key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
-      const missing = asked(raw.kept, raw.other, goes).find((key) => !["kept", "other", "sum", "join"].includes(picked[key] as string));
+      const chosen = choicesOf(raw, given);
+      const missing = asked(raw, free).find((key) => chosen[key] === undefined);
       if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(${n.ui}.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
-      const values = valuesOf(raw.kept, raw.other, picked, goes);
+      const all = valuesOf(raw, chosen, free);
+      const values = Object.fromEntries(Object.entries(all).filter(([key, value]) => !same(value, kept[key as keyof Raw])));
       const changed = Object.keys(values);
-      ${
-        model.trash
-          ? `// The other goes to the trash, its unique values released as a trashed record's are.
-      if (goes) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, raw.other.id)).run();`
-          : `// No trash for ${n.pluralLabel.toLowerCase()}: the other is deleted for good.
-      if (goes) tx.delete(${n.table}).where(eq(${n.table}.id, raw.other.id)).run();`
+      for (const other of others) {
+        ${
+          model.trash
+            ? `// It goes to the trash, its unique values released as a trashed record's are.
+        if (goes.has(other.id)) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, other.id)).run();`
+            : `// No trash for ${n.pluralLabel.toLowerCase()}: it is deleted for good.
+        if (goes.has(other.id)) tx.delete(${n.table}).where(eq(${n.table}.id, other.id)).run();`
+        }
+        // What moved from it, so its Restore can put it back: tied to this trashing.
+        const mine = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id || ("id" in x && (x as { id: number }).id === other.id));
+        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: ${JSON.stringify(model.name)}, record: other.id, title: other.${title}, details: { into: kept.id, by: ${JSON.stringify(action.name)}, trashedAt: goes.has(other.id) ? when.getTime() : null, moved: mine(plan.moved), trashed: mine(plan.trashed), cleared: mine(plan.cleared), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
       }
-      // After the other has gone, so a unique value it gives the kept one is free (one it keeps
-      // while it stays is refused as a taken value).
-      if (changed.length) tx.update(${n.table}).set(values as Partial<Raw>).where(eq(${n.table}.id, raw.kept.id)).run();
-      // What moved, so Restore can put it back: tied to this trashing, so a later delete and
-      // restore of the record does not replay it.
-      audit(tx, viewer, { action: goes ? "merged" : "merged, kept", model: ${JSON.stringify(model.name)}, record: raw.other.id, title: other.${title}, details: { into: raw.kept.id, by: ${JSON.stringify(action.name)}, trashedAt: goes ? when.getTime() : null, moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
-      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: raw.kept.id, fields: changed, details: { merged: raw.other.id } });
+      // After the others have gone, so a unique value one gives the kept record is free.
+      if (changed.length) tx.update(${n.table}).set(values as Partial<Raw>).where(eq(${n.table}.id, kept.id)).run();
+      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: kept.id, fields: changed, details: { merged: others.map((o) => o.id) } });
     });
   } catch (error) {
     throw refusal(error);
   }
-  return { kept: kept.id, other: other.id, stays: !goes };
+  return { kept: rows[0]?.id as number, others: rows.slice(1).map((r) => r.id), stays: rows.slice(1).map((r) => r.id).filter((id) => !goes.has(id)) };
+}
+`;
+}
+
+/** Into a new record (a combine): who may, the preview and the run. */
+function combineCode(
+  action: StandardActionIR,
+  model: ModelIR,
+  n: ReturnType<typeof names>,
+  referrers: Referrer[],
+  numbered: string,
+  title: string,
+  signedIn: boolean,
+  owner: (m: ModelIR, row: string) => string,
+  t: Texts,
+): string {
+  const a = actionNames(action);
+  const refers = referrers.map((r) => {
+    const tb = names(r.model, t).table;
+    return `tx.select({ id: ${tb}.id }).from(${tb}).where(inArray(${tb}.${r.key}, ids)).get()`;
+  });
+  return `
+/**
+ * Whether the picked could be removed for the new one: the same apart from what is summed or
+ * joined, nothing refers to them, and the viewer may delete each.
+ */
+function removable(${refers.length ? "tx" : "_tx"}: Tx, viewer: Viewer | null, records: Raw[]): boolean {
+${refers.length ? "  const ids = records.map((r) => r.id);\n" : ""}  const sameApart = Object.keys(RULES).every((key) => RULES[key]?.rule === "add" || RULES[key]?.rule === "append" || new Set(records.map((r) => JSON.stringify(r[key as keyof Raw] ?? null))).size === 1);
+  const referred = ${refers.length ? refers.join(" || ") : "false"};
+  return sameApart && !referred && records.every((record) => allows(${n.access}.delete, viewer${owner(model, "record")}));
+}
+
+/** What combining them would do, as the viewer may see it: the new record's values, what is left empty, and whether they may go. */
+export async function ${a.preview}(viewer: Viewer | null, ids: number[]) {
+  const rows = await picked(viewer, ids);
+  const raw = rawOf(db, rows.map((r) => r.id));
+  const titles = rows.map((r) => String(r.${title} ?? r.id));
+  const values = valuesOf(raw, {}, false);
+  return {
+    records: raw,
+    titles,
+    asked: asked(raw, false).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+    refs: refsOf(rows as Record<string, unknown>[]),
+    taken: Object.keys(values).filter((key) => !asked(raw, false).includes(key) && !same(values[key], raw[0]?.[key as keyof Raw])),
+    moves: [] as { model: string; label: string; plural: string; count: number }[],
+    goes: "stays" as "trash" | "gone" | "stays" | "some",
+    // A unique value stays with the record that has it: the new one's is left empty.
+    emptied: Object.keys(RULES).filter((key) => RULES[key]?.unique && valuesAmong(raw, key).length > 0),
+    removable: removable(db, viewer, raw),
+    refused: null as string | null,
+  };
+}
+
+/**
+ * Combines the records into a new one as the viewer: its values by the fields' rules and the
+ * person's choices, the first picked where the kept one would be; sequences and the app's fields
+ * new, a unique value left empty unless the picked are removed (to the trash), which frees it.
+ * Returns the new record's id.
+ */
+export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Record<string, number | string> = {}, remove = false): Promise<number> {
+  const rows = await picked(viewer, ids);
+  const when = new Date();
+  let made: Raw;
+  try {
+    made = db.transaction((tx) => {
+      const raw = rawOf(tx, rows.map((r) => r.id));
+      if (remove && !removable(tx, viewer, raw)) throw new Conflict(w.combineNotRemovable);
+      const chosen = choicesOf(raw, given);
+      const missing = asked(raw, remove).find((key) => chosen[key] === undefined);
+      if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(${n.ui}.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
+      if (remove)
+        for (const record of raw) {
+          ${
+            model.trash
+              ? `tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, record.id)).run();`
+              : `tx.delete(${n.table}).where(eq(${n.table}.id, record.id)).run();`
+          }
+          audit(tx, viewer, { action: ${model.trash ? '"trashed"' : '"deleted"'}, model: ${JSON.stringify(model.name)}, record: record.id, title: record.${title}, details: { by: ${JSON.stringify(action.name)} } });
+        }
+      // Made as any new record is (A 153): its rules, its numbers counting up; theirs who ran it.
+      const values = ${n.data}.checkCreate(tx, viewer, valuesOf(raw, chosen, remove) as never);
+      const created = tx.insert(${n.table}).values({ ...values${signedIn ? `, ${ownerKey(model)}: personOf(viewer)` : ""}${numbered} } as never).returning().get() as Raw;
+      audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: created.id, details: { from: raw.map((r) => r.id), removed: remove } });
+      return created;
+    });
+  } catch (error) {
+    throw refusal(error);
+  }
+  return made.id;
 }
 `;
 }

@@ -124,10 +124,11 @@ export function doorModule(
     let body: string;
     if (m.kind === "open")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => (allows(pageAccess[${JSON.stringify(m.page)}], viewer) ? move : undefined),`;
-    // A merge: two records the person may change (the app picks the other when it acts).
+    // A merge: two records the person may change, or for a combine read (the app picks the
+    // other when it acts).
     if (m.kind === "merge")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
-    const records = (await ${n(m.model).data}.list(viewer)).filter((row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null)).slice(0, 50).map((row) => row.id);
+    const records = (await ${n(m.model).data}.list(viewer))${m.into === "new" ? "" : `.filter((row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null))`}.slice(0, 50).map((row) => row.id);
     return records.length > 1 ? { ...move, records } : undefined;
   },`;
     // A split: a record with two or more in its list (at least one goes, one stays).
@@ -180,14 +181,13 @@ export function doorModule(
       const a = actionNames(actionOf(m.action));
       const model = modelNamed(ir, m.model);
       return `  ${id}: async (viewer, _move, body) => {
-    // The other: another record the person may change; the kept one first, as the merge's keep says.
-    // The other: another record the person may change; the kept one first, as the person picked.
-    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null))?.id;
+    // The record acted on first, then another the person may ${m.into === "new" ? "read" : "change"}.
+    const kept = record(body);
+    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept${m.into === "new" ? "" : ` && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null)`})?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
-    const [first, second] = [kept, other];
-    // Each field the two differ in: the kept one's.
-    const facts = await ${a.preview}(viewer, first, second);
-    return ${a.run}(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
+    // Each field the two differ in: the first one's.
+    const facts = await ${a.preview}(viewer, [kept, other]);
+    return ${a.run}(viewer, [kept, other], Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
   },`;
     }
     if (m.kind === "split") {

@@ -31,8 +31,10 @@ export interface DoorMove {
   /** For an action, when it fits a record (the app checks; shown for the host's reading). */
   when?: Record<string, unknown>;
   slots?: Slot[];
-  /** A merge: the fields the two may differ in that the person decides (intents.md §3). */
+  /** A merge: the fields the records may differ in that the person decides (intents.md §3). */
   choices?: string[];
+  /** A merge: into the record chosen, or a new one (a combine). */
+  into?: "chosen" | "new";
   /** A split: the list whose records go to the new record (intents.md §4). */
   list?: string;
 }
